@@ -5,8 +5,8 @@
 package init
 
 import (
-	archerApp "github.com/aws/PRIVATE-amazon-ecs-archer/app"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	archerApp "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/app"
 	"github.com/spf13/cobra"
 )
 
