@@ -35,24 +35,24 @@ func New() *App {
 // Ask prompts the user for the value of any required fields that are not already provided.
 func (a *App) Ask() error {
 	var qs []*survey.Question
-	if a.Project == "" {
+	if err := projectNameValidator(a.Project); err != nil {
 		qs = append(qs, &survey.Question{
 			Name: "project",
 			Prompt: &survey.Input{
 				Message: "What is your project's name?",
 				Help:    "Applications under the same project can share infrastructure.",
 			},
-			Validate: survey.Required,
+			Validate: projectNameValidator,
 		})
 	}
-	if a.Name == "" {
+	if err := applicationNameValidator(a.Name); err != nil {
 		qs = append(qs, &survey.Question{
 			Name: "name",
 			Prompt: &survey.Input{
 				Message: "What is your application's name?",
 				Help:    "Collection of AWS services to achieve a business capability. Must be unique within a project.",
 			},
-			Validate: survey.Required,
+			Validate: applicationNameValidator,
 		})
 	}
 	return survey.Ask(qs, a, survey.WithStdio(a.prompt.In, a.prompt.Out, a.prompt.Err))
