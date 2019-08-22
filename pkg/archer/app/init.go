@@ -5,7 +5,6 @@ package app
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -20,8 +19,8 @@ import (
 
 // Errors that can occur while initializing an application.
 var (
-	// User entered a manifest type that doesn't have a matching template.
-	invalidManifestTypeErr = errors.New(fmt.Sprintf("invalid manifest type, must be one of: %s", strings.Join(manifestTypes, ",")))
+	// ErrInvalidManifestType occurs when a user enters a manifest type that doesn't have a matching template.
+	ErrInvalidManifestType = fmt.Errorf("invalid manifest type, must be one of: %s", strings.Join(manifestTypes, ","))
 )
 
 var (
@@ -49,7 +48,7 @@ func (opts *InitOpts) Validate() error {
 				return nil
 			}
 		}
-		return invalidManifestTypeErr
+		return ErrInvalidManifestType
 	}
 	return nil
 }

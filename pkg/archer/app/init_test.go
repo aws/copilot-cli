@@ -37,7 +37,7 @@ func TestInitOpts_Validate(t *testing.T) {
 		},
 		"invalid manifest type": {
 			input: "Horrible Service",
-			want:  invalidManifestTypeErr,
+			want:  ErrInvalidManifestType,
 		},
 		"valid manifest type": {
 			input: "Load Balanced Web App",
