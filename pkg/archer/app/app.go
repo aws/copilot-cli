@@ -40,7 +40,7 @@ func (a *App) Ask() error {
 			Name: "project",
 			Prompt: &survey.Input{
 				Message: "What is your project's name?",
-				Help:    "Applications under the same project share a VPC and are placed on the same ECS cluster.",
+				Help:    "Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 			},
 			Validate: survey.Required,
 		})
