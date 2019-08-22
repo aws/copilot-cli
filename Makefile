@@ -6,3 +6,7 @@ all: build
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
+
+.PHONY: test
+test:
+	go test -v -race -cover ./pkg/...
