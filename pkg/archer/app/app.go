@@ -12,7 +12,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 )
 
-// App represents a suite of AWS services with an ECS service or task as compute to achieve a business capability.
+// App represents an ECS Service or Task and any related AWS Infrastructure.
 type App struct {
 	Project string `survey:"project"` // namespace that this application belongs to.
 	Name    string `survey:"name"`    // unique identifier to logically group AWS resources together.
@@ -40,7 +40,7 @@ func (a *App) Ask() error {
 			Name: "project",
 			Prompt: &survey.Input{
 				Message: "What is your project's name?",
-				Help:    "Applications under the same project can share infrastructure.",
+				Help:    "Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 			},
 			Validate: projectNameValidator,
 		})

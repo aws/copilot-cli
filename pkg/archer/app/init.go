@@ -4,130 +4,52 @@
 package app
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"html/template"
-	"io"
-	"os"
-	"path"
-	"strings"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/gobuffalo/packr/v2"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/manifest"
 )
 
-// Errors that can occur while initializing an application.
-var (
-	// User entered a manifest type that doesn't have a matching template.
-	invalidManifestTypeErr = errors.New(fmt.Sprintf("invalid manifest type, must be one of: %s", strings.Join(manifestTypes, ",")))
-)
-
-var (
-	manifestTypes = []string{
-		"Load Balanced Web App",
-		"Empty",
-	}
-	manifestFileNames = []string{
-		"load-balanced-fargate-service.yml",
-		"empty.yml",
-	}
-)
+type renderer interface {
+	Render(filePrefix string, data interface{}) error
+}
 
 // InitOpts holds additional fields needed to initialize an application.
 type InitOpts struct {
-	ManifestType string         // must be one of ManifestTypes.
-	wc           io.WriteCloser // interface to write the Manifest file.
+	ManifestTemplate string // name of the Manifest template.
+
+	m renderer // interface for Manifest operations.
 }
 
-// Validate returns nil if the flags set by the user have valid values. Otherwise returns an error.
-func (opts *InitOpts) Validate() error {
-	if opts.ManifestType != "" {
-		for _, t := range manifestTypes {
-			if t == opts.ManifestType {
-				return nil
-			}
-		}
-		return invalidManifestTypeErr
-	}
-	return nil
-}
-
-func (opts *InitOpts) askManifestType(prompt terminal.Stdio) error {
-	if opts.ManifestType != "" {
-		// A validated manifest type is already set.
+func (opts *InitOpts) askManifestTemplate(prompt terminal.Stdio) error {
+	if opts.ManifestTemplate != "" {
+		// User already set a manifest template name.
 		return nil
 	}
 	return survey.AskOne(&survey.Select{
-		Message: "What type of application is this?",
+		Message: "Which template would you like to use?",
 		Help:    "Pre-defined infrastructure templates.",
-		Options: manifestTypes,
-		Default: manifestTypes[0],
-	}, &opts.ManifestType, survey.WithStdio(prompt.In, prompt.Out, prompt.Err))
+		Options: manifest.TemplateNames,
+		Default: manifest.TemplateNames[0],
+	}, &opts.ManifestTemplate, survey.WithStdio(prompt.In, prompt.Out, prompt.Err))
 }
 
-// setManifestWriter creates a Manifest file under ./ecs/ if there is no existing Writer.
-func (opts *InitOpts) setManifestWriter(appName string) error {
-	if opts.wc != nil {
-		// A manifest writer is already set.
-		return nil
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	projectDir := path.Join(wd, "ecs")
-	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
-		return err
-	}
-	f, err := os.Create(path.Join(projectDir, fmt.Sprintf("%s-app.yaml", appName)))
-	if err != nil {
-		return err
-	}
-	opts.wc = f
-	return nil
-}
-
-func (opts *InitOpts) manifestFileName() string {
-	for i, t := range manifestTypes {
-		if opts.ManifestType == t {
-			return manifestFileNames[i]
+func (opts *InitOpts) renderManifest(a *App) error {
+	if opts.m == nil {
+		m, err := manifest.New(opts.ManifestTemplate)
+		if err != nil {
+			return err
 		}
+		opts.m = m
 	}
-	// This should never happen, see TestManifestTypeFileNamePairs
-	return ""
+	return opts.m.Render(a.Name, a)
 }
 
 // Init creates a new application.
 //
-// It assumes that the opts with non-zero values have already been validated.
 // It prompts the user for any missing options fields, and then writes the manifest file to ./ecs/.
 func (a *App) Init(opts *InitOpts) error {
-	if err := opts.askManifestType(a.prompt); err != nil {
+	if err := opts.askManifestTemplate(a.prompt); err != nil {
 		return err
 	}
-	if err := opts.setManifestWriter(a.Name); err != nil {
-		return err
-	}
-
-	defer opts.wc.Close()
-	box := packr.New("templates", "./template")
-	manifest, err := box.FindString("manifest/" + opts.manifestFileName())
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New(opts.ManifestType).Parse(manifest)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, a); err != nil {
-		return err
-	}
-	if _, err := opts.wc.Write(buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
+	return opts.renderManifest(a)
 }
