@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 
-	initCmd "github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/init"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +32,8 @@ func buildRootCmd() *cobra.Command {
 		SilenceUsage: true,
 	}
 
-	cmd.AddCommand(initCmd.Build())
+	cmd.AddCommand(buildInitCmd())
+	cmd.AddCommand(buildEnvCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
 	return cmd
 }

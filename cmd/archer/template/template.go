@@ -12,10 +12,10 @@ import (
 )
 
 // RootUsage is the text template for the root command.
-const RootUsage = `{{h1 "Commands"}}
-  {{h2 "Getting Started"}}{{range .Commands}}{{if isInGroup . "Getting Started"}}
-    {{rpad .Name .NamePadding}} {{.Short}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
+const RootUsage = `{{h1 "Commands"}}{{ $cmds := .Commands }}{{$groups := mkSlice "Getting Started ✨" "Develop 👷‍♀️" }}{{range $group := $groups }}
+  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
+    {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}} 
+{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 {{h1 "Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 
@@ -28,7 +28,10 @@ const RootUsage = `{{h1 "Commands"}}
 // Usage is the text template for a single command.
 const Usage = `{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]{{end}}{{if .HasAvailableLocalFlags}}
+  {{.CommandPath}} [command]
+
+{{h1 "Available Commands"}}{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
 {{h1 "Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
@@ -43,6 +46,7 @@ func init() {
 	cobra.AddTemplateFunc("isInGroup", isInGroup)
 	cobra.AddTemplateFunc("h1", h1)
 	cobra.AddTemplateFunc("h2", h2)
+	cobra.AddTemplateFunc("mkSlice", mkSlice)
 }
 
 func isInGroup(cmd *cobra.Command, group string) bool {
@@ -59,4 +63,8 @@ func h2(text string) string {
 	var s strings.Builder
 	color.New(color.Bold).Fprintf(&s, text)
 	return s.String()
+}
+
+func mkSlice(args ...interface{}) []interface{} {
+	return args
 }
