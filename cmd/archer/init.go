@@ -1,8 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package init provides the init command.
-package init
+package main
 
 import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
@@ -10,13 +9,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Build returns the init command.
-func Build() *cobra.Command {
+func buildInitCmd() *cobra.Command {
 	opts := archerApp.InitOpts{}
 	app := archerApp.New()
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create a new ECS application ✨",
+		Short: "Create a new ECS application",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := app.Validate(); err != nil {
 				return err
@@ -32,7 +30,7 @@ func Build() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.ManifestTemplate, "template", "t", "", "Template of the application to bootstrap the infrastructure")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": "Getting Started",
+		"group": "Getting Started ✨",
 	}
 	return cmd
 }
