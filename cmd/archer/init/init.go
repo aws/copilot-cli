@@ -18,6 +18,9 @@ func Build() *cobra.Command {
 		Use:   "init",
 		Short: "Create a new ECS application ✨",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := app.Validate(); err != nil {
+				return err
+			}
 			return app.Ask()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

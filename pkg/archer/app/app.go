@@ -35,7 +35,7 @@ func New() *App {
 // Ask prompts the user for the value of any required fields that are not already provided.
 func (a *App) Ask() error {
 	var qs []*survey.Question
-	if err := projectNameValidator(a.Project); err != nil {
+	if a.Project == "" {
 		qs = append(qs, &survey.Question{
 			Name: "project",
 			Prompt: &survey.Input{
@@ -45,7 +45,7 @@ func (a *App) Ask() error {
 			Validate: projectNameValidator,
 		})
 	}
-	if err := applicationNameValidator(a.Name); err != nil {
+	if a.Name == "" {
 		qs = append(qs, &survey.Question{
 			Name: "name",
 			Prompt: &survey.Input{
@@ -61,4 +61,17 @@ func (a *App) Ask() error {
 // String returns a human readable representation of an App.
 func (a *App) String() string {
 	return fmt.Sprintf("name=%s, project=%s", a.Name, a.Project)
+}
+
+// Validate returns an error if a command line flag provided value is invalid
+func (a *App) Validate() error {
+	if err := projectNameValidator(a.Project); err != nil && err != errValueEmpty {
+		return fmt.Errorf("project name invalid: %v", err)
+	}
+
+	if err := applicationNameValidator(a.Name); err != nil && err != errValueEmpty {
+		return fmt.Errorf("application name invalid: %v", err)
+	}
+
+	return nil
 }
