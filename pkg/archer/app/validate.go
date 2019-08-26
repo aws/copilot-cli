@@ -17,36 +17,36 @@ var (
 
 func validateProjectName(val interface{}) error {
 	// TODO(nick): add logic to determine project name uniqueness in the scope of an AWS account
-	if s, ok := val.(string); ok {
-		if s == "" {
-			return errValueEmpty
-		}
-		if len(s) > 255 {
-			return errValueTooLong
-		}
-		if !isAlphanumeric(s) {
-			return errValueNotAlphanumeric
-		}
-	} else {
+	s, ok := val.(string)
+	if !ok {
 		return errValueNotAString
+	}
+	if s == "" {
+		return errValueEmpty
+	}
+	if len(s) > 255 {
+		return errValueTooLong
+	}
+	if !isAlphanumeric(s) {
+		return errValueNotAlphanumeric
 	}
 	return nil
 }
 
 func validateApplicationName(val interface{}) error {
 	// TODO(nick): add logic to determine application name uniqeness in the scope of a project
-	if s, ok := val.(string); ok {
-		if s == "" {
-			return errValueEmpty
-		}
-		if len(s) > 255 {
-			return errValueTooLong
-		}
-		if !isAlphanumeric(s) {
-			return errValueNotAlphanumeric
-		}
-	} else {
+	s, ok := val.(string)
+	if !ok {
 		return errValueNotAString
+	}
+	if s == "" {
+		return errValueEmpty
+	}
+	if len(s) > 255 {
+		return errValueTooLong
+	}
+	if !isAlphanumeric(s) {
+		return errValueNotAlphanumeric
 	}
 	return nil
 }
