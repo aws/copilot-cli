@@ -6,6 +6,8 @@ package app
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateProjectName(t *testing.T) {
@@ -41,11 +43,9 @@ func TestValidateProjectName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateProjectName(tc.input)
+			got := validateProjectName(tc.input)
 
-			if tc.want != err {
-				t.Fatalf("got: %v, wanted: %v", err, tc.want)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -83,11 +83,9 @@ func TestValidateApplicationName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateApplicationName(tc.input)
+			got := validateApplicationName(tc.input)
 
-			if tc.want != err {
-				t.Fatalf("got: %v, wanted: %v", err, tc.want)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -117,11 +115,9 @@ func TestIsAlphanumeric(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := isAlphanumeric(tc.input)
+			got := isAlphanumeric(tc.input)
 
-			if tc.want != err {
-				t.Fatalf("got: %v, wanted: %v", err, tc.want)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
