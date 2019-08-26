@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestProjectNameValidator(t *testing.T) {
+func TestValidateProjectName(t *testing.T) {
 	testCases := map[string]struct {
 		input interface{}
 		want  error
@@ -41,7 +41,7 @@ func TestProjectNameValidator(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := projectNameValidator(tc.input)
+			err := validateProjectName(tc.input)
 
 			if tc.want != err {
 				t.Fatalf("got: %v, wanted: %v", err, tc.want)
@@ -50,7 +50,7 @@ func TestProjectNameValidator(t *testing.T) {
 	}
 }
 
-func TestApplicationNameValidator(t *testing.T) {
+func TestValidateApplicationName(t *testing.T) {
 	testCases := map[string]struct {
 		input interface{}
 		want  error
@@ -83,7 +83,7 @@ func TestApplicationNameValidator(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := applicationNameValidator(tc.input)
+			err := validateApplicationName(tc.input)
 
 			if tc.want != err {
 				t.Fatalf("got: %v, wanted: %v", err, tc.want)

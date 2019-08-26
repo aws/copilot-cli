@@ -15,7 +15,7 @@ var (
 	errValueNotAString      = errors.New("value must be a string")
 )
 
-func projectNameValidator(val interface{}) error {
+func validateProjectName(val interface{}) error {
 	// TODO(nick): add logic to determine project name uniqueness in the scope of an AWS account
 	if s, ok := val.(string); ok {
 		if s == "" {
@@ -33,7 +33,7 @@ func projectNameValidator(val interface{}) error {
 	return nil
 }
 
-func applicationNameValidator(val interface{}) error {
+func validateApplicationName(val interface{}) error {
 	// TODO(nick): add logic to determine application name uniqeness in the scope of a project
 	if s, ok := val.(string); ok {
 		if s == "" {
