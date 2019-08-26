@@ -42,7 +42,7 @@ func (a *App) Ask() error {
 				Message: "What is your project's name?",
 				Help:    "Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 			},
-			Validate: survey.Required,
+			Validate: validateProjectName,
 		})
 	}
 	if a.Name == "" {
@@ -52,7 +52,7 @@ func (a *App) Ask() error {
 				Message: "What is your application's name?",
 				Help:    "Collection of AWS services to achieve a business capability. Must be unique within a project.",
 			},
-			Validate: survey.Required,
+			Validate: validateApplicationName,
 		})
 	}
 	return survey.Ask(qs, a, survey.WithStdio(a.prompt.In, a.prompt.Out, a.prompt.Err))
@@ -61,4 +61,17 @@ func (a *App) Ask() error {
 // String returns a human readable representation of an App.
 func (a *App) String() string {
 	return fmt.Sprintf("name=%s, project=%s", a.Name, a.Project)
+}
+
+// Validate returns an error if a command line flag provided value is invalid
+func (a *App) Validate() error {
+	if err := validateProjectName(a.Project); err != nil && err != errValueEmpty {
+		return fmt.Errorf("project name invalid: %v", err)
+	}
+
+	if err := validateApplicationName(a.Name); err != nil && err != errValueEmpty {
+		return fmt.Errorf("application name invalid: %v", err)
+	}
+
+	return nil
 }

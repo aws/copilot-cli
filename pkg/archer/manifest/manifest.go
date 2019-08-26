@@ -50,13 +50,13 @@ type Manifest struct {
 func New(tpl string) (*Manifest, error) {
 	for _, name := range TemplateNames {
 		if tpl == name {
-			break
+			return &Manifest{
+				tpl: tpl,
+			}, nil
 		}
-		return nil, &ErrInvalidTemplate{tpl: tpl}
 	}
-	return &Manifest{
-		tpl: tpl,
-	}, nil
+
+	return nil, &ErrInvalidTemplate{tpl: tpl}
 }
 
 // Render evaluates the manifest's template with the data and then writes it to a file under ./ecs/{filePrefix}-app.yaml.
