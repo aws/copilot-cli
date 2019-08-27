@@ -5,9 +5,7 @@ package main
 
 import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/env"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/project"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +25,7 @@ An environment represents a deployment stage.`,
 }
 
 func buildEnvAddCmd() *cobra.Command {
-	var projectName, profileName = "", "default"
+	opts, err := project.NewAddEnvOpts()
 	cmd := &cobra.Command{
 		Use:   "add [name]",
 		Short: "Deploy a new environment to your project",
@@ -38,25 +36,28 @@ func buildEnvAddCmd() *cobra.Command {
   Create a prod-iad environment using your "prod-admin" AWS profile
   $ archer env add prod-iad --profile prod-admin`,
 		Args: cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			opts.EnvName = args[0]
+			if err != nil {
+				return err
+			}
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
+				return err
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			proj, err := project.New(projectName)
+			proj, err := project.New(opts.ProjectName)
 			if err != nil {
 				return err
 			}
-			if err := proj.Ask(); err != nil {
-				return err
-			}
-			environ, err := env.New(args[0], env.WithProfile(profileName))
-			if err != nil {
-				return err
-			}
-			if err := proj.AddEnv(environ); err != nil {
-				return errors.Wrapf(err, "failed to add environment %s to project %s", environ.Name, proj.Name)
-			}
-			return environ.Deploy()
+			return proj.AddEnv(opts)
 		},
 	}
-	cmd.Flags().StringVar(&projectName, "project", "", "Name of the project (required).")
-	cmd.Flags().StringVar(&profileName, "profile", "", "Name of the profile. Defaults to \"default\".")
+	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")
+	cmd.Flags().StringVar(&opts.EnvProfile, "profile", "", "Name of the profile. Defaults to \"default\".")
 	return cmd
 }

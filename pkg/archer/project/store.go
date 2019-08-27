@@ -12,30 +12,31 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
 
-// Manager handles actions on all of your projects.
-type Manager struct {
+// Store handles actions on all of your projects.
+type Store struct {
 	c ssmiface.SSMAPI
 }
 
-// NewManager returns a new manager supervising your projects using your default AWS config.
-// // See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-func NewManager() (*Manager, error) {
-	sess, err := session.NewSession()
+// NewStore returns a new manager supervising your projects using your default AWS config.
+// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+func NewStore() (*Store, error) {
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &Manager{
+	return &Store{
 		c: ssm.New(sess),
 	}, nil
 }
 
 // List returns the list of your existing projects.
 // If an error occurs while listing, an empty slice is returned along with the error.
-func (m *Manager) List() ([]*Project, error) {
+func (m *Store) List() ([]*Project, error) {
 	// TODO paginate
 	resp, err := m.c.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path:      aws.String("archer/"),
-		Recursive: aws.Bool(true),
+		Path: aws.String(fmtProjectsParamPath),
 	})
 	if err != nil {
 		return []*Project{}, err
@@ -43,7 +44,7 @@ func (m *Manager) List() ([]*Project, error) {
 
 	projectNames := make(map[string]bool)
 	for _, param := range resp.Parameters {
-		projectName := strings.Split(*param.Name, "/")[1]
+		projectName := strings.Split(*param.Name, "/")[2]
 		projectNames[projectName] = true
 	}
 	var projects []*Project

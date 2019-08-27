@@ -6,12 +6,7 @@ package project
 
 import (
 	"errors"
-	"fmt"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/env"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -23,15 +18,16 @@ var (
 
 // SSM parameter name formats for resources in a project.
 const (
-	fmtEnvParamName = "/archer/%s/environments/%s" // name for an environment in a project
+	fmtProjectsParamPath = "/archer/"                   // path for finding projects
+	fmtProjectParamName  = "/archer/%s"                 // name for a project
+	fmtEnvParamName      = "/archer/%s/environments/%s" // name for an environment in a project
 )
 
 // Project is a collection of environments.
 type Project struct {
 	Name string
 
-	c      ssmiface.SSMAPI
-	prompt terminal.Stdio
+	c ssmiface.SSMAPI
 }
 
 // New returns a new named project managing your environments using your default AWS config.
@@ -47,49 +43,4 @@ func New(name string) (*Project, error) {
 		Name: name,
 		c:    ssm.New(sess),
 	}, nil
-}
-
-// Ask prompts the user for an existing project name if the project's name is empty.
-func (p *Project) Ask() error {
-	if p.Name != "" {
-		// TODO check if the project name exists.
-		return nil
-	}
-
-	m, err := NewManager()
-	if err != nil {
-		return err
-	}
-	projects, err := m.List()
-	if err != nil {
-		return err
-	}
-	if len(projects) == 0 {
-		return ErrNoExistingProjects
-	}
-	var names []string
-	for _, p := range projects {
-		names = append(names, p.Name)
-	}
-	return survey.AskOne(&survey.Select{
-		Message: "Which project do you want to create this environment in?",
-		Options: names,
-		Default: names[0],
-	}, &p.Name, survey.WithStdio(p.prompt.In, p.prompt.Out, p.prompt.Err))
-}
-
-// AddEnv links a new environment to the project.
-func (p *Project) AddEnv(e *env.Environment) error {
-	data, err := e.Marshal()
-	if err != nil {
-		return err
-	}
-	_, err = p.c.PutParameter(&ssm.PutParameterInput{
-		Name:        aws.String(fmt.Sprintf(fmtEnvParamName, p.Name, e.Name)),
-		Description: aws.String(fmt.Sprintf("The %s deployment stage", e.Name)),
-		Type:        aws.String(ssm.ParameterTypeString),
-		Value:       aws.String(data),
-	})
-	// TODO check errors
-	return err
 }
