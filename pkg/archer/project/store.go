@@ -9,12 +9,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
+
+type parametersByPathGetter interface {
+	GetParametersByPath(*ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
+}
 
 // Store handles actions on all of your projects.
 type Store struct {
-	c ssmiface.SSMAPI
+	c parametersByPathGetter
 }
 
 // NewStore returns a new manager supervising your projects using your default AWS config.
@@ -32,14 +35,14 @@ func NewStore() (*Store, error) {
 }
 
 // List returns the list of your existing projects.
-// If an error occurs while listing, an empty slice is returned along with the error.
+// If an error occurs while listing, a nil slice is returned along with the error.
 func (m *Store) List() ([]*Project, error) {
 	// TODO paginate
 	resp, err := m.c.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path: aws.String(fmtProjectsParamPath),
+		Path: aws.String(projectsParamPath),
 	})
 	if err != nil {
-		return []*Project{}, err
+		return nil, err
 	}
 
 	projectNames := make(map[string]bool)
@@ -51,7 +54,7 @@ func (m *Store) List() ([]*Project, error) {
 	for name, _ := range projectNames {
 		p, err := New(name)
 		if err != nil {
-			return []*Project{}, err
+			return nil, err
 		}
 		projects = append(projects, p)
 	}

@@ -11,7 +11,9 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/env"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/pkg/errors"
 )
 
 type projectLister interface {
@@ -60,7 +62,7 @@ func (opts *AddEnvOpts) Ask() error {
 	if opts.ProjectName == "" {
 		projects, err := opts.store.List()
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to retrieve list of existing projects")
 		}
 		if len(projects) == 0 {
 			return ErrNoExistingProjects
@@ -93,12 +95,7 @@ func (opts *AddEnvOpts) Ask() error {
 
 // AddEnv creates a new environment under the project.
 // The environment is first linked in SSM to the project, and then the CloudFormation stack is created.
-func (p *Project) AddEnv(opts *AddEnvOpts) error {
-	environ, err := env.New(opts.EnvName, env.WithProfile(opts.EnvProfile))
-	if err != nil {
-		return err
-	}
-
+func (p *Project) AddEnv(environ *env.Environment) error {
 	// 1. Add the environment to SSM
 	data, err := environ.Marshal()
 	if err != nil {
@@ -110,9 +107,15 @@ func (p *Project) AddEnv(opts *AddEnvOpts) error {
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
-
-	// TODO check errors
-
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterAlreadyExists:
+				return &ErrEnvAlreadyExists{Name: environ.Name, Project: p.Name}
+			}
+		}
+		return err
+	}
 	// 2. Deploy the environment
 	return environ.Deploy()
 }

@@ -5,6 +5,7 @@ package main
 
 import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/env"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/project"
 	"github.com/spf13/cobra"
 )
@@ -54,7 +55,11 @@ func buildEnvAddCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return proj.AddEnv(opts)
+			environ, err := env.New(opts.EnvName, env.WithProfile(opts.EnvProfile))
+			if err != nil {
+				return err
+			}
+			return proj.AddEnv(environ)
 		},
 	}
 	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")

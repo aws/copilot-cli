@@ -5,29 +5,25 @@
 package project
 
 import (
-	"errors"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-)
-
-var (
-	ErrNoExistingProjects = errors.New("no projects found")
 )
 
 // SSM parameter name formats for resources in a project.
 const (
-	fmtProjectsParamPath = "/archer/"                   // path for finding projects
-	fmtProjectParamName  = "/archer/%s"                 // name for a project
-	fmtEnvParamName      = "/archer/%s/environments/%s" // name for an environment in a project
+	projectsParamPath = "/archer/"                   // path for finding projects
+	fmtEnvParamName   = "/archer/%s/environments/%s" // name for an environment in a project
 )
+
+type ssmAPI interface {
+	PutParameter(*ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+}
 
 // Project is a collection of environments.
 type Project struct {
 	Name string
 
-	c ssmiface.SSMAPI
+	c ssmAPI
 }
 
 // New returns a new named project managing your environments using your default AWS config.
