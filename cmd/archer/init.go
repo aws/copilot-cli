@@ -25,9 +25,9 @@ func buildInitCmd() *cobra.Command {
 			return app.Init(&opts)
 		},
 	}
-	cmd.Flags().StringVarP(&app.Project, "project", "p", "", "Name of the project (required)")
-	cmd.Flags().StringVarP(&app.Name, "app", "a", "", "Name of the application (required)")
-	cmd.Flags().StringVarP(&opts.ManifestTemplate, "template", "t", "", "Template of the application to bootstrap the infrastructure")
+	cmd.Flags().StringVarP(&app.Project, "project", "p", "", "Name of the project (required).")
+	cmd.Flags().StringVarP(&app.Name, "app", "a", "", "Name of the application (required).")
+	cmd.Flags().StringVarP(&opts.ManifestTemplate, "template", "t", "", "Template of the application to bootstrap the infrastructure.")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": "Getting Started ✨",
