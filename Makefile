@@ -10,3 +10,7 @@ build:
 .PHONY: test
 test:
 	go test -v -race -cover ./pkg/...
+
+.PHONY: integ-test
+integ-test:
+	go test -v -run Integration -tags integration ./pkg/...
