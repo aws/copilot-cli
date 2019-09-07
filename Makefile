@@ -9,8 +9,13 @@ build:
 
 .PHONY: test
 test:
-	go test -v -race -cover ./pkg/...
+	go test -v -race -cover -count=1 ./pkg/...
 
 .PHONY: integ-test
 integ-test:
 	go test -v -run Integration -tags integration ./pkg/...
+
+.PHONY: gen-mocks
+gen-mocks:
+	mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
+	mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go

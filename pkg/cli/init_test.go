@@ -1,4 +1,4 @@
-package app
+package cli
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApp_Ask(t *testing.T) {
+func TestInit_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject string
 		inputApp     string
@@ -39,10 +39,10 @@ func TestApp_Ask(t *testing.T) {
 			// GIVEN
 			mockTerminal, _, _ := vt10x.NewVT10XConsole()
 			defer mockTerminal.Close()
-			app := &App{
+			app := &InitAppOpts{
 				Project: tc.inputProject,
 				Name:    tc.inputApp,
-				prompt: terminal.Stdio{
+				Prompt: terminal.Stdio{
 					In:  mockTerminal.Tty(),
 					Out: mockTerminal.Tty(),
 					Err: mockTerminal.Tty(),
@@ -71,10 +71,45 @@ func TestApp_Ask(t *testing.T) {
 	}
 }
 
-func TestApp_String(t *testing.T) {
-	app := &App{
-		Project: "hello",
-		Name:    "world",
+func TestInit_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inputOpts       InitAppOpts
+		wantedErrPrefix string
+	}{
+		"with valid project and app": {
+			inputOpts: InitAppOpts{
+				Name:    "frontend",
+				Project: "coolproject",
+			},
+		},
+		"with invalid project name": {
+			inputOpts: InitAppOpts{
+				Name:    "coolapp",
+				Project: "!!!!",
+			},
+			wantedErrPrefix: "project name invalid",
+		},
+		"with invalid app name": {
+			inputOpts: InitAppOpts{
+				Name:    "!!!",
+				Project: "coolproject",
+			},
+			wantedErrPrefix: "application name invalid",
+		},
 	}
-	require.Equal(t, "name=world, project=hello", app.String())
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.inputOpts.Validate()
+			if tc.wantedErrPrefix != "" {
+				require.Regexp(t, "^"+tc.wantedErrPrefix+".*", err.Error())
+			} else {
+				require.NoError(t, err, "There shouldn't have been an error")
+			}
+		})
+	}
+}
+
+func TestInit_InitApp(t *testing.T) {
+	t.Skip("Skipping init, not yet implemented")
 }
