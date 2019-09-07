@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -18,11 +19,11 @@ import (
 
 func TestStore_ListProjects(t *testing.T) {
 
-	testProject := Project{Name: "chicken", Version: "1.0"}
-	testProjectString, _ := testProject.Marshal()
+	testProject := archer.Project{Name: "chicken", Version: "1.0"}
+	testProjectString, _ := marshal(testProject)
 
-	cowProject := Project{Name: "cow", Version: "1.0"}
-	cowProjectString, _ := cowProject.Marshal()
+	cowProject := archer.Project{Name: "cow", Version: "1.0"}
+	cowProjectString, _ := marshal(cowProject)
 
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
@@ -105,14 +106,14 @@ func TestStore_ListProjects(t *testing.T) {
 
 func TestStore_GetProject(t *testing.T) {
 
-	testProject := Project{Name: "chicken", Version: "1.0"}
-	testProjectString, _ := testProject.Marshal()
+	testProject := archer.Project{Name: "chicken", Version: "1.0"}
+	testProjectString, _ := marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
 
 	testCases := map[string]struct {
 		mockGetParameter      func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 		mockGetCallerIdentity func(t *testing.T, param *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
-		wantedProject         Project
+		wantedProject         archer.Project
 		wantedErr             error
 	}{
 		"with existing project": {
@@ -132,9 +133,7 @@ func TestStore_GetProject(t *testing.T) {
 		"with no existing project": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testProjectPath, *param.Name)
-				return &ssm.GetParameterOutput{
-					Parameter: &ssm.Parameter{},
-				}, nil
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
 			mockGetCallerIdentity: func(t *testing.T, input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
 				return &sts.GetCallerIdentityOutput{
@@ -150,9 +149,7 @@ func TestStore_GetProject(t *testing.T) {
 		"with no existing project and failed STS call": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testProjectPath, *param.Name)
-				return &ssm.GetParameterOutput{
-					Parameter: &ssm.Parameter{},
-				}, nil
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
 			mockGetCallerIdentity: func(t *testing.T, input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
 				return nil, fmt.Errorf("Error")
@@ -214,8 +211,8 @@ func TestStore_GetProject(t *testing.T) {
 }
 
 func TestStore_CreateProject(t *testing.T) {
-	testProject := Project{Name: "chicken", Version: "1.0"}
-	testProjectString, _ := testProject.Marshal()
+	testProject := archer.Project{Name: "chicken", Version: "1.0"}
+	testProjectString, _ := marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
 
 	testCases := map[string]struct {
@@ -262,7 +259,7 @@ func TestStore_CreateProject(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateProject(&Project{Name: "chicken", Version: "1.0"})
+			err := store.CreateProject(&archer.Project{Name: "chicken", Version: "1.0"})
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -274,12 +271,12 @@ func TestStore_CreateProject(t *testing.T) {
 
 func TestStore_ListEnvironments(t *testing.T) {
 
-	testEnvironment := Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
-	testEnvironmentString, _ := testEnvironment.Marshal()
+	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
+	testEnvironmentString, _ := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
 
-	prodEnvironment := Environment{Name: "prod", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
-	prodEnvironmentString, _ := prodEnvironment.Marshal()
+	prodEnvironment := archer.Environment{Name: "prod", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
+	prodEnvironmentString, _ := marshal(prodEnvironment)
 	prodEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, prodEnvironment.Project, prodEnvironment.Name)
 
 	environmentPath := fmt.Sprintf(rootEnvParamPath, testEnvironment.Project)
@@ -287,7 +284,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 
-		wantedEnvironments []Environment
+		wantedEnvironments []archer.Environment
 		wantedErr          error
 	}{
 		"with multiple existing environments": {
@@ -307,7 +304,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 				}, nil
 			},
 
-			wantedEnvironments: []Environment{testEnvironment, prodEnvironment},
+			wantedEnvironments: []archer.Environment{testEnvironment, prodEnvironment},
 			wantedErr:          nil,
 		},
 		"with malfored json": {
@@ -349,7 +346,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				var environments []Environment
+				var environments []archer.Environment
 				for _, e := range envPointers {
 					environments = append(environments, *e)
 				}
@@ -360,13 +357,13 @@ func TestStore_ListEnvironments(t *testing.T) {
 	}
 }
 func TestStore_GetEnvironment(t *testing.T) {
-	testEnvironment := Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
-	testEnvironmentString, _ := testEnvironment.Marshal()
+	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
+	testEnvironmentString, _ := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
 
 	testCases := map[string]struct {
 		mockGetParameter  func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-		wantedEnvironment Environment
+		wantedEnvironment archer.Environment
 		wantedErr         error
 	}{
 		"with existing environment": {
@@ -439,12 +436,12 @@ func TestStore_GetEnvironment(t *testing.T) {
 
 func TestStore_CreateEnvironment(t *testing.T) {
 
-	testProject := Project{Name: "chicken", Version: "1.0"}
-	testProjectString, _ := testProject.Marshal()
+	testProject := archer.Project{Name: "chicken", Version: "1.0"}
+	testProjectString, _ := marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
 
-	testEnvironment := Environment{Name: "test", Project: testProject.Name, AccountID: "1234", Region: "us-west-2"}
-	testEnvironmentString, _ := testEnvironment.Marshal()
+	testEnvironment := archer.Environment{Name: "test", Project: testProject.Name, AccountID: "1234", Region: "us-west-2"}
+	testEnvironmentString, _ := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
 
 	testCases := map[string]struct {
@@ -520,7 +517,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateEnvironment(&Environment{
+			err := store.CreateEnvironment(&archer.Environment{
 				Name:      testEnvironment.Name,
 				Project:   testEnvironment.Project,
 				AccountID: testEnvironment.AccountID,

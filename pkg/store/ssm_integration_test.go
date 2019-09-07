@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer/store"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,7 @@ func init() {
 
 func Test_Project_Integration(t *testing.T) {
 	s, _ := store.NewSSM()
-	projectToCreate := store.Project{Name: randStringBytes(10), Version: "1.0"}
+	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	t.Run("Create, Get and List Projects", func(t *testing.T) {
 		// Create our first project
 		err := s.CreateProject(&projectToCreate)
@@ -43,9 +44,9 @@ func Test_Project_Integration(t *testing.T) {
 
 func Test_Environment_Integration(t *testing.T) {
 	s, _ := store.NewSSM()
-	projectToCreate := store.Project{Name: randStringBytes(10), Version: "1.0"}
-	testEnvironment := store.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
-	prodEnvironment := store.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
+	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
+	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
+	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
 
 	t.Run("Create, Get and List Projects", func(t *testing.T) {
 		// Create our first project
@@ -74,11 +75,11 @@ func Test_Environment_Integration(t *testing.T) {
 		// Make sure all the environments are under our project
 		envs, err = s.ListEnvironments(projectToCreate.Name)
 		require.NoError(t, err)
-		var environments []store.Environment
+		var environments []archer.Environment
 		for _, e := range envs {
 			environments = append(environments, *e)
 		}
-		require.ElementsMatch(t, environments, []store.Environment{testEnvironment, prodEnvironment})
+		require.ElementsMatch(t, environments, []archer.Environment{testEnvironment, prodEnvironment})
 
 		// Fetch our saved environments, one by one
 		env, err := s.GetEnvironment(projectToCreate.Name, testEnvironment.Name)
