@@ -56,7 +56,7 @@ func TestStore_List(t *testing.T) {
 			for _, p := range projects {
 				names = append(names, p.Name)
 			}
-			require.Equal(t, tc.wantedProjectNames, names)
+			require.ElementsMatch(t, tc.wantedProjectNames, names)
 		})
 	}
 }
