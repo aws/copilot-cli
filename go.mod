@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.23.9
 	github.com/fatih/color v1.7.0
 	github.com/gobuffalo/packr/v2 v2.5.2
+	github.com/golang/mock v1.3.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v0.0.5
