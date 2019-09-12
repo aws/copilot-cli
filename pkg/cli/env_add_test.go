@@ -116,6 +116,7 @@ func TestEnvAdd_Validate(t *testing.T) {
 func TestEnvAdd_AddEnv(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 	var capturedArgument *archer.Environment
 	defer ctrl.Finish()
 
@@ -127,6 +128,7 @@ func TestEnvAdd_AddEnv(t *testing.T) {
 		"with a succesful call to add env": {
 			addEnvOpts: AddEnvOpts{
 				manager:     mockEnvStore,
+				deployer:    mockDeployer,
 				ProjectName: "project",
 				EnvName:     "env",
 				Production:  true,
@@ -146,7 +148,9 @@ func TestEnvAdd_AddEnv(t *testing.T) {
 					Do(func(env *archer.Environment) {
 						capturedArgument = env
 					})
-
+				mockDeployer.EXPECT().DeployEnvironment(gomock.Any(), gomock.Any())
+				// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
+				mockDeployer.EXPECT().Wait(gomock.Any())
 			},
 		},
 	}

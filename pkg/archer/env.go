@@ -35,5 +35,6 @@ type EnvironmentCreator interface {
 
 // EnvironmentDeployer can deploy an environment
 type EnvironmentDeployer interface {
-	DeployEnvironment(environment *Environment, opts map[string]string) (string, error)
+	DeployEnvironment(env Environment, includeLoadBalancer bool) error
+	Wait(env Environment) error
 }

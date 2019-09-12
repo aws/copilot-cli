@@ -1,6 +1,8 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+PACKAGES=./pkg... ./internal...
+
 all: build
 
 .PHONY: build
@@ -9,11 +11,11 @@ build:
 
 .PHONY: test
 test:
-	go test -v -race -cover -count=1 ./pkg/...
+	go test -v -race -cover -count=1 ${PACKAGES}
 
 .PHONY: integ-test
 integ-test:
-	go test -v -run Integration -tags integration ./pkg/...
+	go test -v -run Integration -tags integration ${PACKAGES}
 
 .PHONY: gen-mocks
 gen-mocks:

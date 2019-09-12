@@ -9,8 +9,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store/ssm"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +24,7 @@ type AddEnvOpts struct {
 	Production  bool `survey:"prod"`
 	Prompt      terminal.Stdio
 	manager     archer.EnvironmentCreator
+	deployer    archer.EnvironmentDeployer
 }
 
 // Ask asks for fields that are required but not passed in
@@ -59,13 +62,29 @@ func (opts *AddEnvOpts) Validate() error {
 
 // AddEnvironment does the heavy lifting of adding an environment
 func (opts *AddEnvOpts) AddEnvironment() error {
-	return opts.manager.CreateEnvironment(&archer.Environment{
+	env := archer.Environment{
 		Name:      opts.EnvName,
 		Project:   opts.ProjectName,
 		AccountID: "1234",
 		Region:    "1234",
 		Prod:      opts.Production,
-	})
+	}
+
+	if err := opts.deployer.DeployEnvironment(env, true); err != nil {
+		return err
+	}
+
+	// TODO: Add distracting spinny thing
+	err := opts.deployer.Wait(env)
+	if err != nil {
+		return err
+	}
+
+	if err := opts.manager.CreateEnvironment(&env); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // BuildEnvAddCmd builds the command for adding an environment
@@ -102,7 +121,24 @@ func BuildEnvAddCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			opts.manager, _ = ssm.NewStore()
+			// TODO: pass in configured session to ssm.NewStore?
+			s, err := ssm.NewStore()
+			if err != nil {
+				return err
+			}
+			opts.manager = s
+
+			// TODO: create this session elsewhere
+			sess, err := session.NewSessionWithOptions(session.Options{
+				SharedConfigState: session.SharedConfigEnable,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			opts.deployer = cloudformation.New(sess)
+
 			return opts.AddEnvironment()
 		},
 	}
