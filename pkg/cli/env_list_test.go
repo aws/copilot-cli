@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnvList_ListEnvs(t *testing.T) {
+func TestEnvList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	defer ctrl.Finish()
@@ -91,7 +91,7 @@ func TestEnvList_ListEnvs(t *testing.T) {
 			tc.mocking()
 
 			// Set up fake terminal
-			tc.listOpts.prompt = terminal.Stdio{
+			tc.listOpts.Prompt = terminal.Stdio{
 				In:  mockTerminal.Tty(),
 				Out: mockTerminal.Tty(),
 				Err: mockTerminal.Tty(),
@@ -102,7 +102,7 @@ func TestEnvList_ListEnvs(t *testing.T) {
 			go func() { done <- tc.output(mockTerminal) }()
 
 			// WHEN
-			tc.listOpts.Execute()
+			tc.listOpts.ListEnvironments()
 			require.True(t, <-done, "We should print to the terminal")
 
 			// Cleanup our terminals

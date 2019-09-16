@@ -113,7 +113,7 @@ func TestEnvAdd_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvAdd_AddEnv(t *testing.T) {
+func TestEnvAdd_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)

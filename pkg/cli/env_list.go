@@ -11,37 +11,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListEnvOpts contains the fields to collect for listing an environment.
+// ListEnvOpts contains the fields to collect for listing an environment
 type ListEnvOpts struct {
 	ProjectName string `survey:"project"`
-
-	prompt  terminal.Stdio
-	manager archer.EnvironmentLister
+	Prompt      terminal.Stdio
+	manager     archer.EnvironmentLister
 }
 
-// Execute lists the environments through the prompt.
-func (opts *ListEnvOpts) Execute() error {
+// ListEnvironments does the actual work of listing environments
+func (opts *ListEnvOpts) ListEnvironments() error {
 	envs, err := opts.manager.ListEnvironments(opts.ProjectName)
 	if err != nil {
-		fmt.Fprintf(opts.prompt.Err, "%v\n", err)
+		fmt.Fprintf(opts.Prompt.Err, "%v\n", err)
 		return err
 	}
 
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
 		if env.Prod {
-			fmt.Fprintf(opts.prompt.Out, "%s (prod)\n", prodColor(env.Name))
+			fmt.Fprintf(opts.Prompt.Out, "%s (prod)\n", prodColor(env.Name))
 		} else {
-			fmt.Fprintln(opts.prompt.Out, env.Name)
+			fmt.Fprintln(opts.Prompt.Out, env.Name)
 		}
 	}
+
 	return nil
 }
 
-// BuildEnvListCmd builds the command for listing environments in a project.
+// BuildEnvListCmd lists environments for a particular project
 func BuildEnvListCmd() *cobra.Command {
 	opts := ListEnvOpts{
-		prompt: terminal.Stdio{
+		Prompt: terminal.Stdio{
 			In:  os.Stdin,
 			Out: os.Stderr,
 			Err: os.Stderr,
@@ -49,7 +49,7 @@ func BuildEnvListCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the environments in a project",
+		Short: "Lists all the environments in a particular project",
 		Example: `
   Lists all the environments for the test project
   $ archer env ls --project test`,
@@ -59,7 +59,7 @@ func BuildEnvListCmd() *cobra.Command {
 				return err
 			}
 			opts.manager = ssmStore
-			return opts.Execute()
+			return opts.ListEnvironments()
 		},
 	}
 	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")
