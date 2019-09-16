@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProjectList_ListProjects(t *testing.T) {
+func TestProjectList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	defer ctrl.Finish()
@@ -69,7 +69,7 @@ func TestProjectList_ListProjects(t *testing.T) {
 			tc.mocking()
 
 			// Set up fake terminal
-			tc.listOpts.Prompt = terminal.Stdio{
+			tc.listOpts.prompt = terminal.Stdio{
 				In:  mockTerminal.Tty(),
 				Out: mockTerminal.Tty(),
 				Err: mockTerminal.Tty(),
@@ -77,10 +77,10 @@ func TestProjectList_ListProjects(t *testing.T) {
 
 			// WHEN
 			if tc.expectedErr != nil {
-				err := tc.listOpts.ListProjects()
+				err := tc.listOpts.Execute()
 				require.Equal(t, tc.expectedErr, err)
 			} else {
-				err := tc.listOpts.ListProjects()
+				err := tc.listOpts.Execute()
 				// Write inputs to the terminal
 				done := make(chan bool)
 				go func() { done <- tc.output(mockTerminal) }()

@@ -10,30 +10,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListProjectOpts contains the fields to collect for creating a project
+// ListProjectOpts contains the fields to collect for listing a project.
 type ListProjectOpts struct {
-	Prompt  terminal.Stdio
+	prompt  terminal.Stdio
 	manager archer.ProjectLister
 }
 
-// ListProjects calls the manager to create a project
-func (opts *ListProjectOpts) ListProjects() error {
+// Execute lists the existing projects to the prompt.
+func (opts *ListProjectOpts) Execute() error {
 	projects, err := opts.manager.ListProjects()
 	if err != nil {
 		return err
 	}
 
 	for _, proj := range projects {
-		fmt.Fprintln(opts.Prompt.Out, proj.Name)
+		fmt.Fprintln(opts.prompt.Out, proj.Name)
 	}
 
 	return nil
 }
 
-// BuildProjectListCommand creates a command which lists projects
+// BuildProjectListCommand builds the command to list existing projects.
 func BuildProjectListCommand() *cobra.Command {
 	opts := ListProjectOpts{
-		Prompt: terminal.Stdio{
+		prompt: terminal.Stdio{
 			In:  os.Stdin,
 			Out: os.Stderr,
 			Err: os.Stderr,
@@ -51,7 +51,7 @@ func BuildProjectListCommand() *cobra.Command {
 				return err
 			}
 			opts.manager = ssmStore
-			return opts.ListProjects()
+			return opts.Execute()
 		},
 	}
 	return cmd
