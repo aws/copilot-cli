@@ -61,8 +61,8 @@ func (opts *AddEnvOpts) Validate() error {
 	return nil
 }
 
-// AddEnvironment deploys a new environment with CloudFormation and adds it to SSM.
-func (opts *AddEnvOpts) AddEnvironment() error {
+// Execute deploys a new environment with CloudFormation and adds it to SSM.
+func (opts *AddEnvOpts) Execute() error {
 	env := archer.Environment{
 		Name:      opts.EnvName,
 		Project:   opts.ProjectName,
@@ -138,7 +138,7 @@ func BuildEnvAddCmd() *cobra.Command {
 
 			opts.deployer = cloudformation.New(sess)
 
-			return opts.AddEnvironment()
+			return opts.Execute()
 		},
 	}
 	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")

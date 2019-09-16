@@ -159,7 +159,7 @@ func TestEnvAdd_AddEnv(t *testing.T) {
 			// Setup mocks
 			tc.mocking()
 
-			tc.addEnvOpts.AddEnvironment()
+			tc.addEnvOpts.Execute()
 
 			require.Equal(t, tc.expectedEnv, *capturedArgument)
 		})

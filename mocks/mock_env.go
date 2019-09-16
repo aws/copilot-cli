@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	archer "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockEnvironmentStore is a mock of EnvironmentStore interface
@@ -33,19 +34,19 @@ func (m *MockEnvironmentStore) EXPECT() *MockEnvironmentStoreMockRecorder {
 	return m.recorder
 }
 
-// ListEnvironments mocks base method
+// Execute mocks base method
 func (m *MockEnvironmentStore) ListEnvironments(projectName string) ([]*archer.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEnvironments", projectName)
+	ret := m.ctrl.Call(m, "Execute", projectName)
 	ret0, _ := ret[0].([]*archer.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListEnvironments indicates an expected call of ListEnvironments
+// Execute indicates an expected call of Execute
 func (mr *MockEnvironmentStoreMockRecorder) ListEnvironments(projectName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockEnvironmentStore)(nil).ListEnvironments), projectName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockEnvironmentStore)(nil).ListEnvironments), projectName)
 }
 
 // GetEnvironment mocks base method
@@ -100,19 +101,19 @@ func (m *MockEnvironmentLister) EXPECT() *MockEnvironmentListerMockRecorder {
 	return m.recorder
 }
 
-// ListEnvironments mocks base method
+// Execute mocks base method
 func (m *MockEnvironmentLister) ListEnvironments(projectName string) ([]*archer.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEnvironments", projectName)
+	ret := m.ctrl.Call(m, "Execute", projectName)
 	ret0, _ := ret[0].([]*archer.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListEnvironments indicates an expected call of ListEnvironments
+// Execute indicates an expected call of Execute
 func (mr *MockEnvironmentListerMockRecorder) ListEnvironments(projectName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockEnvironmentLister)(nil).ListEnvironments), projectName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockEnvironmentLister)(nil).ListEnvironments), projectName)
 }
 
 // MockEnvironmentGetter is a mock of EnvironmentGetter interface
