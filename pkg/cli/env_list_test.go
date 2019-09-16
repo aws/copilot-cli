@@ -91,7 +91,7 @@ func TestEnvList_Execute(t *testing.T) {
 			tc.mocking()
 
 			// Set up fake terminal
-			tc.listOpts.Prompt = terminal.Stdio{
+			tc.listOpts.prompt = terminal.Stdio{
 				In:  mockTerminal.Tty(),
 				Out: mockTerminal.Tty(),
 				Err: mockTerminal.Tty(),
@@ -102,7 +102,7 @@ func TestEnvList_Execute(t *testing.T) {
 			go func() { done <- tc.output(mockTerminal) }()
 
 			// WHEN
-			tc.listOpts.ListEnvironments()
+			tc.listOpts.Execute()
 			require.True(t, <-done, "We should print to the terminal")
 
 			// Cleanup our terminals
