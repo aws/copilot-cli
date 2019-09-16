@@ -114,7 +114,7 @@ func TestInit_Ask(t *testing.T) {
 				Project: tc.inputProject,
 				Name:    tc.inputApp,
 				Type:    tc.inputType,
-				Prompt: terminal.Stdio{
+				prompt: terminal.Stdio{
 					In:  mockTerminal.Tty(),
 					Out: mockTerminal.Tty(),
 					Err: mockTerminal.Tty(),
@@ -365,7 +365,7 @@ func TestInit_DeployEnv(t *testing.T) {
 			app := &InitAppOpts{
 				Project:  tc.inputProject,
 				envStore: mockEnvStore,
-				Prompt: terminal.Stdio{
+				prompt: terminal.Stdio{
 					In:  mockTerminal.Tty(),
 					Out: mockTerminal.Tty(),
 					Err: mockTerminal.Tty(),

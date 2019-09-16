@@ -13,19 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// InitAppOpts represents an ECS Service or Task and any related AWS Infrastructure.
+// InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
 	Project string `survey:"project"` // namespace that this application belongs to.
 	Name    string `survey:"name"`    // unique identifier to logically group AWS resources together.
-	Type    string `survey:"Type"`    // The type of application you're trying to build (LoadBalanced, Backend, etc.)
+	Type    string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
+
+	existingProjects []string
 
 	projStore archer.ProjectStore
 	envStore  archer.EnvironmentStore
-
-	existingProjects []string // existing project names
-
-	// Prompt holds the interfaces to receive and output app configuration data to the terminal.
-	Prompt terminal.Stdio
+	prompt    terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
 }
 
 // Ask prompts the user for the value of any required fields that are not already provided.
@@ -47,7 +45,7 @@ func (opts *InitAppOpts) Ask() error {
 	if opts.Type == "" {
 		qs = append(qs, manifestQuestion(opts))
 	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.Prompt.In, opts.Prompt.Out, opts.Prompt.Err))
+	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
 func manifestQuestion(opts *InitAppOpts) *survey.Question {
@@ -109,10 +107,10 @@ func (opts *InitAppOpts) Prepare() {
 	opts.existingProjects = projectNames
 }
 
-// InitApp creates a project and initializes the workspace
+// InitApp creates a project and initializes the workspace.
 func (opts *InitAppOpts) InitApp() error {
 	shouldCreateNewProject := true
-	// If the project already exists, skip creating it
+	// If the project already exists, skip creating it.
 	for _, project := range opts.existingProjects {
 		if opts.Project == project {
 			shouldCreateNewProject = false
@@ -135,7 +133,7 @@ func (opts *InitAppOpts) InitApp() error {
 	return nil
 }
 
-// DeployEnv optionally deploys an environment
+// DeployEnv prompts the user to deploy a test environment if the project doesn't already have one.
 func (opts *InitAppOpts) DeployEnv() error {
 	existingEnvs, _ := opts.envStore.ListEnvironments(opts.Project)
 	if len(existingEnvs) > 0 {
@@ -147,7 +145,7 @@ func (opts *InitAppOpts) DeployEnv() error {
 		Help:    "You can deploy your app into your test environment.",
 	}
 
-	survey.AskOne(prompt, &deployEnv, survey.WithStdio(opts.Prompt.In, opts.Prompt.Out, opts.Prompt.Err))
+	survey.AskOne(prompt, &deployEnv, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 
 	if deployEnv {
 		//TODO deploy env
@@ -156,10 +154,10 @@ func (opts *InitAppOpts) DeployEnv() error {
 	return nil
 }
 
-// BuildInitCmd builds the command to build an application
+// BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
 	opts := InitAppOpts{
-		Prompt: terminal.Stdio{
+		prompt: terminal.Stdio{
 			In:  os.Stdin,
 			Out: os.Stderr,
 			Err: os.Stderr,
