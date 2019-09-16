@@ -108,8 +108,8 @@ func (opts *InitAppOpts) Prepare() {
 	opts.existingProjects = projectNames
 }
 
-// InitApp creates a project and initializes the workspace.
-func (opts *InitAppOpts) InitApp() error {
+// Execute creates a project and initializes the workspace.
+func (opts *InitAppOpts) Execute() error {
 	shouldCreateNewProject := true
 	// If the project already exists, skip creating it.
 	for _, project := range opts.existingProjects {
@@ -181,7 +181,7 @@ func BuildInitCmd() *cobra.Command {
 			return opts.Ask()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := opts.InitApp()
+			err := opts.Execute()
 			if err != nil {
 				return err
 			}

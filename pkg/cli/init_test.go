@@ -241,7 +241,7 @@ func TestInit_Validate(t *testing.T) {
 //TODO this test currently doesn't mock out the manifest writer.
 // Since that part will change soon, I don't have tests for the
 // manifest writer parts yet.
-func TestInit_InitApp(t *testing.T) {
+func TestInit_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	defer ctrl.Finish()
@@ -301,7 +301,7 @@ func TestInit_InitApp(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 			tc.inputOpts.projStore = mockProjectStore
-			err := tc.inputOpts.InitApp()
+			err := tc.inputOpts.Execute()
 			if tc.wantedErr == nil {
 				require.NoError(t, err, "There should be no error")
 			} else {
