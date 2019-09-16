@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProjectInit_Init(t *testing.T) {
+func TestProjectInit_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	var capturedArgument *archer.Project
@@ -45,7 +45,7 @@ func TestProjectInit_Init(t *testing.T) {
 			// Setup mocks
 			tc.mocking()
 
-			tc.initProjectOpts.CreateProject()
+			tc.initProjectOpts.Execute()
 
 			require.Equal(t, tc.expectedProject, *capturedArgument)
 		})

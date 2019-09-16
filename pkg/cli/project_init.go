@@ -9,25 +9,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// InitProjectOpts contains the fields to collect for creating a project
+// InitProjectOpts contains the fields to collect for creating a project.
 type InitProjectOpts struct {
 	ProjectName string `survey:"project"`
-	Prompt      terminal.Stdio
+	prompt      terminal.Stdio
 	manager     archer.ProjectCreator
 }
 
-// CreateProject calls the manager to create a project
-func (opts *InitProjectOpts) CreateProject() error {
+// Execute creates a new managed empty project.
+func (opts *InitProjectOpts) Execute() error {
 	return opts.manager.CreateProject(&archer.Project{
 		Name:    opts.ProjectName,
 		Version: "1.0",
 	})
 }
 
-// BuildProjectInitCommand creates a command which gets the fields for creating a project
+// BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
 	opts := InitProjectOpts{
-		Prompt: terminal.Stdio{
+		prompt: terminal.Stdio{
 			In:  os.Stdin,
 			Out: os.Stderr,
 			Err: os.Stderr,
@@ -48,7 +48,7 @@ func BuildProjectInitCommand() *cobra.Command {
 			}
 			opts.manager = ssmStore
 			opts.ProjectName = args[0]
-			return opts.CreateProject()
+			return opts.Execute()
 		},
 	}
 	return cmd
