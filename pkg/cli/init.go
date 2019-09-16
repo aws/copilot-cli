@@ -131,11 +131,11 @@ func (opts *InitAppOpts) Execute() error {
 		return err
 	}
 	m.Render(opts.Name, opts)
-	return nil
+	return opts.deployEnv()
 }
 
-// DeployEnv prompts the user to deploy a test environment if the project doesn't already have one.
-func (opts *InitAppOpts) DeployEnv() error {
+// deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
+func (opts *InitAppOpts) deployEnv() error {
 	existingEnvs, _ := opts.envStore.ListEnvironments(opts.Project)
 	if len(existingEnvs) > 0 {
 		return nil
@@ -181,11 +181,7 @@ func BuildInitCmd() *cobra.Command {
 			return opts.Ask()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := opts.Execute()
-			if err != nil {
-				return err
-			}
-			return opts.DeployEnv()
+			return opts.Execute()
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project (required).")

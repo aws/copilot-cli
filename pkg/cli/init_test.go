@@ -244,10 +244,12 @@ func TestInit_Validate(t *testing.T) {
 func TestInit_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
 		inputOpts InitAppOpts
+		input     func(c *expect.Console)
 		mocking   func()
 		wantedErr error
 	}{
@@ -258,12 +260,21 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Empty",
 				existingProjects: []string{"project1", "project2"},
 			},
+			input: func(c *expect.Console) {
+				c.ExpectEOF()
+			},
 			mocking: func() {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
 					Return(nil).
 					Times(0)
+				mockEnvStore.
+					EXPECT().
+					ListEnvironments(gomock.Eq("project1")).
+					Return([]*archer.Environment{
+						{Name: "test"},
+					}, nil)
 			},
 		},
 		"with a new project": {
@@ -273,11 +284,20 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Empty",
 				existingProjects: []string{"project1", "project2"},
 			},
+			input: func(c *expect.Console) {
+				c.ExpectString("Would you like to set up a test environment?")
+				c.SendLine("n")
+				c.ExpectEOF()
+			},
 			mocking: func() {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
 					Return(nil)
+				mockEnvStore.
+					EXPECT().
+					ListEnvironments(gomock.Eq("project3")).
+					Return([]*archer.Environment{}, nil)
 			},
 		},
 		"with an error creating a new project": {
@@ -287,72 +307,19 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Empty",
 				existingProjects: []string{"project1", "project2"},
 			},
+			input: func(c *expect.Console) {
+				c.ExpectEOF()
+			},
 			wantedErr: fmt.Errorf("error creating project"),
 			mocking: func() {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
 					Return(fmt.Errorf("error creating project"))
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			tc.mocking()
-			tc.inputOpts.projStore = mockProjectStore
-			err := tc.inputOpts.Execute()
-			if tc.wantedErr == nil {
-				require.NoError(t, err, "There should be no error")
-			} else {
-				require.Error(t, tc.wantedErr, err.Error())
-			}
-		})
-	}
-}
-
-func TestInit_DeployEnv(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
-	defer ctrl.Finish()
-
-	testCases := map[string]struct {
-		inputProject string
-		input        func(c *expect.Console)
-		mocking      func()
-		wantedErr    error
-	}{
-		"when there are no envs for a project": {
-			// When a project is first created, and there are
-			// no environments in it - we can offer to create
-			// an env for the user.
-			inputProject: "project",
-			input: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("n")
-				c.ExpectEOF()
-			},
-			mocking: func() {
 				mockEnvStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("project")).
-					Return([]*archer.Environment{}, nil)
-			},
-		},
-		"when there are existing envs for a project": {
-			// When a project already has environments, we don't
-			// prompt the user to create a "test" env
-			inputProject: "project",
-			input: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project")).
-					Return([]*archer.Environment{
-						&archer.Environment{Name: "test"},
-					}, nil)
+					ListEnvironments(gomock.Any()).
+					Times(0)
 			},
 		},
 	}
@@ -362,15 +329,6 @@ func TestInit_DeployEnv(t *testing.T) {
 			// GIVEN
 			mockTerminal, _, _ := vt10x.NewVT10XConsole()
 			defer mockTerminal.Close()
-			app := &InitAppOpts{
-				Project:  tc.inputProject,
-				envStore: mockEnvStore,
-				prompt: terminal.Stdio{
-					In:  mockTerminal.Tty(),
-					Out: mockTerminal.Tty(),
-					Err: mockTerminal.Tty(),
-				},
-			}
 			// Write inputs to the terminal
 			done := make(chan struct{})
 			go func() {
@@ -379,21 +337,26 @@ func TestInit_DeployEnv(t *testing.T) {
 			}()
 
 			tc.mocking()
+			tc.inputOpts.prompt = terminal.Stdio{
+				In:  mockTerminal.Tty(),
+				Out: mockTerminal.Tty(),
+				Err: mockTerminal.Tty(),
+			}
+			tc.inputOpts.projStore = mockProjectStore
+			tc.inputOpts.envStore = mockEnvStore
 
 			// WHEN
-			err := app.DeployEnv()
+			err := tc.inputOpts.Execute()
 
-			// Wait until the terminal receives the input
+			// THEN
 			mockTerminal.Tty().Close()
 			<-done
 
-			// THEN
 			if tc.wantedErr == nil {
-				require.NoError(t, err)
+				require.NoError(t, err, "There should be no error")
 			} else {
-				require.Error(t, tc.wantedErr, err)
+				require.Error(t, tc.wantedErr, err.Error())
 			}
-
 		})
 	}
 }
