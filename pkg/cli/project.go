@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildProjCmd builds the top level project command and related subcommands
+// BuildProjCmd builds the top level project command and related subcommands.
 func BuildProjCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
