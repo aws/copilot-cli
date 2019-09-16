@@ -64,7 +64,7 @@ func NewStore() (*SSM, error) {
 	}, nil
 }
 
-// CreateProject instanciates a new project, validates its uniqueness and stores it in SSM.
+// CreateProject instantiates a new project, validates its uniqueness and stores it in SSM.
 func (s *SSM) CreateProject(project *archer.Project) error {
 	projectPath := fmt.Sprintf(fmtProjectPath, project.Name)
 
