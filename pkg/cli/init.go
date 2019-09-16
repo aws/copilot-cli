@@ -15,6 +15,7 @@ import (
 
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
+	// User provided fields
 	Project string `survey:"project"` // namespace that this application belongs to.
 	Name    string `survey:"name"`    // unique identifier to logically group AWS resources together.
 	Type    string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
@@ -30,7 +31,7 @@ type InitAppOpts struct {
 func (opts *InitAppOpts) Ask() error {
 	var qs []*survey.Question
 	if opts.Project == "" {
-		qs = append(qs, projectQuestion(opts))
+		qs = append(qs, opts.projectQuestion())
 	}
 	if opts.Name == "" {
 		qs = append(qs, &survey.Question{
@@ -43,12 +44,12 @@ func (opts *InitAppOpts) Ask() error {
 		})
 	}
 	if opts.Type == "" {
-		qs = append(qs, manifestQuestion(opts))
+		qs = append(qs, opts.manifestQuestion())
 	}
 	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
-func manifestQuestion(opts *InitAppOpts) *survey.Question {
+func (opts *InitAppOpts) manifestQuestion() *survey.Question {
 	return &survey.Question{
 		Prompt: &survey.Select{
 			Message: "Which template would you like to use?",
@@ -60,7 +61,7 @@ func manifestQuestion(opts *InitAppOpts) *survey.Question {
 	}
 }
 
-func projectQuestion(opts *InitAppOpts) *survey.Question {
+func (opts *InitAppOpts) projectQuestion() *survey.Question {
 	if len(opts.existingProjects) > 0 {
 		return &survey.Question{
 			Name: "project",
