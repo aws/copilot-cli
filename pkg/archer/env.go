@@ -1,3 +1,7 @@
+// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package archer contains the structs that represent archer concepts, and the associated interfaces to manipulate them.
 package archer
 
 // Environment represents the configuration of a particular Environment in a Project. It includes
