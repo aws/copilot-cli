@@ -16,18 +16,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AddEnvOpts contains the fields to collect for adding an environment
+// AddEnvOpts contains the fields to collect for adding an environment.
 type AddEnvOpts struct {
 	ProjectName string `survey:"project"`
 	EnvName     string `survey:"env"`
 	EnvProfile  string
 	Production  bool `survey:"prod"`
-	Prompt      terminal.Stdio
-	manager     archer.EnvironmentCreator
-	deployer    archer.EnvironmentDeployer
+
+	prompt   terminal.Stdio
+	manager  archer.EnvironmentCreator
+	deployer archer.EnvironmentDeployer
 }
 
-// Ask asks for fields that are required but not passed in
+// Ask asks for fields that are required but not passed in.
 func (opts *AddEnvOpts) Ask() error {
 	var qs []*survey.Question
 	if opts.ProjectName == "" {
@@ -49,10 +50,10 @@ func (opts *AddEnvOpts) Ask() error {
 			Validate: survey.Required,
 		})
 	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.Prompt.In, opts.Prompt.Out, opts.Prompt.Err))
+	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
-// Validate validates the options
+// Validate returns an error if the required fields are invalid.
 func (opts *AddEnvOpts) Validate() error {
 	if opts.ProjectName == "" {
 		return fmt.Errorf("to add an environment either run the command in your workspace or provide a --project")
@@ -60,7 +61,7 @@ func (opts *AddEnvOpts) Validate() error {
 	return nil
 }
 
-// AddEnvironment does the heavy lifting of adding an environment
+// AddEnvironment deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *AddEnvOpts) AddEnvironment() error {
 	env := archer.Environment{
 		Name:      opts.EnvName,
@@ -83,16 +84,14 @@ func (opts *AddEnvOpts) AddEnvironment() error {
 	if err := opts.manager.CreateEnvironment(&env); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// BuildEnvAddCmd builds the command for adding an environment
+// BuildEnvAddCmd builds the command for adding an environment.
 func BuildEnvAddCmd() *cobra.Command {
-
 	opts := AddEnvOpts{
 		EnvProfile: "default",
-		Prompt: terminal.Stdio{
+		prompt: terminal.Stdio{
 			In:  os.Stdin,
 			Out: os.Stderr,
 			Err: os.Stderr,

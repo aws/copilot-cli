@@ -53,7 +53,7 @@ func TestEnvAdd_Ask(t *testing.T) {
 			addEnv := &AddEnvOpts{
 				EnvName:     tc.inputEnv,
 				ProjectName: tc.inputProject,
-				Prompt: terminal.Stdio{
+				prompt: terminal.Stdio{
 					In:  mockTerminal.Tty(),
 					Out: mockTerminal.Tty(),
 					Err: mockTerminal.Tty(),
