@@ -49,7 +49,7 @@ func (opts *InitAppOpts) Ask() error {
 	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
-func (opts *InitAppOpts) manifestQuestion() *survey.Question {
+func (opts InitAppOpts) manifestQuestion() *survey.Question {
 	return &survey.Question{
 		Prompt: &survey.Select{
 			Message: "Which template would you like to use?",
@@ -61,7 +61,7 @@ func (opts *InitAppOpts) manifestQuestion() *survey.Question {
 	}
 }
 
-func (opts *InitAppOpts) projectQuestion() *survey.Question {
+func (opts InitAppOpts) projectQuestion() *survey.Question {
 	if len(opts.existingProjects) > 0 {
 		return &survey.Question{
 			Name: "project",
