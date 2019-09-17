@@ -10,6 +10,7 @@ import (
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
+	cli_mocks "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/hinshun/vt10x"
 	"github.com/stretchr/testify/require"
@@ -120,6 +121,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
+	mockSpinner := cli_mocks.NewMockspinner(ctrl)
 	var capturedArgument *archer.Environment
 	defer ctrl.Finish()
 
@@ -135,6 +137,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 				ProjectName: "project",
 				EnvName:     "env",
 				Production:  true,
+				spinner:     mockSpinner,
 			},
 			expectedEnv: archer.Environment{
 				Name:    "env",
@@ -152,8 +155,10 @@ func TestEnvAdd_Execute(t *testing.T) {
 						capturedArgument = env
 					})
 				mockDeployer.EXPECT().DeployEnvironment(gomock.Any(), gomock.Any())
+				mockSpinner.EXPECT().Start(gomock.Eq("Deploying env..."))
 				// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
 				mockDeployer.EXPECT().Wait(gomock.Any())
+				mockSpinner.EXPECT().Stop(gomock.Eq("Done!"))
 			},
 		},
 	}
