@@ -19,5 +19,8 @@ integ-test:
 
 .PHONY: gen-mocks
 gen-mocks:
+	# TODO: make this more extensible?
 	mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
 	mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
+	mockgen -source=./pkg/spinner/spinner.go -package=mocks -destination=./pkg/spinner/mocks/mock_spinner.go
+	mockgen -source=./pkg/cli/spinner.go -package=mocks -destination=./pkg/cli/mocks/mock_spinner.go
