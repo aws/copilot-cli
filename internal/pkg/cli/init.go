@@ -58,8 +58,10 @@ func (opts InitAppOpts) manifestQuestion() *survey.Question {
 		Prompt: &survey.Select{
 			Message: "Which template would you like to use?",
 			Help:    "Pre-defined infrastructure templates.",
-			Options: manifest.TemplateNames,
-			Default: manifest.TemplateNames[0],
+			Options: []string{
+				manifest.LoadBalancedWebApplication,
+			},
+			Default: manifest.LoadBalancedWebApplication,
 		},
 		Name: "Type",
 	}
@@ -114,28 +116,25 @@ func (opts *InitAppOpts) Prepare() {
 
 // Execute creates a project and initializes the workspace.
 func (opts *InitAppOpts) Execute() error {
-	shouldCreateNewProject := true
-	// If the project already exists, skip creating it.
+	if err := opts.createProjectIfNotExists(); err != nil {
+		return err
+	}
+	return opts.deployEnv()
+}
+
+func (opts *InitAppOpts) createProjectIfNotExists() error {
 	for _, project := range opts.existingProjects {
 		if opts.Project == project {
-			shouldCreateNewProject = false
+			return nil
 		}
 	}
-	if shouldCreateNewProject {
-		err := opts.projStore.CreateProject(&archer.Project{
-			Name: opts.Project,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	m, err := manifest.New(opts.Type)
+	err := opts.projStore.CreateProject(&archer.Project{
+		Name: opts.Project,
+	})
 	if err != nil {
 		return err
 	}
-	m.Render(opts.Name, opts)
-	return opts.deployEnv()
+	return nil
 }
 
 // deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
@@ -177,7 +176,6 @@ func BuildInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			opts.projStore = ssm
 			opts.envStore = ssm
 

@@ -1,126 +1,60 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to render a manifest file and transform it to a CloudFormation template.
+// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
-	"html/template"
-	"io"
-	"os"
-	"path"
-	"strings"
-
-	"github.com/gobuffalo/packr/v2"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"gopkg.in/yaml.v2"
 )
 
-// TemplateNames is the list of valid infrastructure-as-code template names.
-var TemplateNames = []string{
-	"Load Balanced Web App",
-	"Empty",
+// Supported manifest types.
+const (
+	// LoadBalancedWebApplication is a web application with a load balancer and Fargate as compute.
+	LoadBalancedWebApplication = "Load Balanced Web App"
+)
+
+// AppManifest holds the basic data that every manifest file need to have.
+type AppManifest struct {
+	Name string `yaml:"name"`
+	Type string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// ErrInvalidApp occurs if the application to render does not exist.
-var ErrInvalidApp = errors.New("app cannot be nil")
-
-// ErrInvalidTemplate occurs when a user requested a manifest template name that doesn't exist.
-type ErrInvalidTemplate struct {
-	tpl string
+// AppStage represents configuration for each deployment stage of an application.
+type AppStage struct {
+	EnvName      string `yaml:"env"`
+	DesiredCount int    `yaml:"desiredCount"`
 }
 
-func (e *ErrInvalidTemplate) Error() string {
-	return fmt.Sprintf("invalid manifest template: %s, must be one of: %s",
-		e.tpl,
-		strings.Join(TemplateNames, ", "))
+// Create returns a manifest object based on the application's type.
+// If the application type is invalid, then returns an ErrInvalidManifestType.
+func Create(appName, appType string) (archer.Manifest, error) {
+	switch appType {
+	case LoadBalancedWebApplication:
+		return NewLoadBalancedFargateManifest(appName), nil
+	default:
+		return nil, &ErrInvalidManifestType{Type: appType}
+	}
 }
 
-// Manifest is a infrastructure-as-code template to represent applications.
-type Manifest struct {
-	tpl string // name of the template, must be one of TemplateNames.
+// Unmarshal deserializes the YAML input stream into a manifest object.
+// If an error occurs during deserialization, then returns the error.
+// If the application type in the manifest is invalid, then returns an ErrInvalidManifestType.
+func Unmarshal(in []byte) (archer.Manifest, error) {
+	am := AppManifest{}
+	if err := yaml.Unmarshal(in, &am); err != nil {
+		return nil, err
+	}
 
-	wc io.WriteCloser // interface to write the Manifest file.
-}
-
-// New creates a new Manifest given a template name.
-//
-// If the template name doesn't exist, it returns an ErrInvalidTemplate.
-func New(tpl string) (*Manifest, error) {
-	for _, name := range TemplateNames {
-		if tpl == name {
-			return &Manifest{
-				tpl: tpl,
-			}, nil
+	switch am.Type {
+	case LoadBalancedWebApplication:
+		m := LoadBalancedFargateManifest{}
+		if err := yaml.Unmarshal(in, &m); err != nil {
+			return nil, err
 		}
+		return &m, nil
+	default:
+		return nil, &ErrInvalidManifestType{Type: am.Type}
 	}
-
-	return nil, &ErrInvalidTemplate{tpl: tpl}
-}
-
-// Render evaluates the manifest's template with the data and then writes it to a file under ./ecs/{filePrefix}-app.yaml.
-func (m *Manifest) Render(filePrefix string, data interface{}) error {
-	if err := m.setWriter(filePrefix); err != nil {
-		return err
-	}
-
-	defer m.wc.Close()
-	box := packr.New("templates", "./template")
-	manifest, err := box.FindString("manifest/" + m.templateFile())
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New(m.tpl).Parse(manifest)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, data); err != nil {
-		return err
-	}
-	if _, err := m.wc.Write(buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
-}
-
-// CFNTemplate returns the CloudFormation template from the manifest file.
-func (m *Manifest) CFNTemplate() string {
-	return ""
-}
-
-func (m *Manifest) setWriter(name string) error {
-	if m.wc != nil {
-		return nil
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	projectDir := path.Join(wd, "ecs")
-	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
-		return err
-	}
-	f, err := os.Create(path.Join(projectDir, fmt.Sprintf("%s-app.yaml", name)))
-	if err != nil {
-		return err
-	}
-	m.wc = f
-	return nil
-}
-
-// templateFile returns the name of the file matching the template, if the name is not found returns an empty string.
-func (m *Manifest) templateFile() string {
-	templateFileNames := []string{
-		"load-balanced-fargate-service.yml",
-		"empty.yml",
-	}
-	for i, name := range TemplateNames {
-		if m.tpl == name {
-			return templateFileNames[i]
-		}
-	}
-	return ""
 }
