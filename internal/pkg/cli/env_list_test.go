@@ -9,8 +9,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
 	"github.com/golang/mock/gomock"
 	"github.com/hinshun/vt10x"
 	"github.com/stretchr/testify/require"

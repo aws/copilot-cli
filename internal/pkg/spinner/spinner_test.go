@@ -6,7 +6,7 @@ package spinner
 import (
 	"testing"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/spinner/mocks"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner/mocks"
 	"github.com/golang/mock/gomock"
 )
 

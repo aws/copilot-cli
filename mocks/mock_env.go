@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	archer "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	archer "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockEnvironmentStore is a mock of EnvironmentStore interface

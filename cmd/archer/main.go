@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/cli"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli"
 	"github.com/spf13/cobra"
 )
 

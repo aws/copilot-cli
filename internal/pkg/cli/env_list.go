@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )

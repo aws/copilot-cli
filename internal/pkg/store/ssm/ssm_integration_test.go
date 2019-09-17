@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/stretchr/testify/require"
 )
 

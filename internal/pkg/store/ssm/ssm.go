@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
