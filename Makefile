@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 PACKAGES=./pkg... ./internal...
+GOBIN=${PWD}/bin/tools
 
 all: build
 
@@ -17,7 +18,11 @@ test:
 integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
+.PHONY: tools
+tools:
+	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
+
 .PHONY: gen-mocks
-gen-mocks:
-	mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
-	mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
+gen-mocks: tools
+	${GOBIN}/mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
+	${GOBIN}/mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
