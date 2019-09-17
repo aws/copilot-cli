@@ -1,3 +1,5 @@
+// +build !windows
+
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -67,7 +69,10 @@ func TestProjectList_Execute(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			mockTerminal, _, _ := vt10x.NewVT10XConsole()
+			mockTerminal, _, err := vt10x.NewVT10XConsole()
+			require.NoError(t, err)
+			defer mockTerminal.Close()
+
 			// Prepare mocks
 			tc.mocking()
 
