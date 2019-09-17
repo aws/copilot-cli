@@ -14,6 +14,8 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
+	github.com/pkg/errors v0.8.1 // indirect
+	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966
