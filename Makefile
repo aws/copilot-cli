@@ -26,8 +26,13 @@ e2e-test:
 
 .PHONY: e2e-test-update-golden-files
 e2e-test-update-golden-files:
-	# use this target to update all the golden files (i.e expected responses)
-	# then run `make e2e-test` afterward
+	# CAUTION: only use this target when the archer CLI output changes
+	# (for example, a new command is added) and the golden files
+	# (i.e. the expected responses from CLI) need to be updated.
+	# The normal flow is the following:
+	#
+	# make e2e-test-update-golden-files // this is expected to fail but will update the golden files
+	# make e2e-test // this should pass because the golden files were updated
 	go test -v -p 1 -parallel 1 -tags=e2e ./e2e... --update
 
 .PHONY: tools
