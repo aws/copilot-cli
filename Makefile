@@ -18,6 +18,23 @@ test:
 integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
+.PHONY: e2e-test
+e2e-test:
+	# -p: The number of test binaries that can be run in parallel
+	# -parallel: Within a single test binary, how many test functions can run in parallel
+	go test -v -p 1 -parallel 1 -tags=e2e ./e2e...
+
+.PHONY: e2e-test-update-golden-files
+e2e-test-update-golden-files:
+	# CAUTION: only use this target when the archer CLI output changes
+	# (for example, a new command is added) and the golden files
+	# (i.e. the expected responses from CLI) need to be updated.
+	# The normal flow is the following:
+	#
+	# make e2e-test-update-golden-files // this is expected to fail but will update the golden files
+	# make e2e-test // this should pass because the golden files were updated
+	go test -v -p 1 -parallel 1 -tags=e2e ./e2e... --update
+
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
