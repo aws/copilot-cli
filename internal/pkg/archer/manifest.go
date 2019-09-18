@@ -5,16 +5,16 @@ package archer
 
 // Manifest is the API for a manifest object.
 type Manifest interface {
-	ManifestMarshaller
-	ManifestCFNTemplater
+	Marshaller
+	CFNTemplater
 }
 
-// ManifestMarshaller is the interface to serialize a manifest object into a YAML document.
-type ManifestMarshaller interface {
+// Marshaller is the interface to serialize an object into a YAML document.
+type Marshaller interface {
 	Marshal() ([]byte, error)
 }
 
-// ManifestCFNTemplater is the interface to serialize a manifest object into a CloudFormation template.
-type ManifestCFNTemplater interface {
+// CFNTemplater is the interface to serialize an object into a CloudFormation template.
+type CFNTemplater interface {
 	CFNTemplate() (string, error)
 }
