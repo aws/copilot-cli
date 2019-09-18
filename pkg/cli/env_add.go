@@ -11,6 +11,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
+	spin "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store/ssm"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ type AddEnvOpts struct {
 	prompt   terminal.Stdio
 	manager  archer.EnvironmentCreator
 	deployer archer.EnvironmentDeployer
+	spinner  spinner
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -75,11 +77,14 @@ func (opts *AddEnvOpts) Execute() error {
 		return err
 	}
 
-	// TODO: Add distracting spinny thing
+	opts.spinner.Start("Deploying env...")
+
 	err := opts.deployer.Wait(env)
 	if err != nil {
 		return err
 	}
+
+	opts.spinner.Stop("Done!")
 
 	if err := opts.manager.CreateEnvironment(&env); err != nil {
 		return err
@@ -96,6 +101,7 @@ func BuildEnvAddCmd() *cobra.Command {
 			Out: os.Stderr,
 			Err: os.Stderr,
 		},
+		spinner: spin.New(),
 	}
 
 	cmd := &cobra.Command{

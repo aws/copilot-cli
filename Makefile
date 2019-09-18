@@ -24,5 +24,8 @@ tools:
 
 .PHONY: gen-mocks
 gen-mocks: tools
+	# TODO: make this more extensible?
 	${GOBIN}/mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
 	${GOBIN}/mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
+	${GOBIN}/mockgen -source=./pkg/spinner/spinner.go -package=mocks -destination=./pkg/spinner/mocks/mock_spinner.go
+	${GOBIN}/mockgen -source=./pkg/cli/spinner.go -package=mocks -destination=./pkg/cli/mocks/mock_spinner.go
