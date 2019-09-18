@@ -3,6 +3,7 @@
 package cli_test
 
 import (
+	"flag"
 	"math/rand"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ func TestHelpMessages(t *testing.T) {
 }
 
 var cliPath string
+var update = flag.Bool("update", false, "update .golden files")
 
 var _ = BeforeSuite(func() {
 	// ensure the e2e tests are performed on the latest code changes by

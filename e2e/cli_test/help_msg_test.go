@@ -3,7 +3,9 @@
 package cli_test
 
 import (
+	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,12 +20,24 @@ var _ = Describe("archer help messages", func() {
 	})
 
 	Context("top-level help message", func() {
-		const expectedToplevelHelpMsg = "Launch and manage applications on Amazon ECS and AWS Fargate 🚀"
-		var actualHelpMsg []byte
+		var (
+			expectedHelpMsgFile     = filepath.Join("testdata", "top-level-help-msg.golden")
+			expectedToplevelHelpMsg []byte
+			actualHelpMsg           []byte
+		)
+
+		BeforeEach(func() {
+			var err error
+			expectedToplevelHelpMsg, err = ioutil.ReadFile(expectedHelpMsgFile)
+			Expect(err).To(BeNil())
+		})
 
 		AfterEach(func() {
-			Expect(string(actualHelpMsg)).
-				To(ContainSubstring(expectedToplevelHelpMsg))
+			if *update {
+				ioutil.WriteFile(expectedHelpMsgFile, actualHelpMsg, 0644)
+			}
+
+			Expect(string(actualHelpMsg)).To(Equal(string(expectedToplevelHelpMsg)))
 		})
 
 		It("should print top-level help message when run with no argument", func() {

@@ -24,6 +24,12 @@ e2e-test:
 	# -parallel: Within a single test binary, how many test functions can run in parallel
 	go test -v -p 1 -parallel 1 -tags=e2e ./e2e...
 
+.PHONY: e2e-test-update-golden-files
+e2e-test-update-golden-files:
+	# use this target to update all the golden files (i.e expected responses)
+	# then run `make e2e-test` afterward
+	go test -v -p 1 -parallel 1 -tags=e2e ./e2e... --update
+
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen

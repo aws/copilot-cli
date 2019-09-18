@@ -1,0 +1,17 @@
+Launch and manage applications on Amazon ECS and AWS Fargate 🚀
+
+Commands
+  Getting Started ✨
+    init        Create a new ECS application 
+
+  Develop 🔧
+    env         Environment commands 
+
+    project     Project commands 
+
+Flags
+  -h, --help   help for archer
+
+Examples
+  Display the help menu for the init command
+  $ archer init --help
