@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -84,7 +84,7 @@ func TestStore_ListProjects(t *testing.T) {
 			// GIVEN
 			store := &SSM{
 				systemManager: &mockSSM{
-					t:                       t,
+					t: t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
 			}
@@ -195,7 +195,7 @@ func TestStore_GetProject(t *testing.T) {
 					mockGetParameter: tc.mockGetParameter,
 				},
 				tokenService: &mockSTS{
-					t:                     t,
+					t: t,
 					mockGetCallerIdentity: tc.mockGetCallerIdentity,
 				},
 				sessionRegion: "us-west-2",
@@ -342,7 +342,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 			// GIVEN
 			store := &SSM{
 				systemManager: &mockSSM{
-					t:                       t,
+					t: t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
 			}

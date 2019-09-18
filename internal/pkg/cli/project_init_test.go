@@ -6,8 +6,8 @@ package cli
 import (
 	"testing"
 
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

@@ -9,10 +9,10 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
-	spin "github.com/aws/PRIVATE-amazon-ecs-archer/pkg/spinner"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/store/ssm"
+	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
