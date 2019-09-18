@@ -18,6 +18,12 @@ test:
 integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
+.PHONY: e2e-test
+e2e-test:
+	# -p: The number of test binaries that can be run in parallel
+	# -parallel: Within a single test binary, how many test functions can run in parallel
+	go test -v -p 1 -parallel 1 -tags=e2e ./e2e...
+
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
