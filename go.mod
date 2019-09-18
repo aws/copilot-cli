@@ -14,5 +14,5 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.4.0
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966
 )

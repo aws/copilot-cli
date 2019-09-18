@@ -6,7 +6,7 @@ package manifest
 
 import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Supported manifest types.
