@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 PACKAGES=./internal...
+GOBIN=${PWD}/bin/tools
 
 all: build
 
@@ -17,10 +18,14 @@ test:
 integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
+.PHONY: tools
+tools:
+	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
+
 .PHONY: gen-mocks
-gen-mocks:
+gen-mocks: tools
 	# TODO: make this more extensible?
-	mockgen -source=./pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
-	mockgen -source=./pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
-	mockgen -source=./pkg/spinner/spinner.go -package=mocks -destination=./pkg/spinner/mocks/mock_spinner.go
-	mockgen -source=./pkg/cli/spinner.go -package=mocks -destination=./pkg/cli/mocks/mock_spinner.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
+	${GOBIN}/mockgen -source=./internal/pkg/spinner/spinner.go -package=mocks -destination=.internal/pkg/spinner/mocks/mock_spinner.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/spinner.go -package=mocks -destination=.internal/pkg/cli/mocks/mock_spinner.go
