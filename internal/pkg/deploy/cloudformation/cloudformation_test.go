@@ -42,7 +42,7 @@ func TestDeployEnvironment(t *testing.T) {
 		env  archer.Environment
 		want error
 	}{
-		"template file does not exist": {
+		"should return error given file not found": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -51,7 +51,7 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 			want: fmt.Errorf("file does not exist"),
 		},
-		"ErrCodeAlreadyExistsException in CreateStack call": {
+		"should return nil given ErrCodeAlreadyExistsException in CreateStack call": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -63,7 +63,7 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 			want: nil,
 		},
-		"unhandled error in CreatStack call": {
+		"should echo error returned from CreatStack call": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -75,7 +75,7 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 			want: fmt.Errorf("some AWS error"),
 		},
-		"happy path": {
+		"should deploy an environment": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -89,8 +89,9 @@ func TestDeployEnvironment(t *testing.T) {
 				box: boxWithTemplateFile(),
 			},
 			env: archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
+				Project:            mockProjectName,
+				Name:               mockEnvironmentName,
+				PublicLoadBalancer: false,
 			},
 			want: nil,
 		},
@@ -98,7 +99,7 @@ func TestDeployEnvironment(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.DeployEnvironment(tc.env, false)
+			got := tc.cf.DeployEnvironment(tc.env)
 
 			require.Equal(t, tc.want, got)
 		})

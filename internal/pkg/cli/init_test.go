@@ -355,9 +355,10 @@ func TestInit_Execute(t *testing.T) {
 				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
 				mockDeployer.EXPECT().
 					DeployEnvironment(gomock.Eq(archer.Environment{
-						Project: "project3",
-						Name:    defaultEnvironmentName,
-					}), gomock.Eq(true)).
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
+					})).
 					Return(mockError).
 					Times(1)
 				mockSpinner.EXPECT().Stop("Error!").Times(1)
@@ -390,15 +391,17 @@ func TestInit_Execute(t *testing.T) {
 				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
 				mockDeployer.EXPECT().
 					DeployEnvironment(gomock.Eq(archer.Environment{
-						Project: "project3",
-						Name:    defaultEnvironmentName,
-					}), gomock.Eq(true)).
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
+					})).
 					Return(nil).
 					Times(1)
 				mockDeployer.EXPECT().
 					Wait(gomock.Eq(archer.Environment{
-						Project: "project3",
-						Name:    defaultEnvironmentName,
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
 					})).
 					Return(mockError).
 					Times(1)
@@ -432,15 +435,17 @@ func TestInit_Execute(t *testing.T) {
 				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
 				mockDeployer.EXPECT().
 					DeployEnvironment(gomock.Eq(archer.Environment{
-						Project: "project3",
-						Name:    defaultEnvironmentName,
-					}), gomock.Eq(true)).
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
+					})).
 					Return(nil).
 					Times(1)
 				mockDeployer.EXPECT().
 					Wait(gomock.Eq(archer.Environment{
-						Project: "project3",
-						Name:    defaultEnvironmentName,
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
 					})).
 					Return(nil).
 					Times(1)

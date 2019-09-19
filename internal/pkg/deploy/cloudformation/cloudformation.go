@@ -39,9 +39,7 @@ func New(sess *session.Session) CloudFormation {
 }
 
 // DeployEnvironment creates an environment CloudFormation stack
-func (cf CloudFormation) DeployEnvironment(env archer.Environment, includeLoadBalancer bool) error {
-	// TODO: move load balancer method flag into the Environment structure
-	// https://github.com/aws/PRIVATE-amazon-ecs-archer/issues/57
+func (cf CloudFormation) DeployEnvironment(env archer.Environment) error {
 	template, err := cf.box.FindString(environmentTemplate)
 
 	if err != nil {
@@ -56,7 +54,7 @@ func (cf CloudFormation) DeployEnvironment(env archer.Environment, includeLoadBa
 		Parameters: []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(includeLoadBalancerParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(includeLoadBalancer)),
+				ParameterValue: aws.String(strconv.FormatBool(env.PublicLoadBalancer)),
 			},
 		},
 	}
