@@ -13,6 +13,7 @@ build:
 .PHONY: test
 test:
 	go test -v -race -cover -count=1 ${PACKAGES}
+	go test -v -p 1 --parallel 1 -tags=isolated ./e2e...
 
 .PHONY: integ-test
 integ-test:
@@ -32,7 +33,7 @@ e2e-test-update-golden-files:
 	# The normal flow is the following:
 	#
 	# make e2e-test-update-golden-files // this is expected to fail but will update the golden files
-	# make e2e-test // this should pass because the golden files were updated
+	# make e2e-test or make test // this should pass because the golden files were updated
 	go test -v -p 1 -parallel 1 -tags=e2e ./e2e... --update
 
 .PHONY: tools

@@ -1,5 +1,11 @@
-// +build e2e
+// +build e2e isolated
 
+// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// This suite of e2e tests do not require additional intrastructure setup
+// nor do they interact with AWS services so it's ok to run them as part of
+// the normal test target.
 package cli_test
 
 import (
