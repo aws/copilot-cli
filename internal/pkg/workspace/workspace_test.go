@@ -1,10 +1,13 @@
+// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package workspace
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
