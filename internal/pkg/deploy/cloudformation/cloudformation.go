@@ -40,6 +40,8 @@ func New(sess *session.Session) CloudFormation {
 
 // DeployEnvironment creates an environment CloudFormation stack
 func (cf CloudFormation) DeployEnvironment(env archer.Environment, includeLoadBalancer bool) error {
+	// TODO: move load balancer method flag into the Environment structure
+	// https://github.com/aws/PRIVATE-amazon-ecs-archer/issues/57
 	template, err := cf.box.FindString(environmentTemplate)
 
 	if err != nil {
