@@ -8,16 +8,16 @@ type WorkspaceSummary struct {
 	ProjectName string `yaml:"project"`
 }
 
-// WorkspaceManager can bootstrap a workspace with a manifest directory and workspace summary
+// Workspace can bootstrap a workspace with a manifest directory and workspace summary
 // and it can manage manifest files.
-type WorkspaceManager interface {
-	ManifestManager
+type Workspace interface {
+	ManifestIO
 	Create(projectName string) error
 	Summary() (*WorkspaceSummary, error)
 }
 
-// ManifestManager can read, write and list local manifest files.
-type ManifestManager interface {
+// ManifestIO can read, write and list local manifest files.
+type ManifestIO interface {
 	WriteManifest(manifestBlob []byte, applicationName string) error
 	ReadManifestFile(manifestFileName string) ([]byte, error)
 	ListManifestFiles() ([]string, error)
