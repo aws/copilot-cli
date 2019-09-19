@@ -12,10 +12,15 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
+	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
+
+const defaultEnvironmentName = "test"
 
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
@@ -28,7 +33,11 @@ type InitAppOpts struct {
 
 	projStore archer.ProjectStore
 	envStore  archer.EnvironmentStore
-	prompt    terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
+	deployer  archer.EnvironmentDeployer
+
+	spinner spinner
+
+	prompt terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
 }
 
 // Ask prompts the user for the value of any required fields that are not already provided.
@@ -153,8 +162,28 @@ func (opts *InitAppOpts) deployEnv() error {
 	survey.AskOne(prompt, &deployEnv, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 
 	if deployEnv {
-		//TODO deploy env
-		fmt.Println("Deploying env...")
+		opts.spinner.Start("Deploying env...")
+
+		// TODO: prompt the user for an environment name with default value "test"
+		// https://github.com/aws/PRIVATE-amazon-ecs-archer/issues/56
+		env := archer.Environment{
+			Project: opts.Project,
+			Name:    defaultEnvironmentName,
+		}
+
+		if err := opts.deployer.DeployEnvironment(env, true); err != nil {
+			opts.spinner.Stop("Error!")
+
+			return err
+		}
+
+		if err := opts.deployer.Wait(env); err != nil {
+			opts.spinner.Stop("Error!")
+
+			return err
+		}
+
+		opts.spinner.Stop("Done!")
 	}
 	return nil
 }
@@ -180,6 +209,18 @@ func BuildInitCmd() *cobra.Command {
 
 			opts.projStore = ssm
 			opts.envStore = ssm
+
+			sess, err := session.NewSessionWithOptions(session.Options{
+				SharedConfigState: session.SharedConfigEnable,
+			})
+
+			if err != nil {
+				return err
+			}
+
+			opts.deployer = cloudformation.New(sess)
+
+			opts.spinner = spin.New()
 
 			opts.Prepare()
 			return opts.Ask()
