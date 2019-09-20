@@ -5,6 +5,7 @@ package workspace
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
@@ -191,6 +192,8 @@ func TestWriteManifest(t *testing.T) {
 }
 
 func TestManifestDirectoryPath(t *testing.T) {
+	var platformDependentExpectedManifestDir = filepath.FromSlash("test/ecs")
+
 	testCases := map[string]struct {
 		expectedManifestDir string
 		presetManifestDir   string
@@ -199,7 +202,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		mockFileSystem      func(appFS afero.Fs)
 	}{
 		"same directory level": {
-			expectedManifestDir: "test/ecs",
+			expectedManifestDir: platformDependentExpectedManifestDir,
 			workingDir:          "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -207,7 +210,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"same directory": {
-			expectedManifestDir: "test/ecs",
+			expectedManifestDir: platformDependentExpectedManifestDir,
 			workingDir:          "test/ecs",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -215,7 +218,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"several levels deep": {
-			expectedManifestDir: "test/ecs",
+			expectedManifestDir: platformDependentExpectedManifestDir,
 			workingDir:          "test/1/2/3/4",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -241,7 +244,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"uses precomputed manifest path": {
-			expectedManifestDir: "test/ecs",
+			expectedManifestDir: platformDependentExpectedManifestDir,
 			workingDir:          "/",
 			mockFileSystem:      func(appFS afero.Fs) {},
 			presetManifestDir:   "test/ecs",
