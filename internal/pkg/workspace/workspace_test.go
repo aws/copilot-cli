@@ -5,6 +5,7 @@ package workspace
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
@@ -191,6 +192,9 @@ func TestWriteManifest(t *testing.T) {
 }
 
 func TestManifestDirectoryPath(t *testing.T) {
+	// turn "test/ecs" into a platform-dependent path
+	var manifestDir = filepath.FromSlash("test/ecs")
+
 	testCases := map[string]struct {
 		expectedManifestDir string
 		presetManifestDir   string
@@ -199,24 +203,24 @@ func TestManifestDirectoryPath(t *testing.T) {
 		mockFileSystem      func(appFS afero.Fs)
 	}{
 		"same directory level": {
-			expectedManifestDir: "test/ecs",
-			workingDir:          "test/",
+			expectedManifestDir: manifestDir,
+			workingDir:          filepath.FromSlash("test/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
 		},
 
 		"same directory": {
-			expectedManifestDir: "test/ecs",
-			workingDir:          "test/ecs",
+			expectedManifestDir: manifestDir,
+			workingDir:          filepath.FromSlash("test/ecs"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
 		},
 
 		"several levels deep": {
-			expectedManifestDir: "test/ecs",
-			workingDir:          "test/1/2/3/4",
+			expectedManifestDir: manifestDir,
+			workingDir:          filepath.FromSlash("test/1/2/3/4"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 				appFS.MkdirAll("test/1/2/3/4", 0755)
@@ -224,8 +228,8 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"too many levels deep": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from test/1/2/3/4/5"),
-			workingDir:    "test/1/2/3/4/5",
+			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("test/1/2/3/4/5")),
+			workingDir:    filepath.FromSlash("test/1/2/3/4/5"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 				appFS.MkdirAll("test/1/2/3/4/5", 0755)
@@ -233,18 +237,18 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"out of a workspace": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from /"),
-			workingDir:    "/",
+			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("/")),
+			workingDir:    filepath.FromSlash("/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
 		},
 
 		"uses precomputed manifest path": {
-			expectedManifestDir: "test/ecs",
-			workingDir:          "/",
+			expectedManifestDir: manifestDir,
+			workingDir:          filepath.FromSlash("/"),
 			mockFileSystem:      func(appFS afero.Fs) {},
-			presetManifestDir:   "test/ecs",
+			presetManifestDir:   filepath.FromSlash("test/ecs"),
 		},
 	}
 	for name, tc := range testCases {
