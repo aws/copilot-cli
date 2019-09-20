@@ -48,6 +48,21 @@ func (mr *MockProjectStoreMockRecorder) ListProjects() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjects", reflect.TypeOf((*MockProjectStore)(nil).ListProjects))
 }
 
+// GetProject mocks base method
+func (m *MockProjectStore) GetProject(projectName string) (*archer.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProject", projectName)
+	ret0, _ := ret[0].(*archer.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProject indicates an expected call of GetProject
+func (mr *MockProjectStoreMockRecorder) GetProject(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockProjectStore)(nil).GetProject), projectName)
+}
+
 // CreateProject mocks base method
 func (m *MockProjectStore) CreateProject(project *archer.Project) error {
 	m.ctrl.T.Helper()
@@ -135,4 +150,42 @@ func (m *MockProjectCreator) CreateProject(project *archer.Project) error {
 func (mr *MockProjectCreatorMockRecorder) CreateProject(project interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProject", reflect.TypeOf((*MockProjectCreator)(nil).CreateProject), project)
+}
+
+// MockProjectGetter is a mock of ProjectGetter interface
+type MockProjectGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockProjectGetterMockRecorder
+}
+
+// MockProjectGetterMockRecorder is the mock recorder for MockProjectGetter
+type MockProjectGetterMockRecorder struct {
+	mock *MockProjectGetter
+}
+
+// NewMockProjectGetter creates a new mock instance
+func NewMockProjectGetter(ctrl *gomock.Controller) *MockProjectGetter {
+	mock := &MockProjectGetter{ctrl: ctrl}
+	mock.recorder = &MockProjectGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockProjectGetter) EXPECT() *MockProjectGetterMockRecorder {
+	return m.recorder
+}
+
+// GetProject mocks base method
+func (m *MockProjectGetter) GetProject(projectName string) (*archer.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProject", projectName)
+	ret0, _ := ret[0].(*archer.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProject indicates an expected call of GetProject
+func (mr *MockProjectGetterMockRecorder) GetProject(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockProjectGetter)(nil).GetProject), projectName)
 }

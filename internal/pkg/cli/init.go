@@ -5,6 +5,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -15,7 +16,9 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
@@ -34,8 +37,8 @@ type InitAppOpts struct {
 	projStore archer.ProjectStore
 	envStore  archer.EnvironmentStore
 	deployer  archer.EnvironmentDeployer
-
-	spinner spinner
+	ws        archer.Workspace
+	spinner   spinner
 
 	prompt terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
 }
@@ -114,7 +117,17 @@ func (opts *InitAppOpts) Validate() error {
 
 // Prepare loads contextual data such as any existing projects, the current workspace, etc
 func (opts *InitAppOpts) Prepare() {
-	// Load existing projects (this is a UI convenience, so we'll ignore errors)
+	// If there's a local project, we'll use that and just skip the project question.
+	// Otherwise, we'll load a list of existing projects that the customer can select from.
+	if opts.Project != "" {
+		return
+	}
+	if summary, err := opts.ws.Summary(); err == nil {
+		// use the project name from the workspace
+		opts.Project = summary.ProjectName
+		return
+	}
+	// load all existing project names
 	existingProjects, _ := opts.projStore.ListProjects()
 	var projectNames []string
 	for _, p := range existingProjects {
@@ -128,19 +141,22 @@ func (opts *InitAppOpts) Execute() error {
 	if err := opts.createProjectIfNotExists(); err != nil {
 		return err
 	}
+
+	if err := opts.ws.Create(opts.Project); err != nil {
+		return err
+	}
+
 	return opts.deployEnv()
 }
 
 func (opts *InitAppOpts) createProjectIfNotExists() error {
-	for _, project := range opts.existingProjects {
-		if opts.Project == project {
-			return nil
-		}
-	}
 	err := opts.projStore.CreateProject(&archer.Project{
 		Name: opts.Project,
 	})
-	if err != nil {
+	// If the project already exists, that's ok - otherwise
+	// return the error.
+	var projectAlreadyExistsError *store.ErrProjectAlreadyExists
+	if !errors.As(err, &projectAlreadyExistsError) {
 		return err
 	}
 	return nil
@@ -201,6 +217,12 @@ func BuildInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Create a new ECS application",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			ws, err := workspace.New()
+			if err != nil {
+				return err
+			}
+
+			opts.ws = ws
 			ssm, err := ssm.NewStore()
 			if err != nil {
 				return err

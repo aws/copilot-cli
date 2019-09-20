@@ -12,6 +12,7 @@ type Project struct {
 // ProjectStore is an interface for creating and listing projects
 type ProjectStore interface {
 	ProjectLister
+	ProjectGetter
 	ProjectCreator
 }
 
@@ -23,4 +24,9 @@ type ProjectLister interface {
 // ProjectCreator creates a project in the underlying project manager
 type ProjectCreator interface {
 	CreateProject(project *Project) error
+}
+
+// ProjectGetter fetches an individual project from the underlying project manager
+type ProjectGetter interface {
+	GetProject(projectName string) (*Project, error)
 }

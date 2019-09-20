@@ -4,8 +4,17 @@
 package cli
 
 import (
+	"log"
+
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+const (
+	// EnvProjectFlag is the flag for providing the project name to the env commands.
+	EnvProjectFlag = "project"
 )
 
 // BuildEnvCmd is the top level command for environments
@@ -15,7 +24,32 @@ func BuildEnvCmd() *cobra.Command {
 		Short: "Environment commands",
 		Long: `Command for working with environments.
 An environment represents a deployment stage.`,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Load the workspace and set the project flag.
+			ws, err := workspace.New()
+			if err != nil {
+				// If there's an error fetching the workspace, fall back to requiring
+				// the project flag be set.
+				log.Println(err.Error())
+				return
+			}
+
+			summary, err := ws.Summary()
+			if err != nil {
+				// If there's an error reading from the workspace, fall back to requiring
+				// the project flag be set.
+				log.Println(err.Error())
+				return
+			}
+			viper.SetDefault(EnvProjectFlag, summary.ProjectName)
+
+		},
 	}
+
+	// The project flag is available to all subcommands through viper.GetString("project")
+	cmd.PersistentFlags().String(EnvProjectFlag, "", "Name of the project (required unless you're in a workspace).")
+	viper.BindPFlag(EnvProjectFlag, cmd.PersistentFlags().Lookup(EnvProjectFlag))
+
 	cmd.AddCommand(BuildEnvAddCmd())
 	cmd.AddCommand(BuildEnvListCmd())
 	cmd.SetUsageTemplate(template.Usage)

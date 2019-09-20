@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/AlecAivazis/survey/v2/terminal"
@@ -86,40 +87,11 @@ func TestEnvAdd_Ask(t *testing.T) {
 	}
 }
 
-func TestEnvAdd_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inputOpts       AddEnvOpts
-		wantedErrPrefix string
-	}{
-		"with no project name": {
-			inputOpts: AddEnvOpts{
-				EnvName: "coolapp",
-			},
-			wantedErrPrefix: "to add an environment either run the command in your workspace or provide a --project",
-		},
-		"with valid input": {
-			inputOpts: AddEnvOpts{
-				EnvName:     "coolapp",
-				ProjectName: "coolproject",
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.inputOpts.Validate()
-			if tc.wantedErrPrefix != "" {
-				require.Regexp(t, "^"+tc.wantedErrPrefix+".*", err.Error())
-			} else {
-				require.NoError(t, err, "There shouldn't have been an error")
-			}
-		})
-	}
-}
-
 func TestEnvAdd_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	mockError := fmt.Errorf("error")
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+	mockProjStore := mocks.NewMockProjectStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 	mockSpinner := cli_mocks.NewMockspinner(ctrl)
 	var capturedArgument *archer.Environment
@@ -128,16 +100,18 @@ func TestEnvAdd_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		addEnvOpts  AddEnvOpts
 		expectedEnv archer.Environment
+		expectedErr error
 		mocking     func()
 	}{
 		"with a succesful call to add env": {
 			addEnvOpts: AddEnvOpts{
-				manager:     mockEnvStore,
-				deployer:    mockDeployer,
-				ProjectName: "project",
-				EnvName:     "env",
-				Production:  true,
-				spinner:     mockSpinner,
+				manager:       mockEnvStore,
+				projectGetter: mockProjStore,
+				deployer:      mockDeployer,
+				ProjectName:   "project",
+				EnvName:       "env",
+				Production:    true,
+				spinner:       mockSpinner,
 			},
 			expectedEnv: archer.Environment{
 				Name:    "env",
@@ -148,6 +122,10 @@ func TestEnvAdd_Execute(t *testing.T) {
 				Prod:      true,
 			},
 			mocking: func() {
+				mockProjStore.
+					EXPECT().
+					GetProject(gomock.Any()).
+					Return(&archer.Project{}, nil)
 				mockEnvStore.
 					EXPECT().
 					CreateEnvironment(gomock.Any()).
@@ -161,15 +139,49 @@ func TestEnvAdd_Execute(t *testing.T) {
 				mockSpinner.EXPECT().Stop(gomock.Eq("Done!"))
 			},
 		},
+		"with a invalid project": {
+			expectedErr: mockError,
+			addEnvOpts: AddEnvOpts{
+				manager:       mockEnvStore,
+				projectGetter: mockProjStore,
+				deployer:      mockDeployer,
+				ProjectName:   "project",
+				EnvName:       "env",
+				Production:    true,
+				spinner:       mockSpinner,
+			},
+			expectedEnv: archer.Environment{
+				Name:    "env",
+				Project: "project",
+				//TODO update these to real values
+				AccountID: "1234",
+				Region:    "1234",
+				Prod:      true,
+			},
+			mocking: func() {
+				mockProjStore.
+					EXPECT().
+					GetProject(gomock.Any()).
+					Return(nil, mockError)
+				mockEnvStore.
+					EXPECT().
+					CreateEnvironment(gomock.Any()).
+					Times(0)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Setup mocks
 			tc.mocking()
 
-			tc.addEnvOpts.Execute()
-
-			require.Equal(t, tc.expectedEnv, *capturedArgument)
+			err := tc.addEnvOpts.Execute()
+			if tc.expectedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedEnv, *capturedArgument)
+			} else {
+				require.EqualError(t, tc.expectedErr, err.Error())
+			}
 		})
 	}
 }

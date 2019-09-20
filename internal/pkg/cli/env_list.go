@@ -7,25 +7,48 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // ListEnvOpts contains the fields to collect for listing an environment.
 type ListEnvOpts struct {
-	ProjectName string `survey:"project"`
-	prompt      terminal.Stdio
-	manager     archer.EnvironmentLister
+	ProjectName   string `survey:"project"`
+	prompt        terminal.Stdio
+	manager       archer.EnvironmentLister
+	projectGetter archer.ProjectGetter
+}
+
+// Ask asks for fields that are required but not passed in.
+func (opts *ListEnvOpts) Ask() error {
+	var qs []*survey.Question
+	if opts.ProjectName == "" {
+		qs = append(qs, &survey.Question{
+			Name: "project",
+			Prompt: &survey.Input{
+				Message: "Which project's environments would you like to list?",
+				Help:    "A project groups all of your environments together.",
+			},
+			Validate: validateProjectName,
+		})
+	}
+	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
 // Execute lists the environments through the prompt.
 func (opts *ListEnvOpts) Execute() error {
+	// Ensure the project actually exists before we try to list its environments.
+	if _, err := opts.projectGetter.GetProject(opts.ProjectName); err != nil {
+		return err
+	}
+
 	envs, err := opts.manager.ListEnvironments(opts.ProjectName)
 	if err != nil {
-		fmt.Fprintf(opts.prompt.Err, "%v\n", err)
 		return err
 	}
 
@@ -56,15 +79,19 @@ func BuildEnvListCmd() *cobra.Command {
 		Example: `
   Lists all the environments for the test project
   $ archer env ls --project test`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			opts.ProjectName = viper.GetString("project")
+			return opts.Ask()
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := ssm.NewStore()
 			if err != nil {
 				return err
 			}
 			opts.manager = ssmStore
+			opts.projectGetter = ssmStore
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")
 	return cmd
 }
