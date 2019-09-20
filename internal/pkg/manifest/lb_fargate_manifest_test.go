@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,5 +82,5 @@ stages:
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, wantedContent, string(b))
+	require.Equal(t, wantedContent, strings.Replace(string(b), "\r\n", "\n", -1))
 }
