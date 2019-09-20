@@ -192,7 +192,8 @@ func TestWriteManifest(t *testing.T) {
 }
 
 func TestManifestDirectoryPath(t *testing.T) {
-	var platformDependentExpectedManifestDir = filepath.FromSlash("test/ecs")
+	// turn "test/ecs" into a platform-dependent path
+	var manifestDir = filepath.FromSlash("test/ecs")
 
 	testCases := map[string]struct {
 		expectedManifestDir string
@@ -202,7 +203,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		mockFileSystem      func(appFS afero.Fs)
 	}{
 		"same directory level": {
-			expectedManifestDir: platformDependentExpectedManifestDir,
+			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -210,7 +211,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"same directory": {
-			expectedManifestDir: platformDependentExpectedManifestDir,
+			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/ecs"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -218,7 +219,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"several levels deep": {
-			expectedManifestDir: platformDependentExpectedManifestDir,
+			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/1/2/3/4"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -244,7 +245,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"uses precomputed manifest path": {
-			expectedManifestDir: platformDependentExpectedManifestDir,
+			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("/"),
 			mockFileSystem:      func(appFS afero.Fs) {},
 			presetManifestDir:   filepath.FromSlash("test/ecs"),
