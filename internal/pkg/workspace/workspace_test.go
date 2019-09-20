@@ -227,7 +227,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"too many levels deep": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from test/1/2/3/4/5"),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("test/1/2/3/4/5")),
 			workingDir:    filepath.FromSlash("test/1/2/3/4/5"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
@@ -236,7 +236,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 		},
 
 		"out of a workspace": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from /"),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("/")),
 			workingDir:    filepath.FromSlash("/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
