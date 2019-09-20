@@ -9,6 +9,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -17,14 +18,19 @@ type InitProjectOpts struct {
 	ProjectName string `survey:"project"`
 	prompt      terminal.Stdio
 	manager     archer.ProjectCreator
+	ws          archer.Workspace
 }
 
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
-	return opts.manager.CreateProject(&archer.Project{
+	if err := opts.manager.CreateProject(&archer.Project{
 		Name:    opts.ProjectName,
 		Version: "1.0",
-	})
+	}); err != nil {
+		return err
+	}
+
+	return opts.ws.Create(opts.ProjectName)
 }
 
 // BuildProjectInitCommand builds the command for creating a new project.
@@ -49,6 +55,12 @@ func BuildProjectInitCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			ws, err := workspace.New()
+			if err != nil {
+				return err
+			}
+			opts.ws = ws
 			opts.manager = ssmStore
 			opts.ProjectName = args[0]
 			return opts.Execute()

@@ -11,6 +11,8 @@ import (
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	cli_mocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/hinshun/vt10x"
@@ -153,20 +155,25 @@ func TestInit_Ask(t *testing.T) {
 func TestInit_Prepare(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockWorkspace := mocks.NewMockWorkspace(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
 		inputOpts              InitAppOpts
 		mocking                func()
 		wantedExistingProjects []string
+		wantedProject          string
 	}{
-		"with existing projects": {
+		"with no project flag, empty workspace and existing projects": {
 			inputOpts: InitAppOpts{
-				Name:    "frontend",
-				Project: "coolproject",
+				Name: "frontend",
 			},
 			wantedExistingProjects: []string{"project1", "project2"},
 			mocking: func() {
+				mockWorkspace.
+					EXPECT().
+					Summary().
+					Return(nil, &workspace.ErrWorkspaceNotFound{})
 				mockProjectStore.
 					EXPECT().
 					ListProjects().
@@ -177,17 +184,68 @@ func TestInit_Prepare(t *testing.T) {
 
 			},
 		},
-		"with error loading projects": {
+		"with no project flag, empty workspace and error finding projects": {
 			inputOpts: InitAppOpts{
-				Name:    "frontend",
-				Project: "coolproject",
+				Name: "frontend",
 			},
 			wantedExistingProjects: []string{},
 			mocking: func() {
+				mockWorkspace.
+					EXPECT().
+					Summary().
+					Return(nil, &workspace.ErrWorkspaceNotFound{})
+
 				mockProjectStore.
 					EXPECT().
 					ListProjects().
 					Return(nil, fmt.Errorf("error loading projects"))
+
+			},
+		},
+		"with no project flag and existing workspace": {
+			inputOpts: InitAppOpts{
+				Name: "frontend",
+			},
+			wantedProject: "MyProject",
+			mocking: func() {
+				mockWorkspace.
+					EXPECT().
+					Summary().
+					Return(&archer.WorkspaceSummary{
+						ProjectName: "MyProject",
+					}, nil)
+				// No calls to project store should be made if we determine
+				// the project from the workspace.
+				mockProjectStore.
+					EXPECT().
+					ListProjects().
+					Return(nil, fmt.Errorf("error loading projects")).
+					Times(0)
+
+			},
+		},
+
+		"with project flag": {
+			inputOpts: InitAppOpts{
+				Name:    "frontend",
+				Project: "MyProject",
+			},
+			wantedProject: "MyProject",
+			mocking: func() {
+				mockWorkspace.
+					EXPECT().
+					Summary().
+					Return(&archer.WorkspaceSummary{
+						ProjectName: "MyOtherProject",
+					}, nil).
+					Times(0)
+				// No calls to project store should be made if we determine
+				// the project from the workspace.
+				mockProjectStore.
+					EXPECT().
+					ListProjects().
+					Return(nil, fmt.Errorf("error loading projects")).
+					Times(0)
 
 			},
 		},
@@ -197,8 +255,10 @@ func TestInit_Prepare(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 			tc.inputOpts.projStore = mockProjectStore
+			tc.inputOpts.ws = mockWorkspace
 			tc.inputOpts.Prepare()
 			require.ElementsMatch(t, tc.wantedExistingProjects, tc.inputOpts.existingProjects)
+			require.Equal(t, tc.wantedProject, tc.inputOpts.Project)
 		})
 	}
 }
@@ -251,6 +311,7 @@ func TestInit_Execute(t *testing.T) {
 
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+	mockWorkspace := mocks.NewMockWorkspace(ctrl)
 	mockSpinner := cli_mocks.NewMockspinner(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 
@@ -262,7 +323,7 @@ func TestInit_Execute(t *testing.T) {
 		mocking      func()
 		want         error
 	}{
-		"should not prompt to create test environment given existing environments": {
+		"should not prompt to create test environment given project and environments": {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project1",
@@ -276,7 +337,12 @@ func TestInit_Execute(t *testing.T) {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
-					Times(0)
+					Return(&store.ErrProjectAlreadyExists{
+						ProjectName: "project1",
+					})
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project1"))
 				mockEnvStore.
 					EXPECT().
 					ListEnvironments(gomock.Eq("project1")).
@@ -287,7 +353,7 @@ func TestInit_Execute(t *testing.T) {
 			},
 			want: nil,
 		},
-		"should create a new project without a test environment": {
+		"should create a new project and workspace without a test environment": {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project3",
@@ -305,6 +371,9 @@ func TestInit_Execute(t *testing.T) {
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
 					Return(nil).
 					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3"))
 				mockEnvStore.
 					EXPECT().
 					ListEnvironments(gomock.Eq("project3")).
@@ -326,6 +395,31 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
 					Return(mockError)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
+					Times(0)
+			},
+			want: mockError,
+		},
+		"should echo error returned from call to workspace.Create": {
+			inputOpts: InitAppOpts{
+				Project:          "project3",
+				existingProjects: []string{"project1", "project2"},
+			},
+			consoleInput: func(c *expect.Console) {
+				c.ExpectEOF()
+			},
+			mocking: func() {
+				mockProjectStore.
+					EXPECT().
+					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
+					Return(mockError)
 			},
 			want: mockError,
 		},
@@ -345,6 +439,11 @@ func TestInit_Execute(t *testing.T) {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
 					Return(nil).
 					Times(1)
 				mockEnvStore.
@@ -381,6 +480,11 @@ func TestInit_Execute(t *testing.T) {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
 					Return(nil).
 					Times(1)
 				mockEnvStore.
@@ -425,6 +529,11 @@ func TestInit_Execute(t *testing.T) {
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
 					Return(nil).
 					Times(1)
 				mockEnvStore.
@@ -477,6 +586,7 @@ func TestInit_Execute(t *testing.T) {
 			tc.inputOpts.envStore = mockEnvStore
 			tc.inputOpts.spinner = mockSpinner
 			tc.inputOpts.deployer = mockDeployer
+			tc.inputOpts.ws = mockWorkspace
 
 			// WHEN
 			got := tc.inputOpts.Execute()

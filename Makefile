@@ -44,5 +44,6 @@ gen-mocks: tools
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
 	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/workspace.go -package=mocks -destination=./mocks/mock_workspace.go
 	${GOBIN}/mockgen -source=./internal/pkg/spinner/spinner.go -package=mocks -destination=./internal/pkg/spinner/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/spinner.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_spinner.go

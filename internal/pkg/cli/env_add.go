@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -15,6 +14,7 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // AddEnvOpts contains the fields to collect for adding an environment.
@@ -24,10 +24,11 @@ type AddEnvOpts struct {
 	EnvProfile  string
 	Production  bool `survey:"prod"`
 
-	prompt   terminal.Stdio
-	manager  archer.EnvironmentCreator
-	deployer archer.EnvironmentDeployer
-	spinner  spinner
+	prompt        terminal.Stdio
+	manager       archer.EnvironmentCreator
+	projectGetter archer.ProjectGetter
+	deployer      archer.EnvironmentDeployer
+	spinner       spinner
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -55,16 +56,13 @@ func (opts *AddEnvOpts) Ask() error {
 	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
-// Validate returns an error if the required fields are invalid.
-func (opts *AddEnvOpts) Validate() error {
-	if opts.ProjectName == "" {
-		return fmt.Errorf("to add an environment either run the command in your workspace or provide a --project")
-	}
-	return nil
-}
-
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *AddEnvOpts) Execute() error {
+	// Ensure the project actually exists before we do a deployment.
+	if _, err := opts.projectGetter.GetProject(opts.ProjectName); err != nil {
+		return err
+	}
+
 	env := archer.Environment{
 		Name:               opts.EnvName,
 		Project:            opts.ProjectName,
@@ -80,8 +78,7 @@ func (opts *AddEnvOpts) Execute() error {
 
 	opts.spinner.Start("Deploying env...")
 
-	err := opts.deployer.Wait(env)
-	if err != nil {
+	if err := opts.deployer.Wait(env); err != nil {
 		return err
 	}
 
@@ -118,9 +115,9 @@ func BuildEnvAddCmd() *cobra.Command {
 			if len(args) > 0 {
 				opts.EnvName = args[0]
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
+
+			opts.ProjectName = viper.GetString("project")
+			// If the project flag or env name isn't passed in, ask the user for them.
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -133,22 +130,20 @@ func BuildEnvAddCmd() *cobra.Command {
 				return err
 			}
 			opts.manager = s
+			opts.projectGetter = s
 
 			// TODO: create this session elsewhere
 			sess, err := session.NewSessionWithOptions(session.Options{
 				SharedConfigState: session.SharedConfigEnable,
 			})
-
 			if err != nil {
 				return err
 			}
 
 			opts.deployer = cloudformation.New(sess)
-
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVar(&opts.ProjectName, "project", "", "Name of the project (required).")
 	cmd.Flags().StringVar(&opts.EnvProfile, "profile", "", "Name of the profile. Defaults to \"default\".")
 	cmd.Flags().BoolVar(&opts.Production, "prod", false, "If the environment contains production services.")
 
