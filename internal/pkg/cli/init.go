@@ -166,11 +166,12 @@ func (opts *InitAppOpts) deployEnv() error {
 		// TODO: prompt the user for an environment name with default value "test"
 		// https://github.com/aws/PRIVATE-amazon-ecs-archer/issues/56
 		env := archer.Environment{
-			Project: opts.Project,
-			Name:    defaultEnvironmentName,
+			Project:            opts.Project,
+			Name:               defaultEnvironmentName,
+			PublicLoadBalancer: true, // TODO: configure this value based on user input or Application type needs?
 		}
 
-		if err := opts.deployer.DeployEnvironment(env, true); err != nil {
+		if err := opts.deployer.DeployEnvironment(env); err != nil {
 			opts.spinner.Stop("Error!")
 
 			return err

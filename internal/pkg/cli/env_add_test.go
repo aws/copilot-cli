@@ -143,9 +143,10 @@ func TestEnvAdd_Execute(t *testing.T) {
 				Name:    "env",
 				Project: "project",
 				//TODO update these to real values
-				AccountID: "1234",
-				Region:    "1234",
-				Prod:      true,
+				AccountID:          "1234",
+				Region:             "1234",
+				Prod:               true,
+				PublicLoadBalancer: true,
 			},
 			mocking: func() {
 				mockEnvStore.
@@ -154,7 +155,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 					Do(func(env *archer.Environment) {
 						capturedArgument = env
 					})
-				mockDeployer.EXPECT().DeployEnvironment(gomock.Any(), gomock.Any())
+				mockDeployer.EXPECT().DeployEnvironment(gomock.Any())
 				mockSpinner.EXPECT().Start(gomock.Eq("Deploying env..."))
 				// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
 				mockDeployer.EXPECT().Wait(gomock.Any())

@@ -66,14 +66,15 @@ func (opts *AddEnvOpts) Validate() error {
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *AddEnvOpts) Execute() error {
 	env := archer.Environment{
-		Name:      opts.EnvName,
-		Project:   opts.ProjectName,
-		AccountID: "1234",
-		Region:    "1234",
-		Prod:      opts.Production,
+		Name:               opts.EnvName,
+		Project:            opts.ProjectName,
+		AccountID:          "1234",
+		Region:             "1234",
+		Prod:               opts.Production,
+		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
 	}
 
-	if err := opts.deployer.DeployEnvironment(env, true); err != nil {
+	if err := opts.deployer.DeployEnvironment(env); err != nil {
 		return err
 	}
 

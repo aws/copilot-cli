@@ -214,17 +214,17 @@ func (m *MockEnvironmentDeployer) EXPECT() *MockEnvironmentDeployerMockRecorder 
 }
 
 // DeployEnvironment mocks base method
-func (m *MockEnvironmentDeployer) DeployEnvironment(env archer.Environment, includeLoadBalancer bool) error {
+func (m *MockEnvironmentDeployer) DeployEnvironment(env archer.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env, includeLoadBalancer)
+	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env, includeLoadBalancer interface{}) *gomock.Call {
+func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockEnvironmentDeployer)(nil).DeployEnvironment), env, includeLoadBalancer)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockEnvironmentDeployer)(nil).DeployEnvironment), env)
 }
 
 // Wait mocks base method
