@@ -203,7 +203,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 	}{
 		"same directory level": {
 			expectedManifestDir: platformDependentExpectedManifestDir,
-			workingDir:          "test/",
+			workingDir:          filepath.FromSlash("test/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
@@ -211,7 +211,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 		"same directory": {
 			expectedManifestDir: platformDependentExpectedManifestDir,
-			workingDir:          "test/ecs",
+			workingDir:          filepath.FromSlash("test/ecs"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
@@ -219,7 +219,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 		"several levels deep": {
 			expectedManifestDir: platformDependentExpectedManifestDir,
-			workingDir:          "test/1/2/3/4",
+			workingDir:          filepath.FromSlash("test/1/2/3/4"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 				appFS.MkdirAll("test/1/2/3/4", 0755)
@@ -228,7 +228,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 		"too many levels deep": {
 			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from test/1/2/3/4/5"),
-			workingDir:    "test/1/2/3/4/5",
+			workingDir:    filepath.FromSlash("test/1/2/3/4/5"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 				appFS.MkdirAll("test/1/2/3/4/5", 0755)
@@ -237,7 +237,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 		"out of a workspace": {
 			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from /"),
-			workingDir:    "/",
+			workingDir:    filepath.FromSlash("/"),
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs", 0755)
 			},
@@ -245,9 +245,9 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 		"uses precomputed manifest path": {
 			expectedManifestDir: platformDependentExpectedManifestDir,
-			workingDir:          "/",
+			workingDir:          filepath.FromSlash("/"),
 			mockFileSystem:      func(appFS afero.Fs) {},
-			presetManifestDir:   "test/ecs",
+			presetManifestDir:   filepath.FromSlash("test/ecs"),
 		},
 	}
 	for name, tc := range testCases {
