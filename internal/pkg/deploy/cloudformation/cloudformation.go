@@ -67,7 +67,7 @@ func (cf CloudFormation) DeployEnvironment(env archer.Environment) error {
 				return nil
 			}
 		}
-		return err
+		return fmt.Errorf("failed to deploy the environment %s with CloudFormation due to: %w", env.Name, err)
 	}
 
 	return nil

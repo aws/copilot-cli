@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -64,6 +65,10 @@ func TestDeployEnvironment(t *testing.T) {
 			want: nil,
 		},
 		"should echo error returned from CreatStack call": {
+			env: archer.Environment{
+				Project: mockProjectName,
+				Name:    mockEnvironmentName,
+			},
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -73,7 +78,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: fmt.Errorf("some AWS error"),
+			want: errors.New("failed to deploy the environment " + mockEnvironmentName + " with CloudFormation due to: some AWS error"),
 		},
 		"should deploy an environment": {
 			cf: CloudFormation{
@@ -101,7 +106,9 @@ func TestDeployEnvironment(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := tc.cf.DeployEnvironment(tc.env)
 
-			require.Equal(t, tc.want, got)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			}
 		})
 	}
 }
