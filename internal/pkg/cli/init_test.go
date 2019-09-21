@@ -513,6 +513,60 @@ func TestInit_Execute(t *testing.T) {
 			},
 			want: mockError,
 		},
+		"should echo error returned from call to envStore.Create": {
+			inputOpts: InitAppOpts{
+				Name:             "frontend",
+				Project:          "project3",
+				Type:             "Empty",
+				existingProjects: []string{"project1", "project2"},
+			},
+			consoleInput: func(c *expect.Console) {
+				c.ExpectString("Would you like to set up a test environment?")
+				c.SendLine("Y")
+				c.ExpectEOF()
+			},
+			mocking: func() {
+				mockProjectStore.
+					EXPECT().
+					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
+					Return(nil).
+					Times(1)
+				mockEnvStore.
+					EXPECT().
+					ListEnvironments(gomock.Eq("project3")).
+					Return([]*archer.Environment{}, nil).
+					Times(1)
+				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
+				mockDeployer.EXPECT().
+					DeployEnvironment(gomock.Eq(archer.Environment{
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
+					})).
+					Return(nil).
+					Times(1)
+				mockDeployer.EXPECT().
+					Wait(gomock.Eq(archer.Environment{
+						Project:            "project3",
+						Name:               defaultEnvironmentName,
+						PublicLoadBalancer: true,
+					})).
+					Return(nil).
+					Times(1)
+				mockEnvStore.
+					EXPECT().
+					CreateEnvironment(gomock.Any()).
+					Return(mockError).
+					Times(1)
+				mockSpinner.EXPECT().Stop("Error!").Times(1)
+			},
+			want: mockError,
+		},
 		"should create a new test environment": {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
@@ -540,6 +594,11 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					ListEnvironments(gomock.Eq("project3")).
 					Return([]*archer.Environment{}, nil).
+					Times(1)
+				mockEnvStore.
+					EXPECT().
+					CreateEnvironment(gomock.Any()).
+					Return(nil).
 					Times(1)
 				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
 				mockDeployer.EXPECT().
