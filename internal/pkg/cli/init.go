@@ -198,7 +198,11 @@ func (opts *InitAppOpts) deployEnv() error {
 
 			return err
 		}
+		if err := opts.envStore.CreateEnvironment(&env); err != nil {
+			opts.spinner.Stop("Error!")
 
+			return err
+		}
 		opts.spinner.Stop("Done!")
 	}
 	return nil
