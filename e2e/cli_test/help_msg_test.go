@@ -58,4 +58,66 @@ var _ = Describe("archer help messages", func() {
 			exitCode = sess.ExitCode()
 		})
 	})
+
+	Context("env help message", func() {
+		var (
+			expectedHelpMsgFile     = filepath.Join("testdata", "env-help-msg.golden")
+			expectedToplevelHelpMsg []byte
+			actualHelpMsg           []byte
+		)
+
+		BeforeEach(func() {
+			var err error
+			expectedToplevelHelpMsg, err = ioutil.ReadFile(expectedHelpMsgFile)
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			if *update {
+				ioutil.WriteFile(expectedHelpMsgFile, actualHelpMsg, 0644)
+			}
+
+			Expect(string(actualHelpMsg)).To(Equal(string(expectedToplevelHelpMsg)))
+		})
+
+		It("should print env help message when run with -h", func() {
+			command := exec.Command(cliPath, "env", "-h")
+			sess, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).To(BeNil())
+
+			actualHelpMsg = sess.Wait().Out.Contents()
+			exitCode = sess.ExitCode()
+		})
+	})
+
+	Context("project help message", func() {
+		var (
+			expectedHelpMsgFile     = filepath.Join("testdata", "project-help-msg.golden")
+			expectedToplevelHelpMsg []byte
+			actualHelpMsg           []byte
+		)
+
+		BeforeEach(func() {
+			var err error
+			expectedToplevelHelpMsg, err = ioutil.ReadFile(expectedHelpMsgFile)
+			Expect(err).To(BeNil())
+		})
+
+		AfterEach(func() {
+			if *update {
+				ioutil.WriteFile(expectedHelpMsgFile, actualHelpMsg, 0644)
+			}
+
+			Expect(string(actualHelpMsg)).To(Equal(string(expectedToplevelHelpMsg)))
+		})
+
+		It("should print project help message when run with -h", func() {
+			command := exec.Command(cliPath, "project", "-h")
+			sess, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
+			Expect(err).To(BeNil())
+
+			actualHelpMsg = sess.Wait().Out.Contents()
+			exitCode = sess.ExitCode()
+		})
+	})
 })
