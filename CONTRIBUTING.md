@@ -1,61 +1,117 @@
-# Contributing Guidelines
+# Contributing to the CLI
 
-Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional
-documentation, we greatly value feedback and contributions from our community.
+Thanks for your interest in contributing to the Amazon ECS CLI! 💖
 
-Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
-information to effectively respond to your bug report or contribution.
+This document describes how to set up a development environment and submit your contributions. Please read it over and let us know if it's not up-to-date (or, even better, submit a PR with your corrections 😉).
 
+- [Development setup](#development-setup)
+  - [Environment](#environment)
+  - [Set upstream](#set-upstream)
+  - [Building and testing](#building-and-testing)
+  - [Generating mocks](#generating-mocks)
+  - [Adding new dependencies](#adding-new-dependencies)
+- [Where should I start?](#where-should-i-start)
+- [Contributing code](#contributing-code)
+- [Amazon Open Source Code of Conduct](#amazon-open-source-code-of-conduct)
+- [Licensing](#licensing)
 
-## Reporting Bugs/Feature Requests
+## Development setup
 
-We welcome you to use the GitHub issue tracker to report bugs or suggest features.
+### Environment
 
-When filing an issue, please check [existing open](https://github.com/aws/PRIVATE-amazon-ecs-archer/issues), or [recently closed](https://github.com/aws/PRIVATE-amazon-ecs-archer/issues?utf8=%E2%9C%93&q=is%3Aissue%20is%3Aclosed%20), issues to make sure somebody else hasn't already
-reported the issue. Please try to include as much information as you can. Details like these are incredibly useful:
+- Make sure you are using Go 1.13 (`go version`).
+- Fork the repository.
+- Clone your forked repository locally.
+- We use Go Modules to manage depenencies, so you can develop outside of your $GOPATH.
 
-* A reproducible test case or series of steps
-* The version of our code being used
-* Any modifications you've made relevant to the bug
-* Anything unusual about your environment or deployment
+#### Set upstream
 
+From the repository root run:
 
-## Contributing via Pull Requests
-Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
+`git remote add upstream git@github.com:aws/amazon-ecs-cli`
 
-1. You are working against the latest source on the *master* branch.
-2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
-3. You open an issue to discuss any significant work - we would hate for your time to be wasted.
+`git fetch upstream`
 
-To send us a pull request, please:
+### Building and testing
 
-1. Fork the repository.
-2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. Ensure local tests pass.
-4. Commit to your fork using clear commit messages.
-5. Send us a pull request, answering any default questions in the pull request interface.
-6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
+There are three different types of testing done on the ECS CLI.
 
-GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
-[creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
+**Unit tests** makes up the majority of the testing and new code should include unit tests. Ideally, these unit tests will be in the same package as the file they're testing and have full coverage (or as much is practical within a unit test). Unit tests shouldn't make any network calls.
 
+**Integration tests** are rarer and test the CLI's integration with remote services, such as CloudFormation or SSM. Our integration tests ensure that we can call these remote services and get the results we expect.
 
-## Finding contributions to work on
-Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any ['help wanted'](https://github.com/aws/PRIVATE-amazon-ecs-archer/labels/help%20wanted) issues is a great place to start.
+**End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs). These tests are the most comprehensive and run on both Windows and Linux build fleets. Feel free to run these tests - but they require an AWS account to run in, so be mindful that resources will be created and destroyed.
 
+Below are the different commands which can be run in the root of the project directory.
 
-## Code of Conduct
-This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
-For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact
-opensource-codeofconduct@amazon.com with any additional questions or comments.
+* Run `make` (This creates a standalone executable in the `bin/local` directory).
+* Run `make test` to run the unit tests.
+* Run `make integ-test` to run integration tests against your Default AWS profile. **Warning** - this will create AWS resources in your account.
+* Run `make e2e-test` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account.
 
+### Generating mocks
+Often times it's helpful to generate mocks to make unit-testing easier and more focused. We strongly encourage this and encourage you to generate mocks when appropriate! In order to generate mocks:
 
-## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
+* Add the package your interface is in under the [gen-mocks](https://github.com/aws/PRIVATE-amazon-ecs-archer/blob/master/Makefile#L43) command in the Makefile.
+* run `make gen-mocks`
 
+## Adding new dependencies
+
+In general, we discourage adding new dependencies to the ECS CLI. If there's a module you think the CLI could benefit from, first open a PR with your proposal. We'll evaluate the dependency and the use case and decide on the next steps.
+
+## Where should I start
+
+We're so excited you want to contribute to the ECS CLI! We welcome all PRs and will try to get to them as soon as possible. The best place to start, though, is with filing an issue first. Filing an issue gives us some time to chat about the code you're keen on writing, and make sure that it's not already being worked on, or has already been discussed.
+
+You can also check out our [issues queue](https://github.com/aws/PRIVATE-amazon-ecs-archer/issues) to see all the known issues - this is a really great place to start.
+
+If you want to get your feet wet, check out issues tagged with [good first issue](https://github.com/aws/PRIVATE-amazon-ecs-archer/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). These issues are great for folks who are looking to get started, but not sure where to start 😁.
+
+## Contributing code
+* Please check the existing issues to see if your feedback has already been reported.
+
+* Let us know if you are interested in working on an issue by leaving a comment
+on the issue in GitHub. This helps avoid multiple people unknowingly working on
+the same issue.
+
+* If you would like to propose a new feature, please open an issue on GitHub with
+a detailed description. This enables us to collaborate on the feature design
+more easily and increases the chances that your feature request will be accepted.
+
+* New features should include full test coverage.
+
+* New files should include the standard license  header.
+
+* All submissions, including submissions by project members, require review. We
+  use GitHub pull requests for this purpose. Consult GitHub Help for more
+information on using pull requests.
+
+## Amazon Open Source Code of Conduct
+
+This code of conduct provides guidance on participation in Amazon-managed open source communities, and outlines the process for reporting unacceptable behavior. As an organization and community, we are committed to providing an inclusive environment for everyone. Anyone violating this code of conduct may be removed and banned from the community.
+
+**Our open source communities endeavor to:**
+* Use welcoming and inclusive language;
+* Be respectful of differing viewpoints at all times;
+* Accept constructive criticism and work together toward decisions;
+* Focus on what is best for the community and users.
+
+**Our Responsibility.** As contributors, members, or bystanders we each individually have the responsibility to behave professionally and respectfully at all times. Disrespectful and unacceptable behaviors include, but are not limited to:
+The use of violent threats, abusive, discriminatory, or derogatory language;
+* Offensive comments related to gender, gender identity and expression, sexual orientation, disability, mental illness, race, political or religious affiliation;
+* Posting of sexually explicit or violent content;
+* The use of sexualized language and unwelcome sexual attention or advances;
+* Public or private [harassment](http://todogroup.org/opencodeofconduct/#definitions) of any kind;
+* Publishing private information, such as physical or electronic address, without permission;
+* Other conduct which could reasonably be considered inappropriate in a professional setting;
+* Advocating for or encouraging any of the above behaviors.
+
+**Enforcement and Reporting Code of Conduct Issues.**
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting opensource-codeofconduct@amazon.com. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
+
+**Attribution.** _This code of conduct is based on the [template](http://todogroup.org/opencodeofconduct) established by the [TODO Group](http://todogroup.org/) and the Scope section from the [Contributor Covenant version 1.4](http://contributor-covenant.org/version/1/4/)._
 
 ## Licensing
+The Amazon ECS CLI is released under an [Apache 2.0](http://aws.amazon.com/apache-2-0/) license. Any code you submit will be released under that license.
 
-See the [LICENSE](https://github.com/aws/PRIVATE-amazon-ecs-archer/blob/master/LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
-
-We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) for larger changes.
+For significant changes, we may ask you to sign a [Contributor License Agreement](http://en.wikipedia.org/wiki/Contributor_License_Agreement).
