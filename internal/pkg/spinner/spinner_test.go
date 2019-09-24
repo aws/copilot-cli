@@ -4,11 +4,27 @@
 package spinner
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner/mocks"
+	spin "github.com/briandowns/spinner"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
+
+func TestNew(t *testing.T) {
+	t.Run("it should initialize the internal spinner", func(t *testing.T) {
+		got := New()
+
+		v, ok := got.internal.(*spin.Spinner)
+		require.True(t, ok)
+
+		require.Equal(t, os.Stderr, v.Writer)
+		require.Equal(t, 125*time.Millisecond, v.Delay)
+	})
+}
 
 func TestStart(t *testing.T) {
 	ctrl := gomock.NewController(t)
