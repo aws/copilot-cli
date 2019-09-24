@@ -6,6 +6,7 @@ package spinner
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	spin "github.com/briandowns/spinner"
@@ -21,10 +22,13 @@ type Spinner struct {
 	internal spinner
 }
 
-// New returns a Spinner.
+// New returns a Spinner that outputs to stderr.
 func New() Spinner {
+	s := spin.New(spin.CharSets[14], 125*time.Millisecond)
+	s.Writer = os.Stderr
+
 	return Spinner{
-		internal: spin.New(spin.CharSets[14], 125*time.Millisecond),
+		internal: s,
 	}
 }
 
