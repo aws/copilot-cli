@@ -13,6 +13,7 @@ require (
 	github.com/golang/mock v1.3.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
