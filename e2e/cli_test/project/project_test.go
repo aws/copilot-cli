@@ -17,7 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/e2e/cli_test/internal/utils"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/e2e/cli_test/internal/creds"
 )
 
 func TestArcherProjectCommand(t *testing.T) {
@@ -88,7 +88,7 @@ var _ = Describe("Archer project command", func() {
 
 			It("should use shared AWS configuration file", func() {
 				// dump AWS creds into a credential file
-				creds, err := utils.ExtractAWSCredsFromEnvVars()
+				creds, err := creds.ExtractAWSCredsFromEnvVars()
 				Expect(err).To(BeNil())
 
 				tmpFile, err := ioutil.TempFile(tmpDir, "config")

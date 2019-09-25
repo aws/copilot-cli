@@ -7,7 +7,7 @@ GOBIN=${PWD}/bin/tools
 all: build
 
 .PHONY: build
-build:
+build: test
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
 
 .PHONY: test

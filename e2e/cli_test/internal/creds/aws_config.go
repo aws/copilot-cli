@@ -1,6 +1,6 @@
 // +build e2e
 
-package utils
+package creds
 
 import (
 	"fmt"
