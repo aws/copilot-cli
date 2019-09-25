@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	uuid "github.com/nu7hatch/gouuid"
+	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -25,13 +25,14 @@ func TestArcherProjectCommand(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	RunSpecs(t, "Test Archer project command")
 }
+
 var cliPath string
 
 var _ = BeforeSuite(func() {
 	var err error
 	cliPath, err = filepath.Abs("../../../bin/local/archer")
 	Expect(err).To(BeNil())
-	
+
 	// ensure the CLI is available to e2e tests
 	_, err = os.Stat(cliPath)
 	Expect(err).To(BeNil())
@@ -48,7 +49,7 @@ var _ = Describe("Archer project command", func() {
 		)
 
 		BeforeEach(func() {
-			u, err := uuid.NewV4()
+			u, err := uuid.NewRandom()
 			Expect(err).To(BeNil())
 			projectName = u.String()
 

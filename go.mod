@@ -11,6 +11,7 @@ require (
 	github.com/gobuffalo/packd v0.3.0
 	github.com/gobuffalo/packr/v2 v2.5.2
 	github.com/golang/mock v1.3.1
+	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
