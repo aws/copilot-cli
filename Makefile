@@ -7,7 +7,7 @@ GOBIN=${PWD}/bin/tools
 all: build
 
 .PHONY: build
-build: test
+build:
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
 
 .PHONY: test
@@ -19,7 +19,7 @@ integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
 .PHONY: e2e-test
-e2e-test: build
+e2e-test: build test
 	# the target assumes the AWS-* environment variables are exported
 	# -p: The number of test binaries that can be run in parallel
 	# -parallel: Within a single test binary, how many test functions can run in parallel
