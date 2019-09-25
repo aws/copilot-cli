@@ -32,6 +32,11 @@ import (
 // heirarchies based on that format. Projects are at the root of the heirarchy.
 // Searching SSM for all parameters with the `rootProjectPath` key will give you
 // all the project keys, for example.
+
+// current schema Version for Projects
+const schemaVersion = "1.0"
+
+// schema formats supported in current schemaVersion. NOTE: May change to map in the future.
 const (
 	rootProjectPath  = "/archer/"
 	fmtProjectPath   = "/archer/%s"
@@ -67,6 +72,7 @@ func NewStore() (*SSM, error) {
 // CreateProject instantiates a new project, validates its uniqueness and stores it in SSM.
 func (s *SSM) CreateProject(project *archer.Project) error {
 	projectPath := fmt.Sprintf(fmtProjectPath, project.Name)
+	project.Version = schemaVersion
 
 	data, err := marshal(project)
 	if err != nil {

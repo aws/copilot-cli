@@ -84,7 +84,7 @@ func TestStore_ListProjects(t *testing.T) {
 			// GIVEN
 			store := &SSM{
 				systemManager: &mockSSM{
-					t: t,
+					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
 			}
@@ -195,7 +195,7 @@ func TestStore_GetProject(t *testing.T) {
 					mockGetParameter: tc.mockGetParameter,
 				},
 				tokenService: &mockSTS{
-					t: t,
+					t:                     t,
 					mockGetCallerIdentity: tc.mockGetCallerIdentity,
 				},
 				sessionRegion: "us-west-2",
@@ -215,10 +215,10 @@ func TestStore_GetProject(t *testing.T) {
 }
 
 func TestStore_CreateProject(t *testing.T) {
-	testProject := archer.Project{Name: "chicken", Version: "1.0"}
-	testProjectString, err := marshal(testProject)
+	testProject := archer.Project{Name: "chicken"}
+	testProjectString := fmt.Sprintf("{\"name\":\"chicken\",\"version\":\"%s\"}", schemaVersion)
+	marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
-	require.NoError(t, err, "Marshal project should not fail")
 
 	testCases := map[string]struct {
 		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
@@ -342,7 +342,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 			// GIVEN
 			store := &SSM{
 				systemManager: &mockSSM{
-					t: t,
+					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
 			}

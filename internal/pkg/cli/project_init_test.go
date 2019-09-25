@@ -34,8 +34,7 @@ func TestProjectInit_Execute(t *testing.T) {
 				ws:          mockWorkspace,
 			},
 			expectedProject: archer.Project{
-				Name:    "project",
-				Version: "1.0",
+				Name: "project",
 			},
 			mocking: func() {
 				mockWorkspace.

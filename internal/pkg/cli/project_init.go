@@ -24,8 +24,7 @@ type InitProjectOpts struct {
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
 	if err := opts.manager.CreateProject(&archer.Project{
-		Name:    opts.ProjectName,
-		Version: "1.0",
+		Name: opts.ProjectName,
 	}); err != nil {
 		return err
 	}
