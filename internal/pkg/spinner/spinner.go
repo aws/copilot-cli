@@ -24,7 +24,7 @@ type Spinner struct {
 
 // New returns a Spinner that outputs to stderr.
 func New() Spinner {
-	s := spin.New(spin.CharSets[14], 125*time.Millisecond)
+	s := spin.New(charset, 125*time.Millisecond)
 	s.Writer = os.Stderr
 
 	return Spinner{
