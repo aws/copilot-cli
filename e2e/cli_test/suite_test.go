@@ -5,6 +5,8 @@ package cli_test
 import (
 	"flag"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -23,11 +25,13 @@ var cliPath string
 var update = flag.Bool("update", false, "update .golden files")
 
 var _ = BeforeSuite(func() {
-	// ensure the e2e tests are performed on the latest code changes by
-	// compiling CLI from source
 	var err error
-	cliPath, err = gexec.Build("../../cmd/archer/main.go")
-	Expect(err).Should(BeNil())
+	cliPath, err = filepath.Abs("../../bin/local/archer")
+	Expect(err).To(BeNil())
+
+	// ensure the CLI is available to e2e tests
+	_, err = os.Stat(cliPath)
+	Expect(err).To(BeNil())
 })
 
 var _ = AfterSuite(func() {
