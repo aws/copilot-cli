@@ -3,13 +3,12 @@
 package project
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
-	"strings"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -17,6 +16,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/e2e/cli_test/internal/utils"
 )
 
 func TestArcherProjectCommand(t *testing.T) {
@@ -24,19 +25,16 @@ func TestArcherProjectCommand(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	RunSpecs(t, "Test Archer project command")
 }
-
 var cliPath string
 
 var _ = BeforeSuite(func() {
-	// ensure the e2e tests are performed on the latest code changes by
-	// compiling CLI from source
 	var err error
-	cliPath, err = gexec.Build("../../../cmd/archer/main.go")
-	Expect(err).Should(BeNil())
-})
-
-var _ = AfterSuite(func() {
-	gexec.CleanupBuildArtifacts()
+	cliPath, err = filepath.Abs("../../../bin/local/archer")
+	Expect(err).To(BeNil())
+	
+	// ensure the CLI is available to e2e tests
+	_, err = os.Stat(cliPath)
+	Expect(err).To(BeNil())
 })
 
 var _ = Describe("Archer project command", func() {
@@ -90,7 +88,7 @@ var _ = Describe("Archer project command", func() {
 
 			It("should use shared AWS configuration file", func() {
 				// dump AWS creds into a credential file
-				creds, err := extractAWSCredsFromEnvVars()
+				creds, err := utils.ExtractAWSCredsFromEnvVars()
 				Expect(err).To(BeNil())
 
 				tmpFile, err := ioutil.TempFile(tmpDir, "config")
@@ -100,7 +98,7 @@ var _ = Describe("Archer project command", func() {
 				_, err = tmpFile.Write([]byte(
 					fmt.Sprintf(
 						"[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s\nregion = %s",
-						creds.awsAccessKey, creds.awsSecretKey, creds.awsSessionToken, creds.awsRegion),
+						creds.AwsAccessKey, creds.AwsSecretKey, creds.AwsSessionToken, creds.AwsRegion),
 				))
 				Expect(err).To(BeNil())
 
@@ -109,8 +107,6 @@ var _ = Describe("Archer project command", func() {
 				command.Env = []string{
 					fmt.Sprintf("AWS_CONFIG_FILE=%s", tmpFile.Name()),
 				}
-
-				fmt.Println("Name", tmpFile.Name())
 			})
 		})
 
@@ -147,55 +143,3 @@ var _ = Describe("Archer project command", func() {
 		})
 	})
 })
-
-type creds struct {
-	awsAccessKey    string
-	awsSecretKey    string
-	awsSessionToken string
-	awsRegion       string
-}
-
-func extractAWSCredsFromEnvVars() (*creds, error) {
-	const (
-		awsAccessKeyName        = "AWS_ACCESS_KEY_ID"
-		awsSecretKeyName        = "AWS_SECRET_ACCESS_KEY"
-		awsSessionTokenName     = "AWS_SESSION_TOKEN"
-		awsDefaultRegionKeyName = "AWS_DEFAULT_REGION"
-	)
-
-	var res = &creds{}
-
-	for _, pair := range os.Environ() {
-		fmt.Println(pair)
-		keyValue := strings.SplitN(pair, "=", 2)
-		if len(keyValue) < 2 {
-			return nil, errors.New("invalid environment variable format")
-		}
-		key := keyValue[0]
-		value := keyValue[1]
-
-		if key == awsAccessKeyName {
-			res.awsAccessKey = value
-		} else if key == awsSecretKeyName {
-			res.awsSecretKey = value
-		} else if key == awsSessionTokenName {
-			res.awsSessionToken = value
-		} else if key == awsDefaultRegionKeyName {
-			res.awsRegion = value
-		} else {
-			continue
-		}
-	}
-
-	if res.awsAccessKey == "" || res.awsSecretKey == "" || res.awsSessionToken == "" || res.awsRegion == "" {
-		return nil, fmt.Errorf(
-			"failed to parse AWS credentials out of environment variables, "+
-				"AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s "+
-				"AWS_SESSION_TOKEN=%s AWS_DEFAULT_REGION=%s",
-			res.awsAccessKey, res.awsSecretKey, res.awsSessionToken,
-			res.awsRegion,
-		)
-	}
-
-	return res, nil
-}
