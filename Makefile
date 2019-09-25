@@ -7,7 +7,7 @@ GOBIN=${PWD}/bin/tools
 all: build
 
 .PHONY: build
-build:
+build: test
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
 
 .PHONY: test
@@ -19,9 +19,15 @@ integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
 .PHONY: e2e-test
-e2e-test:
+e2e-test: build
+	# the target assumes the AWS-* environment variables are exported
 	# -p: The number of test binaries that can be run in parallel
 	# -parallel: Within a single test binary, how many test functions can run in parallel
+	env -i PATH=$$PATH GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
+	AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+	AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+	AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
+	AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
 	go test -v -p 1 -parallel 1 -tags=e2e ./e2e...
 
 .PHONY: e2e-test-update-golden-files
