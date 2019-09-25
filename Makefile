@@ -59,3 +59,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/archer/workspace.go -package=mocks -destination=./mocks/mock_workspace.go
 	${GOBIN}/mockgen -source=./internal/pkg/spinner/spinner.go -package=mocks -destination=./internal/pkg/spinner/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/spinner.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_spinner.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go

@@ -36,6 +36,7 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildInitCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildProjCmd())
+	cmd.AddCommand(cli.BuildCompletionCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
 	return cmd
 }
