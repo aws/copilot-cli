@@ -3,6 +3,7 @@
 package project
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -27,6 +28,7 @@ func TestArcherProjectCommand(t *testing.T) {
 }
 
 var cliPath string
+var update = flag.Bool("update", false, "update .golden files")
 
 var _ = BeforeSuite(func() {
 	var err error
