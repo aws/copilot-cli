@@ -1,4 +1,5 @@
 bin/
+coverage.out
 .idea/*
 .vscode/*
 *.swp

@@ -3,6 +3,7 @@
 
 PACKAGES=./internal...
 GOBIN=${PWD}/bin/tools
+COVERAGE=coverage.out
 
 all: build
 
@@ -12,7 +13,12 @@ build:
 
 .PHONY: test
 test:
-	go test -v -race -cover -count=1 ${PACKAGES}
+	go test -v -race -cover -count=1 -coverprofile ${COVERAGE} ${PACKAGES}
+
+generate-coverage: ${COVERAGE}
+	go tool cover -html=${COVERAGE}
+
+${COVERAGE}: test
 
 .PHONY: integ-test
 integ-test:
