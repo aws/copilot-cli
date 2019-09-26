@@ -1,7 +1,9 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package styling
+// Package color provides utilities to globally enable/disable color
+// output of the CLI
+package color
 
 import (
 	"os"
@@ -22,7 +24,7 @@ func DisableColorBasedOnEnvVar() {
 	if !exists {
 		// if the COLOR environment variable is not set
 		// then follow the settings in the color library
-		// since it's dynamitcally set based on the type of terminal
+		// since it's dynamically set based on the type of terminal
 		// and whether stdout is connected to a terminal or not.
 		core.DisableColor = color.NoColor
 		return

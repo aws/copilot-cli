@@ -11,11 +11,11 @@ import (
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/styling"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/color"
 )
 
 func init() {
-	styling.DisableColorBasedOnEnvVar()
+	color.DisableColorBasedOnEnvVar()
 }
 
 func main() {
