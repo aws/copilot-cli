@@ -5,9 +5,9 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/spf13/cobra"
@@ -15,19 +15,19 @@ import (
 
 // ListProjectOpts contains the fields to collect for listing a project.
 type ListProjectOpts struct {
-	prompt  terminal.Stdio
-	manager archer.ProjectLister
+	store archer.ProjectLister
+	w     io.Writer
 }
 
 // Execute lists the existing projects to the prompt.
 func (opts *ListProjectOpts) Execute() error {
-	projects, err := opts.manager.ListProjects()
+	projects, err := opts.store.ListProjects()
 	if err != nil {
 		return err
 	}
 
 	for _, proj := range projects {
-		fmt.Fprintln(opts.prompt.Out, proj.Name)
+		fmt.Fprintln(opts.w, proj.Name)
 	}
 
 	return nil
@@ -36,11 +36,7 @@ func (opts *ListProjectOpts) Execute() error {
 // BuildProjectListCommand builds the command to list existing projects.
 func BuildProjectListCommand() *cobra.Command {
 	opts := ListProjectOpts{
-		prompt: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stderr,
-			Err: os.Stderr,
-		},
+		w: os.Stdout,
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
@@ -53,7 +49,7 @@ func BuildProjectListCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts.manager = ssmStore
+			opts.store = ssmStore
 			return opts.Execute()
 		},
 	}
