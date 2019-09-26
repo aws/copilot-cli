@@ -6,19 +6,20 @@ package cli
 import (
 	"log"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 )
 
 const (
-	// EnvProjectFlag is the flag for providing the project name to the env commands.
-	EnvProjectFlag = "project"
+	// envProjectFlag is the flag for providing the project name to the env commands.
+	envProjectFlag = "project"
 )
 
-// BuildEnvCmd is the top level command for environments
-func BuildEnvCmd() *cobra.Command {
+// buildEnvCmd is the top level command for environments
+func buildEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
 		Short: "Environment commands",
@@ -41,14 +42,14 @@ An environment represents a deployment stage.`,
 				log.Println(err.Error())
 				return
 			}
-			viper.SetDefault(EnvProjectFlag, summary.ProjectName)
+			viper.SetDefault(envProjectFlag, summary.ProjectName)
 
 		},
 	}
 
 	// The project flag is available to all subcommands through viper.GetString("project")
-	cmd.PersistentFlags().String(EnvProjectFlag, "", "Name of the project (required unless you're in a workspace).")
-	viper.BindPFlag(EnvProjectFlag, cmd.PersistentFlags().Lookup(EnvProjectFlag))
+	cmd.PersistentFlags().String(envProjectFlag, "", "Name of the project (required unless you're in a workspace).")
+	viper.BindPFlag(envProjectFlag, cmd.PersistentFlags().Lookup(envProjectFlag))
 
 	cmd.AddCommand(BuildEnvAddCmd())
 	cmd.AddCommand(BuildEnvListCmd())

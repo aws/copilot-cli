@@ -4,12 +4,13 @@
 package cli
 
 import (
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/template"
 )
 
-// BuildProjCmd builds the top level project command and related subcommands.
-func BuildProjCmd() *cobra.Command {
+// buildProjCmd builds the top level project command and related subcommands.
+func buildProjCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
 		Short: "Project commands",

@@ -11,16 +11,17 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/cobra"
+
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/spf13/cobra"
 )
 
 const defaultEnvironmentName = "test"
@@ -208,8 +209,8 @@ func (opts *InitAppOpts) deployEnv() error {
 	return nil
 }
 
-// BuildInitCmd builds the command for bootstrapping an application.
-func BuildInitCmd() *cobra.Command {
+// buildInitCmd builds the command for bootstrapping an application.
+func buildInitCmd() *cobra.Command {
 	opts := InitAppOpts{
 		prompt: terminal.Stdio{
 			In:  os.Stdin,
