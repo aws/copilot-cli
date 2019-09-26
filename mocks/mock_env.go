@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	archer "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockEnvironmentStore is a mock of EnvironmentStore interface
@@ -64,17 +65,17 @@ func (mr *MockEnvironmentStoreMockRecorder) GetEnvironment(projectName, environm
 }
 
 // CreateEnvironment mocks base method
-func (m *MockEnvironmentStore) CreateEnvironment(environment *archer.Environment) error {
+func (m *MockEnvironmentStore) CreateEnvironment(env *archer.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateEnvironment", environment)
+	ret := m.ctrl.Call(m, "CreateEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateEnvironment indicates an expected call of CreateEnvironment
-func (mr *MockEnvironmentStoreMockRecorder) CreateEnvironment(environment interface{}) *gomock.Call {
+func (mr *MockEnvironmentStoreMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentStore)(nil).CreateEnvironment), environment)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentStore)(nil).CreateEnvironment), env)
 }
 
 // MockEnvironmentLister is a mock of EnvironmentLister interface
@@ -177,17 +178,17 @@ func (m *MockEnvironmentCreator) EXPECT() *MockEnvironmentCreatorMockRecorder {
 }
 
 // CreateEnvironment mocks base method
-func (m *MockEnvironmentCreator) CreateEnvironment(environment *archer.Environment) error {
+func (m *MockEnvironmentCreator) CreateEnvironment(env *archer.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateEnvironment", environment)
+	ret := m.ctrl.Call(m, "CreateEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateEnvironment indicates an expected call of CreateEnvironment
-func (mr *MockEnvironmentCreatorMockRecorder) CreateEnvironment(environment interface{}) *gomock.Call {
+func (mr *MockEnvironmentCreatorMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentCreator)(nil).CreateEnvironment), environment)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentCreator)(nil).CreateEnvironment), env)
 }
 
 // MockEnvironmentDeployer is a mock of EnvironmentDeployer interface
@@ -214,7 +215,7 @@ func (m *MockEnvironmentDeployer) EXPECT() *MockEnvironmentDeployerMockRecorder 
 }
 
 // DeployEnvironment mocks base method
-func (m *MockEnvironmentDeployer) DeployEnvironment(env archer.Environment) error {
+func (m *MockEnvironmentDeployer) DeployEnvironment(env *archer.Environment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
@@ -227,16 +228,16 @@ func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockEnvironmentDeployer)(nil).DeployEnvironment), env)
 }
 
-// Wait mocks base method
-func (m *MockEnvironmentDeployer) Wait(env archer.Environment) error {
+// WaitForEnvironmentCreation mocks base method
+func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *archer.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Wait", env)
+	ret := m.ctrl.Call(m, "WaitForEnvironmentCreation", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Wait indicates an expected call of Wait
-func (mr *MockEnvironmentDeployerMockRecorder) Wait(env interface{}) *gomock.Call {
+// WaitForEnvironmentCreation indicates an expected call of WaitForEnvironmentCreation
+func (mr *MockEnvironmentDeployerMockRecorder) WaitForEnvironmentCreation(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockEnvironmentDeployer)(nil).Wait), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEnvironmentCreation", reflect.TypeOf((*MockEnvironmentDeployer)(nil).WaitForEnvironmentCreation), env)
 }

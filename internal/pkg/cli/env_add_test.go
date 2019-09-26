@@ -136,7 +136,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 				mockDeployer.EXPECT().DeployEnvironment(gomock.Any())
 				mockSpinner.EXPECT().Start(gomock.Eq("Deploying env..."))
 				// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
-				mockDeployer.EXPECT().Wait(gomock.Any())
+				mockDeployer.EXPECT().WaitForEnvironmentCreation(gomock.Any())
 				mockSpinner.EXPECT().Stop(gomock.Eq("Done!"))
 			},
 		},

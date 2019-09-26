@@ -63,10 +63,10 @@ func (opts *AddEnvOpts) Execute() error {
 		return err
 	}
 
-	env := archer.Environment{
+	env := &archer.Environment{
 		Name:               opts.EnvName,
 		Project:            opts.ProjectName,
-		AccountID:          "1234",
+		AccountID:          "1234", // FIXME
 		Region:             "1234",
 		Prod:               opts.Production,
 		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
@@ -78,13 +78,13 @@ func (opts *AddEnvOpts) Execute() error {
 
 	opts.spinner.Start("Deploying env...")
 
-	if err := opts.deployer.Wait(env); err != nil {
+	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
 		return err
 	}
 
 	opts.spinner.Stop("Done!")
 
-	if err := opts.manager.CreateEnvironment(&env); err != nil {
+	if err := opts.manager.CreateEnvironment(env); err != nil {
 		return err
 	}
 	return nil

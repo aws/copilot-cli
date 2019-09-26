@@ -35,11 +35,11 @@ type EnvironmentGetter interface {
 
 // EnvironmentCreator creates an environment in the underlying project management store
 type EnvironmentCreator interface {
-	CreateEnvironment(environment *Environment) error
+	CreateEnvironment(env *Environment) error
 }
 
 // EnvironmentDeployer can deploy an environment
 type EnvironmentDeployer interface {
-	DeployEnvironment(env Environment) error
-	Wait(env Environment) error
+	DeployEnvironment(env *Environment) error
+	WaitForEnvironmentCreation(env *Environment) error
 }
