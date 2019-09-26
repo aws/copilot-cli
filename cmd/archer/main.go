@@ -7,10 +7,16 @@ package main
 import (
 	"os"
 
+	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/internal/styling"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli"
-	"github.com/spf13/cobra"
 )
+
+func init() {
+	styling.DisableColorBasedOnEnvVar()
+}
 
 func main() {
 	cmd := buildRootCmd()
