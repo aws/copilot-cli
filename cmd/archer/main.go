@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/internal/styling"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/styling"
 )
 
 func init() {

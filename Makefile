@@ -1,7 +1,7 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-PACKAGES=./internal... ./cmd/archer/internal...
+PACKAGES=./internal...
 GOBIN=${PWD}/bin/tools
 
 all: build

@@ -4,7 +4,6 @@
 package styling
 
 import (
-	"os"
 	"testing"
 
 	"github.com/AlecAivazis/survey/v2/core"
@@ -12,8 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type envVar struct {
+	env map[string]string
+}
+
+func (e *envVar) lookupEnv(key string) (string, bool) {
+	v, ok := e.env[key]
+	return v, ok
+}
+
 func TestColorEnvVarSetToFalse(t *testing.T) {
-	os.Setenv(colorEnvVar, "false")
+	env := &envVar{
+		env: map[string]string{colorEnvVar: "false"},
+	}
+	lookupEnv = env.lookupEnv
 
 	DisableColorBasedOnEnvVar()
 
@@ -22,7 +33,10 @@ func TestColorEnvVarSetToFalse(t *testing.T) {
 }
 
 func TestColorEnvVarSetToTrue(t *testing.T) {
-	os.Setenv(colorEnvVar, "True")
+	env := &envVar{
+		env: map[string]string{colorEnvVar: "true"},
+	}
+	lookupEnv = env.lookupEnv
 
 	DisableColorBasedOnEnvVar()
 
@@ -31,7 +45,10 @@ func TestColorEnvVarSetToTrue(t *testing.T) {
 }
 
 func TestColorEnvVarNotSet(t *testing.T) {
-	os.Clearenv()
+	env := &envVar{
+		env: make(map[string]string),
+	}
+	lookupEnv = env.lookupEnv
 
 	DisableColorBasedOnEnvVar()
 
