@@ -10,39 +10,57 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testCase struct {
+	input interface{}
+	want  error
+}
+
+var basicNameTestCases = map[string]testCase{
+	"string as input": {
+		input: "chicken1234",
+		want:  nil,
+	},
+	"number as input": {
+		input: 1234,
+		want:  errValueNotAString,
+	},
+	"bool as input": {
+		input: false,
+		want:  errValueNotAString,
+	},
+	"string with non-alphanumerics": {
+		input: "my-project",
+		want:  errValueNotAlphanumeric,
+	},
+	"empty string": {
+		input: "",
+		want:  errValueEmpty,
+	},
+	"invalid length string": {
+		input: strings.Repeat("s", 256),
+		want:  errValueTooLong,
+	},
+	"does not start with letter": {
+		input: "123chicken",
+		want:  errValueFirstCharNotLetter,
+	},
+}
+
 func TestValidateProjectName(t *testing.T) {
-	testCases := map[string]struct {
-		input interface{}
-		want  error
-	}{
-		"string as input": {
-			input: "chicken1234",
-			want:  nil,
-		},
-		"number as input": {
-			input: 1234,
-			want:  errValueNotAString,
-		},
-		"bool as input": {
-			input: false,
-			want:  errValueNotAString,
-		},
-		"string with non-alphanumerics": {
-			input: "my-project",
+	// Any project-specific name validations can be added here
+	testCases := map[string]testCase{
+		"contains emoji": testCase{
+			input: "😀",
 			want:  errValueNotAlphanumeric,
 		},
-		"empty string": {
-			input: "",
-			want:  errValueEmpty,
-		},
-		"invalid length string": {
-			input: strings.Repeat("s", 256),
-			want:  errValueTooLong,
-		},
-		"does not start with letter": {
-			input: "123chicken",
-			want:  errValueFirstCharNotLetter,
-		},
+	}
+
+	for name, tc := range basicNameTestCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateProjectName(tc.input)
+
+			require.Equal(t, tc.want, got)
+		})
 	}
 
 	for name, tc := range testCases {
@@ -55,39 +73,19 @@ func TestValidateProjectName(t *testing.T) {
 }
 
 func TestValidateApplicationName(t *testing.T) {
-	testCases := map[string]struct {
-		input interface{}
-		want  error
-	}{
-		"string as input": {
-			input: "badgoose1234",
-			want:  nil,
-		},
-		"number as input": {
-			input: 1234,
-			want:  errValueNotAString,
-		},
-		"bool as input": {
-			input: false,
-			want:  errValueNotAString,
-		},
-		"string with non-alphanumerics": {
-			input: "my-application",
-			want:  errValueNotAlphanumeric,
-		},
-		"empty string": {
-			input: "",
-			want:  errValueEmpty,
-		},
-		"invalid length string": {
-			input: strings.Repeat("s", 256),
-			want:  errValueTooLong,
-		},
-		"does not start with letter": {
-			input: "123badgoose",
-			want:  errValueFirstCharNotLetter,
-		},
+	testCases := basicNameTestCases
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateApplicationName(tc.input)
+
+			require.Equal(t, tc.want, got)
+		})
 	}
+}
+
+func TestValidateEnvironmentName(t *testing.T) {
+	testCases := basicNameTestCases
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -124,6 +122,34 @@ func TestIsAlphanumeric(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := isAlphanumeric(tc.input)
+
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestStartsWithLetter(t *testing.T) {
+	testCases := map[string]struct {
+		input string
+		want  bool
+	}{
+		"starts with letter": {
+			input: "foo1234",
+			want:  true,
+		},
+		"starts with number": {
+			input: "1234foo",
+			want:  false,
+		},
+		"starts with special char": {
+			input: "_foo",
+			want:  false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := startsWithLetter(tc.input)
 
 			require.Equal(t, tc.want, got)
 		})
