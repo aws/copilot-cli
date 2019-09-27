@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/spinner/mocks"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner/mocks"
 	spin "github.com/briandowns/spinner"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
