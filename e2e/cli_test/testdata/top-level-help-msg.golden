@@ -9,6 +9,9 @@ Commands
 
     project     Project commands 
 
+  Settings
+    completion  Output shell completion code 
+
 Flags
   -h, --help   help for archer
 
