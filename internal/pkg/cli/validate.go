@@ -19,49 +19,19 @@ var (
 
 func validateProjectName(val interface{}) error {
 	// TODO(nick): add logic to determine project name uniqueness in the scope of an AWS account
-	s, ok := val.(string)
-	if !ok {
-		return errValueNotAString
-	}
-	if s == "" {
-		return errValueEmpty
-	}
-	if len(s) > 255 {
-		return errValueTooLong
-	}
-	if !isAlphanumeric(s) {
-		return errValueNotAlphanumeric
-	}
-	if !startsWithLetter(s) {
-		return errValueFirstCharNotLetter
-	}
-
-	return nil
+	return basicNameValidation(val)
 }
 
 func validateApplicationName(val interface{}) error {
 	// TODO(nick): add logic to determine application name uniqeness in the scope of a project
-	s, ok := val.(string)
-	if !ok {
-		return errValueNotAString
-	}
-	if s == "" {
-		return errValueEmpty
-	}
-	if len(s) > 255 {
-		return errValueTooLong
-	}
-	if !isAlphanumeric(s) {
-		return errValueNotAlphanumeric
-	}
-	if !startsWithLetter(s) {
-		return errValueFirstCharNotLetter
-	}
-
-	return nil
+	return basicNameValidation(val)
 }
 
 func validateEnvironmentName(val interface{}) error {
+	return basicNameValidation(val)
+}
+
+func basicNameValidation(val interface{}) error {
 	s, ok := val.(string)
 	if !ok {
 		return errValueNotAString
@@ -80,15 +50,6 @@ func validateEnvironmentName(val interface{}) error {
 	}
 
 	return nil
-}
-
-func startsWithLetter(s string) bool {
-	valid, err := regexp.MatchString(`^[a-zA-Z]`, s)
-	if err != nil {
-		return false // bubble up error?
-	}
-
-	return valid
 }
 
 func isAlphanumeric(s string) bool {
@@ -98,4 +59,13 @@ func isAlphanumeric(s string) bool {
 		}
 	}
 	return true
+}
+
+func startsWithLetter(s string) bool {
+	valid, err := regexp.MatchString(`^[a-zA-Z]`, s)
+	if err != nil {
+		return false // bubble up error?
+	}
+
+	return valid
 }
