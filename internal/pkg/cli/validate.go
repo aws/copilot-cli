@@ -5,14 +5,16 @@ package cli
 
 import (
 	"errors"
+	"regexp"
 	"unicode"
 )
 
 var (
-	errValueEmpty           = errors.New("value must not be empty")
-	errValueTooLong         = errors.New("value must not exceed 255 characters")
-	errValueNotAlphanumeric = errors.New("value must be alphanumeric: [A-Za-z0-9]")
-	errValueNotAString      = errors.New("value must be a string")
+	errValueEmpty              = errors.New("value must not be empty")
+	errValueTooLong            = errors.New("value must not exceed 255 characters")
+	errValueNotAlphanumeric    = errors.New("value must be alphanumeric: [A-Za-z0-9]")
+	errValueNotAString         = errors.New("value must be a string")
+	errValueFirstCharNotLetter = errors.New("value must start with letter")
 )
 
 func validateProjectName(val interface{}) error {
@@ -30,6 +32,10 @@ func validateProjectName(val interface{}) error {
 	if !isAlphanumeric(s) {
 		return errValueNotAlphanumeric
 	}
+	if !startsWithLetter(s) {
+		return errValueFirstCharNotLetter
+	}
+
 	return nil
 }
 
@@ -48,7 +54,41 @@ func validateApplicationName(val interface{}) error {
 	if !isAlphanumeric(s) {
 		return errValueNotAlphanumeric
 	}
+	if !startsWithLetter(s) {
+		return errValueFirstCharNotLetter
+	}
+
 	return nil
+}
+
+func validateEnvironmentName(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if s == "" {
+		return errValueEmpty
+	}
+	if len(s) > 255 {
+		return errValueTooLong
+	}
+	if !isAlphanumeric(s) {
+		return errValueNotAlphanumeric
+	}
+	if !startsWithLetter(s) {
+		return errValueFirstCharNotLetter
+	}
+
+	return nil
+}
+
+func startsWithLetter(s string) bool {
+	valid, err := regexp.MatchString(`^[a-zA-Z]`, s)
+	if err != nil {
+		return false // bubble up error?
+	}
+
+	return valid
 }
 
 func isAlphanumeric(s string) bool {
