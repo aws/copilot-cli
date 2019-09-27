@@ -16,7 +16,7 @@ func TestValidateProjectName(t *testing.T) {
 		want  error
 	}{
 		"string as input": {
-			input: "1234",
+			input: "chicken1234",
 			want:  nil,
 		},
 		"number as input": {
@@ -39,6 +39,10 @@ func TestValidateProjectName(t *testing.T) {
 			input: strings.Repeat("s", 256),
 			want:  errValueTooLong,
 		},
+		"does not start with letter": {
+			input: "123chicken",
+			want:  errValueFirstCharNotLetter,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -56,7 +60,7 @@ func TestValidateApplicationName(t *testing.T) {
 		want  error
 	}{
 		"string as input": {
-			input: "1234",
+			input: "badgoose1234",
 			want:  nil,
 		},
 		"number as input": {
@@ -78,6 +82,10 @@ func TestValidateApplicationName(t *testing.T) {
 		"invalid length string": {
 			input: strings.Repeat("s", 256),
 			want:  errValueTooLong,
+		},
+		"does not start with letter": {
+			input: "123badgoose",
+			want:  errValueFirstCharNotLetter,
 		},
 	}
 
