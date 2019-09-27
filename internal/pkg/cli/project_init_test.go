@@ -88,6 +88,15 @@ func TestProjectInit_Execute(t *testing.T) {
 
 			},
 		},
+		"with invalid project name": {
+			initProjectOpts: InitProjectOpts{
+				ProjectName: "123chicken",
+				manager:     mockProjectStore,
+				ws:          mockWorkspace,
+			},
+			expectedError: errValueFirstCharNotLetter,
+			mocking: func() {},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
