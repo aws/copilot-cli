@@ -23,6 +23,9 @@ type InitProjectOpts struct {
 
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
+	if err := validateProjectName(opts.ProjectName); err != nil {
+		return err
+	}
 	if err := opts.manager.CreateProject(&archer.Project{
 		Name: opts.ProjectName,
 	}); err != nil {
@@ -62,6 +65,7 @@ func BuildProjectInitCommand() *cobra.Command {
 			opts.ws = ws
 			opts.manager = ssmStore
 			opts.ProjectName = args[0]
+
 			return opts.Execute()
 		},
 	}
