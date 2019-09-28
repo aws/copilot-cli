@@ -132,9 +132,9 @@ func BuildEnvAddCmd() *cobra.Command {
 			opts.manager = s
 			opts.projectGetter = s
 
-			// TODO: create this session elsewhere
 			sess, err := session.NewSessionWithOptions(session.Options{
 				SharedConfigState: session.SharedConfigEnable,
+				Profile:           opts.EnvProfile,
 			})
 			if err != nil {
 				return err

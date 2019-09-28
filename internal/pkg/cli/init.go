@@ -28,10 +28,10 @@ const defaultEnvironmentName = "test"
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
 	// User provided fields
-	Project string `survey:"project"` // namespace that this application belongs to.
-	Name    string `survey:"name"`    // unique identifier to logically group AWS resources together.
-	Type    string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
-
+	Project          string `survey:"project"` // namespace that this application belongs to.
+	Name             string `survey:"name"`    // unique identifier to logically group AWS resources together.
+	Type             string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
+	SkipDeploy       bool   // whether to skip asking if we should deploy a test environment.
 	existingProjects []string
 
 	projStore archer.ProjectStore
@@ -138,7 +138,7 @@ func (opts *InitAppOpts) Prepare() {
 
 // Execute creates a project and initializes the workspace.
 func (opts *InitAppOpts) Execute() error {
-	if err := opts.createProjectIfNotExists(); err != nil {
+	if err := opts.createProject(); err != nil {
 		return err
 	}
 
@@ -146,10 +146,25 @@ func (opts *InitAppOpts) Execute() error {
 		return err
 	}
 
+	if err := opts.createApp(); err != nil {
+		return err
+	}
+
 	return opts.deployEnv()
 }
+func (opts *InitAppOpts) createApp() error {
+	manifest, err := manifest.Create(opts.Name, opts.Type)
+	if err != nil {
+		return fmt.Errorf("failed to generate a manifest %w", err)
+	}
+	manifestBytes, err := manifest.Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal the manifest file %w", err)
+	}
+	return opts.ws.WriteManifest(manifestBytes, opts.Name)
+}
 
-func (opts *InitAppOpts) createProjectIfNotExists() error {
+func (opts *InitAppOpts) createProject() error {
 	err := opts.projStore.CreateProject(&archer.Project{
 		Name: opts.Project,
 	})
@@ -164,10 +179,16 @@ func (opts *InitAppOpts) createProjectIfNotExists() error {
 
 // deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
 func (opts *InitAppOpts) deployEnv() error {
+
+	if opts.SkipDeploy {
+		return nil
+	}
+
 	existingEnvs, _ := opts.envStore.ListEnvironments(opts.Project)
 	if len(existingEnvs) > 0 {
 		return nil
 	}
+
 	deployEnv := false
 	prompt := &survey.Confirm{
 		Message: "Would you like to set up a test environment?",
@@ -257,6 +278,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project (required).")
 	cmd.Flags().StringVarP(&opts.Name, "app", "a", "", "Name of the application (required).")
 	cmd.Flags().StringVarP(&opts.Type, "type", "t", "", "Type of application to create.")
+	cmd.Flags().BoolVar(&opts.SkipDeploy, "skip-deploy", false, "Skips asking if you want to do a deployment.")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": "Getting Started ✨",
