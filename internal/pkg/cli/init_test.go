@@ -327,7 +327,7 @@ func TestInit_Execute(t *testing.T) {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project1",
-				Type:             "Empty",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -343,6 +343,9 @@ func TestInit_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Eq("project1"))
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend")
 				mockEnvStore.
 					EXPECT().
 					ListEnvironments(gomock.Eq("project1")).
@@ -353,11 +356,45 @@ func TestInit_Execute(t *testing.T) {
 			},
 			want: nil,
 		},
-		"should create a new project and workspace without a test environment": {
+		"should not prompt to create test environment when customer skips it": {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
+				Project:          "project1",
+				Type:             "Load Balanced Web App",
+				SkipDeploy:       true,
+				existingProjects: []string{},
+			},
+			consoleInput: func(c *expect.Console) {
+				c.ExpectEOF()
+			},
+			mocking: func() {
+				mockProjectStore.
+					EXPECT().
+					CreateProject(gomock.Any()).
+					Return(&store.ErrProjectAlreadyExists{
+						ProjectName: "project1",
+					})
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project1"))
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend")
+				mockEnvStore.
+					EXPECT().
+					ListEnvironments(gomock.Eq("project1")).
+					Return([]*archer.Environment{
+						{Name: "test"},
+					}, nil).
+					Times(0)
+			},
+			want: nil,
+		},
+		"should create a new project, workspace and manifest without a test environment": {
+			inputOpts: InitAppOpts{
 				Project:          "project3",
-				Type:             "Empty",
+				Name:             "frontend",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -374,6 +411,9 @@ func TestInit_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Eq("project3"))
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend")
 				mockEnvStore.
 					EXPECT().
 					ListEnvironments(gomock.Eq("project3")).
@@ -384,7 +424,9 @@ func TestInit_Execute(t *testing.T) {
 		},
 		"should echo error returned from call to CreateProject": {
 			inputOpts: InitAppOpts{
+				Type:             "Load Balanced Web App",
 				Project:          "project3",
+				Name:             "frontend",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -399,12 +441,18 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Times(0)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
+					Times(0)
 			},
 			want: mockError,
 		},
 		"should echo error returned from call to workspace.Create": {
 			inputOpts: InitAppOpts{
+				Type:             "Load Balanced Web App",
 				Project:          "project3",
+				Name:             "frontend",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -420,6 +468,42 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Return(mockError)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
+					Times(0)
+			},
+			want: mockError,
+		},
+		"should echo error returned from call to workspace.WriteManifest": {
+			inputOpts: InitAppOpts{
+				Type:             "Load Balanced Web App",
+				Project:          "project3",
+				Name:             "frontend",
+				existingProjects: []string{"project1", "project2"},
+			},
+			consoleInput: func(c *expect.Console) {
+				c.ExpectEOF()
+			},
+			mocking: func() {
+				mockProjectStore.
+					EXPECT().
+					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project3")).
+					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
+					Return(mockError)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
+					Times(0)
 			},
 			want: mockError,
 		},
@@ -427,7 +511,7 @@ func TestInit_Execute(t *testing.T) {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project3",
-				Type:             "Empty",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -445,6 +529,10 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
 					Times(1)
 				mockEnvStore.
 					EXPECT().
@@ -468,7 +556,7 @@ func TestInit_Execute(t *testing.T) {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project3",
-				Type:             "Empty",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -486,6 +574,10 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
 					Times(1)
 				mockEnvStore.
 					EXPECT().
@@ -517,7 +609,7 @@ func TestInit_Execute(t *testing.T) {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project3",
-				Type:             "Empty",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -535,6 +627,10 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
 					Times(1)
 				mockEnvStore.
 					EXPECT().
@@ -571,7 +667,7 @@ func TestInit_Execute(t *testing.T) {
 			inputOpts: InitAppOpts{
 				Name:             "frontend",
 				Project:          "project3",
-				Type:             "Empty",
+				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
 			consoleInput: func(c *expect.Console) {
@@ -589,6 +685,10 @@ func TestInit_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project3")).
 					Return(nil).
+					Times(1)
+				mockWorkspace.
+					EXPECT().
+					WriteManifest(gomock.Any(), "frontend").
 					Times(1)
 				mockEnvStore.
 					EXPECT().
