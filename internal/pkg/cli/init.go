@@ -138,6 +138,10 @@ func (opts *InitAppOpts) Prepare() {
 
 // Execute creates a project and initializes the workspace.
 func (opts *InitAppOpts) Execute() error {
+	if err := validateProjectName(opts.Project); err != nil {
+		return err
+	}
+
 	if err := opts.createProject(); err != nil {
 		return err
 	}
