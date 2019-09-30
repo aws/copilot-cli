@@ -8,11 +8,40 @@ COVERAGE=coverage.out
 all: build
 
 .PHONY: build
-build:
+build: packr-build compile-local packr-clean
+
+.PHONY: release
+release: packr-build compile-darwin compile-linux compile-windows packr-clean
+compile-local:
+	@echo "Building archer to ./bin/local/archer" &&\
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
 
+compile-windows:
+	@echo "Building windows archer to ./bin/local/archer.exe" &&\
+	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -o ./bin/local/archer.exe ./cmd/archer
+
+compile-linux:
+	@echo "Building linux archer to ./bin/local/archer-amd64" &&\
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/local/archer-amd64 ./cmd/archer
+
+compile-darwin:
+	@echo "Building darwin archer to ./bin/local/archer" &&\
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ./bin/local/archer ./cmd/archer
+
+packr-build:
+	@echo "Packaging static files" &&\
+	go generate ./...
+
+packr-clean:
+	@echo "Cleaning up static files generated code" &&\
+	cd templates &&\
+	packr2 clean &&\
+	cd ..\
+
 .PHONY: test
-test:
+test: packr-build run-unit-test packr-clean
+
+run-unit-test:
 	go test -v -race -cover -count=1 -coverprofile ${COVERAGE} ${PACKAGES}
 
 generate-coverage: ${COVERAGE}
@@ -21,7 +50,9 @@ generate-coverage: ${COVERAGE}
 ${COVERAGE}: test
 
 .PHONY: integ-test
-integ-test:
+integ-test: packr-build run-integ-test packr-clean
+
+run-integ-test:
 	go test -v -run Integration -tags integration ${PACKAGES}
 
 .PHONY: e2e-test
@@ -50,6 +81,7 @@ e2e-test-update-golden-files:
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
+	PACKR=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 
 .PHONY: gen-mocks
 gen-mocks: tools

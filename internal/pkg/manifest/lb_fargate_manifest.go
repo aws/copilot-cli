@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/gobuffalo/packr/v2"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/templates"
 )
 
 // LoadBalancedFargateManifest holds the fields needed to represent a load balanced Fargate service.
@@ -36,8 +36,8 @@ func NewLoadBalancedFargateManifest(appName string) *LoadBalancedFargateManifest
 
 // Marshal serializes the manifest object into a YAML document.
 func (m *LoadBalancedFargateManifest) Marshal() ([]byte, error) {
-	box := packr.New("templates", "./template")
-	content, err := box.FindString("load-balanced-fargate-service.yml")
+	box := templates.Box()
+	content, err := box.FindString("lb-fargate-service/manifest.yml")
 	if err != nil {
 		return nil, err
 	}

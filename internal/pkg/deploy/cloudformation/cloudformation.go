@@ -11,18 +11,17 @@ import (
 	"strings"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/templates"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/gobuffalo/packd"
-	"github.com/gobuffalo/packr/v2"
 )
 
 const (
-	cloudformationTemplatesPath = "../../../../templates/cloudformation"
-	environmentTemplate         = "environment.yml"
+	environmentTemplate         = "environment/cf.yml"
 	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
 )
 
@@ -36,7 +35,7 @@ type CloudFormation struct {
 func New(sess *session.Session) CloudFormation {
 	return CloudFormation{
 		client: cloudformation.New(sess),
-		box:    packr.New("cloudformation", cloudformationTemplatesPath),
+		box:    templates.Box(),
 	}
 }
 
