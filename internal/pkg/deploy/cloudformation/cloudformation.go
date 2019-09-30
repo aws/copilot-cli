@@ -5,11 +5,14 @@
 package cloudformation
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -38,6 +41,10 @@ func New(sess *session.Session) CloudFormation {
 }
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
+//
+// If the deployment succeeds, returns nil.
+// If the stack already exists, returns a ErrStackAlreadyExists.
+// Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 	template, err := cf.box.FindString(environmentTemplate)
 	if err != nil {
@@ -55,6 +62,14 @@ func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 	}
 
 	if err := cf.deployChangeSet(in); err != nil {
+		if stackExists(err) {
+			// Explicitly return a StackAlreadyExists error for the caller to decide if they want to ignore the
+			// operation or fail the program.
+			return &ErrStackAlreadyExists{
+				stackName: envStackName(env),
+				parentErr: err,
+			}
+		}
 		return err
 	}
 	return nil
@@ -136,6 +151,30 @@ func (cf CloudFormation) describeChangeSet(set *changeSet) ([]*cloudformation.Ch
 		}
 	}
 	return changes, nil
+}
+
+// stackExists returns true if the underlying error is a stack already exists error.
+func stackExists(err error) bool {
+	currentErr := err
+	for {
+		if currentErr == nil {
+			break
+		}
+		if aerr, ok := currentErr.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "ValidationError":
+				// A ValidationError occurs if we tried to create the stack with a change set.
+				if strings.Contains(aerr.Message(), "already exists") {
+					return true
+				}
+			case cloudformation.ErrCodeAlreadyExistsException:
+				// An AlreadyExists error occurs if we tried to create the stack with the CreateStack API.
+				return true
+			}
+		}
+		currentErr = errors.Unwrap(currentErr)
+	}
+	return false
 }
 
 func envStackName(env *archer.Environment) string {

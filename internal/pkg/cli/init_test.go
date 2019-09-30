@@ -334,25 +334,27 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Any()).
-					Return(&store.ErrProjectAlreadyExists{
-						ProjectName: "project1",
-					})
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project1"))
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend")
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project1")).
-					Return([]*archer.Environment{
-						{Name: "test"},
-					}, nil).
-					Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Any()).
+						Return(&store.ErrProjectAlreadyExists{
+							ProjectName: "project1",
+						}),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project1")),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend"),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project1")).
+						Return([]*archer.Environment{
+							{Name: "test"},
+						}, nil).
+						Times(1),
+				)
 			},
 			want: nil,
 		},
@@ -403,22 +405,24 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3"))
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend")
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project3")).
-					Return(make([]*archer.Environment, 0), nil).
-					Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend"),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project3")).
+						Return(make([]*archer.Environment, 0), nil).
+						Times(1),
+				)
 			},
 			want: nil,
 		},
@@ -433,18 +437,20 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(mockError)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Times(0)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(0)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(mockError),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Times(0),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(0),
+				)
 			},
 			want: mockError,
 		},
@@ -459,19 +465,21 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(mockError)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(0)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(mockError),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(0),
+				)
 			},
 			want: mockError,
 		},
@@ -486,24 +494,26 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Return(mockError)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(0)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Return(mockError),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(0),
+				)
 			},
 			want: mockError,
 		},
@@ -520,35 +530,37 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project3")).
-					Return([]*archer.Environment{}, nil).
-					Times(1)
-				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
-				mockDeployer.EXPECT().
-					DeployEnvironment(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(mockError).
-					Times(1)
-				mockSpinner.EXPECT().Stop("Error!").Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project3")).
+						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockDeployer.EXPECT().
+						DeployEnvironment(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(mockError).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Error!").Times(1),
+				)
 			},
 			want: mockError,
 		},
@@ -565,43 +577,47 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project3")).
-					Return([]*archer.Environment{}, nil).
-					Times(1)
-				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
-				mockDeployer.EXPECT().
-					DeployEnvironment(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(nil).
-					Times(1)
-				mockDeployer.EXPECT().
-					WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(mockError).
-					Times(1)
-				mockSpinner.EXPECT().Stop("Error!").Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project3")).
+						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockDeployer.EXPECT().
+						DeployEnvironment(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(nil).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Done!").Times(1),
+					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockDeployer.EXPECT().
+						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(mockError).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Error!").Times(1),
+				)
 			},
 			want: mockError,
 		},
@@ -618,48 +634,52 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project3")).
-					Return([]*archer.Environment{}, nil).
-					Times(1)
-				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
-				mockDeployer.EXPECT().
-					DeployEnvironment(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(nil).
-					Times(1)
-				mockDeployer.EXPECT().
-					WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(nil).
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					CreateEnvironment(gomock.Any()).
-					Return(mockError).
-					Times(1)
-				mockSpinner.EXPECT().Stop("Error!").Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project3")).
+						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockDeployer.EXPECT().
+						DeployEnvironment(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(nil).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Done!").Times(1),
+					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockDeployer.EXPECT().
+						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(nil).
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						CreateEnvironment(gomock.Any()).
+						Return(mockError).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Error!").Times(1),
+				)
 			},
 			want: mockError,
 		},
@@ -676,48 +696,52 @@ func TestInit_Execute(t *testing.T) {
 				c.ExpectEOF()
 			},
 			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project3")).
-					Return(nil).
-					Times(1)
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend").
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project3")).
-					Return([]*archer.Environment{}, nil).
-					Times(1)
-				mockEnvStore.
-					EXPECT().
-					CreateEnvironment(gomock.Any()).
-					Return(nil).
-					Times(1)
-				mockSpinner.EXPECT().Start("Deploying env...").Times(1)
-				mockDeployer.EXPECT().
-					DeployEnvironment(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(nil).
-					Times(1)
-				mockDeployer.EXPECT().
-					WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
-						Project:            "project3",
-						Name:               defaultEnvironmentName,
-						PublicLoadBalancer: true,
-					})).
-					Return(nil).
-					Times(1)
-				mockSpinner.EXPECT().Stop("Done!").Times(1)
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project3")).
+						Return(nil).
+						Times(1),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend").
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project3")).
+						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockDeployer.EXPECT().
+						DeployEnvironment(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(nil).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Done!").Times(1),
+					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockDeployer.EXPECT().
+						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+							Project:            "project3",
+							Name:               defaultEnvironmentName,
+							PublicLoadBalancer: true,
+						})).
+						Return(nil).
+						Times(1),
+					mockEnvStore.
+						EXPECT().
+						CreateEnvironment(gomock.Any()).
+						Return(nil).
+						Times(1),
+					mockSpinner.EXPECT().Stop("Done!").Times(1),
+				)
 			},
 			want: nil,
 		},

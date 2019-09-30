@@ -123,21 +123,25 @@ func TestEnvAdd_Execute(t *testing.T) {
 				PublicLoadBalancer: true,
 			},
 			mocking: func() {
-				mockProjStore.
-					EXPECT().
-					GetProject(gomock.Any()).
-					Return(&archer.Project{}, nil)
-				mockEnvStore.
-					EXPECT().
-					CreateEnvironment(gomock.Any()).
-					Do(func(env *archer.Environment) {
-						capturedArgument = env
-					})
-				mockDeployer.EXPECT().DeployEnvironment(gomock.Any())
-				mockSpinner.EXPECT().Start(gomock.Eq("Deploying env..."))
-				// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
-				mockDeployer.EXPECT().WaitForEnvironmentCreation(gomock.Any())
-				mockSpinner.EXPECT().Stop(gomock.Eq("Done!"))
+				gomock.InOrder(
+					mockProjStore.
+						EXPECT().
+						GetProject(gomock.Any()).
+						Return(&archer.Project{}, nil),
+					mockSpinner.EXPECT().Start(gomock.Eq("Preparing deployment...")),
+					mockDeployer.EXPECT().DeployEnvironment(gomock.Any()),
+					mockSpinner.EXPECT().Stop(gomock.Eq("Done!")),
+					mockSpinner.EXPECT().Start(gomock.Eq("Deploying env...")),
+					// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
+					mockDeployer.EXPECT().WaitForEnvironmentCreation(gomock.Any()),
+					mockEnvStore.
+						EXPECT().
+						CreateEnvironment(gomock.Any()).
+						Do(func(env *archer.Environment) {
+							capturedArgument = env
+						}),
+					mockSpinner.EXPECT().Stop(gomock.Eq("Done!")),
+				)
 			},
 		},
 		"with a invalid project": {
