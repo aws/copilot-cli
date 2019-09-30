@@ -24,3 +24,15 @@ func TestErrStackAlreadyExists_Unwrap(t *testing.T) {
 	err = &ErrStackAlreadyExists{parentErr: errors.New("test-error")}
 	require.EqualError(t, errors.Unwrap(err), "test-error")
 }
+
+func TestErrNotExecutableChangeSet_Error(t *testing.T) {
+	err := &ErrNotExecutableChangeSet{
+		set: &changeSet{
+			name:            "test-change-set",
+			stackID:         "test-stack",
+			executionStatus: "wow",
+			statusReason:    "amazing",
+		},
+	}
+	require.EqualError(t, err, "cannot execute change set name=test-change-set, stackID=test-stack because status is wow with reason amazing")
+}

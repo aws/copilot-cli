@@ -19,3 +19,12 @@ func (err *ErrStackAlreadyExists) Error() string {
 func (err *ErrStackAlreadyExists) Unwrap() error {
 	return err.parentErr
 }
+
+// ErrNotExecutableChangeSet occurs when the change set cannot be executed.
+type ErrNotExecutableChangeSet struct {
+	set *changeSet
+}
+
+func (err *ErrNotExecutableChangeSet) Error() string {
+	return fmt.Sprintf("cannot execute change set %s because status is %s with reason %s", err.set, err.set.executionStatus, err.set.statusReason)
+}

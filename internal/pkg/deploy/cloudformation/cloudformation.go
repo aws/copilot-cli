@@ -44,6 +44,7 @@ func New(sess *session.Session) CloudFormation {
 //
 // If the deployment succeeds, returns nil.
 // If the stack already exists, returns a ErrStackAlreadyExists.
+// If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 	template, err := cf.box.FindString(environmentTemplate)
@@ -91,10 +92,10 @@ func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput
 	if err != nil {
 		return err
 	}
-	if err := cf.waitForChangeSetCreation(set); err != nil {
+	if err := set.waitForCreation(); err != nil {
 		return err
 	}
-	if err := cf.executeChangeSet(set); err != nil {
+	if err := set.execute(); err != nil {
 		return err
 	}
 	return nil
@@ -108,49 +109,8 @@ func (cf CloudFormation) createChangeSet(in *cloudformation.CreateChangeSetInput
 	return &changeSet{
 		name:    aws.StringValue(out.Id),
 		stackID: aws.StringValue(out.StackId),
+		c:       cf.client,
 	}, nil
-}
-
-func (cf CloudFormation) waitForChangeSetCreation(set *changeSet) error {
-	if err := cf.client.WaitUntilChangeSetCreateComplete(&cloudformation.DescribeChangeSetInput{
-		ChangeSetName: aws.String(set.name),
-		StackName:     aws.String(set.stackID),
-	}); err != nil {
-		return fmt.Errorf("failed to wait for changeSet creation %s: %w", set, err)
-	}
-	return nil
-}
-
-func (cf CloudFormation) executeChangeSet(set *changeSet) error {
-	if _, err := cf.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: aws.String(set.name),
-		StackName:     aws.String(set.stackID),
-	}); err != nil {
-		return fmt.Errorf("failed to execute changeSet %s: %w", set, err)
-	}
-	return nil
-}
-
-func (cf CloudFormation) describeChangeSet(set *changeSet) ([]*cloudformation.Change, error) {
-	var changes []*cloudformation.Change
-	var nextToken *string
-	for {
-		out, err := cf.client.DescribeChangeSet(&cloudformation.DescribeChangeSetInput{
-			ChangeSetName: aws.String(set.name),
-			StackName:     aws.String(set.stackID),
-			NextToken:     nextToken,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to describe changeSet %s: %w", set, err)
-		}
-		changes = append(changes, out.Changes...)
-		nextToken = out.NextToken
-
-		if nextToken == nil { // no more results left
-			break
-		}
-	}
-	return changes, nil
 }
 
 // stackExists returns true if the underlying error is a stack already exists error.
