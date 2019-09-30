@@ -130,6 +130,122 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 			want: errors.New(fmt.Sprintf("failed to wait for changeSet creation %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error")),
 		},
+		"should wrap error return from DescribeChangeSet call": {
+			env: &archer.Environment{
+				Project: mockProjectName,
+				Name:    mockEnvironmentName,
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return nil, errors.New("some AWS error")
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			want: errors.New(fmt.Sprintf("failed to describe changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error")),
+		},
+		"should not execute Change Set with no changes": {
+			env: &archer.Environment{
+				Project: mockProjectName,
+				Name:    mockEnvironmentName,
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
+							StatusReason:    aws.String(noChangesReason),
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			want: nil,
+		},
+		"should not execute Change Set with no updates": {
+			env: &archer.Environment{
+				Project: mockProjectName,
+				Name:    mockEnvironmentName,
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
+							StatusReason:    aws.String(noUpdatesReason),
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			want: nil,
+		},
+		"should fail Change Set with unexpected status": {
+			env: &archer.Environment{
+				Project: mockProjectName,
+				Name:    mockEnvironmentName,
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
+							StatusReason:    aws.String("some other reason"),
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			want: &ErrNotExecutableChangeSet{
+				set: &changeSet{
+					name:            mockChangeSetID,
+					stackID:         mockStackID,
+					executionStatus: cloudformation.ExecutionStatusUnavailable,
+					statusReason:    "some other reason",
+				},
+			},
+		},
 		"should wrap error returned from ExecuteChangeSet call": {
 			env: &archer.Environment{
 				Project: mockProjectName,
@@ -146,6 +262,11 @@ func TestDeployEnvironment(t *testing.T) {
 					},
 					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
 					},
 					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
 						return nil, errors.New("some AWS error")
@@ -173,6 +294,11 @@ func TestDeployEnvironment(t *testing.T) {
 						require.Equal(t, mockStackID, *in.StackName)
 						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
 						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
 					},
 					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
 						require.Equal(t, mockStackID, *in.StackName)
