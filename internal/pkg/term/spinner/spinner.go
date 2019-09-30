@@ -6,6 +6,7 @@ package spinner
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -19,35 +20,33 @@ type spinner interface {
 
 // Spinner wraps the spinner interface.
 type Spinner struct {
-	internal spinner
+	internal   spinner
+	tipsWriter io.Writer
 }
 
 // New returns a Spinner that outputs to stderr.
-func New() Spinner {
+func New() *Spinner {
 	s := spin.New(charset, 125*time.Millisecond)
 	s.Writer = os.Stderr
-
-	return Spinner{
+	return &Spinner{
 		internal: s,
 	}
 }
 
-// Start starts the spinner with the input message.
-func (s Spinner) Start(msg string) {
+// Start starts the spinner suffixed with a label.
+func (s *Spinner) Start(label string) {
 	if i, ok := s.internal.(*spin.Spinner); ok {
-		i.Suffix = fmt.Sprintf(" %s", msg)
+		i.Suffix = fmt.Sprintf(" %s", label)
 	}
-
 	s.internal.Start()
 }
 
-// Stop stops the spinner with the input message.
-func (s Spinner) Stop(msg string) {
+// Stop stops the spinner suffixed with a label.
+func (s *Spinner) Stop(label string) {
 	if i, ok := s.internal.(*spin.Spinner); ok {
 		i.Lock()
-		i.FinalMSG = fmt.Sprintf("%s\n", msg)
+		i.FinalMSG = fmt.Sprintf("%s\n", label)
 		i.Unlock()
 	}
-
 	s.internal.Stop()
 }
