@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -72,21 +74,28 @@ func (opts *AddEnvOpts) Execute() error {
 		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
 	}
 
+	opts.spinner.Start("Preparing deployment...")
 	if err := opts.deployer.DeployEnvironment(env); err != nil {
+		var existsErr *cloudformation.ErrStackAlreadyExists
+		if errors.As(err, &existsErr) {
+			// Do nothing if the stack already exists.
+			opts.spinner.Stop("Done!")
+			fmt.Printf("The environment %s already exists under project %s.\n", opts.EnvName, opts.ProjectName)
+			return nil
+		}
+		opts.spinner.Stop("Error!")
 		return err
 	}
-
-	opts.spinner.Start("Deploying env...")
-
-	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
-		return err
-	}
-
 	opts.spinner.Stop("Done!")
-
+	opts.spinner.Start("Deploying env...")
+	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
+		opts.spinner.Stop("Error!")
+		return err
+	}
 	if err := opts.manager.CreateEnvironment(env); err != nil {
 		return err
 	}
+	opts.spinner.Stop("Done!")
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/gobuffalo/packd"
@@ -86,6 +87,26 @@ func TestDeployEnvironment(t *testing.T) {
 				box: boxWithTemplateFile(),
 			},
 			want: errors.New(fmt.Sprintf("failed to create changeSet for stack %s: %s", mockProjectName+"-"+mockEnvironmentName, "some AWS error")),
+		},
+		"should return a ErrStackAlreadyExists if the stack already exists": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						msg := fmt.Sprintf("Stack [%s-%s] already exists and cannot be created again with the changeSet [ecscli-%s]", mockProjectName, mockEnvironmentName, mockChangeSetID)
+						return nil, awserr.New("ValidationError", msg, nil)
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			env: &archer.Environment{
+				Project:            mockProjectName,
+				Name:               mockEnvironmentName,
+				PublicLoadBalancer: false,
+			},
+			want: &ErrStackAlreadyExists{
+				stackName: mockProjectName + "-" + mockEnvironmentName,
+			},
 		},
 		"should wrap error returned from WaitUntilChangeSetCreateComplete call": {
 			env: &archer.Environment{
