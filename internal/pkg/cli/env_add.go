@@ -47,15 +47,17 @@ func (opts *AddEnvOpts) Ask() error {
 		})
 	}
 	if opts.EnvName == "" {
+		validators := survey.ComposeValidators(survey.Required, validateEnvironmentName)
 		qs = append(qs, &survey.Question{
 			Name: "env",
 			Prompt: &survey.Input{
 				Message: "What is your environment's name?",
 			},
-			Validate: validateEnvironmentName,
+			Validate: validators,
+
 		})
 	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err), survey.WithValidator(survey.Required))
+	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
