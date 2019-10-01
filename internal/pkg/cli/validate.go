@@ -18,12 +18,10 @@ var (
 )
 
 func validateProjectName(val interface{}) error {
-	// TODO(nick): add logic to determine project name uniqueness in the scope of an AWS account
 	return basicNameValidation(val)
 }
 
 func validateApplicationName(val interface{}) error {
-	// TODO(nick): add logic to determine application name uniqeness in the scope of a project
 	return basicNameValidation(val)
 }
 
