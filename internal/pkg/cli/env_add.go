@@ -13,6 +13,7 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -30,7 +31,7 @@ type AddEnvOpts struct {
 	manager       archer.EnvironmentCreator
 	projectGetter archer.ProjectGetter
 	deployer      archer.EnvironmentDeployer
-	spinner       spinner
+	prog          term.Progress
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -54,7 +55,6 @@ func (opts *AddEnvOpts) Ask() error {
 				Message: "What is your environment's name?",
 			},
 			Validate: validators,
-
 		})
 	}
 	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
@@ -76,28 +76,29 @@ func (opts *AddEnvOpts) Execute() error {
 		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
 	}
 
-	opts.spinner.Start("Preparing deployment...")
+	opts.prog.Start("Preparing deployment...")
 	if err := opts.deployer.DeployEnvironment(env); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
-			opts.spinner.Stop("Done!")
+			opts.prog.Stop("Done!")
 			fmt.Printf("The environment %s already exists under project %s.\n", opts.EnvName, opts.ProjectName)
 			return nil
 		}
-		opts.spinner.Stop("Error!")
+		opts.prog.Stop("Error!")
 		return err
 	}
-	opts.spinner.Stop("Done!")
-	opts.spinner.Start("Deploying env...")
+	opts.prog.Stop("Done!")
+	opts.prog.Start("Deploying env...")
 	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
-		opts.spinner.Stop("Error!")
+		opts.prog.Stop("Error!")
 		return err
 	}
 	if err := opts.manager.CreateEnvironment(env); err != nil {
+		opts.prog.Stop("Error!")
 		return err
 	}
-	opts.spinner.Stop("Done!")
+	opts.prog.Stop("Done!")
 	return nil
 }
 
@@ -110,7 +111,7 @@ func BuildEnvAddCmd() *cobra.Command {
 			Out: os.Stderr,
 			Err: os.Stderr,
 		},
-		spinner: spin.New(),
+		prog: spin.New(),
 	}
 
 	cmd := &cobra.Command{

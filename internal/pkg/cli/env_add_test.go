@@ -10,7 +10,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	cli_mocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
+	termMocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/hinshun/vt10x"
@@ -93,7 +93,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockProjStore := mocks.NewMockProjectStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
-	mockSpinner := cli_mocks.NewMockspinner(ctrl)
+	mockSpinner := termMocks.NewMockProgress(ctrl)
 	var capturedArgument *archer.Environment
 	defer ctrl.Finish()
 
@@ -111,7 +111,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 				ProjectName:   "project",
 				EnvName:       "env",
 				Production:    true,
-				spinner:       mockSpinner,
+				prog:          mockSpinner,
 			},
 			expectedEnv: archer.Environment{
 				Name:    "env",
@@ -153,7 +153,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 				ProjectName:   "project",
 				EnvName:       "env",
 				Production:    true,
-				spinner:       mockSpinner,
+				prog:          mockSpinner,
 			},
 			expectedEnv: archer.Environment{
 				Name:    "env",

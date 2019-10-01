@@ -5,10 +5,6 @@ package term
 
 // ANSI escape sequences to control the cursor.
 const (
-	// Hide hides the cursor.
-	Hide = "\033[?25l"
-	// Visible makes the cursor visible.
-	Visible = "\033[?25h"
 	// EraseLine deletes the current line that the cursor is at.
 	EraseLine = "\033[K"
 

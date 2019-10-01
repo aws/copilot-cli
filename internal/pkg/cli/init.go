@@ -17,6 +17,7 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -38,7 +39,7 @@ type InitAppOpts struct {
 	envStore  archer.EnvironmentStore
 	deployer  archer.EnvironmentDeployer
 	ws        archer.Workspace
-	spinner   spinner
+	prog      term.Progress
 
 	prompt terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
 }
@@ -211,29 +212,29 @@ func (opts *InitAppOpts) deployEnv() error {
 		PublicLoadBalancer: true, // TODO: configure this value based on user input or Application type needs?
 	}
 
-	opts.spinner.Start("Preparing deployment...")
+	opts.prog.Start("Preparing deployment...")
 	if err := opts.deployer.DeployEnvironment(env); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
-			opts.spinner.Stop("Done!")
+			opts.prog.Stop("Done!")
 			fmt.Printf("The environment %s already exists under project %s.\n", env.Name, opts.Project)
 			return nil
 		}
-		opts.spinner.Stop("Error!")
+		opts.prog.Stop("Error!")
 		return err
 	}
-	opts.spinner.Stop("Done!")
-	opts.spinner.Start("Deploying env...")
+	opts.prog.Stop("Done!")
+	opts.prog.Start("Deploying env...")
 	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
-		opts.spinner.Stop("Error!")
+		opts.prog.Stop("Error!")
 		return err
 	}
 	if err := opts.envStore.CreateEnvironment(env); err != nil {
-		opts.spinner.Stop("Error!")
+		opts.prog.Stop("Error!")
 		return err
 	}
-	opts.spinner.Stop("Done!")
+	opts.prog.Stop("Done!")
 	return nil
 }
 
@@ -274,7 +275,7 @@ func BuildInitCmd() *cobra.Command {
 
 			opts.deployer = cloudformation.New(sess)
 
-			opts.spinner = spin.New()
+			opts.prog = spin.New()
 
 			opts.Prepare()
 			return opts.Ask()

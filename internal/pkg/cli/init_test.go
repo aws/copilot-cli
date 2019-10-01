@@ -10,8 +10,8 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	cli_mocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
+	termMocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
@@ -312,7 +312,7 @@ func TestInit_Execute(t *testing.T) {
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockWorkspace := mocks.NewMockWorkspace(ctrl)
-	mockSpinner := cli_mocks.NewMockspinner(ctrl)
+	mockProgress := termMocks.NewMockProgress(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 
 	mockError := fmt.Errorf("error")
@@ -550,7 +550,7 @@ func TestInit_Execute(t *testing.T) {
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
 						Times(1),
-					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -559,7 +559,7 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(mockError).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Error!").Times(1),
+					mockProgress.EXPECT().Stop("Error!").Times(1),
 				)
 			},
 			want: mockError,
@@ -597,7 +597,7 @@ func TestInit_Execute(t *testing.T) {
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
 						Times(1),
-					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -606,8 +606,8 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(nil).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Done!").Times(1),
-					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockProgress.EXPECT().Stop("Done!").Times(1),
+					mockProgress.EXPECT().Start("Deploying env...").Times(1),
 					mockDeployer.EXPECT().
 						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -616,7 +616,7 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(mockError).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Error!").Times(1),
+					mockProgress.EXPECT().Stop("Error!").Times(1),
 				)
 			},
 			want: mockError,
@@ -654,7 +654,7 @@ func TestInit_Execute(t *testing.T) {
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
 						Times(1),
-					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -663,8 +663,8 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(nil).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Done!").Times(1),
-					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockProgress.EXPECT().Stop("Done!").Times(1),
+					mockProgress.EXPECT().Start("Deploying env...").Times(1),
 					mockDeployer.EXPECT().
 						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -678,7 +678,7 @@ func TestInit_Execute(t *testing.T) {
 						CreateEnvironment(gomock.Any()).
 						Return(mockError).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Error!").Times(1),
+					mockProgress.EXPECT().Stop("Error!").Times(1),
 				)
 			},
 			want: mockError,
@@ -716,7 +716,7 @@ func TestInit_Execute(t *testing.T) {
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
 						Times(1),
-					mockSpinner.EXPECT().Start("Preparing deployment...").Times(1),
+					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -725,8 +725,8 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(nil).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Done!").Times(1),
-					mockSpinner.EXPECT().Start("Deploying env...").Times(1),
+					mockProgress.EXPECT().Stop("Done!").Times(1),
+					mockProgress.EXPECT().Start("Deploying env...").Times(1),
 					mockDeployer.EXPECT().
 						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
 							Project:            "project3",
@@ -740,7 +740,7 @@ func TestInit_Execute(t *testing.T) {
 						CreateEnvironment(gomock.Any()).
 						Return(nil).
 						Times(1),
-					mockSpinner.EXPECT().Stop("Done!").Times(1),
+					mockProgress.EXPECT().Stop("Done!").Times(1),
 				)
 			},
 			want: nil,
@@ -767,7 +767,7 @@ func TestInit_Execute(t *testing.T) {
 			}
 			tc.inputOpts.projStore = mockProjectStore
 			tc.inputOpts.envStore = mockEnvStore
-			tc.inputOpts.spinner = mockSpinner
+			tc.inputOpts.prog = mockProgress
 			tc.inputOpts.deployer = mockDeployer
 			tc.inputOpts.ws = mockWorkspace
 
