@@ -6,13 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -21,42 +19,47 @@ import (
 
 // AddEnvOpts contains the fields to collect for adding an environment.
 type AddEnvOpts struct {
-	ProjectName string `survey:"project"`
-	EnvName     string `survey:"env"`
+	ProjectName string
+	EnvName     string
 	EnvProfile  string
-	Production  bool `survey:"prod"`
+	Production  bool
 
-	prompt        terminal.Stdio
 	manager       archer.EnvironmentCreator
 	projectGetter archer.ProjectGetter
 	deployer      archer.EnvironmentDeployer
 	prog          progress
+	prompter      prompter
 }
 
 // Ask asks for fields that are required but not passed in.
 func (opts *AddEnvOpts) Ask() error {
-	var qs []*survey.Question
 	if opts.ProjectName == "" {
-		qs = append(qs, &survey.Question{
-			Name: "project",
-			Prompt: &survey.Input{
-				Message: "What is your project's name?",
-				Help:    "A project groups all of your environments together.",
-			},
-			Validate: validateProjectName,
-		})
+		projectName, err := opts.prompter.Get(
+			"What is your project's name?",
+			"A project groups all of your environments together.",
+			validateProjectName)
+
+		if err != nil {
+			return fmt.Errorf("failed to get project name: %w", err)
+		}
+
+		opts.ProjectName = projectName
 	}
 	if opts.EnvName == "" {
-		validators := survey.ComposeValidators(survey.Required, validateEnvironmentName)
-		qs = append(qs, &survey.Question{
-			Name: "env",
-			Prompt: &survey.Input{
-				Message: "What is your environment's name?",
-			},
-			Validate: validators,
-		})
+		envName, err := opts.prompter.Get(
+			"What is your environment's name?",
+			"A unique identifier for an environment (e.g. dev, test, prod)",
+			validateEnvironmentName,
+		)
+
+		if err != nil {
+			return fmt.Errorf("failed to get environment name: %w", err)
+		}
+
+		opts.EnvName = envName
 	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
+
+	return nil
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
@@ -105,12 +108,8 @@ func (opts *AddEnvOpts) Execute() error {
 func BuildEnvAddCmd() *cobra.Command {
 	opts := AddEnvOpts{
 		EnvProfile: "default",
-		prompt: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stderr,
-			Err: os.Stderr,
-		},
-		prog: spinner.New(),
+		prog:       spinner.New(),
+		prompter:   prompt.New(),
 	}
 
 	cmd := &cobra.Command{
