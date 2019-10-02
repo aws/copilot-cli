@@ -6,10 +6,10 @@
 // to that directory and managing manifest files (reading, writing and listing).
 // The typical workspace will be structured like:
 //  .
-//  ├── ecs             (manifest directory)
-//  │   ├── .project    (workspace summary)
-//  │   └── my-app.yml  (manifest)
-//  └── my-app          (customer application)
+//  ├── ecs-project           (manifest directory)
+//  │   ├── .ecs-workspace    (workspace summary)
+//  │   └── my-app.yml        (manifest)
+//  └── my-app                (customer application)
 //
 package workspace
 
@@ -26,8 +26,8 @@ import (
 )
 
 const (
-	workspaceSummaryFileName  = ".project"
-	manifestDirectoryName     = "ecs"
+	workspaceSummaryFileName  = ".ecs-workspace"
+	manifestDirectoryName     = "ecs-project"
 	maximumParentDirsToSearch = 5
 	manifestFileSuffix        = "-app.yml"
 )

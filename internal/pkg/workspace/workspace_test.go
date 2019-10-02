@@ -24,11 +24,11 @@ func TestListManifests(t *testing.T) {
 			expectedManifests: []string{"frontend-app.yml", "backend-app.yml"},
 			workingDir:        "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte("hiddenproject"), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 
@@ -36,14 +36,14 @@ func TestListManifests(t *testing.T) {
 			expectedManifests: []string{},
 			workingDir:        "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte("hiddenproject"), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 
 		"not in a valid workspace": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from test/"),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from test/"),
 			workingDir:    "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 			},
@@ -84,11 +84,11 @@ func TestReadManifest(t *testing.T) {
 			expectedContent: "frontend",
 			workingDir:      "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte("hiddenproject"), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 
@@ -97,24 +97,24 @@ func TestReadManifest(t *testing.T) {
 			expectedError: fmt.Errorf("manifest file traveling-salesman-app.yml does not exists"),
 			workingDir:    "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte("hiddenproject"), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 
 		"invalid workspace": {
 			manifestFile:  "frontend-app.yml",
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from /"),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
 			workingDir:    "/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte("hiddenproject"), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 	}
@@ -155,13 +155,13 @@ func TestWriteManifest(t *testing.T) {
 			expectedContent: "frontend",
 			workingDir:      "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 		"no manifest dir": {
 			manifestFile:  "frontend-app.yml",
 			appName:       "frontend",
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from /"),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
 			workingDir:    "/",
 			mockFileSystem: func(appFS afero.Fs) {
 			},
@@ -192,8 +192,8 @@ func TestWriteManifest(t *testing.T) {
 }
 
 func TestManifestDirectoryPath(t *testing.T) {
-	// turn "test/ecs" into a platform-dependent path
-	var manifestDir = filepath.FromSlash("test/ecs")
+	// turn "test/ecs-project" into a platform-dependent path
+	var manifestDir = filepath.FromSlash("test/ecs-project")
 
 	testCases := map[string]struct {
 		expectedManifestDir string
@@ -206,15 +206,15 @@ func TestManifestDirectoryPath(t *testing.T) {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 
 		"same directory": {
 			expectedManifestDir: manifestDir,
-			workingDir:          filepath.FromSlash("test/ecs"),
+			workingDir:          filepath.FromSlash("test/ecs-project"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 
@@ -222,25 +222,25 @@ func TestManifestDirectoryPath(t *testing.T) {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/1/2/3/4"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 				appFS.MkdirAll("test/1/2/3/4", 0755)
 			},
 		},
 
 		"too many levels deep": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("test/1/2/3/4/5")),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from " + filepath.FromSlash("test/1/2/3/4/5")),
 			workingDir:    filepath.FromSlash("test/1/2/3/4/5"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 				appFS.MkdirAll("test/1/2/3/4/5", 0755)
 			},
 		},
 
 		"out of a workspace": {
-			expectedError: fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from " + filepath.FromSlash("/")),
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from " + filepath.FromSlash("/")),
 			workingDir:    filepath.FromSlash("/"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 
@@ -248,7 +248,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("/"),
 			mockFileSystem:      func(appFS afero.Fs) {},
-			presetManifestDir:   filepath.FromSlash("test/ecs"),
+			presetManifestDir:   filepath.FromSlash("test/ecs-project"),
 		},
 	}
 	for name, tc := range testCases {
@@ -285,20 +285,20 @@ func TestReadSummary(t *testing.T) {
 			expectedSummary: archer.WorkspaceSummary{ProjectName: "DavidsProject"},
 			workingDir:      "test/",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
 			},
 		},
 		"no existing workspace summary": {
 			workingDir:    "test/",
 			expectedError: fmt.Errorf("couldn't find a project associated with this workspace"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 		"no existing manifest dir": {
 			workingDir:     "test/",
-			expectedError:  fmt.Errorf("couldn't find a directory called ecs up to 5 levels up from test/"),
+			expectedError:  fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from test/"),
 			mockFileSystem: func(appFS afero.Fs) {},
 		},
 	}
@@ -335,8 +335,8 @@ func TestCreate(t *testing.T) {
 			workingDir:  "test/",
 			projectName: "DavidsProject",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
 			},
 		},
 		"existing workspace and different project": {
@@ -344,15 +344,15 @@ func TestCreate(t *testing.T) {
 			projectName:   "DavidsProject",
 			expectedError: fmt.Errorf("this workspace is already registered with project DavidsOtherProject"),
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
-				afero.WriteFile(appFS, "test/ecs/.project", []byte(fmt.Sprintf("---\nproject: %s", "DavidsOtherProject")), 0644)
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte(fmt.Sprintf("---\nproject: %s", "DavidsOtherProject")), 0644)
 			},
 		},
 		"existing workspace but no workspace summary": {
 			workingDir:  "test/",
 			projectName: "DavidsProject",
 			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs", 0755)
+				appFS.MkdirAll("test/ecs-project", 0755)
 			},
 		},
 		"no existing workspace or workspace summary": {

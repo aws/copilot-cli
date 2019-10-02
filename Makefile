@@ -12,6 +12,7 @@ build: packr-build compile-local packr-clean
 
 .PHONY: release
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
+
 compile-local:
 	@echo "Building archer to ./bin/local/archer" &&\
 	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
