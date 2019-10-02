@@ -9,51 +9,110 @@ import (
 	reflect "reflect"
 )
 
-// Mockspinner is a mock of spinner interface
-type Mockspinner struct {
+// MockstartStopper is a mock of startStopper interface
+type MockstartStopper struct {
 	ctrl     *gomock.Controller
-	recorder *MockspinnerMockRecorder
+	recorder *MockstartStopperMockRecorder
 }
 
-// MockspinnerMockRecorder is the mock recorder for Mockspinner
-type MockspinnerMockRecorder struct {
-	mock *Mockspinner
+// MockstartStopperMockRecorder is the mock recorder for MockstartStopper
+type MockstartStopperMockRecorder struct {
+	mock *MockstartStopper
 }
 
-// NewMockspinner creates a new mock instance
-func NewMockspinner(ctrl *gomock.Controller) *Mockspinner {
-	mock := &Mockspinner{ctrl: ctrl}
-	mock.recorder = &MockspinnerMockRecorder{mock}
+// NewMockstartStopper creates a new mock instance
+func NewMockstartStopper(ctrl *gomock.Controller) *MockstartStopper {
+	mock := &MockstartStopper{ctrl: ctrl}
+	mock.recorder = &MockstartStopperMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *Mockspinner) EXPECT() *MockspinnerMockRecorder {
+func (m *MockstartStopper) EXPECT() *MockstartStopperMockRecorder {
 	return m.recorder
 }
 
 // Start mocks base method
-func (m *Mockspinner) Start() {
+func (m *MockstartStopper) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
 // Start indicates an expected call of Start
-func (mr *MockspinnerMockRecorder) Start() *gomock.Call {
+func (mr *MockstartStopperMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*Mockspinner)(nil).Start))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockstartStopper)(nil).Start))
 }
 
 // Stop mocks base method
-func (m *Mockspinner) Stop() {
+func (m *MockstartStopper) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
 // Stop indicates an expected call of Stop
-func (mr *MockspinnerMockRecorder) Stop() *gomock.Call {
+func (mr *MockstartStopperMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*Mockspinner)(nil).Stop))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockstartStopper)(nil).Stop))
+}
+
+// Mockmover is a mock of mover interface
+type Mockmover struct {
+	ctrl     *gomock.Controller
+	recorder *MockmoverMockRecorder
+}
+
+// MockmoverMockRecorder is the mock recorder for Mockmover
+type MockmoverMockRecorder struct {
+	mock *Mockmover
+}
+
+// NewMockmover creates a new mock instance
+func NewMockmover(ctrl *gomock.Controller) *Mockmover {
+	mock := &Mockmover{ctrl: ctrl}
+	mock.recorder = &MockmoverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockmover) EXPECT() *MockmoverMockRecorder {
+	return m.recorder
+}
+
+// Up mocks base method
+func (m *Mockmover) Up(n int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Up", n)
+}
+
+// Up indicates an expected call of Up
+func (mr *MockmoverMockRecorder) Up(n interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Up", reflect.TypeOf((*Mockmover)(nil).Up), n)
+}
+
+// Down mocks base method
+func (m *Mockmover) Down(n int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Down", n)
+}
+
+// Down indicates an expected call of Down
+func (mr *MockmoverMockRecorder) Down(n interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Down", reflect.TypeOf((*Mockmover)(nil).Down), n)
+}
+
+// EraseLine mocks base method
+func (m *Mockmover) EraseLine() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EraseLine")
+}
+
+// EraseLine indicates an expected call of EraseLine
+func (mr *MockmoverMockRecorder) EraseLine() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EraseLine", reflect.TypeOf((*Mockmover)(nil).EraseLine))
 }
 
 // MockwriteFlusher is a mock of writeFlusher interface

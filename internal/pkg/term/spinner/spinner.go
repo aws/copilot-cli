@@ -11,11 +11,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term"
-	spin "github.com/briandowns/spinner"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/cursor"
+	"github.com/briandowns/spinner"
 )
 
-// Tip display settings.
+// Events display settings.
 const (
 	minCellWidth           = 20  // minimum number of characters in a table's cell.
 	tabWidth               = 4   // number of characters in between columns.
@@ -24,9 +24,17 @@ const (
 	noAdditionalFormatting = 0
 )
 
-type spinner interface {
+// startStopper is the interface to interact with the spinner.
+type startStopper interface {
 	Start()
 	Stop()
+}
+
+// mover is the interface to interact with the cursor.
+type mover interface {
+	Up(n int)
+	Down(n int)
+	EraseLine()
 }
 
 type writeFlusher interface {
@@ -34,82 +42,87 @@ type writeFlusher interface {
 	Flush() error
 }
 
-// Spinner is an indicator that a long operation is taking place.
+// Spinner represents an indicator that an asynchronous operation is taking place.
+//
+// For short operations, less than 4 seconds, display only the spinner with the Start and Stop methods.
+// For longer operations, display intermediate progress events using the Events method.
 type Spinner struct {
-	internal spinner
+	spin startStopper
+	cur  mover
 
-	tips       []string     // additional information that's already written
-	tipsWriter writeFlusher // writer to pretty format tips in a table
+	pastEvents   []string     // Already written entries.
+	eventsWriter writeFlusher // Writer to pretty format events in a table.
 }
 
-// New returns a Spinner that outputs to stderr.
+// New returns a spinner that outputs to stderr.
 func New() *Spinner {
-	s := spin.New(charset, 125*time.Millisecond, spin.WithHiddenCursor(true))
+	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
 	s.Writer = os.Stderr
 	return &Spinner{
-		internal:   s,
-		tipsWriter: tabwriter.NewWriter(s.Writer, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting),
+		spin:         s,
+		cur:          cursor.New(),
+		eventsWriter: tabwriter.NewWriter(s.Writer, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting),
 	}
 }
 
 // Start starts the spinner suffixed with a label.
 func (s *Spinner) Start(label string) {
 	s.suffix(fmt.Sprintf(" %s", label))
-	s.internal.Start()
+	s.spin.Start()
 }
 
 // Stop stops the spinner and replaces it with a label.
 func (s *Spinner) Stop(label string) {
-	s.finalMSG(fmt.Sprintf("%s\n", label))
-	s.internal.Stop()
+	s.finalMSG(fmt.Sprintln(label))
+	s.spin.Stop()
 
-	s.lock()
-	defer s.unlock()
-	for _, tip := range s.tips {
-		fmt.Fprintf(s.tipsWriter, "%s\n", tip)
+	// Maintain old progress entries on the screen.
+	for _, event := range s.pastEvents {
+		fmt.Fprintf(s.eventsWriter, "%s\n", event)
 	}
-	s.tipsWriter.Flush()
+	s.eventsWriter.Flush()
 }
 
-// Tips writes additional information below the spinner while the spinner is still in progress.
-// If there are already existing tips under the spinner, it replaces them with the new information.
+// Events writes additional information below the spinner while the spinner is still in progress.
+// If there are already existing events under the spinner, it replaces them with the new information.
 //
-// A tip is displayed in a table, where columns are separated with the '\t' character.
-func (s *Spinner) Tips(tips []string) {
+// An event is displayed in a table, where columns are separated with the '\t' character.
+func (s *Spinner) Events(events []string) {
 	done := make(chan struct{})
 	go func() {
 		s.lock()
 		defer s.unlock()
 		// Erase previous entries, and move the cursor back to the spinner.
-		for i := 0; i < len(s.tips); i++ {
-			fmt.Fprintf(s.tipsWriter, term.FmtMoveDown+"\r"+term.EraseLine, 1)
+		for i := 0; i < len(s.pastEvents); i++ {
+			s.cur.Down(1)
+			s.cur.EraseLine()
 		}
-		if len(s.tips) > 0 {
-			fmt.Fprintf(s.tipsWriter, term.FmtMoveUp, len(s.tips))
+		if len(s.pastEvents) > 0 {
+			s.cur.Up(len(s.pastEvents))
 		}
 
 		// Add new status updates, and move cursor back to the spinner.
-		for _, tip := range tips {
-			fmt.Fprintf(s.tipsWriter, "\n%s", tip)
+		for _, event := range events {
+			fmt.Fprintf(s.eventsWriter, "\n%s", event)
 		}
-		if len(tips) > 0 {
-			fmt.Fprintf(s.tipsWriter, term.FmtMoveUp, len(tips))
+		s.eventsWriter.Flush()
+		if len(events) > 0 {
+			s.cur.Up(len(events))
 		}
-		s.tipsWriter.Flush()
-		s.tips = tips
+		s.pastEvents = events
 		close(done)
 	}()
 	<-done
 }
 
 func (s *Spinner) lock() {
-	if spinner, ok := s.internal.(*spin.Spinner); ok {
+	if spinner, ok := s.spin.(*spinner.Spinner); ok {
 		spinner.Lock()
 	}
 }
 
 func (s *Spinner) unlock() {
-	if spinner, ok := s.internal.(*spin.Spinner); ok {
+	if spinner, ok := s.spin.(*spinner.Spinner); ok {
 		spinner.Unlock()
 	}
 }
@@ -117,7 +130,7 @@ func (s *Spinner) unlock() {
 func (s *Spinner) suffix(label string) {
 	s.lock()
 	defer s.unlock()
-	if spinner, ok := s.internal.(*spin.Spinner); ok {
+	if spinner, ok := s.spin.(*spinner.Spinner); ok {
 		spinner.Suffix = label
 	}
 }
@@ -125,7 +138,7 @@ func (s *Spinner) suffix(label string) {
 func (s *Spinner) finalMSG(label string) {
 	s.lock()
 	defer s.unlock()
-	if spinner, ok := s.internal.(*spin.Spinner); ok {
+	if spinner, ok := s.spin.(*spinner.Spinner); ok {
 		spinner.FinalMSG = label
 	}
 }
