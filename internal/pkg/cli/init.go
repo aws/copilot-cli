@@ -17,7 +17,6 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -39,7 +38,7 @@ type InitAppOpts struct {
 	envStore  archer.EnvironmentStore
 	deployer  archer.EnvironmentDeployer
 	ws        archer.Workspace
-	prog      term.Progress
+	prog      progress
 
 	prompt terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	cliMocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
-	termMocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
@@ -312,7 +312,7 @@ func TestInit_Execute(t *testing.T) {
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockWorkspace := mocks.NewMockWorkspace(ctrl)
-	mockProgress := termMocks.NewMockProgress(ctrl)
+	mockProgress := cliMocks.NewMockprogress(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 
 	mockError := fmt.Errorf("error")

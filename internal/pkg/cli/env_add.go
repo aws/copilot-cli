@@ -13,8 +13,7 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term"
-	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,7 +30,7 @@ type AddEnvOpts struct {
 	manager       archer.EnvironmentCreator
 	projectGetter archer.ProjectGetter
 	deployer      archer.EnvironmentDeployer
-	prog          term.Progress
+	prog          progress
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -111,7 +110,7 @@ func BuildEnvAddCmd() *cobra.Command {
 			Out: os.Stderr,
 			Err: os.Stderr,
 		},
-		prog: spin.New(),
+		prog: spinner.New(),
 	}
 
 	cmd := &cobra.Command{

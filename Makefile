@@ -91,5 +91,5 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
 	${GOBIN}/mockgen -source=./internal/pkg/archer/workspace.go -package=mocks -destination=./mocks/mock_workspace.go
 	${GOBIN}/mockgen -source=./internal/pkg/term/spinner/spinner.go -package=mocks -destination=./internal/pkg/term/spinner/mocks/mock_spinner.go
-	${GOBIN}/mockgen -source=./internal/pkg/term/term.go -package=mocks -destination=./internal/pkg/term/mocks/mock_term.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
