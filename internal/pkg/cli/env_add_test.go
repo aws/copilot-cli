@@ -10,7 +10,7 @@ import (
 	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	cliMocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
+	climocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/hinshun/vt10x"
@@ -93,7 +93,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockProjStore := mocks.NewMockProjectStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
-	mockSpinner := cliMocks.NewMockprogress(ctrl)
+	mockSpinner := climocks.NewMockprogress(ctrl)
 	var capturedArgument *archer.Environment
 	defer ctrl.Finish()
 
