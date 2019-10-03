@@ -13,7 +13,7 @@ import (
 func TestPrintSuccess(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintSuccess("hello", " world")
@@ -26,7 +26,7 @@ func TestPrintSuccess(t *testing.T) {
 func TestPrintSuccessln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintSuccessln("hello", " world")
@@ -39,7 +39,7 @@ func TestPrintSuccessln(t *testing.T) {
 func TestPrintSuccessf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintSuccessf("%s %s\n", "hello", "world")
@@ -52,7 +52,7 @@ func TestPrintSuccessf(t *testing.T) {
 func TestPrintError(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintError("hello", " world")
@@ -65,7 +65,7 @@ func TestPrintError(t *testing.T) {
 func TestPrintErrorln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintErrorln("hello", " world")
@@ -78,7 +78,7 @@ func TestPrintErrorln(t *testing.T) {
 func TestPrintErrorf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintErrorf("%s %s\n", "hello", "world")
@@ -91,7 +91,7 @@ func TestPrintErrorf(t *testing.T) {
 func TestPrintWarning(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintWarning("hello", " world")
@@ -104,7 +104,7 @@ func TestPrintWarning(t *testing.T) {
 func TestPrintWarningln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintWarningln("hello", " world")
@@ -117,7 +117,7 @@ func TestPrintWarningln(t *testing.T) {
 func TestPrintWarningf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintWarningf("%s %s\n", "hello", "world")
@@ -130,7 +130,7 @@ func TestPrintWarningf(t *testing.T) {
 func TestPrint(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	Print("hello", " world")
@@ -142,7 +142,7 @@ func TestPrint(t *testing.T) {
 func TestPrintln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	Println("hello", "world")
@@ -154,7 +154,7 @@ func TestPrintln(t *testing.T) {
 func TestPrintf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	Printf("%s %s\n", "hello", "world")
@@ -166,7 +166,7 @@ func TestPrintf(t *testing.T) {
 func TestPrintDebug(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintDebug("hello", " world")
@@ -178,7 +178,7 @@ func TestPrintDebug(t *testing.T) {
 func TestPrintDebugln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintDebugln("hello", " world")
@@ -190,7 +190,7 @@ func TestPrintDebugln(t *testing.T) {
 func TestPrintDebugf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
-	diagnosticWriter = b
+	DiagnosticWriter = b
 
 	// WHEN
 	PrintDebugf("%s %s\n", "hello", "world")
