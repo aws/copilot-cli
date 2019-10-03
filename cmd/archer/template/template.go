@@ -14,8 +14,8 @@ import (
 // RootUsage is the text template for the root command.
 const RootUsage = `{{h1 "Commands"}}{{ $cmds := .Commands }}{{$groups := mkSlice "Getting Started ✨" "Develop 🔧" "Settings" }}{{range $group := $groups }}
   {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
-    {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}
-{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+    {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
+{{end}}{{if .HasAvailableLocalFlags}}
 {{h1 "Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 

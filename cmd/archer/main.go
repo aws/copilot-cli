@@ -16,6 +16,7 @@ import (
 
 func init() {
 	color.DisableColorBasedOnEnvVar()
+	cobra.EnableCommandSorting = false // Maintain the order in which we add commands.
 }
 
 func main() {
@@ -40,8 +41,8 @@ func buildRootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(cli.BuildInitCmd())
-	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildProjCmd())
+	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildCompletionCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
 	return cmd

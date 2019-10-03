@@ -15,7 +15,7 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
-	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -25,19 +25,21 @@ const defaultEnvironmentName = "test"
 
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
-	// User provided fields
-	Project          string // namespace that this application belongs to.
-	Name             string // unique identifier to logically group AWS resources together.
-	Type             string // type of application you're trying to build (LoadBalanced, Backend, etc.)
-	SkipDeploy       bool   // whether to skip asking if we should deploy a test environment.
+	Project          string `survey:"project"` // namespace that this application belongs to.
+	AppName          string `survey:"name"`    // unique identifier for the application.
+	AppType          string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
+	ShouldDeploy     bool   // true means we should create a test environment and deploy the application in it. Exclusive with ShouldSkipDeploy.
+	ShouldSkipDeploy bool   // true means we should not create a test environment and not deploy the application in it. Exclusive with ShouldDeploy.
+
+	projStore   archer.ProjectStore
+	envStore    archer.EnvironmentStore
+	envDeployer archer.EnvironmentDeployer
+
+	ws               archer.Workspace
 	existingProjects []string
 
-	projStore archer.ProjectStore
-	envStore  archer.EnvironmentStore
-	deployer  archer.EnvironmentDeployer
-	ws        archer.Workspace
-	prog      progress
-	prompter  prompter
+	prog     progress
+	prompter prompter
 }
 
 // Ask prompts the user for the value of any required fields that are not already provided.
@@ -48,7 +50,7 @@ func (opts *InitAppOpts) Ask() error {
 		}
 	}
 
-	if opts.Name == "" {
+	if opts.AppName == "" {
 		name, err := opts.prompter.Get(
 			"What is your application's name?",
 			"Collection of AWS services to achieve a business capability. Must be unique within a project.",
@@ -58,9 +60,9 @@ func (opts *InitAppOpts) Ask() error {
 			return fmt.Errorf("failed to get application name: %w", err)
 		}
 
-		opts.Name = name
+		opts.AppName = name
 	}
-	if opts.Type == "" {
+	if opts.AppType == "" {
 		t, err := opts.prompter.SelectOne(
 			"Which template would you like to use?",
 			"Pre-defined infrastructure templates.",
@@ -70,7 +72,7 @@ func (opts *InitAppOpts) Ask() error {
 			return fmt.Errorf("failed to get template selection: %w", err)
 		}
 
-		opts.Type = t
+		opts.AppType = t
 	}
 
 	return nil
@@ -112,7 +114,7 @@ func (opts *InitAppOpts) Validate() error {
 		return fmt.Errorf("project name invalid: %v", err)
 	}
 
-	if err := validateApplicationName(opts.Name); err != nil && err != errValueEmpty {
+	if err := validateApplicationName(opts.AppName); err != nil && err != errValueEmpty {
 		return fmt.Errorf("application name invalid: %v", err)
 	}
 
@@ -161,7 +163,7 @@ func (opts *InitAppOpts) Execute() error {
 	return opts.deployEnv()
 }
 func (opts *InitAppOpts) createApp() error {
-	manifest, err := manifest.Create(opts.Name, opts.Type)
+	manifest, err := manifest.Create(opts.AppName, opts.AppType)
 	if err != nil {
 		return fmt.Errorf("failed to generate a manifest %w", err)
 	}
@@ -169,7 +171,7 @@ func (opts *InitAppOpts) createApp() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal the manifest file %w", err)
 	}
-	return opts.ws.WriteManifest(manifestBytes, opts.Name)
+	return opts.ws.WriteManifest(manifestBytes, opts.AppName)
 }
 
 func (opts *InitAppOpts) createProject() error {
@@ -188,7 +190,7 @@ func (opts *InitAppOpts) createProject() error {
 // deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
 func (opts *InitAppOpts) deployEnv() error {
 
-	if opts.SkipDeploy {
+	if opts.ShouldSkipDeploy {
 		return nil
 	}
 
@@ -220,7 +222,7 @@ func (opts *InitAppOpts) deployEnv() error {
 	}
 
 	opts.prog.Start("Preparing deployment...")
-	if err := opts.deployer.DeployEnvironment(env); err != nil {
+	if err := opts.envDeployer.DeployEnvironment(env); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -233,7 +235,7 @@ func (opts *InitAppOpts) deployEnv() error {
 	}
 	opts.prog.Stop("Done!")
 	opts.prog.Start("Deploying env...")
-	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
+	if err := opts.envDeployer.WaitForEnvironmentCreation(env); err != nil {
 		opts.prog.Stop("Error!")
 		return err
 	}
@@ -249,6 +251,7 @@ func (opts *InitAppOpts) deployEnv() error {
 func BuildInitCmd() *cobra.Command {
 	opts := InitAppOpts{
 		prompter: prompt.New(),
+		prog:     spinner.New(),
 	}
 
 	cmd := &cobra.Command{
@@ -259,8 +262,8 @@ func BuildInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			opts.ws = ws
+
 			ssm, err := ssm.NewStore()
 			if err != nil {
 				return err
@@ -271,14 +274,10 @@ func BuildInitCmd() *cobra.Command {
 			sess, err := session.NewSessionWithOptions(session.Options{
 				SharedConfigState: session.SharedConfigEnable,
 			})
-
 			if err != nil {
 				return err
 			}
-
-			opts.deployer = cloudformation.New(sess)
-
-			opts.prog = spin.New()
+			opts.envDeployer = cloudformation.New(sess)
 
 			opts.Prepare()
 			return opts.Ask()
@@ -287,10 +286,11 @@ func BuildInitCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project (required).")
-	cmd.Flags().StringVarP(&opts.Name, "app", "a", "", "Name of the application (required).")
-	cmd.Flags().StringVarP(&opts.Type, "type", "t", "", "Type of application to create.")
-	cmd.Flags().BoolVar(&opts.SkipDeploy, "skip-deploy", false, "Skips asking if you want to do a deployment.")
+	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project.")
+	cmd.Flags().StringVarP(&opts.AppName, "app", "a", "", "Name of the application.")
+	cmd.Flags().StringVarP(&opts.AppType, "app-type", "t", "", "Type of application to create.")
+	cmd.Flags().BoolVar(&opts.ShouldDeploy, "deploy", false, "Deploy your application to a \"test\" environment (exclusive with --skip-deploy).")
+	cmd.Flags().BoolVar(&opts.ShouldSkipDeploy, "skip-deploy", false, "Skip deploying your application (exclusive with --deploy).")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": "Getting Started ✨",
