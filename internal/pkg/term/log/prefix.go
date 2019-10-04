@@ -9,5 +9,4 @@ package log
 const (
 	successPrefix = "✔ Success!"
 	errorPrefix   = "✘ Error!"
-	warningPrefix = "Note:"
 )

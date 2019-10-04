@@ -24,6 +24,11 @@ var (
 	OutputWriter     = color.Output
 )
 
+// Log message prefixes.
+const (
+	warningPrefix = "Note:"
+)
+
 // Success prefixes the message with a green "✔ Success!", and writes to standard error.
 func Success(args ...interface{}) {
 	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
