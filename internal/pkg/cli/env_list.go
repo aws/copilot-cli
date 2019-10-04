@@ -5,12 +5,12 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,26 +18,33 @@ import (
 
 // ListEnvOpts contains the fields to collect for listing an environment.
 type ListEnvOpts struct {
-	ProjectName   string `survey:"project"`
-	prompt        terminal.Stdio
+	ProjectName   string
 	manager       archer.EnvironmentLister
 	projectGetter archer.ProjectGetter
+	prompter      prompter
+
+	w io.Writer
 }
 
 // Ask asks for fields that are required but not passed in.
 func (opts *ListEnvOpts) Ask() error {
-	var qs []*survey.Question
-	if opts.ProjectName == "" {
-		qs = append(qs, &survey.Question{
-			Name: "project",
-			Prompt: &survey.Input{
-				Message: "Which project's environments would you like to list?",
-				Help:    "A project groups all of your environments together.",
-			},
-			Validate: validateProjectName,
-		})
+	if opts.ProjectName != "" {
+		return nil
 	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
+
+	// TODO: Make this a SelectOne prompt based on existing projects?
+	projectName, err := opts.prompter.Get(
+		"Which project's environments would you like to list?",
+		"A project groups all of your environments together.",
+		validateProjectName)
+
+	if err != nil {
+		return fmt.Errorf("failed to get project name: %w", err)
+	}
+
+	opts.ProjectName = projectName
+
+	return nil
 }
 
 // Execute lists the environments through the prompt.
@@ -55,9 +62,9 @@ func (opts *ListEnvOpts) Execute() error {
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
 		if env.Prod {
-			fmt.Fprintf(opts.prompt.Out, "%s (prod)\n", prodColor(env.Name))
+			fmt.Fprintf(opts.w, "%s (prod)\n", prodColor(env.Name))
 		} else {
-			fmt.Fprintln(opts.prompt.Out, env.Name)
+			fmt.Fprintln(opts.w, env.Name)
 		}
 	}
 
@@ -67,11 +74,8 @@ func (opts *ListEnvOpts) Execute() error {
 // BuildEnvListCmd builds the command for listing environments in a project.
 func BuildEnvListCmd() *cobra.Command {
 	opts := ListEnvOpts{
-		prompt: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stderr,
-			Err: os.Stderr,
-		},
+		w:        os.Stdout,
+		prompter: prompt.New(),
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",

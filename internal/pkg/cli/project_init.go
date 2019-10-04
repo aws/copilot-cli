@@ -4,9 +4,6 @@
 package cli
 
 import (
-	"os"
-
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
@@ -15,8 +12,7 @@ import (
 
 // InitProjectOpts contains the fields to collect for creating a project.
 type InitProjectOpts struct {
-	ProjectName string `survey:"project"`
-	prompt      terminal.Stdio
+	ProjectName string
 	manager     archer.ProjectCreator
 	ws          archer.Workspace
 }
@@ -37,13 +33,7 @@ func (opts *InitProjectOpts) Execute() error {
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	opts := InitProjectOpts{
-		prompt: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stderr,
-			Err: os.Stderr,
-		},
-	}
+	opts := InitProjectOpts{}
 
 	cmd := &cobra.Command{
 		Use:   "init [name]",

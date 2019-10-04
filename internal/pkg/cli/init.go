@@ -7,16 +7,14 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
 	spin "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -28,9 +26,9 @@ const defaultEnvironmentName = "test"
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
 	// User provided fields
-	Project          string `survey:"project"` // namespace that this application belongs to.
-	Name             string `survey:"name"`    // unique identifier to logically group AWS resources together.
-	Type             string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
+	Project          string // namespace that this application belongs to.
+	Name             string // unique identifier to logically group AWS resources together.
+	Type             string // type of application you're trying to build (LoadBalanced, Backend, etc.)
 	SkipDeploy       bool   // whether to skip asking if we should deploy a test environment.
 	existingProjects []string
 
@@ -39,67 +37,73 @@ type InitAppOpts struct {
 	deployer  archer.EnvironmentDeployer
 	ws        archer.Workspace
 	prog      progress
-
-	prompt terminal.Stdio // interfaces to receive and output app configuration data to the terminal.
+	prompter  prompter
 }
 
 // Ask prompts the user for the value of any required fields that are not already provided.
 func (opts *InitAppOpts) Ask() error {
-	var qs []*survey.Question
 	if opts.Project == "" {
-		qs = append(qs, opts.projectQuestion())
-	}
-	if opts.Name == "" {
-		qs = append(qs, &survey.Question{
-			Name: "name",
-			Prompt: &survey.Input{
-				Message: "What is your application's name?",
-				Help:    "Collection of AWS services to achieve a business capability. Must be unique within a project.",
-			},
-			Validate: validateApplicationName,
-		})
-	}
-	if opts.Type == "" {
-		qs = append(qs, opts.manifestQuestion())
-	}
-	return survey.Ask(qs, opts, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
-}
-
-func (opts InitAppOpts) manifestQuestion() *survey.Question {
-	return &survey.Question{
-		Prompt: &survey.Select{
-			Message: "Which template would you like to use?",
-			Help:    "Pre-defined infrastructure templates.",
-			Options: []string{
-				manifest.LoadBalancedWebApplication,
-			},
-			Default: manifest.LoadBalancedWebApplication,
-		},
-		Name: "Type",
-	}
-}
-
-func (opts InitAppOpts) projectQuestion() *survey.Question {
-	if len(opts.existingProjects) > 0 {
-		return &survey.Question{
-			Name: "project",
-			Prompt: &survey.Select{
-				Message: "Which project should we use?",
-				Help:    "Choose a project to create a new application in. Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery",
-				Options: opts.existingProjects,
-			},
+		if err := opts.projectQuestion(); err != nil {
+			return err
 		}
 	}
 
-	return &survey.Question{
-		Name: "project",
-		Prompt: &survey.Input{
-			Message: "What is your project's name?",
-			Help:    "Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
-		},
-		Validate: validateProjectName,
+	if opts.Name == "" {
+		name, err := opts.prompter.Get(
+			"What is your application's name?",
+			"Collection of AWS services to achieve a business capability. Must be unique within a project.",
+			validateApplicationName)
+
+		if err != nil {
+			return fmt.Errorf("failed to get application name: %w", err)
+		}
+
+		opts.Name = name
+	}
+	if opts.Type == "" {
+		t, err := opts.prompter.SelectOne(
+			"Which template would you like to use?",
+			"Pre-defined infrastructure templates.",
+			[]string{manifest.LoadBalancedWebApplication})
+
+		if err != nil {
+			return fmt.Errorf("failed to get template selection: %w", err)
+		}
+
+		opts.Type = t
 	}
 
+	return nil
+}
+
+func (opts *InitAppOpts) projectQuestion() error {
+	if len(opts.existingProjects) > 0 {
+		projectName, err := opts.prompter.SelectOne(
+			"Which project should we use?",
+			"Choose a project to create a new application in. Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery",
+			opts.existingProjects)
+
+		if err != nil {
+			return fmt.Errorf("failed to get project selection: %w", err)
+		}
+
+		opts.Project = projectName
+
+		return nil
+	}
+
+	projectName, err := opts.prompter.Get(
+		"What is your project's name?",
+		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
+		validateProjectName)
+
+	if err != nil {
+		return fmt.Errorf("failed to get project name: %w", err)
+	}
+
+	opts.Project = projectName
+
+	return nil
 }
 
 // Validate returns an error if a command line flag provided value is invalid
@@ -194,11 +198,15 @@ func (opts *InitAppOpts) deployEnv() error {
 	}
 
 	deployEnv := false
-	prompt := &survey.Confirm{
-		Message: "Would you like to set up a test environment?",
-		Help:    "You can deploy your app into your test environment.",
+
+	deployEnv, err := opts.prompter.Confirm(
+		"Would you like to set up a test environment?",
+		"You can deploy your app into your test environment.")
+
+	if err != nil {
+		// TODO: handle error?
 	}
-	survey.AskOne(prompt, &deployEnv, survey.WithStdio(opts.prompt.In, opts.prompt.Out, opts.prompt.Err))
+
 	if !deployEnv {
 		return nil
 	}
@@ -240,11 +248,7 @@ func (opts *InitAppOpts) deployEnv() error {
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
 	opts := InitAppOpts{
-		prompt: terminal.Stdio{
-			In:  os.Stdin,
-			Out: os.Stderr,
-			Err: os.Stderr,
-		},
+		prompter: prompt.New(),
 	}
 
 	cmd := &cobra.Command{

@@ -7,104 +7,136 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/Netflix/go-expect"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
 	climocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
 	"github.com/golang/mock/gomock"
-	"github.com/hinshun/vt10x"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInit_Ask(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockProjectStore := mocks.NewMockProjectStore(ctrl)
 	defer ctrl.Finish()
+
+	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockPrompter := climocks.NewMockprompter(ctrl)
 
 	testCases := map[string]struct {
 		inputProject     string
 		inputApp         string
 		inputType        string
-		input            func(c *expect.Console)
+		setupMocks       func()
 		wantedProject    string
 		wantedApp        string
 		wantedType       string
 		existingProjects []string
 	}{
 		"with no flags set and no projects": {
-			input: func(c *expect.Console) {
-				c.ExpectString("What is your project's name?")
-				c.SendLine("heartbeat")
-				c.ExpectString("What is your application's name?")
-				c.SendLine("api")
-				c.ExpectString("Which template would you like to use?")
-				c.SendLine(string(terminal.KeyEnter))
-				c.ExpectString("Would you like to set up a test environment")
-				c.SendLine("n")
-				c.ExpectEOF()
+			setupMocks: func() {
+				gomock.InOrder(
+					mockPrompter.EXPECT().
+						Get(
+							gomock.Eq("What is your project's name?"),
+							gomock.Eq("Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery."),
+							gomock.Any()).
+						Return("heartbeat", nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Get(
+							gomock.Eq("What is your application's name?"),
+							gomock.Eq("Collection of AWS services to achieve a business capability. Must be unique within a project."),
+							gomock.Any()).
+						Return("api", nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						SelectOne(
+							gomock.Eq("Which template would you like to use?"),
+							gomock.Eq("Pre-defined infrastructure templates."),
+							gomock.Eq([]string{manifest.LoadBalancedWebApplication})).
+						Return("Load Balanced Web App", nil).
+						Times(1))
 			},
 			wantedProject: "heartbeat",
 			wantedApp:     "api",
 			wantedType:    "Load Balanced Web App",
 		},
 		"with no flags set and existing projects": {
-			existingProjects: []string{"heartbeat"},
-			input: func(c *expect.Console) {
-				c.ExpectString("Which project should we use?")
-				c.SendLine(string(terminal.KeyEnter))
-				c.ExpectString("What is your application's name?")
-				c.SendLine("api")
-				c.ExpectString("Which template would you like to use?")
-				c.SendLine(string(terminal.KeyEnter))
-				c.ExpectString("Would you like to set up a test environment")
-				c.SendLine("n")
-				c.ExpectEOF()
+			setupMocks: func() {
+				gomock.InOrder(
+					mockPrompter.EXPECT().
+						SelectOne(
+							gomock.Eq("Which project should we use?"),
+							gomock.Eq("Choose a project to create a new application in. Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery"),
+							gomock.Eq([]string{"heartbeat"})).
+						Return("heartbeat", nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Get(
+							gomock.Eq("What is your application's name?"),
+							gomock.Eq("Collection of AWS services to achieve a business capability. Must be unique within a project."),
+							gomock.Any()).
+						Return("api", nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						SelectOne(
+							gomock.Eq("Which template would you like to use?"),
+							gomock.Eq("Pre-defined infrastructure templates."),
+							gomock.Eq([]string{manifest.LoadBalancedWebApplication})).
+						Return("Load Balanced Web App", nil).
+						Times(1))
 			},
-			wantedProject: "heartbeat",
-			wantedApp:     "api",
-			wantedType:    "Load Balanced Web App",
+			existingProjects: []string{"heartbeat"},
+			wantedProject:    "heartbeat",
+			wantedApp:        "api",
+			wantedType:       "Load Balanced Web App",
 		},
 		"with only project flag set": {
-			inputProject: "heartbeat",
-			input: func(c *expect.Console) {
-				c.ExpectString("What is your application's name?")
-				c.SendLine("api")
-				c.ExpectString("Which template would you like to use?")
-				c.SendLine(string(terminal.KeyEnter))
-				c.ExpectString("Would you like to set up a test environment")
-				c.SendLine("n")
-				c.ExpectEOF()
+			setupMocks: func() {
+				gomock.InOrder(
+					mockPrompter.EXPECT().
+						Get(
+							gomock.Eq("What is your application's name?"),
+							gomock.Eq("Collection of AWS services to achieve a business capability. Must be unique within a project."),
+							gomock.Any()).
+						Return("api", nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						SelectOne(
+							gomock.Eq("Which template would you like to use?"),
+							gomock.Eq("Pre-defined infrastructure templates."),
+							gomock.Eq([]string{manifest.LoadBalancedWebApplication})).
+						Return("Load Balanced Web App", nil).
+						Times(1))
 			},
+			inputProject:  "heartbeat",
 			wantedProject: "heartbeat",
 			wantedApp:     "api",
 			wantedType:    "Load Balanced Web App",
 		},
 		"with project and app flag set": {
-			inputProject: "heartbeat",
-			inputApp:     "api",
-			input: func(c *expect.Console) {
-				c.ExpectString("Which template would you like to use?")
-				c.SendLine(string(terminal.KeyEnter))
-				c.ExpectString("Would you like to set up a test environment")
-				c.SendLine("n")
-				c.ExpectEOF()
+			setupMocks: func() {
+				mockPrompter.EXPECT().
+					SelectOne(
+						gomock.Eq("Which template would you like to use?"),
+						gomock.Eq("Pre-defined infrastructure templates."),
+						gomock.Eq([]string{manifest.LoadBalancedWebApplication})).
+					Return("Load Balanced Web App", nil).
+					Times(1)
 			},
+			inputProject:  "heartbeat",
+			inputApp:      "api",
 			wantedProject: "heartbeat",
 			wantedApp:     "api",
 			wantedType:    "Load Balanced Web App",
 		},
 		"with project, app and template flag set": {
-			inputProject: "heartbeat",
-			inputApp:     "api",
-			inputType:    "Load Balanced Web App",
-			input: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment")
-				c.SendLine("n")
-				c.ExpectEOF()
-			},
+			setupMocks:    func() {},
+			inputProject:  "heartbeat",
+			inputApp:      "api",
+			inputType:     "Load Balanced Web App",
 			wantedProject: "heartbeat",
 			wantedApp:     "api",
 			wantedType:    "Load Balanced Web App",
@@ -113,36 +145,18 @@ func TestInit_Ask(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			mockTerminal, _, _ := vt10x.NewVT10XConsole()
-			defer mockTerminal.Close()
 			app := &InitAppOpts{
-				Project: tc.inputProject,
-				Name:    tc.inputApp,
-				Type:    tc.inputType,
-				prompt: terminal.Stdio{
-					In:  mockTerminal.Tty(),
-					Out: mockTerminal.Tty(),
-					Err: mockTerminal.Tty(),
-				},
+				Project:          tc.inputProject,
+				Name:             tc.inputApp,
+				Type:             tc.inputType,
 				projStore:        mockProjectStore,
 				existingProjects: tc.existingProjects,
+				prompter:         mockPrompter,
 			}
-			// Write inputs to the terminal
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				tc.input(mockTerminal)
-			}()
+			tc.setupMocks()
 
-			// WHEN
 			err := app.Ask()
 
-			// Wait until the terminal receives the input
-			mockTerminal.Tty().Close()
-			<-done
-
-			// THEN
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedProject, app.Project, "expected project names to match")
 			require.Equal(t, tc.wantedApp, app.Name, "expected app names to match")
@@ -314,14 +328,14 @@ func TestInit_Execute(t *testing.T) {
 	mockWorkspace := mocks.NewMockWorkspace(ctrl)
 	mockProgress := climocks.NewMockprogress(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
+	mockPrompter := climocks.NewMockprompter(ctrl)
 
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
-		inputOpts    InitAppOpts
-		consoleInput func(c *expect.Console)
-		mocking      func()
-		want         error
+		inputOpts  InitAppOpts
+		setupMocks func()
+		want       error
 	}{
 		"should not prompt to create test environment given project and environments": {
 			inputOpts: InitAppOpts{
@@ -330,10 +344,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -353,8 +364,7 @@ func TestInit_Execute(t *testing.T) {
 						Return([]*archer.Environment{
 							{Name: "test"},
 						}, nil).
-						Times(1),
-				)
+						Times(1))
 			},
 			want: nil,
 		},
@@ -366,29 +376,27 @@ func TestInit_Execute(t *testing.T) {
 				SkipDeploy:       true,
 				existingProjects: []string{},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Any()).
-					Return(&store.ErrProjectAlreadyExists{
-						ProjectName: "project1",
-					})
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Eq("project1"))
-				mockWorkspace.
-					EXPECT().
-					WriteManifest(gomock.Any(), "frontend")
-				mockEnvStore.
-					EXPECT().
-					ListEnvironments(gomock.Eq("project1")).
-					Return([]*archer.Environment{
-						{Name: "test"},
-					}, nil).
-					Times(0)
+			setupMocks: func() {
+				gomock.InOrder(
+					mockProjectStore.
+						EXPECT().
+						CreateProject(gomock.Any()).
+						Return(&store.ErrProjectAlreadyExists{
+							ProjectName: "project1",
+						}),
+					mockWorkspace.
+						EXPECT().
+						Create(gomock.Eq("project1")),
+					mockWorkspace.
+						EXPECT().
+						WriteManifest(gomock.Any(), "frontend"),
+					mockEnvStore.
+						EXPECT().
+						ListEnvironments(gomock.Eq("project1")).
+						Return([]*archer.Environment{
+							{Name: "test"},
+						}, nil).
+						Times(0))
 			},
 			want: nil,
 		},
@@ -399,12 +407,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("n")
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -422,7 +425,11 @@ func TestInit_Execute(t *testing.T) {
 						ListEnvironments(gomock.Eq("project3")).
 						Return(make([]*archer.Environment, 0), nil).
 						Times(1),
-				)
+					mockPrompter.EXPECT().
+						Confirm("Would you like to set up a test environment?",
+							"You can deploy your app into your test environment.").
+						Return(false, nil).
+						Times(1))
 			},
 			want: nil,
 		},
@@ -433,10 +440,7 @@ func TestInit_Execute(t *testing.T) {
 				Name:             "frontend",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -449,8 +453,7 @@ func TestInit_Execute(t *testing.T) {
 					mockWorkspace.
 						EXPECT().
 						WriteManifest(gomock.Any(), "frontend").
-						Times(0),
-				)
+						Times(0))
 			},
 			want: mockError,
 		},
@@ -461,10 +464,7 @@ func TestInit_Execute(t *testing.T) {
 				Name:             "frontend",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -478,42 +478,7 @@ func TestInit_Execute(t *testing.T) {
 					mockWorkspace.
 						EXPECT().
 						WriteManifest(gomock.Any(), "frontend").
-						Times(0),
-				)
-			},
-			want: mockError,
-		},
-		"should echo error returned from call to workspace.WriteManifest": {
-			inputOpts: InitAppOpts{
-				Type:             "Load Balanced Web App",
-				Project:          "project3",
-				Name:             "frontend",
-				existingProjects: []string{"project1", "project2"},
-			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectEOF()
-			},
-			mocking: func() {
-				gomock.InOrder(
-					mockProjectStore.
-						EXPECT().
-						CreateProject(gomock.Eq(&archer.Project{Name: "project3"})).
-						Return(nil).
-						Times(1),
-					mockWorkspace.
-						EXPECT().
-						Create(gomock.Eq("project3")).
-						Return(nil).
-						Times(1),
-					mockWorkspace.
-						EXPECT().
-						WriteManifest(gomock.Any(), "frontend").
-						Return(mockError),
-					mockWorkspace.
-						EXPECT().
-						WriteManifest(gomock.Any(), "frontend").
-						Times(0),
-				)
+						Times(0))
 			},
 			want: mockError,
 		},
@@ -524,12 +489,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("Y")
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -549,6 +509,11 @@ func TestInit_Execute(t *testing.T) {
 						EXPECT().
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Confirm("Would you like to set up a test environment?",
+							"You can deploy your app into your test environment.").
+						Return(true, nil).
 						Times(1),
 					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
@@ -559,8 +524,7 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(mockError).
 						Times(1),
-					mockProgress.EXPECT().Stop("Error!").Times(1),
-				)
+					mockProgress.EXPECT().Stop("Error!").Times(1))
 			},
 			want: mockError,
 		},
@@ -571,12 +535,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("Y")
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -596,6 +555,11 @@ func TestInit_Execute(t *testing.T) {
 						EXPECT().
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Confirm("Would you like to set up a test environment?",
+							"You can deploy your app into your test environment.").
+						Return(true, nil).
 						Times(1),
 					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
@@ -616,8 +580,7 @@ func TestInit_Execute(t *testing.T) {
 						})).
 						Return(mockError).
 						Times(1),
-					mockProgress.EXPECT().Stop("Error!").Times(1),
-				)
+					mockProgress.EXPECT().Stop("Error!").Times(1))
 			},
 			want: mockError,
 		},
@@ -628,12 +591,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("Y")
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -653,6 +611,11 @@ func TestInit_Execute(t *testing.T) {
 						EXPECT().
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Confirm("Would you like to set up a test environment?",
+							"You can deploy your app into your test environment.").
+						Return(true, nil).
 						Times(1),
 					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
@@ -690,12 +653,7 @@ func TestInit_Execute(t *testing.T) {
 				Type:             "Load Balanced Web App",
 				existingProjects: []string{"project1", "project2"},
 			},
-			consoleInput: func(c *expect.Console) {
-				c.ExpectString("Would you like to set up a test environment?")
-				c.SendLine("Y")
-				c.ExpectEOF()
-			},
-			mocking: func() {
+			setupMocks: func() {
 				gomock.InOrder(
 					mockProjectStore.
 						EXPECT().
@@ -715,6 +673,11 @@ func TestInit_Execute(t *testing.T) {
 						EXPECT().
 						ListEnvironments(gomock.Eq("project3")).
 						Return([]*archer.Environment{}, nil).
+						Times(1),
+					mockPrompter.EXPECT().
+						Confirm("Would you like to set up a test environment?",
+							"You can deploy your app into your test environment.").
+						Return(true, nil).
 						Times(1),
 					mockProgress.EXPECT().Start("Preparing deployment...").Times(1),
 					mockDeployer.EXPECT().
@@ -749,34 +712,16 @@ func TestInit_Execute(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			mockTerminal, _, _ := vt10x.NewVT10XConsole()
-			defer mockTerminal.Close()
-			// Write inputs to the terminal
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				tc.consoleInput(mockTerminal)
-			}()
-
-			tc.mocking()
-			tc.inputOpts.prompt = terminal.Stdio{
-				In:  mockTerminal.Tty(),
-				Out: mockTerminal.Tty(),
-				Err: mockTerminal.Tty(),
-			}
 			tc.inputOpts.projStore = mockProjectStore
 			tc.inputOpts.envStore = mockEnvStore
 			tc.inputOpts.prog = mockProgress
 			tc.inputOpts.deployer = mockDeployer
 			tc.inputOpts.ws = mockWorkspace
+			tc.inputOpts.prompter = mockPrompter
+			tc.setupMocks()
 
-			// WHEN
 			got := tc.inputOpts.Execute()
 
-			// THEN
-			mockTerminal.Tty().Close()
-			<-done
 			require.Equal(t, tc.want, got)
 		})
 	}
