@@ -28,9 +28,9 @@ var basicNameTestCases = map[string]testCase{
 		input: false,
 		want:  errValueNotAString,
 	},
-	"string with non-alphanumerics": {
-		input: "my-project",
-		want:  errValueNotAlphanumeric,
+	"string with invalid characters": {
+		input: "myProject!",
+		want:  errValueBadFormat,
 	},
 	"empty string": {
 		input: "",
@@ -42,7 +42,7 @@ var basicNameTestCases = map[string]testCase{
 	},
 	"does not start with letter": {
 		input: "123chicken",
-		want:  errValueFirstCharNotLetter,
+		want:  errValueBadFormat,
 	},
 }
 
@@ -51,7 +51,7 @@ func TestValidateProjectName(t *testing.T) {
 	testCases := map[string]testCase{
 		"contains emoji": testCase{
 			input: "😀",
-			want:  errValueNotAlphanumeric,
+			want:  errValueBadFormat,
 		},
 	}
 
@@ -96,60 +96,40 @@ func TestValidateEnvironmentName(t *testing.T) {
 	}
 }
 
-func TestIsAlphanumeric(t *testing.T) {
+func TestIsCorrectFormat(t *testing.T) {
 	testCases := map[string]struct {
 		input string
 		want  bool
 	}{
 		"numbers only input": {
 			input: "1234",
-			want:  true,
+			want:  false,
 		},
 		"alphabetic input only": {
-			input: "abcdaz",
+			input: "abcDaZ",
 			want:  true,
 		},
 		"alphanumeric string input": {
-			input: "abc123",
+			input: "abC123",
+			want:  true,
+		},
+		"contains hyphen": {
+			input: "bad-goose",
 			want:  true,
 		},
 		"non-alphanumeric string input": {
-			input: "my-value",
+			input: "bad-goose!",
+			want:  false,
+		},
+		"starts with non-letter": {
+			input: "1bad-goose",
 			want:  false,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := isAlphanumeric(tc.input)
-
-			require.Equal(t, tc.want, got)
-		})
-	}
-}
-
-func TestStartsWithLetter(t *testing.T) {
-	testCases := map[string]struct {
-		input string
-		want  bool
-	}{
-		"starts with letter": {
-			input: "foo1234",
-			want:  true,
-		},
-		"starts with number": {
-			input: "1234foo",
-			want:  false,
-		},
-		"starts with special char": {
-			input: "_foo",
-			want:  false,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := startsWithLetter(tc.input)
+			got := isCorrectFormat(tc.input)
 
 			require.Equal(t, tc.want, got)
 		})

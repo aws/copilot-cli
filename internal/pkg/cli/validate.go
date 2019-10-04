@@ -6,15 +6,13 @@ package cli
 import (
 	"errors"
 	"regexp"
-	"unicode"
 )
 
 var (
-	errValueEmpty              = errors.New("value must not be empty")
-	errValueTooLong            = errors.New("value must not exceed 255 characters")
-	errValueNotAlphanumeric    = errors.New("value must be alphanumeric: [A-Za-z0-9]")
-	errValueNotAString         = errors.New("value must be a string")
-	errValueFirstCharNotLetter = errors.New("value must start with letter")
+	errValueEmpty      = errors.New("value must not be empty")
+	errValueTooLong    = errors.New("value must not exceed 255 characters")
+	errValueBadFormat  = errors.New("value must be start with letter and container only letters, numbers, and hyphens.")
+	errValueNotAString = errors.New("value must be a string")
 )
 
 func validateProjectName(val interface{}) error {
@@ -40,30 +38,17 @@ func basicNameValidation(val interface{}) error {
 	if len(s) > 255 {
 		return errValueTooLong
 	}
-	if !isAlphanumeric(s) {
-		return errValueNotAlphanumeric
-	}
-	if !startsWithLetter(s) {
-		return errValueFirstCharNotLetter
+	if !isCorrectFormat(s) {
+		return errValueBadFormat
 	}
 
 	return nil
 }
 
-func isAlphanumeric(s string) bool {
-	for _, r := range s {
-		if !(unicode.IsLetter(r) || unicode.IsNumber(r)) {
-			return false
-		}
-	}
-	return true
-}
-
-func startsWithLetter(s string) bool {
-	valid, err := regexp.MatchString(`^[a-zA-Z]`, s)
+func isCorrectFormat(s string) bool {
+	valid, err := regexp.MatchString(`^[a-zA-Z][a-zA-Z0-9\-]+$`, s)
 	if err != nil {
 		return false // bubble up error?
 	}
-
 	return valid
 }

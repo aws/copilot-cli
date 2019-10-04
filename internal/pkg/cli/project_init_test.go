@@ -94,7 +94,7 @@ func TestProjectInit_Execute(t *testing.T) {
 				manager:     mockProjectStore,
 				ws:          mockWorkspace,
 			},
-			expectedError: errValueFirstCharNotLetter,
+			expectedError: errValueBadFormat,
 			mocking: func() {},
 		},
 	}
