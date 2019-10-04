@@ -10,190 +10,190 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPrintSuccess(t *testing.T) {
+func TestSuccess(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintSuccess("hello", " world")
+	Success("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Success!")
 	require.Contains(t, b.String(), "hello world")
 }
 
-func TestPrintSuccessln(t *testing.T) {
+func TestSuccessln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintSuccessln("hello", " world")
+	Successln("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Success!")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintSuccessf(t *testing.T) {
+func TestSuccessf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintSuccessf("%s %s\n", "hello", "world")
+	Successf("%s %s\n", "hello", "world")
 
 	// THEN
 	require.Contains(t, b.String(), "Success!")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintError(t *testing.T) {
+func TestError(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintError("hello", " world")
+	Error("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Error!")
 	require.Contains(t, b.String(), "hello world")
 }
 
-func TestPrintErrorln(t *testing.T) {
+func TestErrorln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintErrorln("hello", " world")
+	Errorln("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Error!")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintErrorf(t *testing.T) {
+func TestErrorf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintErrorf("%s %s\n", "hello", "world")
+	Errorf("%s %s\n", "hello", "world")
 
 	// THEN
 	require.Contains(t, b.String(), "Error!")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintWarning(t *testing.T) {
+func TestWarning(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintWarning("hello", " world")
+	Warning("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Note:")
 	require.Contains(t, b.String(), "hello world")
 }
 
-func TestPrintWarningln(t *testing.T) {
+func TestWarningln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintWarningln("hello", " world")
+	Warningln("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "Note:")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintWarningf(t *testing.T) {
+func TestWarningf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintWarningf("%s %s\n", "hello", "world")
+	Warningf("%s %s\n", "hello", "world")
 
 	// THEN
 	require.Contains(t, b.String(), "Note:")
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrint(t *testing.T) {
+func TestInfo(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	Print("hello", " world")
+	Info("hello", " world")
 
 	// THEN
 	require.Equal(t, "hello world", b.String())
 }
 
-func TestPrintln(t *testing.T) {
+func TestInfoln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	Println("hello", "world")
+	Infoln("hello", "world")
 
 	// THEN
 	require.Equal(t, "hello world\n", b.String())
 }
 
-func TestPrintf(t *testing.T) {
+func TestInfof(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	Printf("%s %s\n", "hello", "world")
+	Infof("%s %s\n", "hello", "world")
 
 	// THEN
 	require.Equal(t, "hello world\n", b.String())
 }
 
-func TestPrintDebug(t *testing.T) {
+func TestDebug(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintDebug("hello", " world")
+	Debug("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "hello world")
 }
 
-func TestPrintDebugln(t *testing.T) {
+func TestDebugln(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintDebugln("hello", " world")
+	Debugln("hello", " world")
 
 	// THEN
 	require.Contains(t, b.String(), "hello world\n")
 }
 
-func TestPrintDebugf(t *testing.T) {
+func TestDebugf(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
 	DiagnosticWriter = b
 
 	// WHEN
-	PrintDebugf("%s %s\n", "hello", "world")
+	Debugf("%s %s\n", "hello", "world")
 
 	// THEN
 	require.Contains(t, b.String(), "hello world\n")
