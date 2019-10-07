@@ -1,16 +1,15 @@
-Launch and manage applications on Amazon ECS and AWS Fargate 🚀
+Launch and manage applications on Amazon ECS and AWS Fargate
 
-Commands
+Commands 
   Getting Started ✨
-    init        Create a new ECS application 
-
+    init        Create a new ECS application
+ 
   Develop 🔧
-    env         Environment commands 
-
-    project     Project commands 
-
+    project     Project commands
+    env         Environment commands
+ 
   Settings
-    completion  Output shell completion code 
+    completion  Output shell completion code
 
 Flags
   -h, --help   help for archer

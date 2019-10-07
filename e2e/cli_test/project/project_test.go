@@ -53,7 +53,7 @@ var _ = Describe("Archer project command", func() {
 		BeforeEach(func() {
 			u, err := uuid.NewRandom()
 			Expect(err).To(BeNil())
-			projectName = u.String()
+			projectName = "proj" + u.String()
 
 			// create a temporary directory under the OS temporary directory
 			tmpDir, err = ioutil.TempDir("", "archer-project-init")
