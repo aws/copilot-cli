@@ -29,14 +29,15 @@ compile-darwin:
 	@echo "Building darwin archer to ./bin/local/archer" &&\
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ./bin/local/archer ./cmd/archer
 
-packr-build:
+packr-build: tools
 	@echo "Packaging static files" &&\
+	env -i PATH=$$PATH:${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
 	go generate ./...
 
-packr-clean:
+packr-clean: tools
 	@echo "Cleaning up static files generated code" &&\
 	cd templates &&\
-	packr2 clean &&\
+	${GOBIN}/packr2 clean &&\
 	cd ..\
 
 .PHONY: test
@@ -82,7 +83,7 @@ e2e-test-update-golden-files:
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
-	PACKR=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
+	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 
 .PHONY: gen-mocks
 gen-mocks: tools
