@@ -21,6 +21,8 @@ var _ = Describe("archer help messages", func() {
 
 	Context("top-level help message", func() {
 		var (
+			// TODO: Now that we have different template for Windows and !Windows
+			// need to have 2 templates as well.
 			expectedHelpMsgFile     = filepath.Join("testdata", "top-level-help-msg.golden")
 			expectedToplevelHelpMsg []byte
 			actualHelpMsg           []byte

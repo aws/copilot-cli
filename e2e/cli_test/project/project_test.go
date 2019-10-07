@@ -53,7 +53,7 @@ var _ = Describe("Archer project command", func() {
 		BeforeEach(func() {
 			u, err := uuid.NewRandom()
 			Expect(err).To(BeNil())
-			projectName = u.String()
+			projectName = "proj" + u.String()
 
 			// create a temporary directory under the OS temporary directory
 			tmpDir, err = ioutil.TempDir("", "archer-project-init")
@@ -76,8 +76,9 @@ var _ = Describe("Archer project command", func() {
 				sess, err := gexec.Start(command, GinkgoWriter, GinkgoWriter)
 				Expect(err).To(BeNil())
 
-				actualCmdOutput := sess.Wait().Err.Contents()
-				Expect(string(actualCmdOutput)).To(ContainSubstring("Created Project"))
+				// TODO: Add assertion that lists all the projects and ensure
+				// the project exists
+				sess.Wait()
 
 				exitCode := sess.ExitCode()
 				Expect(exitCode).To(Equal(0))
