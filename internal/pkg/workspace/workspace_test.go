@@ -146,6 +146,7 @@ func TestWriteManifest(t *testing.T) {
 		manifestFile    string
 		appName         string
 		workingDir      string
+		expectedPath    string
 		expectedError   error
 		mockFileSystem  func(appFS afero.Fs)
 	}{
@@ -154,6 +155,7 @@ func TestWriteManifest(t *testing.T) {
 			appName:         "frontend",
 			expectedContent: "frontend",
 			workingDir:      "test/",
+			expectedPath:    "test/ecs-project/frontend-app.yml",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)
 			},
@@ -161,6 +163,7 @@ func TestWriteManifest(t *testing.T) {
 		"no manifest dir": {
 			manifestFile:  "frontend-app.yml",
 			appName:       "frontend",
+			expectedPath:  "",
 			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
 			workingDir:    "/",
 			mockFileSystem: func(appFS afero.Fs) {
@@ -178,7 +181,8 @@ func TestWriteManifest(t *testing.T) {
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
-			err := ws.WriteManifest([]byte(tc.expectedContent), tc.appName)
+			manifestPath, err := ws.WriteManifest([]byte(tc.expectedContent), tc.appName)
+			require.Equal(t, tc.expectedPath, manifestPath)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				readContent, err := ws.ReadManifestFile(tc.manifestFile)

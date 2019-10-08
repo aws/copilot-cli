@@ -79,7 +79,7 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 		return err
 	}
 
-	paramOutput, err := s.systemManager.PutParameter(&ssm.PutParameterInput{
+	_, err = s.systemManager.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(projectPath),
 		Description: aws.String("An ECS-CLI Project"),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -97,10 +97,7 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 		}
 		return err
 	}
-
-	log.Printf("Created Project with version %v", *paramOutput.Version)
 	return nil
-
 }
 
 // GetProject fetches a project by name. If it can't be found, return a ErrNoSuchProject

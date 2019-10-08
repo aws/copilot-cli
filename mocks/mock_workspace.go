@@ -34,11 +34,12 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // WriteManifest mocks base method
-func (m *MockWorkspace) WriteManifest(manifestBlob []byte, applicationName string) error {
+func (m *MockWorkspace) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, applicationName)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WriteManifest indicates an expected call of WriteManifest
@@ -130,11 +131,12 @@ func (m *MockManifestIO) EXPECT() *MockManifestIOMockRecorder {
 }
 
 // WriteManifest mocks base method
-func (m *MockManifestIO) WriteManifest(manifestBlob []byte, applicationName string) error {
+func (m *MockManifestIO) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, applicationName)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WriteManifest indicates an expected call of WriteManifest
