@@ -29,9 +29,9 @@ const defaultEnvironmentName = "test"
 
 // InitAppOpts holds the fields to bootstrap a new application.
 type InitAppOpts struct {
-	Project               string `survey:"project"` // namespace that this application belongs to.
-	AppName               string `survey:"name"`    // unique identifier for the application.
-	AppType               string `survey:"Type"`    // type of application you're trying to build (LoadBalanced, Backend, etc.)
+	Project               string // namespace that this application belongs to.
+	AppName               string // unique identifier for the application.
+	AppType               string // type of application you're trying to build (LoadBalanced, Backend, etc.)
 	ShouldDeploy          bool   // true means we should create a test environment and deploy the application in it. Defaults to false.
 	promptForShouldDeploy bool   // true means that the user set the ShouldDeploy flag explicitly.
 
