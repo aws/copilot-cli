@@ -38,7 +38,7 @@ func TestGet(t *testing.T) {
 
 				*result = mockInput
 
-				require.Equal(t, len(opts), 2)
+				require.Equal(t, 3, len(opts))
 
 				return nil
 			},
@@ -93,7 +93,7 @@ func TestSelectOne(t *testing.T) {
 
 				*result = internalPrompt.Options[0]
 
-				require.Equal(t, len(opts), 1)
+				require.Equal(t, 2, len(opts))
 
 				return nil
 			},
@@ -149,7 +149,7 @@ func TestConfirm(t *testing.T) {
 
 				*result = true
 
-				require.Equal(t, len(opts), 1)
+				require.Equal(t, 2, len(opts))
 
 				return nil
 			},

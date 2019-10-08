@@ -224,11 +224,16 @@ func (ws *Service) ReadManifestFile(manifestFile string) ([]byte, error) {
 }
 
 // WriteManifest takes a manifest blob and writes it to the manifest directory.
-func (ws *Service) WriteManifest(manifestBlob []byte, applicationName string) error {
+// If successful returns the path of the manifest file, otherwise returns an empty string and the error.
+func (ws *Service) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {
-		return err
+		return "", err
 	}
 	manifestFileName := fmt.Sprintf("%s%s", applicationName, manifestFileSuffix)
-	return ws.fsUtils.WriteFile(filepath.Join(manifestPath, manifestFileName), manifestBlob, 0644)
+	p := filepath.Join(manifestPath, manifestFileName)
+	if err := ws.fsUtils.WriteFile(p, manifestBlob, 0644); err != nil {
+		return "", fmt.Errorf("failed to write manifest file: %w", err)
+	}
+	return p, nil
 }
