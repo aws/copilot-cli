@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/log"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
@@ -46,6 +45,5 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildCompletionCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
-	cmd.SetOut(log.OutputWriter)
 	return cmd
 }
