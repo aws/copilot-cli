@@ -5,12 +5,17 @@
 package template
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
 )
 
 // RootUsage is the text template for the root command.
-const RootUsage = `{{"Commands"}}{{ $cmds := .Commands }}{{$groups := mkSlice "Getting Started" "Develop" "Settings" }}{{range $group := $groups }}
-  {{$group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
+var RootUsage = fmt.Sprintf("{{\"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
+	groups.GettingStarted, groups.Develop, groups.Settings) +
+	`  {{$group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
 {{"Flags"}}

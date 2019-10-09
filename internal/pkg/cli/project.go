@@ -4,8 +4,10 @@
 package cli
 
 import (
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
 )
 
 // BuildProjCmd builds the top level project command and related subcommands.
@@ -20,7 +22,7 @@ A Project represents all of your deployment environments.`,
 	cmd.AddCommand(BuildProjectListCommand())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": "Develop 🔧",
+		"group": groups.Develop,
 	}
 	return cmd
 }

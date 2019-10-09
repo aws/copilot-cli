@@ -6,10 +6,12 @@ package cli
 import (
 	"log"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 )
 
 const (
@@ -54,7 +56,7 @@ An environment represents a deployment stage.`,
 	cmd.AddCommand(BuildEnvListCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": "Develop 🔧",
+		"group": groups.Develop,
 	}
 	return cmd
 }

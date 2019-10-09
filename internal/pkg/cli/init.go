@@ -8,8 +8,12 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/cobra"
+
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
@@ -17,8 +21,6 @@ import (
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/spf13/cobra"
 )
 
 const defaultEnvironmentName = "test"
@@ -293,7 +295,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.ShouldSkipDeploy, "skip-deploy", false, "Skip deploying your application (exclusive with --deploy).")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": "Getting Started ✨",
+		"group": groups.GettingStarted,
 	}
 	return cmd
 }

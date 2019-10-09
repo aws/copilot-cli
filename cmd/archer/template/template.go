@@ -7,15 +7,19 @@
 package template
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
 )
 
 // RootUsage is the text template for the root command.
-const RootUsage = `{{h1 "Commands"}}{{ $cmds := .Commands }}{{$groups := mkSlice "Getting Started ✨" "Develop 🔧" "Settings" }}{{range $group := $groups }}
-  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
+var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
+	groups.GettingStarted, groups.Develop, groups.Settings) +
+	`  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
 {{h1 "Flags"}}
