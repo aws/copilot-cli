@@ -29,7 +29,7 @@ func main() {
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archer",
-		Short: "Launch and manage applications on Amazon ECS and AWS Fargate 🚀",
+		Short: "Launch and manage applications on Amazon ECS and AWS Fargate",
 		Example: `
   Display the help menu for the init command
   $ archer init --help`,

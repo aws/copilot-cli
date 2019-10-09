@@ -19,7 +19,7 @@ const RootUsage = `{{"Commands"}}{{ $cmds := .Commands }}{{$groups := mkSlice "G
 {{"Global Flags"}}
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-{{"Examples"}}{{code .Example}}{{end}}
+{{"Examples"}}{{.Example}}{{end}}
 `
 
 // Usage is the text template for a single command.
@@ -36,7 +36,7 @@ const Usage = `{{"Usage"}}{{if .Runnable}}
 {{"Global Flags"}}
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-{{"Examples"}}{{code .Example}}{{end}}
+{{"Examples"}}{{.Example}}{{end}}
 `
 
 func init() {
