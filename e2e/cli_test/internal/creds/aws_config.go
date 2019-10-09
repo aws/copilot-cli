@@ -31,19 +31,19 @@ func ExtractAWSCredsFromEnvVars() (*Creds, error) {
 	res.AwsAccessKey = value
 
 	value, exists = os.LookupEnv(awsSecretKeyName)
-	if !exists {
+	if !exists || value == "" {
 		return nil, fmt.Errorf("%s is not set", awsSecretKeyName)
 	}
 	res.AwsSecretKey = value
 
 	value, exists = os.LookupEnv(awsSessionTokenName)
-	if !exists {
+	if !exists || value == "" {
 		return nil, fmt.Errorf("%s is not set", awsSessionTokenName)
 	}
 	res.AwsSessionToken = value
 
 	value, exists = os.LookupEnv(awsDefaultRegionKeyName)
-	if !exists {
+	if !exists || value == "" {
 		return nil, fmt.Errorf("%s is not set", awsDefaultRegionKeyName)
 	}
 	res.AwsRegion = value
