@@ -7,7 +7,6 @@ package main
 import (
 	"os"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/log"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
@@ -30,7 +29,7 @@ func main() {
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archer",
-		Short: "Launch and manage applications on Amazon ECS and AWS Fargate 🚀",
+		Short: "Launch and manage applications on Amazon ECS and AWS Fargate",
 		Example: `
   Display the help menu for the init command
   $ archer init --help`,
@@ -46,6 +45,5 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildCompletionCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
-	cmd.SetOut(log.OutputWriter)
 	return cmd
 }

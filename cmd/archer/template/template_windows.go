@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -14,41 +12,38 @@ import (
 )
 
 // RootUsage is the text template for the root command.
-var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
+var RootUsage = fmt.Sprintf("{{\"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
 	group.GettingStarted, group.Develop, group.Settings) +
-	`  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
+	`  {{$group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
-{{h1 "Flags"}}
+{{"Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 
-{{h1 "Global Flags"}}
+{{"Global Flags"}}
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-{{h1 "Examples"}}{{code .Example}}{{end}}
+{{"Examples"}}{{.Example}}{{end}}
 `
 
 // Usage is the text template for a single command.
-const Usage = `{{h1 "Usage"}}{{if .Runnable}}
+const Usage = `{{"Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]
 
-{{h1 "Available Commands"}}{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+{{"Available Commands"}}{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
-{{h1 "Flags"}}
+{{"Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
 
-{{h1 "Global Flags"}}
+{{"Global Flags"}}
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-{{h1 "Examples"}}{{code .Example}}{{end}}
+{{"Examples"}}{{.Example}}{{end}}
 `
 
 func init() {
 	cobra.AddTemplateFunc("isInGroup", isInGroup)
-	cobra.AddTemplateFunc("h1", h1)
-	cobra.AddTemplateFunc("h2", h2)
-	cobra.AddTemplateFunc("code", code)
 	cobra.AddTemplateFunc("mkSlice", mkSlice)
 }

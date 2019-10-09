@@ -8,8 +8,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/spf13/cobra"
+
+	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
 )
 
 type shellCompleter interface {
@@ -78,7 +80,7 @@ The code must be evaluated to provide interactive completion of commands.`,
 	}
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": "Settings",
+		"group": group.Settings,
 	}
 	return cmd
 }
