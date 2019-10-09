@@ -135,24 +135,34 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 
 // ListProjects returns the list of existing projects in the customer's account and region.
 func (s *SSM) ListProjects() ([]*archer.Project, error) {
-	params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path:      aws.String(rootProjectPath),
-		Recursive: aws.Bool(false),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
 	var projects []*archer.Project
-	for _, param := range params.Parameters {
-		var project archer.Project
-		err := json.Unmarshal([]byte(*param.Value), &project)
+
+	var nextToken *string = nil
+	for {
+		params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
+			Path:      aws.String(rootProjectPath),
+			Recursive: aws.Bool(false),
+			NextToken: nextToken,
+		})
 
 		if err != nil {
 			return nil, err
 		}
-		projects = append(projects, &project)
+
+		for _, param := range params.Parameters {
+			var project archer.Project
+			err := json.Unmarshal([]byte(*param.Value), &project)
+
+			if err != nil {
+				return nil, err
+			}
+			projects = append(projects, &project)
+		}
+
+		nextToken = params.NextToken
+		if nextToken == nil {
+			break
+		}
 	}
 
 	return projects, nil
@@ -221,26 +231,36 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 
 // ListEnvironments returns all environments belonging to a particular project.
 func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error) {
-	environmentsPath := fmt.Sprintf(rootEnvParamPath, projectName)
-	params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
-		Path:      aws.String(environmentsPath),
-		Recursive: aws.Bool(false),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
 	var environments []*archer.Environment
-	for _, param := range params.Parameters {
-		var env archer.Environment
-		err := json.Unmarshal([]byte(*param.Value), &env)
+
+	environmentsPath := fmt.Sprintf(rootEnvParamPath, projectName)
+	var nextToken *string = nil
+	for {
+		params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
+			Path:      aws.String(environmentsPath),
+			Recursive: aws.Bool(false),
+			NextToken: nextToken,
+		})
 
 		if err != nil {
 			return nil, err
 		}
 
-		environments = append(environments, &env)
+		for _, param := range params.Parameters {
+			var env archer.Environment
+			err := json.Unmarshal([]byte(*param.Value), &env)
+
+			if err != nil {
+				return nil, err
+			}
+
+			environments = append(environments, &env)
+		}
+
+		nextToken = params.NextToken
+		if nextToken == nil {
+			break
+		}
 	}
 
 	return environments, nil
