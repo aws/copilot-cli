@@ -3,7 +3,7 @@ module github.com/aws/PRIVATE-amazon-ecs-archer
 go 1.13
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.2
+	github.com/AlecAivazis/survey/v2 v2.0.4
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/aws/aws-sdk-go v1.23.9
 	github.com/briandowns/spinner v1.7.0
