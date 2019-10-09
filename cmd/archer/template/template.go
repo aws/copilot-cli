@@ -8,17 +8,15 @@ package template
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
 )
 
 // RootUsage is the text template for the root command.
 var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
-	groups.GettingStarted, groups.Develop, groups.Settings) +
+	group.GettingStarted, group.Develop, group.Settings) +
 	`  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
@@ -54,35 +52,4 @@ func init() {
 	cobra.AddTemplateFunc("h2", h2)
 	cobra.AddTemplateFunc("code", code)
 	cobra.AddTemplateFunc("mkSlice", mkSlice)
-}
-
-func isInGroup(cmd *cobra.Command, group string) bool {
-	return cmd.Annotations["group"] == group
-}
-
-func h1(text string) string {
-	var s strings.Builder
-	color.New(color.Bold, color.Underline).Fprintf(&s, text)
-	return s.String()
-}
-
-func h2(text string) string {
-	var s strings.Builder
-	color.New(color.Bold).Fprintf(&s, text)
-	return s.String()
-}
-
-func code(text string) string {
-	lines := strings.Split(text, "\n")
-	for i, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "$") {
-			// code sample
-			lines[i] = color.HiBlackString(line)
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
-func mkSlice(args ...interface{}) []interface{} {
-	return args
 }

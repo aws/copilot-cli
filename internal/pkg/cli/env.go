@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
 )
 
@@ -56,7 +56,7 @@ An environment represents a deployment stage.`,
 	cmd.AddCommand(BuildEnvListCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": groups.Develop,
+		"group": group.Develop,
 	}
 	return cmd
 }

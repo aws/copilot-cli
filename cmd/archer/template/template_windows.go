@@ -9,12 +9,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
 )
 
 // RootUsage is the text template for the root command.
 var RootUsage = fmt.Sprintf("{{\"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
-	groups.GettingStarted, groups.Develop, groups.Settings) +
+	group.GettingStarted, group.Develop, group.Settings) +
 	`  {{$group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
@@ -47,12 +47,4 @@ const Usage = `{{"Usage"}}{{if .Runnable}}
 func init() {
 	cobra.AddTemplateFunc("isInGroup", isInGroup)
 	cobra.AddTemplateFunc("mkSlice", mkSlice)
-}
-
-func isInGroup(cmd *cobra.Command, group string) bool {
-	return cmd.Annotations["group"] == group
-}
-
-func mkSlice(args ...interface{}) []interface{} {
-	return args
 }

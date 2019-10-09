@@ -13,7 +13,7 @@ import (
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/groups"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
@@ -295,7 +295,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&opts.ShouldSkipDeploy, "skip-deploy", false, "Skip deploying your application (exclusive with --deploy).")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": groups.GettingStarted,
+		"group": group.GettingStarted,
 	}
 	return cmd
 }
