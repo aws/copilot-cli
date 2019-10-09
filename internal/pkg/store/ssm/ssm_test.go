@@ -28,6 +28,8 @@ func TestStore_ListProjects(t *testing.T) {
 	cowProjectString, err := marshal(cowProject)
 	require.NoError(t, err, "Marshal project should not fail")
 
+	lastPageInPaginatedResp := false
+
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 
@@ -76,6 +78,37 @@ func TestStore_ListProjects(t *testing.T) {
 
 			wantedProjectNames: nil,
 			wantedErr:          fmt.Errorf("broken"),
+		},
+		"with paginated response": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, rootProjectPath, *param.Path)
+
+				// this closure references the `lastPageInPaginatedResp` variable
+				// in order to determine the content of the response.
+				if !lastPageInPaginatedResp {
+					lastPageInPaginatedResp = true
+					return &ssm.GetParametersByPathOutput{
+						Parameters: []*ssm.Parameter{
+							{
+								Name:  aws.String("/archer/chicken"),
+								Value: aws.String(testProjectString),
+							},
+						},
+						NextToken: aws.String("more"),
+					}, nil
+				}
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String("/archer/cow"),
+							Value: aws.String(cowProjectString),
+						},
+					},
+				}, nil
+			},
+
+			wantedProjectNames: []string{"chicken", "cow"},
+			wantedErr:          nil,
 		},
 	}
 
@@ -288,6 +321,8 @@ func TestStore_ListEnvironments(t *testing.T) {
 
 	environmentPath := fmt.Sprintf(rootEnvParamPath, testEnvironment.Project)
 
+	lastPageInPaginatedResp := false
+
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 
@@ -334,6 +369,36 @@ func TestStore_ListEnvironments(t *testing.T) {
 				return nil, fmt.Errorf("broken")
 			},
 			wantedErr: fmt.Errorf("broken"),
+		},
+		"with paginated response": {
+			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
+				require.Equal(t, environmentPath, *param.Path)
+
+				if !lastPageInPaginatedResp {
+					lastPageInPaginatedResp = true
+					return &ssm.GetParametersByPathOutput{
+						Parameters: []*ssm.Parameter{
+							{
+								Name:  aws.String(testEnvironmentPath),
+								Value: aws.String(testEnvironmentString),
+							},
+						},
+						NextToken: aws.String("more"),
+					}, nil
+				}
+
+				return &ssm.GetParametersByPathOutput{
+					Parameters: []*ssm.Parameter{
+						{
+							Name:  aws.String(prodEnvironmentPath),
+							Value: aws.String(prodEnvironmentString),
+						},
+					},
+				}, nil
+			},
+
+			wantedEnvironments: []archer.Environment{testEnvironment, prodEnvironment},
+			wantedErr:          nil,
 		},
 	}
 
