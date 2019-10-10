@@ -15,6 +15,9 @@ import (
 // Default returns a session configured against the "default" AWS profile.
 func Default() (*session.Session, error) {
 	return session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			CredentialsChainVerboseErrors: aws.Bool(true),
+		},
 		SharedConfigState: session.SharedConfigEnable,
 	})
 }
@@ -22,6 +25,9 @@ func Default() (*session.Session, error) {
 // FromProfile returns a session configured against the input profile name.
 func FromProfile(name string) (*session.Session, error) {
 	return session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			CredentialsChainVerboseErrors: aws.Bool(true),
+		},
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           name,
 	})
@@ -37,7 +43,8 @@ func FromRole(roleARN string, region string) (*session.Session, error) {
 
 	creds := stscreds.NewCredentials(defaultSession, roleARN)
 	return session.NewSession(&aws.Config{
-		Credentials: creds,
-		Region:      &region,
+		CredentialsChainVerboseErrors: aws.Bool(true),
+		Credentials:                   creds,
+		Region:                        &region,
 	})
 }
