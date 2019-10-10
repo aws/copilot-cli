@@ -15,11 +15,10 @@ import (
 	"log"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/aws/session"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	awsSsm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -54,9 +53,7 @@ type SSM struct {
 
 // NewStore returns a Store allowing you to query or create Projects or Environments.
 func NewStore() (*SSM, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	})
+	sess, err := session.Default()
 
 	if err != nil {
 		return nil, err
