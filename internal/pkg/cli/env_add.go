@@ -8,11 +8,11 @@ import (
 	"fmt"
 
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/aws/session"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
 	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -142,10 +142,7 @@ func BuildEnvAddCmd() *cobra.Command {
 			opts.manager = s
 			opts.projectGetter = s
 
-			sess, err := session.NewSessionWithOptions(session.Options{
-				SharedConfigState: session.SharedConfigEnable,
-				Profile:           opts.EnvProfile,
-			})
+			sess, err := session.FromProfile(opts.EnvProfile)
 			if err != nil {
 				return err
 			}
