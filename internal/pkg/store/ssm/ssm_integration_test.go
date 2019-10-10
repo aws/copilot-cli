@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/stretchr/testify/require"
 )
 

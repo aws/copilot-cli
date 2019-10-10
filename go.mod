@@ -1,4 +1,4 @@
-module github.com/aws/PRIVATE-amazon-ecs-archer
+module github.com/aws/amazon-ecs-cli-v2
 
 go 1.13
 

@@ -16,7 +16,7 @@ func TestLoadBalancedFargateManifest_Marshal(t *testing.T) {
 # like log groups, services, etc.
 name: SweetApp
 # The "Type" of the application you're running. For a list of all types that we support see
-# https://github.com/aws/PRIVATE-amazon-ecs-archer/app/template/manifest/
+# https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
 type: Load Balanced Web App
 
 # The port exposed through your container. We need to know
@@ -67,6 +67,7 @@ stages:
     # Any secrets via ARNs
     #secrets:
     #  lemonaidpassword: arn:aws:secretsmanager:us-west-2:902697171733:secret:DavidsLemons/DavidsFrontEnd
+
 `
 	m := NewLoadBalancedFargateManifest("SweetApp")
 	m.Stages = append(m.Stages, AppStage{

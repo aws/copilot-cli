@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 )
 
 // RootUsage is the text template for the root command.

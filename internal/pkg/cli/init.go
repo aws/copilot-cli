@@ -10,19 +10,19 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/cmd/archer/template"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/aws/session"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/group"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/manifest"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/color"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/log"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -268,7 +268,7 @@ func (opts *InitAppOpts) deploy() error {
 }
 
 func (opts *InitAppOpts) deployEnv() error {
-	// TODO https://github.com/aws/PRIVATE-amazon-ecs-archer/issues/56
+	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/56
 	env := &archer.Environment{
 		Project:            opts.Project,
 		Name:               defaultEnvironmentName,

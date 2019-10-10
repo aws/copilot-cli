@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/spf13/cobra"
 )
 

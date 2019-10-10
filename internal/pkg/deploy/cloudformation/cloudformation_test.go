@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"

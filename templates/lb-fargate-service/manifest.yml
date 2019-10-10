@@ -2,7 +2,7 @@
 # like log groups, services, etc.
 name: {{.Name}}
 # The "Type" of the application you're running. For a list of all types that we support see
-# https://github.com/aws/PRIVATE-amazon-ecs-archer/app/template/manifest/
+# https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
 type: {{.Type}}
 
 # The port exposed through your container. We need to know

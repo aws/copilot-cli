@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/aws/session"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/deploy/cloudformation"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/prompt"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/spinner"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

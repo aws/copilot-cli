@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	climocks "github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/cli/mocks"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

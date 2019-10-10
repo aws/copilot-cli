@@ -11,7 +11,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/term/cursor"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/cursor"
 	"github.com/briandowns/spinner"
 )
 

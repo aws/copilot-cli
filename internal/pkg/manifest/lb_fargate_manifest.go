@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/templates"
+	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
 // LoadBalancedFargateManifest holds the fields needed to represent a load balanced Fargate service.

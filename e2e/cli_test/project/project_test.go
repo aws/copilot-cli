@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/e2e/cli_test/internal/creds"
+	"github.com/aws/amazon-ecs-cli-v2/e2e/cli_test/internal/creds"
 )
 
 func TestArcherProjectCommand(t *testing.T) {

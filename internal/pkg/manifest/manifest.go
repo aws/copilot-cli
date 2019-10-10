@@ -5,7 +5,7 @@
 package manifest
 
 import (
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"gopkg.in/yaml.v3"
 )
 

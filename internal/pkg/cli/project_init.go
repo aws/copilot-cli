@@ -4,9 +4,9 @@
 package cli
 
 import (
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/store/ssm"
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/workspace"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 

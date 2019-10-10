@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/PRIVATE-amazon-ecs-archer/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
