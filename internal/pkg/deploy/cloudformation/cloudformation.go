@@ -23,6 +23,8 @@ import (
 const (
 	environmentTemplate         = "environment/cf.yml"
 	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
+	projectNameParamKey         = "ProjectName"
+	environmentNameParamKey     = "EnvironmentName"
 )
 
 // CloudFormation wraps the CloudFormationAPI interface
@@ -55,6 +57,14 @@ func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 		{
 			ParameterKey:   aws.String(includeLoadBalancerParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(env.PublicLoadBalancer)),
+		},
+		{
+			ParameterKey:   aws.String(projectNameParamKey),
+			ParameterValue: aws.String(env.Project),
+		},
+		{
+			ParameterKey:   aws.String(environmentNameParamKey),
+			ParameterValue: aws.String(env.Name),
 		},
 	}))
 	if err != nil {

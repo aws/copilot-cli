@@ -70,7 +70,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: emptyBox(),
 			},
-			want: errors.New(fmt.Sprintf("failed to find template %s for the environment: %s", environmentTemplate, "file does not exist")),
+			want: fmt.Errorf("failed to find template %s for the environment: %s", environmentTemplate, "file does not exist"),
 		},
 		"should wrap error returned from CreateChangeSet call": {
 			env: &archer.Environment{
@@ -86,7 +86,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: errors.New(fmt.Sprintf("failed to create changeSet for stack %s: %s", mockProjectName+"-"+mockEnvironmentName, "some AWS error")),
+			want: fmt.Errorf("failed to create changeSet for stack %s: %s", mockProjectName+"-"+mockEnvironmentName, "some AWS error"),
 		},
 		"should return a ErrStackAlreadyExists if the stack already exists": {
 			cf: CloudFormation{
@@ -128,7 +128,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: errors.New(fmt.Sprintf("failed to wait for changeSet creation %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error")),
+			want: fmt.Errorf("failed to wait for changeSet creation %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
 		"should wrap error return from DescribeChangeSet call": {
 			env: &archer.Environment{
@@ -153,7 +153,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: errors.New(fmt.Sprintf("failed to describe changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error")),
+			want: fmt.Errorf("failed to describe changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
 		"should not execute Change Set with no changes": {
 			env: &archer.Environment{
@@ -274,7 +274,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: errors.New(fmt.Sprintf("failed to execute changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error")),
+			want: fmt.Errorf("failed to execute changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
 		"should deploy an environment": {
 			cf: CloudFormation{

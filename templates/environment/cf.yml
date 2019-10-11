@@ -4,6 +4,12 @@
 # TODO: Resource tags
 
 Parameters:
+  ProjectName:
+    Type: String
+
+  EnvironmentName:
+    Type: String
+
   VpcCIDR:
     Type: String
     Default: 10.0.0.0/16
@@ -194,6 +200,11 @@ Resources:
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
       Type: application
 
+  ECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+        RepositoryName: !Join [ '/', [ !Ref ProjectName, !Ref EnvironmentName ] ]
+
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -232,3 +243,9 @@ Outputs:
     Value: !Ref Cluster
     Export:
       Name: !Sub ${AWS::StackName}-ClusterId
+
+  ECRRepositoryArn:
+    Value: !GetAtt ECRRepository.Arn
+    Description: ECR Repository used by this environment.
+    Export:
+      Name: !Sub ${AWS::StackName}-ECRArn
