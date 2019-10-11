@@ -55,7 +55,11 @@ ${COVERAGE}: test
 integ-test: packr-build run-integ-test packr-clean
 
 run-integ-test:
-	go test -v -run Integration -tags integration ${PACKAGES}
+	# These tests have a long timeout as they create and teardown CloudFormation stacks.
+	# Also adding count=1 so the test results aren't cached.
+	# This command also targets files with the build integration tag
+	# and runs tests which end in Integration.
+	go test -v -count=1 -timeout 15m -run Integration -tags integration ${PACKAGES}
 
 .PHONY: e2e-test
 e2e-test: build

@@ -20,7 +20,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func Test_Project_Integration(t *testing.T) {
+func Test_SSM_Project_Integration(t *testing.T) {
 	s, _ := ssm.NewStore()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	t.Run("Create, Get and List Projects", func(t *testing.T) {
@@ -44,7 +44,7 @@ func Test_Project_Integration(t *testing.T) {
 	})
 }
 
-func Test_Environment_Integration(t *testing.T) {
+func Test_SSM_Environment_Integration(t *testing.T) {
 	s, _ := ssm.NewStore()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
