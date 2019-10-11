@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -110,8 +111,9 @@ func createChangeSetInput(stackName, templateBody string, options ...createChang
 	// The change set name must match the regex [a-zA-Z][-a-zA-Z0-9]*. The generated UUID can start with a number,
 	// by prefixing the uuid with a word we guarantee that we start with a letter.
 	name := fmt.Sprintf("%s-%s", "ecscli", id.String())
+
 	in := &cloudformation.CreateChangeSetInput{
-		Capabilities:  []*string{aws.String(cloudformation.CapabilityCapabilityIam)},
+		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
 		ChangeSetName: aws.String(name),
 		StackName:     aws.String(stackName),
 		TemplateBody:  aws.String(templateBody),
@@ -131,5 +133,20 @@ func withParameters(params []*cloudformation.Parameter) createChangeSetOpt {
 func withCreateChangeSetType() createChangeSetOpt {
 	return func(in *cloudformation.CreateChangeSetInput) {
 		in.ChangeSetType = aws.String(cloudformation.ChangeSetTypeCreate)
+	}
+}
+
+func withEnvTags(env *archer.Environment) createChangeSetOpt {
+	return func(in *cloudformation.CreateChangeSetInput) {
+		in.Tags = []*cloudformation.Tag{
+                        {
+			         Key:   aws.String("ecs-project"),
+			         Value: aws.String(env.Project),
+		        },
+		       {
+			         Key:   aws.String("ecs-env"),
+			         Value: aws.String(env.Name),
+		        },
+	       }
 	}
 }

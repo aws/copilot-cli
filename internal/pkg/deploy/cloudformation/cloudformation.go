@@ -53,7 +53,7 @@ func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 		return fmt.Errorf("failed to find template %s for the environment: %w", environmentTemplate, err)
 	}
 
-	in, err := createChangeSetInput(envStackName(env), template, withCreateChangeSetType(), withParameters([]*cloudformation.Parameter{
+	in, err := createChangeSetInput(envStackName(env), template, withCreateChangeSetType(), withEnvTags(env), withParameters([]*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(includeLoadBalancerParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(env.PublicLoadBalancer)),
