@@ -117,10 +117,10 @@ func BuildEnvInitCmd() *cobra.Command {
 		Short: "Create a new environment in your project.",
 		Example: `
   Create a test environment in your "default" AWS profile
-  $ archer env add test
+  $ archer env init test
 
   Create a prod-iad environment using your "prod-admin" AWS profile
-  $ archer env add prod-iad --profile prod-admin --prod`,
+  $ archer env init prod-iad --profile prod-admin --prod`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				opts.EnvName = args[0]
