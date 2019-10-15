@@ -52,7 +52,7 @@ An environment represents a deployment stage.`,
 	cmd.PersistentFlags().String(EnvProjectFlag, "", "Name of the project (required unless you're in a workspace).")
 	viper.BindPFlag(EnvProjectFlag, cmd.PersistentFlags().Lookup(EnvProjectFlag))
 
-	cmd.AddCommand(BuildEnvAddCmd())
+	cmd.AddCommand(BuildEnvInitCmd())
 	cmd.AddCommand(BuildEnvListCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

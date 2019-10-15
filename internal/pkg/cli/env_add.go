@@ -104,8 +104,8 @@ func (opts *AddEnvOpts) Execute() error {
 	return nil
 }
 
-// BuildEnvAddCmd builds the command for adding an environment.
-func BuildEnvAddCmd() *cobra.Command {
+// BuildEnvInitCmd builds the command for adding an environment.
+func BuildEnvInitCmd() *cobra.Command {
 	opts := AddEnvOpts{
 		EnvProfile: "default",
 		prog:       spinner.New(),
@@ -113,8 +113,8 @@ func BuildEnvAddCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "add [name]",
-		Short: "Deploy a new environment to your project",
+		Use:   "init [name]",
+		Short: "Create a new environment in your project.",
 		Example: `
   Create a test environment in your "default" AWS profile
   $ archer env add test
