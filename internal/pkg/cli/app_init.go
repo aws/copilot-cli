@@ -6,12 +6,16 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,8 +32,9 @@ type AppInitOpts struct {
 	projectName string
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	prompt prompter
+	fs             afero.Fs
+	manifestWriter archer.ManifestIO
+	prompt         prompter
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -77,6 +82,30 @@ func (opts *AppInitOpts) Validate() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (opts *AppInitOpts) Execute() error {
+	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
+	if err != nil {
+		return fmt.Errorf("failed to generate a manifest %w", err)
+	}
+	manifestBytes, err := manifest.Marshal()
+	if err != nil {
+		return fmt.Errorf("failed to marshal the manifest file %w", err)
+	}
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, opts.AppName)
+	if err != nil {
+		return fmt.Errorf("failed to write manifest for app %s: %w", opts.AppName, err)
+	}
+
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+	relPath, err := filepath.Rel(wkdir, manifestPath)
+	if err != nil {
+		return fmt.Errorf("failed to get relative path of manifest file: %w", err)
+	}
+	log.Infoln()
+	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(relPath))
+	log.Infoln()
 	return nil
 }
 
@@ -105,6 +134,8 @@ func (opts *AppInitOpts) askAppName() error {
 	return nil
 }
 
+// askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
+// If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *AppInitOpts) askDockerfile() error {
 	dockerfiles, err := opts.listDockerfiles()
 	if err != nil {
@@ -134,6 +165,8 @@ func (opts *AppInitOpts) askDockerfile() error {
 	return nil
 }
 
+// listDockerfiles returns the list of Dockerfiles within a sub-directory below current working directory.
+// If an error occurs while reading directories, returns the error.
 func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
 	wdFiles, err := afero.ReadDir(opts.fs, ".")
 	if err != nil {
@@ -171,6 +204,12 @@ func BuildAppInitCmd() *cobra.Command {
 			opts.projectName = viper.GetString(projectFlag) // inject from parent command
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 			opts.prompt = prompt.New()
+
+			ws, err := workspace.New()
+			if err != nil {
+				return fmt.Errorf("workspace cannot be created: %w", err)
+			}
+			opts.manifestWriter = ws
 
 			return opts.Validate()
 		},

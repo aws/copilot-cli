@@ -216,7 +216,7 @@ func (opts *InitAppOpts) createProject() error {
 }
 
 func (opts *InitAppOpts) createManifest() error {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType)
+	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, "") // TODO https://github.com/aws/amazon-ecs-cli-v2/issues/109
 	if err != nil {
 		return fmt.Errorf("failed to generate a manifest %w", err)
 	}

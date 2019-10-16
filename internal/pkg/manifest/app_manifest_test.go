@@ -11,30 +11,35 @@ import (
 
 func TestCreate(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName string
-		inAppType string
+		inAppName    string
+		inAppType    string
+		inDockerfile string
 
 		requireCorrectType func(t *testing.T, i interface{})
 		wantedErr          error
 	}{
 		"load balanced web application": {
-			inAppName: "ChickenApp",
-			inAppType: LoadBalancedWebApplication,
+			inAppName:    "ChickenApp",
+			inAppType:    LoadBalancedWebApplication,
+			inDockerfile: "ChickenApp/Dockerfile",
+
 			requireCorrectType: func(t *testing.T, i interface{}) {
 				_, ok := i.(*LoadBalancedFargateManifest)
 				require.True(t, ok)
 			},
 		},
 		"invalid app type": {
-			inAppName: "CowApp",
-			inAppType: "Cow App",
+			inAppName:    "CowApp",
+			inAppType:    "Cow App",
+			inDockerfile: "CowApp/Dockerfile",
+
 			wantedErr: &ErrInvalidManifestType{Type: "Cow App"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreateApp(tc.inAppName, tc.inAppType)
+			m, err := CreateApp(tc.inAppName, tc.inAppType, tc.inDockerfile)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
@@ -55,6 +60,9 @@ func TestUnmarshal(t *testing.T) {
 		"load balanced web application": {
 			inContent: `
 name: ChickenApp
+image:
+  build: ChickenApp/Dockerfile
+  port: 5000
 type: 'Load Balanced Web App'
 containerPort: 8080
 cpu: 2048
@@ -70,12 +78,12 @@ stages:
 				actualManifest, ok := i.(*LoadBalancedFargateManifest)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedFargateManifest{
-					AppManifest:   AppManifest{Name: "ChickenApp", Type: LoadBalancedWebApplication},
-					ContainerPort: 8080,
-					CPU:           2048,
-					Memory:        1024,
-					Logging:       true,
-					Public:        false,
+					AppManifest: AppManifest{Name: "ChickenApp", Type: LoadBalancedWebApplication},
+					Image:       LBFargateImage{AppImage: AppImage{Build: "ChickenApp/Dockerfile"}, Port: 5000},
+					CPU:         2048,
+					Memory:      1024,
+					Logging:     true,
+					Public:      false,
 					Stages: []AppStage{
 						{
 							EnvName:      "test",

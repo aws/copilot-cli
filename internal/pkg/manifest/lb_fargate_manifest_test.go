@@ -19,9 +19,12 @@ name: SweetApp
 # https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
 type: Load Balanced Web App
 
-# The port exposed through your container. We need to know
-# this so that we can route traffic to it.
-containerPort: 80
+image:
+  # Path to your application's Dockerfile.
+  build: SweetApp/Dockerfile
+
+  # Port exposed through your container to route traffic to it.
+  port: 8080
 
 # Size of CPU
 cpu: 256
@@ -69,7 +72,7 @@ stages:
     #  lemonaidpassword: arn:aws:secretsmanager:us-west-2:902697171733:secret:DavidsLemons/DavidsFrontEnd
 
 `
-	m := NewLoadBalancedFargateManifest("SweetApp")
+	m := NewLoadBalancedFargateManifest("SweetApp", "SweetApp/Dockerfile")
 	m.Stages = append(m.Stages, AppStage{
 		EnvName:      "test",
 		DesiredCount: 1,

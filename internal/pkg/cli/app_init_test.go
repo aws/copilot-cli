@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -186,5 +187,44 @@ func TestAppInitOpts_Validate(t *testing.T) {
 }
 
 func TestAppInitOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inAppType        string
+		inAppName        string
+		inDockerfilePath string
 
+		mockManifestWriter func(m *archerMocks.MockManifestIO)
+	}{
+		"writes manifest": {
+			inAppType:        manifest.LoadBalancedWebApplication,
+			inAppName:        "frontend",
+			inDockerfilePath: "frontend/Dockerfile",
+
+			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWriter := archerMocks.NewMockManifestIO(ctrl)
+			opts := AppInitOpts{
+				AppType:        tc.inAppType,
+				AppName:        tc.inAppName,
+				DockerfilePath: tc.inDockerfilePath,
+				manifestWriter: mockWriter,
+			}
+			tc.mockManifestWriter(mockWriter)
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			require.Nil(t, err)
+		})
+	}
 }

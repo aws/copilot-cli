@@ -31,12 +31,17 @@ type AppStage struct {
 	DesiredCount int    `yaml:"desiredCount"`
 }
 
+// AppImage represents the application's container image.
+type AppImage struct {
+	Build string `yaml:"build"` // Path to the Dockerfile.
+}
+
 // CreateApp returns a manifest object based on the application's type.
 // If the application type is invalid, then returns an ErrInvalidManifestType.
-func CreateApp(appName, appType string) (archer.Manifest, error) {
+func CreateApp(appName, appType, dockerfile string) (archer.Manifest, error) {
 	switch appType {
 	case LoadBalancedWebApplication:
-		return NewLoadBalancedFargateManifest(appName), nil
+		return NewLoadBalancedFargateManifest(appName, dockerfile), nil
 	default:
 		return nil, &ErrInvalidManifestType{Type: appType}
 	}

@@ -5,9 +5,12 @@ name: {{.Name}}
 # https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
 type: {{.Type}}
 
-# The port exposed through your container. We need to know
-# this so that we can route traffic to it.
-containerPort: {{.ContainerPort}}
+image:
+  # Path to your application's Dockerfile.
+  build: {{.Image.Build}}
+
+  # Port exposed through your container to route traffic to it.
+  port: {{.Image.Port}}
 
 # Size of CPU
 cpu: {{.CPU}}
