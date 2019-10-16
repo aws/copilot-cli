@@ -5,13 +5,17 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
+	"strings"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
 var (
 	errValueEmpty      = errors.New("value must not be empty")
 	errValueTooLong    = errors.New("value must not exceed 255 characters")
-	errValueBadFormat  = errors.New("value must be start with letter and container only letters, numbers, and hyphens.")
+	errValueBadFormat  = errors.New("value must be start with letter and container only letters, numbers, and hyphens")
 	errValueNotAString = errors.New("value must be a string")
 )
 
@@ -21,6 +25,23 @@ func validateProjectName(val interface{}) error {
 
 func validateApplicationName(val interface{}) error {
 	return basicNameValidation(val)
+}
+
+func validateApplicationType(val interface{}) error {
+	appType, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	for _, validType := range manifest.AppTypes {
+		if appType == validType {
+			return nil
+		}
+	}
+	var prettyTypes []string
+	for _, validType := range manifest.AppTypes {
+		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
+	}
+	return fmt.Errorf("invalid app type %s: must be one of %s", appType, strings.Join(prettyTypes, ", "))
 }
 
 func validateEnvironmentName(val interface{}) error {

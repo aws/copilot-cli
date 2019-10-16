@@ -172,10 +172,10 @@ func (opts *InitAppOpts) askAppType() error {
 	t, err := opts.prompter.SelectOne(
 		"What type of application do you want to make?",
 		"List of infrastructure patterns.",
-		[]string{manifest.LoadBalancedWebApplication})
+		manifest.AppTypes)
 
 	if err != nil {
-		return fmt.Errorf("failed to get template selection: %w", err)
+		return fmt.Errorf("failed to get type selection: %w", err)
 	}
 	opts.AppType = t
 	return nil

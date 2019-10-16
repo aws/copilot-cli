@@ -4,7 +4,7 @@
 package cli
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -12,11 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-)
-
-const (
-	// EnvProjectFlag is the flag for providing the project name to the env commands.
-	EnvProjectFlag = "project"
 )
 
 // BuildEnvCmd is the top level command for environments
@@ -27,30 +22,12 @@ func BuildEnvCmd() *cobra.Command {
 		Long: `Command for working with environments.
 An environment represents a deployment stage.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Load the workspace and set the project flag.
-			ws, err := workspace.New()
-			if err != nil {
-				// If there's an error fetching the workspace, fall back to requiring
-				// the project flag be set.
-				log.Println(err.Error())
-				return
-			}
-
-			summary, err := ws.Summary()
-			if err != nil {
-				// If there's an error reading from the workspace, fall back to requiring
-				// the project flag be set.
-				log.Println(err.Error())
-				return
-			}
-			viper.SetDefault(EnvProjectFlag, summary.ProjectName)
-
+			persistProjectName()
 		},
 	}
-
-	// The project flag is available to all subcommands through viper.GetString("project")
-	cmd.PersistentFlags().String(EnvProjectFlag, "", "Name of the project (required unless you're in a workspace).")
-	viper.BindPFlag(EnvProjectFlag, cmd.PersistentFlags().Lookup(EnvProjectFlag))
+	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
+	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	viper.BindPFlag(projectFlag, cmd.PersistentFlags().Lookup(projectFlag))
 
 	cmd.AddCommand(BuildEnvInitCmd())
 	cmd.AddCommand(BuildEnvListCmd())
@@ -59,4 +36,34 @@ An environment represents a deployment stage.`,
 		"group": group.Develop,
 	}
 	return cmd
+}
+
+// persistProjectName loads the project's name to viper.
+// If there is an error, we swallow the error and leave the default value as empty string.
+func persistProjectName() {
+	name, err := loadProjectName()
+	if err != nil {
+		return
+	}
+	viper.SetDefault(projectFlag, name)
+}
+
+// loadProjectName retrieves the project's name from the workspace if it exists and returns it.
+// If there is an error, it returns an empty string and the error.
+func loadProjectName() (string, error) {
+	// Load the workspace and set the project flag.
+	ws, err := workspace.New()
+	if err != nil {
+		// If there's an error fetching the workspace, fall back to requiring
+		// the project flag be set.
+		return "", fmt.Errorf("fetching workspace: %w", err)
+	}
+
+	summary, err := ws.Summary()
+	if err != nil {
+		// If there's an error reading from the workspace, fall back to requiring
+		// the project flag be set.
+		return "", fmt.Errorf("reading from workspace: %w", err)
+	}
+	return summary.ProjectName, nil
 }

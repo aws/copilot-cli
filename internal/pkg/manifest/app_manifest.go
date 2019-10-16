@@ -9,11 +9,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Supported manifest types.
 const (
 	// LoadBalancedWebApplication is a web application with a load balancer and Fargate as compute.
 	LoadBalancedWebApplication = "Load Balanced Web App"
 )
+
+// AppTypes are the supported manifest types.
+var AppTypes = []string{
+	LoadBalancedWebApplication,
+}
 
 // AppManifest holds the basic data that every manifest file need to have.
 type AppManifest struct {
