@@ -1,0 +1,24 @@
+# This manifest defines the relationship and deployment ordering of your environments.
+
+# This section defines the source artifacts.
+source:
+  # The name of the provider that is used to store the source artifacts.
+  provider: {{.Provider}}
+  # Additional properties that further specifies the exact location
+  # the artifacts should be sourced from.
+  properties:
+    # Repository in the format of <user_name>/<repository_name>.
+    repository: {{.Repository}}
+
+{{$length := len .Environments}}{{if gt $length 0}}
+# The deployment section defines the order the pipeline will deploy
+# to your environments
+deployment: {{range $env := .Environments}}
+    - 
+      # The name of the environment to deploy to.
+      env: {{$env.Name}}
+      # This field defines the post-deployment validation script
+      # that will be executed after the deployment to the environment
+      # has succeeded.
+      validation: {{$env.Validation}}
+{{end}}
