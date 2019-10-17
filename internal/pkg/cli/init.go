@@ -254,9 +254,9 @@ func (opts *InitAppOpts) deploy() error {
 			log.Infoln()
 			log.Infoln("No problem, you can deploy your application later:")
 			log.Infof("- Run %s to create your staging environment.\n",
-				color.HighlightCode(fmt.Sprintf("archer env init --env %s --project %s", defaultEnvironmentName, opts.Project)))
+				color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, opts.Project)))
 			log.Infof("- Run %s to deploy your application to the environment.\n",
-				color.HighlightCode(fmt.Sprintf("archer env add --app %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.Project)))
+				color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.Project)))
 			log.Infoln()
 		}
 	}

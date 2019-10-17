@@ -36,7 +36,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("What type of application do you want to make?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
 					Return(wantedAppType, nil)
 			},
 		},

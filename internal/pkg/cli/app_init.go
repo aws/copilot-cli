@@ -35,6 +35,9 @@ type AppInitOpts struct {
 	fs             afero.Fs
 	manifestWriter archer.ManifestIO
 	prompt         prompter
+
+	// Outputs stored on successful actions.
+	manifestPath string
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -84,35 +87,37 @@ func (opts *AppInitOpts) Validate() error {
 func (opts *AppInitOpts) Execute() error {
 	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
 	if err != nil {
-		return fmt.Errorf("failed to generate a manifest %w", err)
+		return fmt.Errorf("generate a manifest: %w", err)
 	}
 	manifestBytes, err := manifest.Marshal()
 	if err != nil {
-		return fmt.Errorf("failed to marshal the manifest file %w", err)
+		return fmt.Errorf("marshal manifest: %w", err)
 	}
 	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, opts.AppName)
 	if err != nil {
-		return fmt.Errorf("failed to write manifest for app %s: %w", opts.AppName, err)
+		return fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
 	}
-
 	wkdir, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %w", err)
+		return fmt.Errorf("get working directory: %w", err)
 	}
 	relPath, err := filepath.Rel(wkdir, manifestPath)
 	if err != nil {
-		return fmt.Errorf("failed to get relative path of manifest file: %w", err)
+		return fmt.Errorf("relative path of manifest file: %w", err)
 	}
+	opts.manifestPath = relPath
 	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(relPath))
+	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
+	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 	return nil
 }
 
 func (opts *AppInitOpts) askAppType() error {
 	t, err := opts.prompt.SelectOne(
-		"What type of application do you want to make?",
-		"List of infrastructure patterns.",
+		"Which type of infrastructure pattern best represents your application?",
+		`Your application's architecture. Most applications need additional AWS resources to run.
+To help setup the infrastructure resources, select what "kind" or "type" of application you want to build.`,
 		manifest.AppTypes)
 
 	if err != nil {
@@ -125,7 +130,8 @@ func (opts *AppInitOpts) askAppType() error {
 func (opts *AppInitOpts) askAppName() error {
 	name, err := opts.prompt.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
-		"Collection of AWS services to achieve a business capability. Must be unique within a project.",
+		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
+Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, opts.projectName),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
@@ -137,6 +143,7 @@ func (opts *AppInitOpts) askAppName() error {
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *AppInitOpts) askDockerfile() error {
+	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
 	dockerfiles, err := opts.listDockerfiles()
 	if err != nil {
 		return err
@@ -191,15 +198,27 @@ func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
+// LogRecommendedActions logs follow-up actions the user can take after successfully executing the command.
+func (opts *AppInitOpts) LogRecommendedActions() {
+	log.Infoln("Recommended follow-up actions:")
+	log.Infof("- Update your manifest %s to change the defaults.\n",
+		color.HighlightResource(opts.manifestPath))
+	log.Infof("- Run %s to create your staging environment.\n",
+		color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, opts.projectName)))
+	log.Infof("- Run %s to deploy your application to the environment.\n",
+		color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.projectName)))
+}
+
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
 	opts := &AppInitOpts{}
 	cmd := &cobra.Command{
-		Use:   "init",
-		Short: "Create a new application in a project.",
+		Use: "init",
+		Long: `Create a new application in a project.
+This command is also run part of "archer init".`,
 		Example: `
   Create a "frontend" web application.
-  $ archer app init -n frontend -t "Load Balanced Web App" -d ./frontend/Dockerfile`,
+  $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.projectName = viper.GetString(projectFlag) // inject from parent command
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
@@ -222,6 +241,10 @@ func BuildAppInitCmd() *cobra.Command {
 				return err
 			}
 			return opts.Execute()
+		},
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			opts.LogRecommendedActions()
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&opts.AppType, "app-type", "t", "" /* default */, "Type of application to create.")
