@@ -34,7 +34,7 @@ func TestCreate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := Create(tc.inAppName, tc.inAppType)
+			m, err := CreateApp(tc.inAppName, tc.inAppType)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

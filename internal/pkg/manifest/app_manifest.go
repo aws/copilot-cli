@@ -27,9 +27,9 @@ type AppStage struct {
 	DesiredCount int    `yaml:"desiredCount"`
 }
 
-// Create returns a manifest object based on the application's type.
+// CreateApp returns a manifest object based on the application's type.
 // If the application type is invalid, then returns an ErrInvalidManifestType.
-func Create(appName, appType string) (archer.Manifest, error) {
+func CreateApp(appName, appType string) (archer.Manifest, error) {
 	switch appType {
 	case LoadBalancedWebApplication:
 		return NewLoadBalancedFargateManifest(appName), nil
