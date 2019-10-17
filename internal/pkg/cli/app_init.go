@@ -172,7 +172,7 @@ func (opts *AppInitOpts) askDockerfile() error {
 	return nil
 }
 
-// listDockerfiles returns the list of Dockerfiles within a sub-directory below current working directory.
+// listDockerfiles returns the list of Dockerfiles within the current working directory and a sub-directory level below.
 // If an error occurs while reading directories, returns the error.
 func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
 	wdFiles, err := afero.ReadDir(opts.fs, ".")
@@ -180,10 +180,17 @@ func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
 	var dockerfiles []string
+
 	for _, wdFile := range wdFiles {
+		// Add Dockerfiles in current directory, otherwise continue.
 		if !wdFile.IsDir() {
+			if wdFile.Name() == "Dockerfile" {
+				dockerfiles = append(dockerfiles, filepath.Join(".", wdFile.Name()))
+			}
 			continue
 		}
+
+		// Add Dockerfiles in one sub-directory below.
 		subFiles, err := afero.ReadDir(opts.fs, filepath.Join(".", wdFile.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("read directory: %w", err)

@@ -60,12 +60,14 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				mockFS.MkdirAll("frontend", 0755)
 				mockFS.MkdirAll("backend", 0755)
 
+				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
 				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Eq("Which Dockerfile would you like to use for frontend app?"), gomock.Any(), gomock.Eq(
 					[]string{
+						"Dockerfile",
 						"backend/Dockerfile",
 						"frontend/Dockerfile",
 						"Enter a custom path",
