@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
@@ -82,13 +83,21 @@ func TestEnvAdd_Ask(t *testing.T) {
 
 func TestEnvAdd_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockError := fmt.Errorf("error")
+	defer ctrl.Finish()
+
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockProjStore := mocks.NewMockProjectStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 	mockSpinner := climocks.NewMockprogress(ctrl)
+	mockIdentityService := climocks.NewMockidentityService(ctrl)
+
 	var capturedArgument *archer.Environment
-	defer ctrl.Finish()
+
+	mockError := fmt.Errorf("error")
+	mockARN := "mockARN"
+	mockCaller := identity.Caller{
+		ARN: mockARN,
+	}
 
 	testCases := map[string]struct {
 		addEnvOpts  InitEnvOpts
@@ -105,6 +114,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 				EnvName:       "env",
 				Production:    true,
 				prog:          mockSpinner,
+				identity:      mockIdentityService,
 			},
 			expectedEnv: archer.Environment{
 				Name:        "env",
@@ -120,6 +130,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 						EXPECT().
 						GetProject(gomock.Any()).
 						Return(&archer.Project{}, nil),
+					mockIdentityService.EXPECT().Get().Times(1).Return(mockCaller, nil),
 					mockSpinner.EXPECT().Start(gomock.Eq("Preparing deployment...")),
 					mockDeployer.EXPECT().DeployEnvironment(gomock.Any()),
 					mockSpinner.EXPECT().Stop(gomock.Eq("Done!")),

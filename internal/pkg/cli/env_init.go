@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
@@ -29,6 +30,7 @@ type InitEnvOpts struct {
 	deployer      archer.EnvironmentDeployer
 	prog          progress
 	prompter      prompter
+	identity      identityService
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -69,11 +71,18 @@ func (opts *InitEnvOpts) Execute() error {
 		return err
 	}
 
+	// TODO: should this be part of a method on the opts structure that fills in required data for the Execute method?
+	identity, err := opts.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+
 	deployEnvInput := &archer.DeployEnvironmentInput{
-		Name:               opts.EnvName,
-		Project:            opts.ProjectName,
-		Prod:               opts.Production,
-		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
+		Name:                     opts.EnvName,
+		Project:                  opts.ProjectName,
+		Prod:                     opts.Production,
+		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
+		ToolsAccountPrincipalARN: identity.ARN,
 	}
 
 	opts.prog.Start("Preparing deployment...")
@@ -145,8 +154,11 @@ func BuildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			opts.deployer = cloudformation.New(sess)
+
+			defaultSession, err := session.Default()
+			opts.identity = identity.New(defaultSession)
+
 			return opts.Execute()
 		},
 	}
