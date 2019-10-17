@@ -22,7 +22,7 @@ func BuildEnvCmd() *cobra.Command {
 		Long: `Command for working with environments.
 An environment represents a deployment stage.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			persistProjectName()
+			bindProjectName()
 		},
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
@@ -38,9 +38,9 @@ An environment represents a deployment stage.`,
 	return cmd
 }
 
-// persistProjectName loads the project's name to viper.
+// bindProjectName loads the project's name to viper.
 // If there is an error, we swallow the error and leave the default value as empty string.
-func persistProjectName() {
+func bindProjectName() {
 	name, err := loadProjectName()
 	if err != nil {
 		return

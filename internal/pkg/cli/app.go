@@ -17,7 +17,7 @@ func BuildAppCmd() *cobra.Command {
 		Long: `Command for working with applications.
 An application represents an Amazon ECS service or task.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			persistProjectName()
+			bindProjectName()
 		},
 	}
 

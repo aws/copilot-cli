@@ -215,7 +215,7 @@ func BuildAppInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "init",
 		Long: `Create a new application in a project.
-This command is also run part of "archer init".`,
+This command is also run as part of "archer init".`,
 		Example: `
   Create a "frontend" web application.
   $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
