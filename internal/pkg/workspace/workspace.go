@@ -134,15 +134,11 @@ func (ws *Service) summaryPath() (string, error) {
 
 func (ws *Service) createManifestDirectory() error {
 	// First check to see if a manifest directory already exists
-	dirExists, err := ws.fsUtils.DirExists(filepath.Join(ws.workingDir, manifestDirectoryName))
-	if err != nil {
-		return err
+	existingWorkspace, _ := ws.manifestDirectoryPath()
+	if existingWorkspace != "" {
+		return nil
 	}
-	// If a manifest directory doesn't exist, create it - otherwise fast succeed
-	if !dirExists {
-		return ws.fsUtils.Mkdir(manifestDirectoryName, 0755)
-	}
-	return nil
+	return ws.fsUtils.Mkdir(manifestDirectoryName, 0755)
 }
 
 func (ws *Service) manifestDirectoryPath() (string, error) {
