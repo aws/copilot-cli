@@ -13,6 +13,7 @@
   * [Colors](#colors)
   * [Data](#data)
   * [Progress](#progress)
+  * [Recommended actions](#recommended-actions)
   * [Errors](#errors)
 * [Acknowledgments](#acknowledgments)  
 
@@ -135,11 +136,27 @@ Prefer listing all sub-tasks up front.
 Otherwise, display them sequentially over time.
 ![sequential-task-progress](https://user-images.githubusercontent.com/879348/65549577-abe63500-ded2-11e9-988b-00be9e770c85.gif)
 
+### Recommended actions
+Commands that are missing prerequisites should suggest other commands to run prior to invocation. For example:
+```
+$ ecs app init
+✘ Failed! no project found, run `project init` first
+```
+
+Commands that perform actions successfully should suggest additional steps to follow. For example:
+```
+$ ecs app init -n frontend -t "Load Balanced Web App" -d ./frontend/Dockerfile
+✔ Success! Wrote the manifest for frontend app at 'ecs-project/frontend-app.yml'
+
+Recommended follow-up actions:
+- Update your manifest ecs-project/frontend-app.yml to change the defaults.
+```
+
 ### Errors
 Failure messages should be written to `stderr`.
 
 ```
-✘ Failed! could not create directory "ecs": no permissions.
+✘ Failed! could not create directory "ecs": no permissions
 ```
 
 Wrap external dependency errors to display errors as: `{what happened}: {why it happened}`
