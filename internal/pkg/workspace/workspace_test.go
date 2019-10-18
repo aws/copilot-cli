@@ -333,13 +333,25 @@ func TestCreate(t *testing.T) {
 		projectName    string
 		workingDir     string
 		expectedError  error
+		expectNoWrites bool
 		mockFileSystem func(appFS afero.Fs)
 	}{
 		"existing workspace and workspace summary": {
-			workingDir:  "test/",
-			projectName: "DavidsProject",
+			workingDir:     "test/",
+			projectName:    "DavidsProject",
+			expectNoWrites: true,
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
+			},
+		},
+		"existing workspace and workspace summary in different directory": {
+			workingDir:     "test/app/",
+			projectName:    "DavidsProject",
+			expectNoWrites: true,
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				appFS.MkdirAll("test/app", 0755)
 				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte(fmt.Sprintf("---\nproject: %s", "DavidsProject")), 0644)
 			},
 		},
@@ -371,6 +383,11 @@ func TestCreate(t *testing.T) {
 			appFS := afero.NewMemMapFs()
 			// Set it up
 			tc.mockFileSystem(appFS)
+			// Throw an error if someone tries to write
+			// if we expect there to be no writes.
+			if tc.expectNoWrites {
+				appFS = afero.NewReadOnlyFs(appFS)
+			}
 
 			ws := Service{
 				workingDir: tc.workingDir,
@@ -378,6 +395,9 @@ func TestCreate(t *testing.T) {
 			}
 			err := ws.Create(tc.projectName)
 			if tc.expectedError == nil {
+				// an operation not permitted error means
+				// we tried to write to the filesystem, but
+				// the test indicated that we expected no writes.
 				require.NoError(t, err)
 				project, err := ws.Summary()
 				require.NoError(t, err)
