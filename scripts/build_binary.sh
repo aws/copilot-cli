@@ -8,12 +8,18 @@ cd "${ROOT}"
 
 go run ./internal/pkg/version/gen/generate-version.go
 
-GIT_DIRTY=`git diff --quiet || echo '*'`
-GIT_SHORT_HASH="$GIT_DIRTY"`git rev-parse --short=7 HEAD`
+GIT_SHORT_HASH=`git rev-parse --short=7 HEAD`
+TAGGED=`git tag --points-at ${GIT_SHORT_HASH}`
+
+if [ -z "$TAGGED" ]; then
+  GIT_DIRTY=`echo '*'`
+fi
+
+GIT_HASH="$GIT_DIRTY$GIT_SHORT_HASH"
 
 echo "Building archer to ${DESTINATION}"
 
 # TODO: Inject version and git short hash into build
 GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags \
-	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_SHORT_HASH -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM" \
+	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_HASH -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM" \
        	-o ${DESTINATION} ./cmd/archer

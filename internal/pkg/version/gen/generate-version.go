@@ -29,6 +29,17 @@ type versionInfo struct {
 	Version string
 }
 
+func getVersion(path string) string {
+	versionFile := filepath.Join(path, "VERSION")
+	data, err := ioutil.ReadFile(versionFile)
+	if err != nil {
+		log.Fatalf("Unable to read file version: %v", err)
+	}
+	version := strings.TrimSpace(string(data))
+
+	return version
+}
+
 func main() {
 	path, _ := os.Getwd()
 	dest := filepath.Join(path, "internal", "pkg", "version", "version.go")
@@ -40,14 +51,10 @@ func main() {
 	defer f.Close()
 
 	t := template.Must(template.New("").Parse(versionTemplate))
-	versionFile := filepath.Join(path, "VERSION")
-	data, err := ioutil.ReadFile(versionFile)
-	if err != nil {
-		log.Fatalf("Unable to read file version: %v", err)
-	}
-	version := strings.TrimSpace(string(data))
 
-	info := versionInfo{
+	version := getVersion(path)
+
+	info := versionInfo {
 		Version: version,
 	}
 
