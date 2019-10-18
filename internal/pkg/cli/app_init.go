@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AppInitOpts holds the configuration needed to create a new application.
-type AppInitOpts struct {
+// InitAppOpts holds the configuration needed to create a new application.
+type InitAppOpts struct {
 	// Fields with matching flags.
 	AppType        string
 	AppName        string
@@ -41,7 +41,7 @@ type AppInitOpts struct {
 }
 
 // Ask prompts for fields that are required but not passed in.
-func (opts *AppInitOpts) Ask() error {
+func (opts *InitAppOpts) Ask() error {
 	if opts.AppType == "" {
 		if err := opts.askAppType(); err != nil {
 			return err
@@ -61,7 +61,7 @@ func (opts *AppInitOpts) Ask() error {
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *AppInitOpts) Validate() error {
+func (opts *InitAppOpts) Validate() error {
 	if opts.AppType != "" {
 		if err := validateApplicationType(opts.AppType); err != nil {
 			return err
@@ -84,7 +84,7 @@ func (opts *AppInitOpts) Validate() error {
 }
 
 // Execute writes the application's manifest file and stores the application in SSM.
-func (opts *AppInitOpts) Execute() error {
+func (opts *InitAppOpts) Execute() error {
 	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
 	if err != nil {
 		return fmt.Errorf("generate a manifest: %w", err)
@@ -113,7 +113,7 @@ func (opts *AppInitOpts) Execute() error {
 	return nil
 }
 
-func (opts *AppInitOpts) askAppType() error {
+func (opts *InitAppOpts) askAppType() error {
 	t, err := opts.prompt.SelectOne(
 		"Which type of infrastructure pattern best represents your application?",
 		`Your application's architecture. Most applications need additional AWS resources to run.
@@ -127,7 +127,7 @@ To help setup the infrastructure resources, select what "kind" or "type" of appl
 	return nil
 }
 
-func (opts *AppInitOpts) askAppName() error {
+func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
 		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
@@ -142,7 +142,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
-func (opts *AppInitOpts) askDockerfile() error {
+func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
 	dockerfiles, err := opts.listDockerfiles()
 	if err != nil {
@@ -174,7 +174,7 @@ func (opts *AppInitOpts) askDockerfile() error {
 
 // listDockerfiles returns the list of Dockerfiles within the current working directory and a sub-directory level below.
 // If an error occurs while reading directories, returns the error.
-func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
+func (opts *InitAppOpts) listDockerfiles() ([]string, error) {
 	wdFiles, err := afero.ReadDir(opts.fs, ".")
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
@@ -206,7 +206,7 @@ func (opts *AppInitOpts) listDockerfiles() ([]string, error) {
 }
 
 // LogRecommendedActions logs follow-up actions the user can take after successfully executing the command.
-func (opts *AppInitOpts) LogRecommendedActions() {
+func (opts *InitAppOpts) LogRecommendedActions() {
 	log.Infoln("Recommended follow-up actions:")
 	log.Infof("- Update your manifest %s to change the defaults.\n",
 		color.HighlightResource(opts.manifestPath))
@@ -218,7 +218,7 @@ func (opts *AppInitOpts) LogRecommendedActions() {
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &AppInitOpts{}
+	opts := &InitAppOpts{}
 	cmd := &cobra.Command{
 		Use: "init",
 		Long: `Create a new application in a project.
