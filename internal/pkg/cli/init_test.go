@@ -154,7 +154,7 @@ func TestInit_Ask(t *testing.T) {
 			mockProjectStore = mocks.NewMockProjectStore(ctrl)
 			mockPrompter = climocks.NewMockprompter(ctrl)
 
-			app := &InitAppOpts{
+			app := &InitOpts{
 				Project:          tc.inputProject,
 				AppName:          tc.inputApp,
 				AppType:          tc.inputType,
@@ -181,13 +181,13 @@ func TestInit_Prepare(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		inputOpts              InitAppOpts
+		inputOpts              InitOpts
 		mocking                func()
 		wantedExistingProjects []string
 		wantedProject          string
 	}{
 		"with no project flag, empty workspace and existing projects": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedExistingProjects: []string{"project1", "project2"},
@@ -207,7 +207,7 @@ func TestInit_Prepare(t *testing.T) {
 			},
 		},
 		"with no project flag, empty workspace and error finding projects": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedExistingProjects: []string{},
@@ -225,7 +225,7 @@ func TestInit_Prepare(t *testing.T) {
 			},
 		},
 		"with no project flag and existing workspace": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedProject: "MyProject",
@@ -248,7 +248,7 @@ func TestInit_Prepare(t *testing.T) {
 		},
 
 		"with project flag": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 				Project: "MyProject",
 			},
@@ -287,24 +287,24 @@ func TestInit_Prepare(t *testing.T) {
 
 func TestInit_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputOpts       InitAppOpts
+		inputOpts       InitOpts
 		wantedErrPrefix string
 	}{
 		"with valid project and app": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 				Project: "coolproject",
 			},
 		},
 		"with invalid project name": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "coolapp",
 				Project: "!!!!",
 			},
 			wantedErrPrefix: "project name !!!! is invalid",
 		},
 		"with invalid app name": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "!!!",
 				Project: "coolproject",
 			},
@@ -335,12 +335,12 @@ func TestInit_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
-		inputOpts  InitAppOpts
+		inputOpts  InitOpts
 		setupMocks func()
 		want       error
 	}{
 		"should return error if project error is not ProjectAlreadyExist": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project1",
 				AppType:               "Load Balanced Web App",
@@ -359,7 +359,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should continue if project already exists": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project1",
 				AppType:               "Load Balanced Web App",
@@ -386,7 +386,7 @@ func TestInit_Execute(t *testing.T) {
 			want: nil,
 		},
 		"prompt for should deploy": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				Project:               "project3",
 				AppName:               "frontend",
 				AppType:               "Load Balanced Web App",
@@ -417,7 +417,7 @@ func TestInit_Execute(t *testing.T) {
 			want: nil,
 		},
 		"should echo error returned from call to workspace.Create": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppType:               "Load Balanced Web App",
 				Project:               "project3",
 				AppName:               "frontend",
@@ -444,7 +444,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envDeployer.DeployEnvironment": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -484,7 +484,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envDeployer.Wait": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -534,7 +534,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envStore.Create": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -589,7 +589,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should create a new test environment": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
