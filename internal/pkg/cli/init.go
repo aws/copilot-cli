@@ -51,7 +51,7 @@ type InitAppOpts struct {
 func (opts *InitAppOpts) Prepare() {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome the the ECS CLI! We're going to walk you through some questions to help you get set up
-with a project on ECS. A project is a collection of containerized applications (or micro-services) 
+with a project on ECS. A project is a collection of containerized applications (or micro-services)
 that operate together.` + "\n")
 
 	// If there's a local project, we'll use that and just skip the project question.
@@ -269,19 +269,19 @@ func (opts *InitAppOpts) deploy() error {
 
 func (opts *InitAppOpts) deployEnv() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/56
-	env := &archer.Environment{
+	deployEnvInput := &archer.DeployEnvironmentInput{
 		Project:            opts.Project,
 		Name:               defaultEnvironmentName,
 		PublicLoadBalancer: true, // TODO: configure this value based on user input or Application type needs?
 	}
 
 	opts.prog.Start("Preparing deployment...")
-	if err := opts.envDeployer.DeployEnvironment(env); err != nil {
+	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			opts.prog.Stop("")
-			log.Infof("The environment %s already exists under project %s.\n", env.Name, opts.Project)
+			log.Infof("The environment %s already exists under project %s.\n", deployEnvInput.Name, opts.Project)
 			return nil
 		}
 		opts.prog.Stop("Error!")
@@ -289,7 +289,8 @@ func (opts *InitAppOpts) deployEnv() error {
 	}
 	opts.prog.Stop("Done!")
 	opts.prog.Start("Deploying env...")
-	if err := opts.envDeployer.WaitForEnvironmentCreation(env); err != nil {
+	env, err := opts.envDeployer.WaitForEnvironmentCreation(deployEnvInput)
+	if err != nil {
 		opts.prog.Stop("Error!")
 		return err
 	}

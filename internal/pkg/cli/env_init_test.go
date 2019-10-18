@@ -107,13 +107,12 @@ func TestEnvAdd_Execute(t *testing.T) {
 				prog:          mockSpinner,
 			},
 			expectedEnv: archer.Environment{
-				Name:    "env",
-				Project: "project",
-				//TODO update these to real values
-				AccountID:          "1234",
-				Region:             "1234",
-				Prod:               true,
-				PublicLoadBalancer: true,
+				Name:        "env",
+				Project:     "project",
+				AccountID:   "1234",
+				Region:      "1234",
+				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+				Prod:        true,
 			},
 			mocking: func() {
 				gomock.InOrder(
@@ -126,7 +125,16 @@ func TestEnvAdd_Execute(t *testing.T) {
 					mockSpinner.EXPECT().Stop(gomock.Eq("Done!")),
 					mockSpinner.EXPECT().Start(gomock.Eq("Deploying env...")),
 					// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
-					mockDeployer.EXPECT().WaitForEnvironmentCreation(gomock.Any()),
+					mockDeployer.EXPECT().
+						WaitForEnvironmentCreation(gomock.Any()).
+						Return(&archer.Environment{
+							Name:        "env",
+							Project:     "project",
+							AccountID:   "1234",
+							Region:      "1234",
+							RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+							Prod:        true,
+						}, nil),
 					mockEnvStore.
 						EXPECT().
 						CreateEnvironment(gomock.Any()).
@@ -149,12 +157,12 @@ func TestEnvAdd_Execute(t *testing.T) {
 				prog:          mockSpinner,
 			},
 			expectedEnv: archer.Environment{
-				Name:    "env",
-				Project: "project",
-				//TODO update these to real values
-				AccountID: "1234",
-				Region:    "1234",
-				Prod:      true,
+				Name:        "env",
+				Project:     "project",
+				AccountID:   "1234",
+				Region:      "1234",
+				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+				Prod:        true,
 			},
 			mocking: func() {
 				mockProjStore.

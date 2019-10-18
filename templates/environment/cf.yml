@@ -249,3 +249,9 @@ Outputs:
     Description: ECR Repository used by this environment.
     Export:
       Name: !Sub ${AWS::StackName}-ECRArn
+
+  ECRRepositoryName:
+    Value: !Ref ECRRepository
+    Description: Name of ECR Repository used by this environment.
+    Export:
+      Name: !Sub ${AWS::StackName}-ECRName

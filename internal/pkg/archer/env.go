@@ -8,12 +8,20 @@ package archer
 // the location of the Environment (account and region), the name of the environment, as well as the project
 // the environment belongs to.
 type Environment struct {
-	Project            string `json:"project"`            // Name of the project this environment belongs to.
-	Name               string `json:"name"`               // Name of the environment, must be unique within a project.
-	Region             string `json:"region"`             // Name of the region this environment is stored in.
-	AccountID          string `json:"accountID"`          // Account ID of the account this environment is stored in.
-	Prod               bool   `json:"prod"`               // Whether or not this environment is a production environment.
-	PublicLoadBalancer bool   `json:"publicLoadBalancer"` // Whether or not this environment contains a shared public load balancer between applications.
+	Project     string `json:"project"`     // Name of the project this environment belongs to.
+	Name        string `json:"name"`        // Name of the environment, must be unique within a project.
+	Region      string `json:"region"`      // Name of the region this environment is stored in.
+	AccountID   string `json:"accountID"`   // Account ID of the account this environment is stored in.
+	Prod        bool   `json:"prod"`        // Whether or not this environment is a production environment.
+	RegistryURL string `json:"registryURL"` // URL For ECR Registry for this environment.
+}
+
+// DeployEnvironmentInput represents the fields required to setup and deploy an environment
+type DeployEnvironmentInput struct {
+	Project            string // Name of the project this environment belongs to.
+	Name               string // Name of the environment, must be unique within a project.
+	Prod               bool   // Whether or not this environment is a production environment.
+	PublicLoadBalancer bool   // Whether or not this environment should contain a shared public load balancer between applications.
 }
 
 // EnvironmentStore can List, Create and Get environments in an underlying project management store
@@ -40,6 +48,6 @@ type EnvironmentCreator interface {
 
 // EnvironmentDeployer can deploy an environment
 type EnvironmentDeployer interface {
-	DeployEnvironment(env *Environment) error
-	WaitForEnvironmentCreation(env *Environment) error
+	DeployEnvironment(env *DeployEnvironmentInput) error
+	WaitForEnvironmentCreation(env *DeployEnvironmentInput) (*Environment, error)
 }
