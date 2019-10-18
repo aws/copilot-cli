@@ -16,7 +16,7 @@ source:
 {{$length := len .Environments}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments
-Stages: {{range $env := .Environments}}
+stages: {{range $env := .Environments}}
     - 
       # The name of the environment to deploy to.
       env: {{$env.Name}}
