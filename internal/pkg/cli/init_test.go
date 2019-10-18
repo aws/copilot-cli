@@ -471,7 +471,7 @@ func TestInit_Execute(t *testing.T) {
 						Times(1),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -511,7 +511,7 @@ func TestInit_Execute(t *testing.T) {
 						Times(1),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -521,12 +521,12 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(mockError).
+						Return(nil, mockError).
 						Times(1),
 					mockProgress.EXPECT().Stop(gomock.Any()),
 				)
@@ -561,7 +561,7 @@ func TestInit_Execute(t *testing.T) {
 						Times(1),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -571,12 +571,17 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(nil).
+						Return(&archer.Environment{
+							Project:   "project3",
+							Name:      defaultEnvironmentName,
+							AccountID: "2345",
+							Region:    "us-west-2",
+						}, nil).
 						Times(1),
 					mockEnvStore.
 						EXPECT().
@@ -616,7 +621,7 @@ func TestInit_Execute(t *testing.T) {
 						Times(1),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -626,12 +631,17 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(nil).
+						Return(&archer.Environment{
+							Project:   "project3",
+							Name:      defaultEnvironmentName,
+							AccountID: "1234",
+							Region:    "us-west-2",
+						}, nil).
 						Times(1),
 					mockEnvStore.
 						EXPECT().

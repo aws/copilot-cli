@@ -69,17 +69,15 @@ func (opts *InitEnvOpts) Execute() error {
 		return err
 	}
 
-	env := &archer.Environment{
+	deployEnvInput := &archer.DeployEnvironmentInput{
 		Name:               opts.EnvName,
 		Project:            opts.ProjectName,
-		AccountID:          "1234", // FIXME
-		Region:             "1234",
 		Prod:               opts.Production,
 		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
 	}
 
 	opts.prog.Start("Preparing deployment...")
-	if err := opts.deployer.DeployEnvironment(env); err != nil {
+	if err := opts.deployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -92,7 +90,8 @@ func (opts *InitEnvOpts) Execute() error {
 	}
 	opts.prog.Stop("Done!")
 	opts.prog.Start("Deploying env...")
-	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
+	env, err := opts.deployer.WaitForEnvironmentCreation(deployEnvInput)
+	if err != nil {
 		opts.prog.Stop("Error!")
 		return err
 	}
