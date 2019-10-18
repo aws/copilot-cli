@@ -6,18 +6,19 @@ version: {{.Version}}
 # This section defines the source artifacts.
 source:
   # The name of the provider that is used to store the source artifacts.
-  provider: {{.Provider}}
+  provider: {{.Source.ProviderName}}
   # Additional properties that further specifies the exact location
   # the artifacts should be sourced from.
   properties:
     # Repository in the format of <user_name>/<repository_name>.
-    repository: {{.Repository}}
+    repository: {{index .Source.Properties "repository"}}
 
 {{$length := len .Environments}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments
-stages: {{range $env := .Environments}}
+stages:{{range .Environments}}
     - 
       # The name of the environment to deploy to.
-      env: {{$env.Name}}
+      env: {{.Name}}
+    {{end}}
 {{end}}

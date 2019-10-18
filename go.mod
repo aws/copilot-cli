@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.25.16
 	github.com/briandowns/spinner v1.7.0
 	github.com/fatih/color v1.7.0
+	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v0.3.0
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/golang/mock v1.3.1
