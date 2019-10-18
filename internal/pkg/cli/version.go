@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 // BuildVersionCmd builds the command for displaying the version
 func BuildVersionCmd() *cobra.Command {
 	return &cobra.Command{
