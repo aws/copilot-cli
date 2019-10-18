@@ -44,8 +44,7 @@ func buildRootCmd() *cobra.Command {
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
 	cmd.Version = version.Version
-	// TODO add version template
-	// cmd.SetVersionTemplate(template.VersionFlag)
+	cmd.SetVersionTemplate(template.VersionFlag)
 
 	cmd.AddCommand(cli.BuildVersionCmd())
 	cmd.AddCommand(cli.BuildInitCmd())
