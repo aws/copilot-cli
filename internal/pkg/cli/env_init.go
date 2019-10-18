@@ -17,8 +17,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AddEnvOpts contains the fields to collect for adding an environment.
-type AddEnvOpts struct {
+// InitEnvOpts contains the fields to collect for adding an environment.
+type InitEnvOpts struct {
 	ProjectName string
 	EnvName     string
 	EnvProfile  string
@@ -32,7 +32,7 @@ type AddEnvOpts struct {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *AddEnvOpts) Ask() error {
+func (opts *InitEnvOpts) Ask() error {
 	if opts.ProjectName == "" {
 		projectName, err := opts.prompter.Get(
 			"What is your project's name?",
@@ -63,7 +63,7 @@ func (opts *AddEnvOpts) Ask() error {
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
-func (opts *AddEnvOpts) Execute() error {
+func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
 	if _, err := opts.projectGetter.GetProject(opts.ProjectName); err != nil {
 		return err
@@ -106,7 +106,7 @@ func (opts *AddEnvOpts) Execute() error {
 
 // BuildEnvInitCmd builds the command for adding an environment.
 func BuildEnvInitCmd() *cobra.Command {
-	opts := AddEnvOpts{
+	opts := InitEnvOpts{
 		EnvProfile: "default",
 		prog:       spinner.New(),
 		prompter:   prompt.New(),
