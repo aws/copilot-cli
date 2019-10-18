@@ -10,15 +10,11 @@ source:
     # Repository in the format of <user_name>/<repository_name>.
     repository: {{.Repository}}
 
-{{$length := len .Environments}}{{if gt $length 0}}
+{{$length := len .Stages}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments
-deployment: {{range $env := .Environments}}
+deployment: {{range $stage := .Stages}}
     - 
       # The name of the environment to deploy to.
-      env: {{$env.Name}}
-      # This field defines the post-deployment validation script
-      # that will be executed after the deployment to the environment
-      # has succeeded.
-      validation: {{$env.Validation}}
+      env: {{$stage.Name}}
 {{end}}
