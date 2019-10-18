@@ -21,6 +21,7 @@ package version
 
 const Version = "{{.Version}}"
 var GitHash string
+var Platform string
 `
 
 type versionInfo struct {

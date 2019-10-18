@@ -14,6 +14,6 @@ GIT_SHORT_HASH="$GIT_DIRTY"`git rev-parse --short=7 HEAD`
 echo "Building archer to ${DESTINATION}"
 
 # TODO: Inject version and git short hash into build
-GOOS=$TARGET_GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
-	-ldflags "-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_SHORT_HASH" \
+GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags \
+	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_SHORT_HASH -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM" \
        	-o ${DESTINATION} ./cmd/archer

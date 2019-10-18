@@ -14,16 +14,16 @@ build: packr-build compile-local packr-clean
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
 compile-local:
-	DESTINATION=./bin/local/archer ./scripts/build_binary.sh
+	PLATFORM=local DESTINATION=./bin/local/archer ./scripts/build_binary.sh
 
 compile-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/archer.exe ./scripts/build_binary.sh
+	PLATFORM=Windows CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/archer.exe ./scripts/build_binary.sh
 
 compile-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/archer-amd64 ./scripts/build_binary.sh
+	PLATFORM=Linux CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/archer-amd64 ./scripts/build_binary.sh
 
 compile-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/archer ./scripts/build_binary.sh
+	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/archer ./scripts/build_binary.sh
 
 packr-build: tools
 	@echo "Packaging static files" &&\
