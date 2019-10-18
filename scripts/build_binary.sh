@@ -6,13 +6,14 @@
 ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )
 cd "${ROOT}"
 
-go run ./version/gen/generate-version.go
+go run ./internal/pkg/version/gen/generate-version.go
 
-# GIT_DIRTY=`git diff --quiet || echo '*'`
-# GIT_SHORT_HASH="$GIT_DIRTY"`git rev-parse --short=7 HEAD`
+GIT_DIRTY=`git diff --quiet || echo '*'`
+GIT_SHORT_HASH="$GIT_DIRTY"`git rev-parse --short=7 HEAD`
 
 echo "Building archer to ${DESTINATION}"
 
 # TODO: Inject version and git short hash into build
-GOOS=$TARGET_GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -o ${DESTINATION} ./cmd/archer
-	# -ldflags "-X github.com/aws/amazon-ecs-cli-v2/version.GitHash=$GIT_SHORT_HASH" \
+GOOS=$TARGET_GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build \
+	-ldflags "-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_SHORT_HASH" \
+       	-o ${DESTINATION} ./cmd/archer

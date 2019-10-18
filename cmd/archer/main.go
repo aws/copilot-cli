@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
-	"github.com/aws/amazon-ecs-cli-v2/version"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
