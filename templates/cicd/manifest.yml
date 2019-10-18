@@ -1,7 +1,7 @@
 # This manifest defines the relationship and deployment ordering of your environments.
 
 # The version of the schema
-version: 0.1
+version: {{.Version}}
 
 # This section defines the source artifacts.
 source:
