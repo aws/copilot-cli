@@ -1,5 +1,8 @@
 # This manifest defines the relationship and deployment ordering of your environments.
 
+# The version of the schema
+version: 0.1
+
 # This section defines the source artifacts.
 source:
   # The name of the provider that is used to store the source artifacts.
@@ -10,11 +13,11 @@ source:
     # Repository in the format of <user_name>/<repository_name>.
     repository: {{.Repository}}
 
-{{$length := len .Stages}}{{if gt $length 0}}
+{{$length := len .Environments}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments
-deployment: {{range $stage := .Stages}}
+Stages: {{range $env := .Environments}}
     - 
       # The name of the environment to deploy to.
-      env: {{$stage.Name}}
+      env: {{$env.Name}}
 {{end}}
