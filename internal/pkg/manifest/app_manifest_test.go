@@ -33,7 +33,7 @@ func TestCreate(t *testing.T) {
 			inAppType:    "Cow App",
 			inDockerfile: "CowApp/Dockerfile",
 
-			wantedErr: &ErrInvalidManifestType{Type: "Cow App"},
+			wantedErr: &ErrInvalidAppManifestType{Type: "Cow App"},
 		},
 	}
 
@@ -50,7 +50,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestUnmarshal(t *testing.T) {
+func TestUnmarshalApp(t *testing.T) {
 	testCases := map[string]struct {
 		inContent string
 
@@ -99,13 +99,13 @@ stages:
 name: CowApp
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidAppManifestType{Type: "OH NO"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := Unmarshal([]byte(tc.inContent))
+			m, err := UnmarshalApp([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
