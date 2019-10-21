@@ -1,6 +1,6 @@
-# This manifest defines the relationship and deployment ordering of your environments.
+# This YAML file defines the relationship and deployment ordering of your environments.
 
-# The version of the schema
+# The version of the schema used in this template
 version: {{.Version}}
 
 # This section defines the source artifacts.
