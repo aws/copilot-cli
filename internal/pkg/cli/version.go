@@ -17,7 +17,7 @@ func BuildVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number of Archer",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Archer version: %s (%s), built for %s", version.Version, version.GitHash, version.Platform)
+			fmt.Printf("Archer version: %s, built for %s", version.Version, version.Platform)
 		},
 	}
 }

@@ -6,20 +6,11 @@
 ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )
 cd "${ROOT}"
 
-go run ./internal/pkg/version/gen/generate-version.go
-
-GIT_SHORT_HASH=`git rev-parse --short=7 HEAD`
-TAGGED=`git tag --points-at ${GIT_SHORT_HASH}`
-
-if [ -z "$TAGGED" ]; then
-  GIT_DIRTY=`echo '*'`
-fi
-
-GIT_HASH="$GIT_DIRTY$GIT_SHORT_HASH"
+GIT_TAGGED_VERSION=`git describe --tags --always`
 
 echo "Building archer to ${DESTINATION}"
 
-# TODO: Inject version and git short hash into build
-GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 go build -ldflags \
-	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.GitHash=$GIT_HASH -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM" \
+# Injects last tagged version and/or git hash into the build to populate version info
+GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=$CGO_ENABLED go build -ldflags \
+	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=$GIT_TAGGED_VERSION" \
        	-o ${DESTINATION} ./cmd/archer
