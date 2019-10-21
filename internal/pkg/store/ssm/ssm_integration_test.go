@@ -50,7 +50,7 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
 	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
 
-	t.Run("Create, Get and List Projects", func(t *testing.T) {
+	t.Run("Create, Get and List Environments", func(t *testing.T) {
 		// Create our first project
 		err := s.CreateProject(&projectToCreate)
 		require.NoError(t, err)
@@ -91,6 +91,56 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 		env, err = s.GetEnvironment(projectToCreate.Name, prodEnvironment.Name)
 		require.NoError(t, err)
 		require.Equal(t, prodEnvironment, *env)
+	})
+}
+
+func Test_SSM_Application_Integration(t *testing.T) {
+	s, _ := ssm.NewStore()
+	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
+	apiApplication := archer.Application{Name: "api", Project: projectToCreate.Name, Type: "LBFargateService"}
+	feApplication := archer.Application{Name: "front-end", Project: projectToCreate.Name, Type: "LBFargateService"}
+
+	t.Run("Create, Get and List Applications", func(t *testing.T) {
+		// Create our first project
+		err := s.CreateProject(&projectToCreate)
+		require.NoError(t, err)
+
+		// Make sure there are no apps with our new project
+		apps, err := s.ListApplications(projectToCreate.Name)
+		require.NoError(t, err)
+		require.Empty(t, apps)
+
+		// Add our applications
+		err = s.CreateApplication(&apiApplication)
+		require.NoError(t, err)
+
+		err = s.CreateApplication(&feApplication)
+		require.NoError(t, err)
+
+		// Make sure we can't add a duplicate apps
+		err = s.CreateApplication(&apiApplication)
+		require.EqualError(t, &store.ErrApplicationAlreadyExists{ProjectName: projectToCreate.Name, ApplicationName: apiApplication.Name}, err.Error())
+
+		// Wait for consistency to kick in (ssm path commands are eventually consistent)
+		time.Sleep(5 * time.Second)
+
+		// Make sure all the apps are under our project
+		apps, err = s.ListApplications(projectToCreate.Name)
+		require.NoError(t, err)
+		var applications []archer.Application
+		for _, a := range apps {
+			applications = append(applications, *a)
+		}
+		require.ElementsMatch(t, applications, []archer.Application{apiApplication, feApplication})
+
+		// Fetch our saved apps, one by one
+		app, err := s.GetApplication(projectToCreate.Name, apiApplication.Name)
+		require.NoError(t, err)
+		require.Equal(t, apiApplication, *app)
+
+		app, err = s.GetApplication(projectToCreate.Name, feApplication.Name)
+		require.NoError(t, err)
+		require.Equal(t, feApplication, *app)
 	})
 }
 

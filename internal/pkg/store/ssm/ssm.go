@@ -28,7 +28,7 @@ import (
 
 // Parameter name formats for resources in a project. Projects are laid out in SSM
 // based on path - each parameter's key has a certain format, and you can have
-// heirarchies based on that format. Projects are at the root of the heirarchy.
+// heirarchies based on that format. Projects are at the root of the hierarchy.
 // Searching SSM for all parameters with the `rootProjectPath` key will give you
 // all the project keys, for example.
 
@@ -41,6 +41,8 @@ const (
 	fmtProjectPath   = "/archer/%s"
 	rootEnvParamPath = "/archer/%s/environments/"
 	fmtEnvParamPath  = "/archer/%s/environments/%s" // path for an environment in a project
+	rootAppParamPath = "/archer/%s/applications/"
+	fmtAppParamPath  = "/archer/%s/applications/%s" // path for an application in a project
 )
 
 // SSM store is in charge of fetching and creating Projects, Environment and Pipeline
@@ -73,7 +75,7 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 
 	data, err := marshal(project)
 	if err != nil {
-		return err
+		return fmt.Errorf("serializing project %s: %w", project.Name, err)
 	}
 
 	_, err = s.systemManager.PutParameter(&ssm.PutParameterInput{
@@ -92,7 +94,7 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 				}
 			}
 		}
-		return err
+		return fmt.Errorf("create project %s: %w", project.Name, err)
 	}
 	return nil
 }
@@ -116,16 +118,15 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 				}
 			}
 		}
-		return nil, err
+		return nil, fmt.Errorf("get project %s: %w", projectName, err)
 	}
 
 	if projectParam.Parameter.Value == nil {
 
 	}
 	var project archer.Project
-	err = json.Unmarshal([]byte(*projectParam.Parameter.Value), &project)
-	if err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(*projectParam.Parameter.Value), &project); err != nil {
+		return nil, fmt.Errorf("read details for project %s: %w", projectName, err)
 	}
 	return &project, nil
 }
@@ -133,49 +134,32 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 // ListProjects returns the list of existing projects in the customer's account and region.
 func (s *SSM) ListProjects() ([]*archer.Project, error) {
 	var projects []*archer.Project
-
-	var nextToken *string = nil
-	for {
-		params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
-			Path:      aws.String(rootProjectPath),
-			Recursive: aws.Bool(false),
-			NextToken: nextToken,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		for _, param := range params.Parameters {
-			var project archer.Project
-			err := json.Unmarshal([]byte(*param.Value), &project)
-
-			if err != nil {
-				return nil, err
-			}
-			projects = append(projects, &project)
-		}
-
-		nextToken = params.NextToken
-		if nextToken == nil {
-			break
-		}
+	serializedProjects, err := s.listParams(rootProjectPath)
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
 	}
+	for _, serializedProject := range serializedProjects {
+		var project archer.Project
+		if err := json.Unmarshal([]byte(*serializedProject), &project); err != nil {
+			return nil, fmt.Errorf("read project details: %w", err)
+		}
 
+		projects = append(projects, &project)
+	}
 	return projects, nil
 }
 
-// CreateEnvironment instanciates a new environment within an existing project. Returns ErrEnvironmentAlreadyExists
+// CreateEnvironment instantiates a new environment within an existing project. Returns ErrEnvironmentAlreadyExists
 // if the environment already exists in the project.
 func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
-	_, err := s.GetProject(environment.Project)
-	if err != nil {
+	if _, err := s.GetProject(environment.Project); err != nil {
 		return err
 	}
+
 	environmentPath := fmt.Sprintf(fmtEnvParamPath, environment.Project, environment.Name)
 	data, err := marshal(environment)
 	if err != nil {
-		return err
+		return fmt.Errorf("serializing environment %s: %w", environment.Name, err)
 	}
 
 	paramOutput, err := s.systemManager.PutParameter(&ssm.PutParameterInput{
@@ -194,7 +178,7 @@ func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
 					ProjectName:     environment.Project}
 			}
 		}
-		return err
+		return fmt.Errorf("create environment %s in project %s: %w", environment.Name, environment.Project, err)
 	}
 
 	log.Printf("Created Environment with version %v", *paramOutput.Version)
@@ -211,7 +195,7 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get environment %s in project %s: %w", environmentName, projectName, err)
 	}
 
 	if environmentParam.Parameter.Value == nil {
@@ -223,7 +207,10 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 
 	var env archer.Environment
 	err = json.Unmarshal([]byte(*environmentParam.Parameter.Value), &env)
-	return &env, err
+	if err != nil {
+		return nil, fmt.Errorf("read details for environment %s in project %s: %w", environmentName, projectName, err)
+	}
+	return &env, nil
 }
 
 // ListEnvironments returns all environments belonging to a particular project.
@@ -231,10 +218,112 @@ func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error
 	var environments []*archer.Environment
 
 	environmentsPath := fmt.Sprintf(rootEnvParamPath, projectName)
+	serializedEnvs, err := s.listParams(environmentsPath)
+	if err != nil {
+		return nil, fmt.Errorf("list environments for project %s: %w", projectName, err)
+	}
+	for _, serializedEnv := range serializedEnvs {
+		var env archer.Environment
+		if err := json.Unmarshal([]byte(*serializedEnv), &env); err != nil {
+			return nil, fmt.Errorf("read environment details for project %s: %w", projectName, err)
+		}
+
+		environments = append(environments, &env)
+	}
+	return environments, nil
+}
+
+// CreateApplication instantiates a new application within an existing project. Returns ErrApplicationAlreadyExists
+// if the application already exists in the project.
+func (s *SSM) CreateApplication(app *archer.Application) error {
+	if _, err := s.GetProject(app.Project); err != nil {
+		return err
+	}
+
+	applicationPath := fmt.Sprintf(fmtAppParamPath, app.Project, app.Name)
+	data, err := marshal(app)
+	if err != nil {
+		return fmt.Errorf("serializing application %s: %w", app.Name, err)
+	}
+
+	paramOutput, err := s.systemManager.PutParameter(&ssm.PutParameterInput{
+		Name:        aws.String(applicationPath),
+		Description: aws.String(fmt.Sprintf("ECS-CLI v2 Application %s", app.Name)),
+		Type:        aws.String(ssm.ParameterTypeString),
+		Value:       aws.String(data),
+	})
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterAlreadyExists:
+				return &store.ErrApplicationAlreadyExists{
+					ApplicationName: app.Name,
+					ProjectName:     app.Project}
+			}
+		}
+		return fmt.Errorf("create application %s in project %s: %w", app.Name, app.Project, err)
+	}
+
+	log.Printf("Created Application with version %v", *paramOutput.Version)
+	return nil
+
+}
+
+// GetApplication gets an application belonging to a particular project by name. If no app is found
+// it returns ErrNoSuchApplication.
+func (s *SSM) GetApplication(projectName, appName string) (*archer.Application, error) {
+	appPath := fmt.Sprintf(fmtAppParamPath, projectName, appName)
+	appParam, err := s.systemManager.GetParameter(&ssm.GetParameterInput{
+		Name: aws.String(appPath),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("get application %s in project %s: %w", appName, projectName, err)
+	}
+
+	if appParam.Parameter.Value == nil {
+		return nil, &store.ErrNoSuchApplication{
+			ProjectName:     projectName,
+			ApplicationName: appName,
+		}
+	}
+
+	var app archer.Application
+	err = json.Unmarshal([]byte(*appParam.Parameter.Value), &app)
+	if err != nil {
+		return nil, fmt.Errorf("read details for application %s in project %s: %w", appName, projectName, err)
+	}
+	return &app, nil
+}
+
+// ListApplications returns all applications belonging to a particular project.
+func (s *SSM) ListApplications(projectName string) ([]*archer.Application, error) {
+	var applications []*archer.Application
+
+	applicationsPath := fmt.Sprintf(rootAppParamPath, projectName)
+	serializedApps, err := s.listParams(applicationsPath)
+	if err != nil {
+		return nil, fmt.Errorf("list applications for project %s: %w", projectName, err)
+	}
+	for _, serializedApp := range serializedApps {
+		var app archer.Application
+		if err := json.Unmarshal([]byte(*serializedApp), &app); err != nil {
+			return nil, fmt.Errorf("read application details for project %s: %w", projectName, err)
+		}
+
+		applications = append(applications, &app)
+	}
+	return applications, nil
+}
+
+func (s *SSM) listParams(path string) ([]*string, error) {
+	var serializedParams []*string
+
 	var nextToken *string = nil
 	for {
 		params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
-			Path:      aws.String(environmentsPath),
+			Path:      aws.String(path),
 			Recursive: aws.Bool(false),
 			NextToken: nextToken,
 		})
@@ -244,14 +333,7 @@ func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error
 		}
 
 		for _, param := range params.Parameters {
-			var env archer.Environment
-			err := json.Unmarshal([]byte(*param.Value), &env)
-
-			if err != nil {
-				return nil, err
-			}
-
-			environments = append(environments, &env)
+			serializedParams = append(serializedParams, param.Value)
 		}
 
 		nextToken = params.NextToken
@@ -259,8 +341,7 @@ func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error
 			break
 		}
 	}
-
-	return environments, nil
+	return serializedParams, nil
 }
 
 // Retrieves the caller's Account ID with a best effort. If it fails to fetch the Account ID,

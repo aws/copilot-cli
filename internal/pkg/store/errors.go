@@ -12,6 +12,17 @@ type ErrNoSuchProject struct {
 	Region      string
 }
 
+// Is returns whether the provided error equals this error.
+func (e *ErrNoSuchProject) Is(target error) bool {
+	t, ok := target.(*ErrNoSuchProject)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName &&
+		e.AccountID == t.AccountID &&
+		e.Region == t.Region
+}
+
 func (e *ErrNoSuchProject) Error() string {
 	return fmt.Sprintf("couldn't find a project named %s in account %s and region %s",
 		e.ProjectName, e.AccountID, e.Region)
@@ -20,6 +31,15 @@ func (e *ErrNoSuchProject) Error() string {
 // ErrProjectAlreadyExists means a project already exists and can't be created again.
 type ErrProjectAlreadyExists struct {
 	ProjectName string
+}
+
+// Is returns whether the provided error equals this error.
+func (e *ErrProjectAlreadyExists) Is(target error) bool {
+	t, ok := target.(*ErrProjectAlreadyExists)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName
 }
 
 func (e *ErrProjectAlreadyExists) Error() string {
@@ -33,6 +53,16 @@ type ErrEnvironmentAlreadyExists struct {
 	ProjectName     string
 }
 
+// Is returns whether the provided error equals this error.
+func (e *ErrEnvironmentAlreadyExists) Is(target error) bool {
+	t, ok := target.(*ErrEnvironmentAlreadyExists)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName &&
+		e.EnvironmentName == t.EnvironmentName
+}
+
 func (e *ErrEnvironmentAlreadyExists) Error() string {
 	return fmt.Sprintf("environment %s already exists in project %s",
 		e.EnvironmentName, e.ProjectName)
@@ -44,7 +74,59 @@ type ErrNoSuchEnvironment struct {
 	EnvironmentName string
 }
 
+// Is returns whether the provided error equals this error.
+func (e *ErrNoSuchEnvironment) Is(target error) bool {
+	t, ok := target.(*ErrNoSuchEnvironment)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName &&
+		e.EnvironmentName == t.EnvironmentName
+}
+
 func (e *ErrNoSuchEnvironment) Error() string {
 	return fmt.Sprintf("couldn't find environment %s in the project %s",
 		e.EnvironmentName, e.ProjectName)
+}
+
+// ErrApplicationAlreadyExists means that an application is already created in a specific project.
+type ErrApplicationAlreadyExists struct {
+	ApplicationName string
+	ProjectName     string
+}
+
+// Is returns whether the provided error equals this error.
+func (e *ErrApplicationAlreadyExists) Is(target error) bool {
+	t, ok := target.(*ErrApplicationAlreadyExists)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName &&
+		e.ApplicationName == t.ApplicationName
+}
+
+func (e *ErrApplicationAlreadyExists) Error() string {
+	return fmt.Sprintf("application %s already exists in project %s",
+		e.ApplicationName, e.ProjectName)
+}
+
+// ErrNoSuchApplication means a specific application couldn't be found in a specific project.
+type ErrNoSuchApplication struct {
+	ProjectName     string
+	ApplicationName string
+}
+
+// Is returns whether the provided error equals this error.
+func (e *ErrNoSuchApplication) Is(target error) bool {
+	t, ok := target.(*ErrNoSuchApplication)
+	if !ok {
+		return false
+	}
+	return e.ProjectName == t.ProjectName &&
+		e.ApplicationName == t.ApplicationName
+}
+
+func (e *ErrNoSuchApplication) Error() string {
+	return fmt.Sprintf("couldn't find application %s in the project %s",
+		e.ApplicationName, e.ProjectName)
 }

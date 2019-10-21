@@ -4,6 +4,7 @@
 package store
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,9 +15,61 @@ func TestErrNoSuchProject(t *testing.T) {
 	require.EqualError(t, err, "couldn't find a project named chicken in account 12345 and region us-west-2")
 }
 
+func TestErrNoSuchProject_Is(t *testing.T) {
+	err := &ErrNoSuchProject{ProjectName: "chicken", AccountID: "12345", Region: "us-west-2"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrNoSuchProject{ProjectName: "chicken", AccountID: "12345", Region: "us-west-2"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrNoSuchProject{ProjectName: "rooster", AccountID: "12345", Region: "us-west-2"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
+}
+
 func TestErrProjectAlreadyExists(t *testing.T) {
 	err := &ErrProjectAlreadyExists{ProjectName: "chicken"}
 	require.EqualError(t, err, "a project named chicken already exists")
+}
+
+func TestErrProjectAlreadyExists_Is(t *testing.T) {
+	err := &ErrProjectAlreadyExists{ProjectName: "chicken"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrProjectAlreadyExists{ProjectName: "chicken"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrProjectAlreadyExists{ProjectName: "rooster"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
 }
 
 func TestErrEnvironmentAlreadyExists(t *testing.T) {
@@ -24,7 +77,121 @@ func TestErrEnvironmentAlreadyExists(t *testing.T) {
 	require.EqualError(t, err, "environment test already exists in project chicken")
 }
 
+func TestErrEnvironmentAlreadyExists_Is(t *testing.T) {
+	err := &ErrEnvironmentAlreadyExists{EnvironmentName: "test", ProjectName: "chicken"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrEnvironmentAlreadyExists{EnvironmentName: "test", ProjectName: "chicken"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrEnvironmentAlreadyExists{EnvironmentName: "test", ProjectName: "rooster"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
+}
+
 func TestErrNoSuchEnvironment(t *testing.T) {
 	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"}
 	require.EqualError(t, err, "couldn't find environment test in the project chicken")
+}
+
+func TestErrNoSuchEnvironment_Is(t *testing.T) {
+	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "rooster"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
+}
+
+func TestErrNoSuchApplication(t *testing.T) {
+	err := &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"}
+	require.EqualError(t, err, "couldn't find application api in the project chicken")
+}
+
+func TestErrNoSuchApplication_Is(t *testing.T) {
+	err := &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "rooster"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
+}
+
+func TestErrApplicationAlreadyExists(t *testing.T) {
+	err := &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"}
+	require.EqualError(t, err, "application api already exists in project chicken")
+}
+
+func TestErrApplicationAlreadyExists_Is(t *testing.T) {
+	err := &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"}
+	testCases := map[string]struct {
+		wantedSame bool
+		otherError error
+	}{
+		"errors are same": {
+			wantedSame: true,
+			otherError: &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"},
+		},
+		"errors have different values": {
+			wantedSame: false,
+			otherError: &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "rooster"},
+		},
+		"errors are different type": {
+			wantedSame: false,
+			otherError: errors.New("different error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
+		})
+	}
 }
