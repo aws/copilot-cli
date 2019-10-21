@@ -64,7 +64,7 @@ func TestEnvAdd_Ask(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			addEnv := &AddEnvOpts{
+			addEnv := &InitEnvOpts{
 				EnvName:     tc.inputEnv,
 				ProjectName: tc.inputProject,
 				prompter:    mockPrompter,
@@ -91,13 +91,13 @@ func TestEnvAdd_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		addEnvOpts  AddEnvOpts
+		addEnvOpts  InitEnvOpts
 		expectedEnv archer.Environment
 		expectedErr error
 		mocking     func()
 	}{
 		"with a succesful call to add env": {
-			addEnvOpts: AddEnvOpts{
+			addEnvOpts: InitEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjStore,
 				deployer:      mockDeployer,
@@ -147,7 +147,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 		},
 		"with a invalid project": {
 			expectedErr: mockError,
-			addEnvOpts: AddEnvOpts{
+			addEnvOpts: InitEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjStore,
 				deployer:      mockDeployer,

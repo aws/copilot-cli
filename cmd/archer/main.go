@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 )
 
 func init() {
@@ -40,11 +41,19 @@ func buildRootCmd() *cobra.Command {
 		SilenceUsage: true,
 	}
 
+	// Sets version for --version flag. Version command gives more detailed
+	// version information.
+	cmd.Version = version.Version
+	cmd.SetVersionTemplate(template.VersionFlag)
+
+	cmd.AddCommand(cli.BuildVersionCmd())
 	cmd.AddCommand(cli.BuildInitCmd())
 	cmd.AddCommand(cli.BuildProjCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildAppCmd())
 	cmd.AddCommand(cli.BuildCompletionCmd())
+
 	cmd.SetUsageTemplate(template.RootUsage)
+
 	return cmd
 }
