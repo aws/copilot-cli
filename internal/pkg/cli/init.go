@@ -7,8 +7,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -16,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -24,6 +21,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -31,101 +29,143 @@ const defaultEnvironmentName = "test"
 
 // InitOpts holds the fields to bootstrap a new application.
 type InitOpts struct {
-	Project               string // namespace that this application belongs to.
-	AppName               string // unique identifier for the application.
-	AppType               string // type of application you're trying to build (LoadBalanced, Backend, etc.)
-	ShouldDeploy          bool   // true means we should create a test environment and deploy the application in it. Defaults to false.
-	promptForShouldDeploy bool   // true means that the user set the ShouldDeploy flag explicitly.
+	Project      string
+	ShouldDeploy bool // true means we should create a test environment and deploy the application in it. Defaults to false.
 
+	// Sub-commands to execute.
+	initApp actionCommand
+
+	// Pointers to flag values part of sub-commands.
+	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
+	// we have to resort to type-casting the interface. These pointers simplify data access.
+	appType        *string
+	appName        *string
+	dockerfilePath *string
+
+	// Interfaces for dependencies.
 	projStore   archer.ProjectStore
 	envStore    archer.EnvironmentStore
 	envDeployer archer.EnvironmentDeployer
+	ws          archer.Workspace
+	identity    identityService
+	prog        progress
+	prompt      prompter
 
-	ws               archer.Workspace
-	existingProjects []string
-
-	prog     progress
-	prompter prompter
-
-	identity identityService
+	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
+	existingProjects      []string
 }
 
-// Prepare loads contextual data such as any existing projects, the current workspace, etc.
-func (opts *InitOpts) Prepare() {
+func NewInitOpts() (*InitOpts, error) {
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+	ssm, err := ssm.NewStore()
+	if err != nil {
+		return nil, err
+	}
+	sess, err := session.Default()
+	if err != nil {
+		return nil, err
+	}
+	prompt := prompt.New()
+	spin := spinner.New()
+
+	initApp := &InitAppOpts{
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		manifestWriter: ws,
+		prompt:         prompt,
+	}
+
+	return &InitOpts{
+		initApp: initApp,
+
+		appType:        &initApp.AppType,
+		appName:        &initApp.AppName,
+		dockerfilePath: &initApp.DockerfilePath,
+
+		// TODO remove these dependencies from InitOpts after https://github.com/aws/amazon-ecs-cli-v2/issues/109
+		projStore:   ssm,
+		envStore:    ssm,
+		envDeployer: cloudformation.New(sess),
+		ws:          ws,
+		identity:    identity.New(sess),
+		prompt:      prompt,
+		prog:        spin,
+	}, nil
+}
+
+func (opts *InitOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome the the ECS CLI! We're going to walk you through some questions to help you get set up
 with a project on ECS. A project is a collection of containerized applications (or micro-services)
 that operate together.` + "\n")
 
-	// If there's a local project, we'll use that and just skip the project question.
-	// Otherwise, we'll load a list of existing projects that the customer can select from.
+	if err := opts.loadProject(); err != nil {
+		return err
+	}
+	if err := opts.loadApp(); err != nil {
+		return err
+	}
+
+	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
+		color.HighlightUserInput(*opts.appType), color.HighlightUserInput(*opts.appName), color.HighlightUserInput(opts.Project))
+
+	if err := opts.createProject(); err != nil {
+		return err
+	}
+	if err := opts.ws.Create(opts.Project); err != nil {
+		return fmt.Errorf("create workspace for project %s: %w", opts.Project, err)
+	}
+	if err := opts.initApp.Execute(); err != nil {
+		return fmt.Errorf("execute app init: %w", err)
+	}
+	return opts.deploy()
+}
+
+func (opts *InitOpts) loadProject() (err error) {
+	defer func() {
+		if err != nil {
+			// If another error occurred, return that first
+			return
+		}
+		// Always validate the project name, whether the user provided it or not.
+		err = validateProjectName(opts.Project)
+	}()
+
 	if opts.Project != "" {
+		// Flag is set by user.
 		return
 	}
-	if summary, err := opts.ws.Summary(); err == nil {
+
+	// If there's a local project, we'll use that and just skip the project question.
+	// Otherwise, we'll load a list of existing projects that the customer can select from.
+	summary, err := opts.ws.Summary()
+	if err == nil {
 		log.Infof("Looks like you are using a workspace that's registered to project %s. We'll use that as your project.\n", color.HighlightUserInput(summary.ProjectName))
 		opts.Project = summary.ProjectName
 		return
 	}
-	// load all existing project names
 	existingProjects, _ := opts.projStore.ListProjects()
 	var projectNames []string
 	for _, p := range existingProjects {
 		projectNames = append(projectNames, p.Name)
 	}
 	opts.existingProjects = projectNames
+
+	// Prompt the user for a project name.
+	return opts.askProjectName()
 }
 
-// Ask prompts the user for the value of any required fields that are not already provided.
-func (opts *InitOpts) Ask() error {
-	if opts.Project == "" {
-		if err := opts.askProjectName(); err != nil {
-			return err
-		}
-	}
-	if opts.AppType == "" {
-		if err := opts.askAppType(); err != nil {
-			return err
-		}
-	}
-	if opts.AppName == "" {
-		if err := opts.askAppName(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Validate returns an error if a command line flag provided value is invalid
-func (opts *InitOpts) Validate() error {
-	if err := validateProjectName(opts.Project); err != nil {
-		return fmt.Errorf("project name %s is invalid: %w", opts.Project, err)
+func (opts *InitOpts) loadApp() error {
+	if obj, ok := opts.initApp.(*InitAppOpts); ok {
+		obj.projectName = opts.Project
 	}
 
-	if err := validateApplicationName(opts.AppName); err != nil {
-		return fmt.Errorf("application name %s is invalid: %w", opts.AppName, err)
+	if err := opts.initApp.Ask(); err != nil {
+		return fmt.Errorf("prompt for app init: %w", err)
 	}
-
-	// TODO validate application type
-
-	return nil
-}
-
-// Execute creates a project and initializes the workspace.
-func (opts *InitOpts) Execute() error {
-	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
-		color.HighlightUserInput(opts.AppType), color.HighlightUserInput(opts.AppName), color.HighlightUserInput(opts.Project))
-
-	if err := opts.createProject(); err != nil {
-		return err
-	}
-	if err := opts.ws.Create(opts.Project); err != nil {
-		return err
-	}
-	if err := opts.createManifest(); err != nil {
-		return err
-	}
-	return opts.deploy()
+	return opts.initApp.Validate()
 }
 
 func (opts *InitOpts) askProjectName() error {
@@ -135,7 +175,7 @@ func (opts *InitOpts) askProjectName() error {
 	}
 
 	log.Infoln("Looks like you have some projects already.")
-	useExistingProject, err := opts.prompter.Confirm("Would you like to create a new app in one of your existing projects?", "", prompt.WithTrueDefault())
+	useExistingProject, err := opts.prompt.Confirm("Would you like to create a new app in one of your existing projects?", "", prompt.WithTrueDefault())
 	if err != nil {
 		return fmt.Errorf("failed to get new project confirmation: %w", err)
 	}
@@ -148,7 +188,7 @@ func (opts *InitOpts) askProjectName() error {
 }
 
 func (opts *InitOpts) askSelectExistingProjectName() error {
-	projectName, err := opts.prompter.SelectOne(
+	projectName, err := opts.prompt.SelectOne(
 		"Which one do you want to add a new application to?",
 		"Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery.",
 		opts.existingProjects)
@@ -160,7 +200,7 @@ func (opts *InitOpts) askSelectExistingProjectName() error {
 }
 
 func (opts *InitOpts) askNewProjectName() error {
-	projectName, err := opts.prompter.Get(
+	projectName, err := opts.prompt.Get(
 		"What would you like to call your project?",
 		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 		validateProjectName)
@@ -168,40 +208,6 @@ func (opts *InitOpts) askNewProjectName() error {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
 	opts.Project = projectName
-	return nil
-}
-
-func (opts *InitOpts) askAppType() error {
-	t, err := opts.prompter.SelectOne(
-		"What type of application do you want to make?",
-		"List of infrastructure patterns.",
-		manifest.AppTypes)
-
-	if err != nil {
-		return fmt.Errorf("failed to get type selection: %w", err)
-	}
-	opts.AppType = t
-	return nil
-}
-
-func (opts *InitOpts) askAppName() error {
-	name, err := opts.prompter.Get(
-		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
-		"Collection of AWS services to achieve a business capability. Must be unique within a project.",
-		validateApplicationName)
-	if err != nil {
-		return fmt.Errorf("failed to get application name: %w", err)
-	}
-	opts.AppName = name
-	return nil
-}
-
-func (opts *InitOpts) askShouldDeploy() error {
-	v, err := opts.prompter.Confirm("Would you like to deploy a staging environment?", "A \"test\" environment with your application deployed to it. This will allow you to test your application before placing it in production.")
-	if err != nil {
-		return fmt.Errorf("failed to confirm deployment: %w", err)
-	}
-	opts.ShouldDeploy = v
 	return nil
 }
 
@@ -218,34 +224,6 @@ func (opts *InitOpts) createProject() error {
 	return nil
 }
 
-func (opts *InitOpts) createManifest() error {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, "") // TODO https://github.com/aws/amazon-ecs-cli-v2/issues/109
-	if err != nil {
-		return fmt.Errorf("failed to generate a manifest %w", err)
-	}
-	manifestBytes, err := manifest.Marshal()
-	if err != nil {
-		return fmt.Errorf("failed to marshal the manifest file %w", err)
-	}
-	manifestPath, err := opts.ws.WriteManifest(manifestBytes, opts.AppName)
-	if err != nil {
-		return fmt.Errorf("failed to write manifest for app %s: %w", opts.AppName, err)
-	}
-
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %w", err)
-	}
-	relPath, err := filepath.Rel(wkdir, manifestPath)
-	if err != nil {
-		return fmt.Errorf("failed to get relative path of manifest file: %w", err)
-	}
-	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(relPath))
-	log.Infoln()
-	return nil
-}
-
 // deploy prompts the user to deploy a test environment if the project doesn't already have one.
 func (opts *InitOpts) deploy() error {
 	if opts.promptForShouldDeploy {
@@ -254,13 +232,8 @@ func (opts *InitOpts) deploy() error {
 			return err
 		}
 		if !opts.ShouldDeploy {
-			log.Infoln()
-			log.Infoln("No problem, you can deploy your application later:")
-			log.Infof("- Run %s to create your staging environment.\n",
-				color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, opts.Project)))
-			log.Infof("- Run %s to deploy your application to the environment.\n",
-				color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.Project)))
-			log.Infoln()
+			log.Info("\nNo problem, you can deploy your application later:\n")
+			opts.initApp.LogRecommendedActions()
 		}
 	}
 	if !opts.ShouldDeploy {
@@ -268,6 +241,15 @@ func (opts *InitOpts) deploy() error {
 		return nil
 	}
 	return opts.deployEnv()
+}
+
+func (opts *InitOpts) askShouldDeploy() error {
+	v, err := opts.prompt.Confirm("Would you like to deploy a staging environment?", "A \"test\" environment with your application deployed to it. This will allow you to test your application before placing it in production.")
+	if err != nil {
+		return fmt.Errorf("failed to confirm deployment: %w", err)
+	}
+	opts.ShouldDeploy = v
+	return nil
 }
 
 func (opts *InitOpts) deployEnv() error {
@@ -313,54 +295,22 @@ func (opts *InitOpts) deployEnv() error {
 
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
-	opts := InitOpts{
-		prompter: prompt.New(),
-		prog:     spinner.New(),
-	}
-
+	opts, err := NewInitOpts()
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application",
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// setup dependencies
-			ws, err := workspace.New()
-			if err != nil {
-				return err
-			}
-			opts.ws = ws
-
-			ssm, err := ssm.NewStore()
-			if err != nil {
-				return err
-			}
-			opts.projStore = ssm
-			opts.envStore = ssm
-
-			sess, err := session.Default()
-			if err != nil {
-				return err
-			}
-			opts.envDeployer = cloudformation.New(sess)
-
-			opts.identity = identity.New(sess)
-
-			return nil
-		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.Prepare()
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			return opts.Validate()
+			return err
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.promptForShouldDeploy = !cmd.Flags().Changed("deploy")
-			return opts.Execute()
+			return opts.Run()
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project.")
-	cmd.Flags().StringVarP(&opts.AppName, "app", "a", "", "Name of the application.")
-	cmd.Flags().StringVarP(&opts.AppType, "app-type", "t", "", "Type of application to create.")
+	cmd.Flags().StringVarP(opts.appName, "app", "a", "", "Name of the application.")
+	cmd.Flags().StringVarP(opts.appType, "app-type", "t", "", "Type of application to create.")
+	cmd.Flags().StringVarP(opts.dockerfilePath, "dockerfile", "d", "", "Path to the Dockerfile.")
 	cmd.Flags().BoolVar(&opts.ShouldDeploy, "deploy", false, "Deploy your application to a \"test\" environment.")
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

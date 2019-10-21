@@ -137,7 +137,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"invalid app name": {
 			inAppName: "1234",
-			wantedErr: errors.New("invalid app name 1234: value must be start with letter and container only letters, numbers, and hyphens"),
+			wantedErr: errors.New("application name 1234 is invalid: value must be start with letter and container only letters, numbers, and hyphens"),
 		},
 		"invalid dockerfile path": {
 			inDockerfilePath: "./hello/Dockerfile",

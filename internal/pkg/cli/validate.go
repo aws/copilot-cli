@@ -20,11 +20,17 @@ var (
 )
 
 func validateProjectName(val interface{}) error {
-	return basicNameValidation(val)
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("project name %v is invalid: %w", val, err)
+	}
+	return nil
 }
 
 func validateApplicationName(val interface{}) error {
-	return basicNameValidation(val)
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("application name %v is invalid: %w", val, err)
+	}
+	return nil
 }
 
 func validateApplicationType(val interface{}) error {

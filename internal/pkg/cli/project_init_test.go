@@ -259,7 +259,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 			} else {
-				require.Equal(t, tc.expectedError, err)
+				require.True(t, errors.Is(err, tc.expectedError))
 			}
 		})
 	}
