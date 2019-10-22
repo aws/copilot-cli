@@ -15,39 +15,62 @@ import (
 
 func TestInitOpts_Run(t *testing.T) {
 	testCases := map[string]struct {
-		inProject               string
 		inShouldDeploy          bool
 		inPromptForShouldDeploy bool
 
 		expect      func(opts *InitOpts)
 		wantedError string
 	}{
-		"returns prompt error for app": {
-			inProject: "testproject",
+		"returns prompt error for project": {
 			expect: func(opts *InitOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
+			},
+			wantedError: "prompt for project init: my error",
+		},
+		"returns validation error for project": {
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
+			},
+			wantedError: "my error",
+		},
+		"returns prompt error for app": {
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
 			},
 			wantedError: "prompt for app init: my error",
 		},
 		"returns validation error for app": {
-			inProject: "testproject",
 			expect: func(opts *InitOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
 			},
 			wantedError: "my error",
 		},
-		"returns execute error for app": {
-			inProject: "testproject",
+		"returns execute error for project": {
 			expect: func(opts *InitOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
-				opts.projStore.(*mocks.MockProjectStore).EXPECT().CreateProject(gomock.Any()).Return(nil)
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Create(gomock.Any()).Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(errors.New("my error"))
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Times(0)
+			},
+			wantedError: "execute project init: my error",
+		},
+		"returns execute error for app": {
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(errors.New("my error"))
 			},
 			wantedError: "execute app init: my error",
@@ -60,35 +83,33 @@ func TestInitOpts_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockProjectStore := mocks.NewMockProjectStore(ctrl)
 			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 			mockEnvDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
-			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 			mockIdentity := climocks.NewMockidentityService(ctrl)
+			mockInitProject := climocks.NewMockactionCommand(ctrl)
 			mockInitApp := climocks.NewMockactionCommand(ctrl)
 
-			var logAppName, logAppType string
+			var mockProjectName, mockAppName, mockAppType string
 
 			opts := &InitOpts{
-				Project:               tc.inProject,
 				ShouldDeploy:          tc.inShouldDeploy,
 				promptForShouldDeploy: tc.inPromptForShouldDeploy,
 
-				initApp: mockInitApp,
+				initProject: mockInitProject,
+				initApp:     mockInitApp,
 
-				projStore:   mockProjectStore,
 				envStore:    mockEnvStore,
 				envDeployer: mockEnvDeployer,
 				identity:    mockIdentity,
-				ws:          mockWorkspace,
 				prog:        mockProgress,
 				prompt:      mockPrompt,
 
 				// These fields are used for logging, the values are not important for tests.
-				appName: &logAppName,
-				appType: &logAppType,
+				projectName: &mockProjectName,
+				appName:     &mockAppName,
+				appType:     &mockAppType,
 			}
 			tc.expect(opts)
 
