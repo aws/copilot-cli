@@ -74,14 +74,16 @@ func (mr *MockactionCommandMockRecorder) Execute() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockactionCommand)(nil).Execute))
 }
 
-// LogRecommendedActions mocks base method
-func (m *MockactionCommand) LogRecommendedActions() {
+// RecommendedActions mocks base method
+func (m *MockactionCommand) RecommendedActions() []string {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "LogRecommendedActions")
+	ret := m.ctrl.Call(m, "RecommendedActions")
+	ret0, _ := ret[0].([]string)
+	return ret0
 }
 
-// LogRecommendedActions indicates an expected call of LogRecommendedActions
-func (mr *MockactionCommandMockRecorder) LogRecommendedActions() *gomock.Call {
+// RecommendedActions indicates an expected call of RecommendedActions
+func (mr *MockactionCommandMockRecorder) RecommendedActions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).LogRecommendedActions))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendedActions))
 }

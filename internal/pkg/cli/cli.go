@@ -9,5 +9,5 @@ type actionCommand interface {
 	Ask() error
 	Validate() error
 	Execute() error
-	LogRecommendedActions()
+	RecommendedActions() []string
 }

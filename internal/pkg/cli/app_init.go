@@ -205,14 +205,14 @@ func (opts *InitAppOpts) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
-// LogRecommendedActions logs follow-up actions the user can take after successfully executing the command.
-func (opts *InitAppOpts) LogRecommendedActions() {
-	log.Infof("- Update your manifest %s to change the defaults.\n",
-		color.HighlightResource(opts.manifestPath))
-	log.Infof("- Run %s to create your staging environment.\n",
-		color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, opts.projectName)))
-	log.Infof("- Run %s to deploy your application to the environment.\n",
-		color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.projectName)))
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (opts *InitAppOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
+		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
+			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.projectName)),
+			defaultEnvironmentName),
+	}
 }
 
 // BuildAppInitCmd build the command for creating a new application.
@@ -250,7 +250,9 @@ This command is also run as part of "archer init".`,
 		},
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln("Recommended follow-up actions:")
-			opts.LogRecommendedActions()
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
 			return nil
 		},
 	}

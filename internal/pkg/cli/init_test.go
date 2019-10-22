@@ -25,6 +25,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"returns prompt error for app": {
 			inProject: "testproject",
 			expect: func(opts *InitOpts) {
+				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
 			},
@@ -33,6 +34,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"returns validation error for app": {
 			inProject: "testproject",
 			expect: func(opts *InitOpts) {
+				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
 			},
@@ -41,6 +43,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"returns execute error for app": {
 			inProject: "testproject",
 			expect: func(opts *InitOpts) {
+				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.projStore.(*mocks.MockProjectStore).EXPECT().CreateProject(gomock.Any()).Return(nil)

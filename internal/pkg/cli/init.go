@@ -123,29 +123,24 @@ that operate together.` + "\n")
 	return opts.deploy()
 }
 
-func (opts *InitOpts) loadProject() (err error) {
-	defer func() {
-		if err != nil {
-			// If another error occurred, return that first
-			return
+func (opts *InitOpts) loadProject() error {
+	// If there's a local project, we'll use that over anything else.
+	summary, _ := opts.ws.Summary()
+	if summary != nil {
+		msg := fmt.Sprintf("Looks like you are using a workspace that's registered to project %s. We'll use that as your project.", color.HighlightUserInput(summary.ProjectName))
+		if opts.Project != "" {
+			msg = fmt.Sprintf("Looks like you are using a workspace that's registered to project %s. We'll use that as your project instead of %s.", color.HighlightUserInput(summary.ProjectName), color.HighlightUserInput(opts.Project))
 		}
-		// Always validate the project name, whether the user provided it or not.
-		err = validateProjectName(opts.Project)
-	}()
+		log.Infoln(msg)
+		opts.Project = summary.ProjectName
+		return validateProjectName(opts.Project)
+	}
 
 	if opts.Project != "" {
 		// Flag is set by user.
-		return
+		return validateProjectName(opts.Project)
 	}
 
-	// If there's a local project, we'll use that and just skip the project question.
-	// Otherwise, we'll load a list of existing projects that the customer can select from.
-	summary, err := opts.ws.Summary()
-	if err == nil {
-		log.Infof("Looks like you are using a workspace that's registered to project %s. We'll use that as your project.\n", color.HighlightUserInput(summary.ProjectName))
-		opts.Project = summary.ProjectName
-		return
-	}
 	existingProjects, _ := opts.projStore.ListProjects()
 	var projectNames []string
 	for _, p := range existingProjects {
@@ -153,8 +148,10 @@ func (opts *InitOpts) loadProject() (err error) {
 	}
 	opts.existingProjects = projectNames
 
-	// Prompt the user for a project name.
-	return opts.askProjectName()
+	if err := opts.askProjectName(); err != nil {
+		return err
+	}
+	return validateProjectName(opts.Project)
 }
 
 func (opts *InitOpts) loadApp() error {
@@ -231,10 +228,6 @@ func (opts *InitOpts) deploy() error {
 		if err := opts.askShouldDeploy(); err != nil {
 			return err
 		}
-		if !opts.ShouldDeploy {
-			log.Info("\nNo problem, you can deploy your application later:\n")
-			opts.initApp.LogRecommendedActions()
-		}
 	}
 	if !opts.ShouldDeploy {
 		// User chose not to deploy the application, exit.
@@ -305,6 +298,16 @@ func BuildInitCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.promptForShouldDeploy = !cmd.Flags().Changed("deploy")
 			return opts.Run()
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			if !opts.ShouldDeploy {
+				log.Info("\nNo problem, you can deploy your application later:\n")
+				log.Infof("- Run %s to create your staging environment.\n",
+					color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, opts.Project)))
+				for _, followup := range opts.initApp.RecommendedActions() {
+					log.Infof("- %s\n", followup)
+				}
+			}
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Name of the project.")
