@@ -11,6 +11,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestNewProvider(t *testing.T) {
+	testCases := map[string]struct {
+		providerConfig interface{}
+		expectedErr    error
+	}{
+		"successfully create Github provider": {
+			providerConfig: &GithubProperties{
+				Repository: "aws/amazon-ecs-cli-v2",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			_, err := NewProvider(tc.providerConfig)
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, err, "unexpected error while calling NewProvider()")
+			}
+		})
+	}
+}
+
 func TestCreatePipeline(t *testing.T) {
 	testCases := map[string]struct {
 		beforeEach     func() error
@@ -19,27 +44,14 @@ func TestCreatePipeline(t *testing.T) {
 		inputStages    []PipelineStage
 		expectedStages []PipelineStage
 	}{
-		"missing provider configuration": {
-			beforeEach: func() error {
-				// reset the global map before each test case is run
-				providerSpecificProperties = make(map[Provider]interface{})
-				return nil
-			},
-			provider: Github,
-			expectedErr: &ErrMissingProviderProperties{
-				provider: Github,
-			},
-		},
 		"happy case with default stages": {
-			beforeEach: func() error {
-				// reset the global map before each test case is run
-				providerSpecificProperties = make(map[Provider]interface{})
-
-				return Github.ConfiguredWith(&GithubProperties{
+			provider: func() Provider {
+				p, err := NewProvider(&GithubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 				})
-			},
-			provider: Github,
+				require.NoError(t, err, "failed to create provider")
+				return p
+			}(),
 			expectedStages: []PipelineStage{
 				{
 					Name: "Test",
@@ -50,15 +62,13 @@ func TestCreatePipeline(t *testing.T) {
 			},
 		},
 		"happy case with non-default stages": {
-			beforeEach: func() error {
-				// reset the global map before each test case is run
-				providerSpecificProperties = make(map[Provider]interface{})
-
-				return Github.ConfiguredWith(&GithubProperties{
+			provider: func() Provider {
+				p, err := NewProvider(&GithubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 				})
-			},
-			provider: Github,
+				require.NoError(t, err, "failed to create provider")
+				return p
+			}(),
 			inputStages: []PipelineStage{
 				{
 					Name: "Chicken",
@@ -80,10 +90,6 @@ func TestCreatePipeline(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			if tc.beforeEach != nil {
-				err := tc.beforeEach()
-				require.NoError(t, err, "unexpected error while running beforeEach")
-			}
 			m, err := CreatePipeline(tc.provider, tc.inputStages...)
 
 			if tc.expectedErr != nil {
@@ -110,9 +116,7 @@ source:
   # Additional properties that further specifies the exact location
   # the artifacts should be sourced from.
   properties:
-    # Repository in the format of <user_name>/<repository_name>.
     repository: aws/amazon-ecs-cli-v2
-
 
 # The deployment section defines the order the pipeline will deploy
 # to your environments
@@ -120,19 +124,17 @@ stages:
     - 
       # The name of the environment to deploy to.
       env: Test
-    
     - 
       # The name of the environment to deploy to.
       env: Prod
-    
 `
 	// reset the global map before each test case is run
-	providerSpecificProperties = make(map[Provider]interface{})
-	Github.ConfiguredWith(&GithubProperties{
+	provider, err := NewProvider(&GithubProperties{
 		Repository: "aws/amazon-ecs-cli-v2",
 	})
+	require.NoError(t, err)
 
-	m, err := CreatePipeline(Github)
+	m, err := CreatePipeline(provider)
 	require.NoError(t, err)
 
 	b, err := m.Marshal()

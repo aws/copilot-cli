@@ -16,70 +16,48 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
-// Provider represents the possible source provider
-// for this pipeline.
-type Provider int
+// Provider defines a source of the artifacts
+// that will be built and deployed via a pipeline
+type Provider interface {
+	fmt.Stringer
+	Name() string
+	Properties() map[string]interface{}
+}
 
-// this is definitely not thread-safe but we'll deal with it
-// when there's a need
-var providerSpecificProperties map[Provider]interface{} = make(map[Provider]interface{})
+type githubProvider struct {
+	properties *GithubProperties
+}
 
-const (
-	// Github is the provider that sources from a Github repository.
-	Github Provider = iota + 1
-)
+func (p *githubProvider) Name() string {
+	return "github"
+}
 
-// GithubProperties contain information to configure a Github source provider.
+func (p *githubProvider) String() string {
+	return "github"
+}
+
+func (p *githubProvider) Properties() map[string]interface{} {
+	return structs.Map(p.properties)
+}
+
+// GithubProperties contain information for configuring a Github
+// source provider.
 type GithubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 	Repository string `structs:"repository"`
 }
 
-func (p Provider) String() string {
-	names := [...]string{
-		"uninitialized",
-		"github",
-	}
-
-	if int(p) < 0 || int(p) >= len(names) {
-		return "unknown"
-	}
-
-	return names[p]
-}
-
-// ConfiguredWith allows configuring the provider with provider-specific
-// properties.
-func (p Provider) ConfiguredWith(newProps interface{}) error {
-	if props, exists := providerSpecificProperties[p]; exists {
-		return fmt.Errorf("the provider is already configured, provider: %s, new properties: %v, old properties: %v",
-			p, newProps, props)
-	}
-
-	switch p {
-	case Github:
-		_, ok := newProps.(*GithubProperties)
-		if !ok {
-			return &ErrProviderPropertiesMismatch{
-				provider: p,
-				newProps: newProps,
-			}
-		}
+// NewProvider creates a source provider based on the type of
+// the provided provider-specific configurations
+func NewProvider(configs interface{}) (Provider, error) {
+	switch props := configs.(type) {
+	case *GithubProperties:
+		return &githubProvider{
+			properties: props,
+		}, nil
 	default:
-		return errors.New("unknown provider")
-	}
-
-	providerSpecificProperties[p] = newProps
-	return nil
-}
-
-func (p Provider) properties() (map[string]interface{}, error) {
-	if props, exists := providerSpecificProperties[p]; exists {
-		return structs.Map(props), nil
-	}
-	return nil, &ErrMissingProviderProperties{
-		provider: p,
+		return nil, &ErrUnknownProvider{unknownProviderProperties: props}
 	}
 }
 
@@ -115,11 +93,6 @@ type PipelineStage struct {
 // CreatePipeline returns a pipeline manifest object.
 func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest, error) {
 	// TODO: #221 Do more validations
-	props, err := provider.properties()
-	if err != nil {
-		return nil, err
-	}
-
 	var defaultStages []PipelineStage
 	if len(stages) == 0 {
 		defaultStages = []PipelineStage{
@@ -135,8 +108,8 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 	return &PipelineManifest{
 		Version: Ver1,
 		Source: &Source{
-			ProviderName: provider.String(),
-			Properties:   props,
+			ProviderName: provider.Name(),
+			Properties:   provider.Properties(),
 		},
 		Environments: append(defaultStages, stages...),
 	}, nil
@@ -192,7 +165,7 @@ func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 	default:
 		return pm.Version,
 			&ErrInvalidPipelineManifestVersion{
-				version: pm.Version,
+				invalidVersion: pm.Version,
 			}
 	}
 }

@@ -17,32 +17,34 @@ func (e *ErrInvalidAppManifestType) Error() string {
 // ErrInvalidPipelineManifestVersion occurs when the pipeline.yml file
 // contains invalid schema version during unmarshalling.
 type ErrInvalidPipelineManifestVersion struct {
-	version PipelineSchemaMajorVersion
+	invalidVersion PipelineSchemaMajorVersion
 }
 
 func (e *ErrInvalidPipelineManifestVersion) Error() string {
-	return fmt.Sprintf("pipeline.yml contains invalid schema version: %d", e.version)
+	return fmt.Sprintf("pipeline.yml contains invalid schema version: %d", e.invalidVersion)
 }
 
-// ErrMissingProviderProperties occurs when the specified source provider
-// hasn't been configured before pipeline creation.
-type ErrMissingProviderProperties struct {
-	provider Provider
+// Is compares the 2 errors. Only returns true if the errors are of the same
+// type and contain the same information.
+func (e *ErrInvalidPipelineManifestVersion) Is(target error) bool {
+	t, ok := target.(*ErrInvalidPipelineManifestVersion)
+	return ok && t.invalidVersion == e.invalidVersion
 }
 
-func (e *ErrMissingProviderProperties) Error() string {
-	return fmt.Sprintf("the provider has not been configured, provider: %s",
-		e.provider)
+// ErrUnknownProvider occurs CreateProvider() is called with configurations
+// that do not map to any supported provider.
+type ErrUnknownProvider struct {
+	unknownProviderProperties interface{}
 }
 
-// ErrProviderPropertiesMismatch occurs when the provided properties do not
-// match the type of provider being configured.
-type ErrProviderPropertiesMismatch struct {
-	provider Provider
-	newProps interface{}
+func (e *ErrUnknownProvider) Error() string {
+	return fmt.Sprintf("no provider found for properties: %v",
+		e.unknownProviderProperties)
 }
 
-func (e *ErrProviderPropertiesMismatch) Error() string {
-	return fmt.Sprintf("mismatch between the property type and the provider, properties: %T%+v, provider: %s",
-		e.newProps, e.newProps, e.provider)
+// Is compares the 2 errors. Returns true if the errors are of the same
+// type
+func (e *ErrUnknownProvider) Is(target error) bool {
+	_, ok := target.(*ErrUnknownProvider)
+	return ok
 }
