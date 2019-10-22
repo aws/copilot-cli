@@ -24,15 +24,18 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		wantedProjectName string
 		wantedErr         string
 	}{
-		"do nothing if name is provided": {
-			inProjectName: "metrics",
-			expect:        func(opts *InitProjectOpts) {},
-
-			wantedProjectName: "metrics",
-		},
-		"set the project name workspace.Summary": {
+		"override flag from project name if summary exists": {
+			inProjectName: "testname",
 			expect: func(opts *InitProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(&archer.WorkspaceSummary{ProjectName: "metrics"}, nil)
+				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
+			},
+			wantedProjectName: "metrics",
+		},
+		"use flag if there is no summary": {
+			inProjectName: "metrics",
+			expect: func(opts *InitProjectOpts) {
+				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
 			wantedProjectName: "metrics",
