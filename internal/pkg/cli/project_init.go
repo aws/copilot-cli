@@ -4,8 +4,15 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
@@ -13,50 +20,149 @@ import (
 // InitProjectOpts contains the fields to collect for creating a project.
 type InitProjectOpts struct {
 	ProjectName string
-	manager     archer.ProjectCreator
-	ws          archer.Workspace
+
+	projectStore archer.ProjectStore
+	ws           archer.Workspace
+	prompt       prompter
+}
+
+// NewInitProjectOpts returns a new InitProjectOpts.
+func NewInitProjectOpts() (*InitProjectOpts, error) {
+	ssmStore, err := ssm.NewStore()
+	if err != nil {
+		return nil, err
+	}
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+	return &InitProjectOpts{
+		projectStore: ssmStore,
+		ws:           ws,
+		prompt:       prompt.New(),
+	}, nil
+}
+
+// Ask prompts the user for any required arguments that they didn't provide.
+func (opts *InitProjectOpts) Ask() error {
+	if opts.ProjectName != "" {
+		// User passed in a name as an argument.
+		return nil
+	}
+
+	// If there's a local project, we'll use that and just skip the project question.
+	// Otherwise, we'll load a list of existing projects that the customer can select from.
+	if summary, err := opts.ws.Summary(); err == nil {
+		log.Infof("Looks like you are using a workspace that's registered to project %s. We'll use that as your project.\n", color.HighlightUserInput(summary.ProjectName))
+		opts.ProjectName = summary.ProjectName
+		return nil
+	}
+
+	existingProjects, _ := opts.projectStore.ListProjects()
+	if len(existingProjects) == 0 {
+		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
+		return opts.askNewProjectName()
+	}
+
+	log.Infoln("Looks like you have some projects already.")
+	useExistingProject, err := opts.prompt.Confirm("Would you like to use one of your existing projects?", "", prompt.WithTrueDefault())
+	if err != nil {
+		return fmt.Errorf("new project confirmation: %w", err)
+	}
+	if useExistingProject {
+		log.Infoln("Ok, here are your existing projects.")
+		return opts.askSelectExistingProjectName(existingProjects)
+	}
+	log.Infoln("Ok, let's create a new project then.")
+	return opts.askNewProjectName()
+}
+
+// Validate returns an error if the user's input is invalid.
+func (opts *InitProjectOpts) Validate() error {
+	return validateProjectName(opts.ProjectName)
 }
 
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
-	if err := validateProjectName(opts.ProjectName); err != nil {
-		return err
-	}
-	if err := opts.manager.CreateProject(&archer.Project{
+	err := opts.projectStore.CreateProject(&archer.Project{
 		Name: opts.ProjectName,
-	}); err != nil {
-		return err
-	}
+	})
 
+	if err != nil {
+		// If the project already exists, move on - otherwise return the error.
+		var projectAlreadyExistsError *store.ErrProjectAlreadyExists
+		if !errors.As(err, &projectAlreadyExistsError) {
+			return err
+		}
+	}
 	return opts.ws.Create(opts.ProjectName)
+}
+
+func (opts *InitProjectOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("archer init")),
+	}
+}
+
+func (opts *InitProjectOpts) askNewProjectName() error {
+	projectName, err := opts.prompt.Get(
+		"What would you like to call your project?",
+		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
+		validateProjectName)
+	if err != nil {
+		return fmt.Errorf("prompt get project name: %w", err)
+	}
+	opts.ProjectName = projectName
+	return nil
+}
+
+func (opts *InitProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
+	var projectNames []string
+	for _, p := range existingProjects {
+		projectNames = append(projectNames, p.Name)
+	}
+	projectName, err := opts.prompt.SelectOne(
+		"Which one do you want to add a new application to?",
+		"Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery.",
+		projectNames)
+	if err != nil {
+		return fmt.Errorf("prompt select project name: %w", err)
+	}
+	opts.ProjectName = projectName
+	return nil
 }
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	opts := InitProjectOpts{}
+	opts, err := NewInitProjectOpts()
 
 	cmd := &cobra.Command{
-		Use:   "init [name]",
-		Short: "Creates a new, empty project",
+		Use: "init [name]",
+		Long: `Creates a new empty project.
+A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `
   Create a new project named test
   $ archer project init test`,
-		Args: cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return err
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := ssm.NewStore()
-			if err != nil {
+			if err := opts.Ask(); err != nil {
 				return err
 			}
-
-			ws, err := workspace.New()
-			if err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
-			opts.ws = ws
-			opts.manager = ssmStore
-			opts.ProjectName = args[0]
-
 			return opts.Execute()
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ManifestDirectoryName), color.HighlightUserInput(opts.ProjectName))
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followUp := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followUp)
+			}
 		},
 	}
 	return cmd
