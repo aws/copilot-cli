@@ -68,7 +68,7 @@ func (opts *InitProjectOpts) Ask() error {
 	log.Infoln("Looks like you have some projects already.")
 	useExistingProject, err := opts.prompt.Confirm("Would you like to use one of your existing projects?", "", prompt.WithTrueDefault())
 	if err != nil {
-		return fmt.Errorf("new project confirmation: %w", err)
+		return fmt.Errorf("prompt to confirm using existing project: %w", err)
 	}
 	if useExistingProject {
 		log.Infoln("Ok, here are your existing projects.")
