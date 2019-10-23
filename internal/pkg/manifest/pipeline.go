@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	archerCfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
@@ -29,11 +32,11 @@ type githubProvider struct {
 }
 
 func (p *githubProvider) Name() string {
-	return "github"
+	return "Github"
 }
 
 func (p *githubProvider) String() string {
-	return "github"
+	return "Github"
 }
 
 func (p *githubProvider) Properties() map[string]interface{} {
@@ -74,6 +77,10 @@ const (
 // pipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
 type pipelineManifest struct {
+	// Name of the project this pipeline belongs to
+	ProjectName string `yaml:"-"`
+	// Name of the pipeline
+	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
 	Stages  []PipelineStage            `yaml:"stages"`
@@ -85,50 +92,31 @@ type Source struct {
 	Properties   map[string]interface{} `yaml:"properties"`
 }
 
-// PipelineStage represents configuration for each deployment stage
-// of a workspace. A stage consists of the Archer Environment the pipeline
-// is deloying to and the containerized applications that will be deployed.
-type PipelineStage struct {
-	*AssociatedEnvironment `yaml:",inline"`
-	Applications           []*archer.Application `yaml:"-"`
-}
-
-// AssociatedEnvironment defines the necessary information a pipline stage
-// needs for an Archer Environment.
-type AssociatedEnvironment struct {
-	Project   string `yaml:"-"`    // Name of the project this environment belongs to.
-	Name      string `yaml:"name"` // Name of the environment, must be unique within a project.
-	Region    string `yaml:"-"`    // Name of the region this environment is stored in.
-	AccountID string `yaml:"-"`    // Account ID of the account this environment is stored in.
-	Prod      bool   `yaml:"-"`    // Whether or not this environment is a production environment.
-}
-
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest, error) {
+func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineStage) (archer.Pipeline, error) {
 	// TODO: #221 Do more validations
-	var defaultStages []PipelineStage
 	if len(stages) == 0 {
-		defaultStages = []PipelineStage{
-			{
-				AssociatedEnvironment: &AssociatedEnvironment{
-					Name: "test",
-				},
-			},
-			{
-				AssociatedEnvironment: &AssociatedEnvironment{
-					Name: "prod",
-				},
-			},
+		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
+			pipelineName)
+	}
+
+	var projectName = stages[0].ProjectName
+	for _, s := range stages[1:] {
+		if s.ProjectName != projectName {
+			return nil, fmt.Errorf("failed to create a pipieline that is associated with multiple projects, found at least: [%s, %s]",
+				projectName, s.ProjectName)
 		}
 	}
 
 	return &pipelineManifest{
-		Version: Ver1,
+		ProjectName: stages[0].ProjectName,
+		Name:        pipelineName,
+		Version:     Ver1,
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
 		},
-		Stages: append(defaultStages, stages...),
+		Stages: stages,
 	}, nil
 }
 
@@ -154,7 +142,7 @@ func (m *pipelineManifest) Marshal() ([]byte, error) {
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
-func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
+func UnmarshalPipeline(in []byte) (archer.Pipeline, error) {
 	pm := pipelineManifest{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
@@ -187,8 +175,23 @@ func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
 	}
 }
 
-// CFNTemplate serializes the manifest object into a CloudFormation template.
-func (m *pipelineManifest) CFNTemplate() (string, error) {
-	// TODO: #223 Generate CFN template for the archer pipeline
+func (m *pipelineManifest) StackName() string {
+	return m.ProjectName + "-" + m.Name
+}
+
+func (m *pipelineManifest) Template() (string, error) {
 	return "", nil
+}
+
+func (m *pipelineManifest) Parameters() []*cloudformation.Parameter {
+	return nil
+}
+
+func (m *pipelineManifest) Tags() []*cloudformation.Tag {
+	return []*cloudformation.Tag{
+		{
+			Key:   aws.String(archerCfn.ProjectTagKey),
+			Value: aws.String(m.ProjectName),
+		},
+	}
 }

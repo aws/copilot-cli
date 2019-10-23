@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	projectTagKey = "ecs-project"
+	ProjectTagKey = "ecs-project"
 	envTagKey     = "ecs-environment"
 )
 
@@ -28,13 +28,6 @@ const (
 type CloudFormation struct {
 	client cloudformationiface.CloudFormationAPI
 	box    packd.Box
-}
-
-type stackConfiguration interface {
-	StackName() string
-	Template() (string, error)
-	Parameters() []*cloudformation.Parameter
-	Tags() []*cloudformation.Tag
 }
 
 // New returns a configured CloudFormation client.
@@ -52,10 +45,11 @@ func New(sess *session.Session) CloudFormation {
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *archer.DeployEnvironmentInput) error {
-	return cf.deploy(newEnvStackConfig(env, cf.box))
+	return cf.Deploy(newEnvStackConfig(env, cf.box))
 }
 
-func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
+// Deploy delpoys an entity that can be serialized into a Cloudformation template
+func (cf CloudFormation) Deploy(stackConfig archer.StackConfiguration) error {
 	template, err := stackConfig.Template()
 	if err != nil {
 		return fmt.Errorf("template creation: %w", err)
@@ -92,7 +86,7 @@ func (cf CloudFormation) WaitForEnvironmentCreation(env *archer.DeployEnvironmen
 	return cfEnv.ToEnv(deployedStack)
 }
 
-func (cf CloudFormation) waitForStackCreation(stackConfig stackConfiguration) (*cloudformation.Stack, error) {
+func (cf CloudFormation) waitForStackCreation(stackConfig archer.StackConfiguration) (*cloudformation.Stack, error) {
 	describeStackInput := &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackConfig.StackName()),
 	}
