@@ -62,6 +62,10 @@ func TestEnvParameters(t *testing.T) {
 			ParameterKey:   aws.String(EnvParamEnvNameKey),
 			ParameterValue: aws.String(deploymentInput.Name),
 		},
+		{
+			ParameterKey:   aws.String(envParamToolsAccountPrincipal),
+			ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
+		},
 	}
 	require.ElementsMatch(t, expectedParams, env.Parameters())
 }
@@ -140,10 +144,11 @@ func mockEnvironmentStack(stackArn, ecrOutput string) *cloudformation.Stack {
 
 func mockDeployEnvironmentInput() *archer.DeployEnvironmentInput {
 	return &archer.DeployEnvironmentInput{
-		Name:               "env",
-		Project:            "project",
-		Prod:               true,
-		PublicLoadBalancer: true,
+		Name:                     "env",
+		Project:                  "project",
+		Prod:                     true,
+		PublicLoadBalancer:       true,
+		ToolsAccountPrincipalARN: "mockToolsAccountPrincipalARN",
 	}
 }
 func emptyEnvBox() packd.Box {

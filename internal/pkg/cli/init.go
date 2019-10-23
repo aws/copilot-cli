@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -45,6 +46,8 @@ type InitOpts struct {
 
 	prog     progress
 	prompter prompter
+
+	identity identityService
 }
 
 // Prepare loads contextual data such as any existing projects, the current workspace, etc.
@@ -268,11 +271,17 @@ func (opts *InitOpts) deploy() error {
 }
 
 func (opts *InitOpts) deployEnv() error {
+	identity, err := opts.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/56
 	deployEnvInput := &archer.DeployEnvironmentInput{
-		Project:            opts.Project,
-		Name:               defaultEnvironmentName,
-		PublicLoadBalancer: true, // TODO: configure this value based on user input or Application type needs?
+		Project:                  opts.Project,
+		Name:                     defaultEnvironmentName,
+		PublicLoadBalancer:       true, // TODO: configure this value based on user input or Application type needs?
+		ToolsAccountPrincipalARN: identity.ARN,
 	}
 
 	opts.prog.Start("Preparing deployment...")
@@ -332,6 +341,9 @@ func BuildInitCmd() *cobra.Command {
 				return err
 			}
 			opts.envDeployer = cloudformation.New(sess)
+
+			opts.identity = identity.New(sess)
+
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {

@@ -112,7 +112,10 @@ func createChangeSetInput(stackName, templateBody string, options ...createChang
 	name := fmt.Sprintf("%s-%s", "ecscli", id.String())
 
 	in := &cloudformation.CreateChangeSetInput{
-		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
+		Capabilities: aws.StringSlice([]string{
+			cloudformation.CapabilityCapabilityIam,
+			cloudformation.CapabilityCapabilityNamedIam,
+		}),
 		ChangeSetName: aws.String(name),
 		StackName:     aws.String(stackName),
 		TemplateBody:  aws.String(templateBody),
