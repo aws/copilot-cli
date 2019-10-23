@@ -47,8 +47,8 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 // Ask prompts the user for any required arguments that they didn't provide.
 func (opts *InitProjectOpts) Ask() error {
 	// If there's a local project, we'll use that over anything else.
-	summary, _ := opts.ws.Summary()
-	if summary != nil {
+	summary, err := opts.ws.Summary()
+	if err == nil {
 		msg := fmt.Sprintf(
 			"Looks like you are using a workspace that's registered to project %s. We'll use that as your project.",
 			color.HighlightUserInput(summary.ProjectName))

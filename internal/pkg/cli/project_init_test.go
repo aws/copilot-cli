@@ -35,7 +35,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		"use flag if there is no summary": {
 			inProjectName: "metrics",
 			expect: func(opts *InitProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, nil)
+				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
 			wantedProjectName: "metrics",
