@@ -214,7 +214,7 @@ func (m *MockEnvironmentDeployer) EXPECT() *MockEnvironmentDeployerMockRecorder 
 }
 
 // DeployEnvironment mocks base method
-func (m *MockEnvironmentDeployer) DeployEnvironment(env *archer.Environment) error {
+func (m *MockEnvironmentDeployer) DeployEnvironment(env *archer.DeployEnvironmentInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
@@ -228,11 +228,12 @@ func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env interface{}
 }
 
 // WaitForEnvironmentCreation mocks base method
-func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *archer.Environment) error {
+func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *archer.DeployEnvironmentInput) (*archer.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForEnvironmentCreation", env)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*archer.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // WaitForEnvironmentCreation indicates an expected call of WaitForEnvironmentCreation

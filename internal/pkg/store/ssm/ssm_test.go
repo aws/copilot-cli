@@ -8,13 +8,12 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/stretchr/testify/require"
 )
 
@@ -147,10 +146,10 @@ func TestStore_GetProject(t *testing.T) {
 	require.NoError(t, err, "Marshal project should not fail")
 
 	testCases := map[string]struct {
-		mockGetParameter      func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-		mockGetCallerIdentity func(t *testing.T, param *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
-		wantedProject         archer.Project
-		wantedErr             error
+		mockGetParameter       func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+		mockIdentityServiceGet func() (identity.Caller, error)
+		wantedProject          archer.Project
+		wantedErr              error
 	}{
 		"with existing project": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
@@ -171,9 +170,9 @@ func TestStore_GetProject(t *testing.T) {
 				require.Equal(t, testProjectPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
-			mockGetCallerIdentity: func(t *testing.T, input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-				return &sts.GetCallerIdentityOutput{
-					Account: aws.String("12345"),
+			mockIdentityServiceGet: func() (identity.Caller, error) {
+				return identity.Caller{
+					Account: "12345",
 				}, nil
 			},
 			wantedErr: &store.ErrNoSuchProject{
@@ -187,8 +186,8 @@ func TestStore_GetProject(t *testing.T) {
 				require.Equal(t, testProjectPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
-			mockGetCallerIdentity: func(t *testing.T, input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-				return nil, fmt.Errorf("Error")
+			mockIdentityServiceGet: func() (identity.Caller, error) {
+				return identity.Caller{}, fmt.Errorf("Error")
 			},
 			wantedErr: &store.ErrNoSuchProject{
 				ProjectName: "chicken",
@@ -226,9 +225,8 @@ func TestStore_GetProject(t *testing.T) {
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
-				tokenService: &mockSTS{
-					t:                     t,
-					mockGetCallerIdentity: tc.mockGetCallerIdentity,
+				identity: mockIdentityService{
+					mockIdentityServiceGet: tc.mockIdentityServiceGet,
 				},
 				sessionRegion: "us-west-2",
 			}
@@ -925,12 +923,10 @@ func (m *mockSSM) GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutp
 	return m.mockGetParameter(m.t, in)
 }
 
-type mockSTS struct {
-	stsiface.STSAPI
-	t                     *testing.T
-	mockGetCallerIdentity func(t *testing.T, input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
+type mockIdentityService struct {
+	mockIdentityServiceGet func() (identity.Caller, error)
 }
 
-func (m *mockSTS) GetCallerIdentity(input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-	return m.mockGetCallerIdentity(m.t, input)
+func (m mockIdentityService) Get() (identity.Caller, error) {
+	return m.mockIdentityServiceGet()
 }

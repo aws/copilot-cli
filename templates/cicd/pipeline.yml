@@ -1,0 +1,21 @@
+# This YAML file defines the relationship and deployment ordering of your environments.
+
+# The version of the schema used in this template
+version: {{.Version}}
+
+# This section defines the source artifacts.
+source:
+  # The name of the provider that is used to store the source artifacts.
+  provider: {{.Source.ProviderName}}
+  # Additional properties that further specifies the exact location
+  # the artifacts should be sourced from.
+  properties:{{range $key, $value := .Source.Properties}}
+    {{$key}}: {{$value}}{{end}}
+{{$length := len .Environments}}{{if gt $length 0}}
+# The deployment section defines the order the pipeline will deploy
+# to your environments
+stages:{{range .Environments}}
+    - 
+      # The name of the environment to deploy to.
+      env: {{.Name}}{{end}}
+{{end}}

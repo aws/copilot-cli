@@ -35,6 +35,7 @@ type mockCloudFormation struct {
 	mockExecuteChangeSet                 func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
 	mockDescribeChangeSet                func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
 	mockWaitUntilStackCreateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+	mockDescribeStacks                   func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -57,26 +58,42 @@ func (cf mockCloudFormation) WaitUntilStackCreateComplete(in *cloudformation.Des
 	return cf.mockWaitUntilStackCreateComplete(cf.t, in)
 }
 
-func TestDeployEnvironment(t *testing.T) {
+func (cf mockCloudFormation) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+	return cf.mockDescribeStacks(cf.t, in)
+}
+
+type mockStackConfiguration struct {
+	mockTemplate   func() (string, error)
+	mockParameters func() []*cloudformation.Parameter
+	mockTags       func() []*cloudformation.Tag
+	mockStackName  func() string
+}
+
+func (sc mockStackConfiguration) Template() (string, error) {
+	return sc.mockTemplate()
+}
+
+func (sc mockStackConfiguration) Parameters() []*cloudformation.Parameter {
+	return sc.mockParameters()
+}
+
+func (sc mockStackConfiguration) Tags() []*cloudformation.Tag {
+	return sc.mockTags()
+}
+
+func (sc mockStackConfiguration) StackName() string {
+	return sc.mockStackName()
+}
+
+func TestDeploy(t *testing.T) {
+	mockStackConfig := getMockStackConfiguration()
 	testCases := map[string]struct {
-		cf   CloudFormation
-		env  *archer.Environment
-		want error
+		cf    CloudFormation
+		input stackConfiguration
+		want  error
 	}{
-		"should return error given file not found": {
-			cf: CloudFormation{
-				client: &mockCloudFormation{
-					t: t,
-				},
-				box: emptyBox(),
-			},
-			want: fmt.Errorf("failed to find template %s for the environment: %s", environmentTemplate, "file does not exist"),
-		},
 		"should wrap error returned from CreateChangeSet call": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -86,7 +103,7 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			want: fmt.Errorf("failed to create changeSet for stack %s: %s", mockProjectName+"-"+mockEnvironmentName, "some AWS error"),
+			want: fmt.Errorf("failed to create changeSet for stack %s: %s", mockStackConfig.StackName(), "some AWS error"),
 		},
 		"should return a ErrStackAlreadyExists if the stack already exists": {
 			cf: CloudFormation{
@@ -99,20 +116,13 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			env: &archer.Environment{
-				Project:            mockProjectName,
-				Name:               mockEnvironmentName,
-				PublicLoadBalancer: false,
-			},
+			input: mockStackConfig,
 			want: &ErrStackAlreadyExists{
-				stackName: mockProjectName + "-" + mockEnvironmentName,
+				stackName: mockStackConfig.StackName(),
 			},
 		},
 		"should wrap error returned from WaitUntilChangeSetCreateComplete call": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -131,10 +141,7 @@ func TestDeployEnvironment(t *testing.T) {
 			want: fmt.Errorf("failed to wait for changeSet creation %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
 		"should wrap error return from DescribeChangeSet call": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -156,10 +163,7 @@ func TestDeployEnvironment(t *testing.T) {
 			want: fmt.Errorf("failed to describe changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
 		"should not execute Change Set with no changes": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -184,10 +188,7 @@ func TestDeployEnvironment(t *testing.T) {
 			want: nil,
 		},
 		"should not execute Change Set with no updates": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -212,10 +213,7 @@ func TestDeployEnvironment(t *testing.T) {
 			want: nil,
 		},
 		"should fail Change Set with unexpected status": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -247,10 +245,7 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 		},
 		"should wrap error returned from ExecuteChangeSet call": {
-			env: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
+			input: mockStackConfig,
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -276,12 +271,12 @@ func TestDeployEnvironment(t *testing.T) {
 			},
 			want: fmt.Errorf("failed to execute changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
-		"should deploy an environment": {
+		"should deploy": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
 					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
-						require.Equal(t, mockProjectName+"-"+mockEnvironmentName, *in.StackName)
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
 						require.True(t, isValidChangeSetName(*in.ChangeSetName))
 						require.Equal(t, mockTemplate, *in.TemplateBody)
 
@@ -308,18 +303,51 @@ func TestDeployEnvironment(t *testing.T) {
 				},
 				box: boxWithTemplateFile(),
 			},
-			env: &archer.Environment{
-				Project:            mockProjectName,
-				Name:               mockEnvironmentName,
-				PublicLoadBalancer: false,
-			},
-			want: nil,
+			input: mockStackConfig,
+			want:  nil,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.DeployEnvironment(tc.env)
+			got := tc.cf.deploy(tc.input)
+
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func TestWaitForStackCreation(t *testing.T) {
+	stackConfig := getMockStackConfiguration()
+	testCases := map[string]struct {
+		cf    CloudFormation
+		input stackConfiguration
+		want  error
+	}{
+		"error in WaitUntilStackCreateComplete call": {
+			cf:    getMockWaitStackCreateCFClient(t, stackConfig.StackName(), true, false),
+			input: stackConfig,
+			want:  fmt.Errorf("failed to create stack %s: %s", stackConfig.StackName(), "some AWS error"),
+		},
+		"error if no stacks returned": {
+			cf:    getMockWaitStackCreateCFClient(t, stackConfig.StackName(), false, true),
+			input: stackConfig,
+			want:  fmt.Errorf("failed to find a stack named %s after it was created", stackConfig.StackName()),
+		},
+		"happy path": {
+			cf:    getMockWaitStackCreateCFClient(t, stackConfig.StackName(), false, false),
+			input: stackConfig,
+			want:  nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			_, got := tc.cf.waitForStackCreation(tc.input)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())
@@ -331,57 +359,89 @@ func TestDeployEnvironment(t *testing.T) {
 }
 
 func TestWaitForEnvironmentCreation(t *testing.T) {
+	deploymentInput := archer.DeployEnvironmentInput{
+		Name:    "test",
+		Project: "project",
+	}
+	stackName := fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name)
+
 	testCases := map[string]struct {
 		cf    CloudFormation
-		input *archer.Environment
+		input archer.DeployEnvironmentInput
 		want  error
 	}{
-		"error in WaitUntilStackCreateComplete call": {
-			cf: CloudFormation{
-				client: &mockCloudFormation{
-					t: t,
-					mockWaitUntilStackCreateComplete: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
-						return fmt.Errorf("some AWS error")
-					},
-				},
-			},
-			input: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
-			want: fmt.Errorf("failed to create stack %s: %s", mockProjectName+"-"+mockEnvironmentName, "some AWS error"),
+		"error in waitForStackCreation call": {
+			cf:    getMockWaitStackCreateCFClient(t, stackName, true, false),
+			input: deploymentInput,
+			want:  fmt.Errorf("failed to create stack %s: %s", stackName, "some AWS error"),
 		},
 		"happy path": {
-			cf: CloudFormation{
-				client: &mockCloudFormation{
-					t: t,
-					mockWaitUntilStackCreateComplete: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
-						require.Equal(t, mockProjectName+"-"+mockEnvironmentName, *input.StackName)
-						return nil
-					},
-				},
-			},
-			input: &archer.Environment{
-				Project: mockProjectName,
-				Name:    mockEnvironmentName,
-			},
-			want: nil,
+			cf:    getMockWaitStackCreateCFClient(t, stackName, false, false),
+			input: deploymentInput,
+			want:  nil,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.WaitForEnvironmentCreation(tc.input)
+			env, got := tc.cf.WaitForEnvironmentCreation(&tc.input)
 
 			if tc.want != nil {
 				require.EqualError(t, tc.want, got.Error())
 			} else {
 				require.NoError(t, got)
+				require.NotNil(t, env, "An environment should be created")
 			}
 		})
 	}
 }
+func getMockWaitStackCreateCFClient(t *testing.T, stackName string, shouldThrowError, shouldReturnEmptyStacks bool) CloudFormation {
+	return CloudFormation{
+		client: &mockCloudFormation{
+			t: t,
+			mockWaitUntilStackCreateComplete: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, stackName, *input.StackName)
+				if shouldThrowError {
+					return fmt.Errorf("some AWS error")
+				}
+				return nil
+			},
+			mockDescribeStacks: func(t *testing.T, input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				require.Equal(t, stackName, *input.StackName)
+				if shouldReturnEmptyStacks {
+					return &cloudformation.DescribeStacksOutput{
+						Stacks: []*cloudformation.Stack{},
+					}, nil
+				}
+				return &cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						&cloudformation.Stack{
+							StackId: aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:902697171733:stack/%s", stackName)),
+						},
+					},
+				}, nil
+			},
+		},
+		box: emptyEnvBox(),
+	}
+}
 
+func getMockStackConfiguration() stackConfiguration {
+	return mockStackConfiguration{
+		mockStackName: func() string {
+			return mockStackID
+		},
+		mockParameters: func() []*cloudformation.Parameter {
+			return []*cloudformation.Parameter{}
+		},
+		mockTags: func() []*cloudformation.Tag {
+			return []*cloudformation.Tag{}
+		},
+		mockTemplate: func() (string, error) {
+			return mockTemplate, nil
+		},
+	}
+}
 func emptyBox() packd.Box {
 	return packd.NewMemoryBox()
 }
@@ -389,7 +449,7 @@ func emptyBox() packd.Box {
 func boxWithTemplateFile() packd.Box {
 	box := packd.NewMemoryBox()
 
-	box.AddString(environmentTemplate, mockTemplate)
+	box.AddString(envTemplatePath, mockTemplate)
 
 	return box
 }

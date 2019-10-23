@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -33,8 +34,12 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	require.NoError(t, err)
 	deployer := cloudformation.New(sess)
 	cfClient := awsCF.New(sess)
+	identity := identity.New(sess)
 
-	environmentToDeploy := archer.Environment{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true}
+	id, err := identity.Get()
+	require.NoError(t, err)
+
+	environmentToDeploy := archer.DeployEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.ARN}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.Project, environmentToDeploy.Name)
 
 	t.Run("Deploys an Environment to CloudFormation", func(t *testing.T) {
@@ -56,7 +61,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployEnvironment(&environmentToDeploy))
-		require.NoError(t, deployer.WaitForEnvironmentCreation(&environmentToDeploy))
+		// Make sure the environment was deployed succesfully
+
+		deployedEnv, err := deployer.WaitForEnvironmentCreation(&environmentToDeploy)
+		require.NoError(t, err)
+
+		// And that we saved the state from the stack into our environment.
+		require.True(t,
+			strings.HasSuffix(deployedEnv.RegistryURL,
+				fmt.Sprintf("%s/%s", environmentToDeploy.Project, environmentToDeploy.Name)),
+			"Repository URL should end with project/env - saved URL was "+deployedEnv.RegistryURL)
 
 		// Ensure that the new stack exists
 		output, err = cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -67,6 +81,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
+			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-EnvironmentManagerRoleARN", envStackName),
+					*output.ExportName,
+					"Should export EnvironmentManagerRole ARN")
+
+				require.True(t,
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-EnvManagerRole", envStackName)),
+					"EnvironmentManagerRole ARN value should not be nil.")
+			},
 			"ECRRepositoryArn": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-ECRArn", envStackName),
@@ -77,6 +101,17 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					strings.HasSuffix(*output.OutputValue,
 						fmt.Sprintf("repository/%s/%s", environmentToDeploy.Project, environmentToDeploy.Name)),
 					"ECR Repo Should be named repository/project_name/env_name")
+			},
+			"ECRRepositoryName": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-ECRName", envStackName),
+					*output.ExportName,
+					"Should export ECR name as stackname-ECRName")
+				require.Equal(t,
+					*output.OutputValue,
+					fmt.Sprintf("%s/%s", environmentToDeploy.Project, environmentToDeploy.Name),
+					"ECR Repo Name Should be named project_name/env_name",
+				)
 			},
 			"ClusterId": func(output *awsCF.Output) {
 				require.Equal(t,

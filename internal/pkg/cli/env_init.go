@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
@@ -17,8 +18,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// AddEnvOpts contains the fields to collect for adding an environment.
-type AddEnvOpts struct {
+// InitEnvOpts contains the fields to collect for adding an environment.
+type InitEnvOpts struct {
 	ProjectName string
 	EnvName     string
 	EnvProfile  string
@@ -29,10 +30,11 @@ type AddEnvOpts struct {
 	deployer      archer.EnvironmentDeployer
 	prog          progress
 	prompter      prompter
+	identity      identityService
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *AddEnvOpts) Ask() error {
+func (opts *InitEnvOpts) Ask() error {
 	if opts.ProjectName == "" {
 		projectName, err := opts.prompter.Get(
 			"What is your project's name?",
@@ -63,23 +65,28 @@ func (opts *AddEnvOpts) Ask() error {
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
-func (opts *AddEnvOpts) Execute() error {
+func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
 	if _, err := opts.projectGetter.GetProject(opts.ProjectName); err != nil {
 		return err
 	}
 
-	env := &archer.Environment{
-		Name:               opts.EnvName,
-		Project:            opts.ProjectName,
-		AccountID:          "1234", // FIXME
-		Region:             "1234",
-		Prod:               opts.Production,
-		PublicLoadBalancer: true, // TODO: configure this based on user input or application Type needs?
+	// TODO: should this be part of a method on the opts structure that fills in required data for the Execute method?
+	identity, err := opts.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+
+	deployEnvInput := &archer.DeployEnvironmentInput{
+		Name:                     opts.EnvName,
+		Project:                  opts.ProjectName,
+		Prod:                     opts.Production,
+		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
+		ToolsAccountPrincipalARN: identity.ARN,
 	}
 
 	opts.prog.Start("Preparing deployment...")
-	if err := opts.deployer.DeployEnvironment(env); err != nil {
+	if err := opts.deployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -92,7 +99,8 @@ func (opts *AddEnvOpts) Execute() error {
 	}
 	opts.prog.Stop("Done!")
 	opts.prog.Start("Deploying env...")
-	if err := opts.deployer.WaitForEnvironmentCreation(env); err != nil {
+	env, err := opts.deployer.WaitForEnvironmentCreation(deployEnvInput)
+	if err != nil {
 		opts.prog.Stop("Error!")
 		return err
 	}
@@ -106,7 +114,7 @@ func (opts *AddEnvOpts) Execute() error {
 
 // BuildEnvInitCmd builds the command for adding an environment.
 func BuildEnvInitCmd() *cobra.Command {
-	opts := AddEnvOpts{
+	opts := InitEnvOpts{
 		EnvProfile: "default",
 		prog:       spinner.New(),
 		prompter:   prompt.New(),
@@ -146,8 +154,11 @@ func BuildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			opts.deployer = cloudformation.New(sess)
+
+			defaultSession, err := session.Default()
+			opts.identity = identity.New(defaultSession)
+
 			return opts.Execute()
 		},
 	}

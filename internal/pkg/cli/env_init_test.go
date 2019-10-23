@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
@@ -64,7 +65,7 @@ func TestEnvAdd_Ask(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			addEnv := &AddEnvOpts{
+			addEnv := &InitEnvOpts{
 				EnvName:     tc.inputEnv,
 				ProjectName: tc.inputProject,
 				prompter:    mockPrompter,
@@ -82,22 +83,30 @@ func TestEnvAdd_Ask(t *testing.T) {
 
 func TestEnvAdd_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockError := fmt.Errorf("error")
+	defer ctrl.Finish()
+
 	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 	mockProjStore := mocks.NewMockProjectStore(ctrl)
 	mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
 	mockSpinner := climocks.NewMockprogress(ctrl)
+	mockIdentityService := climocks.NewMockidentityService(ctrl)
+
 	var capturedArgument *archer.Environment
-	defer ctrl.Finish()
+
+	mockError := fmt.Errorf("error")
+	mockARN := "mockARN"
+	mockCaller := identity.Caller{
+		ARN: mockARN,
+	}
 
 	testCases := map[string]struct {
-		addEnvOpts  AddEnvOpts
+		addEnvOpts  InitEnvOpts
 		expectedEnv archer.Environment
 		expectedErr error
 		mocking     func()
 	}{
 		"with a succesful call to add env": {
-			addEnvOpts: AddEnvOpts{
+			addEnvOpts: InitEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjStore,
 				deployer:      mockDeployer,
@@ -105,15 +114,15 @@ func TestEnvAdd_Execute(t *testing.T) {
 				EnvName:       "env",
 				Production:    true,
 				prog:          mockSpinner,
+				identity:      mockIdentityService,
 			},
 			expectedEnv: archer.Environment{
-				Name:    "env",
-				Project: "project",
-				//TODO update these to real values
-				AccountID:          "1234",
-				Region:             "1234",
-				Prod:               true,
-				PublicLoadBalancer: true,
+				Name:        "env",
+				Project:     "project",
+				AccountID:   "1234",
+				Region:      "1234",
+				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+				Prod:        true,
 			},
 			mocking: func() {
 				gomock.InOrder(
@@ -121,12 +130,22 @@ func TestEnvAdd_Execute(t *testing.T) {
 						EXPECT().
 						GetProject(gomock.Any()).
 						Return(&archer.Project{}, nil),
+					mockIdentityService.EXPECT().Get().Times(1).Return(mockCaller, nil),
 					mockSpinner.EXPECT().Start(gomock.Eq("Preparing deployment...")),
 					mockDeployer.EXPECT().DeployEnvironment(gomock.Any()),
 					mockSpinner.EXPECT().Stop(gomock.Eq("Done!")),
 					mockSpinner.EXPECT().Start(gomock.Eq("Deploying env...")),
 					// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
-					mockDeployer.EXPECT().WaitForEnvironmentCreation(gomock.Any()),
+					mockDeployer.EXPECT().
+						WaitForEnvironmentCreation(gomock.Any()).
+						Return(&archer.Environment{
+							Name:        "env",
+							Project:     "project",
+							AccountID:   "1234",
+							Region:      "1234",
+							RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+							Prod:        true,
+						}, nil),
 					mockEnvStore.
 						EXPECT().
 						CreateEnvironment(gomock.Any()).
@@ -139,7 +158,7 @@ func TestEnvAdd_Execute(t *testing.T) {
 		},
 		"with a invalid project": {
 			expectedErr: mockError,
-			addEnvOpts: AddEnvOpts{
+			addEnvOpts: InitEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjStore,
 				deployer:      mockDeployer,
@@ -149,12 +168,12 @@ func TestEnvAdd_Execute(t *testing.T) {
 				prog:          mockSpinner,
 			},
 			expectedEnv: archer.Environment{
-				Name:    "env",
-				Project: "project",
-				//TODO update these to real values
-				AccountID: "1234",
-				Region:    "1234",
-				Prod:      true,
+				Name:        "env",
+				Project:     "project",
+				AccountID:   "1234",
+				Region:      "1234",
+				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+				Prod:        true,
 			},
 			mocking: func() {
 				mockProjStore.

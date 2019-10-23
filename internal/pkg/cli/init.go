@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -28,8 +29,8 @@ import (
 
 const defaultEnvironmentName = "test"
 
-// InitAppOpts holds the fields to bootstrap a new application.
-type InitAppOpts struct {
+// InitOpts holds the fields to bootstrap a new application.
+type InitOpts struct {
 	Project               string // namespace that this application belongs to.
 	AppName               string // unique identifier for the application.
 	AppType               string // type of application you're trying to build (LoadBalanced, Backend, etc.)
@@ -45,13 +46,15 @@ type InitAppOpts struct {
 
 	prog     progress
 	prompter prompter
+
+	identity identityService
 }
 
 // Prepare loads contextual data such as any existing projects, the current workspace, etc.
-func (opts *InitAppOpts) Prepare() {
+func (opts *InitOpts) Prepare() {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome the the ECS CLI! We're going to walk you through some questions to help you get set up
-with a project on ECS. A project is a collection of containerized applications (or micro-services) 
+with a project on ECS. A project is a collection of containerized applications (or micro-services)
 that operate together.` + "\n")
 
 	// If there's a local project, we'll use that and just skip the project question.
@@ -74,7 +77,7 @@ that operate together.` + "\n")
 }
 
 // Ask prompts the user for the value of any required fields that are not already provided.
-func (opts *InitAppOpts) Ask() error {
+func (opts *InitOpts) Ask() error {
 	if opts.Project == "" {
 		if err := opts.askProjectName(); err != nil {
 			return err
@@ -94,7 +97,7 @@ func (opts *InitAppOpts) Ask() error {
 }
 
 // Validate returns an error if a command line flag provided value is invalid
-func (opts *InitAppOpts) Validate() error {
+func (opts *InitOpts) Validate() error {
 	if err := validateProjectName(opts.Project); err != nil {
 		return fmt.Errorf("project name %s is invalid: %w", opts.Project, err)
 	}
@@ -109,7 +112,7 @@ func (opts *InitAppOpts) Validate() error {
 }
 
 // Execute creates a project and initializes the workspace.
-func (opts *InitAppOpts) Execute() error {
+func (opts *InitOpts) Execute() error {
 	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
 		color.HighlightUserInput(opts.AppType), color.HighlightUserInput(opts.AppName), color.HighlightUserInput(opts.Project))
 
@@ -125,7 +128,7 @@ func (opts *InitAppOpts) Execute() error {
 	return opts.deploy()
 }
 
-func (opts *InitAppOpts) askProjectName() error {
+func (opts *InitOpts) askProjectName() error {
 	if len(opts.existingProjects) == 0 {
 		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
 		return opts.askNewProjectName()
@@ -144,7 +147,7 @@ func (opts *InitAppOpts) askProjectName() error {
 	return opts.askNewProjectName()
 }
 
-func (opts *InitAppOpts) askSelectExistingProjectName() error {
+func (opts *InitOpts) askSelectExistingProjectName() error {
 	projectName, err := opts.prompter.SelectOne(
 		"Which one do you want to add a new application to?",
 		"Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery.",
@@ -156,7 +159,7 @@ func (opts *InitAppOpts) askSelectExistingProjectName() error {
 	return nil
 }
 
-func (opts *InitAppOpts) askNewProjectName() error {
+func (opts *InitOpts) askNewProjectName() error {
 	projectName, err := opts.prompter.Get(
 		"What would you like to call your project?",
 		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
@@ -168,7 +171,7 @@ func (opts *InitAppOpts) askNewProjectName() error {
 	return nil
 }
 
-func (opts *InitAppOpts) askAppType() error {
+func (opts *InitOpts) askAppType() error {
 	t, err := opts.prompter.SelectOne(
 		"What type of application do you want to make?",
 		"List of infrastructure patterns.",
@@ -181,7 +184,7 @@ func (opts *InitAppOpts) askAppType() error {
 	return nil
 }
 
-func (opts *InitAppOpts) askAppName() error {
+func (opts *InitOpts) askAppName() error {
 	name, err := opts.prompter.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
 		"Collection of AWS services to achieve a business capability. Must be unique within a project.",
@@ -193,7 +196,7 @@ func (opts *InitAppOpts) askAppName() error {
 	return nil
 }
 
-func (opts *InitAppOpts) askShouldDeploy() error {
+func (opts *InitOpts) askShouldDeploy() error {
 	v, err := opts.prompter.Confirm("Would you like to deploy a staging environment?", "A \"test\" environment with your application deployed to it. This will allow you to test your application before placing it in production.")
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
@@ -202,7 +205,7 @@ func (opts *InitAppOpts) askShouldDeploy() error {
 	return nil
 }
 
-func (opts *InitAppOpts) createProject() error {
+func (opts *InitOpts) createProject() error {
 	err := opts.projStore.CreateProject(&archer.Project{
 		Name: opts.Project,
 	})
@@ -215,7 +218,7 @@ func (opts *InitAppOpts) createProject() error {
 	return nil
 }
 
-func (opts *InitAppOpts) createManifest() error {
+func (opts *InitOpts) createManifest() error {
 	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, "") // TODO https://github.com/aws/amazon-ecs-cli-v2/issues/109
 	if err != nil {
 		return fmt.Errorf("failed to generate a manifest %w", err)
@@ -244,7 +247,7 @@ func (opts *InitAppOpts) createManifest() error {
 }
 
 // deploy prompts the user to deploy a test environment if the project doesn't already have one.
-func (opts *InitAppOpts) deploy() error {
+func (opts *InitOpts) deploy() error {
 	if opts.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
 		if err := opts.askShouldDeploy(); err != nil {
@@ -267,21 +270,27 @@ func (opts *InitAppOpts) deploy() error {
 	return opts.deployEnv()
 }
 
-func (opts *InitAppOpts) deployEnv() error {
+func (opts *InitOpts) deployEnv() error {
+	identity, err := opts.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
+
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/56
-	env := &archer.Environment{
-		Project:            opts.Project,
-		Name:               defaultEnvironmentName,
-		PublicLoadBalancer: true, // TODO: configure this value based on user input or Application type needs?
+	deployEnvInput := &archer.DeployEnvironmentInput{
+		Project:                  opts.Project,
+		Name:                     defaultEnvironmentName,
+		PublicLoadBalancer:       true, // TODO: configure this value based on user input or Application type needs?
+		ToolsAccountPrincipalARN: identity.ARN,
 	}
 
 	opts.prog.Start("Preparing deployment...")
-	if err := opts.envDeployer.DeployEnvironment(env); err != nil {
+	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			opts.prog.Stop("")
-			log.Infof("The environment %s already exists under project %s.\n", env.Name, opts.Project)
+			log.Infof("The environment %s already exists under project %s.\n", deployEnvInput.Name, opts.Project)
 			return nil
 		}
 		opts.prog.Stop("Error!")
@@ -289,7 +298,8 @@ func (opts *InitAppOpts) deployEnv() error {
 	}
 	opts.prog.Stop("Done!")
 	opts.prog.Start("Deploying env...")
-	if err := opts.envDeployer.WaitForEnvironmentCreation(env); err != nil {
+	env, err := opts.envDeployer.WaitForEnvironmentCreation(deployEnvInput)
+	if err != nil {
 		opts.prog.Stop("Error!")
 		return err
 	}
@@ -303,7 +313,7 @@ func (opts *InitAppOpts) deployEnv() error {
 
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
-	opts := InitAppOpts{
+	opts := InitOpts{
 		prompter: prompt.New(),
 		prog:     spinner.New(),
 	}
@@ -331,6 +341,9 @@ func BuildInitCmd() *cobra.Command {
 				return err
 			}
 			opts.envDeployer = cloudformation.New(sess)
+
+			opts.identity = identity.New(sess)
+
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {

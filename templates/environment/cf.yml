@@ -35,6 +35,9 @@ Parameters:
     Default: true
     AllowedValues: [ true, false ]
 
+  ToolsAccountPrincipalARN:
+    Type: String
+
 Conditions:
   CreatePublicLoadBalancer:
     Fn::Equals: [ !Ref IncludePublicLoadBalancer, true ]
@@ -205,6 +208,130 @@ Resources:
     Properties:
         RepositoryName: !Join [ '/', [ !Ref ProjectName, !Ref EnvironmentName ] ]
 
+  EnvironmentManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-EnvManagerRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS: !Sub ${ToolsAccountPrincipalARN}
+          Action: sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: CloudwatchLogs
+            Effect: Allow
+            Action: [
+              "logs:GetLogRecord",
+              "logs:GetQueryResults",
+              "logs:StartQuery",
+              "logs:GetLogEvents",
+              "logs:StopQuery",
+              "logs:TestMetricFilter",
+              "logs:FilterLogEvents",
+              "logs:GetLogGroupFields",
+              "logs:GetLogDelivery"
+            ]
+            Resource: "*"
+          - Sid: ECS
+            Effect: Allow
+            Action: [
+              "ecs:ListAttributes",
+              "ecs:ListTasks",
+              "ecs:DescribeServices",
+              "ecs:DescribeTaskSets",
+              "ecs:ListContainerInstances",
+              "ecs:DescribeContainerInstances",
+              "ecs:DescribeTasks",
+              "ecs:DescribeClusters",
+              "ecs:UpdateService",
+              "ecs:PutAttributes",
+              "ecs:StartTelemetrySession",
+              "ecs:StartTask",
+              "ecs:StopTask",
+              "ecs:ListServices",
+              "ecs:ListTaskDefinitionFamilies",
+              "ecs:DescribeTaskDefinition",
+              "ecs:ListTaskDefinitions",
+              "ecs:ListClusters"
+            ]
+            Resource: "*"
+          - Sid: CloudFormation
+            Effect: Allow
+            Action: [
+              "cloudformation:CancelUpdateStack",
+              "cloudformation:CreateChangeSet",
+              "cloudformation:DeleteChangeSet",
+              "cloudformation:DeleteStack",
+              "cloudformation:DescribeChangeSet",
+              "cloudformation:DescribeStackEvents",
+              "cloudformation:DescribeStackResource",
+              "cloudformation:DescribeStackResources",
+              "cloudformation:DescribeStackResourceDrifts",
+              "cloudformation:DetectStackDrift",
+              "cloudformation:DetectStackResourceDrift",
+              "cloudformation:ExecuteChangeSet",
+              "cloudformation:GetTemplate",
+              "cloudformation:GetTemplateSummary",
+              "cloudformation:UpdateTerminationProtection"
+            ]
+            Resource: "*"
+          - Sid: ECR
+            Effect: Allow
+            Action: [
+              "ecr:BatchGetImage",
+              "ecr:CompleteLayerUpload",
+              "ecr:DescribeImages",
+              "ecr:DescribeRepositories",
+              "ecr:GetDownloadUrlForLayer",
+              "ecr:InitiateLayerUpload",
+              "ecr:ListImages",
+              "ecr:ListTagsForResource",
+              "ecr:PutImage",
+              "ecr:UploadLayerPart"
+            ]
+            Resource: "*"
+          - Sid: ResourceGroups
+            Effect: Allow
+            Action: [
+              "resource-groups:GetGroup",
+              "resource-groups:GetGroupQuery",
+              "resource-groups:GetTags",
+              "resource-groups:ListGroupResources",
+              "resource-groups:ListGroups"
+            ]
+            Resource: "*"
+          - Sid: SSM
+            Effect: Allow
+            Action: [
+              "ssm:DeleteParameter",
+              "ssm:DeleteParameters",
+              "ssm:GetParameter",
+              "ssm:GetParameters",
+              "ssm:GetParametersByPath"
+            ]
+            Resource: "*"
+          - Sid: ELBv2
+            Effect: Allow
+            Action: [
+              "elasticloadbalancing:DescribeLoadBalancerAttributes",
+              "elasticloadbalancing:DescribeSSLPolicies",
+              "elasticloadbalancing:DescribeLoadBalancers",
+              "elasticloadbalancing:DescribeTargetGroupAttributes",
+              "elasticloadbalancing:DescribeListeners",
+              "elasticloadbalancing:DescribeTags",
+              "elasticloadbalancing:DescribeTargetHealth",
+              "elasticloadbalancing:DescribeTargetGroups",
+              "elasticloadbalancing:DescribeRules"
+            ]
+            Resource: "*"
+
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -249,3 +376,15 @@ Outputs:
     Description: ECR Repository used by this environment.
     Export:
       Name: !Sub ${AWS::StackName}-ECRArn
+
+  ECRRepositoryName:
+    Value: !Ref ECRRepository
+    Description: Name of ECR Repository used by this environment.
+    Export:
+      Name: !Sub ${AWS::StackName}-ECRName
+
+  EnvironmentManagerRoleARN:
+    Value: !GetAtt EnvironmentManagerRole.Arn
+    Description: The role to be assumed by the ecs-cli to manage environments.
+    Export:
+      Name: !Sub ${AWS::StackName}-EnvironmentManagerRoleARN

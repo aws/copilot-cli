@@ -15,15 +15,13 @@ import (
 	"log"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	awsSsm "github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
 // Parameter name formats for resources in a project. Projects are laid out in SSM
@@ -45,11 +43,15 @@ const (
 	fmtAppParamPath  = "/archer/%s/applications/%s" // path for an application in a project
 )
 
+type identityService interface {
+	Get() (identity.Caller, error)
+}
+
 // SSM store is in charge of fetching and creating Projects, Environment and Pipeline
 // configuration in SSM.
 type SSM struct {
 	systemManager ssmiface.SSMAPI
-	tokenService  stsiface.STSAPI
+	identity      identityService
 	sessionRegion string
 }
 
@@ -62,8 +64,8 @@ func NewStore() (*SSM, error) {
 	}
 
 	return &SSM{
-		systemManager: awsSsm.New(sess),
-		tokenService:  sts.New(sess),
+		systemManager: ssm.New(sess),
+		identity:      identity.New(sess),
 		sessionRegion: *sess.Config.Region,
 	}, nil
 }
@@ -347,13 +349,13 @@ func (s *SSM) listParams(path string) ([]*string, error) {
 // Retrieves the caller's Account ID with a best effort. If it fails to fetch the Account ID,
 // this returns "unknown".
 func (s *SSM) getCallerAccountAndRegion() (string, string) {
-	identity, err := s.tokenService.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	identity, err := s.identity.Get()
 	region := s.sessionRegion
 	if err != nil {
 		log.Printf("Failed to get caller's Account ID %v", err)
 		return "unknown", region
 	}
-	return *identity.Account, region
+	return identity.Account, region
 }
 
 func marshal(e interface{}) (string, error) {

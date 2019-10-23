@@ -14,20 +14,16 @@ build: packr-build compile-local packr-clean
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
 compile-local:
-	@echo "Building archer to ./bin/local/archer" &&\
-	CGO_ENABLED=0 go build -o ./bin/local/archer ./cmd/archer
+	PLATFORM=local DESTINATION=./bin/local/archer ./scripts/build_binary.sh
 
 compile-windows:
-	@echo "Building windows archer to ./bin/local/archer.exe" &&\
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -o ./bin/local/archer.exe ./cmd/archer
+	PLATFORM=Windows CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/archer.exe ./scripts/build_binary.sh
 
 compile-linux:
-	@echo "Building linux archer to ./bin/local/archer-amd64" &&\
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./bin/local/archer-amd64 ./cmd/archer
+	PLATFORM=Linux CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/archer-amd64 ./scripts/build_binary.sh
 
 compile-darwin:
-	@echo "Building darwin archer to ./bin/local/archer" &&\
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o ./bin/local/archer ./cmd/archer
+	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/archer ./scripts/build_binary.sh
 
 packr-build: tools
 	@echo "Packaging static files" &&\
@@ -99,3 +95,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go

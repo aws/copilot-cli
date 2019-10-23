@@ -28,3 +28,18 @@ type ErrNotExecutableChangeSet struct {
 func (err *ErrNotExecutableChangeSet) Error() string {
 	return fmt.Sprintf("cannot execute change set %s because status is %s with reason %s", err.set, err.set.executionStatus, err.set.statusReason)
 }
+
+// ErrTemplateNotFound occurs when we can't find a predefined template.
+type ErrTemplateNotFound struct {
+	templateLocation string
+	parentErr        error
+}
+
+func (err *ErrTemplateNotFound) Error() string {
+	return fmt.Sprintf("failed to find the cloudformation template at %s", err.templateLocation)
+}
+
+// Unwrap returns the original error.
+func (err *ErrTemplateNotFound) Unwrap() error {
+	return err.parentErr
+}

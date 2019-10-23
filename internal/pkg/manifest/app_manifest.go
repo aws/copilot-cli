@@ -43,14 +43,14 @@ func CreateApp(appName, appType, dockerfile string) (archer.Manifest, error) {
 	case LoadBalancedWebApplication:
 		return NewLoadBalancedFargateManifest(appName, dockerfile), nil
 	default:
-		return nil, &ErrInvalidManifestType{Type: appType}
+		return nil, &ErrInvalidAppManifestType{Type: appType}
 	}
 }
 
-// Unmarshal deserializes the YAML input stream into a manifest object.
+// UnmarshalApp deserializes the YAML input stream into a manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the application type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func Unmarshal(in []byte) (archer.Manifest, error) {
+func UnmarshalApp(in []byte) (archer.Manifest, error) {
 	am := AppManifest{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, err
@@ -64,6 +64,6 @@ func Unmarshal(in []byte) (archer.Manifest, error) {
 		}
 		return &m, nil
 	default:
-		return nil, &ErrInvalidManifestType{Type: am.Type}
+		return nil, &ErrInvalidAppManifestType{Type: am.Type}
 	}
 }

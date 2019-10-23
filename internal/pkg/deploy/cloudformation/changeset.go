@@ -6,7 +6,6 @@ package cloudformation
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -113,7 +112,10 @@ func createChangeSetInput(stackName, templateBody string, options ...createChang
 	name := fmt.Sprintf("%s-%s", "ecscli", id.String())
 
 	in := &cloudformation.CreateChangeSetInput{
-		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
+		Capabilities: aws.StringSlice([]string{
+			cloudformation.CapabilityCapabilityIam,
+			cloudformation.CapabilityCapabilityNamedIam,
+		}),
 		ChangeSetName: aws.String(name),
 		StackName:     aws.String(stackName),
 		TemplateBody:  aws.String(templateBody),
@@ -136,17 +138,8 @@ func withCreateChangeSetType() createChangeSetOpt {
 	}
 }
 
-func withEnvTags(env *archer.Environment) createChangeSetOpt {
+func withTags(tags []*cloudformation.Tag) createChangeSetOpt {
 	return func(in *cloudformation.CreateChangeSetInput) {
-		in.Tags = []*cloudformation.Tag{
-                        {
-			         Key:   aws.String("ecs-project"),
-			         Value: aws.String(env.Project),
-		        },
-		       {
-			         Key:   aws.String("ecs-env"),
-			         Value: aws.String(env.Name),
-		        },
-	       }
+		in.Tags = tags
 	}
 }

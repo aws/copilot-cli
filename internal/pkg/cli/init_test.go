@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -154,7 +155,7 @@ func TestInit_Ask(t *testing.T) {
 			mockProjectStore = mocks.NewMockProjectStore(ctrl)
 			mockPrompter = climocks.NewMockprompter(ctrl)
 
-			app := &InitAppOpts{
+			app := &InitOpts{
 				Project:          tc.inputProject,
 				AppName:          tc.inputApp,
 				AppType:          tc.inputType,
@@ -181,13 +182,13 @@ func TestInit_Prepare(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		inputOpts              InitAppOpts
+		inputOpts              InitOpts
 		mocking                func()
 		wantedExistingProjects []string
 		wantedProject          string
 	}{
 		"with no project flag, empty workspace and existing projects": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedExistingProjects: []string{"project1", "project2"},
@@ -207,7 +208,7 @@ func TestInit_Prepare(t *testing.T) {
 			},
 		},
 		"with no project flag, empty workspace and error finding projects": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedExistingProjects: []string{},
@@ -225,7 +226,7 @@ func TestInit_Prepare(t *testing.T) {
 			},
 		},
 		"with no project flag and existing workspace": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 			},
 			wantedProject: "MyProject",
@@ -248,7 +249,7 @@ func TestInit_Prepare(t *testing.T) {
 		},
 
 		"with project flag": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 				Project: "MyProject",
 			},
@@ -287,24 +288,24 @@ func TestInit_Prepare(t *testing.T) {
 
 func TestInit_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputOpts       InitAppOpts
+		inputOpts       InitOpts
 		wantedErrPrefix string
 	}{
 		"with valid project and app": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "frontend",
 				Project: "coolproject",
 			},
 		},
 		"with invalid project name": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "coolapp",
 				Project: "!!!!",
 			},
 			wantedErrPrefix: "project name !!!! is invalid",
 		},
 		"with invalid app name": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName: "!!!",
 				Project: "coolproject",
 			},
@@ -331,16 +332,17 @@ func TestInit_Execute(t *testing.T) {
 	var mockDeployer *mocks.MockEnvironmentDeployer
 	var mockProgress *climocks.Mockprogress
 	var mockPrompter *climocks.Mockprompter
+	var mockIdentityService *climocks.MockidentityService
 
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
-		inputOpts  InitAppOpts
+		inputOpts  InitOpts
 		setupMocks func()
 		want       error
 	}{
 		"should return error if project error is not ProjectAlreadyExist": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project1",
 				AppType:               "Load Balanced Web App",
@@ -359,7 +361,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should continue if project already exists": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project1",
 				AppType:               "Load Balanced Web App",
@@ -386,7 +388,7 @@ func TestInit_Execute(t *testing.T) {
 			want: nil,
 		},
 		"prompt for should deploy": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				Project:               "project3",
 				AppName:               "frontend",
 				AppType:               "Load Balanced Web App",
@@ -417,7 +419,7 @@ func TestInit_Execute(t *testing.T) {
 			want: nil,
 		},
 		"should echo error returned from call to workspace.Create": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppType:               "Load Balanced Web App",
 				Project:               "project3",
 				AppName:               "frontend",
@@ -444,7 +446,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envDeployer.DeployEnvironment": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -469,9 +471,10 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -484,7 +487,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envDeployer.Wait": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -509,9 +512,10 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -521,12 +525,12 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(mockError).
+						Return(nil, mockError).
 						Times(1),
 					mockProgress.EXPECT().Stop(gomock.Any()),
 				)
@@ -534,7 +538,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should echo error returned from call to envStore.Create": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -559,9 +563,10 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -571,12 +576,17 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(nil).
+						Return(&archer.Environment{
+							Project:   "project3",
+							Name:      defaultEnvironmentName,
+							AccountID: "2345",
+							Region:    "us-west-2",
+						}, nil).
 						Times(1),
 					mockEnvStore.
 						EXPECT().
@@ -589,7 +599,7 @@ func TestInit_Execute(t *testing.T) {
 			want: mockError,
 		},
 		"should create a new test environment": {
-			inputOpts: InitAppOpts{
+			inputOpts: InitOpts{
 				AppName:               "frontend",
 				Project:               "project3",
 				AppType:               "Load Balanced Web App",
@@ -614,9 +624,10 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						DeployEnvironment(gomock.Eq(&archer.Environment{
+						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
@@ -626,12 +637,17 @@ func TestInit_Execute(t *testing.T) {
 					mockProgress.EXPECT().Stop(gomock.Any()),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
-						WaitForEnvironmentCreation(gomock.Eq(&archer.Environment{
+						WaitForEnvironmentCreation(gomock.Eq(&archer.DeployEnvironmentInput{
 							Project:            "project3",
 							Name:               defaultEnvironmentName,
 							PublicLoadBalancer: true,
 						})).
-						Return(nil).
+						Return(&archer.Environment{
+							Project:   "project3",
+							Name:      defaultEnvironmentName,
+							AccountID: "1234",
+							Region:    "us-west-2",
+						}, nil).
 						Times(1),
 					mockEnvStore.
 						EXPECT().
@@ -655,6 +671,7 @@ func TestInit_Execute(t *testing.T) {
 			mockProgress = climocks.NewMockprogress(ctrl)
 			mockDeployer = mocks.NewMockEnvironmentDeployer(ctrl)
 			mockPrompter = climocks.NewMockprompter(ctrl)
+			mockIdentityService = climocks.NewMockidentityService(ctrl)
 
 			tc.inputOpts.projStore = mockProjectStore
 			tc.inputOpts.envStore = mockEnvStore
@@ -662,6 +679,7 @@ func TestInit_Execute(t *testing.T) {
 			tc.inputOpts.envDeployer = mockDeployer
 			tc.inputOpts.ws = mockWorkspace
 			tc.inputOpts.prompter = mockPrompter
+			tc.inputOpts.identity = mockIdentityService
 			tc.setupMocks()
 
 			got := tc.inputOpts.Execute()

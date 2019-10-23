@@ -7,7 +7,6 @@ package cloudformation
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -21,16 +20,21 @@ import (
 )
 
 const (
-	environmentTemplate         = "environment/cf.yml"
-	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
-	projectNameParamKey         = "ProjectName"
-	environmentNameParamKey     = "EnvironmentName"
+	projectTagKey = "ecs-project"
+	envTagKey     = "ecs-environment"
 )
 
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	client cloudformationiface.CloudFormationAPI
 	box    packd.Box
+}
+
+type stackConfiguration interface {
+	StackName() string
+	Template() (string, error)
+	Parameters() []*cloudformation.Parameter
+	Tags() []*cloudformation.Tag
 }
 
 // New returns a configured CloudFormation client.
@@ -47,26 +51,17 @@ func New(sess *session.Session) CloudFormation {
 // If the stack already exists, returns a ErrStackAlreadyExists.
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
-func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
-	template, err := cf.box.FindString(environmentTemplate)
+func (cf CloudFormation) DeployEnvironment(env *archer.DeployEnvironmentInput) error {
+	return cf.deploy(newEnvStackConfig(env, cf.box))
+}
+
+func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
+	template, err := stackConfig.Template()
 	if err != nil {
-		return fmt.Errorf("failed to find template %s for the environment: %w", environmentTemplate, err)
+		return fmt.Errorf("template creation: %w", err)
 	}
 
-	in, err := createChangeSetInput(envStackName(env), template, withCreateChangeSetType(), withEnvTags(env), withParameters([]*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(includeLoadBalancerParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(env.PublicLoadBalancer)),
-		},
-		{
-			ParameterKey:   aws.String(projectNameParamKey),
-			ParameterValue: aws.String(env.Project),
-		},
-		{
-			ParameterKey:   aws.String(environmentNameParamKey),
-			ParameterValue: aws.String(env.Name),
-		},
-	}))
+	in, err := createChangeSetInput(stackConfig.StackName(), template, withCreateChangeSetType(), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
 	if err != nil {
 		return err
 	}
@@ -76,7 +71,7 @@ func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 			// Explicitly return a StackAlreadyExists error for the caller to decide if they want to ignore the
 			// operation or fail the program.
 			return &ErrStackAlreadyExists{
-				stackName: envStackName(env),
+				stackName: stackConfig.StackName(),
 				parentErr: err,
 			}
 		}
@@ -86,14 +81,36 @@ func (cf CloudFormation) DeployEnvironment(env *archer.Environment) error {
 }
 
 // WaitForEnvironmentCreation will block until the environment's CloudFormation stack has completed or errored.
-func (cf CloudFormation) WaitForEnvironmentCreation(env *archer.Environment) error {
-	name := envStackName(env)
-	if err := cf.client.WaitUntilStackCreateComplete(&cloudformation.DescribeStacksInput{
-		StackName: &name,
-	}); err != nil {
-		return fmt.Errorf("failed to create stack %s: %w", name, err)
+// Once the deployment is complete, it read the stack output and create an environment with the resources from
+// the stack like ECR Repo.
+func (cf CloudFormation) WaitForEnvironmentCreation(env *archer.DeployEnvironmentInput) (*archer.Environment, error) {
+	cfEnv := newEnvStackConfig(env, cf.box)
+	deployedStack, err := cf.waitForStackCreation(cfEnv)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	return cfEnv.ToEnv(deployedStack)
+}
+
+func (cf CloudFormation) waitForStackCreation(stackConfig stackConfiguration) (*cloudformation.Stack, error) {
+	describeStackInput := &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackConfig.StackName()),
+	}
+
+	if err := cf.client.WaitUntilStackCreateComplete(describeStackInput); err != nil {
+		return nil, fmt.Errorf("failed to create stack %s: %w", stackConfig.StackName(), err)
+	}
+
+	describeStackOutput, err := cf.client.DescribeStacks(describeStackInput)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(describeStackOutput.Stacks) == 0 {
+		return nil, fmt.Errorf("failed to find a stack named %s after it was created", stackConfig.StackName())
+	}
+
+	return describeStackOutput.Stacks[0], nil
 }
 
 func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput) error {
@@ -144,8 +161,4 @@ func stackExists(err error) bool {
 		currentErr = errors.Unwrap(currentErr)
 	}
 	return false
-}
-
-func envStackName(env *archer.Environment) string {
-	return fmt.Sprintf("%s-%s", env.Project, env.Name)
 }

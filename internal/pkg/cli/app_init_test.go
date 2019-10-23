@@ -99,7 +99,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			opts := &AppInitOpts{
+			opts := &InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
@@ -164,7 +164,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := AppInitOpts{
+			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
@@ -214,7 +214,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWriter := archerMocks.NewMockManifestIO(ctrl)
-			opts := AppInitOpts{
+			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
