@@ -98,10 +98,10 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 	if len(stages) == 0 {
 		defaultStages = []PipelineStage{
 			{
-				Name: "Test",
+				Name: "test",
 			},
 			{
-				Name: "Prod",
+				Name: "prod",
 			},
 		}
 	}

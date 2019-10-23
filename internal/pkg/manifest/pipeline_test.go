@@ -56,10 +56,10 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			expectedStages: []PipelineStage{
 				{
-					Name: "Test",
+					Name: "test",
 				},
 				{
-					Name: "Prod",
+					Name: "prod",
 				},
 			},
 		},
@@ -74,18 +74,18 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			inputStages: []PipelineStage{
 				{
-					Name: "Chicken",
+					Name: "chicken",
 				},
 				{
-					Name: "Wings",
+					Name: "wings",
 				},
 			},
 			expectedStages: []PipelineStage{
 				{
-					Name: "Chicken",
+					Name: "chicken",
 				},
 				{
-					Name: "Wings",
+					Name: "wings",
 				},
 			},
 		},
@@ -127,10 +127,10 @@ source:
 stages:
     - 
       # The name of the environment to deploy to.
-      env: Test
+      env: test
     - 
       # The name of the environment to deploy to.
-      env: Prod
+      env: prod
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GithubProperties{
@@ -165,9 +165,9 @@ source:
 
 stages:
     - 
-      env: Test
+      env: test
     - 
-      env: Prod
+      env: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
 				PipelineSchemaMajorVersion(-1),
@@ -189,9 +189,9 @@ source:
 
 stages:
     - 
-      env: Chicken
+      env: chicken
     - 
-      env: Wings
+      env: wings
 `,
 			expectedManifest: &PipelineManifest{
 				Version: Ver1,
@@ -204,10 +204,10 @@ stages:
 				},
 				Environments: []PipelineStage{
 					{
-						Name: "Chicken",
+						Name: "chicken",
 					},
 					{
-						Name: "Wings",
+						Name: "wings",
 					},
 				},
 			},
