@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -59,7 +60,7 @@ func TestValidateProjectName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := validateProjectName(tc.input)
 
-			require.Equal(t, tc.want, got)
+			require.True(t, errors.Is(got, tc.want))
 		})
 	}
 
@@ -67,7 +68,7 @@ func TestValidateProjectName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := validateProjectName(tc.input)
 
-			require.Equal(t, tc.want, got)
+			require.True(t, errors.Is(got, tc.want))
 		})
 	}
 }
@@ -79,7 +80,7 @@ func TestValidateApplicationName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := validateApplicationName(tc.input)
 
-			require.Equal(t, tc.want, got)
+			require.True(t, errors.Is(got, tc.want))
 		})
 	}
 }
@@ -91,7 +92,7 @@ func TestValidateEnvironmentName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := validateApplicationName(tc.input)
 
-			require.Equal(t, tc.want, got)
+			require.True(t, errors.Is(got, tc.want))
 		})
 	}
 }

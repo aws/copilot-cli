@@ -46,16 +46,25 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (opts *InitProjectOpts) Ask() error {
-	if opts.ProjectName != "" {
-		// User passed in a name as an argument.
+	// If there's a local project, we'll use that over anything else.
+	summary, err := opts.ws.Summary()
+	if err == nil {
+		msg := fmt.Sprintf(
+			"Looks like you are using a workspace that's registered to project %s. We'll use that as your project.",
+			color.HighlightUserInput(summary.ProjectName))
+		if opts.ProjectName != "" && opts.ProjectName != summary.ProjectName {
+			msg = fmt.Sprintf(
+				"Looks like you are using a workspace that's registered to project %s. We'll use that as your project instead of %s.",
+				color.HighlightUserInput(summary.ProjectName),
+				color.HighlightUserInput(opts.ProjectName))
+		}
+		log.Infoln(msg)
+		opts.ProjectName = summary.ProjectName
 		return nil
 	}
 
-	// If there's a local project, we'll use that and just skip the project question.
-	// Otherwise, we'll load a list of existing projects that the customer can select from.
-	if summary, err := opts.ws.Summary(); err == nil {
-		log.Infof("Looks like you are using a workspace that's registered to project %s. We'll use that as your project.\n", color.HighlightUserInput(summary.ProjectName))
-		opts.ProjectName = summary.ProjectName
+	if opts.ProjectName != "" {
+		// Flag is set by user.
 		return nil
 	}
 
@@ -148,6 +157,9 @@ A project is a collection of containerized applications (or micro-services) that
 			return err
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				opts.ProjectName = args[0]
+			}
 			if err := opts.Ask(); err != nil {
 				return err
 			}
