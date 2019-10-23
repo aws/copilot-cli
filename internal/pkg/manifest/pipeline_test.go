@@ -19,6 +19,7 @@ func TestNewProvider(t *testing.T) {
 		"successfully create Github provider": {
 			providerConfig: &GithubProperties{
 				Repository: "aws/amazon-ecs-cli-v2",
+				Branch:     "master",
 			},
 		},
 	}
@@ -48,6 +49,7 @@ func TestCreatePipeline(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GithubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
+					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -65,6 +67,7 @@ func TestCreatePipeline(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GithubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
+					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -116,6 +119,7 @@ source:
   # Additional properties that further specifies the exact location
   # the artifacts should be sourced from.
   properties:
+    branch: master
     repository: aws/amazon-ecs-cli-v2
 
 # The deployment section defines the order the pipeline will deploy
@@ -131,6 +135,7 @@ stages:
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GithubProperties{
 		Repository: "aws/amazon-ecs-cli-v2",
+		Branch:     "master",
 	})
 	require.NoError(t, err)
 
@@ -156,6 +161,7 @@ source:
   provider: github
   properties:
     repository: aws/somethingCool
+    branch: master
 
 stages:
     - 
@@ -179,6 +185,7 @@ source:
   provider: github
   properties:
     repository: aws/somethingCool
+    branch: master
 
 stages:
     - 
@@ -190,7 +197,10 @@ stages:
 				Version: Ver1,
 				Source: &Source{
 					ProviderName: "github",
-					Properties:   map[string]interface{}{"repository": "aws/somethingCool"},
+					Properties: map[string]interface{}{
+						"repository": "aws/somethingCool",
+						"branch":     "master",
+					},
 				},
 				Environments: []PipelineStage{
 					{
