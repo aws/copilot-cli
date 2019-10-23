@@ -25,7 +25,8 @@ const (
 	// EnvParamProjectNameKey is the CF Param Key Name for providing the project name
 	EnvParamProjectNameKey = "ProjectName"
 	// EnvParamEnvNameKey is the CF Param Key Name for providing the environment name
-	EnvParamEnvNameKey = "EnvironmentName"
+	EnvParamEnvNameKey            = "EnvironmentName"
+	envParamToolsAccountPrincipal = "ToolsAccountPrincipalARN"
 	// EnvOutputECRKey is the CF Output Key Name for the ECR Repo Name
 	EnvOutputECRKey = "ECRRepositoryName"
 
@@ -66,6 +67,10 @@ func (e *envStackConfig) Parameters() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(EnvParamEnvNameKey),
 			ParameterValue: aws.String(e.Name),
+		},
+		{
+			ParameterKey:   aws.String(envParamToolsAccountPrincipal),
+			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
 		},
 	}
 }

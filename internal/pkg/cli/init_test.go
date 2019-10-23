@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -331,6 +332,7 @@ func TestInit_Execute(t *testing.T) {
 	var mockDeployer *mocks.MockEnvironmentDeployer
 	var mockProgress *climocks.Mockprogress
 	var mockPrompter *climocks.Mockprompter
+	var mockIdentityService *climocks.MockidentityService
 
 	mockError := fmt.Errorf("error")
 
@@ -469,6 +471,7 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
@@ -509,6 +512,7 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
@@ -559,6 +563,7 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
@@ -619,6 +624,7 @@ func TestInit_Execute(t *testing.T) {
 						WriteManifest(gomock.Any(), "frontend").
 						Return("/frontend", nil).
 						Times(1),
+					mockIdentityService.EXPECT().Get().Times(1).Return(identity.Caller{}, nil),
 					mockProgress.EXPECT().Start(gomock.Any()),
 					mockDeployer.EXPECT().
 						DeployEnvironment(gomock.Eq(&archer.DeployEnvironmentInput{
@@ -665,6 +671,7 @@ func TestInit_Execute(t *testing.T) {
 			mockProgress = climocks.NewMockprogress(ctrl)
 			mockDeployer = mocks.NewMockEnvironmentDeployer(ctrl)
 			mockPrompter = climocks.NewMockprompter(ctrl)
+			mockIdentityService = climocks.NewMockidentityService(ctrl)
 
 			tc.inputOpts.projStore = mockProjectStore
 			tc.inputOpts.envStore = mockEnvStore
@@ -672,6 +679,7 @@ func TestInit_Execute(t *testing.T) {
 			tc.inputOpts.envDeployer = mockDeployer
 			tc.inputOpts.ws = mockWorkspace
 			tc.inputOpts.prompter = mockPrompter
+			tc.inputOpts.identity = mockIdentityService
 			tc.setupMocks()
 
 			got := tc.inputOpts.Execute()

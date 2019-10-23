@@ -26,8 +26,10 @@ import (
 )
 
 const (
+	// ManifestDirectoryName is the name of the directory where application manifests will be stored.
+	ManifestDirectoryName = "ecs-project"
+
 	workspaceSummaryFileName  = ".ecs-workspace"
-	manifestDirectoryName     = "ecs-project"
 	maximumParentDirsToSearch = 5
 	manifestFileSuffix        = "-app.yml"
 )
@@ -138,7 +140,7 @@ func (ws *Service) createManifestDirectory() error {
 	if existingWorkspace != "" {
 		return nil
 	}
-	return ws.fsUtils.Mkdir(manifestDirectoryName, 0755)
+	return ws.fsUtils.Mkdir(ManifestDirectoryName, 0755)
 }
 
 func (ws *Service) manifestDirectoryPath() (string, error) {
@@ -146,7 +148,7 @@ func (ws *Service) manifestDirectoryPath() (string, error) {
 		return ws.manifestDir, nil
 	}
 	// Are we in the manifest directory?
-	inEcsDir := filepath.Base(ws.workingDir) == manifestDirectoryName
+	inEcsDir := filepath.Base(ws.workingDir) == ManifestDirectoryName
 	if inEcsDir {
 		ws.manifestDir = ws.workingDir
 		return ws.manifestDir, nil
@@ -154,7 +156,7 @@ func (ws *Service) manifestDirectoryPath() (string, error) {
 
 	searchingDir := ws.workingDir
 	for try := 0; try < maximumParentDirsToSearch; try++ {
-		currentDirectoryPath := filepath.Join(searchingDir, manifestDirectoryName)
+		currentDirectoryPath := filepath.Join(searchingDir, ManifestDirectoryName)
 		inCurrentDirPath, err := ws.fsUtils.DirExists(currentDirectoryPath)
 		if err != nil {
 			return "", err
@@ -167,7 +169,7 @@ func (ws *Service) manifestDirectoryPath() (string, error) {
 	}
 	return "", &ErrWorkspaceNotFound{
 		CurrentDirectory:      ws.workingDir,
-		ManifestDirectoryName: manifestDirectoryName,
+		ManifestDirectoryName: ManifestDirectoryName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
 }
