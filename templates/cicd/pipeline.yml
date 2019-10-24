@@ -17,5 +17,5 @@ source:
 stages:{{range .Environments}}
     - 
       # The name of the environment to deploy to.
-      env: {{.Name}}{{end}}
+      name: {{.Name}}{{end}}
 {{end}}

@@ -43,8 +43,8 @@ func TestCreatePipeline(t *testing.T) {
 		beforeEach     func() error
 		provider       Provider
 		expectedErr    error
-		inputStages    []archer.Environment
-		expectedStages []archer.Environment
+		inputStages    []PipelineStage
+		expectedStages []PipelineStage
 	}{
 		"happy case with default stages": {
 			provider: func() Provider {
@@ -55,12 +55,16 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			expectedStages: []archer.Environment{
+			expectedStages: []PipelineStage{
 				{
-					Name: "test",
+					Environment: &archer.Environment{
+						Name: "test",
+					},
 				},
 				{
-					Name: "prod",
+					Environment: &archer.Environment{
+						Name: "prod",
+					},
 				},
 			},
 		},
@@ -73,20 +77,28 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []archer.Environment{
+			inputStages: []PipelineStage{
 				{
-					Name: "chicken",
+					Environment: &archer.Environment{
+						Name: "chicken",
+					},
 				},
 				{
-					Name: "wings",
+					Environment: &archer.Environment{
+						Name: "wings",
+					},
 				},
 			},
-			expectedStages: []archer.Environment{
+			expectedStages: []PipelineStage{
 				{
-					Name: "chicken",
+					Environment: &archer.Environment{
+						Name: "chicken",
+					},
 				},
 				{
-					Name: "wings",
+					Environment: &archer.Environment{
+						Name: "wings",
+					},
 				},
 			},
 		},
@@ -128,10 +140,10 @@ source:
 stages:
     - 
       # The name of the environment to deploy to.
-      env: test
+      name: test
     - 
       # The name of the environment to deploy to.
-      env: prod
+      name: prod
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GithubProperties{
@@ -166,9 +178,9 @@ source:
 
 stages:
     - 
-      env: test
+      name: test
     - 
-      env: prod
+      name: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
 				PipelineSchemaMajorVersion(-1),
@@ -190,9 +202,9 @@ source:
 
 stages:
     - 
-      env: chicken
+      name: chicken
     - 
-      env: wings
+      name: wings
 `,
 			expectedManifest: &PipelineManifest{
 				Version: Ver1,
@@ -203,12 +215,16 @@ stages:
 						"branch":     "master",
 					},
 				},
-				Environments: []archer.Environment{
+				Environments: []PipelineStage{
 					{
-						Name: "chicken",
+						Environment: &archer.Environment{
+							Name: "chicken",
+						},
 					},
 					{
-						Name: "wings",
+						Environment: &archer.Environment{
+							Name: "wings",
+						},
 					},
 				},
 			},

@@ -8,12 +8,12 @@ package archer
 // the location of the Environment (account and region), the name of the environment, as well as the project
 // the environment belongs to.
 type Environment struct {
-	Project     string `json:"project"`         // Name of the project this environment belongs to.
-	Name        string `json:"name" yaml:"env"` // Name of the environment, must be unique within a project.
-	Region      string `json:"region"`          // Name of the region this environment is stored in.
-	AccountID   string `json:"accountID"`       // Account ID of the account this environment is stored in.
-	Prod        bool   `json:"prod"`            // Whether or not this environment is a production environment.
-	RegistryURL string `json:"registryURL"`     // URL For ECR Registry for this environment.
+	Project     string `json:"project" yaml:"-"`     // Name of the project this environment belongs to.
+	Name        string `json:"name" yaml:"name"`     // Name of the environment, must be unique within a project.
+	Region      string `json:"region" yaml:"-"`      // Name of the region this environment is stored in.
+	AccountID   string `json:"accountID" yaml:"-"`   // Account ID of the account this environment is stored in.
+	Prod        bool   `json:"prod" yaml:"-"`        // Whether or not this environment is a production environment.
+	RegistryURL string `json:"registryURL" yaml:"-"` // URL For ECR Registry for this environment.
 }
 
 // DeployEnvironmentInput represents the fields required to setup and deploy an environment
