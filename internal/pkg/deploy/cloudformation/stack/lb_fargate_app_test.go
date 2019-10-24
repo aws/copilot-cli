@@ -115,7 +115,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
   ProjectName: phonetool
   EnvName: test
   AppName: frontend
-  ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend:manual-bf3678c
+  ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c
   ContainerPort: 80
   RulePriority: 1
   RulePath: '*'
@@ -181,7 +181,7 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(lbFargateParamContainerImageKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend:manual-bf3678c"),
+			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
 			ParameterKey:   aws.String(lbFargateParamContainerPortKey),
@@ -262,7 +262,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "ProjectName" : "phonetool",
     "EnvName": "test",
     "AppName": "frontend",
-    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend:manual-bf3678c",
+    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
     "RulePriority": "1",
     "RulePath": "*",

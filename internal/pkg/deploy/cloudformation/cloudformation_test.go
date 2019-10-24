@@ -44,6 +44,8 @@ type mockCloudFormation struct {
 	mockCreateStackInstances             func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
 	mockDescribeStackSetOperation        func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
 	mockDescribeStackEvents              func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
+	mockCreateStack                      func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
+	mockWaitUntilStackUpdateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -96,6 +98,14 @@ func (cf mockCloudFormation) DescribeStackSetOperation(in *cloudformation.Descri
 
 func (cf mockCloudFormation) DescribeStackEvents(in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
 	return cf.mockDescribeStackEvents(cf.t, in)
+}
+
+func (cf mockCloudFormation) CreateStack(in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
+	return cf.mockCreateStack(cf.t, in)
+}
+
+func (cf mockCloudFormation) WaitUntilStackUpdateComplete(in *cloudformation.DescribeStacksInput) error {
+	return cf.mockWaitUntilStackUpdateComplete(cf.t, in)
 }
 
 type mockStackConfiguration struct {

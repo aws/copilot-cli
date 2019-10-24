@@ -100,6 +100,11 @@ func (m *LBFargateManifest) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// DockerfilePath returns the image build path.
+func (m LBFargateManifest) DockerfilePath() string {
+	return m.Image.Build
+}
+
 // EnvConf returns the application configuration with environment overrides.
 // If the environment passed in does not have any overrides then we return the default values.
 func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
