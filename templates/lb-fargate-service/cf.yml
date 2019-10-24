@@ -1,168 +1,171 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-# TODO: handle conditional Load Balancer in environment
-# TODO: Parameterize TaskDefinition/Service constructs
-
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation template that represents a load balanced web application on Amazon ECS.
 Parameters:
-  EnvironmentName:
-    Description: The environment stack to deploy the application stack into.
+  ProjectName:
     Type: String
-
-  Image:
-    Description: The Docker image to run.
+    Default: {{.ProjectName}}
+  EnvName:
     Type: String
-
+    Default: {{.EnvName}}
+  AppName:
+    Type: String
+    Default: {{.AppName}}
+  ContainerImage:
+    Type: String
+    Default: {{.Image.Name}}
+  ContainerPort:
+    Type: Number
+    Default: {{.Image.Port}}
+  RulePath:
+    Type: String
+    Default: {{.Path}}
+  RulePriority:
+    Type: Number
+    Default: {{.PathPriority}} # This number must be unique between rules.
+  TaskCPU:
+    Type: String
+    Default: {{.CPU}}
+  TaskMemory:
+    Type: String
+    Default: {{.Memory}}
   TaskCount:
     Type: Number
-    Default: 2
-
+    Default: {{.Count}}
 Resources:
-  SecurityGroupEgress:
-    Type: AWS::EC2::SecurityGroupEgress
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      GroupId:
-        Fn::ImportValue: !Sub ${EnvironmentName}-PublicLoadBalancerSecurityGroupId
-      IpProtocol: tcp
-      Description: Load balancer to target
-      DestinationSecurityGroupId: !GetAtt SecurityGroup.GroupId
-      FromPort: 80
-      ToPort: 80
-
-  Listener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    Properties:
-      DefaultActions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      LoadBalancerArn:
-        Fn::ImportValue: !Sub ${EnvironmentName}-PublicLoadBalancerArn
-      Port: 80
-      Protocol: HTTP
-
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      Port: 80
-      Protocol: HTTP
-      TargetType: ip
-      VpcId:
-        Fn::ImportValue: !Sub ${EnvironmentName}-VpcId
-
-  TaskRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-        Version: 2012-10-17
-
-  TaskDefinition:
+      LogGroupName: !Join ['', [/ecs/, !Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskDefinition:
     Type: AWS::ECS::TaskDefinition
+    DependsOn: {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup
     Properties:
-      ContainerDefinitions:
-      # TODO: support sidecar images
-        - Essential: true
-          # TODO: support images from different repositories
-          Image: !Sub ${Image}
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: Service
-              awslogs-region: !Ref AWS::Region
-          Name: web
-          PortMappings:
-            - ContainerPort: 80
-              Protocol: tcp
-      Cpu: 256
-      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
-      Memory: 512
+      Family: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      TaskRoleArn: !GetAtt TaskRole.Arn
-
-  LogGroup:
-    Type: AWS::Logs::LogGroup
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
-
-  ExecutionRole:
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ExecutionRole
+      TaskRoleArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskRole
+      ContainerDefinitions:
+        - Name: !Ref AppName
+          Image: !Ref ContainerImage
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort {{if .Variables}}
+          Environment:{{range $name, $value := .Variables}}
+          - Name: {{$name}}
+            Value: {{$value}}{{end}}{{end}}{{if .Secrets}}
+          Secret:{{range $name, $valueFrom := .Screts}}
+          - Name: {{$name}}
+            ValueFrom: {{$valueFrom}}{{end}}{{end}}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup
+              awslogs-stream-prefix: ecs
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
         Statement:
-          - Action: sts:AssumeRole
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service: ecs-tasks.amazonaws.com
-        Version: 2012-10-17
-
-  LogWritingPolicy:
-    Type: AWS::IAM::Policy
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskRole:
+    Type: AWS::IAM::Role
     Properties:
-      PolicyDocument:
+      AssumeRolePolicyDocument:
         Statement:
-          - Action:
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Effect: Allow
-            Resource: !GetAtt LogGroup.Arn
-        Version: 2012-10-17
-      PolicyName: LogWritingPolicy
-      Roles: [ !Ref ExecutionRole ]
-
-  Service:
-    Type: AWS::ECS::Service
-    Properties:
-      TaskDefinition: !Ref TaskDefinition
-      Cluster:
-        Fn::ImportValue: !Sub ${EnvironmentName}-ClusterId
-      DeploymentConfiguration:
-        MaximumPercent: 200
-        MinimumHealthyPercent: 50
-      DesiredCount: !Sub ${TaskCount}
-      HealthCheckGracePeriodSeconds: 60
-      LaunchType: FARGATE
-      LoadBalancers:
-        - ContainerName: web
-          ContainerPort: 80
-          TargetGroupArn: !Ref TargetGroup
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
-          SecurityGroups: [ !GetAtt SecurityGroup.GroupId ]
-          # TODO: find better way to reference subnets
-          Subnets:
-            Fn::Split:
-              - ','
-              - Fn::ImportValue: !Sub ${EnvironmentName}-PrivateSubnets
-    DependsOn:
-      - TargetGroup
-      - Listener
-
-  SecurityGroup:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/PowerUserAccess'
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub ${AWS::StackName}-${EnvironmentName}-SecurityGroup
-      SecurityGroupEgress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow all outbound traffic by default
-          IpProtocol: -1
+      GroupDescription: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName, ContainerSecurityGroup]]
       VpcId:
-        Fn::ImportValue: !Sub ${EnvironmentName}-VpcId
-
-  SecurityGroupIngress:
-    Type: AWS::EC2::SecurityGroupIngress
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-VpcId"
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          SourceSecurityGroupId:
+            Fn::ImportValue:
+              !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerSecurityGroupId"
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}Service:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ListenerRule
     Properties:
-      IpProtocol: tcp
-      Description: Load balancer to target
-      FromPort: 80
-      GroupId: !GetAtt SecurityGroup.GroupId
-      SourceSecurityGroupId:
-        Fn::ImportValue: !Sub ${EnvironmentName}-PublicLoadBalancerSecurityGroupId
-      ToPort: 80
+      Cluster:
+        Fn::ImportValue:
+          !Sub '${ProjectName}-${EnvName}-ClusterId'
+      TaskDefinition: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskDefinition
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: !Ref TaskCount
+      # This may need to be adjusted if the container takes a while to start up
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets:
+            - Fn::Select:
+              - 0
+              - Fn::Split:
+                - ','
+                - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PrivateSubnets'
+            - Fn::Select:
+              - 1
+              - Fn::Split:
+                - ','
+                - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PrivateSubnets'
+          SecurityGroups:
+            - !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ContainerSecurityGroup
+      LoadBalancers:
+        - ContainerName: !Ref AppName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup
+
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckIntervalSeconds: 10 # Default is 30.
+      HealthyThresholdCount: 2       # Default is 5.
+      HealthCheckTimeoutSeconds: 5
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-VpcId"
+
+  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup
+          Type: forward
+      Conditions:
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+            - !Ref RulePath
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+      Priority: !Ref RulePriority

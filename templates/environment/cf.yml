@@ -203,6 +203,31 @@ Resources:
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
       Type: application
 
+  DefaultHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckIntervalSeconds: 10 # Default is 30.
+      HealthyThresholdCount: 2       # Default is 5.
+      HealthCheckTimeoutSeconds: 5
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+      TargetType: ip
+      VpcId: !Ref VPC
+
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 80
+      Protocol: HTTP
+
   ECRRepository:
     Type: AWS::ECR::Repository
     Properties:
@@ -365,6 +390,18 @@ Outputs:
     Value: !GetAtt PublicLoadBalancerSecurityGroup.GroupId
     Export:
       Name: !Sub ${AWS::StackName}-PublicLoadBalancerSecurityGroupId
+
+  HTTPListenerArn:
+    Condition: CreatePublicLoadBalancer
+    Value: !Ref HTTPListener
+    Export:
+      Name: !Sub ${AWS::StackName}-HTTPListenerArn
+
+  DefaultHTTPTargetGroupArn:
+    Condition: CreatePublicLoadBalancer
+    Value: !Ref DefaultHTTPTargetGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
 
   ClusterId:
     Value: !Ref Cluster
