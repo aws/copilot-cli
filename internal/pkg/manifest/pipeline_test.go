@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,8 +43,8 @@ func TestCreatePipeline(t *testing.T) {
 		beforeEach     func() error
 		provider       Provider
 		expectedErr    error
-		inputStages    []PipelineStage
-		expectedStages []PipelineStage
+		inputStages    []archer.Environment
+		expectedStages []archer.Environment
 	}{
 		"happy case with default stages": {
 			provider: func() Provider {
@@ -54,7 +55,7 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			expectedStages: []PipelineStage{
+			expectedStages: []archer.Environment{
 				{
 					Name: "test",
 				},
@@ -72,7 +73,7 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []PipelineStage{
+			inputStages: []archer.Environment{
 				{
 					Name: "chicken",
 				},
@@ -80,7 +81,7 @@ func TestCreatePipeline(t *testing.T) {
 					Name: "wings",
 				},
 			},
-			expectedStages: []PipelineStage{
+			expectedStages: []archer.Environment{
 				{
 					Name: "chicken",
 				},
@@ -202,7 +203,7 @@ stages:
 						"branch":     "master",
 					},
 				},
-				Environments: []PipelineStage{
+				Environments: []archer.Environment{
 					{
 						Name: "chicken",
 					},

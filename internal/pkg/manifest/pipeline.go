@@ -76,7 +76,7 @@ const (
 type PipelineManifest struct {
 	Version      PipelineSchemaMajorVersion `yaml:"version"`
 	Source       *Source                    `yaml:"source"`
-	Environments []PipelineStage            `yaml:"stages"`
+	Environments []archer.Environment       `yaml:"stages"`
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -85,18 +85,12 @@ type Source struct {
 	Properties   map[string]interface{} `yaml:"properties"`
 }
 
-// PipelineStage represents configuration for each deployment stage
-// of an application.
-type PipelineStage struct {
-	Name string `yaml:"env"`
-}
-
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest, error) {
+func CreatePipeline(provider Provider, stages ...archer.Environment) (archer.Manifest, error) {
 	// TODO: #221 Do more validations
-	var defaultStages []PipelineStage
+	var defaultStages []archer.Environment
 	if len(stages) == 0 {
-		defaultStages = []PipelineStage{
+		defaultStages = []archer.Environment{
 			{
 				Name: "test",
 			},
