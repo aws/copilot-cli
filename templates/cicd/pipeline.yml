@@ -11,10 +11,10 @@ source:
   # the artifacts should be sourced from.
   properties:{{range $key, $value := .Source.Properties}}
     {{$key}}: {{$value}}{{end}}
-{{$length := len .Environments}}{{if gt $length 0}}
+{{$length := len .Stages}}{{if gt $length 0}}
 # The deployment section defines the order the pipeline will deploy
 # to your environments
-stages:{{range .Environments}}
+stages:{{range .Stages}}
     - 
       # The name of the environment to deploy to.
       name: {{.Name}}{{end}}

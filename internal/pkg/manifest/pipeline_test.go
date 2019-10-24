@@ -113,7 +113,7 @@ func TestCreatePipeline(t *testing.T) {
 			} else {
 				p, ok := m.(*PipelineManifest)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedStages, p.Environments, "the environments are different from the expected")
+				require.Equal(t, tc.expectedStages, p.Stages, "the stages are different from the expected")
 			}
 		})
 	}
@@ -215,7 +215,7 @@ stages:
 						"branch":     "master",
 					},
 				},
-				Environments: []PipelineStage{
+				Stages: []PipelineStage{
 					{
 						Environment: &archer.Environment{
 							Name: "chicken",

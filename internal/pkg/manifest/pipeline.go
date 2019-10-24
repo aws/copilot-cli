@@ -74,9 +74,9 @@ const (
 // PipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
 type PipelineManifest struct {
-	Version      PipelineSchemaMajorVersion `yaml:"version"`
-	Source       *Source                    `yaml:"source"`
-	Environments []PipelineStage            `yaml:"stages"`
+	Version PipelineSchemaMajorVersion `yaml:"version"`
+	Source  *Source                    `yaml:"source"`
+	Stages  []PipelineStage            `yaml:"stages"`
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -118,7 +118,7 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
 		},
-		Environments: append(defaultStages, stages...),
+		Stages: append(defaultStages, stages...),
 	}, nil
 }
 
