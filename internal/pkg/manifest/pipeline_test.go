@@ -56,10 +56,14 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			expectedStages: []PipelineStage{
 				{
-					Name: "test",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "test",
+					},
 				},
 				{
-					Name: "prod",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "prod",
+					},
 				},
 			},
 		},
@@ -74,18 +78,26 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			inputStages: []PipelineStage{
 				{
-					Name: "chicken",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "chicken",
+					},
 				},
 				{
-					Name: "wings",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "wings",
+					},
 				},
 			},
 			expectedStages: []PipelineStage{
 				{
-					Name: "chicken",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "chicken",
+					},
 				},
 				{
-					Name: "wings",
+					AssociatedEnvironment: &AssociatedEnvironment{
+						Name: "wings",
+					},
 				},
 			},
 		},
@@ -98,9 +110,9 @@ func TestCreatePipeline(t *testing.T) {
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				p, ok := m.(*PipelineManifest)
+				p, ok := m.(*pipelineManifest)
 				require.True(t, ok)
-				require.Equal(t, tc.expectedStages, p.Environments, "the environments are different from the expected")
+				require.Equal(t, tc.expectedStages, p.Stages, "the stages are different from the expected")
 			}
 		})
 	}
@@ -127,10 +139,10 @@ source:
 stages:
     - 
       # The name of the environment to deploy to.
-      env: test
+      name: test
     - 
       # The name of the environment to deploy to.
-      env: prod
+      name: prod
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GithubProperties{
@@ -150,7 +162,7 @@ stages:
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
-		expectedManifest *PipelineManifest
+		expectedManifest *pipelineManifest
 		expectedErr      error
 	}{
 		"invalid pipeline schema version": {
@@ -165,9 +177,9 @@ source:
 
 stages:
     - 
-      env: test
+      name: test
     - 
-      env: prod
+      name: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
 				PipelineSchemaMajorVersion(-1),
@@ -175,7 +187,7 @@ stages:
 		},
 		"invalid pipeline.yml": {
 			inContent:   `corrupted yaml`,
-			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
+			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.pipelineManifest"),
 		},
 		"valid pipeline.yml": {
 			inContent: `
@@ -189,11 +201,11 @@ source:
 
 stages:
     - 
-      env: chicken
+      name: chicken
     - 
-      env: wings
+      name: wings
 `,
-			expectedManifest: &PipelineManifest{
+			expectedManifest: &pipelineManifest{
 				Version: Ver1,
 				Source: &Source{
 					ProviderName: "github",
@@ -202,12 +214,16 @@ stages:
 						"branch":     "master",
 					},
 				},
-				Environments: []PipelineStage{
+				Stages: []PipelineStage{
 					{
-						Name: "chicken",
+						AssociatedEnvironment: &AssociatedEnvironment{
+							Name: "chicken",
+						},
 					},
 					{
-						Name: "wings",
+						AssociatedEnvironment: &AssociatedEnvironment{
+							Name: "wings",
+						},
 					},
 				},
 			},
@@ -221,7 +237,7 @@ stages:
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				actualManifest, ok := m.(*PipelineManifest)
+				actualManifest, ok := m.(*pipelineManifest)
 				require.True(t, ok)
 				require.Equal(t, actualManifest, tc.expectedManifest)
 			}

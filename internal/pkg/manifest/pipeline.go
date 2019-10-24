@@ -71,12 +71,12 @@ const (
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
-// PipelineManifest contains information that defines the relationship
+// pipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
-type PipelineManifest struct {
-	Version      PipelineSchemaMajorVersion `yaml:"version"`
-	Source       *Source                    `yaml:"source"`
-	Environments []PipelineStage            `yaml:"stages"`
+type pipelineManifest struct {
+	Version PipelineSchemaMajorVersion `yaml:"version"`
+	Source  *Source                    `yaml:"source"`
+	Stages  []PipelineStage            `yaml:"stages"`
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -86,9 +86,21 @@ type Source struct {
 }
 
 // PipelineStage represents configuration for each deployment stage
-// of an application.
+// of a workspace. A stage consists of the Archer Environment the pipeline
+// is deloying to and the containerized applications that will be deployed.
 type PipelineStage struct {
-	Name string `yaml:"env"`
+	*AssociatedEnvironment `yaml:",inline"`
+	Applications           []*archer.Application `yaml:"-"`
+}
+
+// AssociatedEnvironment defines the necessary information a pipline stage
+// needs for an Archer Environment.
+type AssociatedEnvironment struct {
+	Project   string `yaml:"-"`    // Name of the project this environment belongs to.
+	Name      string `yaml:"name"` // Name of the environment, must be unique within a project.
+	Region    string `yaml:"-"`    // Name of the region this environment is stored in.
+	AccountID string `yaml:"-"`    // Account ID of the account this environment is stored in.
+	Prod      bool   `yaml:"-"`    // Whether or not this environment is a production environment.
 }
 
 // CreatePipeline returns a pipeline manifest object.
@@ -98,27 +110,31 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 	if len(stages) == 0 {
 		defaultStages = []PipelineStage{
 			{
-				Name: "test",
+				AssociatedEnvironment: &AssociatedEnvironment{
+					Name: "test",
+				},
 			},
 			{
-				Name: "prod",
+				AssociatedEnvironment: &AssociatedEnvironment{
+					Name: "prod",
+				},
 			},
 		}
 	}
 
-	return &PipelineManifest{
+	return &pipelineManifest{
 		Version: Ver1,
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
 		},
-		Environments: append(defaultStages, stages...),
+		Stages: append(defaultStages, stages...),
 	}, nil
 }
 
 // Marshal serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *PipelineManifest) Marshal() ([]byte, error) {
+func (m *pipelineManifest) Marshal() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("cicd/pipeline.yml")
 	if err != nil {
@@ -139,7 +155,7 @@ func (m *PipelineManifest) Marshal() ([]byte, error) {
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
 func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
-	pm := PipelineManifest{}
+	pm := pipelineManifest{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
 		return nil, err
@@ -159,7 +175,7 @@ func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
-func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
+func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil
@@ -172,7 +188,7 @@ func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 }
 
 // CFNTemplate serializes the manifest object into a CloudFormation template.
-func (m *PipelineManifest) CFNTemplate() (string, error) {
+func (m *pipelineManifest) CFNTemplate() (string, error) {
 	// TODO: #223 Generate CFN template for the archer pipeline
 	return "", nil
 }
