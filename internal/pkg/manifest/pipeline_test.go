@@ -110,7 +110,7 @@ func TestCreatePipeline(t *testing.T) {
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				p, ok := m.(*PipelineManifest)
+				p, ok := m.(*pipelineManifest)
 				require.True(t, ok)
 				require.Equal(t, tc.expectedStages, p.Stages, "the stages are different from the expected")
 			}
@@ -162,7 +162,7 @@ stages:
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
-		expectedManifest *PipelineManifest
+		expectedManifest *pipelineManifest
 		expectedErr      error
 	}{
 		"invalid pipeline schema version": {
@@ -187,7 +187,7 @@ stages:
 		},
 		"invalid pipeline.yml": {
 			inContent:   `corrupted yaml`,
-			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
+			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.pipelineManifest"),
 		},
 		"valid pipeline.yml": {
 			inContent: `
@@ -205,7 +205,7 @@ stages:
     - 
       name: wings
 `,
-			expectedManifest: &PipelineManifest{
+			expectedManifest: &pipelineManifest{
 				Version: Ver1,
 				Source: &Source{
 					ProviderName: "github",
@@ -237,7 +237,7 @@ stages:
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				actualManifest, ok := m.(*PipelineManifest)
+				actualManifest, ok := m.(*pipelineManifest)
 				require.True(t, ok)
 				require.Equal(t, actualManifest, tc.expectedManifest)
 			}

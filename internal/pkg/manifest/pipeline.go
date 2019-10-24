@@ -71,9 +71,9 @@ const (
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
-// PipelineManifest contains information that defines the relationship
+// pipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
-type PipelineManifest struct {
+type pipelineManifest struct {
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
 	Stages  []PipelineStage            `yaml:"stages"`
@@ -122,7 +122,7 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 		}
 	}
 
-	return &PipelineManifest{
+	return &pipelineManifest{
 		Version: Ver1,
 		Source: &Source{
 			ProviderName: provider.Name(),
@@ -134,7 +134,7 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 
 // Marshal serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *PipelineManifest) Marshal() ([]byte, error) {
+func (m *pipelineManifest) Marshal() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("cicd/pipeline.yml")
 	if err != nil {
@@ -155,7 +155,7 @@ func (m *PipelineManifest) Marshal() ([]byte, error) {
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
 func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
-	pm := PipelineManifest{}
+	pm := pipelineManifest{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
-func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
+func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil
@@ -188,7 +188,7 @@ func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 }
 
 // CFNTemplate serializes the manifest object into a CloudFormation template.
-func (m *PipelineManifest) CFNTemplate() (string, error) {
+func (m *pipelineManifest) CFNTemplate() (string, error) {
 	// TODO: #223 Generate CFN template for the archer pipeline
 	return "", nil
 }
