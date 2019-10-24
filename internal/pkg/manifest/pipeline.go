@@ -89,8 +89,18 @@ type Source struct {
 // of a workspace. A stage consists of the Archer Environment the pipeline
 // is deloying to and the containerized applications that will be deployed.
 type PipelineStage struct {
-	*archer.Environment `yaml:",inline"`
-	Applications        []*archer.Application `yaml:"-"`
+	*AssociatedEnvironment `yaml:",inline"`
+	Applications           []*archer.Application `yaml:"-"`
+}
+
+// AssociatedEnvironment defines the necessary information a pipline stage
+// needs for an Archer Environment.
+type AssociatedEnvironment struct {
+	Project   string `yaml:"-"`    // Name of the project this environment belongs to.
+	Name      string `yaml:"name"` // Name of the environment, must be unique within a project.
+	Region    string `yaml:"-"`    // Name of the region this environment is stored in.
+	AccountID string `yaml:"-"`    // Account ID of the account this environment is stored in.
+	Prod      bool   `yaml:"-"`    // Whether or not this environment is a production environment.
 }
 
 // CreatePipeline returns a pipeline manifest object.
@@ -100,12 +110,12 @@ func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest
 	if len(stages) == 0 {
 		defaultStages = []PipelineStage{
 			{
-				Environment: &archer.Environment{
+				AssociatedEnvironment: &AssociatedEnvironment{
 					Name: "test",
 				},
 			},
 			{
-				Environment: &archer.Environment{
+				AssociatedEnvironment: &AssociatedEnvironment{
 					Name: "prod",
 				},
 			},

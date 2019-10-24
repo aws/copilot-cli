@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,12 +56,12 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			expectedStages: []PipelineStage{
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "test",
 					},
 				},
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "prod",
 					},
 				},
@@ -79,24 +78,24 @@ func TestCreatePipeline(t *testing.T) {
 			}(),
 			inputStages: []PipelineStage{
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "chicken",
 					},
 				},
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "wings",
 					},
 				},
 			},
 			expectedStages: []PipelineStage{
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "chicken",
 					},
 				},
 				{
-					Environment: &archer.Environment{
+					AssociatedEnvironment: &AssociatedEnvironment{
 						Name: "wings",
 					},
 				},
@@ -217,12 +216,12 @@ stages:
 				},
 				Stages: []PipelineStage{
 					{
-						Environment: &archer.Environment{
+						AssociatedEnvironment: &AssociatedEnvironment{
 							Name: "chicken",
 						},
 					},
 					{
-						Environment: &archer.Environment{
+						AssociatedEnvironment: &AssociatedEnvironment{
 							Name: "wings",
 						},
 					},
