@@ -58,7 +58,7 @@ Resources:
           Environment:{{range $name, $value := .Variables}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}{{if .Secrets}}
-          Secret:{{range $name, $valueFrom := .Screts}}
+          Secrets:{{range $name, $valueFrom := .Secrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}{{end}}
           LogConfiguration:
@@ -76,6 +76,20 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName, SecretsPolicy]]
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'ssm:GetParameters'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'kms:Decrypt'
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
   {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskRole:
