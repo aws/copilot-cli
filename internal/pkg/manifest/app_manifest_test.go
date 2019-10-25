@@ -24,7 +24,7 @@ func TestCreate(t *testing.T) {
 			inDockerfile: "ChickenApp/Dockerfile",
 
 			requireCorrectType: func(t *testing.T, i interface{}) {
-				_, ok := i.(*LoadBalancedFargateManifest)
+				_, ok := i.(*LBFargateManifest)
 				require.True(t, ok)
 			},
 		},
@@ -59,35 +59,65 @@ func TestUnmarshalApp(t *testing.T) {
 	}{
 		"load balanced web application": {
 			inContent: `
-name: ChickenApp
+version: 1.0
+name: frontend
+type: "Load Balanced Web App"
 image:
-  build: ChickenApp/Dockerfile
-  port: 5000
-type: 'Load Balanced Web App'
-containerPort: 8080
-cpu: 2048
+  build: frontend/Dockerfile
+  port: 80
+cpu: 512
 memory: 1024
-logging: true
+count: 1
+http:
+  path: "*"
 public: false
-stages:
-  -
-    env: test
-    desiredCount: 2
+variables:
+  LOG_LEVEL: "WARN"
+secrets:
+  DB_PASSWORD: MYSQL_DB_PASSWORD
+scaling:
+  minCount: 1
+  maxCount: 50
+  targetMemory: 60
+environments:
+  test:
+    count: 3
+    public: true
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*LoadBalancedFargateManifest)
+				actualManifest, ok := i.(*LBFargateManifest)
 				require.True(t, ok)
-				wantedManifest := &LoadBalancedFargateManifest{
-					AppManifest: AppManifest{Name: "ChickenApp", Type: LoadBalancedWebApplication},
-					Image:       LBFargateImage{AppImage: AppImage{Build: "ChickenApp/Dockerfile"}, Port: 5000},
-					CPU:         2048,
-					Memory:      1024,
-					Logging:     true,
-					Public:      false,
-					Stages: []AppStage{
-						{
-							EnvName:      "test",
-							DesiredCount: 2,
+				wantedManifest := &LBFargateManifest{
+					AppManifest: AppManifest{Name: "frontend", Type: LoadBalancedWebApplication},
+					Image:       LBFargateImage{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
+					LBFargateConfig: LBFargateConfig{
+						RoutingRule: RoutingRule{
+							Path: "*",
+						},
+						TaskConfig: TaskConfig{
+							CPU:    512,
+							Memory: 1024,
+							Count:  1,
+							Variables: map[string]string{
+								"LOG_LEVEL": "WARN",
+							},
+							Secrets: map[string]string{
+								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+							},
+						},
+						Public: false,
+						Scaling: &AutoScalingConfig{
+							MinCount:     1,
+							MaxCount:     50,
+							TargetMemory: 60.0,
+						},
+					},
+					Environments: map[string]LBFargateConfig{
+						"test": {
+							TaskConfig: TaskConfig{
+								Count: 3,
+							},
+							Public: true,
 						},
 					},
 				}
