@@ -34,13 +34,13 @@ Parameters:
     Type: Number
     Default: {{.Count}}
 Resources:
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup:
+  LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', [/ecs/, !Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskDefinition:
+  TaskDefinition:
     Type: AWS::ECS::TaskDefinition
-    DependsOn: {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup
+    DependsOn: LogGroup
     Properties:
       Family: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
       NetworkMode: awsvpc
@@ -48,8 +48,8 @@ Resources:
         - FARGATE
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ExecutionRole
-      TaskRoleArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskRole
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn: !Ref TaskRole
       ContainerDefinitions:
         - Name: !Ref AppName
           Image: !Ref ContainerImage
@@ -65,9 +65,9 @@ Resources:
             LogDriver: awslogs
             Options:
               awslogs-region: !Ref AWS::Region
-              awslogs-group: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}LogGroup
+              awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: ecs
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ExecutionRole:
+  ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -92,7 +92,7 @@ Resources:
                   - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskRole:
+  TaskRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -103,7 +103,7 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/PowerUserAccess'
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ContainerSecurityGroup:
+  ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName, ContainerSecurityGroup]]
@@ -115,15 +115,15 @@ Resources:
           SourceSecurityGroupId:
             Fn::ImportValue:
               !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerSecurityGroupId"
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}Service:
+  Service:
     Type: AWS::ECS::Service
     DependsOn:
-      - {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ListenerRule
+      - ListenerRule
     Properties:
       Cluster:
         Fn::ImportValue:
           !Sub '${ProjectName}-${EnvName}-ClusterId'
-      TaskDefinition: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TaskDefinition
+      TaskDefinition: !Ref TaskDefinition
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
@@ -145,13 +145,13 @@ Resources:
                 - ','
                 - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PrivateSubnets'
           SecurityGroups:
-            - !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ContainerSecurityGroup
+            - !Ref ContainerSecurityGroup
       LoadBalancers:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
-          TargetGroupArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup
+          TargetGroupArn: !Ref TargetGroup
 
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup:
+  TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
@@ -168,11 +168,11 @@ Resources:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-VpcId"
 
-  {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}ListenerRule:
+  ListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref {{clean .ProjectName}}{{clean .EnvName}}{{clean .AppName}}TargetGroup
+        - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
         - Field: 'path-pattern'
