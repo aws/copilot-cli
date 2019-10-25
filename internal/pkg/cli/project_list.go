@@ -43,7 +43,7 @@ func BuildProjectListCommand() *cobra.Command {
 		Short: "Lists all projects in your account",
 		Example: `
   List all the projects in your account and region
-  $ archer project ls`,
+  /code $ archer project ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := ssm.NewStore()
 			if err != nil {

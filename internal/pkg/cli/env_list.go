@@ -82,7 +82,7 @@ func BuildEnvListCmd() *cobra.Command {
 		Short: "Lists all the environments in a project",
 		Example: `
   Lists all the environments for the test project
-  $ archer env ls --project test`,
+  /code $ archer env ls --project test`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.ProjectName = viper.GetString("project")
 			return opts.Ask()

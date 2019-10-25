@@ -30,9 +30,8 @@ func h2(text string) string {
 func code(text string) string {
 	lines := strings.Split(text, "\n")
 	for i, line := range lines {
-		if strings.HasPrefix(strings.TrimSpace(line), "$") {
-			// code sample
-			lines[i] = color.HiBlackString(line)
+		if strings.HasPrefix(strings.TrimSpace(line), "/code ") {
+			lines[i] = color.HiBlackString(strings.ReplaceAll(line, "/code ", ""))
 		}
 	}
 	return strings.Join(lines, "\n")

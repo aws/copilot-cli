@@ -224,7 +224,7 @@ func BuildAppInitCmd() *cobra.Command {
 This command is also run as part of "archer init".`,
 		Example: `
   Create a "frontend" web application.
-  $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+  /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.projectName = viper.GetString(projectFlag) // inject from parent command
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}

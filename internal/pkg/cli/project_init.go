@@ -152,7 +152,7 @@ func BuildProjectInitCommand() *cobra.Command {
 A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `
   Create a new project named test
-  $ archer project init test`,
+  /code $ archer project init test`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return err
 		},

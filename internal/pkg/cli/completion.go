@@ -57,16 +57,16 @@ func BuildCompletionCmd() *cobra.Command {
 The code must be evaluated to provide interactive completion of commands.`,
 		Example: `
   Install zsh completion
-  $ source <(archer completion zsh)
-  $ archer completion zsh > "${fpath[1]}/_archer" # to autoload on startup
+  /code $ source <(archer completion zsh)
+  /code $ archer completion zsh > "${fpath[1]}/_archer" # to autoload on startup
 
   Install bash completion on macOS using homebrew
-  $ brew install bash-completion   # if running 3.2
-  $ brew install bash-completion@2 # if running Bash 4.1+
-  $ archer completion bash > /usr/local/etc/bash_completion.d
+  /code $ brew install bash-completion   # if running 3.2
+  /code $ brew install bash-completion@2 # if running Bash 4.1+
+  /code $ archer completion bash > /usr/local/etc/bash_completion.d
 
   Install bash completion on linux
-  $ source <(archer completion bash)`,
+  /code $ source <(archer completion bash)`,
 		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.Shell = args[0]
