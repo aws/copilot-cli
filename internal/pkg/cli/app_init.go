@@ -216,8 +216,9 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 func BuildAppInitCmd() *cobra.Command {
 	opts := &InitAppOpts{}
 	cmd := &cobra.Command{
-		Use: "init",
-		Long: `Create a new application in a project.
+		Use:   "init",
+		Short: "Creates a new application in a project.",
+		Long: `Creates a new application in a project.
 This command is also run as part of "archer init".`,
 		Example: `
   Create a "frontend" web application.

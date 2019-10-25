@@ -22,6 +22,7 @@ An application represents an Amazon ECS service or task.`,
 	}
 
 	cmd.AddCommand(BuildAppInitCmd())
+	cmd.AddCommand(BuildAppPackageCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,
