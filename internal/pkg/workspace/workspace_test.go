@@ -71,14 +71,14 @@ func TestListManifests(t *testing.T) {
 	}
 }
 
-func TestLocalAppNames(t *testing.T) {
+func TestAppNames(t *testing.T) {
 	testCases := map[string]struct {
 		expectedApps   []string
 		workingDir     string
 		expectedError  error
 		mockFileSystem func(appFS afero.Fs)
 	}{
-		"multiple app manifests": {
+		"multiple local app manifests": {
 			expectedApps: []string{"frontend", "backend"},
 			workingDir:   "test/",
 			mockFileSystem: func(appFS afero.Fs) {
@@ -117,7 +117,7 @@ func TestLocalAppNames(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
 
-			apps, err := ws.LocalAppNames()
+			apps, err := ws.AppNames()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.expectedApps, apps)
