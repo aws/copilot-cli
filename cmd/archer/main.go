@@ -44,13 +44,19 @@ func buildRootCmd() *cobra.Command {
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
 	cmd.Version = version.Version
-	cmd.SetVersionTemplate(template.VersionFlag)
+	cmd.SetVersionTemplate("Archer version: {{.Version}}\n")
 
-	cmd.AddCommand(cli.BuildVersionCmd())
+	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.
+	// "Getting Started" command group.
 	cmd.AddCommand(cli.BuildInitCmd())
+
+	// "Develop" command group.
 	cmd.AddCommand(cli.BuildProjCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildAppCmd())
+
+	// "Settings" command group.
+	cmd.AddCommand(cli.BuildVersionCmd())
 	cmd.AddCommand(cli.BuildCompletionCmd())
 
 	cmd.SetUsageTemplate(template.RootUsage)

@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,10 @@ func BuildVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number of Archer",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Archer version: %s, built for %s", version.Version, version.Platform)
+			fmt.Printf("Archer version: %s, built for %s\n", version.Version, version.Platform)
+		},
+		Annotations: map[string]string{
+			"group": group.Settings,
 		},
 	}
 }
