@@ -5,11 +5,9 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
@@ -28,11 +26,14 @@ const defaultEnvironmentName = "test"
 
 // InitOpts holds the fields to bootstrap a new application.
 type InitOpts struct {
-	ShouldDeploy bool // true means we should create a test environment and deploy the application in it. Defaults to false.
+	// Flags unique to "init" that's not provided by other sub-commands.
+	ShouldDeploy          bool // true means we should create a test environment and deploy the application in it. Defaults to false.
+	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
 
 	// Sub-commands to execute.
 	initProject actionCommand
 	initApp     actionCommand
+	initEnv     actionCommand
 
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
@@ -42,14 +43,7 @@ type InitOpts struct {
 	appName        *string
 	dockerfilePath *string
 
-	// Interfaces for dependencies.
-	envStore    archer.EnvironmentStore
-	envDeployer archer.EnvironmentDeployer
-	identity    identityService
-	prog        progress
-	prompt      prompter
-
-	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
+	prompt prompter
 }
 
 func NewInitOpts() (*InitOpts, error) {
@@ -78,21 +72,28 @@ func NewInitOpts() (*InitOpts, error) {
 		manifestWriter: ws,
 		prompt:         prompt,
 	}
+	initEnv := &InitEnvOpts{
+		EnvName:       defaultEnvironmentName,
+		EnvProfile:    "default",
+		IsProduction:  false,
+		envCreator:    ssm,
+		projectGetter: ssm,
+		envDeployer:   cloudformation.New(sess),
+		prog:          spin,
+		prompt:        prompt,
+		identity:      identity.New(sess),
+	}
 	return &InitOpts{
 		initProject: initProject,
 		initApp:     initApp,
+		initEnv:     initEnv,
 
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
 		appName:        &initApp.AppName,
 		dockerfilePath: &initApp.DockerfilePath,
 
-		// TODO remove these dependencies from InitOpts after https://github.com/aws/amazon-ecs-cli-v2/issues/109
-		envStore:    ssm,
-		envDeployer: cloudformation.New(sess),
-		identity:    identity.New(sess),
-		prompt:      prompt,
-		prog:        spin,
+		prompt: prompt,
 	}, nil
 }
 
@@ -108,6 +109,7 @@ that operate together.` + "\n")
 	if err := opts.loadApp(); err != nil {
 		return err
 	}
+	opts.loadEnv()
 
 	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
 		color.HighlightUserInput(*opts.appType), color.HighlightUserInput(*opts.appName), color.HighlightUserInput(*opts.projectName))
@@ -140,6 +142,13 @@ func (opts *InitOpts) loadApp() error {
 	return opts.initApp.Validate()
 }
 
+func (opts *InitOpts) loadEnv() {
+	if obj, ok := opts.initEnv.(*InitEnvOpts); ok {
+		// To deploy an application we need to specify its project.
+		obj.projectName = *opts.projectName
+	}
+}
+
 // deploy prompts the user to deploy a test environment if the project doesn't already have one.
 func (opts *InitOpts) deploy() error {
 	if opts.promptForShouldDeploy {
@@ -152,7 +161,7 @@ func (opts *InitOpts) deploy() error {
 		// User chose not to deploy the application, exit.
 		return nil
 	}
-	return opts.deployEnv()
+	return opts.initEnv.Execute()
 }
 
 func (opts *InitOpts) askShouldDeploy() error {
@@ -161,47 +170,6 @@ func (opts *InitOpts) askShouldDeploy() error {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}
 	opts.ShouldDeploy = v
-	return nil
-}
-
-func (opts *InitOpts) deployEnv() error {
-	identity, err := opts.identity.Get()
-	if err != nil {
-		return fmt.Errorf("get identity: %w", err)
-	}
-
-	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/56
-	deployEnvInput := &archer.DeployEnvironmentInput{
-		Project:                  *opts.projectName,
-		Name:                     defaultEnvironmentName,
-		PublicLoadBalancer:       true, // TODO: configure this value based on user input or Application type needs?
-		ToolsAccountPrincipalARN: identity.ARN,
-	}
-
-	opts.prog.Start("Preparing deployment...")
-	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
-		var existsErr *cloudformation.ErrStackAlreadyExists
-		if errors.As(err, &existsErr) {
-			// Do nothing if the stack already exists.
-			opts.prog.Stop("")
-			log.Infof("The environment %s already exists under project %s.\n", deployEnvInput.Name, *opts.projectName)
-			return nil
-		}
-		opts.prog.Stop("Error!")
-		return err
-	}
-	opts.prog.Stop("Done!")
-	opts.prog.Start("Deploying env...")
-	env, err := opts.envDeployer.WaitForEnvironmentCreation(deployEnvInput)
-	if err != nil {
-		opts.prog.Stop("Error!")
-		return err
-	}
-	if err := opts.envStore.CreateEnvironment(env); err != nil {
-		opts.prog.Stop("Error!")
-		return err
-	}
-	opts.prog.Stop("Done!")
 	return nil
 }
 

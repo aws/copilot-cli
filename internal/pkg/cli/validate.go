@@ -51,7 +51,10 @@ func validateApplicationType(val interface{}) error {
 }
 
 func validateEnvironmentName(val interface{}) error {
-	return basicNameValidation(val)
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("environment name %v is invalid: %w", val, err)
+	}
+	return nil
 }
 
 func basicNameValidation(val interface{}) error {

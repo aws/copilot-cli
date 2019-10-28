@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -75,6 +74,21 @@ func TestInitOpts_Run(t *testing.T) {
 			},
 			wantedError: "execute app init: my error",
 		},
+		"deploys environment": {
+			inPromptForShouldDeploy: true,
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+					Return(true, nil)
+				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -83,28 +97,17 @@ func TestInitOpts_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
-			mockEnvDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
-			mockProgress := climocks.NewMockprogress(ctrl)
-			mockPrompt := climocks.NewMockprompter(ctrl)
-			mockIdentity := climocks.NewMockidentityService(ctrl)
-			mockInitProject := climocks.NewMockactionCommand(ctrl)
-			mockInitApp := climocks.NewMockactionCommand(ctrl)
-
 			var mockProjectName, mockAppName, mockAppType string
 
 			opts := &InitOpts{
 				ShouldDeploy:          tc.inShouldDeploy,
 				promptForShouldDeploy: tc.inPromptForShouldDeploy,
 
-				initProject: mockInitProject,
-				initApp:     mockInitApp,
+				initProject: climocks.NewMockactionCommand(ctrl),
+				initApp:     climocks.NewMockactionCommand(ctrl),
+				initEnv:     climocks.NewMockactionCommand(ctrl),
 
-				envStore:    mockEnvStore,
-				envDeployer: mockEnvDeployer,
-				identity:    mockIdentity,
-				prog:        mockProgress,
-				prompt:      mockPrompt,
+				prompt: climocks.NewMockprompter(ctrl),
 
 				// These fields are used for logging, the values are not important for tests.
 				projectName: &mockProjectName,
