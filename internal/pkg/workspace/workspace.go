@@ -125,6 +125,21 @@ func (ws *Service) writeSummary(projectName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
+//LocalApps returns the name of all the local apps
+func (ws *Service) LocalApps() ([]string, error) {
+	manifests, err := ws.ListManifestFiles()
+	if err != nil {
+		return nil, err
+	}
+	var apps []string
+	for _, manifest := range manifests {
+		appFile := filepath.Base(manifest)
+		appName := appFile[0 : len(appFile)-len(manifestFileSuffix)]
+		apps = append(apps, appName)
+	}
+	return apps, nil
+}
+
 func (ws *Service) summaryPath() (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {
