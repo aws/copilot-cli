@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
@@ -27,12 +28,12 @@ type InitEnvOpts struct {
 	IsProduction bool   // Marks the environment as "production" to create it with additional guardrails.
 
 	// Interfaces to interact with dependencies.
-	envCreator    archer.EnvironmentCreator
 	projectGetter archer.ProjectGetter
+	envCreator    archer.EnvironmentCreator
 	envDeployer   archer.EnvironmentDeployer
+	identity      identityService
 	prog          progress
 	prompt        prompter
-	identity      identityService
 
 	// Injected values passed by parent commands.
 	projectName string
@@ -71,7 +72,7 @@ func (opts *InitEnvOpts) Validate() error {
 func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
 	if _, err := opts.projectGetter.GetProject(opts.projectName); err != nil {
-		return fmt.Errorf("retrieve project %s: %w", opts.projectName, err)
+		return err
 	}
 
 	identity, err := opts.identity.Get()
@@ -93,7 +94,8 @@ func (opts *InitEnvOpts) Execute() error {
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			opts.prog.Stop("Done!")
-			log.Infof("The environment %s already exists under project %s.\n", opts.EnvName, opts.projectName)
+			log.Successf("Environment %s already exists under project %s! Do nothing.\n",
+				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.projectName))
 			return nil
 		}
 		opts.prog.Stop("Error!")
@@ -111,6 +113,8 @@ func (opts *InitEnvOpts) Execute() error {
 		return err
 	}
 	opts.prog.Stop("Done!")
+	log.Successf("Created environment %s in region %s under project %s.\n",
+		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.Project))
 	return nil
 }
 
