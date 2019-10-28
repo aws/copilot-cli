@@ -107,19 +107,19 @@ func (mr *MockWorkspaceMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockWorkspace)(nil).Summary))
 }
 
-// LocalApps mocks base method
-func (m *MockWorkspace) LocalApps() ([]string, error) {
+// LocalAppNames mocks base method
+func (m *MockWorkspace) LocalAppNames() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LocalApps")
+	ret := m.ctrl.Call(m, "LocalAppNames")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// LocalApps indicates an expected call of LocalApps
-func (mr *MockWorkspaceMockRecorder) LocalApps() *gomock.Call {
+// LocalAppNames indicates an expected call of LocalAppNames
+func (mr *MockWorkspaceMockRecorder) LocalAppNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalApps", reflect.TypeOf((*MockWorkspace)(nil).LocalApps))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalAppNames", reflect.TypeOf((*MockWorkspace)(nil).LocalAppNames))
 }
 
 // MockManifestIO is a mock of ManifestIO interface

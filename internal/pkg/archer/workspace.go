@@ -14,7 +14,7 @@ type Workspace interface {
 	ManifestIO
 	Create(projectName string) error
 	Summary() (*WorkspaceSummary, error)
-	LocalApps() ([]string, error)
+	LocalAppNames() ([]string, error)
 }
 
 // ManifestIO can read, write and list local manifest files.

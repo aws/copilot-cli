@@ -125,8 +125,10 @@ func (ws *Service) writeSummary(projectName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
-//LocalApps returns the name of all the local apps
-func (ws *Service) LocalApps() ([]string, error) {
+// LocalAppNames returns the name of all the local applications. For now it
+// extracts the application name from the file name of the corresponding
+// application manifest
+func (ws *Service) LocalAppNames() ([]string, error) {
 	manifests, err := ws.ListManifestFiles()
 	if err != nil {
 		return nil, err

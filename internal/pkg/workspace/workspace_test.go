@@ -71,7 +71,7 @@ func TestListManifests(t *testing.T) {
 	}
 }
 
-func TestListLocalApps(t *testing.T) {
+func TestLocalAppNames(t *testing.T) {
 	testCases := map[string]struct {
 		expectedApps   []string
 		workingDir     string
@@ -117,7 +117,7 @@ func TestListLocalApps(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
 
-			apps, err := ws.LocalApps()
+			apps, err := ws.LocalAppNames()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.expectedApps, apps)
