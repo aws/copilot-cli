@@ -160,7 +160,6 @@ func BuildEnvInitCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warningln("It's best to run this command in the root of your workspace.")
 			if err := opts.Ask(); err != nil {
 				return err
 			}
