@@ -34,9 +34,6 @@ type InitEnvOpts struct {
 	identity      identityService
 	prog          progress
 	prompt        prompter
-
-	// Injected values passed by parent commands.
-	projectName string
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -62,7 +59,7 @@ func (opts *InitEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if opts.projectName == "" {
+	if viper.GetString(projectFlag) == "" {
 		return errors.New("no project found, run `project init` first")
 	}
 	return nil
@@ -71,7 +68,7 @@ func (opts *InitEnvOpts) Validate() error {
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
-	if _, err := opts.projectGetter.GetProject(opts.projectName); err != nil {
+	if _, err := opts.projectGetter.GetProject(viper.GetString(projectFlag)); err != nil {
 		return err
 	}
 
@@ -82,7 +79,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	deployEnvInput := &archer.DeployEnvironmentInput{
 		Name:                     opts.EnvName,
-		Project:                  opts.projectName,
+		Project:                  viper.GetString(projectFlag),
 		Prod:                     opts.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: identity.ARN,
@@ -95,7 +92,7 @@ func (opts *InitEnvOpts) Execute() error {
 			// Do nothing if the stack already exists.
 			opts.prog.Stop("Done!")
 			log.Successf("Environment %s already exists under project %s! Do nothing.\n",
-				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.projectName))
+				color.HighlightUserInput(opts.EnvName), color.HighlightResource(viper.GetString(projectFlag)))
 			return nil
 		}
 		opts.prog.Stop("Error!")
@@ -160,7 +157,6 @@ func BuildEnvInitCmd() *cobra.Command {
 			opts.projectGetter = store
 			opts.envDeployer = cloudformation.New(profileSess)
 			opts.identity = identity.New(defaultSession)
-			opts.projectName = viper.GetString("project")
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

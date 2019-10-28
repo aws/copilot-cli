@@ -28,9 +28,6 @@ type InitAppOpts struct {
 	AppName        string
 	DockerfilePath string
 
-	// Injected fields by parent commands.
-	projectName string
-
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
 	manifestWriter archer.ManifestIO
@@ -77,7 +74,7 @@ func (opts *InitAppOpts) Validate() error {
 			return err
 		}
 	}
-	if opts.projectName == "" {
+	if viper.GetString(projectFlag) == "" {
 		return errors.New("no project found, run `project init` first")
 	}
 	return nil
@@ -131,7 +128,7 @@ func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
 		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
-Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, opts.projectName),
+Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, viper.GetString(projectFlag)),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
@@ -210,7 +207,7 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, opts.projectName)),
+			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, viper.GetString(projectFlag))),
 			defaultEnvironmentName),
 	}
 }
@@ -226,7 +223,6 @@ This command is also run as part of "archer init".`,
   Create a "frontend" web application.
   /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.projectName = viper.GetString(projectFlag) // inject from parent command
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 			opts.prompt = prompt.New()
 

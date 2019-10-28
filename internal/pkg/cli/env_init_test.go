@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,15 +47,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			viper.Set(projectFlag, tc.inputProject)
 			addEnv := &InitEnvOpts{
-				EnvName:     tc.inputEnv,
-				projectName: tc.inputProject,
-				prompt:      mockPrompter,
+				EnvName: tc.inputEnv,
+				prompt:  mockPrompter,
 			}
 			tc.setupMocks()
 
+			// WHEN
 			err := addEnv.Ask()
 
+			// THEN
 			require.NoError(t, err)
 			require.Equal(t, mockEnv, addEnv.EnvName, "expected environment names to match")
 		})
@@ -89,9 +93,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			viper.Set(projectFlag, tc.inProjectName)
 			opts := &InitEnvOpts{
-				EnvName:     tc.inEnvName,
-				projectName: tc.inProjectName,
+				EnvName: tc.inEnvName,
 			}
 
 			// WHEN
@@ -201,12 +205,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			mockSpinner := climocks.NewMockprogress(ctrl)
 			mockIdentityService := climocks.NewMockidentityService(ctrl)
 
+			viper.Set(projectFlag, "project")
 			opts := &InitEnvOpts{
 				envCreator:    mockEnvStore,
 				projectGetter: mockProjStore,
 				envDeployer:   mockDeployer,
 				identity:      mockIdentityService,
-				projectName:   "project",
 				EnvName:       "env",
 				IsProduction:  true,
 				prog:          mockSpinner,

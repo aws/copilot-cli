@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const defaultEnvironmentName = "test"
@@ -109,7 +110,6 @@ that operate together.` + "\n")
 	if err := opts.loadApp(); err != nil {
 		return err
 	}
-	opts.loadEnv()
 
 	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
 		color.HighlightUserInput(*opts.appType), color.HighlightUserInput(*opts.appName), color.HighlightUserInput(*opts.projectName))
@@ -127,26 +127,19 @@ func (opts *InitOpts) loadProject() error {
 	if err := opts.initProject.Ask(); err != nil {
 		return fmt.Errorf("prompt for project init: %w", err)
 	}
-	return opts.initProject.Validate()
+	if err := opts.initProject.Validate(); err != nil {
+		return err
+	}
+	// Write the project name to viper so that sub-commands can retrieve its value.
+	viper.Set(projectFlag, opts.projectName)
+	return nil
 }
 
 func (opts *InitOpts) loadApp() error {
-	if obj, ok := opts.initApp.(*InitAppOpts); ok {
-		// To deploy an application we need to specify its project.
-		obj.projectName = *opts.projectName
-	}
-
 	if err := opts.initApp.Ask(); err != nil {
 		return fmt.Errorf("prompt for app init: %w", err)
 	}
 	return opts.initApp.Validate()
-}
-
-func (opts *InitOpts) loadEnv() {
-	if obj, ok := opts.initEnv.(*InitEnvOpts); ok {
-		// To deploy an application we need to specify its project.
-		obj.projectName = *opts.projectName
-	}
 }
 
 // deploy prompts the user to deploy a test environment if the project doesn't already have one.

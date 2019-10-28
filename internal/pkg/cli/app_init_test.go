@@ -12,6 +12,7 @@ import (
 	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -164,11 +165,11 @@ func TestAppInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			viper.Set(projectFlag, tc.inProjectName)
 			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
-				projectName:    tc.inProjectName,
 				fs:             &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
 			if tc.mockFileSystem != nil {
