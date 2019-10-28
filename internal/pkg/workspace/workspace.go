@@ -136,6 +136,8 @@ func (ws *Service) AppNames() ([]string, error) {
 	var apps []string
 	for _, manifest := range manifests {
 		appFile := filepath.Base(manifest)
+		// TODO: #242 Extract the names of applications from app manifests
+		// instead of from file names.
 		appName := appFile[0 : len(appFile)-len(manifestFileSuffix)]
 		apps = append(apps, appName)
 	}
