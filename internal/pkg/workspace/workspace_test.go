@@ -71,6 +71,63 @@ func TestListManifests(t *testing.T) {
 	}
 }
 
+func TestAppNames(t *testing.T) {
+	testCases := map[string]struct {
+		expectedApps   []string
+		workingDir     string
+		expectedError  error
+		mockFileSystem func(appFS afero.Fs)
+	}{
+		"multiple local app manifests": {
+			expectedApps: []string{"frontend", "backend"},
+			workingDir:   "test/",
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
+			},
+		},
+
+		"no existing app manifest": {
+			expectedApps: []string{},
+			workingDir:   "test/",
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
+			},
+		},
+
+		"not in a valid workspace": {
+			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from test/"),
+			workingDir:    "test/",
+			mockFileSystem: func(appFS afero.Fs) {
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// Create an empty FileSystem
+			appFS := afero.NewMemMapFs()
+			// Set it up
+			tc.mockFileSystem(appFS)
+
+			ws := Service{
+				workingDir: tc.workingDir,
+				fsUtils:    &afero.Afero{Fs: appFS},
+			}
+
+			apps, err := ws.AppNames()
+			if tc.expectedError == nil {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.expectedApps, apps)
+			} else {
+				require.Equal(t, tc.expectedError.Error(), err.Error())
+			}
+		})
+	}
+}
+
 func TestReadManifest(t *testing.T) {
 	testCases := map[string]struct {
 		expectedContent string

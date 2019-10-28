@@ -125,6 +125,25 @@ func (ws *Service) writeSummary(projectName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
+// AppNames returns the name of all the local applications. For now it
+// extracts the application name from the file name of the corresponding
+// application manifest.
+func (ws *Service) AppNames() ([]string, error) {
+	manifests, err := ws.ListManifestFiles()
+	if err != nil {
+		return nil, err
+	}
+	var apps []string
+	for _, manifest := range manifests {
+		appFile := filepath.Base(manifest)
+		// TODO: #242 Extract the names of applications from app manifests
+		// instead of from file names.
+		appName := appFile[0 : len(appFile)-len(manifestFileSuffix)]
+		apps = append(apps, appName)
+	}
+	return apps, nil
+}
+
 func (ws *Service) summaryPath() (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {

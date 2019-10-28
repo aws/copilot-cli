@@ -107,6 +107,21 @@ func (mr *MockWorkspaceMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockWorkspace)(nil).Summary))
 }
 
+// AppNames mocks base method
+func (m *MockWorkspace) AppNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AppNames indicates an expected call of AppNames
+func (mr *MockWorkspaceMockRecorder) AppNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppNames", reflect.TypeOf((*MockWorkspace)(nil).AppNames))
+}
+
 // MockManifestIO is a mock of ManifestIO interface
 type MockManifestIO struct {
 	ctrl     *gomock.Controller
