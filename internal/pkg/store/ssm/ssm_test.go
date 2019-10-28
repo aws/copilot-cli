@@ -453,9 +453,7 @@ func TestStore_GetEnvironment(t *testing.T) {
 		"with no existing environment": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testEnvironmentPath, *param.Name)
-				return &ssm.GetParameterOutput{
-					Parameter: &ssm.Parameter{},
-				}, nil
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
 			wantedErr: &store.ErrNoSuchEnvironment{
 				ProjectName:     testEnvironment.Project,

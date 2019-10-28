@@ -197,14 +197,16 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get environment %s in project %s: %w", environmentName, projectName, err)
-	}
-
-	if environmentParam.Parameter.Value == nil {
-		return nil, &store.ErrNoSuchEnvironment{
-			ProjectName:     projectName,
-			EnvironmentName: environmentName,
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil, &store.ErrNoSuchEnvironment{
+					ProjectName:     projectName,
+					EnvironmentName: environmentName,
+				}
+			}
 		}
+		return nil, fmt.Errorf("get environment %s in project %s: %w", environmentName, projectName, err)
 	}
 
 	var env archer.Environment
