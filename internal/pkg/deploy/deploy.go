@@ -4,6 +4,8 @@
 // Package deploy holds the structures to deploy applications and environments.
 package deploy
 
+import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+
 // CreateEnvironmentInput represents the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	Project                  string // Name of the project this environment belongs to.
@@ -49,4 +51,12 @@ type AssociatedEnvironment struct {
 	AccountId string
 	// Whether or not this environment is a production environment.
 	Prod bool
+}
+
+// CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
+type CreateLBFargateAppInput struct {
+	App         *manifest.LBFargateManifest
+	EnvName     string
+	ProjectName string
+	ImageTag    string
 }
