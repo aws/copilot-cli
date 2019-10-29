@@ -10,29 +10,31 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
-// LBFargateManifest represents a load balanced web application with AWS Fargate as compute.
+// LBFargateManifest holds the configuration to build a container image with an exposed port that receives
+// requests through a load balancer with AWS Fargate as the compute engine.
 type LBFargateManifest struct {
 	AppManifest     `yaml:",inline"`
-	Image           LBFargateImage `yaml:",flow"`
+	Image           ImageWithPort `yaml:",flow"`
 	LBFargateConfig `yaml:",inline"`
 	Environments    map[string]LBFargateConfig `yaml:",flow"` // Fields to override per environment.
 }
 
-// LBFargateImage represents a container image with its exposed port to receive requests.
-type LBFargateImage struct {
+// ImageWithPort represents a container image with an exposed port.
+type ImageWithPort struct {
 	AppImage `yaml:",inline"`
 	Port     int `yaml:"port"`
 }
 
-// LBFargateConfig are the essential configuration that
+// LBFargateConfig represents a load balanced web application with AWS Fargate as compute.
 type LBFargateConfig struct {
-	RoutingRule `yaml:"http,flow"`
-	TaskConfig  `yaml:",inline"`
-	Public      bool               `yaml:"public"`
-	Scaling     *AutoScalingConfig `yaml:",flow"`
+	RoutingRule      `yaml:"http,flow"`
+	ContainersConfig `yaml:",inline"`
+	Public           bool               `yaml:"public"`
+	Scaling          *AutoScalingConfig `yaml:",flow"`
 }
 
-type TaskConfig struct {
+// ContainersConfig represents the resource boundaries and environment variables for the containers in the service.
+type ContainersConfig struct {
 	CPU       int               `yaml:"cpu"`
 	Memory    int               `yaml:"memory"`
 	Count     int               `yaml:"count"`
@@ -40,10 +42,12 @@ type TaskConfig struct {
 	Secrets   map[string]string `yaml:"secrets"`
 }
 
+// RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path string `yaml:"path"`
 }
 
+// AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
 type AutoScalingConfig struct {
 	MinCount int `yaml:"minCount"`
 	MaxCount int `yaml:"maxCount"`
@@ -52,14 +56,15 @@ type AutoScalingConfig struct {
 	TargetMemory float64 `yaml:"targetMemory"`
 }
 
-// NewLoadBalancedFargateManifest creates a new public load balanced Fargate service with minimal compute settings.
+// NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
+// all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
 func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargateManifest {
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
 			Name: appName,
 			Type: LoadBalancedWebApplication,
 		},
-		Image: LBFargateImage{
+		Image: ImageWithPort{
 			AppImage: AppImage{
 				Build: dockerfile,
 			},
@@ -69,7 +74,7 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 			RoutingRule: RoutingRule{
 				Path: "*",
 			},
-			TaskConfig: TaskConfig{
+			ContainersConfig: ContainersConfig{
 				CPU:    256,
 				Memory: 512,
 				Count:  1,

@@ -89,12 +89,12 @@ environments:
 				require.True(t, ok)
 				wantedManifest := &LBFargateManifest{
 					AppManifest: AppManifest{Name: "frontend", Type: LoadBalancedWebApplication},
-					Image:       LBFargateImage{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
+					Image:       ImageWithPort{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
 					LBFargateConfig: LBFargateConfig{
 						RoutingRule: RoutingRule{
 							Path: "*",
 						},
-						TaskConfig: TaskConfig{
+						ContainersConfig: ContainersConfig{
 							CPU:    512,
 							Memory: 1024,
 							Count:  1,
@@ -114,7 +114,7 @@ environments:
 					},
 					Environments: map[string]LBFargateConfig{
 						"test": {
-							TaskConfig: TaskConfig{
+							ContainersConfig: ContainersConfig{
 								Count: 3,
 							},
 							Public: true,
