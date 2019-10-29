@@ -12,8 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const projectName = "project"
-
 func TestNewProvider(t *testing.T) {
 	testCases := map[string]struct {
 		providerConfig interface{}
@@ -47,7 +45,7 @@ func TestCreatePipeline(t *testing.T) {
 		beforeEach     func() error
 		provider       Provider
 		expectedErr    error
-		inputStages    []PipelineStage
+		inputStages    []string
 		expectedStages []PipelineStage
 	}{
 		"errors out when no stage provided": {
@@ -62,32 +60,6 @@ func TestCreatePipeline(t *testing.T) {
 			expectedErr: fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 				pipelineName),
 		},
-		"certain stages use different project names": {
-			provider: func() Provider {
-				p, err := NewProvider(&GitHubProperties{
-					Repository: "aws/amazon-ecs-cli-v2",
-					Branch:     "master",
-				})
-				require.NoError(t, err, "failed to create provider")
-				return p
-			}(),
-			inputStages: []PipelineStage{
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName + "somethingElse",
-						Name:        "chicken",
-					},
-				},
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName,
-						Name:        "wings",
-					},
-				},
-			},
-			expectedErr: fmt.Errorf("failed to create a pipieline that is associated with multiple projects, found at least: [%s, %s]",
-				projectName+"somethingElse", projectName),
-		},
 		"happy case with non-default stages": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
@@ -97,34 +69,8 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []PipelineStage{
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName,
-						Name:        "chicken",
-					},
-				},
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName,
-						Name:        "wings",
-					},
-				},
-			},
-			expectedStages: []PipelineStage{
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName,
-						Name:        "chicken",
-					},
-				},
-				{
-					associatedEnvironment: &associatedEnvironment{
-						ProjectName: projectName,
-						Name:        "wings",
-					},
-				},
-			},
+			inputStages:    []string{"chicken", "wings"},
+			expectedStages: []PipelineStage{{"chicken"}, {"wings"}},
 		},
 	}
 
@@ -167,6 +113,9 @@ stages:
     - 
       # The name of the environment to deploy to.
       name: chicken
+    - 
+      # The name of the environment to deploy to.
+      name: wings
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
@@ -175,12 +124,7 @@ stages:
 	})
 	require.NoError(t, err)
 
-	m, err := CreatePipeline(pipelineName, provider, PipelineStage{
-		associatedEnvironment: &associatedEnvironment{
-			ProjectName: projectName,
-			Name:        "chicken",
-		},
-	})
+	m, err := CreatePipeline(pipelineName, provider, "chicken", "wings")
 	require.NoError(t, err)
 
 	b, err := m.Marshal()
@@ -190,21 +134,11 @@ stages:
 
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
-		overrideFetchFunc func(stageName string) (*associatedEnvironment, []string, error)
-		inContent         string
-		expectedManifest  *PipelineManifest
-		expectedErr       error
+		inContent        string
+		expectedManifest *PipelineManifest
+		expectedErr      error
 	}{
 		"invalid pipeline schema version": {
-			overrideFetchFunc: func(_ string) (*associatedEnvironment, []string, error) {
-				return &associatedEnvironment{
-					ProjectName: projectName,
-					Name:        "test",
-					Region:      "testRegion",
-					AccountID:   "testAccountId",
-					Prod:        false,
-				}, []string{}, nil
-			},
 			inContent: `
 name: pipepiper
 version: -1
@@ -218,6 +152,8 @@ source:
 stages:
     - 
       name: test
+    -
+      name: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
 				PipelineSchemaMajorVersion(-1),
@@ -228,16 +164,6 @@ stages:
 			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
 		},
 		"valid pipeline.yml": {
-			overrideFetchFunc: func(stageName string) (*associatedEnvironment, []string, error) {
-				require.Equal(t, "chicken", stageName)
-				return &associatedEnvironment{
-					ProjectName: projectName,
-					Name:        "chicken",
-					Region:      "testRegion",
-					AccountID:   "testAccountId",
-					Prod:        false,
-				}, []string{"app1", "app2"}, nil
-			},
 			inContent: `
 name: pipepiper
 version: 1
@@ -251,6 +177,8 @@ source:
 stages:
     - 
       name: chicken
+    - 
+      name: wings
 `,
 			expectedManifest: &PipelineManifest{
 				Name:    "pipepiper",
@@ -263,25 +191,14 @@ stages:
 					},
 				},
 				Stages: []PipelineStage{
-					{
-						associatedEnvironment: &associatedEnvironment{
-							ProjectName: projectName,
-							Name:        "chicken",
-							Region:      "testRegion",
-							AccountID:   "testAccountId",
-							Prod:        false,
-						},
-						LocalApplications: []string{"app1", "app2"},
-					},
-				},
+					PipelineStage{"chicken"},
+					PipelineStage{"wings"}},
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			existingFunc := fetchAssociatedEnvAndApps
-			fetchAssociatedEnvAndApps = tc.overrideFetchFunc
 			m, err := UnmarshalPipeline([]byte(tc.inContent))
 
 			if tc.expectedErr != nil {
@@ -289,7 +206,6 @@ stages:
 			} else {
 				require.Equal(t, tc.expectedManifest, m)
 			}
-			fetchAssociatedEnvAndApps = existingFunc
 		})
 	}
 }

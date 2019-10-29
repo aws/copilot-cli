@@ -9,12 +9,9 @@ import (
 	"fmt"
 	"text/template"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 
-	archerCfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
@@ -76,8 +73,6 @@ const (
 // PipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
 type PipelineManifest struct {
-	// Name of the project this pipeline belongs to
-	ProjectName string `yaml:"-"`
 	// Name of the pipeline
 	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
@@ -91,26 +86,27 @@ type Source struct {
 	Properties   map[string]interface{} `yaml:"properties"`
 }
 
+// PipelineStage represents a stage in the pipeline manifest
+type PipelineStage struct {
+	Name string `yaml:"name`
+}
+
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineStage) (*PipelineManifest, error) {
+func CreatePipeline(pipelineName string, provider Provider, stageNames ...string) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
-	if len(stages) == 0 {
+	if len(stageNames) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
 	}
 
-	var projectName = stages[0].ProjectName
-	for _, s := range stages[1:] {
-		if s.ProjectName != projectName {
-			return nil, fmt.Errorf("failed to create a pipieline that is associated with multiple projects, found at least: [%s, %s]",
-				projectName, s.ProjectName)
-		}
+	stages := make([]PipelineStage, 0, len(stageNames))
+	for _, name := range stageNames {
+		stages = append(stages, PipelineStage{Name: name})
 	}
 
 	return &PipelineManifest{
-		ProjectName: stages[0].ProjectName,
-		Name:        pipelineName,
-		Version:     Ver1,
+		Name:    pipelineName,
+		Version: Ver1,
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
@@ -171,26 +167,5 @@ func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 			&ErrInvalidPipelineManifestVersion{
 				invalidVersion: pm.Version,
 			}
-	}
-}
-
-func (m *PipelineManifest) StackName() string {
-	return m.ProjectName + "-" + m.Name
-}
-
-func (m *PipelineManifest) Template() (string, error) {
-	return "", nil
-}
-
-func (m *PipelineManifest) Parameters() []*cloudformation.Parameter {
-	return nil
-}
-
-func (m *PipelineManifest) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
-		{
-			Key:   aws.String(archerCfn.ProjectTagKey),
-			Value: aws.String(m.ProjectName),
-		},
 	}
 }

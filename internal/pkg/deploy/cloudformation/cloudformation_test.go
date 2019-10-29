@@ -89,7 +89,7 @@ func TestDeploy(t *testing.T) {
 	mockStackConfig := getMockStackConfiguration()
 	testCases := map[string]struct {
 		cf    CloudFormation
-		input StackConfiguration
+		input stackConfiguration
 		want  error
 	}{
 		"should wrap error returned from CreateChangeSet call": {
@@ -310,7 +310,7 @@ func TestDeploy(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.Deploy(tc.input)
+			got := tc.cf.deploy(tc.input)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())
@@ -325,7 +325,7 @@ func TestWaitForStackCreation(t *testing.T) {
 	stackConfig := getMockStackConfiguration()
 	testCases := map[string]struct {
 		cf    CloudFormation
-		input StackConfiguration
+		input stackConfiguration
 		want  error
 	}{
 		"error in WaitUntilStackCreateComplete call": {
@@ -426,7 +426,7 @@ func getMockWaitStackCreateCFClient(t *testing.T, stackName string, shouldThrowE
 	}
 }
 
-func getMockStackConfiguration() StackConfiguration {
+func getMockStackConfiguration() stackConfiguration {
 	return mockStackConfiguration{
 		mockStackName: func() string {
 			return mockStackID
