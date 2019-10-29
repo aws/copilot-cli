@@ -359,7 +359,7 @@ func TestWaitForStackCreation(t *testing.T) {
 }
 
 func TestWaitForEnvironmentCreation(t *testing.T) {
-	deploymentInput := deploy.DeployEnvironmentInput{
+	deploymentInput := deploy.CreateEnvironmentInput{
 		Name:    "test",
 		Project: "project",
 	}
@@ -367,7 +367,7 @@ func TestWaitForEnvironmentCreation(t *testing.T) {
 
 	testCases := map[string]struct {
 		cf    CloudFormation
-		input deploy.DeployEnvironmentInput
+		input deploy.CreateEnvironmentInput
 		want  error
 	}{
 		"error in waitForStackCreation call": {

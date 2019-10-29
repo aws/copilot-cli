@@ -4,8 +4,8 @@
 // Package deploy holds the structures to deploy applications and environments.
 package deploy
 
-// DeployEnvironmentInput represents the fields required to setup and deploy an environment.
-type DeployEnvironmentInput struct {
+// CreateEnvironmentInput represents the fields required to deploy an environment.
+type CreateEnvironmentInput struct {
 	Project                  string // Name of the project this environment belongs to.
 	Name                     string // Name of the environment, must be unique within a project.
 	Prod                     bool   // Whether or not this environment is a production environment.

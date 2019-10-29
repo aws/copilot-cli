@@ -52,7 +52,7 @@ func New(sess *session.Session) CloudFormation {
 // If the stack already exists, returns a ErrStackAlreadyExists.
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
-func (cf CloudFormation) DeployEnvironment(env *deploy.DeployEnvironmentInput) error {
+func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
 	return cf.deploy(newEnvStackConfig(env, cf.box))
 }
 
@@ -84,7 +84,7 @@ func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
 // WaitForEnvironmentCreation will block until the environment's CloudFormation stack has completed or errored.
 // Once the deployment is complete, it read the stack output and create an environment with the resources from
 // the stack like ECR Repo.
-func (cf CloudFormation) WaitForEnvironmentCreation(env *deploy.DeployEnvironmentInput) (*archer.Environment, error) {
+func (cf CloudFormation) WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error) {
 	cfEnv := newEnvStackConfig(env, cf.box)
 	deployedStack, err := cf.waitForStackCreation(cfEnv)
 	if err != nil {

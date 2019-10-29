@@ -78,7 +78,7 @@ func (opts *InitEnvOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	deployEnvInput := &deploy.DeployEnvironmentInput{
+	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     opts.EnvName,
 		Project:                  viper.GetString(projectFlag),
 		Prod:                     opts.IsProduction,

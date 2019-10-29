@@ -143,8 +143,8 @@ func mockEnvironmentStack(stackArn, ecrOutput string) *cloudformation.Stack {
 	}
 }
 
-func mockDeployEnvironmentInput() *deploy.DeployEnvironmentInput {
-	return &deploy.DeployEnvironmentInput{
+func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
+	return &deploy.CreateEnvironmentInput{
 		Name:                     "env",
 		Project:                  "project",
 		Prod:                     true,

@@ -6,9 +6,8 @@ package archer
 
 import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 
-// Environment represents the configuration of a particular Environment in a Project. It includes
-// the location of the Environment (account and region), the name of the environment, as well as the project
-// the environment belongs to.
+// Environment represents the configuration of a particular environment in a project. It includes
+// the environment's account and region, name, as well as the project it belongs to.
 type Environment struct {
 	Project     string `json:"project"`     // Name of the project this environment belongs to.
 	Name        string `json:"name"`        // Name of the environment, must be unique within a project.
@@ -42,6 +41,6 @@ type EnvironmentCreator interface {
 
 // EnvironmentDeployer can deploy an environment
 type EnvironmentDeployer interface {
-	DeployEnvironment(env *deploy.DeployEnvironmentInput) error
-	WaitForEnvironmentCreation(env *deploy.DeployEnvironmentInput) (*Environment, error)
+	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
+	WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*Environment, error)
 }

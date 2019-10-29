@@ -86,7 +86,7 @@ type Source struct {
 }
 
 // PipelineStage represents configuration for each deployment stage
-// of a workspace. A stage consists of the Archer Environment the pipeline
+// of a workspace. A stage consists of the Archer environment the pipeline
 // is deloying to and the containerized applications that will be deployed.
 type PipelineStage struct {
 	*AssociatedEnvironment `yaml:",inline"`
@@ -94,7 +94,7 @@ type PipelineStage struct {
 }
 
 // AssociatedEnvironment defines the necessary information a pipline stage
-// needs for an Archer Environment.
+// needs for an Archer environment.
 type AssociatedEnvironment struct {
 	Project   string `yaml:"-"`    // Name of the project this environment belongs to.
 	Name      string `yaml:"name"` // Name of the environment, must be unique within a project.
