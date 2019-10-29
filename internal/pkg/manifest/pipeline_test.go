@@ -19,8 +19,8 @@ func TestNewProvider(t *testing.T) {
 		providerConfig interface{}
 		expectedErr    error
 	}{
-		"successfully create Github provider": {
-			providerConfig: &GithubProperties{
+		"successfully create GitHub provider": {
+			providerConfig: &GitHubProperties{
 				Repository: "aws/amazon-ecs-cli-v2",
 				Branch:     "master",
 			},
@@ -52,7 +52,7 @@ func TestCreatePipeline(t *testing.T) {
 	}{
 		"errors out when no stage provided": {
 			provider: func() Provider {
-				p, err := NewProvider(&GithubProperties{
+				p, err := NewProvider(&GitHubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
@@ -64,7 +64,7 @@ func TestCreatePipeline(t *testing.T) {
 		},
 		"certain stages use different project names": {
 			provider: func() Provider {
-				p, err := NewProvider(&GithubProperties{
+				p, err := NewProvider(&GitHubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
@@ -90,7 +90,7 @@ func TestCreatePipeline(t *testing.T) {
 		},
 		"happy case with non-default stages": {
 			provider: func() Provider {
-				p, err := NewProvider(&GithubProperties{
+				p, err := NewProvider(&GitHubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
@@ -154,7 +154,7 @@ version: 1
 # This section defines the source artifacts.
 source:
   # The name of the provider that is used to store the source artifacts.
-  provider: Github
+  provider: GitHub
   # Additional properties that further specifies the exact location
   # the artifacts should be sourced from.
   properties:
@@ -169,7 +169,7 @@ stages:
       name: chicken
 `
 	// reset the global map before each test case is run
-	provider, err := NewProvider(&GithubProperties{
+	provider, err := NewProvider(&GitHubProperties{
 		Repository: "aws/amazon-ecs-cli-v2",
 		Branch:     "master",
 	})
@@ -210,7 +210,7 @@ name: pipepiper
 version: -1
 
 source:
-  provider: Github
+  provider: GitHub
   properties:
     repository: aws/somethingCool
     branch: master
@@ -243,7 +243,7 @@ name: pipepiper
 version: 1
 
 source:
-  provider: Github
+  provider: GitHub
   properties:
     repository: aws/somethingCool
     branch: master
@@ -256,7 +256,7 @@ stages:
 				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
-					ProviderName: "Github",
+					ProviderName: "GitHub",
 					Properties: map[string]interface{}{
 						"repository": "aws/somethingCool",
 						"branch":     "master",

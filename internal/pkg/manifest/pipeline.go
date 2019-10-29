@@ -27,24 +27,24 @@ type Provider interface {
 }
 
 type githubProvider struct {
-	properties *GithubProperties
+	properties *GitHubProperties
 }
 
 func (p *githubProvider) Name() string {
-	return "Github"
+	return "GitHub"
 }
 
 func (p *githubProvider) String() string {
-	return "Github"
+	return "GitHub"
 }
 
 func (p *githubProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
 
-// GithubProperties contain information for configuring a Github
+// GitHubProperties contain information for configuring a Github
 // source provider.
-type GithubProperties struct {
+type GitHubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 	Repository string `structs:"repository" yaml:"repository"`
@@ -55,7 +55,7 @@ type GithubProperties struct {
 // the provided provider-specific configurations
 func NewProvider(configs interface{}) (Provider, error) {
 	switch props := configs.(type) {
-	case *GithubProperties:
+	case *GitHubProperties:
 		return &githubProvider{
 			properties: props,
 		}, nil
