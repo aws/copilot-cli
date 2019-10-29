@@ -12,6 +12,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -30,6 +32,7 @@ type InitAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
+	appStore       archer.ApplicationStore
 	manifestWriter archer.ManifestIO
 	prompt         prompter
 
@@ -82,31 +85,61 @@ func (opts *InitAppOpts) Validate() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (opts *InitAppOpts) Execute() error {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
-	if err != nil {
-		return fmt.Errorf("generate a manifest: %w", err)
+	projectName := viper.GetString(projectFlag)
+	if err := opts.ensureNoExistingApp(projectName, opts.AppName); err != nil {
+		return err
 	}
-	manifestBytes, err := manifest.Marshal()
+
+	manifestPath, err := opts.createManifest()
 	if err != nil {
-		return fmt.Errorf("marshal manifest: %w", err)
+		return err
 	}
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, opts.AppName)
-	if err != nil {
-		return fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
+
+	opts.manifestPath = manifestPath
+
+	if err := opts.createAppInProject(projectName); err != nil {
+		return err
 	}
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("get working directory: %w", err)
-	}
-	relPath, err := filepath.Rel(wkdir, manifestPath)
-	if err != nil {
-		return fmt.Errorf("relative path of manifest file: %w", err)
-	}
-	opts.manifestPath = relPath
+
 	log.Infoln()
 	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
+	return nil
+}
+
+func (opts *InitAppOpts) createManifest() (string, error) {
+	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
+	if err != nil {
+		return "", fmt.Errorf("generate a manifest: %w", err)
+	}
+	manifestBytes, err := manifest.Marshal()
+	if err != nil {
+		return "", fmt.Errorf("marshal manifest: %w", err)
+	}
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, opts.AppName)
+	if err != nil {
+		return "", fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
+	}
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	relPath, err := filepath.Rel(wkdir, manifestPath)
+	if err != nil {
+		return "", fmt.Errorf("relative path of manifest file: %w", err)
+	}
+	return relPath, nil
+}
+
+func (opts *InitAppOpts) createAppInProject(projectName string) error {
+	if err := opts.appStore.CreateApplication(&archer.Application{
+		Project: projectName,
+		Name:    opts.AppName,
+		Type:    opts.AppType,
+	}); err != nil {
+		return fmt.Errorf("saving application %s: %w", opts.AppName, err)
+	}
 	return nil
 }
 
@@ -202,6 +235,21 @@ func (opts *InitAppOpts) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
+func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
+	_, err := opts.appStore.GetApplication(projectName, opts.AppName)
+	// If the app doesn't exist - that's perfect, return no error.
+	var existsErr *store.ErrNoSuchApplication
+	if errors.As(err, &existsErr) {
+		return nil
+	}
+	// If there's no error, that means we were able to fetch an existing app
+	if err == nil {
+		return fmt.Errorf("application %s already exists under project %s", appName, projectName)
+	}
+	// Otherwise, there was an error calling the store
+	return fmt.Errorf("couldn't check if application %s exists in project %s: %w", appName, projectName, err)
+}
+
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (opts *InitAppOpts) RecommendedActions() []string {
 	return []string{
@@ -226,6 +274,12 @@ This command is also run as part of "archer init".`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 			opts.prompt = prompt.New()
+
+			store, err := ssm.NewStore()
+			if err != nil {
+				return fmt.Errorf("couldn't connect to project datastore: %w", err)
+			}
+			opts.appStore = store
 
 			ws, err := workspace.New()
 			if err != nil {

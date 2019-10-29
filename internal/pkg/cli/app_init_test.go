@@ -5,10 +5,13 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -191,19 +194,88 @@ func TestAppInitOpts_Validate(t *testing.T) {
 
 func TestAppInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inAppType        string
-		inAppName        string
-		inDockerfilePath string
-
+		inAppType          string
+		inAppName          string
+		inDockerfilePath   string
+		inProjectName      string
+		wantedErr          error
 		mockManifestWriter func(m *archerMocks.MockManifestIO)
+		mockAppStore       func(m *archerMocks.MockApplicationStore)
 	}{
-		"writes manifest": {
+		"writes manifest and saves app when app doesn't exist": {
 			inAppType:        manifest.LoadBalancedWebApplication,
+			inProjectName:    "project",
 			inAppName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
 				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+			},
+
+			mockAppStore: func(m *archerMocks.MockApplicationStore) {
+				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
+				m.EXPECT().CreateApplication(gomock.Any()).
+					Do(func(app *archer.Application) {
+						require.Equal(t, &archer.Application{
+							Name:    "frontend",
+							Project: "project",
+							Type:    manifest.LoadBalancedWebApplication,
+						}, app)
+					}).
+					Return(nil)
+			},
+		},
+
+		"app already exists": {
+			inAppType:        manifest.LoadBalancedWebApplication,
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedErr:        fmt.Errorf("application frontend already exists under project project"),
+			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil).Times(0)
+			},
+
+			mockAppStore: func(m *archerMocks.MockApplicationStore) {
+				m.EXPECT().GetApplication("project", "frontend").Return(&archer.Application{}, nil)
+				m.EXPECT().CreateApplication(gomock.Any()).
+					Return(nil).
+					Times(0)
+			},
+		},
+
+		"error calling app store": {
+			inAppType:        manifest.LoadBalancedWebApplication,
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedErr:        fmt.Errorf("couldn't check if application frontend exists in project project: oops"),
+			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil).Times(0)
+			},
+
+			mockAppStore: func(m *archerMocks.MockApplicationStore) {
+				m.EXPECT().GetApplication("project", "frontend").Return(nil, fmt.Errorf("oops"))
+				m.EXPECT().CreateApplication(gomock.Any()).
+					Return(nil).
+					Times(0)
+			},
+		},
+
+		"error saving app": {
+			inAppType:        manifest.LoadBalancedWebApplication,
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedErr:        fmt.Errorf("saving application frontend: oops"),
+			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+			},
+
+			mockAppStore: func(m *archerMocks.MockApplicationStore) {
+				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
+				m.EXPECT().CreateApplication(gomock.Any()).
+					Return(fmt.Errorf("oops"))
 			},
 		},
 	}
@@ -211,23 +283,30 @@ func TestAppInitOpts_Execute(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			viper.Set(projectFlag, tc.inProjectName)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			mockWriter := archerMocks.NewMockManifestIO(ctrl)
+			mockAppStore := archerMocks.NewMockApplicationStore(ctrl)
 			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
 				manifestWriter: mockWriter,
+				appStore:       mockAppStore,
 			}
 			tc.mockManifestWriter(mockWriter)
-
+			tc.mockAppStore(mockAppStore)
 			// WHEN
 			err := opts.Execute()
 
 			// THEN
-			require.Nil(t, err)
+			if tc.wantedErr == nil {
+				require.Nil(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
 		})
 	}
 }
