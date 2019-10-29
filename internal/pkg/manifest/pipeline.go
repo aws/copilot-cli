@@ -14,7 +14,6 @@ import (
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	archerCfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
@@ -74,9 +73,9 @@ const (
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
-// pipelineManifest contains information that defines the relationship
+// PipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
-type pipelineManifest struct {
+type PipelineManifest struct {
 	// Name of the project this pipeline belongs to
 	ProjectName string `yaml:"-"`
 	// Name of the pipeline
@@ -93,7 +92,7 @@ type Source struct {
 }
 
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineStage) (archer.Pipeline, error) {
+func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineStage) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
 	if len(stages) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
@@ -108,7 +107,7 @@ func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineSt
 		}
 	}
 
-	return &pipelineManifest{
+	return &PipelineManifest{
 		ProjectName: stages[0].ProjectName,
 		Name:        pipelineName,
 		Version:     Ver1,
@@ -122,7 +121,7 @@ func CreatePipeline(pipelineName string, provider Provider, stages ...PipelineSt
 
 // Marshal serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *pipelineManifest) Marshal() ([]byte, error) {
+func (m *PipelineManifest) Marshal() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("cicd/pipeline.yml")
 	if err != nil {
@@ -142,8 +141,8 @@ func (m *pipelineManifest) Marshal() ([]byte, error) {
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
-func UnmarshalPipeline(in []byte) (archer.Pipeline, error) {
-	pm := pipelineManifest{}
+func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
+	pm := PipelineManifest{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
 		return nil, err
@@ -163,7 +162,7 @@ func UnmarshalPipeline(in []byte) (archer.Pipeline, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
-func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
+func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil
@@ -175,19 +174,19 @@ func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
 	}
 }
 
-func (m *pipelineManifest) StackName() string {
+func (m *PipelineManifest) StackName() string {
 	return m.ProjectName + "-" + m.Name
 }
 
-func (m *pipelineManifest) Template() (string, error) {
+func (m *PipelineManifest) Template() (string, error) {
 	return "", nil
 }
 
-func (m *pipelineManifest) Parameters() []*cloudformation.Parameter {
+func (m *PipelineManifest) Parameters() []*cloudformation.Parameter {
 	return nil
 }
 
-func (m *pipelineManifest) Tags() []*cloudformation.Tag {
+func (m *PipelineManifest) Tags() []*cloudformation.Tag {
 	return []*cloudformation.Tag{
 		{
 			Key:   aws.String(archerCfn.ProjectTagKey),

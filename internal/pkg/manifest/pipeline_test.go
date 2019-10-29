@@ -135,9 +135,7 @@ func TestCreatePipeline(t *testing.T) {
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				p, ok := m.(*pipelineManifest)
-				require.True(t, ok)
-				require.Equal(t, tc.expectedStages, p.Stages, "the stages are different from the expected")
+				require.Equal(t, tc.expectedStages, m.Stages, "the stages are different from the expected")
 			}
 		})
 	}
@@ -194,7 +192,7 @@ func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		overrideFetchFunc func(stageName string) (*associatedEnvironment, []string, error)
 		inContent         string
-		expectedManifest  *pipelineManifest
+		expectedManifest  *PipelineManifest
 		expectedErr       error
 	}{
 		"invalid pipeline schema version": {
@@ -227,7 +225,7 @@ stages:
 		},
 		"invalid pipeline.yml": {
 			inContent:   `corrupted yaml`,
-			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.pipelineManifest"),
+			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
 		},
 		"valid pipeline.yml": {
 			overrideFetchFunc: func(stageName string) (*associatedEnvironment, []string, error) {
@@ -254,7 +252,7 @@ stages:
     - 
       name: chicken
 `,
-			expectedManifest: &pipelineManifest{
+			expectedManifest: &PipelineManifest{
 				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
@@ -289,9 +287,7 @@ stages:
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				actualManifest, ok := m.(*pipelineManifest)
-				require.True(t, ok)
-				require.Equal(t, tc.expectedManifest, actualManifest)
+				require.Equal(t, tc.expectedManifest, m)
 			}
 			fetchAssociatedEnvAndApps = existingFunc
 		})
