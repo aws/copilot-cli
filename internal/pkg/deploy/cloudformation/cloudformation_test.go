@@ -310,7 +310,7 @@ func TestDeploy(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.Deploy(tc.input)
+			got := tc.cf.deploy(tc.input)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())

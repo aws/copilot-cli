@@ -7,9 +7,10 @@ package archer
 // into a YAML manifest file or various other data format, such as
 // CloudFormation template.
 type Pipeline interface {
-	// TODO: #244 Consolidate this interface and the archer.Manifest interface
-	// For now we use 2 interfaces to limit the scope of the changes so that
-	// they won't bleed into existing application manifest.
+	// TODO: #244 Consolidate this interface and the archer.Manifest interface.
+	// For now we use 2 interfaces to limit the scope of the changes to just
+	// the pipeline commands so that they won't bleed into existing
+	// application manifest.
 	Marshal() ([]byte, error)
 	StackConfiguration
 }
