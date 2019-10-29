@@ -72,6 +72,7 @@ func NewInitOpts() (*InitOpts, error) {
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 		manifestWriter: ws,
 		prompt:         prompt,
+		appStore:       ssm,
 	}
 	initEnv := &InitEnvOpts{
 		EnvName:       defaultEnvironmentName,
