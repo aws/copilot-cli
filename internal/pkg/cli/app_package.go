@@ -26,7 +26,7 @@ type PackageAppOpts struct {
 func NewPackageAppOpts() *PackageAppOpts {
 	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
 	if err != nil {
-		// If we can't retrieve a commit ID we default the image tag to 'latest'
+		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
 			Tag:    "latest",
 			prompt: prompt.New(),

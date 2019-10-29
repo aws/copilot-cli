@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -15,7 +16,7 @@ import (
 // envStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type envStackConfig struct {
-	*archer.DeployEnvironmentInput
+	*deploy.DeployEnvironmentInput
 	box packd.Box
 }
 
@@ -37,7 +38,7 @@ const (
 
 // newEnvStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up an environment.
-func newEnvStackConfig(input *archer.DeployEnvironmentInput, box packd.Box) *envStackConfig {
+func newEnvStackConfig(input *deploy.DeployEnvironmentInput, box packd.Box) *envStackConfig {
 	return &envStackConfig{
 		DeployEnvironmentInput: input,
 		box:                    box,
