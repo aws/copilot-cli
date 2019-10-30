@@ -1,5 +1,8 @@
 # This YAML file defines the relationship and deployment ordering of your environments.
 
+# The name of the pipeline
+name: {{.Name}}
+
 # The version of the schema used in this template
 version: {{.Version}}
 

@@ -12,3 +12,41 @@ type CreateEnvironmentInput struct {
 	PublicLoadBalancer       bool   // Whether or not this environment should contain a shared public load balancer between applications.
 	ToolsAccountPrincipalARN string // The Principal ARN of the tools account.
 }
+
+// CreatePipelineInput represents the fields required to deploy a pipeline.
+type CreatePipelineInput struct {
+	// Name of the project this pipeline belongs to
+	ProjectName string
+	// Name of the pipeline
+	Name   string
+	Source *Source
+	Stages []PipelineStage
+}
+
+// Source defines the source of the artifacts to be built and deployed.
+type Source struct {
+	ProviderName string
+	Properties   map[string]interface{}
+}
+
+// PipelineStage represents configuration for each deployment stage
+// of a workspace. A stage consists of the Archer Environment the pipeline
+// is deloying to and the containerized applications that will be deployed.
+type PipelineStage struct {
+	*AssociatedEnvironment
+	LocalApplications []string
+}
+
+// AssociatedEnvironment defines the necessary information a pipline stage
+// needs for an Archer Environment.
+type AssociatedEnvironment struct {
+	// Name of the environment, must be unique within a project.
+	// This is also the name of the pipeline stage.
+	Name string
+	// T region this environment is stored in.
+	Region string
+	// AccountId of the account this environment is stored in.
+	AccountId string
+	// Whether or not this environment is a production environment.
+	Prod bool
+}

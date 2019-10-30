@@ -12,7 +12,6 @@ import (
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
@@ -25,24 +24,24 @@ type Provider interface {
 }
 
 type githubProvider struct {
-	properties *GithubProperties
+	properties *GitHubProperties
 }
 
 func (p *githubProvider) Name() string {
-	return "github"
+	return "GitHub"
 }
 
 func (p *githubProvider) String() string {
-	return "github"
+	return "GitHub"
 }
 
 func (p *githubProvider) Properties() map[string]interface{} {
 	return structs.Map(p.properties)
 }
 
-// GithubProperties contain information for configuring a Github
+// GitHubProperties contain information for configuring a Github
 // source provider.
-type GithubProperties struct {
+type GitHubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 	Repository string `structs:"repository" yaml:"repository"`
@@ -53,7 +52,7 @@ type GithubProperties struct {
 // the provided provider-specific configurations
 func NewProvider(configs interface{}) (Provider, error) {
 	switch props := configs.(type) {
-	case *GithubProperties:
+	case *GitHubProperties:
 		return &githubProvider{
 			properties: props,
 		}, nil
@@ -71,9 +70,11 @@ const (
 	Ver1 PipelineSchemaMajorVersion = iota + 1
 )
 
-// pipelineManifest contains information that defines the relationship
+// PipelineManifest contains information that defines the relationship
 // and deployment ordering of your environments.
-type pipelineManifest struct {
+type PipelineManifest struct {
+	// Name of the pipeline
+	Name    string                     `yaml:"name"`
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
 	Stages  []PipelineStage            `yaml:"stages"`
@@ -85,56 +86,38 @@ type Source struct {
 	Properties   map[string]interface{} `yaml:"properties"`
 }
 
-// PipelineStage represents configuration for each deployment stage
-// of a workspace. A stage consists of the Archer environment the pipeline
-// is deloying to and the containerized applications that will be deployed.
+// PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	*AssociatedEnvironment `yaml:",inline"`
-	Applications           []*archer.Application `yaml:"-"`
-}
-
-// AssociatedEnvironment defines the necessary information a pipline stage
-// needs for an Archer environment.
-type AssociatedEnvironment struct {
-	Project   string `yaml:"-"`    // Name of the project this environment belongs to.
-	Name      string `yaml:"name"` // Name of the environment, must be unique within a project.
-	Region    string `yaml:"-"`    // Name of the region this environment is stored in.
-	AccountID string `yaml:"-"`    // Account ID of the account this environment is stored in.
-	Prod      bool   `yaml:"-"`    // Whether or not this environment is a production environment.
+	Name string `yaml:"name`
 }
 
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(provider Provider, stages ...PipelineStage) (archer.Manifest, error) {
+func CreatePipeline(pipelineName string, provider Provider, stageNames ...string) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
-	var defaultStages []PipelineStage
-	if len(stages) == 0 {
-		defaultStages = []PipelineStage{
-			{
-				AssociatedEnvironment: &AssociatedEnvironment{
-					Name: "test",
-				},
-			},
-			{
-				AssociatedEnvironment: &AssociatedEnvironment{
-					Name: "prod",
-				},
-			},
-		}
+	if len(stageNames) == 0 {
+		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
+			pipelineName)
 	}
 
-	return &pipelineManifest{
+	stages := make([]PipelineStage, 0, len(stageNames))
+	for _, name := range stageNames {
+		stages = append(stages, PipelineStage{Name: name})
+	}
+
+	return &PipelineManifest{
+		Name:    pipelineName,
 		Version: Ver1,
 		Source: &Source{
 			ProviderName: provider.Name(),
 			Properties:   provider.Properties(),
 		},
-		Stages: append(defaultStages, stages...),
+		Stages: stages,
 	}, nil
 }
 
 // Marshal serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *pipelineManifest) Marshal() ([]byte, error) {
+func (m *PipelineManifest) Marshal() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("cicd/pipeline.yml")
 	if err != nil {
@@ -154,8 +137,8 @@ func (m *pipelineManifest) Marshal() ([]byte, error) {
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline
 // manifest object. It returns an error if any issue occurs during
 // deserialization or the YAML input contains invalid fields.
-func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
-	pm := pipelineManifest{}
+func UnmarshalPipeline(in []byte) (*PipelineManifest, error) {
+	pm := PipelineManifest{}
 	err := yaml.Unmarshal(in, &pm)
 	if err != nil {
 		return nil, err
@@ -175,7 +158,7 @@ func UnmarshalPipeline(in []byte) (archer.Manifest, error) {
 	return nil, errors.New("unexpected error occurs while unmarshalling pipeline.yml")
 }
 
-func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
+func validateVersion(pm *PipelineManifest) (PipelineSchemaMajorVersion, error) {
 	switch pm.Version {
 	case Ver1:
 		return Ver1, nil
@@ -185,10 +168,4 @@ func validateVersion(pm *pipelineManifest) (PipelineSchemaMajorVersion, error) {
 				invalidVersion: pm.Version,
 			}
 	}
-}
-
-// CFNTemplate serializes the manifest object into a CloudFormation template.
-func (m *pipelineManifest) CFNTemplate() (string, error) {
-	// TODO: #223 Generate CFN template for the archer pipeline
-	return "", nil
 }

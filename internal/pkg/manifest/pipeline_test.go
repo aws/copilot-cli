@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -16,8 +17,8 @@ func TestNewProvider(t *testing.T) {
 		providerConfig interface{}
 		expectedErr    error
 	}{
-		"successfully create Github provider": {
-			providerConfig: &GithubProperties{
+		"successfully create GitHub provider": {
+			providerConfig: &GitHubProperties{
 				Repository: "aws/amazon-ecs-cli-v2",
 				Branch:     "master",
 			},
@@ -38,88 +39,60 @@ func TestNewProvider(t *testing.T) {
 }
 
 func TestCreatePipeline(t *testing.T) {
+	const pipelineName = "pipepiper"
+
 	testCases := map[string]struct {
 		beforeEach     func() error
 		provider       Provider
 		expectedErr    error
-		inputStages    []PipelineStage
+		inputStages    []string
 		expectedStages []PipelineStage
 	}{
-		"happy case with default stages": {
+		"errors out when no stage provided": {
 			provider: func() Provider {
-				p, err := NewProvider(&GithubProperties{
+				p, err := NewProvider(&GitHubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			expectedStages: []PipelineStage{
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "test",
-					},
-				},
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "prod",
-					},
-				},
-			},
+			expectedErr: fmt.Errorf("a pipeline %s can not be created without a deployment stage",
+				pipelineName),
 		},
 		"happy case with non-default stages": {
 			provider: func() Provider {
-				p, err := NewProvider(&GithubProperties{
+				p, err := NewProvider(&GitHubProperties{
 					Repository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []PipelineStage{
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "chicken",
-					},
-				},
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "wings",
-					},
-				},
-			},
-			expectedStages: []PipelineStage{
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "chicken",
-					},
-				},
-				{
-					AssociatedEnvironment: &AssociatedEnvironment{
-						Name: "wings",
-					},
-				},
-			},
+			inputStages:    []string{"chicken", "wings"},
+			expectedStages: []PipelineStage{{"chicken"}, {"wings"}},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreatePipeline(tc.provider, tc.inputStages...)
+			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages...)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				p, ok := m.(*pipelineManifest)
-				require.True(t, ok)
-				require.Equal(t, tc.expectedStages, p.Stages, "the stages are different from the expected")
+				require.Equal(t, tc.expectedStages, m.Stages, "the stages are different from the expected")
 			}
 		})
 	}
 }
 
 func TestPipelineManifestMarshal(t *testing.T) {
+	const pipelineName = "pipepiper"
 	wantedContent := `# This YAML file defines the relationship and deployment ordering of your environments.
+
+# The name of the pipeline
+name: pipepiper
 
 # The version of the schema used in this template
 version: 1
@@ -127,7 +100,7 @@ version: 1
 # This section defines the source artifacts.
 source:
   # The name of the provider that is used to store the source artifacts.
-  provider: github
+  provider: GitHub
   # Additional properties that further specifies the exact location
   # the artifacts should be sourced from.
   properties:
@@ -139,19 +112,19 @@ source:
 stages:
     - 
       # The name of the environment to deploy to.
-      name: test
+      name: chicken
     - 
       # The name of the environment to deploy to.
-      name: prod
+      name: wings
 `
 	// reset the global map before each test case is run
-	provider, err := NewProvider(&GithubProperties{
+	provider, err := NewProvider(&GitHubProperties{
 		Repository: "aws/amazon-ecs-cli-v2",
 		Branch:     "master",
 	})
 	require.NoError(t, err)
 
-	m, err := CreatePipeline(provider)
+	m, err := CreatePipeline(pipelineName, provider, "chicken", "wings")
 	require.NoError(t, err)
 
 	b, err := m.Marshal()
@@ -162,15 +135,16 @@ stages:
 func TestUnmarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
-		expectedManifest *pipelineManifest
+		expectedManifest *PipelineManifest
 		expectedErr      error
 	}{
 		"invalid pipeline schema version": {
 			inContent: `
+name: pipepiper
 version: -1
 
 source:
-  provider: github
+  provider: GitHub
   properties:
     repository: aws/somethingCool
     branch: master
@@ -178,7 +152,7 @@ source:
 stages:
     - 
       name: test
-    - 
+    -
       name: prod
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
@@ -187,14 +161,15 @@ stages:
 		},
 		"invalid pipeline.yml": {
 			inContent:   `corrupted yaml`,
-			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.pipelineManifest"),
+			expectedErr: errors.New("yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `corrupt...` into manifest.PipelineManifest"),
 		},
 		"valid pipeline.yml": {
 			inContent: `
+name: pipepiper
 version: 1
 
 source:
-  provider: github
+  provider: GitHub
   properties:
     repository: aws/somethingCool
     branch: master
@@ -205,27 +180,19 @@ stages:
     - 
       name: wings
 `,
-			expectedManifest: &pipelineManifest{
+			expectedManifest: &PipelineManifest{
+				Name:    "pipepiper",
 				Version: Ver1,
 				Source: &Source{
-					ProviderName: "github",
+					ProviderName: "GitHub",
 					Properties: map[string]interface{}{
 						"repository": "aws/somethingCool",
 						"branch":     "master",
 					},
 				},
 				Stages: []PipelineStage{
-					{
-						AssociatedEnvironment: &AssociatedEnvironment{
-							Name: "chicken",
-						},
-					},
-					{
-						AssociatedEnvironment: &AssociatedEnvironment{
-							Name: "wings",
-						},
-					},
-				},
+					PipelineStage{"chicken"},
+					PipelineStage{"wings"}},
 			},
 		},
 	}
@@ -237,9 +204,7 @@ stages:
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				actualManifest, ok := m.(*pipelineManifest)
-				require.True(t, ok)
-				require.Equal(t, actualManifest, tc.expectedManifest)
+				require.Equal(t, tc.expectedManifest, m)
 			}
 		})
 	}
