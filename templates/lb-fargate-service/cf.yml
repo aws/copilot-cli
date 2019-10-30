@@ -5,34 +5,34 @@ Description: CloudFormation template that represents a load balanced web applica
 Parameters:
   ProjectName:
     Type: String
-    Default: {{.ProjectName}}
+    Default: {{.Env.Project}}
   EnvName:
     Type: String
-    Default: {{.EnvName}}
+    Default: {{.Env.Name}}
   AppName:
     Type: String
-    Default: {{.AppName}}
+    Default: {{.App.Name}}
   ContainerImage:
     Type: String
-    Default: {{.Image.Name}}
+    Default: {{.Image.URL}}
   ContainerPort:
     Type: Number
     Default: {{.Image.Port}}
-  RulePath:
-    Type: String
-    Default: {{.Path}}
   RulePriority:
     Type: Number
-    Default: {{.PathPriority}} # This number must be unique between rules.
+    Default: {{.Priority}} # This number must be unique between rules.
+  RulePath:
+    Type: String
+    Default: {{.App.Path}}
   TaskCPU:
     Type: String
-    Default: {{.CPU}}
+    Default: '{{.App.CPU}}'
   TaskMemory:
     Type: String
-    Default: {{.Memory}}
+    Default: '{{.App.Memory}}'
   TaskCount:
     Type: Number
-    Default: {{.Count}}
+    Default: {{.App.Count}}
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup

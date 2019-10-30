@@ -3,7 +3,10 @@
 
 package cloudformation
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // ErrStackAlreadyExists occurs when a CloudFormation stack already exists with a given name.
 type ErrStackAlreadyExists struct {
@@ -37,6 +40,15 @@ type ErrTemplateNotFound struct {
 
 func (err *ErrTemplateNotFound) Error() string {
 	return fmt.Sprintf("failed to find the cloudformation template at %s", err.templateLocation)
+}
+
+func (e *ErrTemplateNotFound) Is(target error) bool {
+	t, ok := target.(*ErrTemplateNotFound)
+	if !ok {
+		return false
+	}
+	return (e.templateLocation == t.templateLocation) &&
+		(errors.Is(e.parentErr, t.parentErr))
 }
 
 // Unwrap returns the original error.
