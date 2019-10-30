@@ -42,6 +42,7 @@ func (err *ErrTemplateNotFound) Error() string {
 	return fmt.Sprintf("failed to find the cloudformation template at %s", err.templateLocation)
 }
 
+// Is returns true if the target's template location and parent error are equal to this error's template location and parent error.
 func (e *ErrTemplateNotFound) Is(target error) bool {
 	t, ok := target.(*ErrTemplateNotFound)
 	if !ok {

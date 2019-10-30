@@ -23,6 +23,7 @@ import (
 const (
 	projectTagKey = "ecs-project"
 	envTagKey     = "ecs-environment"
+	appTagKey     = "ecs-application"
 )
 
 // CloudFormation wraps the CloudFormationAPI interface

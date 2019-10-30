@@ -33,19 +33,6 @@ const (
 	lbFargateTaskCountKey           = "TaskCount"
 )
 
-type lbFargateTemplateParams struct {
-	*deploy.CreateLBFargateAppInput
-
-	// Additional fields needed to render the CloudFormation stack.
-	Priority int
-
-	// Field types to override.
-	Image struct {
-		URL  string
-		Port int
-	}
-}
-
 // LBFargateStackConfig represents the configuration needed to create a CloudFormation stack from a
 // load balanced Fargate application.
 type LBFargateStackConfig struct {
@@ -64,13 +51,13 @@ func NewLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig
 
 // StackName returns the name of the stack.
 func (c *LBFargateStackConfig) StackName() string {
-	const maxLen = 128
-	n := fmt.Sprintf("%s-%s-%s-app", c.Env.Project, c.Env.Name, c.App.Name)
+	const maxLen = 128 // stack name limit constrained by CFN https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html
+	stackName := fmt.Sprintf("%s-%s-%s-app", c.Env.Project, c.Env.Name, c.App.Name)
 
-	if len(n) > maxLen {
-		return n[len(n)-maxLen:]
+	if len(stackName) > maxLen {
+		return stackName[len(stackName)-maxLen:]
 	}
-	return n
+	return stackName
 }
 
 // Template returns the CloudFormation template for the application parametrized for the environment.
@@ -145,10 +132,39 @@ func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
 func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
-	return nil
+	return []*cloudformation.Tag{
+		{
+			Key:   aws.String(projectTagKey),
+			Value: aws.String(c.Env.Project),
+		},
+		{
+			Key:   aws.String(envTagKey),
+			Value: aws.String(c.Env.Name),
+		},
+		{
+			Key:   aws.String(appTagKey),
+			Value: aws.String(c.App.Name),
+		},
+	}
+}
+
+// lbFargateTemplateParams holds the data to render the CloudFormation template for an application.
+type lbFargateTemplateParams struct {
+	*deploy.CreateLBFargateAppInput
+
+	// Additional fields needed to render the CloudFormation stack.
+	Priority int // Listener's rule priority https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html#listener-rules
+
+	// Field types to override.
+	Image struct {
+		URL  string
+		Port int
+	}
 }
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
+	// TODO override app's fields with the environment's.
+
 	imgLoc := fmt.Sprintf("%s/%s/%s:%s", c.Env.Project, c.Env.Name, c.App.Name, c.ImageTag)
 	url := fmt.Sprintf(ecrURLFormatString, c.Env.AccountID, c.Env.Region, imgLoc)
 	return &lbFargateTemplateParams{

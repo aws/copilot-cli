@@ -216,5 +216,37 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 }
 
 func TestLBFargateStackConfig_Tags(t *testing.T) {
+	// GIVEN
+	conf := &LBFargateStackConfig{
+		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+			Env: &archer.Environment{
+				Project:   "phonetool",
+				Name:      "test",
+				Region:    "us-west-2",
+				AccountID: "12345",
+				Prod:      false,
+			},
+			ImageTag: "manual-bf3678c",
+		},
+	}
 
+	// WHEN
+	tags := conf.Tags()
+
+	// THEN
+	require.Equal(t, []*cloudformation.Tag{
+		{
+			Key:   aws.String(projectTagKey),
+			Value: aws.String("phonetool"),
+		},
+		{
+			Key:   aws.String(envTagKey),
+			Value: aws.String("test"),
+		},
+		{
+			Key:   aws.String(appTagKey),
+			Value: aws.String("frontend"),
+		},
+	}, tags)
 }
