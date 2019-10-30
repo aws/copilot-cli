@@ -1,0 +1,378 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline for the chickenProject
+Parameters:
+  GitHubOAuthSecretId:
+    Description: The secretId of the GitHub OAuth token stored in the Secrets Manager
+    Type: String
+    Default: testGitHubSecret
+Resources:
+  BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-CodeBuildRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  BuildProjectPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: BuildProjectRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodeBuildPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::chicken-us-east-1
+              - !Join ['', ['arn:aws:s3:::chicken-us-east-1', '/*']]
+              - arn:aws:s3:::chicken-us-west-2
+              - !Join ['', ['arn:aws:s3:::chicken-us-west-2', '/*']]
+              - arn:aws:s3:::chicken-us-west-1
+              - !Join ['', ['arn:aws:s3:::chicken-us-west-1', '/*']]
+          -
+            Effect: Allow
+            Action:
+              - kms:*
+            Resource:
+              - arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+          -
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      Roles:
+        -
+          !Ref BuildProjectRole
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref AWS::StackName
+      Description: !Ref AWS::StackName
+      EncryptionKey: !ImportValue ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              runtime-versions:
+                docker: 18
+            build:
+              commands:
+                - ls
+          artifacts:
+            files: '**/*'
+      TimeoutInMinutes: 60
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-codepipeline-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  PipelineRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-codepipeline-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Action:
+              - codepipeline:*
+              - iam:ListRoles
+              - cloudformation:Describe*
+              - cloudFormation:List*
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+            Resource:
+              - "*"
+          -
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+          -
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::chicken-us-east-1
+              - !Join ['', ['arn:aws:s3:::chicken-us-east-1', '/*']]
+              - arn:aws:s3:::chicken-us-west-2
+              - !Join ['', ['arn:aws:s3:::chicken-us-west-2', '/*']]
+              - arn:aws:s3:::chicken-us-west-1
+              - !Join ['', ['arn:aws:s3:::chicken-us-west-1', '/*']]
+          -
+            Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+              - arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+      Roles:
+        -
+          !Ref PipelineRole
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - PipelineRole
+      - PipelineRolePolicy
+    Properties:
+      ArtifactStores:
+        -
+          Region: us-east-1
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-east-1
+            EncryptionKey:
+              Id: arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              Type: KMS
+        -
+          Region: us-west-2
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-west-2
+            EncryptionKey:
+              Id: arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              Type: KMS
+        -
+          Region: us-west-1
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-west-1
+            EncryptionKey:
+              Id: arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+              Type: KMS
+      RoleArn: !GetAtt PipelineRole.Arn
+      Name: !Ref AWS::StackName
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-chickenProject
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                Owner: hencrice
+                Repo: amazon-ecs-cli-v2
+                Branch: master
+                OAuthToken: !Sub
+                    - '{{resolve:secretsmanager:${SecretId}}}'
+                    - { SecretId: !Ref GitHubOAuthSecretId }
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        -
+          Name: Build
+          Actions:
+          -
+            Name: Build
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref BuildProject
+            RunOrder: 1
+            InputArtifacts:
+              - Name: SCCheckoutArtifact
+            OutputArtifacts:
+              - Name: BuildOutput
+        
+        
+        - Name: DeployTochickenProject-test
+          Actions:
+            - Name: CreateChangeSet-frontend-test
+              Region: us-west-2
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-frontend-test
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: chickenProject-frontend-test
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: BuildOutput::frontend-test.yaml
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+            - Name: DeployChangeSet-frontend-test
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-frontend-test
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: chickenProject-frontend-test
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 3
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+            - Name: CreateChangeSet-backend-test
+              Region: us-west-2
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-backend-test
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: chickenProject-backend-test
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: BuildOutput::backend-test.yaml
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+            - Name: DeployChangeSet-backend-test
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-backend-test
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: chickenProject-backend-test
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 3
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+        - Name: DeployTochickenProject-prod
+          Actions:
+            - Name: CreateChangeSet-frontend-prod
+              Region: us-east-1
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-frontend-prod
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: chickenProject-frontend-prod
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: BuildOutput::frontend-prod.yaml
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+            - Name: DeployChangeSet-frontend-prod
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-frontend-prod
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: chickenProject-frontend-prod
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 3
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+            - Name: CreateChangeSet-backend-prod
+              Region: us-east-1
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-backend-prod
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: chickenProject-backend-prod
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: BuildOutput::backend-prod.yaml
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+            - Name: DeployChangeSet-backend-prod
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: chickenProject-backend-prod
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: chickenProject-backend-prod
+                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 3
+              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
