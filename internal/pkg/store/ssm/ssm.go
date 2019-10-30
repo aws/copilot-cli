@@ -283,14 +283,16 @@ func (s *SSM) GetApplication(projectName, appName string) (*archer.Application, 
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get application %s in project %s: %w", appName, projectName, err)
-	}
-
-	if appParam.Parameter.Value == nil {
-		return nil, &store.ErrNoSuchApplication{
-			ProjectName:     projectName,
-			ApplicationName: appName,
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil, &store.ErrNoSuchApplication{
+					ProjectName:     projectName,
+					ApplicationName: appName,
+				}
+			}
 		}
+		return nil, fmt.Errorf("get application %s in project %s: %w", appName, projectName, err)
 	}
 
 	var app archer.Application

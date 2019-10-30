@@ -752,9 +752,7 @@ func TestStore_GetApp(t *testing.T) {
 		"with no existing app": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
-				return &ssm.GetParameterOutput{
-					Parameter: &ssm.Parameter{},
-				}, nil
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
 			wantedErr: &store.ErrNoSuchApplication{
 				ProjectName:     testApplication.Project,
