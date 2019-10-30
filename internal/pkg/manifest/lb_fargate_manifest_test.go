@@ -12,74 +12,56 @@ import (
 
 func TestLoadBalancedFargateManifest_Marshal(t *testing.T) {
 	// GIVEN
-	wantedContent := `# Your application name will be used in naming your resources
-# like log groups, services, etc.
-name: SweetApp
-# The "Type" of the application you're running. For a list of all types that we support see
-# https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
+	wantedContent := `# The manifest for the "frontend" application.
+# Read the full specification for the "Load Balanced Web App" type at:
+#   https://github.com/aws/amazon-ecs-cli-v2/docs/manifests/load-balanced-web-app.
+
+# Your application name will be used in naming your resources like log groups, services, etc.
+name: frontend
+# The "architecture" of the application you're running.
 type: Load Balanced Web App
 
 image:
   # Path to your application's Dockerfile.
-  build: SweetApp/Dockerfile
-
+  build: frontend/Dockerfile
   # Port exposed through your container to route traffic to it.
-  port: 8080
+  port: 80
 
-# Size of CPU
-cpu: 256
-
-# Size of memory
-memory: 512
-
-# Logging is enabled by default. We'll create a loggroup that is
-# the SweetApp/Stage
-logging: true
+http:
+  # Requests to this path will be forwarded to your service.
+  path: '*'
 
 # Determines whether the application will have a public IP or not.
-public: true
+public: false
 
-# You can also pass in environment variables as key/value pairs
-#environment-variables:
-#  dog: 'Clyde'
-#  cute: 'hekya'
+# Number of CPU units for the task.
+cpu: 256
+# Amount of memory in MiB used by the task.
+memory: 512
+# Number of tasks that should be running in your service.
+count: 1
+
+# Optional fields for more advanced use-cases.
 #
-# Additional Sidecar apps that can run along side your main application
-#sidecars:
-#  fluentbit:
-#    containerPort: 80
-#    image: 'amazon/aws-for-fluent-bit:1.2.0'
-#    memory: 512
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+#
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+#
+#scaling:                      # Optional configuration for scaling your service.
+#  minCount: 1                   # Minimum number of tasks that should be running in your service.
+#  maxCount: 3                   # Maximum number of tasks that should be running in your service.
+#
+#  # If the target value is crossed, ECS starts adding or removing tasks.
+#  targetCPU: 75.0               # Target average CPU utilization percentage.
 
-# This section defines each of the release stages
-# and their specific configuration for your app.
-stages:
-  -
-    # The "environment" (cluster/vpc/lb) to contain this service.
-    env: test
-    # The number of tasks that we want, at minimum.
-    desiredCount: 1
-    # Any secrets via ARNs
-    #secrets:
-    #  lemonaidpassword: arn:aws:secretsmanager:us-west-2:902697171733:secret:DavidsLemons/DavidsFrontEnd
-  -
-    # The "environment" (cluster/vpc/lb) to contain this service.
-    env: prod
-    # The number of tasks that we want, at minimum.
-    desiredCount: 3
-    # Any secrets via ARNs
-    #secrets:
-    #  lemonaidpassword: arn:aws:secretsmanager:us-west-2:902697171733:secret:DavidsLemons/DavidsFrontEnd
-
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.
 `
-	m := NewLoadBalancedFargateManifest("SweetApp", "SweetApp/Dockerfile")
-	m.Stages = append(m.Stages, AppStage{
-		EnvName:      "test",
-		DesiredCount: 1,
-	}, AppStage{
-		EnvName:      "prod",
-		DesiredCount: 3,
-	})
+	m := NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile")
 
 	// WHEN
 	b, err := m.Marshal()

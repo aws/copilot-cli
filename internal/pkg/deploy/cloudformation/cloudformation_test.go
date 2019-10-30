@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -359,7 +359,7 @@ func TestWaitForStackCreation(t *testing.T) {
 }
 
 func TestWaitForEnvironmentCreation(t *testing.T) {
-	deploymentInput := archer.DeployEnvironmentInput{
+	deploymentInput := deploy.CreateEnvironmentInput{
 		Name:    "test",
 		Project: "project",
 	}
@@ -367,7 +367,7 @@ func TestWaitForEnvironmentCreation(t *testing.T) {
 
 	testCases := map[string]struct {
 		cf    CloudFormation
-		input archer.DeployEnvironmentInput
+		input deploy.CreateEnvironmentInput
 		want  error
 	}{
 		"error in waitForStackCreation call": {

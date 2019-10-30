@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
@@ -142,8 +143,8 @@ func mockEnvironmentStack(stackArn, ecrOutput string) *cloudformation.Stack {
 	}
 }
 
-func mockDeployEnvironmentInput() *archer.DeployEnvironmentInput {
-	return &archer.DeployEnvironmentInput{
+func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
+	return &deploy.CreateEnvironmentInput{
 		Name:                     "env",
 		Project:                  "project",
 		Prod:                     true,
