@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -39,10 +39,10 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	id, err := identity.Get()
 	require.NoError(t, err)
 
-	environmentToDeploy := archer.DeployEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.ARN}
+	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.ARN}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.Project, environmentToDeploy.Name)
 
-	t.Run("Deploys an Environment to CloudFormation", func(t *testing.T) {
+	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
 		// Given our stack doesn't exist
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
 			StackName: aws.String(envStackName),

@@ -5,9 +5,11 @@
 package mocks
 
 import (
-	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockEnvironmentStore is a mock of EnvironmentStore interface
@@ -214,7 +216,7 @@ func (m *MockEnvironmentDeployer) EXPECT() *MockEnvironmentDeployerMockRecorder 
 }
 
 // DeployEnvironment mocks base method
-func (m *MockEnvironmentDeployer) DeployEnvironment(env *archer.DeployEnvironmentInput) error {
+func (m *MockEnvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
@@ -228,7 +230,7 @@ func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env interface{}
 }
 
 // WaitForEnvironmentCreation mocks base method
-func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *archer.DeployEnvironmentInput) (*archer.Environment, error) {
+func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForEnvironmentCreation", env)
 	ret0, _ := ret[0].(*archer.Environment)

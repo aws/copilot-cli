@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package ssm implements CRUD operations for Package, Environment and
-Pipeline configuration. This configuration contains the archer projects
+Package ssm implements CRUD operations for project, environment, application and
+pipeline configuration. This configuration contains the archer projects
 a customer has, and the environments and pipelines associated with each
 project.
 */
@@ -47,7 +47,7 @@ type identityService interface {
 	Get() (identity.Caller, error)
 }
 
-// SSM store is in charge of fetching and creating Projects, Environment and Pipeline
+// SSM store is in charge of fetching and creating projects, environment and pipeline
 // configuration in SSM.
 type SSM struct {
 	systemManager ssmiface.SSMAPI
@@ -183,7 +183,7 @@ func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
 		return fmt.Errorf("create environment %s in project %s: %w", environment.Name, environment.Project, err)
 	}
 
-	log.Printf("Created Environment with version %v", *paramOutput.Version)
+	log.Printf("Created environment with version %v", *paramOutput.Version)
 	return nil
 
 }

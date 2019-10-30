@@ -1,51 +1,48 @@
-# Your application name will be used in naming your resources
-# like log groups, services, etc.
+# The manifest for the "{{.Name}}" application.
+# Read the full specification for the "{{.Type}}" type at:
+#   https://github.com/aws/amazon-ecs-cli-v2/docs/manifests/load-balanced-web-app.
+
+# Your application name will be used in naming your resources like log groups, services, etc.
 name: {{.Name}}
-# The "Type" of the application you're running. For a list of all types that we support see
-# https://github.com/aws/amazon-ecs-cli-v2/app/template/manifest/
+# The "architecture" of the application you're running.
 type: {{.Type}}
 
 image:
   # Path to your application's Dockerfile.
   build: {{.Image.Build}}
-
   # Port exposed through your container to route traffic to it.
   port: {{.Image.Port}}
 
-# Size of CPU
-cpu: {{.CPU}}
-
-# Size of memory
-memory: {{.Memory}}
-
-# Logging is enabled by default. We'll create a loggroup that is
-# the {{.Name}}/Stage
-logging: {{.Logging}}
+http:
+  # Requests to this path will be forwarded to your service.
+  path: '{{.Path}}'
 
 # Determines whether the application will have a public IP or not.
 public: {{.Public}}
 
-# You can also pass in environment variables as key/value pairs
-#environment-variables:
-#  dog: 'Clyde'
-#  cute: 'hekya'
+# Number of CPU units for the task.
+cpu: {{.CPU}}
+# Amount of memory in MiB used by the task.
+memory: {{.Memory}}
+# Number of tasks that should be running in your service.
+count: {{.Count}}
+
+# Optional fields for more advanced use-cases.
 #
-# Additional Sidecar apps that can run along side your main application
-#sidecars:
-#  fluentbit:
-#    containerPort: 80
-#    image: 'amazon/aws-for-fluent-bit:1.2.0'
-#    memory: 512
-{{$length := len .Stages}}{{if gt $length 0}}
-# This section defines each of the release stages
-# and their specific configuration for your app.
-stages:{{range .Stages}}
-  -
-    # The "environment" (cluster/vpc/lb) to contain this service.
-    env: {{.EnvName}}
-    # The number of tasks that we want, at minimum.
-    desiredCount: {{.DesiredCount}}
-    # Any secrets via ARNs
-    #secrets:
-    #  lemonaidpassword: arn:aws:secretsmanager:us-west-2:902697171733:secret:DavidsLemons/DavidsFrontEnd{{end}}
-{{end}}
+#variables:                    # Pass environment variables as key value pairs.
+#  LOG_LEVEL: info
+#
+#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+#
+#scaling:                      # Optional configuration for scaling your service.
+#  minCount: 1                   # Minimum number of tasks that should be running in your service.
+#  maxCount: 3                   # Maximum number of tasks that should be running in your service.
+#
+#  # If the target value is crossed, ECS starts adding or removing tasks.
+#  targetCPU: 75.0               # Target average CPU utilization percentage.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.

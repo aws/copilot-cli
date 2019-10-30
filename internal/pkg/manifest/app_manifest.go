@@ -25,12 +25,6 @@ type AppManifest struct {
 	Type string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// AppStage represents configuration for each deployment stage of an application.
-type AppStage struct {
-	EnvName      string `yaml:"env"`
-	DesiredCount int    `yaml:"desiredCount"`
-}
-
 // AppImage represents the application's container image.
 type AppImage struct {
 	Build string `yaml:"build"` // Path to the Dockerfile.
@@ -58,7 +52,7 @@ func UnmarshalApp(in []byte) (archer.Manifest, error) {
 
 	switch am.Type {
 	case LoadBalancedWebApplication:
-		m := LoadBalancedFargateManifest{}
+		m := LBFargateManifest{}
 		if err := yaml.Unmarshal(in, &m); err != nil {
 			return nil, err
 		}

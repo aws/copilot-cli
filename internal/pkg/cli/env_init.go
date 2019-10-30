@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -77,7 +78,7 @@ func (opts *InitEnvOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	deployEnvInput := &archer.DeployEnvironmentInput{
+	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     opts.EnvName,
 		Project:                  viper.GetString(projectFlag),
 		Prod:                     opts.IsProduction,
