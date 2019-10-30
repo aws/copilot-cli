@@ -6,6 +6,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -13,6 +15,12 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 )
+
+// environmentDeployer can deploy an environment.
+type environmentDeployer interface {
+	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
+	WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error)
+}
 
 // BuildEnvCmd is the top level command for environments
 func BuildEnvCmd() *cobra.Command {

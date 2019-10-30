@@ -5,11 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockEnvironmentStore is a mock of EnvironmentStore interface
@@ -190,56 +188,4 @@ func (m *MockEnvironmentCreator) CreateEnvironment(env *archer.Environment) erro
 func (mr *MockEnvironmentCreatorMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentCreator)(nil).CreateEnvironment), env)
-}
-
-// MockEnvironmentDeployer is a mock of EnvironmentDeployer interface
-type MockEnvironmentDeployer struct {
-	ctrl     *gomock.Controller
-	recorder *MockEnvironmentDeployerMockRecorder
-}
-
-// MockEnvironmentDeployerMockRecorder is the mock recorder for MockEnvironmentDeployer
-type MockEnvironmentDeployerMockRecorder struct {
-	mock *MockEnvironmentDeployer
-}
-
-// NewMockEnvironmentDeployer creates a new mock instance
-func NewMockEnvironmentDeployer(ctrl *gomock.Controller) *MockEnvironmentDeployer {
-	mock := &MockEnvironmentDeployer{ctrl: ctrl}
-	mock.recorder = &MockEnvironmentDeployerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockEnvironmentDeployer) EXPECT() *MockEnvironmentDeployerMockRecorder {
-	return m.recorder
-}
-
-// DeployEnvironment mocks base method
-func (m *MockEnvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployEnvironment", env)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployEnvironment indicates an expected call of DeployEnvironment
-func (mr *MockEnvironmentDeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockEnvironmentDeployer)(nil).DeployEnvironment), env)
-}
-
-// WaitForEnvironmentCreation mocks base method
-func (m *MockEnvironmentDeployer) WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForEnvironmentCreation", env)
-	ret0, _ := ret[0].(*archer.Environment)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WaitForEnvironmentCreation indicates an expected call of WaitForEnvironmentCreation
-func (mr *MockEnvironmentDeployerMockRecorder) WaitForEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEnvironmentCreation", reflect.TypeOf((*MockEnvironmentDeployer)(nil).WaitForEnvironmentCreation), env)
 }

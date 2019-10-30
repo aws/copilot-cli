@@ -9,12 +9,13 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
+
+	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
 
 func TestInitEnvOpts_Ask(t *testing.T) {
@@ -131,11 +132,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						Return(&archer.Project{}, nil),
 					opts.identity.(*climocks.MockidentityService).EXPECT().Get().Times(1).Return(mockCaller, nil),
 					opts.prog.(*climocks.Mockprogress).EXPECT().Start(gomock.Eq("Preparing deployment...")),
-					opts.envDeployer.(*mocks.MockEnvironmentDeployer).EXPECT().DeployEnvironment(gomock.Any()),
+					opts.envDeployer.(*climocks.MockenvironmentDeployer).EXPECT().DeployEnvironment(gomock.Any()),
 					opts.prog.(*climocks.Mockprogress).EXPECT().Stop(gomock.Eq("Done!")),
 					opts.prog.(*climocks.Mockprogress).EXPECT().Start(gomock.Eq("Deploying env...")),
 					// TODO: Assert Wait is called with stack name returned by DeployEnvironment.
-					opts.envDeployer.(*mocks.MockEnvironmentDeployer).EXPECT().
+					opts.envDeployer.(*climocks.MockenvironmentDeployer).EXPECT().
 						WaitForEnvironmentCreation(gomock.Any()).
 						Return(&archer.Environment{
 							Name:        "env",
@@ -170,7 +171,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Return(&archer.Project{}, nil)
 				opts.identity.(*climocks.MockidentityService).EXPECT().Get().Return(mockCaller, nil)
 				opts.prog.(*climocks.Mockprogress).EXPECT().Start(gomock.Eq("Preparing deployment..."))
-				opts.envDeployer.(*mocks.MockEnvironmentDeployer).EXPECT().
+				opts.envDeployer.(*climocks.MockenvironmentDeployer).EXPECT().
 					DeployEnvironment(gomock.Any()).
 					Return(&cloudformation.ErrStackAlreadyExists{})
 				opts.prog.(*climocks.Mockprogress).EXPECT().Stop(gomock.Eq("Done!"))
@@ -201,7 +202,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 			mockProjStore := mocks.NewMockProjectStore(ctrl)
-			mockDeployer := mocks.NewMockEnvironmentDeployer(ctrl)
+			mockDeployer := climocks.NewMockenvironmentDeployer(ctrl)
 			mockSpinner := climocks.NewMockprogress(ctrl)
 			mockIdentityService := climocks.NewMockidentityService(ctrl)
 

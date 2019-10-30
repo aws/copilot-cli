@@ -4,8 +4,6 @@
 // Package archer contains the structs that represent archer concepts, and the associated interfaces to manipulate them.
 package archer
 
-import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-
 // Environment represents the configuration of a particular environment in a project. It includes
 // the environment's account and region, name, as well as the project it belongs to.
 type Environment struct {
@@ -37,10 +35,4 @@ type EnvironmentGetter interface {
 // EnvironmentCreator creates an environment in the underlying project management store
 type EnvironmentCreator interface {
 	CreateEnvironment(env *Environment) error
-}
-
-// EnvironmentDeployer can deploy an environment
-type EnvironmentDeployer interface {
-	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
-	WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*Environment, error)
 }

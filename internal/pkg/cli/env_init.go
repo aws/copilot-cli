@@ -31,7 +31,7 @@ type InitEnvOpts struct {
 	// Interfaces to interact with dependencies.
 	projectGetter archer.ProjectGetter
 	envCreator    archer.EnvironmentCreator
-	envDeployer   archer.EnvironmentDeployer
+	envDeployer   environmentDeployer
 	identity      identityService
 	prog          progress
 	prompt        prompter

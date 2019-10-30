@@ -98,3 +98,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/cli.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_cli.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/env.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_env.go
