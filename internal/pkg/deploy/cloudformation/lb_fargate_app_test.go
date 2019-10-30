@@ -11,6 +11,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
@@ -145,6 +147,67 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 }
 
 func TestLBFargateStackConfig_Parameters(t *testing.T) {
+	// GIVEN
+	conf := &LBFargateStackConfig{
+		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+			Env: &archer.Environment{
+				Project:   "phonetool",
+				Name:      "test",
+				Region:    "us-west-2",
+				AccountID: "12345",
+				Prod:      false,
+			},
+			ImageTag: "manual-bf3678c",
+		},
+	}
+
+	// WHEN
+	params := conf.Parameters()
+
+	// THEN
+	require.Equal(t, []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(lbFargateParamProjectNameKey),
+			ParameterValue: aws.String("phonetool"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamEnvNameKey),
+			ParameterValue: aws.String("test"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamAppNameKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamContainerImageKey),
+			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend:manual-bf3678c"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamContainerPortKey),
+			ParameterValue: aws.String("80"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateRulePriorityKey),
+			ParameterValue: aws.String("1"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateRulePathKey),
+			ParameterValue: aws.String("*"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskCPUKey),
+			ParameterValue: aws.String("256"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskMemoryKey),
+			ParameterValue: aws.String("512"),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskCountKey),
+			ParameterValue: aws.String("1"),
+		},
+	}, params)
 
 }
 

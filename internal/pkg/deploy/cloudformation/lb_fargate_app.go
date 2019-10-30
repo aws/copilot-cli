@@ -6,16 +6,31 @@ package cloudformation
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
 )
 
 const (
 	lbFargateAppTemplatePath = "lb-fargate-service/cf.yml"
+)
+
+const (
+	lbFargateParamProjectNameKey    = "ProjectName"
+	lbFargateParamEnvNameKey        = "EnvName"
+	lbFargateParamAppNameKey        = "AppName"
+	lbFargateParamContainerImageKey = "ContainerImage"
+	lbFargateParamContainerPortKey  = "ContainerPort"
+	lbFargateRulePriorityKey        = "RulePriority"
+	lbFargateRulePathKey            = "RulePath"
+	lbFargateTaskCPUKey             = "TaskCPU"
+	lbFargateTaskMemoryKey          = "TaskMemory"
+	lbFargateTaskCountKey           = "TaskCount"
 )
 
 type lbFargateTemplateParams struct {
@@ -77,7 +92,49 @@ func (c *LBFargateStackConfig) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
-	return nil
+	templateParams := c.toTemplateParams()
+	return []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(lbFargateParamProjectNameKey),
+			ParameterValue: aws.String(templateParams.Env.Project),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamEnvNameKey),
+			ParameterValue: aws.String(templateParams.Env.Name),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamAppNameKey),
+			ParameterValue: aws.String(templateParams.App.Name),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamContainerImageKey),
+			ParameterValue: aws.String(templateParams.Image.URL),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateParamContainerPortKey),
+			ParameterValue: aws.String(strconv.Itoa(templateParams.Image.Port)),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateRulePriorityKey),
+			ParameterValue: aws.String(strconv.Itoa(templateParams.Priority)),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateRulePathKey),
+			ParameterValue: aws.String(templateParams.App.Path),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskCPUKey),
+			ParameterValue: aws.String(strconv.Itoa(templateParams.App.CPU)),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskMemoryKey),
+			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Memory)),
+		},
+		{
+			ParameterKey:   aws.String(lbFargateTaskCountKey),
+			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Count)),
+		},
+	}
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
