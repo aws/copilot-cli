@@ -29,7 +29,7 @@ type ImageWithPort struct {
 type LBFargateConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	ContainersConfig `yaml:",inline"`
-	Public           bool               `yaml:"public"`
+	Public           *bool              `yaml:"public"` // A pointer because we don't want the environment override to default to false.
 	Scaling          *AutoScalingConfig `yaml:",flow"`
 }
 
@@ -59,6 +59,7 @@ type AutoScalingConfig struct {
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
 // all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
 func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargateManifest {
+	isPublic := false
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
 			Name: appName,
@@ -79,6 +80,7 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 				Memory: 512,
 				Count:  1,
 			},
+			Public: &isPublic,
 		},
 	}
 }
@@ -99,6 +101,93 @@ func (m *LBFargateManifest) Marshal() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// EnvConf returns the application configuration with environment overrides.
+// If the environment passed in does not have any overrides then we return the default values.
+func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
+	if _, ok := m.Environments[envName]; !ok {
+		return m.LBFargateConfig
+	}
+
+	// We don't want to modify the default settings, so deep copy into a "conf" variable.
+	envVars := make(map[string]string, len(m.Variables))
+	for k, v := range m.Variables {
+		envVars[k] = v
+	}
+	secrets := make(map[string]string, len(m.Secrets))
+	for k, v := range m.Secrets {
+		secrets[k] = v
+	}
+	var scaling *AutoScalingConfig
+	if m.Scaling != nil {
+		scaling = &AutoScalingConfig{
+			MinCount:     m.Scaling.MinCount,
+			MaxCount:     m.Scaling.MaxCount,
+			TargetCPU:    m.Scaling.TargetCPU,
+			TargetMemory: m.Scaling.TargetMemory,
+		}
+	}
+	isPublic := false
+	if m.Public != nil {
+		isPublic = *m.Public
+	}
+	conf := LBFargateConfig{
+		RoutingRule: RoutingRule{
+			Path: m.Path,
+		},
+		ContainersConfig: ContainersConfig{
+			CPU:       m.CPU,
+			Memory:    m.Memory,
+			Count:     m.Count,
+			Variables: envVars,
+			Secrets:   secrets,
+		},
+		Public:  &isPublic,
+		Scaling: scaling,
+	}
+
+	// Override with fields set in the environment.
+	target := m.Environments[envName]
+	if target.RoutingRule.Path != "" {
+		conf.RoutingRule.Path = target.RoutingRule.Path
+	}
+	if target.CPU != 0 {
+		conf.CPU = target.CPU
+	}
+	if target.Memory != 0 {
+		conf.Memory = target.Memory
+	}
+	if target.Count != 0 {
+		conf.Count = target.Count
+	}
+	for k, v := range target.Variables {
+		conf.Variables[k] = v
+	}
+	for k, v := range target.Secrets {
+		conf.Secrets[k] = v
+	}
+	if target.Public != nil {
+		conf.Public = target.Public
+	}
+	if target.Scaling != nil {
+		if conf.Scaling == nil {
+			conf.Scaling = &AutoScalingConfig{}
+		}
+		if target.Scaling.MinCount != 0 {
+			conf.Scaling.MinCount = target.Scaling.MinCount
+		}
+		if target.Scaling.MaxCount != 0 {
+			conf.Scaling.MaxCount = target.Scaling.MaxCount
+		}
+		if target.Scaling.TargetCPU != 0 {
+			conf.Scaling.TargetCPU = target.Scaling.TargetCPU
+		}
+		if target.Scaling.TargetMemory != 0 {
+			conf.Scaling.TargetMemory = target.Scaling.TargetMemory
+		}
+	}
+	return conf
 }
 
 // CFNTemplate serializes the manifest object into a CloudFormation template.

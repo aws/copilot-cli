@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,4 +70,182 @@ count: 1
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, wantedContent, strings.Replace(string(b), "\r\n", "\n", -1))
+}
+
+func TestLBFargateManifest_EnvConf(t *testing.T) {
+	testCases := map[string]struct {
+		inDefaultConfig  LBFargateConfig
+		inEnvNameToQuery string
+		inEnvOverride    map[string]LBFargateConfig
+
+		wantedConfig LBFargateConfig
+	}{
+		"with no existing environments": {
+			inDefaultConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/awards/*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  1,
+				},
+			},
+			inEnvNameToQuery: "prod-iad",
+
+			wantedConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/awards/*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  1,
+				},
+			},
+		},
+		"with partial overrides": {
+			inDefaultConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/awards/*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  1,
+					Variables: map[string]string{
+						"LOG_LEVEL":      "DEBUG",
+						"DDB_TABLE_NAME": "awards",
+					},
+					Secrets: map[string]string{
+						"GITHUB_TOKEN": "1111",
+						"TWILIO_TOKEN": "1111",
+					},
+				},
+				Public: aws.Bool(false),
+				Scaling: &AutoScalingConfig{
+					MinCount:     1,
+					MaxCount:     2,
+					TargetCPU:    75.0,
+					TargetMemory: 0,
+				},
+			},
+			inEnvNameToQuery: "prod-iad",
+			inEnvOverride: map[string]LBFargateConfig{
+				"prod-iad": {
+					ContainersConfig: ContainersConfig{
+						CPU: 2046,
+						Variables: map[string]string{
+							"DDB_TABLE_NAME": "awards-prod",
+						},
+					},
+					Public: aws.Bool(true),
+					Scaling: &AutoScalingConfig{
+						MaxCount: 5,
+					},
+				},
+			},
+
+			wantedConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/awards/*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    2046,
+					Memory: 1024,
+					Count:  1,
+					Variables: map[string]string{
+						"LOG_LEVEL":      "DEBUG",
+						"DDB_TABLE_NAME": "awards-prod",
+					},
+					Secrets: map[string]string{
+						"GITHUB_TOKEN": "1111",
+						"TWILIO_TOKEN": "1111",
+					},
+				},
+				Public: aws.Bool(true),
+				Scaling: &AutoScalingConfig{
+					MinCount:  1,
+					MaxCount:  5,
+					TargetCPU: 75.0,
+				},
+			},
+		},
+		"with complete override": {
+			inDefaultConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/awards/*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  1,
+				},
+				Public: aws.Bool(false),
+				Scaling: &AutoScalingConfig{
+					MinCount:     1,
+					MaxCount:     2,
+					TargetCPU:    75.0,
+					TargetMemory: 0,
+				},
+			},
+			inEnvNameToQuery: "prod-iad",
+			inEnvOverride: map[string]LBFargateConfig{
+				"prod-iad": {
+					RoutingRule: RoutingRule{Path: "/frontend*"},
+					ContainersConfig: ContainersConfig{
+						CPU:    2046,
+						Memory: 2046,
+						Count:  3,
+						Variables: map[string]string{
+							"LOG_LEVEL":      "WARN",
+							"DDB_TABLE_NAME": "awards-prod",
+						},
+						Secrets: map[string]string{
+							"GITHUB_TOKEN": "2222",
+							"TWILIO_TOKEN": "2222",
+						},
+					},
+					Public: aws.Bool(true),
+					Scaling: &AutoScalingConfig{
+						MinCount:     2,
+						MaxCount:     5,
+						TargetCPU:    75.0,
+						TargetMemory: 75.0,
+					},
+				},
+			},
+
+			wantedConfig: LBFargateConfig{
+				RoutingRule: RoutingRule{Path: "/frontend*"},
+				ContainersConfig: ContainersConfig{
+					CPU:    2046,
+					Memory: 2046,
+					Count:  3,
+					Variables: map[string]string{
+						"LOG_LEVEL":      "WARN",
+						"DDB_TABLE_NAME": "awards-prod",
+					},
+					Secrets: map[string]string{
+						"GITHUB_TOKEN": "2222",
+						"TWILIO_TOKEN": "2222",
+					},
+				},
+				Public: aws.Bool(true),
+				Scaling: &AutoScalingConfig{
+					MinCount:     2,
+					MaxCount:     5,
+					TargetCPU:    75.0,
+					TargetMemory: 75.0,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			m := &LBFargateManifest{
+				LBFargateConfig: tc.inDefaultConfig,
+				Environments:    tc.inEnvOverride,
+			}
+
+			// WHEN
+			conf := m.EnvConf(tc.inEnvNameToQuery)
+
+			// THEN
+			require.Equal(t, tc.wantedConfig, conf, "returned configuration should have overrides from the environment")
+			require.Equal(t, m.LBFargateConfig, tc.inDefaultConfig, "values in the default configuration should not be overwritten")
+		})
+	}
 }

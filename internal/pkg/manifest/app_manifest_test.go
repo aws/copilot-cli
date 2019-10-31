@@ -6,6 +6,7 @@ package manifest
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,7 +106,7 @@ environments:
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
 						},
-						Public: false,
+						Public: aws.Bool(false),
 						Scaling: &AutoScalingConfig{
 							MinCount:     1,
 							MaxCount:     50,
@@ -117,7 +118,7 @@ environments:
 							ContainersConfig: ContainersConfig{
 								Count: 3,
 							},
-							Public: true,
+							Public: aws.Bool(true),
 						},
 					},
 				}
