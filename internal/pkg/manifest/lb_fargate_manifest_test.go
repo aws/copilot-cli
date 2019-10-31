@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,9 +30,6 @@ image:
 http:
   # Requests to this path will be forwarded to your service.
   path: '*'
-
-# Determines whether the application will have a public IP or not.
-public: false
 
 # Number of CPU units for the task.
 cpu: 256
@@ -116,7 +112,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 						"TWILIO_TOKEN": "1111",
 					},
 				},
-				Public: aws.Bool(false),
 				Scaling: &AutoScalingConfig{
 					MinCount:     1,
 					MaxCount:     2,
@@ -133,7 +128,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 							"DDB_TABLE_NAME": "awards-prod",
 						},
 					},
-					Public: aws.Bool(true),
 					Scaling: &AutoScalingConfig{
 						MaxCount: 5,
 					},
@@ -155,7 +149,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 						"TWILIO_TOKEN": "1111",
 					},
 				},
-				Public: aws.Bool(true),
 				Scaling: &AutoScalingConfig{
 					MinCount:  1,
 					MaxCount:  5,
@@ -171,7 +164,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 					Memory: 1024,
 					Count:  1,
 				},
-				Public: aws.Bool(false),
 				Scaling: &AutoScalingConfig{
 					MinCount:     1,
 					MaxCount:     2,
@@ -196,7 +188,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 							"TWILIO_TOKEN": "2222",
 						},
 					},
-					Public: aws.Bool(true),
 					Scaling: &AutoScalingConfig{
 						MinCount:     2,
 						MaxCount:     5,
@@ -221,7 +212,6 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 						"TWILIO_TOKEN": "2222",
 					},
 				},
-				Public: aws.Bool(true),
 				Scaling: &AutoScalingConfig{
 					MinCount:     2,
 					MaxCount:     5,

@@ -29,7 +29,6 @@ type ImageWithPort struct {
 type LBFargateConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	ContainersConfig `yaml:",inline"`
-	Public           *bool              `yaml:"public"` // A pointer because we don't want the environment override to default to false.
 	Scaling          *AutoScalingConfig `yaml:",flow"`
 }
 
@@ -59,7 +58,6 @@ type AutoScalingConfig struct {
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
 // all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
 func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargateManifest {
-	isPublic := false
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
 			Name: appName,
@@ -80,7 +78,6 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 				Memory: 512,
 				Count:  1,
 			},
-			Public: &isPublic,
 		},
 	}
 }
@@ -128,10 +125,6 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 			TargetMemory: m.Scaling.TargetMemory,
 		}
 	}
-	isPublic := false
-	if m.Public != nil {
-		isPublic = *m.Public
-	}
 	conf := LBFargateConfig{
 		RoutingRule: RoutingRule{
 			Path: m.Path,
@@ -143,7 +136,6 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 			Variables: envVars,
 			Secrets:   secrets,
 		},
-		Public:  &isPublic,
 		Scaling: scaling,
 	}
 
@@ -166,9 +158,6 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 	}
 	for k, v := range target.Secrets {
 		conf.Secrets[k] = v
-	}
-	if target.Public != nil {
-		conf.Public = target.Public
 	}
 	if target.Scaling != nil {
 		if conf.Scaling == nil {

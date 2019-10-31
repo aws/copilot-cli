@@ -6,7 +6,6 @@ package manifest
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,7 +70,6 @@ memory: 1024
 count: 1
 http:
   path: "*"
-public: false
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -83,7 +81,6 @@ scaling:
 environments:
   test:
     count: 3
-    public: true
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
 				actualManifest, ok := i.(*LBFargateManifest)
@@ -106,7 +103,6 @@ environments:
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
 						},
-						Public: aws.Bool(false),
 						Scaling: &AutoScalingConfig{
 							MinCount:     1,
 							MaxCount:     50,
@@ -118,7 +114,6 @@ environments:
 							ContainersConfig: ContainersConfig{
 								Count: 3,
 							},
-							Public: aws.Bool(true),
 						},
 					},
 				}

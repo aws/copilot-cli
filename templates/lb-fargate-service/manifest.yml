@@ -17,9 +17,6 @@ http:
   # Requests to this path will be forwarded to your service.
   path: '{{.Path}}'
 
-# Determines whether the application will have a public IP or not.
-public: {{.Public}}
-
 # Number of CPU units for the task.
 cpu: {{.CPU}}
 # Amount of memory in MiB used by the task.
