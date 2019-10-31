@@ -1,0 +1,14 @@
+{
+  "Parameters" : {
+    "ProjectName" : "{{.Env.Project}}",
+    "EnvName": "{{.Env.Name}}",
+    "AppName": "{{.App.Name}}",
+    "ContainerImage": "{{.Image.URL}}",
+    "ContainerPort": "{{.Image.Port}}",
+    "RulePriority": "{{.Priority}}",
+    "RulePath": "{{.App.Path}}",
+    "TaskCPU": "{{.App.CPU}}",
+    "TaskMemory": "{{.App.Memory}}",
+    "TaskCount": "{{.App.Count}}"
+  }
+}
