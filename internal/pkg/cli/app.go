@@ -4,10 +4,14 @@
 package cli
 
 import (
+	"errors"
+
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 )
+
+var errNoWorkspace = errors.New("could not find a project attached to this workspace, please run `project init` first")
 
 // BuildAppCmd is the top level command for applications.
 func BuildAppCmd() *cobra.Command {

@@ -78,7 +78,7 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if viper.GetString(projectFlag) == "" {
-		return errors.New("no project found, run `project init` first")
+		return errNoWorkspace
 	}
 	return nil
 }

@@ -149,7 +149,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"invalid project name": {
 			inProjectName: "",
-			wantedErr:     errors.New("no project found, run `project init` first"),
+			wantedErr:     errNoWorkspace,
 		},
 		"valid flags": {
 			inAppName:        "frontend",
@@ -169,6 +169,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			viper.Set(projectFlag, tc.inProjectName)
+			defer viper.Set(projectFlag, "")
 			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
@@ -284,6 +285,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			viper.Set(projectFlag, tc.inProjectName)
+			defer viper.Set(projectFlag, "")
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 

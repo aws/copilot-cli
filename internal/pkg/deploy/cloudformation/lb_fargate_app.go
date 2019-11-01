@@ -10,6 +10,7 @@ import (
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -163,13 +164,17 @@ type lbFargateTemplateParams struct {
 }
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
-	// TODO override app's fields with the environment's.
-
 	imgLoc := fmt.Sprintf("%s/%s/%s:%s", c.Env.Project, c.Env.Name, c.App.Name, c.ImageTag)
 	url := fmt.Sprintf(ecrURLFormatString, c.Env.AccountID, c.Env.Region, imgLoc)
 	return &lbFargateTemplateParams{
-		CreateLBFargateAppInput: c.CreateLBFargateAppInput,
-		Priority:                1, // TODO assign a unique path priority given a path.
+		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+			App: &manifest.LBFargateManifest{
+				AppManifest:     c.App.AppManifest,
+				LBFargateConfig: c.CreateLBFargateAppInput.App.EnvConf(c.Env.Name), // Get environment specific app configuration.
+			},
+			Env: c.Env,
+		},
+		Priority: 1, // TODO assign a unique path priority given a path.
 		Image: struct {
 			URL  string
 			Port int
