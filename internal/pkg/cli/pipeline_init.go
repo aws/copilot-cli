@@ -8,29 +8,27 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
 )
-
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
 	// Fields with matching flags.
-	GitHubRepo  string
+	GitHubRepo        string
 	GitHubAccessToken string
-	Deploy bool
-	EnableCD bool
-	Environments []string
+	Deploy            bool
+	EnableCD          bool
+	Environments      []string
 
 	// Interfaces to interact with dependencies.  // TODO
-	fs             afero.Fs
-	appStore       archer.ApplicationStore
-	manifestWriter archer.ManifestIO
-	prompt         prompter
+	appStore archer.ApplicationStore
+	ws       archer.Workspace
+	prompt   prompter
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -38,17 +36,11 @@ type InitPipelineOpts struct {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
-	// TODO do we need?
-	// if opts.AppName == "" {
-	// 	if err := opts.askAppName(); err != nil {
-	// 		return err
-	// 	}
-	// }
-	// if opts.GitHubRepo == "" {
-	// 	if err := opts.askGitHubRepo(); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if opts.GitHubRepo == "" {
+		if err := opts.selectGitHubRepo(); err != nil {
+			return err
+		}
+	}
 	// if opts.GitHubAccessToken == "" {
 	// 	if err := opts.askGitHubAccessToken(); err != nil {
 	// 		return err
@@ -75,26 +67,18 @@ func (opts *InitPipelineOpts) Execute() error {
 	return nil
 }
 
-func (opts *InitPipelineOpts) askAppName() error {
-	// projectName := viper.GetString(projectFlag)
-	// apps, err := opts.appStore.ListApplications(projectName)
-	// if err != nil {
-	// 	return err
-	// }
+// TODO: Nice-to-have: have an opts.listRemoteRepos() method that execs out to `git remote -v` and parse repo name to offer select menu
+func (opts *InitPipelineOpts) selectGitHubRepo() error {
+	repo, err := opts.prompt.Get(
+		fmt.Sprintf("What is your application's GitHub repository?"),
+		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage.`),
+		nil)
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub repository: %w", err)
+	}
 
-	// selections := make([]string, len(apps))
-	// for _, app := range apps {
-	// 	selections = append(selections, app.Name)
-	// }
-
-	// sel, err := opts.prompt.SelectOne(
-	// 	fmt.Sprintf("Which application would you like to create a pipeline for?"),
-	// 	`The application to create a pipeline for.`,
-	// 	selections,
-	// )
-	// if err != nil {
-	// 	return fmt.Errorf("failed to select application: %w", err)
-	// }
+	opts.GitHubRepo = repo
+	// TODO validate github repo?
 
 	return nil
 }
@@ -105,7 +89,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a pipeline for applications in your workspace.",
-		Long: `Creates a pipeline for the applications in your workspace, using the environments associated with the applications."`,
+		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications."`,
 		Example: `
   Create a pipeline for the applications in your workspace
   /code $ archer pipeline init \
@@ -114,7 +98,6 @@ func BuildPipelineInitCmd() *cobra.Command {
     --environments "stage,prod" \
     --deploy`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 			opts.prompt = prompt.New()
 
 			store, err := ssm.NewStore()
@@ -127,13 +110,12 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("workspace cannot be created: %w", err)
 			}
-			opts.manifestWriter = ws
+			opts.ws = ws
 
 			return opts.Validate()
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warningln("It's best to run this command in the root of your workspace.")
 			if err := opts.Ask(); err != nil {
 				return err
 			}
