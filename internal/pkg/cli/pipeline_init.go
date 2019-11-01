@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/spf13/afero"
 )
 
@@ -23,7 +22,6 @@ type InitPipelineOpts struct {
 	// Fields with matching flags.
 	GitHubRepo  string
 	GitHubAccessToken string
-	AppName string
 	Deploy bool
 	EnableCD bool
 	Environments []string
@@ -78,27 +76,25 @@ func (opts *InitPipelineOpts) Execute() error {
 }
 
 func (opts *InitPipelineOpts) askAppName() error {
-	projectName := viper.GetString(projectFlag)
-	apps, err := opts.appStore.ListApplications(projectName)
-	if err != nil {
-		return err
-	}
+	// projectName := viper.GetString(projectFlag)
+	// apps, err := opts.appStore.ListApplications(projectName)
+	// if err != nil {
+	// 	return err
+	// }
 
-	selections := make([]string, len(apps))
-	for _, app := range apps {
-		selections = append(selections, app.Name)
-	}
+	// selections := make([]string, len(apps))
+	// for _, app := range apps {
+	// 	selections = append(selections, app.Name)
+	// }
 
-	sel, err := opts.prompt.SelectOne(
-		fmt.Sprintf("Which application would you like to create a pipeline for?"),
-		`The application to create a pipeline for.`,
-		selections,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to select application: %w", err)
-	}
-
-	opts.AppName = sel
+	// sel, err := opts.prompt.SelectOne(
+	// 	fmt.Sprintf("Which application would you like to create a pipeline for?"),
+	// 	`The application to create a pipeline for.`,
+	// 	selections,
+	// )
+	// if err != nil {
+	// 	return fmt.Errorf("failed to select application: %w", err)
+	// }
 
 	return nil
 }
@@ -108,15 +104,14 @@ func BuildPipelineInitCmd() *cobra.Command {
 	opts := &InitPipelineOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Creates a pipeline for an application.",
-		Long: `Creates a pipeline for an application in a project, using the environments associated with the application."`,
+		Short: "Creates a pipeline for applications in your workspace.",
+		Long: `Creates a pipeline for the applications in your workspace, using the environments associated with the applications."`,
 		Example: `
-  Create a pipeline for your "frontend".
+  Create a pipeline for the applications in your workspace
   /code $ archer pipeline init \
-    --app frontend \
     --github-repo "gitHubUserName/myFrontendApp" \
     --github-access-token file://myGitHubToken \
-    --environments stage prod \
+    --environments "stage,prod" \
     --deploy`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
@@ -150,7 +145,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, "github-repo", "r", "", "GitHub repository for your application.")
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, "github-access-token", "t", "", "GitHub personal access token for your GitHub repository.")
-	cmd.Flags().StringVarP(&opts.AppName, "app", "a", "", "Name of the application.")
 	cmd.Flags().BoolVarP(&opts.Deploy, "deploy", "d", false, "Deploy pipline automatically.")
 	cmd.Flags().BoolVarP(&opts.EnableCD, "enable-cd", "", false, "Enables automatic deployment to production environment.")
 	cmd.Flags().StringSliceVarP(&opts.Environments, "environments", "e", []string{"build"}, "Environments to add to the pipeline.")
