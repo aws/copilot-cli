@@ -10,5 +10,5 @@ const (
 	GettingStarted = "Getting Started ✨"
 	Develop = "Develop 🔧"
 	Settings = "Settings"
-	Release = "Release"
+	Release = "Release 🚀"
 )
