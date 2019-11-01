@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errNoWorkspace = errors.New("could not find a project attached to this workspace, please run `project init` first")
+var errNoProjectInWorkspace = errors.New("could not find a project attached to this workspace, please run `project init` first")
 
 // BuildAppCmd is the top level command for applications.
 func BuildAppCmd() *cobra.Command {

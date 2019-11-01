@@ -4,14 +4,21 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	appPackageAppNamePrompt = "Which application would you like to generate a CloudFormation template for?"
+	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
 // PackageAppOpts holds the configuration needed to transform an application's manifest to CloudFormation.
@@ -23,7 +30,7 @@ type PackageAppOpts struct {
 	OutputDir string
 
 	// Interfaces to interact with dependencies.
-	appStore archer.ApplicationStore
+	ws       archer.Workspace
 	envStore archer.EnvironmentStore
 	prompt   prompter
 }
@@ -52,7 +59,10 @@ func (opts *PackageAppOpts) Ask() error {
 		if err != nil {
 			return err
 		}
-		app, err := opts.prompt.SelectOne("Which application's CloudFormation template would you like to generate?", "", names)
+		if len(names) == 0 {
+			return errors.New("there are no applications in the workspace, run `archer init` first")
+		}
+		app, err := opts.prompt.SelectOne(appPackageAppNamePrompt, "", names)
 		if err != nil {
 			return fmt.Errorf("prompt application name: %w", err)
 		}
@@ -63,7 +73,7 @@ func (opts *PackageAppOpts) Ask() error {
 		if err != nil {
 			return err
 		}
-		env, err := opts.prompt.SelectOne("Which environment's configuration would you like to use for your stack's parameters?", "", names)
+		env, err := opts.prompt.SelectOne(appPackageEnvNamePrompt, "", names)
 		if err != nil {
 			return fmt.Errorf("prompt environment name: %w", err)
 		}
@@ -76,11 +86,15 @@ func (opts *PackageAppOpts) Ask() error {
 func (opts *PackageAppOpts) Validate() error {
 	project := viper.GetString(projectFlag)
 	if project == "" {
-		return errNoWorkspace
+		return errNoProjectInWorkspace
 	}
 	if opts.AppName != "" {
-		if _, err := opts.appStore.GetApplication(project, opts.AppName); err != nil {
+		names, err := opts.listAppNames()
+		if err != nil {
 			return err
+		}
+		if !contains(opts.AppName, names) {
+			return fmt.Errorf("application '%s' does not exist in the workspace", opts.AppName)
 		}
 	}
 	if opts.EnvName != "" {
@@ -97,16 +111,20 @@ func (opts *PackageAppOpts) Execute() error {
 }
 
 func (opts *PackageAppOpts) listAppNames() ([]string, error) {
-	project := viper.GetString(projectFlag)
-	apps, err := opts.appStore.ListApplications(project)
+	names, err := opts.ws.AppNames()
 	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", project, err)
-	}
-	var names []string
-	for _, app := range apps {
-		names = append(names, app.Name)
+		return nil, fmt.Errorf("list applications in workspace: %w", err)
 	}
 	return names, nil
+}
+
+func contains(s string, items []string) bool {
+	for _, item := range items {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
@@ -138,11 +156,16 @@ func BuildAppPackageCmd() *cobra.Command {
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			ws, err := workspace.New()
+			if err != nil {
+				return fmt.Errorf("new workspace: %w", err)
+			}
+			opts.ws = ws
+
 			store, err := ssm.NewStore()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to application datastore: %w", err)
 			}
-			opts.appStore = store
 			opts.envStore = store
 			return opts.Validate()
 		},

@@ -21,7 +21,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		inAppName string
 		inEnvName string
 
-		expectAppStore func(m *mocks.MockApplicationStore)
+		expectWS       func(m *mocks.MockWorkspace)
 		expectEnvStore func(m *mocks.MockEnvironmentStore)
 		expectPrompt   func(m *climocks.Mockprompter)
 
@@ -30,8 +30,8 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		wantedErrorS  string
 	}{
 		"wrap list apps error": {
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Return(nil, errors.New("some ssm error"))
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -40,12 +40,25 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedErrorS: "list applications for project : some ssm error",
+			wantedErrorS: "list applications in workspace: some error",
+		},
+		"empty workspace error": {
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return([]string{}, nil)
+			},
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
+			},
+			expectPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedErrorS: "there are no applications in the workspace, run `archer init` first",
 		},
 		"wrap list envs error": {
 			inAppName: "frontend",
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Times(0)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, errors.New("some ssm error"))
@@ -58,15 +71,8 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			wantedErrorS:  "list environments for project : some ssm error",
 		},
 		"prompt for all options": {
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Return([]*archer.Application{
-					{
-						Name: "frontend",
-					},
-					{
-						Name: "backend",
-					},
-				}, nil)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
@@ -79,8 +85,8 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne("Which application's CloudFormation template would you like to generate?", gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
-				m.EXPECT().SelectOne("Which environment's configuration would you like to use for your stack's parameters?", gomock.Any(), []string{"test", "prod"}).Return("test", nil)
+				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
+				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
 			},
 
 			wantedAppName: "frontend",
@@ -89,21 +95,14 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"prompt only for the app name": {
 			inEnvName: "test",
 
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Return([]*archer.Application{
-					{
-						Name: "frontend",
-					},
-					{
-						Name: "backend",
-					},
-				}, nil)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne("Which application's CloudFormation template would you like to generate?", gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
+				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
 			},
 
 			wantedAppName: "frontend",
@@ -112,8 +111,8 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"prompt only for the env name": {
 			inAppName: "frontend",
 
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Times(0)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
@@ -126,7 +125,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne("Which environment's configuration would you like to use for your stack's parameters?", gomock.Any(), []string{"test", "prod"}).Return("test", nil)
+				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
 			},
 
 			wantedAppName: "frontend",
@@ -136,8 +135,8 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inAppName: "frontend",
 			inEnvName: "test",
 
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().ListApplications(gomock.Any()).Times(0)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -157,18 +156,18 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAppStore := mocks.NewMockApplicationStore(ctrl)
+			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 
-			tc.expectAppStore(mockAppStore)
+			tc.expectWS(mockWorkspace)
 			tc.expectEnvStore(mockEnvStore)
 			tc.expectPrompt(mockPrompt)
 
 			opts := &PackageAppOpts{
 				AppName:  tc.inAppName,
 				EnvName:  tc.inEnvName,
-				appStore: mockAppStore,
+				ws:       mockWorkspace,
 				envStore: mockEnvStore,
 				prompt:   mockPrompt,
 			}
@@ -195,14 +194,14 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		inEnvName     string
 		inAppName     string
 
-		expectAppStore func(m *mocks.MockApplicationStore)
+		expectWS       func(m *mocks.MockWorkspace)
 		expectEnvStore func(m *mocks.MockEnvironmentStore)
 
 		wantedErrorS string
 	}{
 		"invalid workspace": {
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().GetApplication(gomock.Any(), gomock.Any()).Times(0)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
@@ -214,27 +213,34 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().GetApplication("phonetool", "frontend").Return(nil, &store.ErrNoSuchApplication{
-					ProjectName:     "phonetool",
-					ApplicationName: "frontend",
-				})
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedErrorS: (&store.ErrNoSuchApplication{
-				ProjectName:     "phonetool",
-				ApplicationName: "frontend",
-			}).Error(),
+			wantedErrorS: "list applications in workspace: some error",
+		},
+		"error when application not in workspace": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Return([]string{"backend"}, nil)
+			},
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedErrorS: "application 'frontend' does not exist in the workspace",
 		},
 		"error while fetching environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectAppStore: func(m *mocks.MockApplicationStore) {
-				m.EXPECT().GetApplication(gomock.Any(), gomock.Any()).Times(0)
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
 			},
 			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
@@ -256,9 +262,9 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockAppStore := mocks.NewMockApplicationStore(ctrl)
+			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
-			tc.expectAppStore(mockAppStore)
+			tc.expectWS(mockWorkspace)
 			tc.expectEnvStore(mockEnvStore)
 
 			viper.Set(projectFlag, tc.inProjectName)
@@ -266,7 +272,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			opts := &PackageAppOpts{
 				AppName:  tc.inAppName,
 				EnvName:  tc.inEnvName,
-				appStore: mockAppStore,
+				ws:       mockWorkspace,
 				envStore: mockEnvStore,
 			}
 

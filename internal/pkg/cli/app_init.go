@@ -78,7 +78,7 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if viper.GetString(projectFlag) == "" {
-		return errNoWorkspace
+		return errNoProjectInWorkspace
 	}
 	return nil
 }

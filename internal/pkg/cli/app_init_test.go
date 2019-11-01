@@ -149,7 +149,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"invalid project name": {
 			inProjectName: "",
-			wantedErr:     errNoWorkspace,
+			wantedErr:     errNoProjectInWorkspace,
 		},
 		"valid flags": {
 			inAppName:        "frontend",
