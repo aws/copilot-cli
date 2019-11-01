@@ -23,7 +23,7 @@ Parameters:
     Default: {{.Priority}} # This number must be unique between rules.
   RulePath:
     Type: String
-    Default: {{.App.Path}}
+    Default: '{{.App.Path}}'
   TaskCPU:
     Type: String
     Default: '{{.App.CPU}}'
@@ -54,11 +54,11 @@ Resources:
         - Name: !Ref AppName
           Image: !Ref ContainerImage
           PortMappings:
-            - ContainerPort: !Ref ContainerPort {{if .Variables}}
-          Environment:{{range $name, $value := .Variables}}
+            - ContainerPort: !Ref ContainerPort {{if .App.Variables}}
+          Environment:{{range $name, $value := .App.Variables}}
           - Name: {{$name}}
-            Value: {{$value}}{{end}}{{end}}{{if .Secrets}}
-          Secrets:{{range $name, $valueFrom := .Secrets}}
+            Value: {{$value}}{{end}}{{end}}{{if .App.Secrets}}
+          Secrets:{{range $name, $valueFrom := .App.Secrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}{{end}}
           LogConfiguration:

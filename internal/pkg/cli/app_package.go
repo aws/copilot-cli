@@ -6,9 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -32,6 +37,7 @@ type PackageAppOpts struct {
 	// Interfaces to interact with dependencies.
 	ws       archer.Workspace
 	envStore archer.EnvironmentStore
+	w        io.Writer // Writer to print the template.
 	prompt   prompter
 }
 
@@ -44,11 +50,13 @@ func NewPackageAppOpts() *PackageAppOpts {
 		return &PackageAppOpts{
 			Tag:    "latest",
 			prompt: prompt.New(),
+			w:      os.Stdout,
 		}
 	}
 	return &PackageAppOpts{
 		Tag:    fmt.Sprintf("manual-%s", commitID),
 		prompt: prompt.New(),
+		w:      os.Stdout,
 	}
 }
 
@@ -107,7 +115,19 @@ func (opts *PackageAppOpts) Validate() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (opts *PackageAppOpts) Execute() error {
-	return nil
+	project := viper.GetString(projectFlag)
+	env, err := opts.envStore.GetEnvironment(project, opts.EnvName)
+	if err != nil {
+		return err
+	}
+
+	tpl, err := opts.getTemplate(env)
+	if err != nil {
+		return err
+	}
+
+	_, err = opts.w.Write([]byte(tpl))
+	return err
 }
 
 func (opts *PackageAppOpts) listAppNames() ([]string, error) {
@@ -116,6 +136,28 @@ func (opts *PackageAppOpts) listAppNames() ([]string, error) {
 		return nil, fmt.Errorf("list applications in workspace: %w", err)
 	}
 	return names, nil
+}
+
+func (opts *PackageAppOpts) getTemplate(env *archer.Environment) (string, error) {
+	raw, err := opts.ws.ReadManifestFile(fmt.Sprintf(workspace.FmtManifestFileName, opts.AppName))
+	if err != nil {
+		return "", err
+	}
+	mft, err := manifest.UnmarshalApp(raw)
+	if err != nil {
+		return "", err
+	}
+	switch t := mft.(type) {
+	case *manifest.LBFargateManifest:
+		stack := cloudformation.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
+			App:      mft.(*manifest.LBFargateManifest),
+			Env:      env,
+			ImageTag: opts.Tag,
+		})
+		return stack.Template()
+	default:
+		return "", fmt.Errorf("create CloudFormation template for manifest of type %T", t)
+	}
 }
 
 func contains(s string, items []string) bool {
@@ -179,9 +221,9 @@ func BuildAppPackageCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVarP(&opts.AppName, "name", "n", "", "Name of the application.")
-	cmd.Flags().StringVarP(&opts.EnvName, "env", "e", "", "Name of the environment.")
-	cmd.Flags().StringVar(&opts.Tag, "tag", "", `Optional. The application's image tag. Defaults to your latest git commit's hash.`)
-	cmd.Flags().StringVar(&opts.OutputDir, "output-dir", "", "Optional. Writes the stack template and template configuration to a directory.")
+	cmd.Flags().StringVarP(&opts.AppName, "name", "n", opts.AppName, "Name of the application.")
+	cmd.Flags().StringVarP(&opts.EnvName, "env", "e", opts.EnvName, "Name of the environment.")
+	cmd.Flags().StringVar(&opts.Tag, "tag", opts.Tag, `Optional. The application's image tag. Defaults to your latest git commit's hash.`)
+	cmd.Flags().StringVar(&opts.OutputDir, "output-dir", opts.OutputDir, "Optional. Writes the stack template and template configuration to a directory.")
 	return cmd
 }

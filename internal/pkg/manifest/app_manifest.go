@@ -47,14 +47,14 @@ func CreateApp(appName, appType, dockerfile string) (archer.Manifest, error) {
 func UnmarshalApp(in []byte) (archer.Manifest, error) {
 	am := AppManifest{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, err
+		return nil, &ErrUnmarshalAppManifest{parent: err}
 	}
 
 	switch am.Type {
 	case LoadBalancedWebApplication:
 		m := LBFargateManifest{}
 		if err := yaml.Unmarshal(in, &m); err != nil {
-			return nil, err
+			return nil, &ErrUnmarshalLBFargateManifest{parent: err}
 		}
 		return &m, nil
 	default:

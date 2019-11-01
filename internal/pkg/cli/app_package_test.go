@@ -5,11 +5,14 @@ package cli
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
@@ -290,5 +293,137 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 }
 
 func TestPackageAppOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inProjectName string
+		inEnvName     string
+		inAppName     string
+		inTagName     string
 
+		expectEnvStore  func(m *mocks.MockEnvironmentStore)
+		expectWorkspace func(m *mocks.MockWorkspace)
+
+		wantedErr error
+	}{
+		"invalid environment": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
+					ProjectName:     "phonetool",
+					EnvironmentName: "test",
+				})
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ReadManifestFile(gomock.Any()).Times(0)
+			},
+
+			wantedErr: &store.ErrNoSuchEnvironment{
+				ProjectName:     "phonetool",
+				EnvironmentName: "test",
+			},
+		},
+		"invalid manifest file": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project: "phonetool",
+					Name:    "test",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return(nil, &workspace.ErrManifestNotFound{
+					ManifestName: "frontend-app.yml",
+				})
+			},
+
+			wantedErr: &workspace.ErrManifestNotFound{
+				ManifestName: "frontend-app.yml",
+			},
+		},
+		"invalid manifest type": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project: "phonetool",
+					Name:    "test",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte("somecontent"), nil)
+			},
+
+			wantedErr: &manifest.ErrUnmarshalAppManifest{},
+		},
+		"print CFN template": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+			inTagName:     "latest",
+
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1111",
+					Region:    "us-west-2",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App
+image:
+  build: frontend/Dockerfile
+  port: 80
+http:
+  path: '*'
+cpu: 256
+memory: 512
+count: 1`), nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			viper.Set(projectFlag, tc.inProjectName)
+			defer viper.Set(projectFlag, "")
+
+			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+			mockWorkspace := mocks.NewMockWorkspace(ctrl)
+			tc.expectEnvStore(mockEnvStore)
+			tc.expectWorkspace(mockWorkspace)
+
+			buf := &strings.Builder{}
+			opts := PackageAppOpts{
+				EnvName: tc.inEnvName,
+				AppName: tc.inAppName,
+				Tag:     tc.inTagName,
+
+				envStore: mockEnvStore,
+				ws:       mockWorkspace,
+				w:        buf,
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.True(t, errors.Is(err, tc.wantedErr), "expected %v but got %v", tc.wantedErr, err)
+			} else {
+				require.Nil(t, err, "expected no errors but got %v", err)
+				require.Greater(t, len(buf.String()), 0, "expected a template to be rendered %s", buf.String())
+			}
+		})
+	}
 }

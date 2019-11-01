@@ -44,3 +44,11 @@ type ErrManifestNotFound struct {
 func (e *ErrManifestNotFound) Error() string {
 	return fmt.Sprintf("manifest file %s does not exists", e.ManifestName)
 }
+
+func (e *ErrManifestNotFound) Is(target error) bool {
+	t, ok := target.(*ErrManifestNotFound)
+	if !ok {
+		return false
+	}
+	return e.ManifestName == t.ManifestName
+}
