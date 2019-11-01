@@ -34,16 +34,16 @@ const (
 	manifestFileSuffix        = "-app.yml"
 )
 
-// Service manages a local workspace, including creating and managing manifest files.
-type Service struct {
+// Workspace manages a local workspace, including creating and managing manifest files.
+type Workspace struct {
 	workingDir  string
 	manifestDir string
 	fsUtils     *afero.Afero
 }
 
-// New returns a workspace Service, used for reading and writing to
+// New returns a workspace, used for reading and writing to
 // user's local workspace.
-func New() (*Service, error) {
+func New() (*Workspace, error) {
 	appFs := afero.NewOsFs()
 	fsUtils := &afero.Afero{Fs: appFs}
 
@@ -51,7 +51,7 @@ func New() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	ws := Service{
+	ws := Workspace{
 		workingDir: workingDir,
 		fsUtils:    fsUtils,
 	}
@@ -62,7 +62,7 @@ func New() (*Service, error) {
 // Create creates the manifest directory (if it doesn't already exist) in
 // the current working directory, and saves a summary in the manifest
 // directory with the project name.
-func (ws *Service) Create(projectName string) error {
+func (ws *Workspace) Create(projectName string) error {
 	// Create a manifest directory, if one doesn't exist
 	if createDirErr := ws.createManifestDirectory(); createDirErr != nil {
 		return createDirErr
@@ -90,7 +90,7 @@ func (ws *Service) Create(projectName string) error {
 }
 
 // Summary returns a summary of the workspace - including the project name.
-func (ws *Service) Summary() (*archer.WorkspaceSummary, error) {
+func (ws *Workspace) Summary() (*archer.WorkspaceSummary, error) {
 	summaryPath, err := ws.summaryPath()
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (ws *Service) Summary() (*archer.WorkspaceSummary, error) {
 	return nil, &ErrNoProjectAssociated{}
 }
 
-func (ws *Service) writeSummary(projectName string) error {
+func (ws *Workspace) writeSummary(projectName string) error {
 	summaryPath, err := ws.summaryPath()
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func (ws *Service) writeSummary(projectName string) error {
 // AppNames returns the name of all the local applications. For now it
 // extracts the application name from the file name of the corresponding
 // application manifest.
-func (ws *Service) AppNames() ([]string, error) {
+func (ws *Workspace) AppNames() ([]string, error) {
 	manifests, err := ws.ListManifestFiles()
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (ws *Service) AppNames() ([]string, error) {
 	return apps, nil
 }
 
-func (ws *Service) summaryPath() (string, error) {
+func (ws *Workspace) summaryPath() (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {
 		return "", err
@@ -153,7 +153,7 @@ func (ws *Service) summaryPath() (string, error) {
 	return workspaceSummaryPath, nil
 }
 
-func (ws *Service) createManifestDirectory() error {
+func (ws *Workspace) createManifestDirectory() error {
 	// First check to see if a manifest directory already exists
 	existingWorkspace, _ := ws.manifestDirectoryPath()
 	if existingWorkspace != "" {
@@ -162,7 +162,7 @@ func (ws *Service) createManifestDirectory() error {
 	return ws.fsUtils.Mkdir(ManifestDirectoryName, 0755)
 }
 
-func (ws *Service) manifestDirectoryPath() (string, error) {
+func (ws *Workspace) manifestDirectoryPath() (string, error) {
 	if ws.manifestDir != "" {
 		return ws.manifestDir, nil
 	}
@@ -194,7 +194,7 @@ func (ws *Service) manifestDirectoryPath() (string, error) {
 }
 
 // ListManifestFiles returns a list of all the local manifests filenames.
-func (ws *Service) ListManifestFiles() ([]string, error) {
+func (ws *Workspace) ListManifestFiles() ([]string, error) {
 	manifestDir, err := ws.manifestDirectoryPath()
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func (ws *Service) ListManifestFiles() ([]string, error) {
 
 // ReadManifestFile takes in a manifest file (e.g. frontend-app.yml) and returns
 // the read bytes.
-func (ws *Service) ReadManifestFile(manifestFile string) ([]byte, error) {
+func (ws *Workspace) ReadManifestFile(manifestFile string) ([]byte, error) {
 	manifestDirPath, err := ws.manifestDirectoryPath()
 	if err != nil {
 		return nil, err
@@ -242,7 +242,7 @@ func (ws *Service) ReadManifestFile(manifestFile string) ([]byte, error) {
 
 // WriteManifest takes a manifest blob and writes it to the manifest directory.
 // If successful returns the path of the manifest file, otherwise returns an empty string and the error.
-func (ws *Service) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
+func (ws *Workspace) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {
 		return "", err

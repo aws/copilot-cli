@@ -56,7 +56,7 @@ func TestListManifests(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
@@ -112,7 +112,7 @@ func TestAppNames(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
@@ -182,7 +182,7 @@ func TestReadManifest(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
@@ -234,7 +234,7 @@ func TestWriteManifest(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
@@ -319,7 +319,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir:  tc.workingDir,
 				fsUtils:     &afero.Afero{Fs: appFS},
 				manifestDir: tc.presetManifestDir,
@@ -370,7 +370,7 @@ func TestReadSummary(t *testing.T) {
 			// Set it up
 			tc.mockFileSystem(appFS)
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
@@ -446,7 +446,7 @@ func TestCreate(t *testing.T) {
 				appFS = afero.NewReadOnlyFs(appFS)
 			}
 
-			ws := Service{
+			ws := Workspace{
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
