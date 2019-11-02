@@ -40,6 +40,20 @@ func (p Prompt) Get(message, help string, validator ValidatorFunc) (string, erro
 	return result, err
 }
 
+// GetSecret prompts the user for sensitive input. Wraps survey.Password
+func (p Prompt) GetSecret(message, help string) (string, error) {
+	prompt := &survey.Password{
+		Message: message,
+		Help:    help,
+	}
+
+	var result string
+
+	err := p(prompt, &result, stdio(), icons())
+
+	return result, err
+}
+
 // SelectOne prompts the user with a list of options to choose from with the arrow keys.
 func (p Prompt) SelectOne(message, help string, options []string) (string, error) {
 	if len(options) <= 0 {

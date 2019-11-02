@@ -8,11 +8,9 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -36,22 +34,22 @@ type InitPipelineOpts struct {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
-	if opts.GitHubRepo == "" {
-		if err := opts.selectGitHubRepo(); err != nil {
-			return err
-		}
-	}
-	// if opts.GitHubAccessToken == "" {
-	// 	if err := opts.askGitHubAccessToken(); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	// if len(opts.Environments) == 0 {
 	// 	if err := opts.askEnvironments(); err != nil {
 	// 		return err
 	// 	}
 	// }
+	if opts.GitHubRepo == "" {
+		if err := opts.selectGitHubRepo(); err != nil {
+			return err
+		}
+	}
+	if opts.GitHubAccessToken == "" {
+		if err := opts.getGitHubAccessToken(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -79,6 +77,21 @@ func (opts *InitPipelineOpts) selectGitHubRepo() error {
 
 	opts.GitHubRepo = repo
 	// TODO validate github repo?
+
+	return nil
+}
+
+func (opts *InitPipelineOpts) getGitHubAccessToken() error {
+	token, err := opts.prompt.GetSecret(
+		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository: %s", opts.GitHubRepo),
+		fmt.Sprintf(`The personal access token for the GitHub repository linked to your workspace. For more information on how to create a personal access token, please refer to: https://help.github.com/en/enterprise/2.17/user/authenticating-to-github/creating-a-personal-access-token-for-the-command-line.`),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub access token: %w", err)
+	}
+
+	opts.GitHubAccessToken = token
 
 	return nil
 }
