@@ -11,23 +11,28 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+const (
+	pipelineAddEnvPrompt = "Would you like to add an environment to your pipeline?"
+	pipelineSelectEnvPrompt = "Which environment would you like to add to your pipeline?"
+	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?"
 )
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
 	// Fields with matching flags.
+	Environments      []string
 	GitHubRepo        string
 	GitHubAccessToken string
-	Deploy            bool
 	EnableCD          bool
-	Environments      []string
+	Deploy            bool
 
-	// Interfaces to interact with dependencies.  // TODO
-	appStore archer.ApplicationStore
-	ws       archer.Workspace
+	// Interfaces to interact with dependencies.
+	envStore archer.EnvironmentStore
 	prompt   prompter
 
 	// Outputs stored on successful actions.
@@ -36,21 +41,32 @@ type InitPipelineOpts struct {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
-	// if len(opts.Environments) == 0 {
-	// 	if err := opts.askEnvironments(); err != nil {
-	// 		return err
-	// 	}
-	// }
+	if len(opts.Environments) == 0 {
+		if err := opts.selectEnvironments(true); err != nil {
+			return err
+		}
+	}
+
 	if opts.GitHubRepo == "" {
 		if err := opts.selectGitHubRepo(); err != nil {
 			return err
 		}
 	}
+
 	if opts.GitHubAccessToken == "" {
 		if err := opts.getGitHubAccessToken(); err != nil {
 			return err
 		}
 	}
+
+	// if err := opts.askEnableCD(); err != nil {
+	// 	return err
+	// }
+
+	// TODO ask this after pipeline.yml is written
+	// if err := opts.askDeploy(); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
@@ -58,6 +74,9 @@ func (opts *InitPipelineOpts) Ask() error {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *InitPipelineOpts) Validate() error {
 	// TODO
+	if viper.GetString(projectFlag) == "" {
+		return errNoProjectInWorkspace
+	}
 	return nil
 }
 
@@ -72,12 +91,108 @@ func (opts *InitPipelineOpts) Execute() error {
 	return nil
 }
 
+func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
+	if addMore == false {
+		return nil
+	}
+
+	addEnv, err := opts.prompt.Confirm(
+		pipelineAddEnvPrompt,
+		"Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to confirm adding an environment: %w", err)
+	}
+
+	var selectMoreEnvs bool
+	if addEnv {
+		selectMore, err := opts.selectEnvironment()
+		if err != nil {
+			return err
+		}
+		selectMoreEnvs = selectMore
+	}
+
+	return opts.selectEnvironments(selectMoreEnvs)
+}
+
+func (opts *InitPipelineOpts) getEnvironments() ([]*archer.Environment, error) {
+	project := viper.GetString(projectFlag)
+	envs, err := opts.envStore.ListEnvironments(project)
+	if err != nil {
+		return nil, fmt.Errorf("list environments for project %s: %w", project, err)
+	}
+
+	if len(envs) == 0 {
+		return nil, fmt.Errorf("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
+	}
+
+	return envs, nil
+}
+
+func (opts *InitPipelineOpts) listAvailableEnvironments() ([]string, error) {
+	envs, err := opts.getEnvironments()
+	if err != nil {
+		return nil, fmt.Errorf("Could not list environments: %w", err)
+	}
+
+	names := []string{}
+	for _, env := range envs {
+		// Check if environment has already been added to pipeline
+		if opts.envCanBeAdded(env.Name) {
+			names = append(names, env.Name)
+		}
+	}
+
+	return names, nil
+}
+
+func (opts *InitPipelineOpts) envCanBeAdded(selectedEnv string) bool {
+	for _, env := range opts.Environments {
+		if selectedEnv == env {
+			return false
+		}
+	}
+	return true
+}
+
+func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
+	selectMoreEnvs := false
+
+	envs, err := opts.listAvailableEnvironments()
+	if err != nil {
+		return selectMoreEnvs, fmt.Errorf("failed to list environments: %w", err)
+	}
+
+	if len(envs) == 0 && len(opts.Environments) != 0 {
+		log.Infoln("There are no more environments to add.")
+		return selectMoreEnvs, nil
+	}
+
+	env, err := opts.prompt.SelectOne(
+		pipelineSelectEnvPrompt,
+		"Environment to be added as the next stage in your pipeline.",
+		envs,
+	)
+
+	if err != nil {
+		return selectMoreEnvs, fmt.Errorf("failed to add environment: %w", err)
+	}
+
+	opts.Environments = append(opts.Environments, env)
+	selectMoreEnvs = true
+
+	return selectMoreEnvs, nil
+}
+
 // TODO: Nice-to-have: have an opts.listRemoteRepos() method that execs out to `git remote -v` and parse repo name to offer select menu
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
 	repo, err := opts.prompt.Get(
-		fmt.Sprintf("What is your application's GitHub repository?"),
+		pipelineEnterGitHubRepoPrompt,
 		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage.`),
 		nil)
+
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub repository: %w", err)
 	}
@@ -103,6 +218,36 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
+func (opts *InitPipelineOpts) askEnableCD() error {
+	enable, err := opts.prompt.Confirm(
+		"Would you like to automatically enable deploying to production?",
+		"Enables the transition to your production environment automatically through your pipeline.",
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to confirm enabling CD: %w", err)
+	}
+
+	opts.EnableCD = enable
+
+	return nil
+}
+
+func (opts *InitPipelineOpts) askDeploy() error {
+	deploy, err := opts.prompt.Confirm(
+		"Would you like to deploy your pipeline?",
+		"Deploys your pipeline through CloudFormation.",
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to confirm deploying pipeline: %w", err)
+	}
+
+	opts.Deploy = deploy
+
+	return nil
+}
+
 // BuildPipelineInitCmd build the command for creating a new pipeline.
 func BuildPipelineInitCmd() *cobra.Command {
 	opts := &InitPipelineOpts{}
@@ -111,7 +256,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 		Short: "Creates a pipeline for applications in your workspace.",
 		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications."`,
 		Example: `
-  Create a pipeline for the applications in your workspace
+  Create a pipeline for the applications in your workspace:
   /code $ archer pipeline init \
     --github-repo "gitHubUserName/myFrontendApp" \
     --github-access-token file://myGitHubToken \
@@ -122,15 +267,9 @@ func BuildPipelineInitCmd() *cobra.Command {
 
 			store, err := ssm.NewStore()
 			if err != nil {
-				return fmt.Errorf("couldn't connect to project datastore: %w", err)
+				return fmt.Errorf("couldn't connect to environment datastore: %w", err)
 			}
-			opts.appStore = store
-
-			ws, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("workspace cannot be created: %w", err)
-			}
-			opts.ws = ws
+			opts.envStore = store
 
 			return opts.Validate()
 		},
@@ -149,7 +288,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, "github-access-token", "t", "", "GitHub personal access token for your GitHub repository.")
 	cmd.Flags().BoolVarP(&opts.Deploy, "deploy", "d", false, "Deploy pipline automatically.")
 	cmd.Flags().BoolVarP(&opts.EnableCD, "enable-cd", "", false, "Enables automatic deployment to production environment.")
-	cmd.Flags().StringSliceVarP(&opts.Environments, "environments", "e", []string{"build"}, "Environments to add to the pipeline.")
+	cmd.Flags().StringSliceVarP(&opts.Environments, "environments", "e", []string{}, "Environments to add to the pipeline.")
 
 	return cmd
 }
