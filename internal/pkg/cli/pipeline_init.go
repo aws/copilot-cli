@@ -8,6 +8,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
@@ -61,7 +63,12 @@ func (opts *InitPipelineOpts) Validate() error {
 
 // Execute writes the pipline manifest file.
 func (opts *InitPipelineOpts) Execute() error {
-	// TODO
+	opts.manifestPath = "pipeline.yml" // TODO: placeholder
+
+	log.Infoln()
+	log.Successf("Wrote the pipeline for %s app at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(opts.manifestPath))
+	log.Infoln("Your pipeline manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
+	log.Infoln()
 	return nil
 }
 
