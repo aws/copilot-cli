@@ -36,6 +36,12 @@ type mockCloudFormation struct {
 	mockDescribeChangeSet                func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
 	mockWaitUntilStackCreateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 	mockDescribeStacks                   func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+	mockCreateStackSet                   func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
+	mockDescribeStackSet                 func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
+	mockUpdateStackSet                   func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
+	mockListStackInstances               func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
+	mockCreateStackInstances             func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
+	mockDescribeStackSetOperation        func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -60,6 +66,30 @@ func (cf mockCloudFormation) WaitUntilStackCreateComplete(in *cloudformation.Des
 
 func (cf mockCloudFormation) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
 	return cf.mockDescribeStacks(cf.t, in)
+}
+
+func (cf mockCloudFormation) CreateStackSet(in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error) {
+	return cf.mockCreateStackSet(cf.t, in)
+}
+
+func (cf mockCloudFormation) DescribeStackSet(in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+	return cf.mockDescribeStackSet(cf.t, in)
+}
+
+func (cf mockCloudFormation) UpdateStackSet(in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+	return cf.mockUpdateStackSet(cf.t, in)
+}
+
+func (cf mockCloudFormation) ListStackInstances(in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+	return cf.mockListStackInstances(cf.t, in)
+}
+
+func (cf mockCloudFormation) CreateStackInstances(in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
+	return cf.mockCreateStackInstances(cf.t, in)
+}
+
+func (cf mockCloudFormation) DescribeStackSetOperation(in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+	return cf.mockDescribeStackSetOperation(cf.t, in)
 }
 
 type mockStackConfiguration struct {
@@ -395,6 +425,7 @@ func TestWaitForEnvironmentCreation(t *testing.T) {
 		})
 	}
 }
+
 func getMockWaitStackCreateCFClient(t *testing.T, stackName string, shouldThrowError, shouldReturnEmptyStacks bool) CloudFormation {
 	return CloudFormation{
 		client: &mockCloudFormation{
@@ -442,6 +473,7 @@ func getMockStackConfiguration() stackConfiguration {
 		},
 	}
 }
+
 func emptyBox() packd.Box {
 	return packd.NewMemoryBox()
 }
