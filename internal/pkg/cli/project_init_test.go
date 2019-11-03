@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
@@ -175,13 +176,19 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		expectedProject archer.Project
 		expectedError   error
-		mocking         func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace)
+		mocking         func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService)
 	}{
-		"with a succesfull call to add env": {
+		"with a succesfull call to add project": {
 			expectedProject: archer.Project{
 				Name: "project",
 			},
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
@@ -198,7 +205,13 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			expectedProject: archer.Project{
 				Name: "project",
 			},
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
@@ -214,7 +227,13 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		"should return error from CreateProject": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
@@ -228,7 +247,13 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		"should return error from workspace.Create": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
 				mockProjectStore.
 					EXPECT().
 					CreateProject(gomock.Any()).
@@ -247,13 +272,15 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 			mockProjectStore := mocks.NewMockProjectStore(ctrl)
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
+			mockIdentityService := climocks.NewMockidentityService(ctrl)
 
 			opts := &InitProjectOpts{
 				ProjectName:  "project",
 				projectStore: mockProjectStore,
+				identity:     mockIdentityService,
 				ws:           mockWorkspace,
 			}
-			tc.mocking(t, mockProjectStore, mockWorkspace)
+			tc.mocking(t, mockProjectStore, mockWorkspace, mockIdentityService)
 
 			// WHEN
 			err := opts.Execute()
