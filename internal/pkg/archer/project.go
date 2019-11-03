@@ -5,8 +5,9 @@ package archer
 
 // Project is a named collection of environments.
 type Project struct {
-	Name    string `json:"name"`    // Name of a project. Must be unique amongst other projects in the same account
-	Version string `json:"version"` // The version of the project layout in the underyling datastore (e.g. SSM)
+	Name      string `json:"name"`    // Name of a project. Must be unique amongst other projects in the same account
+	AccountID string `json:"account"` // AccountID this project is mastered in
+	Version   string `json:"version"` // The version of the project layout in the underyling datastore (e.g. SSM)
 }
 
 // ProjectStore is an interface for creating and listing projects
