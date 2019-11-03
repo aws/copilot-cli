@@ -1,0 +1,90 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: Configure the AWSCloudFormationStackSetAdministrationRole to enable use of AWS CloudFormation StackSets.
+Parameters:
+  AdminRoleName:
+    Type: String
+  ExecutionRoleName:
+    Type: String
+Resources:
+  AdministrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref AdminRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - !Sub 'arn:aws:iam::*:role/${AdminRoleName}'
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref ExecutionRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt AdministrationRole.Arn
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: ExecutionRolePolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+              - Sid: StackSetRequiredPermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - s3:*
+                  - sns:*
+                Resource: "*"
+              - Sid: ManageKMSKeys
+                Effect: Allow
+                Action:
+                  - kms:*
+                Resource: "*"
+              - Sid: ManageECRRepos
+                Effect: Allow
+                Action:
+                  - ecr:DescribeImageScanFindings
+                  - ecr:GetLifecyclePolicyPreview
+                  - ecr:CreateRepository
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:GetAuthorizationToken
+                  - ecr:ListTagsForResource
+                  - ecr:ListImages
+                  - ecr:DeleteLifecyclePolicy
+                  - ecr:DeleteRepository
+                  - ecr:SetRepositoryPolicy
+                  - ecr:BatchGetImage
+                  - ecr:DescribeImages
+                  - ecr:DescribeRepositories
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetRepositoryPolicy
+                  - ecr:GetLifecyclePolicy
+                Resource: "*"
+Outputs:
+  ExecutionRoleARN:
+    Description: ExecutionRole used by this project to set up ECR Repos, KMS Keys and S3 buckets
+    Value: !GetAtt ExecutionRole.Arn
+  AdministrationRoleARN:
+    Description: AdministrationRole used by this project to manage this project's StackSet
+    Value: !GetAtt AdministrationRole.Arn
