@@ -28,12 +28,11 @@ import (
 const (
 	// ManifestDirectoryName is the name of the directory where application manifests will be stored.
 	ManifestDirectoryName = "ecs-project"
-	// FmtManifestFileName is the formatted string to create an application's manifest file name from an application's name.
-	FmtManifestFileName = "%s" + manifestFileSuffix
 
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5
 	manifestFileSuffix        = "-app.yml"
+	fmtManifestFileName       = "%s" + manifestFileSuffix
 )
 
 // Workspace manages a local workspace, including creating and managing manifest files.
@@ -249,10 +248,14 @@ func (ws *Workspace) WriteManifest(manifestBlob []byte, applicationName string) 
 	if err != nil {
 		return "", err
 	}
-	manifestFileName := fmt.Sprintf(FmtManifestFileName, applicationName)
-	p := filepath.Join(manifestPath, manifestFileName)
+	p := filepath.Join(manifestPath, ws.ManifestFileName(applicationName))
 	if err := ws.fsUtils.WriteFile(p, manifestBlob, 0644); err != nil {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}
 	return p, nil
+}
+
+// ManifestFileName returns the manifest's name from an application name.
+func (ws *Workspace) ManifestFileName(appName string) string {
+	return fmt.Sprintf(fmtManifestFileName, appName)
 }

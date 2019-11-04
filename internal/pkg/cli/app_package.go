@@ -139,7 +139,7 @@ func (opts *PackageAppOpts) listAppNames() ([]string, error) {
 }
 
 func (opts *PackageAppOpts) getTemplate(env *archer.Environment) (string, error) {
-	raw, err := opts.ws.ReadManifestFile(fmt.Sprintf(workspace.FmtManifestFileName, opts.AppName))
+	raw, err := opts.ws.ReadManifestFile(opts.ws.ManifestFileName(opts.AppName))
 	if err != nil {
 		return "", err
 	}
@@ -221,6 +221,7 @@ func BuildAppPackageCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
+	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
 	cmd.Flags().StringVarP(&opts.AppName, "name", "n", opts.AppName, "Name of the application.")
 	cmd.Flags().StringVarP(&opts.EnvName, "env", "e", opts.EnvName, "Name of the environment.")
 	cmd.Flags().StringVar(&opts.Tag, "tag", opts.Tag, `Optional. The application's image tag. Defaults to your latest git commit's hash.`)
