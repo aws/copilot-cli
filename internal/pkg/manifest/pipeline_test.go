@@ -19,7 +19,7 @@ func TestNewProvider(t *testing.T) {
 	}{
 		"successfully create GitHub provider": {
 			providerConfig: &GitHubProperties{
-				Repository: "aws/amazon-ecs-cli-v2",
+				OwnerAndRepository: "aws/amazon-ecs-cli-v2",
 				Branch:     "master",
 			},
 		},
@@ -51,7 +51,7 @@ func TestCreatePipeline(t *testing.T) {
 		"errors out when no stage provided": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
-					Repository: "aws/amazon-ecs-cli-v2",
+					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
@@ -63,7 +63,7 @@ func TestCreatePipeline(t *testing.T) {
 		"happy case with non-default stages": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
-					Repository: "aws/amazon-ecs-cli-v2",
+					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
 					Branch:     "master",
 				})
 				require.NoError(t, err, "failed to create provider")
@@ -119,7 +119,7 @@ stages:
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
-		Repository: "aws/amazon-ecs-cli-v2",
+		OwnerAndRepository: "aws/amazon-ecs-cli-v2",
 		Branch:     "master",
 	})
 	require.NoError(t, err)

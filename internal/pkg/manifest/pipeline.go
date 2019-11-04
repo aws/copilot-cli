@@ -44,7 +44,9 @@ func (p *githubProvider) Properties() map[string]interface{} {
 type GitHubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
-	Repository string `structs:"repository" yaml:"repository"`
+
+	// An example for OwnerAndRepository would be: "aws/amazon-ecs-cli-v2"
+	OwnerAndRepository string `structs:"repository" yaml:"repository"`
 	Branch     string `structs:"branch" yaml:"branch"`
 }
 
