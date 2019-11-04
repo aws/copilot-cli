@@ -8,6 +8,8 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -21,6 +23,7 @@ import (
 type InitProjectOpts struct {
 	ProjectName string
 
+	identity     identityService
 	projectStore archer.ProjectStore
 	ws           archer.Workspace
 	prompt       prompter
@@ -28,7 +31,13 @@ type InitProjectOpts struct {
 
 // NewInitProjectOpts returns a new InitProjectOpts.
 func NewInitProjectOpts() (*InitProjectOpts, error) {
+	defaultSession, err := session.Default()
+	if err != nil {
+		return nil, err
+	}
+
 	ssmStore, err := ssm.NewStore()
+
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +47,7 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 		return nil, err
 	}
 	return &InitProjectOpts{
+		identity:     identity.New(defaultSession),
 		projectStore: ssmStore,
 		ws:           ws,
 		prompt:       prompt.New(),
@@ -94,8 +104,15 @@ func (opts *InitProjectOpts) Validate() error {
 
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
-	err := opts.projectStore.CreateProject(&archer.Project{
-		Name: opts.ProjectName,
+	caller, err := opts.identity.Get()
+
+	if err != nil {
+		return err
+	}
+
+	err = opts.projectStore.CreateProject(&archer.Project{
+		AccountID: caller.Account,
+		Name:      opts.ProjectName,
 	})
 
 	if err != nil {

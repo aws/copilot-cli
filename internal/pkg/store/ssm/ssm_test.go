@@ -140,7 +140,7 @@ func TestStore_ListProjects(t *testing.T) {
 }
 
 func TestStore_GetProject(t *testing.T) {
-	testProject := archer.Project{Name: "chicken", Version: "1.0"}
+	testProject := archer.Project{Name: "chicken", AccountID: "1234", Version: "1.0"}
 	testProjectString, err := marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
 	require.NoError(t, err, "Marshal project should not fail")
@@ -245,8 +245,8 @@ func TestStore_GetProject(t *testing.T) {
 }
 
 func TestStore_CreateProject(t *testing.T) {
-	testProject := archer.Project{Name: "chicken"}
-	testProjectString := fmt.Sprintf("{\"name\":\"chicken\",\"version\":\"%s\"}", schemaVersion)
+	testProject := archer.Project{Name: "chicken", AccountID: "1234"}
+	testProjectString := fmt.Sprintf("{\"name\":\"chicken\",\"account\":\"1234\",\"version\":\"%s\"}", schemaVersion)
 	marshal(testProject)
 	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
 
@@ -294,7 +294,7 @@ func TestStore_CreateProject(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateProject(&archer.Project{Name: "chicken", Version: "1.0"})
+			err := store.CreateProject(&archer.Project{Name: "chicken", AccountID: "1234", Version: "1.0"})
 
 			// THEN
 			if tc.wantedErr != nil {
