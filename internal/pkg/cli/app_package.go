@@ -39,24 +39,29 @@ type PackageAppOpts struct {
 	envStore archer.EnvironmentStore
 	w        io.Writer // Writer to print the template.
 	prompt   prompter
+
+	globalOpts // Embed global options.
 }
 
 // NewPackageAppOpts returns a new PackageAppOpts where the image tag is set to "manual-{short git sha}".
 // If an error occurred while running git, we set the image name to "latest" instead.
 func NewPackageAppOpts() *PackageAppOpts {
 	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
+	project := viper.GetString(projectFlag)
 	if err != nil {
 		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
-			Tag:    "latest",
-			prompt: prompt.New(),
-			w:      os.Stdout,
+			Tag:        "latest",
+			prompt:     prompt.New(),
+			w:          os.Stdout,
+			globalOpts: globalOpts{projectName: project},
 		}
 	}
 	return &PackageAppOpts{
-		Tag:    fmt.Sprintf("manual-%s", commitID),
-		prompt: prompt.New(),
-		w:      os.Stdout,
+		Tag:        fmt.Sprintf("manual-%s", commitID),
+		prompt:     prompt.New(),
+		w:          os.Stdout,
+		globalOpts: globalOpts{projectName: project},
 	}
 }
 
@@ -92,8 +97,7 @@ func (opts *PackageAppOpts) Ask() error {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (opts *PackageAppOpts) Validate() error {
-	project := viper.GetString(projectFlag)
-	if project == "" {
+	if opts.projectName == "" {
 		return errNoProjectInWorkspace
 	}
 	if opts.AppName != "" {
@@ -106,7 +110,7 @@ func (opts *PackageAppOpts) Validate() error {
 		}
 	}
 	if opts.EnvName != "" {
-		if _, err := opts.envStore.GetEnvironment(project, opts.EnvName); err != nil {
+		if _, err := opts.envStore.GetEnvironment(opts.projectName, opts.EnvName); err != nil {
 			return err
 		}
 	}
@@ -115,8 +119,7 @@ func (opts *PackageAppOpts) Validate() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (opts *PackageAppOpts) Execute() error {
-	project := viper.GetString(projectFlag)
-	env, err := opts.envStore.GetEnvironment(project, opts.EnvName)
+	env, err := opts.envStore.GetEnvironment(opts.projectName, opts.EnvName)
 	if err != nil {
 		return err
 	}

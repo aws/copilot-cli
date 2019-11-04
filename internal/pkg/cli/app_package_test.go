@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -270,13 +269,14 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			tc.expectWS(mockWorkspace)
 			tc.expectEnvStore(mockEnvStore)
 
-			viper.Set(projectFlag, tc.inProjectName)
-			defer viper.Set(projectFlag, "")
 			opts := &PackageAppOpts{
-				AppName:  tc.inAppName,
-				EnvName:  tc.inEnvName,
+				AppName: tc.inAppName,
+				EnvName: tc.inEnvName,
+
 				ws:       mockWorkspace,
 				envStore: mockEnvStore,
+
+				globalOpts: globalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -398,8 +398,6 @@ count: 1`), nil)
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			viper.Set(projectFlag, tc.inProjectName)
-			defer viper.Set(projectFlag, "")
 
 			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
@@ -415,6 +413,8 @@ count: 1`), nil)
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
 				w:        buf,
+
+				globalOpts: globalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
