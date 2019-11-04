@@ -16,7 +16,7 @@ require (
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/onsi/ginkgo v1.10.3
-	github.com/onsi/gomega v1.7.0
+	github.com/onsi/gomega v1.7.1
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
