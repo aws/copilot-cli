@@ -128,14 +128,14 @@ func TestSpinner_Events(t *testing.T) {
 			eventsBuf: &bytes.Buffer{},
 			newEvents: []string{"hello", "world"},
 
-			wantedSEvents: "\nhello\nworld[up2]",
+			wantedSEvents: "\nhello\nworld[up2]\r",
 		},
 		"with existing events": {
 			eventsBuf:  &bytes.Buffer{},
 			pastEvents: []string{"hello", "world"},
 			newEvents:  []string{"this", "is", "fine"},
 
-			wantedSEvents: "[down1]erase[down1]erase[up2]\nthis\nis\nfine[up3]", // write new events
+			wantedSEvents: "[down1]erase[down1]erase[up2]\nthis\nis\nfine[up3]\r", // write new events
 		},
 	}
 

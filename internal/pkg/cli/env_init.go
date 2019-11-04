@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // InitEnvOpts contains the fields to collect for adding an environment.
@@ -35,6 +35,8 @@ type InitEnvOpts struct {
 	identity      identityService
 	prog          progress
 	prompt        prompter
+
+	globalOpts // Embed global options.
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -60,7 +62,7 @@ func (opts *InitEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if viper.GetString(projectFlag) == "" {
+	if opts.projectName == "" {
 		return errors.New("no project found, run `project init` first")
 	}
 	return nil
@@ -69,51 +71,88 @@ func (opts *InitEnvOpts) Validate() error {
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
-	if _, err := opts.projectGetter.GetProject(viper.GetString(projectFlag)); err != nil {
+	if _, err := opts.projectGetter.GetProject(opts.projectName); err != nil {
 		return err
 	}
 
-	identity, err := opts.identity.Get()
+	caller, err := opts.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     opts.EnvName,
-		Project:                  viper.GetString(projectFlag),
+		Project:                  opts.projectName,
 		Prod:                     opts.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
-		ToolsAccountPrincipalARN: identity.ARN,
+		ToolsAccountPrincipalARN: caller.ARN,
 	}
 
-	opts.prog.Start("Preparing deployment...")
+	opts.prog.Start(fmt.Sprintf("Proposing infrastructure changes for the %s environment", color.HighlightUserInput(opts.EnvName)))
 	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
-			opts.prog.Stop("Done!")
+			opts.prog.Stop("")
 			log.Successf("Environment %s already exists under project %s! Do nothing.\n",
-				color.HighlightUserInput(opts.EnvName), color.HighlightResource(viper.GetString(projectFlag)))
+				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.projectName))
 			return nil
 		}
-		opts.prog.Stop("Error!")
+		opts.prog.Stop(fmt.Sprintf("%s Failed to accept changes for the %s environment", color.ErrorMarker, color.HighlightUserInput(opts.EnvName)))
 		return err
 	}
-	opts.prog.Stop("Done!")
-	opts.prog.Start("Deploying env...")
-	env, err := opts.envDeployer.WaitForEnvironmentCreation(deployEnvInput)
-	if err != nil {
-		opts.prog.Stop("Error!")
-		return err
+	opts.prog.Start(fmt.Sprintf("Creating the infrastructure for the %s environment", color.HighlightUserInput(opts.EnvName)))
+	stackEvents, responses := opts.envDeployer.StreamEnvironmentCreation(deployEnvInput)
+	for stackEvent := range stackEvents {
+		opts.prog.Events(opts.humanizeEnvironmentEvents(stackEvent))
 	}
-	if err := opts.envCreator.CreateEnvironment(env); err != nil {
-		opts.prog.Stop("Error!")
-		return err
+	resp := <-responses
+	if resp.Err != nil {
+		opts.prog.Stop(fmt.Sprintf("%s Failed to create the infrastructure for the %s environment", color.ErrorMarker, color.HighlightUserInput(opts.EnvName)))
+		return resp.Err
 	}
-	opts.prog.Stop("Done!")
+	opts.prog.Stop(fmt.Sprintf("%s Created the infrastructure for the %s environment", color.SuccessMarker, color.HighlightUserInput(opts.EnvName)))
+	if err := opts.envCreator.CreateEnvironment(resp.Env); err != nil {
+		return fmt.Errorf("store environment: %w", err)
+	}
 	log.Successf("Created environment %s in region %s under project %s.\n",
-		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.Project))
+		color.HighlightUserInput(resp.Env.Name), color.HighlightResource(resp.Env.Region), color.HighlightResource(resp.Env.Project))
 	return nil
+}
+
+func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []string {
+	matcher := map[progressText]progressMatcher{
+		vpc: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::EC2::VPC"
+		},
+		internetGateway: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::EC2::InternetGateway" ||
+				event.Type == "AWS::EC2::VPCGatewayAttachment"
+		},
+		publicSubnets: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::EC2::Subnet" &&
+				strings.HasPrefix(event.LogicalName, "Public")
+		},
+		privateSubnets: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::EC2::Subnet" &&
+				strings.HasPrefix(event.LogicalName, "Private")
+		},
+		natGateway: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::EC2::EIP" ||
+				event.Type == "AWS::EC2::NatGateway"
+		},
+		routeTables: func(event deploy.ResourceEvent) bool {
+			return strings.Contains(event.LogicalName, "Route")
+		},
+		ecsCluster: func(event deploy.ResourceEvent) bool {
+			return event.Type == "AWS::ECS::Cluster"
+		},
+		alb: func(event deploy.ResourceEvent) bool {
+			return strings.Contains(event.LogicalName, "LoadBalancer") ||
+				strings.Contains(event.Type, "ElasticLoadBalancingV2")
+		},
+	}
+	return humanizeResourceEvents(resourceEvents, envProgressOrder, matcher)
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -127,6 +166,7 @@ func BuildEnvInitCmd() *cobra.Command {
 		EnvProfile: "default",
 		prog:       spinner.New(),
 		prompt:     prompt.New(),
+		globalOpts: newGlobalOpts(),
 	}
 
 	cmd := &cobra.Command{

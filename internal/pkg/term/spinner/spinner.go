@@ -109,6 +109,9 @@ func (s *Spinner) Events(events []string) {
 		if len(events) > 0 {
 			s.cur.Up(len(events))
 		}
+		// Move the cursor to the beginning so the spinner can delete the existing line.
+		fmt.Fprintf(s.eventsWriter, "\r")
+		s.eventsWriter.Flush()
 		s.pastEvents = events
 		close(done)
 	}()

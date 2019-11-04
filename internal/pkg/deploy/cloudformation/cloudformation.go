@@ -8,8 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
@@ -57,6 +57,20 @@ func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) e
 	return cf.deploy(newEnvStackConfig(env, cf.box))
 }
 
+// StreamEnvironmentCreation streams resource update events while a deployment is taking place.
+// Once the CloudFormation stack operation halts, the update channel is closed and a
+// CreateEnvironmentResponse is sent to the second channel.
+func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
+	done := make(chan struct{})
+	events := make(chan []deploy.ResourceEvent)
+	resp := make(chan deploy.CreateEnvironmentResponse, 1)
+
+	stack := newEnvStackConfig(env, cf.box)
+	go cf.streamResourceEvents(done, events, stack.StackName())
+	go cf.streamEnvironmentResponse(done, resp, stack)
+	return events, resp
+}
+
 func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
 	template, err := stackConfig.Template()
 	if err != nil {
@@ -82,16 +96,85 @@ func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
 	return nil
 }
 
-// WaitForEnvironmentCreation will block until the environment's CloudFormation stack has completed or errored.
-// Once the deployment is complete, it read the stack output and create an environment with the resources from
-// the stack like ECR Repo.
-func (cf CloudFormation) WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error) {
-	cfEnv := newEnvStackConfig(env, cf.box)
-	deployedStack, err := cf.waitForStackCreation(cfEnv)
-	if err != nil {
-		return nil, err
+// streamResourceEvents sends a list of ResourceEvent every 3 seconds to the events channel.
+// The events channel is closed only when the done channel receives a message.
+// If an error occurs while describing stack events, it is ignored so that the stream is not interrupted.
+func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan []deploy.ResourceEvent, stackName string) {
+	sendStatusUpdates := func() {
+		// Send a list of ResourceEvent to events if there was no error.
+		cfEvents, err := cf.describeStackEvents(stackName)
+		if err != nil {
+			return
+		}
+		var transformedEvents []deploy.ResourceEvent
+		for _, cfEvent := range cfEvents {
+			transformedEvents = append(transformedEvents, deploy.ResourceEvent{
+				LogicalName: aws.StringValue(cfEvent.LogicalResourceId),
+				Status:      aws.StringValue(cfEvent.ResourceStatus),
+				// CFN error messages end with a '.' and only the first sentence is useful, the rest is error codes.
+				StatusReason: strings.Split(aws.StringValue(cfEvent.ResourceStatusReason), ".")[0],
+				Type:         aws.StringValue(cfEvent.ResourceType),
+			})
+		}
+		events <- transformedEvents
 	}
-	return cfEnv.ToEnv(deployedStack)
+	for {
+		timeout := time.After(3 * time.Second)
+		select {
+		case <-timeout:
+			sendStatusUpdates()
+		case <-done:
+			sendStatusUpdates() // Send last batch of updates.
+			close(events)       // Close the channel to let receivers know that there won't be any more events.
+			return              // Exit for-loop.
+		}
+	}
+}
+
+// streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
+// The done channel is closed once this method exits to notify other streams that they should stop working.
+func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *envStackConfig) {
+	defer close(done)
+	deployed, err := cf.waitForStackCreation(stack)
+	if err != nil {
+		resp <- deploy.CreateEnvironmentResponse{Err: err}
+		return
+	}
+	env, err := stack.ToEnv(deployed)
+	resp <- deploy.CreateEnvironmentResponse{
+		Env: env,
+		Err: err,
+	}
+}
+
+// describeStackEvents gathers all stack resource events in **chronological** order.
+// If an error occurs while collecting events, returns a wrapped error.
+func (cf CloudFormation) describeStackEvents(stackName string) ([]*cloudformation.StackEvent, error) {
+	var nextToken *string
+	var events []*cloudformation.StackEvent
+	for {
+		out, err := cf.client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+			NextToken: nextToken,
+			StackName: aws.String(stackName),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("desribe stack events for stack %s: %w", stackName, err)
+		}
+		for _, event := range out.StackEvents {
+			events = append(events, event)
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	// Reverse the events so that they're returned in chronological order.
+	// Taken from https://github.com/golang/go/wiki/SliceTricks#reversing.
+	for i := len(events)/2 - 1; i >= 0; i-- {
+		opp := len(events) - 1 - i
+		events[i], events[opp] = events[opp], events[i]
+	}
+	return events, nil
 }
 
 func (cf CloudFormation) waitForStackCreation(stackConfig stackConfiguration) (*cloudformation.Stack, error) {

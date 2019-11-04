@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -42,6 +43,7 @@ type mockCloudFormation struct {
 	mockListStackInstances               func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
 	mockCreateStackInstances             func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
 	mockDescribeStackSetOperation        func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
+	mockDescribeStackEvents              func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -90,6 +92,10 @@ func (cf mockCloudFormation) CreateStackInstances(in *cloudformation.CreateStack
 
 func (cf mockCloudFormation) DescribeStackSetOperation(in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
 	return cf.mockDescribeStackSetOperation(cf.t, in)
+}
+
+func (cf mockCloudFormation) DescribeStackEvents(in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+	return cf.mockDescribeStackEvents(cf.t, in)
 }
 
 type mockStackConfiguration struct {
@@ -388,39 +394,152 @@ func TestWaitForStackCreation(t *testing.T) {
 	}
 }
 
-func TestWaitForEnvironmentCreation(t *testing.T) {
-	deploymentInput := deploy.CreateEnvironmentInput{
-		Name:    "test",
-		Project: "project",
-	}
-	stackName := fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name)
-
+func TestStreamEnvironmentCreation(t *testing.T) {
 	testCases := map[string]struct {
-		cf    CloudFormation
-		input deploy.CreateEnvironmentInput
-		want  error
+		in *deploy.CreateEnvironmentInput
+
+		mockWaitUntilStackCreateComplete func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockDescribeStacks               func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+		mockDescribeStackEvents          func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
+
+		wantedEvents []deploy.ResourceEvent
+		wantedResult deploy.CreateEnvironmentResponse
 	}{
-		"error in waitForStackCreation call": {
-			cf:    getMockWaitStackCreateCFClient(t, stackName, true, false),
-			input: deploymentInput,
-			want:  fmt.Errorf("failed to create stack %s: %s", stackName, "some AWS error"),
+		"error while creating stack": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
+
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return errors.New("wait until error")
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStackEventsOutput{
+					StackEvents: []*cloudformation.StackEvent{
+						{
+							LogicalResourceId:    aws.String("vpc"),
+							ResourceType:         aws.String("AWS::EC2::VPC"),
+							ResourceStatus:       aws.String(cloudformation.ResourceStatusCreateInProgress),
+							ResourceStatusReason: aws.String("create initiated"),
+						},
+					},
+				}, nil
+			},
+
+			wantedEvents: []deploy.ResourceEvent{
+				{
+					LogicalName:  "vpc",
+					Type:         "AWS::EC2::VPC",
+					Status:       cloudformation.ResourceStatusCreateInProgress,
+					StatusReason: "create initiated",
+				},
+			},
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: nil,
+				Err: errors.New("failed to create stack phonetool-test: wait until error"),
+			},
 		},
-		"happy path": {
-			cf:    getMockWaitStackCreateCFClient(t, stackName, false, false),
-			input: deploymentInput,
-			want:  nil,
+		"swallows error while describing stack": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
+
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return errors.New("wait until error")
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return nil, errors.New("describe stack events error")
+			},
+
+			wantedEvents: nil,
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: nil,
+				Err: errors.New("failed to create stack phonetool-test: wait until error"),
+			},
+		},
+		"sends an environment on success": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
+
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return nil
+			},
+			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							StackId: aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:902697171733:stack/%s", "phonetool-test")),
+						},
+					},
+				}, nil
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStackEventsOutput{
+					StackEvents: []*cloudformation.StackEvent{
+						{
+							LogicalResourceId:    aws.String("vpc"),
+							ResourceType:         aws.String("AWS::EC2::VPC"),
+							ResourceStatus:       aws.String(cloudformation.ResourceStatusCreateInProgress),
+							ResourceStatusReason: aws.String("create initiated"),
+						},
+					},
+				}, nil
+			},
+
+			wantedEvents: []deploy.ResourceEvent{
+				{
+					LogicalName:  "vpc",
+					Type:         "AWS::EC2::VPC",
+					Status:       cloudformation.ResourceStatusCreateInProgress,
+					StatusReason: "create initiated",
+				},
+			},
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "eu-west-3",
+					AccountID: "902697171733",
+				},
+				Err: nil,
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			env, got := tc.cf.WaitForEnvironmentCreation(&tc.input)
+			// GIVEN
+			cf := CloudFormation{
+				client: &mockCloudFormation{
+					t:                                t,
+					mockDescribeStackEvents:          tc.mockDescribeStackEvents,
+					mockDescribeStacks:               tc.mockDescribeStacks,
+					mockWaitUntilStackCreateComplete: tc.mockWaitUntilStackCreateComplete,
+				},
+				box: emptyEnvBox(),
+			}
 
-			if tc.want != nil {
-				require.EqualError(t, tc.want, got.Error())
+			// WHEN
+			events, resp := cf.StreamEnvironmentCreation(tc.in)
+
+			// THEN
+			require.Equal(t, tc.wantedEvents, <-events)
+			got := <-resp
+			if tc.wantedResult.Err != nil {
+				require.EqualError(t, got.Err, tc.wantedResult.Err.Error(), "expected %v got %v", tc.wantedResult.Err, got.Err)
 			} else {
-				require.NoError(t, got)
-				require.NotNil(t, env, "An environment should be created")
+				require.Equal(t, tc.wantedResult, got)
 			}
 		})
 	}
@@ -446,7 +565,7 @@ func getMockWaitStackCreateCFClient(t *testing.T, stackName string, shouldThrowE
 				}
 				return &cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
-						&cloudformation.Stack{
+						{
 							StackId: aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:902697171733:stack/%s", stackName)),
 						},
 					},

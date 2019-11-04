@@ -29,6 +29,21 @@ const (
 	GithubSecretIdKeyName = "githubPersonalAccessTokenSecretId"
 )
 
+// CreateEnvironmentResponse holds the created environment on successful deployment.
+// Otherwise, the environment is set to nil and a descriptive error is returned.
+type CreateEnvironmentResponse struct {
+	Env *archer.Environment
+	Err error
+}
+
+// ResourceEvent represents a status update for an AWS resource during a deployment.
+type ResourceEvent struct {
+	LogicalName  string
+	Type         string
+	Status       string
+	StatusReason string
+}
+
 // CreatePipelineInput represents the fields required to deploy a pipeline.
 type CreatePipelineInput struct {
 	// Name of the project this pipeline belongs to

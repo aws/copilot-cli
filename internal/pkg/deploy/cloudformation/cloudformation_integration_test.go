@@ -272,8 +272,10 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		require.NoError(t, deployer.DeployEnvironment(&environmentToDeploy))
 		// Make sure the environment was deployed succesfully
 
-		deployedEnv, err := deployer.WaitForEnvironmentCreation(&environmentToDeploy)
-		require.NoError(t, err)
+		_, responses := deployer.StreamEnvironmentCreation(&environmentToDeploy)
+		resp := <-responses
+		require.NoError(t, resp.Err)
+		deployedEnv := resp.Env
 
 		// And that we saved the state from the stack into our environment.
 		require.True(t,

@@ -13,15 +13,24 @@ import (
 	"github.com/fatih/color"
 )
 
+// String markers to denote the status of an operation.
+var (
+	SuccessMarker = color.HiGreenString("✔")
+	ErrorMarker   = color.HiRedString("✘")
+)
+
+// Predefined colors.
+var (
+	Grey               = color.New(color.FgWhite)
+	Red                = color.New(color.FgHiRed)
+	Cyan               = color.New(color.FgHiCyan)
+	WhiteBoldUnderline = color.New(color.FgHiWhite, color.Bold, color.Underline)
+	Magenta            = color.New(color.FgHiMagenta)
+)
+
 const colorEnvVar = "COLOR"
 
 var lookupEnv = os.LookupEnv
-
-var (
-	cyan               = color.New(color.FgHiCyan)
-	whiteBoldUnderline = color.New(color.FgHiWhite, color.Bold, color.Underline)
-	magenta            = color.New(color.FgHiMagenta)
-)
 
 // DisableColorBasedOnEnvVar determines whether the CLI will produce color
 // output based on the environment variable, COLOR.
@@ -47,15 +56,15 @@ func DisableColorBasedOnEnvVar() {
 
 // HighlightUserInput colors the string to denote it as an input from standard input, and returns it.
 func HighlightUserInput(s string) string {
-	return cyan.Sprint(s)
+	return Cyan.Sprint(s)
 }
 
 // HighlightResource colors the string to denote it as a resource created by the CLI, and returns it.
 func HighlightResource(s string) string {
-	return whiteBoldUnderline.Sprint(s)
+	return WhiteBoldUnderline.Sprint(s)
 }
 
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
 func HighlightCode(s string) string {
-	return magenta.Sprintf("`%s`", s)
+	return Magenta.Sprintf("`%s`", s)
 }

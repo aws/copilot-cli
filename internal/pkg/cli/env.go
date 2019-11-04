@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,7 +15,7 @@ import (
 // environmentDeployer can deploy an environment.
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
-	WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error)
+	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 }
 
 // BuildEnvCmd is the top level command for environments

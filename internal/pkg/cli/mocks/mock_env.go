@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	deploy "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -48,17 +47,17 @@ func (mr *MockenvironmentDeployerMockRecorder) DeployEnvironment(env interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployEnvironment), env)
 }
 
-// WaitForEnvironmentCreation mocks base method
-func (m *MockenvironmentDeployer) WaitForEnvironmentCreation(env *deploy.CreateEnvironmentInput) (*archer.Environment, error) {
+// StreamEnvironmentCreation mocks base method
+func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForEnvironmentCreation", env)
-	ret0, _ := ret[0].(*archer.Environment)
-	ret1, _ := ret[1].(error)
+	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
+	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
+	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
 	return ret0, ret1
 }
 
-// WaitForEnvironmentCreation indicates an expected call of WaitForEnvironmentCreation
-func (mr *MockenvironmentDeployerMockRecorder) WaitForEnvironmentCreation(env interface{}) *gomock.Call {
+// StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
+func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).WaitForEnvironmentCreation), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).StreamEnvironmentCreation), env)
 }
