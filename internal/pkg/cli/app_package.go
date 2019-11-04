@@ -47,21 +47,20 @@ type PackageAppOpts struct {
 // If an error occurred while running git, we set the image name to "latest" instead.
 func NewPackageAppOpts() *PackageAppOpts {
 	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
-	project := viper.GetString(projectFlag)
 	if err != nil {
 		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
 			Tag:        "latest",
 			prompt:     prompt.New(),
 			w:          os.Stdout,
-			globalOpts: globalOpts{projectName: project},
+			globalOpts: newGlobalOpts(),
 		}
 	}
 	return &PackageAppOpts{
 		Tag:        fmt.Sprintf("manual-%s", commitID),
 		prompt:     prompt.New(),
 		w:          os.Stdout,
-		globalOpts: globalOpts{projectName: project},
+		globalOpts: newGlobalOpts(),
 	}
 }
 
