@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -51,13 +52,11 @@ type PackageAppOpts struct {
 
 // NewPackageAppOpts returns a new PackageAppOpts where the image tag is set to "manual-{short git sha}".
 // The CloudFormation template is written to stdout and the parameters are discarded by default.
-// If an error occurred while running git, we set the image name to "latest" instead.
+// If an error occurred while running git, we leave the image tag empty "".
 func NewPackageAppOpts() *PackageAppOpts {
 	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
 	if err != nil {
-		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
-			Tag:          "latest",
 			stackWriter:  os.Stdout,
 			paramsWriter: ioutil.Discard,
 			fs:           &afero.Afero{Fs: afero.NewOsFs()},
@@ -109,6 +108,9 @@ func (opts *PackageAppOpts) Ask() error {
 func (opts *PackageAppOpts) Validate() error {
 	if opts.projectName == "" {
 		return errNoProjectInWorkspace
+	}
+	if opts.Tag == "" {
+		return fmt.Errorf("image tag cannot be empty, please provide the %s flag", color.HighlightCode("--tag"))
 	}
 	if opts.AppName != "" {
 		names, err := opts.listAppNames()

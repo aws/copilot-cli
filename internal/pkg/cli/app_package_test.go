@@ -197,6 +197,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		inProjectName string
 		inEnvName     string
 		inAppName     string
+		inTag         string
 
 		expectWS       func(m *mocks.MockWorkspace)
 		expectEnvStore func(m *mocks.MockEnvironmentStore)
@@ -213,9 +214,20 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
 		},
+		"invalid image tag": {
+			inProjectName: "phonetool",
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
+			},
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErrorS: "image tag cannot be empty, please provide the `--tag` flag",
+		},
 		"error while fetching application": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
@@ -229,6 +241,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error when application not in workspace": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{"backend"}, nil)
@@ -242,6 +255,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error while fetching environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
@@ -274,6 +288,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			opts := &PackageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
+				Tag:     tc.inTag,
 
 				ws:       mockWorkspace,
 				envStore: mockEnvStore,
