@@ -7,8 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -17,6 +20,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -35,32 +39,39 @@ type PackageAppOpts struct {
 	OutputDir string
 
 	// Interfaces to interact with dependencies.
-	ws       archer.Workspace
-	envStore archer.EnvironmentStore
-	w        io.Writer // Writer to print the template.
-	prompt   prompter
+	ws             archer.Workspace
+	envStore       archer.EnvironmentStore
+	templateWriter io.Writer
+	paramsWriter   io.Writer
+	fs             afero.Fs
+	prompt         prompter
 
 	globalOpts // Embed global options.
 }
 
 // NewPackageAppOpts returns a new PackageAppOpts where the image tag is set to "manual-{short git sha}".
+// The CloudFormation template is written to stdout and the parameters are discarded by default.
 // If an error occurred while running git, we set the image name to "latest" instead.
 func NewPackageAppOpts() *PackageAppOpts {
 	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
 	if err != nil {
 		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
-			Tag:        "latest",
-			prompt:     prompt.New(),
-			w:          os.Stdout,
-			globalOpts: newGlobalOpts(),
+			Tag:            "latest",
+			templateWriter: os.Stdout,
+			paramsWriter:   ioutil.Discard,
+			fs:             &afero.Afero{Fs: afero.NewOsFs()},
+			prompt:         prompt.New(),
+			globalOpts:     newGlobalOpts(),
 		}
 	}
 	return &PackageAppOpts{
-		Tag:        fmt.Sprintf("manual-%s", commitID),
-		prompt:     prompt.New(),
-		w:          os.Stdout,
-		globalOpts: newGlobalOpts(),
+		Tag:            fmt.Sprintf("manual-%s", strings.TrimSpace(string(commitID))),
+		templateWriter: os.Stdout,
+		paramsWriter:   ioutil.Discard,
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		prompt:         prompt.New(),
+		globalOpts:     newGlobalOpts(),
 	}
 }
 
@@ -123,12 +134,20 @@ func (opts *PackageAppOpts) Execute() error {
 		return err
 	}
 
-	tpl, err := opts.getTemplate(env)
+	if opts.OutputDir != "" {
+		if err := opts.setFileWriters(); err != nil {
+			return err
+		}
+	}
+
+	tpl, params, err := opts.getTemplates(env)
 	if err != nil {
 		return err
 	}
-
-	_, err = opts.w.Write([]byte(tpl))
+	if _, err = opts.templateWriter.Write([]byte(tpl)); err != nil {
+		return err
+	}
+	_, err = opts.paramsWriter.Write([]byte(params))
 	return err
 }
 
@@ -140,14 +159,15 @@ func (opts *PackageAppOpts) listAppNames() ([]string, error) {
 	return names, nil
 }
 
-func (opts *PackageAppOpts) getTemplate(env *archer.Environment) (string, error) {
+// getTemplates returns the CloudFormation stack's template and its parameters.
+func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (string, string, error) {
 	raw, err := opts.ws.ReadManifestFile(opts.ws.ManifestFileName(opts.AppName))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	mft, err := manifest.UnmarshalApp(raw)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
@@ -156,10 +176,37 @@ func (opts *PackageAppOpts) getTemplate(env *archer.Environment) (string, error)
 			Env:      env,
 			ImageTag: opts.Tag,
 		})
-		return stack.Template()
+		tpl, err := stack.Template()
+		if err != nil {
+			return "", "", err
+		}
+		params, err := stack.SerializedParameters()
+		return tpl, params, err
 	default:
-		return "", fmt.Errorf("create CloudFormation template for manifest of type %T", t)
+		return "", "", fmt.Errorf("create CloudFormation template for manifest of type %T", t)
 	}
+}
+
+// setFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
+func (opts *PackageAppOpts) setFileWriters() error {
+	if err := opts.fs.MkdirAll(opts.OutputDir, 0755); err != nil {
+		return fmt.Errorf("create directory %s: %w", opts.OutputDir, err)
+	}
+
+	templatePath := filepath.Join(opts.OutputDir, fmt.Sprintf("%s.stack.yml", opts.AppName))
+	templateFile, err := opts.fs.Create(templatePath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", templatePath, err)
+	}
+	opts.templateWriter = templateFile
+
+	paramsPath := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%s.params.json", opts.AppName, opts.EnvName))
+	paramsFile, err := opts.fs.Create(paramsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", paramsPath, err)
+	}
+	opts.paramsWriter = paramsFile
+	return nil
 }
 
 func contains(s string, items []string) bool {
