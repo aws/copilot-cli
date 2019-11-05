@@ -62,11 +62,13 @@ func NewInitOpts() (*InitOpts, error) {
 	}
 	prompt := prompt.New()
 	spin := spinner.New()
+	id := identity.New(sess)
 
 	initProject := &InitProjectOpts{
 		projectStore: ssm,
 		ws:           ws,
 		prompt:       prompt,
+		identity:     id,
 	}
 	initApp := &InitAppOpts{
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
@@ -83,7 +85,7 @@ func NewInitOpts() (*InitOpts, error) {
 		envDeployer:   cloudformation.New(sess),
 		prog:          spin,
 		prompt:        prompt,
-		identity:      identity.New(sess),
+		identity:      id,
 	}
 	return &InitOpts{
 		initProject: initProject,
