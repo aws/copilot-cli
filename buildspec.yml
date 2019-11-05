@@ -33,6 +33,7 @@ phases:
       - cp ./bin/local/archer-amd64 ./bin/local/archer-linux-$COMMIT_VERSION
       - mv ./bin/local/archer-amd64 ./bin/local/archer-linux-$VERSION
       - echo "Creating manifest file..."
+      - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
       - echo ./bin/local/archer-windows-$COMMIT_VERSION.exe >> $MANIFESTFILE
       - echo ./bin/local/archer-windows-$VERSION.exe >> $MANIFESTFILE
