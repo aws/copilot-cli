@@ -455,11 +455,11 @@ count: 1`), nil)
 				Tag:       tc.inTagName,
 				OutputDir: tc.inOutputDir,
 
-				envStore:       mockEnvStore,
-				ws:             mockWorkspace,
-				templateWriter: templateBuf,
-				paramsWriter:   paramsBuf,
-				fs:             mockFS,
+				envStore:     mockEnvStore,
+				ws:           mockWorkspace,
+				stackWriter:  templateBuf,
+				paramsWriter: paramsBuf,
+				fs:           mockFS,
 
 				globalOpts: globalOpts{projectName: tc.inProjectName},
 			}

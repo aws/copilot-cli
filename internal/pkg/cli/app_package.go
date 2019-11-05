@@ -39,12 +39,12 @@ type PackageAppOpts struct {
 	OutputDir string
 
 	// Interfaces to interact with dependencies.
-	ws             archer.Workspace
-	envStore       archer.EnvironmentStore
-	templateWriter io.Writer
-	paramsWriter   io.Writer
-	fs             afero.Fs
-	prompt         prompter
+	ws           archer.Workspace
+	envStore     archer.EnvironmentStore
+	stackWriter  io.Writer
+	paramsWriter io.Writer
+	fs           afero.Fs
+	prompt       prompter
 
 	globalOpts // Embed global options.
 }
@@ -57,21 +57,21 @@ func NewPackageAppOpts() *PackageAppOpts {
 	if err != nil {
 		// If we can't retrieve a commit ID we default the image tag to "latest".
 		return &PackageAppOpts{
-			Tag:            "latest",
-			templateWriter: os.Stdout,
-			paramsWriter:   ioutil.Discard,
-			fs:             &afero.Afero{Fs: afero.NewOsFs()},
-			prompt:         prompt.New(),
-			globalOpts:     newGlobalOpts(),
+			Tag:          "latest",
+			stackWriter:  os.Stdout,
+			paramsWriter: ioutil.Discard,
+			fs:           &afero.Afero{Fs: afero.NewOsFs()},
+			prompt:       prompt.New(),
+			globalOpts:   newGlobalOpts(),
 		}
 	}
 	return &PackageAppOpts{
-		Tag:            fmt.Sprintf("manual-%s", strings.TrimSpace(string(commitID))),
-		templateWriter: os.Stdout,
-		paramsWriter:   ioutil.Discard,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		prompt:         prompt.New(),
-		globalOpts:     newGlobalOpts(),
+		Tag:          fmt.Sprintf("manual-%s", strings.TrimSpace(string(commitID))),
+		stackWriter:  os.Stdout,
+		paramsWriter: ioutil.Discard,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		prompt:       prompt.New(),
+		globalOpts:   newGlobalOpts(),
 	}
 }
 
@@ -140,14 +140,14 @@ func (opts *PackageAppOpts) Execute() error {
 		}
 	}
 
-	tpl, params, err := opts.getTemplates(env)
+	templates, err := opts.getTemplates(env)
 	if err != nil {
 		return err
 	}
-	if _, err = opts.templateWriter.Write([]byte(tpl)); err != nil {
+	if _, err = opts.stackWriter.Write([]byte(templates.stack)); err != nil {
 		return err
 	}
-	_, err = opts.paramsWriter.Write([]byte(params))
+	_, err = opts.paramsWriter.Write([]byte(templates.configuration))
 	return err
 }
 
@@ -159,15 +159,20 @@ func (opts *PackageAppOpts) listAppNames() ([]string, error) {
 	return names, nil
 }
 
+type cfnTemplates struct {
+	stack         string
+	configuration string
+}
+
 // getTemplates returns the CloudFormation stack's template and its parameters.
-func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (string, string, error) {
+func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
 	raw, err := opts.ws.ReadManifestFile(opts.ws.ManifestFileName(opts.AppName))
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	mft, err := manifest.UnmarshalApp(raw)
 	if err != nil {
-		return "", "", err
+		return nil, err
 	}
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
@@ -178,12 +183,15 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (string, strin
 		})
 		tpl, err := stack.Template()
 		if err != nil {
-			return "", "", err
+			return nil, err
 		}
 		params, err := stack.SerializedParameters()
-		return tpl, params, err
+		if err != nil {
+			return nil, err
+		}
+		return &cfnTemplates{stack: tpl, configuration: params}, nil
 	default:
-		return "", "", fmt.Errorf("create CloudFormation template for manifest of type %T", t)
+		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", t)
 	}
 }
 
@@ -198,7 +206,7 @@ func (opts *PackageAppOpts) setFileWriters() error {
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
 	}
-	opts.templateWriter = templateFile
+	opts.stackWriter = templateFile
 
 	paramsPath := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%s.params.json", opts.AppName, opts.EnvName))
 	paramsFile, err := opts.fs.Create(paramsPath)

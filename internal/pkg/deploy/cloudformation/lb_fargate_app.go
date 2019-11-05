@@ -142,7 +142,6 @@ func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
 		return "", fmt.Errorf("execute stack configuration for %s: %w", c.App.Type, err)
 	}
 	return buf.String(), nil
-	return "", nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
