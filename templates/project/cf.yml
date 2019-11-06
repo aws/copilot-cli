@@ -1,6 +1,6 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-AWSTemplateFormatVersion: '2010-09-09' {{$accounts := .Accounts}} {{$project := .Project}} {{$apps := .Apps}}
+AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$project := .Project}}{{$apps := .Apps}}
 # Cross-regional resources deployed via a stackset in the tools account
 # to support the CodePipeline for a workspace
 Description: Cross-regional resources to support the CodePipeline for a workspace
@@ -82,7 +82,7 @@ Resources:
     DeletionPolicy: Retain
 
 {{range $app := $apps}}
-  ECRRepo{{$app}}:
+  ECRRepo{{logicalIDSafe $app}}:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: {{$project}}/{{$app}}
@@ -112,7 +112,7 @@ Outputs:
   PipelineBucket:
     Description: Bucket used for CodePipeline to stage resources in.
     Value: !Ref PipelineBuiltArtifactBucket
-{{range $app := $apps}}  ECRRepo{{$app}}:
+{{range $app := $apps}}  ECRRepo{{logicalIDSafe $app}}:
     Description: ECR Repo used to store images of the {{$app}} app.
-    Value: !GetAtt ECRRepo{{$app}}.Arn
+    Value: !GetAtt ECRRepo{{logicalIDSafe $app}}.Arn
 {{end}}

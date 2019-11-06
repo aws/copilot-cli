@@ -117,7 +117,7 @@ func Test_Project_Infrastructure(t *testing.T) {
 			// Clean up any StackInstances we may have created.
 			if stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 				StackSetName: aws.String(projectStackSetName),
-			}); err == nil && stackInstances.Summaries[0] != nil {
+			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
 				projectStackInstance := stackInstances.Summaries[0]
 				cfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
 					Accounts:     []*string{projectStackInstance.Account},
@@ -155,6 +155,16 @@ func Test_Project_Infrastructure(t *testing.T) {
 			&project,
 			&archer.Application{
 				Name: "myapp",
+			},
+		)
+
+		require.NoError(t, err)
+
+		// Add an application with dash
+		err = deployer.AddAppToProject(
+			&project,
+			&archer.Application{
+				Name: "myapp-frontend",
 			},
 		)
 
@@ -204,6 +214,12 @@ func Test_Project_Infrastructure(t *testing.T) {
 				require.True(t,
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp", project.Name)),
 					fmt.Sprintf("ECRRepomyapp should be suffixed with repository/{project}/myapp but was %s", *output.OutputValue))
+			},
+			// We replace dashes with the word DASH for logical IDss
+			"ECRRepomyappDASHfrontend": func(output *awsCF.Output) {
+				require.True(t,
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp-frontend", project.Name)),
+					fmt.Sprintf("ECRRepomyappDASHfrontend should be suffixed with repository/{project}/myapp but was %s", *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
