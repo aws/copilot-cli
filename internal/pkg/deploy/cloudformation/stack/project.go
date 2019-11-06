@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"html/template"
 	"sort"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -79,7 +80,13 @@ func (e *ProjectStackConfig) ResourceTemplate(config *ProjectResourcesConfig) (s
 		return "", &ErrTemplateNotFound{templateLocation: projectResourcesTemplatePath, parentErr: err}
 	}
 
-	template, err := template.New("resourcetemplate").Parse(stackSetTemplate)
+	template, err := template.New("resourcetemplate").
+		Funcs(template.FuncMap{
+			"logicalIDSafe": func(logicalID string) string {
+				return strings.ReplaceAll(logicalID, "-", "DASH")
+			},
+		}).
+		Parse(stackSetTemplate)
 	if err != nil {
 		return "", err
 	}

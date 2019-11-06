@@ -50,25 +50,50 @@ func TestProjTemplate(t *testing.T) {
 }
 
 func TestProjResourceTemplate(t *testing.T) {
+	properlyEscapedTemplate := `AWSTemplateFormatVersion: '2010-09-09'
+Outputs:
+  KMSKeyARN:
+    Description: KMS Key used by CodePipeline for encrypting artifacts.
+    Value: !GetAtt KMSKey.Arn
+  PipelineBucket:
+    Description: Bucket used for CodePipeline to stage resources in.
+    Value: !Ref PipelineBuiltArtifactBucket
+  ECRRepoappDASH1:
+    Description: ECR Repo used to store images of the app-1 app.
+	Value: !GetAtt ECRRepoappDASH1.Arn`
+
 	testCases := map[string]struct {
 		box            packd.Box
 		expectedOutput string
+		given          *ProjectResourcesConfig
 		want           error
 	}{
 		"should return error given template not found": {
-			box:  emptyProjectBox(),
-			want: fmt.Errorf("failed to find the cloudformation template at %s", projectResourcesTemplatePath),
+			box:   emptyProjectBox(),
+			given: &ProjectResourcesConfig{},
+			want:  fmt.Errorf("failed to find the cloudformation template at %s", projectResourcesTemplatePath),
 		},
 		"should return template body when present": {
 			box:            projectBoxWithTemplateFile(),
+			given:          &ProjectResourcesConfig{},
 			expectedOutput: mockTemplate,
+		},
+		"should replace dashes in logical IDs": {
+			box: projectBoxTemplateFileWithSafeLogicalIDs(),
+			given: &ProjectResourcesConfig{
+				Accounts: []string{"1234"},
+				Apps:     []string{"app-1"},
+				Version:  1,
+				Project:  "testproject"},
+			expectedOutput: properlyEscapedTemplate,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			projStack := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, tc.box)
-			got, err := projStack.ResourceTemplate(&ProjectResourcesConfig{})
+
+			got, err := projStack.ResourceTemplate(tc.given)
 
 			if tc.want != nil {
 				require.EqualError(t, tc.want, err.Error())
@@ -145,5 +170,24 @@ func projectBoxWithTemplateFile() packd.Box {
 
 	box.AddString(projectTemplatePath, mockTemplate)
 	box.AddString(projectResourcesTemplatePath, mockTemplate)
+	return box
+}
+
+func projectBoxTemplateFileWithSafeLogicalIDs() packd.Box {
+	box := packd.NewMemoryBox()
+	templateWithFunction := `AWSTemplateFormatVersion: '2010-09-09'
+Outputs:
+  KMSKeyARN:
+    Description: KMS Key used by CodePipeline for encrypting artifacts.
+    Value: !GetAtt KMSKey.Arn
+  PipelineBucket:
+    Description: Bucket used for CodePipeline to stage resources in.
+    Value: !Ref PipelineBuiltArtifactBucket
+{{range $app := .Apps}}  ECRRepo{{logicalIDSafe $app}}:
+    Description: ECR Repo used to store images of the {{$app}} app.
+	Value: !GetAtt ECRRepo{{logicalIDSafe $app}}.Arn{{end}}`
+
+	box.AddString(projectTemplatePath, mockTemplate)
+	box.AddString(projectResourcesTemplatePath, templateWithFunction)
 	return box
 }
