@@ -43,16 +43,37 @@ func (err *ErrTemplateNotFound) Error() string {
 }
 
 // Is returns true if the target's template location and parent error are equal to this error's template location and parent error.
-func (e *ErrTemplateNotFound) Is(target error) bool {
+func (err *ErrTemplateNotFound) Is(target error) bool {
 	t, ok := target.(*ErrTemplateNotFound)
 	if !ok {
 		return false
 	}
-	return (e.templateLocation == t.templateLocation) &&
-		(errors.Is(e.parentErr, t.parentErr))
+	return (err.templateLocation == t.templateLocation) &&
+		(errors.Is(err.parentErr, t.parentErr))
 }
 
 // Unwrap returns the original error.
 func (err *ErrTemplateNotFound) Unwrap() error {
 	return err.parentErr
+}
+
+// ErrStackSetOutOfDate occurs when we try to read and then update a StackSet but
+// between reading it and actually updating it, someone else either started or completed
+// an update.
+type ErrStackSetOutOfDate struct {
+	projectName string
+	parentErr   error
+}
+
+func (err *ErrStackSetOutOfDate) Error() string {
+	return fmt.Sprintf("cannot update project resources for project %s because the stack set update was out of date (feel free to try again)", err.projectName)
+}
+
+// Is returns true if the target's template location and parent error are equal to this error's template location and parent error.
+func (err *ErrStackSetOutOfDate) Is(target error) bool {
+	t, ok := target.(*ErrStackSetOutOfDate)
+	if !ok {
+		return false
+	}
+	return err.projectName == t.projectName
 }

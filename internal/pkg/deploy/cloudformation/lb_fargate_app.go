@@ -19,6 +19,7 @@ import (
 
 const (
 	lbFargateAppTemplatePath = "lb-fargate-service/cf.yml"
+	lbFargateAppParamsPath   = "lb-fargate-service/params.json"
 )
 
 const (
@@ -128,7 +129,19 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
-	return "", nil
+	content, err := c.box.FindString(lbFargateAppParamsPath)
+	if err != nil {
+		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppParamsPath, parentErr: err}
+	}
+	tpl, err := template.New("template").Parse(content)
+	if err != nil {
+		return "", fmt.Errorf("parse stack configuration for %s: %w", c.App.Type, err)
+	}
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, c.toTemplateParams()); err != nil {
+		return "", fmt.Errorf("execute stack configuration for %s: %w", c.App.Type, err)
+	}
+	return buf.String(), nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.

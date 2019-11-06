@@ -1,0 +1,118 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: '2010-09-09'{{$accounts := .Accounts}}{{$project := .Project}}{{$apps := .Apps}}
+# Cross-regional resources deployed via a stackset in the tools account
+# to support the CodePipeline for a workspace
+Description: Cross-regional resources to support the CodePipeline for a workspace
+Metadata:
+  Version: {{.Version}}
+  Apps: {{if not $apps}}[]{{else}}{{range $app := $apps}}
+  - {{$app}}{{end}}{{end}}
+  Accounts: {{if not $accounts}}[]{{else}}{{range $account := $accounts}}
+  - {{$account}}{{end}}{{end}}
+Resources:
+  KMSKey:
+    # Used by the CodePipeline in the tools account to en/decrypt the
+    # artifacts between stages
+    Type: AWS::KMS::Key
+    Properties:
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: !Ref AWS::StackName
+        Statement:
+          -
+            # Allows the key to be administered in the tools account
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - "kms:Create*"
+              - "kms:Describe*"
+              - "kms:Enable*"
+              - "kms:List*"
+              - "kms:Put*"
+              - "kms:Update*"
+              - "kms:Revoke*"
+              - "kms:Disable*"
+              - "kms:Get*"
+              - "kms:Delete*"
+              - "kms:ScheduleKeyDeletion"
+              - "kms:CancelKeyDeletion"
+            Resource: "*"
+          -
+            # Allow use of the key in the tools account and all environment accounts
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+                {{range $accounts}}
+                - arn:aws:iam::{{.}}:root{{end}}
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+  PipelineBuiltArtifactBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn: PipelineBuiltArtifactBucket
+    Properties:
+      Bucket: !Ref PipelineBuiltArtifactBucket
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}
+              - !Sub arn:aws:s3:::${PipelineBuiltArtifactBucket}/*
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+                {{range $accounts}}
+                - arn:aws:iam::{{.}}:root{{end}}
+  PipelineBuiltArtifactBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+    DeletionPolicy: Retain
+
+{{range $app := $apps}}
+  ECRRepo{{logicalIDSafe $app}}:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: {{$project}}/{{$app}}
+      RepositoryPolicyText:
+        Version: '2008-10-17'
+        Statement:
+        - Sid: AllowPushPull
+          Effect: Allow
+          Principal:
+              AWS:
+                - !Sub arn:aws:iam::${AWS::AccountId}:root
+                {{range $accounts}}
+                - arn:aws:iam::{{.}}:root{{end}}
+          Action:
+          - ecr:GetDownloadUrlForLayer
+          - ecr:BatchGetImage
+          - ecr:BatchCheckLayerAvailability
+          - ecr:PutImage
+          - ecr:InitiateLayerUpload
+          - ecr:UploadLayerPart
+          - ecr:CompleteLayerUpload
+{{end}}
+Outputs:
+  KMSKeyARN:
+    Description: KMS Key used by CodePipeline for encrypting artifacts.
+    Value: !GetAtt KMSKey.Arn
+  PipelineBucket:
+    Description: Bucket used for CodePipeline to stage resources in.
+    Value: !Ref PipelineBuiltArtifactBucket
+{{range $app := $apps}}  ECRRepo{{logicalIDSafe $app}}:
+    Description: ECR Repo used to store images of the {{$app}} app.
+    Value: !GetAtt ECRRepo{{logicalIDSafe $app}}.Arn
+{{end}}

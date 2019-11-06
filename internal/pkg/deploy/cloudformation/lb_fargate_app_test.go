@@ -212,7 +212,87 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 }
 
 func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
+	testCases := map[string]struct {
+		in *deploy.CreateLBFargateAppInput
 
+		mockBox func(box *packd.MemoryBox)
+
+		wantedParams string
+		wantedError  error
+	}{
+		"unavailable template": {
+			mockBox: func(box *packd.MemoryBox) {}, // empty box where template does not exist
+
+			wantedParams: "",
+			wantedError: &ErrTemplateNotFound{
+				templateLocation: lbFargateAppParamsPath,
+				parentErr:        os.ErrNotExist,
+			},
+		},
+		"render params template": {
+			in: &deploy.CreateLBFargateAppInput{
+				App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "12345",
+					Prod:      false,
+				},
+				ImageTag: "manual-bf3678c",
+			},
+			mockBox: func(box *packd.MemoryBox) {
+				box.AddString(lbFargateAppParamsPath, `{
+  "Parameters" : {
+    "ProjectName" : "{{.Env.Project}}",
+    "EnvName": "{{.Env.Name}}",
+    "AppName": "{{.App.Name}}",
+    "ContainerImage": "{{.Image.URL}}",
+    "ContainerPort": "{{.Image.Port}}",
+    "RulePriority": "{{.Priority}}",
+    "RulePath": "{{.App.Path}}",
+    "TaskCPU": "{{.App.CPU}}",
+    "TaskMemory": "{{.App.Memory}}",
+    "TaskCount": "{{.App.Count}}"
+  }
+}`)
+			},
+			wantedParams: `{
+  "Parameters" : {
+    "ProjectName" : "phonetool",
+    "EnvName": "test",
+    "AppName": "frontend",
+    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend:manual-bf3678c",
+    "ContainerPort": "80",
+    "RulePriority": "1",
+    "RulePath": "*",
+    "TaskCPU": "256",
+    "TaskMemory": "512",
+    "TaskCount": "1"
+  }
+}`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			box := packd.NewMemoryBox()
+			tc.mockBox(box)
+
+			conf := &LBFargateStackConfig{
+				CreateLBFargateAppInput: tc.in,
+				box:                     box,
+			}
+
+			// WHEN
+			params, err := conf.SerializedParameters()
+
+			// THEN
+			require.True(t, errors.Is(err, tc.wantedError), "expected: %v, got: %v", tc.wantedError, err)
+			require.Equal(t, tc.wantedParams, params)
+		})
+	}
 }
 
 func TestLBFargateStackConfig_Tags(t *testing.T) {

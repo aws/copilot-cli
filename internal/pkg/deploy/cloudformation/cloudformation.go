@@ -164,3 +164,15 @@ func stackExists(err error) bool {
 	}
 	return false
 }
+
+// stackExists returns true if the underlying error is a stack already exists error.
+func stackSetExists(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case cloudformation.ErrCodeNameAlreadyExistsException:
+			// An ErrCodeNameAlreadyExistsException occurs when a stack set already exists.
+			return true
+		}
+	}
+	return false
+}

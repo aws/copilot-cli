@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -195,6 +197,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		inProjectName string
 		inEnvName     string
 		inAppName     string
+		inTag         string
 
 		expectWS       func(m *mocks.MockWorkspace)
 		expectEnvStore func(m *mocks.MockEnvironmentStore)
@@ -211,9 +214,20 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
 		},
+		"invalid image tag": {
+			inProjectName: "phonetool",
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
+			},
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErrorS: "image tag cannot be empty, please provide the `--tag` flag",
+		},
 		"error while fetching application": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
@@ -227,6 +241,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error when application not in workspace": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{"backend"}, nil)
@@ -240,6 +255,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error while fetching environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
+			inTag:         "manual-1234",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
@@ -272,6 +288,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			opts := &PackageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
+				Tag:     tc.inTag,
 
 				ws:       mockWorkspace,
 				envStore: mockEnvStore,
@@ -298,9 +315,11 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 		inEnvName     string
 		inAppName     string
 		inTagName     string
+		inOutputDir   string
 
 		expectEnvStore  func(m *mocks.MockEnvironmentStore)
 		expectWorkspace func(m *mocks.MockWorkspace)
+		expectFS        func(t *testing.T, mockFS *afero.Afero)
 
 		wantedErr error
 	}{
@@ -391,6 +410,44 @@ memory: 512
 count: 1`), nil)
 			},
 		},
+		"with output directory": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+			inTagName:     "latest",
+			inOutputDir:   "./infrastructure",
+
+			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1111",
+					Region:    "us-west-2",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ManifestFileName("frontend").Return("frontend-app.yml")
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App
+image:
+  build: frontend/Dockerfile
+  port: 80
+http:
+  path: '*'
+cpu: 256
+memory: 512
+count: 1`), nil)
+			},
+			expectFS: func(t *testing.T, mockFS *afero.Afero) {
+				stackPath := filepath.Join("infrastructure", "frontend.stack.yml")
+				stackFileExists, _ := mockFS.Exists(stackPath)
+				require.True(t, stackFileExists, "expected file %s to exists", stackPath)
+
+				paramsPath := filepath.Join("infrastructure", "frontend-test.params.json")
+				paramsFileExists, _ := mockFS.Exists(paramsPath)
+				require.True(t, paramsFileExists, "expected file %s to exists", paramsFileExists)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -404,15 +461,20 @@ count: 1`), nil)
 			tc.expectEnvStore(mockEnvStore)
 			tc.expectWorkspace(mockWorkspace)
 
-			buf := &strings.Builder{}
+			templateBuf := &strings.Builder{}
+			paramsBuf := &strings.Builder{}
+			mockFS := &afero.Afero{Fs: afero.NewMemMapFs()}
 			opts := PackageAppOpts{
-				EnvName: tc.inEnvName,
-				AppName: tc.inAppName,
-				Tag:     tc.inTagName,
+				EnvName:   tc.inEnvName,
+				AppName:   tc.inAppName,
+				Tag:       tc.inTagName,
+				OutputDir: tc.inOutputDir,
 
-				envStore: mockEnvStore,
-				ws:       mockWorkspace,
-				w:        buf,
+				envStore:     mockEnvStore,
+				ws:           mockWorkspace,
+				stackWriter:  templateBuf,
+				paramsWriter: paramsBuf,
+				fs:           mockFS,
 
 				globalOpts: globalOpts{projectName: tc.inProjectName},
 			}
@@ -423,9 +485,14 @@ count: 1`), nil)
 			// THEN
 			if tc.wantedErr != nil {
 				require.True(t, errors.Is(err, tc.wantedErr), "expected %v but got %v", tc.wantedErr, err)
+				return
+			}
+			require.Nil(t, err, "expected no errors but got %v", err)
+			if tc.inOutputDir != "" {
+				tc.expectFS(t, mockFS)
 			} else {
-				require.Nil(t, err, "expected no errors but got %v", err)
-				require.Greater(t, len(buf.String()), 0, "expected a template to be rendered %s", buf.String())
+				require.Greater(t, len(templateBuf.String()), 0, "expected a template to be rendered %s", templateBuf.String())
+				require.Greater(t, len(paramsBuf.String()), 0, "expected parameters to be rendered %s", paramsBuf.String())
 			}
 		})
 	}

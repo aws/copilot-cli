@@ -21,6 +21,12 @@ type globalOpts struct {
 	projectName string
 }
 
+func newGlobalOpts() globalOpts {
+	return globalOpts{
+		projectName: viper.GetString(projectFlag),
+	}
+}
+
 // actionCommand is the interface that every command that creates a resource implements.
 type actionCommand interface {
 	Ask() error
