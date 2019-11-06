@@ -63,8 +63,6 @@ func TestPipelineTemplateRendering(t *testing.T) {
 	)
 	tmpl, err := pipeline.Template()
     require.NoError(t, err, "template serialization failed")
-	err = ioutil.WriteFile("/workplace/yenlinc/amazon-ecs-archer/test.yml", []byte(tmpl), 0777)
-	require.NoError(t, err, "template write failed")
     require.Equal(t, string(tmpl), string(expectedTemplate), "the rendered template differs from the expected")
 }
 
