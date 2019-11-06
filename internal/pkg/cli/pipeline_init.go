@@ -20,6 +20,8 @@ const (
 	pipelineAddEnvPrompt = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?"
+
+	pipelineNoEnvError = "There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment."
 )
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
@@ -125,7 +127,7 @@ func (opts *InitPipelineOpts) getEnvironments() ([]*archer.Environment, error) {
 	}
 
 	if len(envs) == 0 {
-		return nil, fmt.Errorf("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
+		return nil, fmt.Errorf(pipelineNoEnvError)
 	}
 
 	return envs, nil
@@ -134,7 +136,7 @@ func (opts *InitPipelineOpts) getEnvironments() ([]*archer.Environment, error) {
 func (opts *InitPipelineOpts) listAvailableEnvironments() ([]string, error) {
 	envs, err := opts.getEnvironments()
 	if err != nil {
-		return nil, fmt.Errorf("Could not list environments: %w", err)
+		return nil, err
 	}
 
 	names := []string{}

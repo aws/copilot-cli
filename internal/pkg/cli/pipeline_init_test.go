@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -59,6 +60,22 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments: []string{"test", "prod"},
 			expectedError: "",
 		},
+
+		"errors if no environments initialized": {
+			inEnvironments: []string{},
+			inGitHubRepo: "",
+			inGitHubAccessToken: "",
+
+			mockEnvStore: func(m *mocks.MockEnvironmentStore) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
+				}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			},
+
+			expectedError: fmt.Sprintf("failed to list environments: %s", pipelineNoEnvError),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -82,19 +99,18 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockPrompt(mockPrompt)
 
-
 			// WHEN
 			err := opts.Ask()
 
 			// THEN
-			require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
-			require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
-			require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
-
 			if tc.expectedError != "" {
 				require.EqualError(t, err, tc.expectedError)
 			} else {
 				require.Nil(t, err)
+				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
+				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
+				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
+				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
 			}
 		})
 	}
