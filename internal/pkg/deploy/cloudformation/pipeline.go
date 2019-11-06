@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -42,7 +41,7 @@ func (p *pipelineStackConfig) Template() (string, error) {
 		return "", &ErrTemplateNotFound{templateLocation: pipelineCfnTemplatePath, parentErr: err}
 	}
 	
-	tpl, err := template.New("pipelineCfn").Parse(removeComments(content))
+	tpl, err := template.New("pipelineCfn").Parse(content)
 	if err != nil {
 		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",
 		p.ProjectName, p.Name, err)
@@ -53,17 +52,6 @@ func (p *pipelineStackConfig) Template() (string, error) {
 		p.ProjectName, p.Name, err)
 	}
 	return buf.String(), nil
-}
-
-func removeComments(tmpl string) string {
-	lines := strings.Split(tmpl, "\n")
-	commentRemoved := make([]string, 0, len(lines))
-	for _, line := range strings.Split(tmpl, "\n") {
-		if !commentRegex.MatchString(line) {
-			commentRemoved = append(commentRemoved, line)
-		}
-	}
-	return strings.Join(commentRemoved, "\n")
 }
 
 func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {

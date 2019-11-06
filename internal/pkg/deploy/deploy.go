@@ -108,44 +108,52 @@ func (s *Source) GitHubOAuthSecretID() (string, error) {
 	return id, nil
 }
 
-func (s *Source) parseOwnerAndRepo() (string, string, error) {
+type ownerAndRepo struct {
+	owner string
+	repo string
+}
+
+func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 	if s.ProviderName != GithubProviderName {
-		return "", "", fmt.Errorf("invalid provider: %s", s.ProviderName)
+		return nil, fmt.Errorf("invalid provider: %s", s.ProviderName)
 	}
 	ownerAndRepoI, exists := s.Properties["repository"]
 	if !exists {
-		return "", "", fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
+		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", s.Properties)
 	}
-	ownerAndRepo, ok := ownerAndRepoI.(string)
+	ownerAndRepoStr, ok := ownerAndRepoI.(string)
 	if !ok {
-		return "", "", fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)	
+		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)	
 	}
 
-	result := strings.Split(ownerAndRepo, "/")
+	result := strings.Split(ownerAndRepoStr, "/")
 	if len(result) != 2 {
-		return "", "", fmt.Errorf("unable to locate the repository from the properties: %s", ownerAndRepo)
+		return nil, fmt.Errorf("unable to locate the repository from the properties: %s", ownerAndRepoStr)
 	}
-	return result[0], result[1], nil
+	return &ownerAndRepo{
+		owner: result[0],
+		repo: result[1],
+	}, nil
 }
 
 // Repository returns the repository portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2"
 func (s *Source) Repository() (string, error) {
-	_, repo, err := s.parseOwnerAndRepo()
+	oAndR, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
 	}
-	return repo, nil
+	return oAndR.repo, nil
 }
 
 // Owner returns the repository owner portion. For example,
 // given "aws/amazon-ecs-cli-v2", this function returns "aws"
 func (s *Source) Owner() (string, error) {
-	owner, _, err := s.parseOwnerAndRepo()
+	oAndR, err := s.parseOwnerAndRepo()
 	if err != nil {
 		return "", err
 	}
-	return owner, nil
+	return oAndR.repo, nil
 }
 
 // PipelineStage represents configuration for each deployment stage

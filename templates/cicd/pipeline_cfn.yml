@@ -1,16 +1,15 @@
-#  Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
-#  the License. A copy of the License is located at
-#      http://aws.amazon.com/apache2.0/
-#  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-#  CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
-#  limitations under the License.
+# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
+# the License. A copy of the License is located at
+#     http://aws.amazon.com/apache2.0/
+# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+# CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for the {{$.ProjectName}}
 Parameters:
-  // TODO: #273 make this source-provider-agnostic
+  # TODO: #273 make this source-provider-agnostic
   GitHubOAuthSecretId:
-    # https://alpha-docs-aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
     Description: The secretId of the GitHub OAuth token stored in the Secrets Manager
     Type: String
     Default: {{$.Source.GitHubOAuthSecretID}}
@@ -46,10 +45,10 @@ Resources:
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
             Resource:{{range .ArtifactBuckets}}
-              # TODO: This might not be necessary. We may only need the bucket
-              # that is in the same region as the pipeline.
-              # Loop through all the artifact buckets created in the stackset
               - {{.BucketArn}}
               - !Join ['', ['{{.BucketArn}}', '/*']]{{end}}
           -
@@ -57,12 +56,12 @@ Resources:
             Action:
               # TODO: scope this down if possible
               - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
             Resource:{{range .ArtifactBuckets}}
-              # TODO: This might not be necessary. We may only need the KMS key
-              # that is in the same region as the pipeline.
-              # Loop through all the KMS keys used to en/decrypt artifacts
-              # across (cross-regional) pipeline stages, with each stage
-              # backed by a (regional) S3 bucket.
               - {{.KeyArn}}{{end}}
           -
             Effect: Allow
@@ -88,12 +87,12 @@ Resources:
       Environment:
         Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
-        # enable interactions with Docker daemon from within the container
-        # run by the CodeBuild service
         PrivilegedMode: true
         Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
       Source:
         Type: CODEPIPELINE
+        # TODO: Fill in the actual build commands
+        # TODO: Fill in the paths to the CFN templates that this pipeline will deploy
         BuildSpec: |
           version: 0.2
           phases:
@@ -102,11 +101,8 @@ Resources:
                 docker: 18
             build:
               commands:
-                # TODO: Fill in the actual build commands
                 - ls
           artifacts:
-            # TODO: Fill in the paths to the CFN templates that this pipeline
-            # will deploy
             files: '**/*'
       TimeoutInMinutes: 60
   PipelineRole:
@@ -134,7 +130,6 @@ Resources:
           -
             Effect: Allow
             Action:
-              # TODO: Scope down the permissions if possible
               - codepipeline:*
               - iam:ListRoles
               - cloudformation:Describe*
@@ -163,9 +158,6 @@ Resources:
               - kms:Encrypt
               - kms:GenerateDataKey
             Resource:{{range .ArtifactBuckets}}
-              # Loop through all the KMS keys used to en/decrypt artifacts
-              # across (cross-regional) pipeline stages, with each stage
-              # backed by a (regional) S3 bucket.
               - {{.KeyArn}}{{end}}
           -
             Effect: Allow
@@ -175,7 +167,6 @@ Resources:
               - s3:GetObject
               - s3:ListBucket
             Resource:{{range .ArtifactBuckets}}
-              # Loop through all the artifact buckets created in the stackset
               - {{.BucketArn}}
               - !Join ['', ['{{.BucketArn}}', '/*']]{{end}}
           -
@@ -193,10 +184,8 @@ Resources:
       - PipelineRole
       - PipelineRolePolicy
     Properties:
-      # Reference: https://github.com/aws-samples/aws-codepipeline-cross-region-continuous-deployment/blob/master/cfn-templates/cross-region-code-pipeline.yaml
       ArtifactStores:{{range .ArtifactBuckets}}
-        # Loop through all the artifact buckets and the corresponding KMS
-        # keys created in the stackset
+        
         -
           Region: {{.Region}}
           ArtifactStore:
@@ -209,10 +198,8 @@ Resources:
       Name: !Ref AWS::StackName
       Stages:
         - Name: Source
-          # defaults to pull for source changes instead of using webhook, same as CDK.
           Actions:
             - Name: SourceCodeFor-{{$.ProjectName}}
-              # https://docs.aws.amazon.com/codepipeline/latest/userguide/pipelines-webhooks-create-cfn.html
               ActionTypeId:
                 Category: Source
                 # TODO: #273 For CodeCommit, this needs to be AWS. Let's do that later
@@ -222,11 +209,10 @@ Resources:
               Configuration:
                 # TODO: #273 For now this set of configurations is GitHub-specific,
                 # change it to be more generic
-                # https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#PollForSourceChanges-defaults
                 Owner: {{$.Source.Owner}}
                 Repo: {{$.Source.Repository}}
                 Branch: {{index $.Source.Properties "branch"}}
-                # https://alpha-docs-aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
                 # Use the *entire* SecretString with version AWSCURRENT
                 OAuthToken: !Sub
                     - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
