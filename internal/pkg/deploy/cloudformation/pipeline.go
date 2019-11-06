@@ -6,7 +6,6 @@ package cloudformation
 import (
 	"bytes"
 	"fmt"
-	"regexp"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,9 +16,6 @@ import (
 )
 
 const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
-
-// matches a line of comment in the template
-var commentRegex = regexp.MustCompile(`\s*#.*`)
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput

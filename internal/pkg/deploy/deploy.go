@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -25,8 +25,8 @@ type CreateEnvironmentInput struct {
 }
 
 const (
-	GithubProviderName = "GitHub"
-	GithubSecretIdKeyName = "githubOAuthSecretId"
+	GithubProviderName    = "GitHub"
+	GithubSecretIdKeyName = "githubPersonalAccessTokenSecretId"
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -34,7 +34,7 @@ type CreatePipelineInput struct {
 	// Name of the project this pipeline belongs to
 	ProjectName string
 	// Name of the pipeline
-	Name   string
+	Name string
 	// The source code provider for this pipeline
 	Source *Source
 	// The stages of the pipeline. The order of stages in this list
@@ -55,13 +55,13 @@ type ArtifactBucket struct {
 }
 
 // Region parses out the region from the ARN of the KMS key associated with
-// the artifact bucket. 
+// the artifact bucket.
 func (a *ArtifactBucket) Region() (string, error) {
 	// We assume the bucket and the key are in the same AWS region.
 	parsedArn, err := arn.Parse(a.KeyArn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse region out of key ARN: %s, error: %w",
-		a.BucketArn, err)
+			a.BucketArn, err)
 	}
 	return parsedArn.Region, nil
 }
@@ -71,7 +71,7 @@ func (a *ArtifactBucket) BucketName() (string, error) {
 	parsedArn, err := arn.Parse(a.BucketArn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse the name of the bucket out of bucket ARN: %s, error: %w",
-		a.BucketArn, err)
+			a.BucketArn, err)
 	}
 	return parsedArn.Resource, nil
 }
@@ -80,17 +80,17 @@ func (a *ArtifactBucket) BucketName() (string, error) {
 type Source struct {
 	// The name of the source code provider. For example, "GitHub"
 	ProviderName string
-	
+
 	// Contains provider-specific configurations, such as:
 	// "repository": "aws/amazon-ecs-cli-v2"
-	// "githubOAuthSecretId": "heyyo"
-	Properties   map[string]interface{}
+	// "githubPersonalAccessTokenSecretId": "heyyo"
+	Properties map[string]interface{}
 }
 
-// GitHubOAuthSecretID returns the ID of the secret in the Secrets manager,
+// GitHubPersonalAccessTokenSecretID returns the ID of the secret in the Secrets manager,
 // which stores the GitHub OAuth token if the provider is "GitHub". Otherwise,
 // it returns an error.
-func (s *Source) GitHubOAuthSecretID() (string, error) {
+func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 	secretID, exists := s.Properties[GithubSecretIdKeyName]
 	if !exists {
 		return "", errors.New("the GitHub token secretID is not configured")
@@ -110,7 +110,7 @@ func (s *Source) GitHubOAuthSecretID() (string, error) {
 
 type ownerAndRepo struct {
 	owner string
-	repo string
+	repo  string
 }
 
 func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
@@ -123,7 +123,7 @@ func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 	}
 	ownerAndRepoStr, ok := ownerAndRepoI.(string)
 	if !ok {
-		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)	
+		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)
 	}
 
 	result := strings.Split(ownerAndRepoStr, "/")
@@ -132,7 +132,7 @@ func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 	}
 	return &ownerAndRepo{
 		owner: result[0],
-		repo: result[1],
+		repo:  result[1],
 	}, nil
 }
 

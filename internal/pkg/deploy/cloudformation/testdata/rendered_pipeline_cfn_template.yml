@@ -66,9 +66,9 @@ Resources:
             # across (cross-regional) pipeline stages, with each stage
             # backed by a (regional) S3 bucket.
             Resource:
-              - arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
-              - arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
-              - arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
           -
             Effect: Allow
             Action:
@@ -164,9 +164,9 @@ Resources:
               - kms:Encrypt
               - kms:GenerateDataKey
             Resource:
-              - arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
-              - arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
-              - arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
           -
             Effect: Allow
             Action:
@@ -186,8 +186,8 @@ Resources:
             Action:
               - sts:AssumeRole
             Resource:
-              - arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
-              - arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+              - arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
+              - arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
       Roles:
         -
           !Ref PipelineRole
@@ -205,7 +205,7 @@ Resources:
             Type: S3
             Location: chicken-us-east-1
             EncryptionKey:
-              Id: arn:aws:kms:us-east-1:620297136107:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              Id: arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
               Type: KMS
         
         -
@@ -214,7 +214,7 @@ Resources:
             Type: S3
             Location: chicken-us-west-2
             EncryptionKey:
-              Id: arn:aws:kms:us-west-2:620297136107:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              Id: arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
               Type: KMS
         
         -
@@ -223,7 +223,7 @@ Resources:
             Type: S3
             Location: chicken-us-west-1
             EncryptionKey:
-              Id: arn:aws:kms:us-west-1:620297136107:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+              Id: arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
               Type: KMS
       RoleArn: !GetAtt PipelineRole.Arn
       Name: !Ref AWS::StackName
@@ -295,7 +295,7 @@ Resources:
                 # TODO: We need the actual name of the CFN execution role here
                 # (created while an environment AWS account is provisioned
                 # through Archer).
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               # After we complete #220, the manual approval action will have a
@@ -305,7 +305,7 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
             # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-test
               Region: us-west-2
@@ -327,7 +327,7 @@ Resources:
                 # TODO: We need the actual name of the CFN execution role here
                 # (created while an environment AWS account is provisioned
                 # through Archer).
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               # After we complete #220, the manual approval action will have a
@@ -337,7 +337,7 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
         # prod is the same as the name of the environment
         # this pipeline stage deploys to
         - Name: DeployTo-chickenProject-prod
@@ -363,7 +363,7 @@ Resources:
                 # TODO: We need the actual name of the CFN execution role here
                 # (created while an environment AWS account is provisioned
                 # through Archer).
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               # After we complete #220, the manual approval action will have a
@@ -373,7 +373,7 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
             # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-prod
               Region: us-east-1
@@ -395,7 +395,7 @@ Resources:
                 # TODO: We need the actual name of the CFN execution role here
                 # (created while an environment AWS account is provisioned
                 # through Archer).
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               # After we complete #220, the manual approval action will have a
@@ -405,4 +405,4 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole

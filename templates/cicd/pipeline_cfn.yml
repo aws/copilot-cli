@@ -12,7 +12,7 @@ Parameters:
   GitHubOAuthSecretId:
     Description: The secretId of the GitHub OAuth token stored in the Secrets Manager
     Type: String
-    Default: {{$.Source.GitHubOAuthSecretID}}
+    Default: {{$.Source.GitHubPersonalAccessTokenSecretID}}
 Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
