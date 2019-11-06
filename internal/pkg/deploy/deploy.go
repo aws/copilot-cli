@@ -36,14 +36,6 @@ type CreateEnvironmentResponse struct {
 	Err error
 }
 
-// ResourceEvent represents a status update for an AWS resource during a deployment.
-type ResourceEvent struct {
-	LogicalName  string
-	Type         string
-	Status       string
-	StatusReason string
-}
-
 // CreatePipelineInput represents the fields required to deploy a pipeline.
 type CreatePipelineInput struct {
 	// Name of the project this pipeline belongs to
@@ -198,4 +190,17 @@ type CreateLBFargateAppInput struct {
 	App      *manifest.LBFargateManifest
 	Env      *archer.Environment
 	ImageTag string
+}
+
+// Resource represents an AWS resource.
+type Resource struct {
+	LogicalName string
+	Type        string
+}
+
+// ResourceEvent represents a status update for an AWS resource during a deployment.
+type ResourceEvent struct {
+	Resource
+	Status       string
+	StatusReason string
 }

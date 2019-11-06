@@ -109,11 +109,13 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 		var transformedEvents []deploy.ResourceEvent
 		for _, cfEvent := range cfEvents {
 			transformedEvents = append(transformedEvents, deploy.ResourceEvent{
-				LogicalName: aws.StringValue(cfEvent.LogicalResourceId),
-				Status:      aws.StringValue(cfEvent.ResourceStatus),
+				Resource: deploy.Resource{
+					LogicalName: aws.StringValue(cfEvent.LogicalResourceId),
+					Type:        aws.StringValue(cfEvent.ResourceType),
+				},
+				Status: aws.StringValue(cfEvent.ResourceStatus),
 				// CFN error messages end with a '.' and only the first sentence is useful, the rest is error codes.
 				StatusReason: strings.Split(aws.StringValue(cfEvent.ResourceStatusReason), ".")[0],
-				Type:         aws.StringValue(cfEvent.ResourceType),
 			})
 		}
 		events <- transformedEvents

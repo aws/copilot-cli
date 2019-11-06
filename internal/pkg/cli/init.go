@@ -15,7 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	termProgress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -61,7 +61,7 @@ func NewInitOpts() (*InitOpts, error) {
 		return nil, err
 	}
 	prompt := prompt.New()
-	spin := termProgress.NewSpinner()
+	spin := termprogress.NewSpinner()
 	id := identity.New(sess)
 
 	initProject := &InitProjectOpts{

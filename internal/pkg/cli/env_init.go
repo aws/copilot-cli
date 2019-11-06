@@ -16,7 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	termProgress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/cobra"
 )
@@ -122,38 +122,38 @@ func (opts *InitEnvOpts) Execute() error {
 }
 
 func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []string {
-	matcher := map[progressText]progressMatcher{
-		vpc: func(event deploy.ResourceEvent) bool {
+	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
+		textVPC: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::VPC"
 		},
-		internetGateway: func(event deploy.ResourceEvent) bool {
+		textInternetGateway: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::InternetGateway" ||
 				event.Type == "AWS::EC2::VPCGatewayAttachment"
 		},
-		publicSubnets: func(event deploy.ResourceEvent) bool {
+		textPublicSubnets: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::Subnet" &&
 				strings.HasPrefix(event.LogicalName, "Public")
 		},
-		privateSubnets: func(event deploy.ResourceEvent) bool {
+		textPrivateSubnets: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::Subnet" &&
 				strings.HasPrefix(event.LogicalName, "Private")
 		},
-		natGateway: func(event deploy.ResourceEvent) bool {
+		textNATGateway: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::EIP" ||
 				event.Type == "AWS::EC2::NatGateway"
 		},
-		routeTables: func(event deploy.ResourceEvent) bool {
+		textRouteTables: func(event deploy.Resource) bool {
 			return strings.Contains(event.LogicalName, "Route")
 		},
-		ecsCluster: func(event deploy.ResourceEvent) bool {
+		textECSCluster: func(event deploy.Resource) bool {
 			return event.Type == "AWS::ECS::Cluster"
 		},
-		alb: func(event deploy.ResourceEvent) bool {
+		textALB: func(event deploy.Resource) bool {
 			return strings.Contains(event.LogicalName, "LoadBalancer") ||
 				strings.Contains(event.Type, "ElasticLoadBalancingV2")
 		},
 	}
-	return humanizeResourceEvents(resourceEvents, envProgressOrder, matcher)
+	return termprogress.HumanizeResourceEvents(resourceEvents, envProgressOrder, matcher)
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -165,7 +165,7 @@ func (opts *InitEnvOpts) RecommendedActions() []string {
 func BuildEnvInitCmd() *cobra.Command {
 	opts := InitEnvOpts{
 		EnvProfile: "default",
-		prog:       termProgress.NewSpinner(),
+		prog:       termprogress.NewSpinner(),
 		prompt:     prompt.New(),
 		globalOpts: newGlobalOpts(),
 	}

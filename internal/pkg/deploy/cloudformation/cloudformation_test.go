@@ -431,8 +431,10 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 
 			wantedEvents: []deploy.ResourceEvent{
 				{
-					LogicalName:  "vpc",
-					Type:         "AWS::EC2::VPC",
+					Resource: deploy.Resource{
+						LogicalName: "vpc",
+						Type:        "AWS::EC2::VPC",
+					},
 					Status:       cloudformation.ResourceStatusCreateInProgress,
 					StatusReason: "create initiated",
 				},
@@ -499,8 +501,10 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 
 			wantedEvents: []deploy.ResourceEvent{
 				{
-					LogicalName:  "vpc",
-					Type:         "AWS::EC2::VPC",
+					Resource: deploy.Resource{
+						LogicalName: "vpc",
+						Type:        "AWS::EC2::VPC",
+					},
 					Status:       cloudformation.ResourceStatusCreateInProgress,
 					StatusReason: "create initiated",
 				},

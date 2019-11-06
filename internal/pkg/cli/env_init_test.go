@@ -205,7 +205,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
 				m.EXPECT().Start("Creating the infrastructure for the test environment")
 				m.EXPECT().Events([]string{
-					fmt.Sprintf("%s\t[%s]", vpc, failed),
+					fmt.Sprintf("%s\t[%s]", textVPC, "FAILED"),
 					fmt.Sprintf("  %s\t", "some reason"),
 				})
 				m.EXPECT().Stop(fmt.Sprintf("%s Failed to create the infrastructure for the test environment", color.ErrorMarker))
@@ -217,8 +217,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				events <- []deploy.ResourceEvent{
 					{
-						LogicalName:  "VPC",
-						Type:         "AWS::EC2::VPC",
+						Resource: deploy.Resource{
+							LogicalName: "VPC",
+							Type:        "AWS::EC2::VPC",
+						},
 						Status:       "CREATE_FAILED",
 						StatusReason: "some reason",
 					},
