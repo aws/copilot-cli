@@ -15,7 +15,7 @@ import (
 var (
 	errValueEmpty      = errors.New("value must not be empty")
 	errValueTooLong    = errors.New("value must not exceed 255 characters")
-	errValueBadFormat  = errors.New("value must be start with letter and container only lower-case letters, numbers, and hyphens")
+	errValueBadFormat  = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString = errors.New("value must be a string")
 )
 

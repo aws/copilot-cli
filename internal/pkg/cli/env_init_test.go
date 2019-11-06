@@ -81,7 +81,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "123env",
 			inProjectName: "phonetool",
 
-			wantedErr: "environment name 123env is invalid: value must be start with letter and container only letters, numbers, and hyphens",
+			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
 		"new workspace": {
 			inEnvName:     "test-pdx",
