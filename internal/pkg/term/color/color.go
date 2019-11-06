@@ -1,8 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package color provides utilities to globally enable/disable color
-// output of the CLI
+// Package color provides functionality to displayed colored text on the terminal.
 package color
 
 import (
@@ -11,12 +10,6 @@ import (
 
 	"github.com/AlecAivazis/survey/v2/core"
 	"github.com/fatih/color"
-)
-
-// String markers to denote the status of an operation.
-var (
-	SuccessMarker = color.HiGreenString("✔")
-	ErrorMarker   = color.HiRedString("✘")
 )
 
 // Predefined colors.
