@@ -1,3 +1,3 @@
-package spinner
+package progress
 
 var charset = []string{"/", "-", "\\"}

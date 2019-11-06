@@ -16,8 +16,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	termProgress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -33,8 +33,9 @@ type InitEnvOpts struct {
 	envCreator    archer.EnvironmentCreator
 	envDeployer   environmentDeployer
 	identity      identityService
-	prog          progress
-	prompt        prompter
+
+	prog   progress
+	prompt prompter
 
 	globalOpts // Embed global options.
 }
@@ -164,7 +165,7 @@ func (opts *InitEnvOpts) RecommendedActions() []string {
 func BuildEnvInitCmd() *cobra.Command {
 	opts := InitEnvOpts{
 		EnvProfile: "default",
-		prog:       spinner.New(),
+		prog:       termProgress.NewSpinner(),
 		prompt:     prompt.New(),
 		globalOpts: newGlobalOpts(),
 	}

@@ -1,6 +1,6 @@
 // +build !windows
 
-package spinner
+package progress
 
 import (
 	spin "github.com/briandowns/spinner"

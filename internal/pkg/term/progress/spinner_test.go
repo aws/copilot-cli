@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package spinner
+package progress
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/spinner/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress/mocks"
 	spin "github.com/briandowns/spinner"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -48,7 +48,7 @@ func (m *mockCursor) EraseLine() {
 
 func TestNew(t *testing.T) {
 	t.Run("it should initialize the spin spinner", func(t *testing.T) {
-		got := New()
+		got := NewSpinner()
 
 		v, ok := got.spin.(*spin.Spinner)
 		require.True(t, ok)
