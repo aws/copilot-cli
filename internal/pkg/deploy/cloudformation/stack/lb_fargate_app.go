@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudformation
+package stack
 
 import (
 	"bytes"
@@ -33,6 +33,10 @@ const (
 	lbFargateTaskCPUKey             = "TaskCPU"
 	lbFargateTaskMemoryKey          = "TaskMemory"
 	lbFargateTaskCountKey           = "TaskCount"
+)
+
+const (
+	ecrURLFormatString = "%s.dkr.ecr.%s.amazonaws.com/%s"
 )
 
 // LBFargateStackConfig represents the configuration needed to create a CloudFormation stack from a

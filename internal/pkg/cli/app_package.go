@@ -15,7 +15,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -178,16 +178,16 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 	}
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
-		stack := cloudformation.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
+		appStack := stack.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
 			App:      mft.(*manifest.LBFargateManifest),
 			Env:      env,
 			ImageTag: opts.Tag,
 		})
-		tpl, err := stack.Template()
+		tpl, err := appStack.Template()
 		if err != nil {
 			return nil, err
 		}
-		params, err := stack.SerializedParameters()
+		params, err := appStack.SerializedParameters()
 		if err != nil {
 			return nil, err
 		}
