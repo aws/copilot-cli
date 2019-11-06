@@ -240,9 +240,9 @@ Resources:
               - Name: BuildOutput
         
         
-        - Name: DeployTochickenProject-test
+        - Name: DeployTo-chickenProject-test
           Actions:
-            - Name: CreateChangeSet-frontend-test
+            - Name: CreateOrUpdate-frontend-test
               Region: us-west-2
               ActionTypeId:
                 Category: Deploy
@@ -251,7 +251,7 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ChangeSetName: chickenProject-frontend-test
-                ActionMode: CHANGE_SET_REPLACE
+                ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-test
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::frontend-test.yaml
@@ -260,22 +260,7 @@ Resources:
                 - Name: BuildOutput
               RunOrder: 2
               RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
-            - Name: DeployChangeSet-frontend-test
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: chickenProject-frontend-test
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: chickenProject-frontend-test
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
-              InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 3
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
-            - Name: CreateChangeSet-backend-test
+            - Name: CreateOrUpdate-backend-test
               Region: us-west-2
               ActionTypeId:
                 Category: Deploy
@@ -284,7 +269,7 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ChangeSetName: chickenProject-backend-test
-                ActionMode: CHANGE_SET_REPLACE
+                ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-test
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::backend-test.yaml
@@ -293,24 +278,9 @@ Resources:
                 - Name: BuildOutput
               RunOrder: 2
               RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
-            - Name: DeployChangeSet-backend-test
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: chickenProject-backend-test
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: chickenProject-backend-test
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-CFNExecutionRole
-              InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 3
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-test-EnvManagerRole
-        - Name: DeployTochickenProject-prod
+        - Name: DeployTo-chickenProject-prod
           Actions:
-            - Name: CreateChangeSet-frontend-prod
+            - Name: CreateOrUpdate-frontend-prod
               Region: us-east-1
               ActionTypeId:
                 Category: Deploy
@@ -319,7 +289,7 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ChangeSetName: chickenProject-frontend-prod
-                ActionMode: CHANGE_SET_REPLACE
+                ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-prod
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::frontend-prod.yaml
@@ -328,22 +298,7 @@ Resources:
                 - Name: BuildOutput
               RunOrder: 2
               RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
-            - Name: DeployChangeSet-frontend-prod
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: chickenProject-frontend-prod
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: chickenProject-frontend-prod
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
-              InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 3
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
-            - Name: CreateChangeSet-backend-prod
+            - Name: CreateOrUpdate-backend-prod
               Region: us-east-1
               ActionTypeId:
                 Category: Deploy
@@ -352,7 +307,7 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ChangeSetName: chickenProject-backend-prod
-                ActionMode: CHANGE_SET_REPLACE
+                ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-prod
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::backend-prod.yaml
@@ -360,19 +315,4 @@ Resources:
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
-              RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole
-            - Name: DeployChangeSet-backend-prod
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: chickenProject-backend-prod
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: chickenProject-backend-prod
-                RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-CFNExecutionRole
-              InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 3
               RoleArn: arn:aws:iam::786043277641:role/chickenProject-prod-EnvManagerRole

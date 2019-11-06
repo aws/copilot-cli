@@ -255,10 +255,10 @@ Resources:
         {{range $stage := .Stages}}
         # {{$stage.Name}} is the same as the name of the environment
         # this pipeline stage deploys to
-        - Name: DeployTo{{$.ProjectName}}-{{$stage.Name}}
+        - Name: DeployTo-{{$.ProjectName}}-{{$stage.Name}}
           Actions:{{range $app := $stage.LocalApplications}}
             # TODO: #220 Add manual approval action if this stage is a prod stage
-            - Name: CreateChangeSet-{{$app}}-{{$stage.Name}}
+            - Name: CreateOrUpdate-{{$app}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
                 Category: Deploy
@@ -268,7 +268,7 @@ Resources:
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
                 ChangeSetName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
-                ActionMode: CHANGE_SET_REPLACE
+                ActionMode: CREATE_UPDATE
                 StackName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::{{$app}}-{{$stage.Name}}.yaml
@@ -288,19 +288,4 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole
-            - Name: DeployChangeSet-{{$app}}-{{$stage.Name}}
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
-                RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-CFNExecutionRole
-              InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 3
               RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{end}}{{end}}

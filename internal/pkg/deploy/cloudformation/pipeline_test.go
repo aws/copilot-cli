@@ -61,12 +61,10 @@ func TestPipelineTemplateRendering(t *testing.T) {
 	pipeline := newPipelineStackConfig(
 		mockCreatePipelineInput(),
 	)
-
 	tmpl, err := pipeline.Template()
     require.NoError(t, err, "template serialization failed")
     require.Equal(t, string(tmpl), string(expectedTemplate), "the rendered template differs from the expected")
 	
-	err = ioutil.WriteFile("/workplace/yenlinc/amazon-ecs-archer/test.yml", []byte(tmpl), 0777)
 }
 
 func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEnvironment {
