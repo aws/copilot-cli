@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	fmtDeployEnvStart    = "Proposing infrastructure changes for the %s environment"
-	fmtDeployEnvFailed   = "Failed to accept changes for the %s environment"
-	fmtStreamEnvStart    = "Creating the infrastructure for the %s environment"
-	fmtStreamEnvFailed   = "Failed to create the infrastructure for the %s environment"
-	fmtStreamEnvComplete = "Created the infrastructure for the %s environment"
+	fmtDeployEnvStart    = "Proposing infrastructure changes for the %s environment."
+	fmtDeployEnvFailed   = "Failed to accept changes for the %s environment."
+	fmtStreamEnvStart    = "Creating the infrastructure for the %s environment."
+	fmtStreamEnvFailed   = "Failed to create the infrastructure for the %s environment."
+	fmtStreamEnvComplete = "Created the infrastructure for the %s environment."
 )
 
 // InitEnvOpts contains the fields to collect for adding an environment.

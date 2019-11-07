@@ -10,13 +10,22 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
+)
+
+const (
+	fmtDeployProjectStart    = "Creating the infrastructure to manage container repositories under project %s."
+	fmtDeployProjectComplete = "Created the infrastructure to manage container repositories under project %s."
+	fmtDeployProjectFailed   = "Failed to create the infrastructure to manage container repositories under project %s."
 )
 
 // InitProjectOpts contains the fields to collect for creating a project.
@@ -26,7 +35,9 @@ type InitProjectOpts struct {
 	identity     identityService
 	projectStore archer.ProjectStore
 	ws           archer.Workspace
+	deployer     projectDeployer
 	prompt       prompter
+	prog         progress
 }
 
 // NewInitProjectOpts returns a new InitProjectOpts.
@@ -37,7 +48,6 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 	}
 
 	ssmStore, err := ssm.NewStore()
-
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +60,9 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 		identity:     identity.New(defaultSession),
 		projectStore: ssmStore,
 		ws:           ws,
+		deployer:     cloudformation.New(defaultSession),
 		prompt:       prompt.New(),
+		prog:         termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -105,7 +117,6 @@ func (opts *InitProjectOpts) Validate() error {
 // Execute creates a new managed empty project.
 func (opts *InitProjectOpts) Execute() error {
 	caller, err := opts.identity.Get()
-
 	if err != nil {
 		return err
 	}
@@ -114,7 +125,6 @@ func (opts *InitProjectOpts) Execute() error {
 		AccountID: caller.Account,
 		Name:      opts.ProjectName,
 	})
-
 	if err != nil {
 		// If the project already exists, move on - otherwise return the error.
 		var projectAlreadyExistsError *store.ErrProjectAlreadyExists
@@ -122,9 +132,24 @@ func (opts *InitProjectOpts) Execute() error {
 			return err
 		}
 	}
-	return opts.ws.Create(opts.ProjectName)
+	err = opts.ws.Create(opts.ProjectName)
+	if err != nil {
+		return err
+	}
+	opts.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(opts.ProjectName)))
+	err = opts.deployer.DeployProject(&deploy.CreateProjectInput{
+		Project:   opts.ProjectName,
+		AccountID: caller.Account,
+	})
+	if err != nil {
+		opts.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(opts.ProjectName)))
+		return err
+	}
+	opts.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(opts.ProjectName)))
+	return nil
 }
 
+// RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
 func (opts *InitProjectOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("archer init")),

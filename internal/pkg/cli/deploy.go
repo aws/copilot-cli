@@ -11,3 +11,7 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 }
+
+type projectDeployer interface {
+	DeployProject(in *deploy.CreateProjectInput) error
+}
