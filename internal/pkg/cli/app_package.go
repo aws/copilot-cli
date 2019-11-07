@@ -202,14 +202,16 @@ func (opts *PackageAppOpts) setFileWriters() error {
 		return fmt.Errorf("create directory %s: %w", opts.OutputDir, err)
 	}
 
-	templatePath := filepath.Join(opts.OutputDir, fmt.Sprintf("%s.stack.yml", opts.AppName))
+	templatePath := filepath.Join(opts.OutputDir,
+		fmt.Sprintf(archer.AppCfnTemplateNameFormat, opts.AppName))
 	templateFile, err := opts.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
 	}
 	opts.stackWriter = templateFile
 
-	paramsPath := filepath.Join(opts.OutputDir, fmt.Sprintf("%s-%s.params.json", opts.AppName, opts.EnvName))
+	paramsPath := filepath.Join(opts.OutputDir,
+		fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat, opts.AppName, opts.EnvName))
 	paramsFile, err := opts.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)

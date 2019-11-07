@@ -63,7 +63,7 @@ func TestPipelineTemplateRendering(t *testing.T) {
 	)
 	tmpl, err := pipeline.Template()
 	require.NoError(t, err, "template serialization failed")
-	require.Equal(t, string(tmpl), string(expectedTemplate), "the rendered template differs from the expected")
+	require.Equal(t, string(expectedTemplate), string(tmpl), "the rendered template differs from the expected")
 }
 
 func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEnvironment {

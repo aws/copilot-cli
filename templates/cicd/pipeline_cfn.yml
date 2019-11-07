@@ -185,7 +185,6 @@ Resources:
       - PipelineRolePolicy
     Properties:
       ArtifactStores:{{range .ArtifactBuckets}}
-        
         -
           Region: {{.Region}}
           ArtifactStore:
@@ -257,7 +256,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::{{$app}}-{{$stage.Name}}.yaml
+                TemplatePath: BuildOutput::{{$stage.AppTemplatePath $app}}
+                TemplateConfiguration: BuildOutput::{{$stage.AppTemplateConfigurationPath $app}}
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.

@@ -31,3 +31,13 @@ type ApplicationGetter interface {
 type ApplicationCreator interface {
 	CreateApplication(app *Application) error
 }
+
+const (
+	// AppCfnTemplateNameFormat is the base output file name when `app package`
+	// is called. This is also used to render the pipeline CFN template.
+	AppCfnTemplateNameFormat = "%s.stack.yml"
+	// AppCfnTemplateConfigurationNameFormat is the base output configuration
+	// file name when `app package` is called. It's also used to render the
+	// pipeline CFN template.
+	AppCfnTemplateConfigurationNameFormat = "%s-%s.params.json"
+)

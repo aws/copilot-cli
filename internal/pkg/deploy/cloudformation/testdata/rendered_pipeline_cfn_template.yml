@@ -198,7 +198,6 @@ Resources:
       - PipelineRolePolicy
     Properties:
       ArtifactStores:
-        
         -
           Region: us-east-1
           ArtifactStore:
@@ -207,7 +206,6 @@ Resources:
             EncryptionKey:
               Id: arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
               Type: KMS
-        
         -
           Region: us-west-2
           ArtifactStore:
@@ -216,7 +214,6 @@ Resources:
             EncryptionKey:
               Id: arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
               Type: KMS
-        
         -
           Region: us-west-1
           ArtifactStore:
@@ -288,7 +285,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-test
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::frontend-test.yaml
+                TemplatePath: BuildOutput::frontend.stack.yml
+                TemplateConfiguration: BuildOutput::frontend-test.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -320,7 +318,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-test
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::backend-test.yaml
+                TemplatePath: BuildOutput::backend.stack.yml
+                TemplateConfiguration: BuildOutput::backend-test.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -356,7 +355,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-prod
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::frontend-prod.yaml
+                TemplatePath: BuildOutput::frontend.stack.yml
+                TemplateConfiguration: BuildOutput::frontend-prod.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -388,7 +388,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-prod
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::backend-prod.yaml
+                TemplatePath: BuildOutput::backend.stack.yml
+                TemplateConfiguration: BuildOutput::backend-prod.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.

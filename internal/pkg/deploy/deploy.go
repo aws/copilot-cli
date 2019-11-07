@@ -171,6 +171,20 @@ type PipelineStage struct {
 	LocalApplications []string
 }
 
+// AppTemplatePath returns the full path to the application CFN template
+// built during the build stage.
+func (s *PipelineStage) AppTemplatePath(appName string) string {
+	return fmt.Sprintf(archer.AppCfnTemplateNameFormat, appName)
+}
+
+// AppTemplateConfigurationPath returns the full path to the application CFN 
+// template configuration file built during the build stage.
+func (s *PipelineStage) AppTemplateConfigurationPath(appName string) string {
+	return fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat,
+		appName, s.Name,
+	)
+}
+
 // AssociatedEnvironment defines the necessary information a pipline stage
 // needs for an Archer Environment.
 type AssociatedEnvironment struct {
