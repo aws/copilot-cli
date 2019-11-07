@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -34,8 +33,7 @@ type InitPipelineOpts struct {
 	Deploy            bool
 
 	// Interfaces to interact with dependencies.
-	envStore archer.EnvironmentStore
-	prompt   prompter
+	prompt prompter
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -246,9 +244,18 @@ func (opts *InitPipelineOpts) askDeploy() error {
 }
 
 func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
-	envs, err := opts.envStore.ListEnvironments(opts.projectName)
+	store, err := ssm.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
+		return nil, fmt.Errorf("couldn't connect to environment datastore: %w", err)
+	}
+
+	envs, err := store.ListEnvironments(opts.projectName)
+	if err != nil {
+		return nil, fmt.Errorf("could not list environments for project %s: %w", opts.projectName, err)
+	}
+
+	if len(envs) == 0 {
+		return nil, errNoEnvsInProject
 	}
 
 	envNames := []string{}
@@ -274,15 +281,9 @@ func BuildPipelineInitCmd() *cobra.Command {
     --environments "stage,prod" \
     --deploy`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			store, err := ssm.NewStore()
-			if err != nil {
-				return fmt.Errorf("couldn't connect to environment datastore: %w", err)
-			}
-			opts.envStore = store
-
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
-				return fmt.Errorf("couldn't get environments from datastore: %w", err)
+				return fmt.Errorf("couldn't get environments: %w", err)
 			}
 			opts.projectEnvs = projectEnvs
 

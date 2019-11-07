@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -22,30 +20,21 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inEnvironments      []string
 		inGitHubRepo        string
 		inGitHubAccessToken string
+		inProjectEnvs       []string
 
-		mockEnvStore func(m *mocks.MockEnvironmentStore)
-		mockPrompt   func(m *climocks.Mockprompter)
+		mockPrompt func(m *climocks.Mockprompter)
 
 		expectedGitHubRepo        string
 		expectedGitHubAccessToken string
 		expectedEnvironments      []string
-		expectedError             string
+		expectedError             error
 	}{
 		"prompts for all input": {
-			inEnvironments: []string{},
-			inGitHubRepo: "",
+			inEnvironments:      []string{},
+			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
+			inProjectEnvs:       []string{"test", "prod"},
 
-			mockEnvStore: func(m *mocks.MockEnvironmentStore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
-					{
-						Name: "test",
-					},
-					{
-						Name: "prod",
-					},
-				}, nil).Times(3)
-			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(3)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
@@ -55,26 +44,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: https://github.com/badGoose/chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
-			expectedGitHubRepo: githubRepo,
+			expectedGitHubRepo:        githubRepo,
 			expectedGitHubAccessToken: githubToken,
-			expectedEnvironments: []string{"test", "prod"},
-			expectedError: "",
-		},
-
-		"errors if no environments initialized": {
-			inEnvironments: []string{},
-			inGitHubRepo: "",
-			inGitHubAccessToken: "",
-
-			mockEnvStore: func(m *mocks.MockEnvironmentStore) {
-				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
-				}, nil)
-			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-			},
-
-			expectedError: fmt.Sprintf("failed to list environments: %s", pipelineNoEnvError),
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             nil,
 		},
 	}
 
@@ -84,7 +57,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 
 			opts := &InitPipelineOpts{
@@ -92,19 +64,21 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubAccessToken,
 
-				envStore: mockEnvStore,
-				prompt:   mockPrompt,
+				prompt: mockPrompt,
+
+				projectEnvs: tc.inProjectEnvs,
 			}
 
-			tc.mockEnvStore(mockEnvStore)
 			tc.mockPrompt(mockPrompt)
 
 			// WHEN
+			fmt.Printf("BEFORE %+v\n", opts)
 			err := opts.Ask()
+			fmt.Printf("AFTER %+v\n", opts)
 
 			// THEN
-			if tc.expectedError != "" {
-				require.EqualError(t, err, tc.expectedError)
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
