@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
@@ -36,7 +36,7 @@ func TestProjTemplate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, tc.box)
+			projStack := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, tc.box)
 			got, err := projStack.Template()
 
 			if tc.want != nil {
@@ -91,7 +91,7 @@ Outputs:
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, tc.box)
+			projStack := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, tc.box)
 
 			got, err := projStack.ResourceTemplate(tc.given)
 
@@ -106,7 +106,7 @@ Outputs:
 }
 
 func TestProjectParameters(t *testing.T) {
-	proj := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(projectAdminRoleParamName),
@@ -121,24 +121,24 @@ func TestProjectParameters(t *testing.T) {
 }
 
 func TestProjectTags(t *testing.T) {
-	proj := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(projectTagKey),
-			Value: aws.String(proj.Project.Name),
+			Value: aws.String(proj.Project),
 		},
 	}
 	require.ElementsMatch(t, expectedTags, proj.Tags())
 }
 
 func TestProjectStackName(t *testing.T) {
-	proj := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, emptyProjectBox())
-	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", proj.Project.Name), proj.StackName())
+	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", proj.Project), proj.StackName())
 }
 
 func TestProjectStackSetName(t *testing.T) {
-	proj := NewProjectStackConfig(&archer.Project{Name: "testproject", AccountID: "1234"}, emptyProjectBox())
-	require.Equal(t, fmt.Sprintf("%s-infrastructure", proj.Project.Name), proj.StackSetName())
+	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure", proj.Project), proj.StackSetName())
 }
 
 func TestTemplateToProjectConfig(t *testing.T) {
