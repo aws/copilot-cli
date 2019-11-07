@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,8 +21,8 @@ import (
 )
 
 func TestCreateProjectResources(t *testing.T) {
-	mockProject := archer.Project{
-		Name:      "testproject",
+	mockProject := &deploy.CreateProjectInput{
+		Project:   "testproject",
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
@@ -73,7 +74,7 @@ func TestCreateProjectResources(t *testing.T) {
 					require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
 					require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
 					require.Equal(t, "ecs-project", *in.Tags[0].Key)
-					require.Equal(t, mockProject.Name, *in.Tags[0].Value)
+					require.Equal(t, mockProject.Project, *in.Tags[0].Value)
 
 					return nil, nil
 				}
@@ -88,7 +89,7 @@ func TestCreateProjectResources(t *testing.T) {
 				client: tc.mockCFClient(),
 				box:    templates.Box(),
 			}
-			got := cf.CreateProjectResources(&mockProject)
+			got := cf.DeployProject(mockProject)
 
 			if tc.want != nil {
 				require.EqualError(t, tc.want, got.Error())
@@ -549,14 +550,14 @@ func TestWaitForStackSetOperation(t *testing.T) {
 }
 
 func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
-	mockProject := archer.Project{Name: "project", AccountID: "12345"}
+	mockProject := &deploy.CreateProjectInput{Project: "project", AccountID: "12345"}
 
 	testCases := map[string]struct {
 		cf   CloudFormation
 		want error
 	}{
 		"ErrCodeOperationIdAlreadyExistsException": {
-			want: &ErrStackSetOutOfDate{projectName: mockProject.Name},
+			want: &ErrStackSetOutOfDate{projectName: mockProject.Project},
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -568,7 +569,7 @@ func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
 			},
 		},
 		"ErrCodeOperationInProgressException": {
-			want: &ErrStackSetOutOfDate{projectName: mockProject.Name},
+			want: &ErrStackSetOutOfDate{projectName: mockProject.Project},
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -580,7 +581,7 @@ func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
 			},
 		},
 		"ErrCodeStaleRequestException": {
-			want: &ErrStackSetOutOfDate{projectName: mockProject.Name},
+			want: &ErrStackSetOutOfDate{projectName: mockProject.Project},
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -596,7 +597,7 @@ func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			mockProjectResources := stack.ProjectResourcesConfig{}
-			got := tc.cf.deployProjectConfig(stack.NewProjectStackConfig(&mockProject, boxWithProjectTemplate()), &mockProjectResources)
+			got := tc.cf.deployProjectConfig(stack.NewProjectStackConfig(mockProject, boxWithProjectTemplate()), &mockProjectResources)
 			require.NotNil(t, got)
 			require.True(t, errors.Is(tc.want, got), "Got %v but expected %v", got, tc.want)
 		})

@@ -9,19 +9,20 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-// CreateProjectResources sets up everything required for our project-wide resources.
+// DeployProject sets up everything required for our project-wide resources.
 // These resources include things that are regional, rather than scoped to a particular
 // environment, such as ECR Repos, CodePipeline KMS keys & S3 buckets.
 // We deploy project resources through StackSets - that way we can have one
 // template that we update and all regional stacks are updated.
-func (cf CloudFormation) CreateProjectResources(project *archer.Project) error {
-	projectConfig := stack.NewProjectStackConfig(project, cf.box)
+func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
+	projectConfig := stack.NewProjectStackConfig(in, cf.box)
 
 	// First deploy the project roles needed by StackSets. These roles
 	// allow the stack set to set up our regional stacks.
@@ -40,7 +41,7 @@ func (cf CloudFormation) CreateProjectResources(project *archer.Project) error {
 	}
 
 	blankProjectTemplate, err := projectConfig.ResourceTemplate(&stack.ProjectResourcesConfig{
-		Project: projectConfig.Project.Name,
+		Project: projectConfig.Project,
 	})
 
 	if err != nil {
@@ -67,7 +68,10 @@ func (cf CloudFormation) CreateProjectResources(project *archer.Project) error {
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
 func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer.Application) error {
-	projectConfig := stack.NewProjectStackConfig(project, cf.box)
+	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+		Project:   project.Name,
+		AccountID: project.AccountID,
+	}, cf.box)
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
 		return fmt.Errorf("adding %s app resources to project %s: %w", newApp.Name, project.Name, err)
@@ -95,7 +99,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 		Version:  previouslyDeployedConfig.Version + 1,
 		Apps:     appList,
 		Accounts: previouslyDeployedConfig.Accounts,
-		Project:  projectConfig.Project.Name,
+		Project:  projectConfig.Project,
 	}
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
 		return fmt.Errorf("adding %s app resources to project: %w", newApp.Name, err)
@@ -108,7 +112,10 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 // with new Account IDs in resource policies (KMS Keys and ECR Repos) - and
 // sets up a new stack instance if the environment is in a new region.
 func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
-	projectConfig := stack.NewProjectStackConfig(project, cf.box)
+	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+		Project:   project.Name,
+		AccountID: project.AccountID,
+	}, cf.box)
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
 		return fmt.Errorf("getting previous deployed stackset %w", err)
@@ -134,7 +141,7 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 		Version:  previouslyDeployedConfig.Version + 1,
 		Apps:     previouslyDeployedConfig.Apps,
 		Accounts: accountList,
-		Project:  projectConfig.Project.Name,
+		Project:  projectConfig.Project,
 	}
 
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
@@ -178,7 +185,7 @@ func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackCo
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case cloudformation.ErrCodeOperationIdAlreadyExistsException, cloudformation.ErrCodeOperationInProgressException, cloudformation.ErrCodeStaleRequestException:
-				return &ErrStackSetOutOfDate{projectName: projectConfig.Project.Name, parentErr: err}
+				return &ErrStackSetOutOfDate{projectName: projectConfig.Project, parentErr: err}
 			}
 		}
 		return fmt.Errorf("updating project resources: %w", err)
@@ -215,7 +222,7 @@ func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.Projec
 	// Set up a new Stack Instance for the new region. The Stack Instance will inherit
 	// the latest StackSet template.
 	createStacksOutput, err := cf.client.CreateStackInstances(&cloudformation.CreateStackInstancesInput{
-		Accounts:     []*string{aws.String(projectConfig.Project.AccountID)},
+		Accounts:     []*string{aws.String(projectConfig.AccountID)},
 		Regions:      []*string{aws.String(env.Region)},
 		StackSetName: aws.String(projectConfig.StackSetName()),
 	})

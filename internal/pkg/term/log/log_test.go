@@ -49,6 +49,28 @@ func TestSuccessf(t *testing.T) {
 	require.Contains(t, b.String(), "hello world\n")
 }
 
+func TestSsuccess(t *testing.T) {
+	s := Ssuccess("hello", " world")
+
+	require.Contains(t, s, "Success!")
+	require.Contains(t, s, "hello world")
+}
+
+func TestSsuccessln(t *testing.T) {
+	s := Ssuccessln("hello", " world")
+
+	// THEN
+	require.Contains(t, s, "Success!")
+	require.Contains(t, s, "hello world\n")
+}
+
+func TestSsuccessf(t *testing.T) {
+	s := Ssuccessf("%s %s\n", "hello", "world")
+
+	require.Contains(t, s, "Success!")
+	require.Contains(t, s, "hello world\n")
+}
+
 func TestError(t *testing.T) {
 	// GIVEN
 	b := &strings.Builder{}
@@ -86,6 +108,27 @@ func TestErrorf(t *testing.T) {
 	// THEN
 	require.Contains(t, b.String(), "Error!")
 	require.Contains(t, b.String(), "hello world\n")
+}
+
+func TestSerror(t *testing.T) {
+	s := Serror("hello", " world")
+
+	require.Contains(t, s, "Error!")
+	require.Contains(t, s, "hello world")
+}
+
+func TestSerrorln(t *testing.T) {
+	s := Serrorln("hello", " world")
+
+	require.Contains(t, s, "Error!")
+	require.Contains(t, s, "hello world\n")
+}
+
+func TestSerrorf(t *testing.T) {
+	s := Serrorf("%s %s\n", "hello", "world")
+
+	require.Contains(t, s, "Error!")
+	require.Contains(t, s, "hello world\n")
 }
 
 func TestWarning(t *testing.T) {
