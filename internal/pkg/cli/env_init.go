@@ -21,6 +21,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	fmtDeployEnvStart    = "Proposing infrastructure changes for the %s environment"
+	fmtDeployEnvFailed   = "Failed to accept changes for the %s environment"
+	fmtStreamEnvStart    = "Creating the infrastructure for the %s environment"
+	fmtStreamEnvFailed   = "Failed to create the infrastructure for the %s environment"
+	fmtStreamEnvComplete = "Created the infrastructure for the %s environment"
+)
+
 // InitEnvOpts contains the fields to collect for adding an environment.
 type InitEnvOpts struct {
 	// Flags set by the user.
@@ -89,7 +97,7 @@ func (opts *InitEnvOpts) Execute() error {
 		ToolsAccountPrincipalARN: caller.ARN,
 	}
 
-	opts.prog.Start(fmt.Sprintf("Proposing infrastructure changes for the %s environment", color.HighlightUserInput(opts.EnvName)))
+	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
 	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
@@ -99,20 +107,20 @@ func (opts *InitEnvOpts) Execute() error {
 				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.projectName))
 			return nil
 		}
-		opts.prog.Stop(fmt.Sprintf("%s Failed to accept changes for the %s environment", color.ErrorMarker, color.HighlightUserInput(opts.EnvName)))
+		opts.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(opts.EnvName)))
 		return err
 	}
-	opts.prog.Start(fmt.Sprintf("Creating the infrastructure for the %s environment", color.HighlightUserInput(opts.EnvName)))
+	opts.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(opts.EnvName)))
 	stackEvents, responses := opts.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		opts.prog.Events(opts.humanizeEnvironmentEvents(stackEvent))
 	}
 	resp := <-responses
 	if resp.Err != nil {
-		opts.prog.Stop(fmt.Sprintf("%s Failed to create the infrastructure for the %s environment", color.ErrorMarker, color.HighlightUserInput(opts.EnvName)))
+		opts.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(opts.EnvName)))
 		return resp.Err
 	}
-	opts.prog.Stop(fmt.Sprintf("%s Created the infrastructure for the %s environment", color.SuccessMarker, color.HighlightUserInput(opts.EnvName)))
+	opts.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(opts.EnvName)))
 	if err := opts.envCreator.CreateEnvironment(resp.Env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
