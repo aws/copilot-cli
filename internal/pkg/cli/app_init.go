@@ -174,7 +174,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := opts.listDockerfiles()
+	dockerfiles, err := opts.listDockerfileDirs()
 	if err != nil {
 		return err
 	}
@@ -202,37 +202,43 @@ func (opts *InitAppOpts) askDockerfile() error {
 	return nil
 }
 
-// listDockerfiles returns the list of Dockerfiles within the current working directory and a sub-directory level below.
+// listDockerfileDirs returns the list of directories containing Dockerfiles within
+// the current working directory and a sub-directory level below.
 // If an error occurs while reading directories, returns the error.
-func (opts *InitAppOpts) listDockerfiles() ([]string, error) {
+func (opts *InitAppOpts) listDockerfileDirs() ([]string, error) {
 	wdFiles, err := afero.ReadDir(opts.fs, ".")
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
-	var dockerfiles []string
+	var directories []string
 
 	for _, wdFile := range wdFiles {
-		// Add Dockerfiles in current directory, otherwise continue.
+		// Add current directory if a Dockerfile exists, otherwise continue.
 		if !wdFile.IsDir() {
 			if wdFile.Name() == "Dockerfile" {
-				dockerfiles = append(dockerfiles, filepath.Join(".", wdFile.Name()))
+				directories = append(directories, filepath.Dir(wdFile.Name()))
 			}
 			continue
 		}
 
-		// Add Dockerfiles in one sub-directory below.
-		subFiles, err := afero.ReadDir(opts.fs, filepath.Join(".", wdFile.Name()))
+		// Add sub-directories containing a Dockerfile one level below current directory.
+		subFiles, err := afero.ReadDir(opts.fs, wdFile.Name())
 		if err != nil {
 			return nil, fmt.Errorf("read directory: %w", err)
 		}
 		for _, f := range subFiles {
+			// NOTE: ignore directories in sub-directories.
+			if f.IsDir() {
+				continue
+			}
+
 			if f.Name() == "Dockerfile" {
-				dockerfiles = append(dockerfiles, filepath.Join(".", wdFile.Name(), "Dockerfile"))
+				directories = append(directories, wdFile.Name())
 			}
 		}
 	}
-	sort.Strings(dockerfiles)
-	return dockerfiles, nil
+	sort.Strings(directories)
+	return directories, nil
 }
 
 func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {

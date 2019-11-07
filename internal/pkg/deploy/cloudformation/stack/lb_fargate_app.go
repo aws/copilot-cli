@@ -181,7 +181,7 @@ type lbFargateTemplateParams struct {
 }
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
-	imgLoc := fmt.Sprintf("%s/%s/%s:%s", c.Env.Project, c.Env.Name, c.App.Name, c.ImageTag)
+	imgLoc := fmt.Sprintf("%s/%s:%s", c.Env.Project, c.App.Name, c.ImageTag)
 	url := fmt.Sprintf(ecrURLFormatString, c.Env.AccountID, c.Env.Region, imgLoc)
 	return &lbFargateTemplateParams{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{

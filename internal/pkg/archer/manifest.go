@@ -6,4 +6,5 @@ package archer
 // Manifest is the interface for serializing a manifest object to a YAML document or CloudFormation template.
 type Manifest interface {
 	Marshal() ([]byte, error)
+	DockerfilePath() string
 }
