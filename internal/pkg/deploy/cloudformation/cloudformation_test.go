@@ -382,7 +382,7 @@ func TestWaitForStackCreation(t *testing.T) {
 		"error if no stacks returned": {
 			cf:    getMockWaitStackCreateCFClient(t, stackConfig.StackName(), false, true),
 			input: stackConfig,
-			want:  fmt.Errorf("failed to find a stack named %s after it was created", stackConfig.StackName()),
+			want:  fmt.Errorf("failed to find a stack named %s", stackConfig.StackName()),
 		},
 		"happy path": {
 			cf:    getMockWaitStackCreateCFClient(t, stackConfig.StackName(), false, false),

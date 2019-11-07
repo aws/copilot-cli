@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"gopkg.in/yaml.v3"
@@ -45,6 +47,9 @@ const (
 	projectResourcesTemplatePath  = "project/cf.yml"
 	projectAdminRoleParamName     = "AdminRoleName"
 	projectExecutionRoleParamName = "ExecutionRoleName"
+	projectOutputKMSKey           = "KMSKeyARN"
+	projectOutputS3Bucket         = "PipelineBucket"
+	projectOutputECRRepoPrefix    = "ECRRepo"
 )
 
 // ProjectConfigFrom takes a template file and extracts the metadata block,
@@ -81,11 +86,7 @@ func (c *ProjectStackConfig) ResourceTemplate(config *ProjectResourcesConfig) (s
 	}
 
 	template, err := template.New("resourcetemplate").
-		Funcs(template.FuncMap{
-			"logicalIDSafe": func(logicalID string) string {
-				return strings.ReplaceAll(logicalID, "-", "DASH")
-			},
-		}).
+		Funcs(templateFunctions).
 		Parse(stackSetTemplate)
 	if err != nil {
 		return "", err
@@ -156,4 +157,48 @@ func (c *ProjectStackConfig) StackSetAdminRoleARN() string {
 // Project resources.
 func (c *ProjectStackConfig) StackSetExecutionRoleName() string {
 	return fmt.Sprintf("%s-executionrole", c.Project)
+}
+
+// ToProjectRegionalResources takes a Project Resource Stack Instance stack, reads the output resources
+// and returns a modeled  ProjectRegionalResources.
+func ToProjectRegionalResources(stack *cloudformation.Stack) (*archer.ProjectRegionalResources, error) {
+	regionalResources := archer.ProjectRegionalResources{
+		RepositoryURLs: map[string]string{},
+	}
+	for _, output := range stack.Outputs {
+		key := *output.OutputKey
+		value := *output.OutputValue
+
+		switch {
+		case key == projectOutputKMSKey:
+			regionalResources.KMSKeyARN = value
+		case key == projectOutputS3Bucket:
+			regionalResources.S3Bucket = value
+		case strings.HasPrefix(key, projectOutputECRRepoPrefix):
+			// If the output starts with the ECR Repo Prefix,
+			// we'll pull the ARN out and construct a URL from it.
+			uri, err := ecr.URIFromARN(value)
+			if err != nil {
+				return nil, err
+			}
+			// The app name for this repo is the Logical ID without
+			// the ECR Repo prefix.
+			safeAppName := strings.TrimPrefix(key, projectOutputECRRepoPrefix)
+			// It's possible we had to sanitize the app name (removing dashes),
+			// so return it back to its original form.
+			originalAppName := safeLogicalIDToOriginal(safeAppName)
+			regionalResources.RepositoryURLs[originalAppName] = uri
+		}
+	}
+	// Check to make sure the KMS key and S3 bucket exist in the stack. There isn't guranteed
+	// to be any ECR repos (for a brand new env without any apps), so we don't validate that.
+	if regionalResources.KMSKeyARN == "" {
+		return nil, fmt.Errorf("couldn't find KMS output key %s in stack %s", projectOutputKMSKey, *stack.StackId)
+	}
+
+	if regionalResources.S3Bucket == "" {
+		return nil, fmt.Errorf("couldn't find S3 bucket output key %s in stack %s", projectOutputS3Bucket, *stack.StackId)
+	}
+
+	return &regionalResources, nil
 }
