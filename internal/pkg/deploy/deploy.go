@@ -207,9 +207,10 @@ type AssociatedEnvironment struct {
 
 // CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
 type CreateLBFargateAppInput struct {
-	App      *manifest.LBFargateManifest
-	Env      *archer.Environment
-	ImageTag string
+	App          *manifest.LBFargateManifest
+	Env          *archer.Environment
+	ImageRepoURL string
+	ImageTag     string
 }
 
 // Resource represents an AWS resource.

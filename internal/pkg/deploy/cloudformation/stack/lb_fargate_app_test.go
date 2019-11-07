@@ -95,7 +95,8 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 					AccountID: "12345",
 					Prod:      false,
 				},
-				ImageTag: "manual-bf3678c",
+				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+				ImageTag:     "manual-bf3678c",
 			},
 			mockBox: func(box *packd.MemoryBox) {
 				box.AddString(lbFargateAppTemplatePath, `Parameters:
@@ -158,7 +159,8 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 				AccountID: "12345",
 				Prod:      false,
 			},
-			ImageTag: "manual-bf3678c",
+			ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+			ImageTag:     "manual-bf3678c",
 		},
 	}
 
@@ -239,7 +241,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 					AccountID: "12345",
 					Prod:      false,
 				},
-				ImageTag: "manual-bf3678c",
+				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+				ImageTag:     "manual-bf3678c",
 			},
 			mockBox: func(box *packd.MemoryBox) {
 				box.AddString(lbFargateAppParamsPath, `{

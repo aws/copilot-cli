@@ -178,9 +178,10 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
 		appStack := stack.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
-			App:      mft.(*manifest.LBFargateManifest),
-			Env:      env,
-			ImageTag: opts.Tag,
+			App:          mft.(*manifest.LBFargateManifest),
+			Env:          env,
+			ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend", // TODO dummy link, need to fetch the repository from the project.
+			ImageTag:     opts.Tag,
 		})
 		tpl, err := appStack.Template()
 		if err != nil {
