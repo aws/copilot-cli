@@ -4,11 +4,18 @@
 package cloudformation
 
 import (
+	"bytes"
+	"fmt"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
+
+const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
@@ -25,8 +32,22 @@ func (p *pipelineStackConfig) StackName() string {
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {
-	// TODO: Render the template
-	return "", nil
+	content, err := templates.Box().FindString(pipelineCfnTemplatePath)
+	if err != nil {
+		return "", &ErrTemplateNotFound{templateLocation: pipelineCfnTemplatePath, parentErr: err}
+	}
+	
+	tpl, err := template.New("pipelineCfn").Parse(content)
+	if err != nil {
+		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",
+		p.ProjectName, p.Name, err)
+	}
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, p); err != nil {
+		return "", fmt.Errorf("execute CloudFormation template for project %s, pipeline %s, error: %w",
+		p.ProjectName, p.Name, err)
+	}
+	return buf.String(), nil
 }
 
 func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {

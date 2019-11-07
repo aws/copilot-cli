@@ -102,13 +102,14 @@ source:
   # The name of the provider that is used to store the source artifacts.
   provider: GitHub
   # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from.
+  # the artifacts should be sourced from. For example, the GitHub provider
+  # has the following properties: repository, branch.
   properties:
     branch: master
     repository: aws/amazon-ecs-cli-v2
 
 # The deployment section defines the order the pipeline will deploy
-# to your environments
+# to your environments.
 stages:
     - 
       # The name of the environment to deploy to.
