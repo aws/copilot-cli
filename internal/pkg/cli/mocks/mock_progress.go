@@ -5,8 +5,10 @@
 package mocks
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	progress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // Mockprogress is a mock of progress interface
@@ -57,7 +59,7 @@ func (mr *MockprogressMockRecorder) Stop(label interface{}) *gomock.Call {
 }
 
 // Events mocks base method
-func (m *Mockprogress) Events(arg0 []string) {
+func (m *Mockprogress) Events(arg0 []progress.TabRow) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Events", arg0)
 }

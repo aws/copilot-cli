@@ -77,7 +77,7 @@ func TestSpinner_Stop(t *testing.T) {
 	defer ctrl.Finish()
 	testCases := map[string]struct {
 		eventsBuf     *bytes.Buffer
-		pastEvents    []string
+		pastEvents    []TabRow
 		wantedSEvents string
 	}{
 		"without existing events": {
@@ -86,7 +86,7 @@ func TestSpinner_Stop(t *testing.T) {
 		},
 		"with exiting events": {
 			eventsBuf:     &bytes.Buffer{},
-			pastEvents:    []string{"hello", "world"},
+			pastEvents:    []TabRow{"hello", "world"},
 			wantedSEvents: "hello\nworld\n",
 		},
 	}
@@ -119,21 +119,21 @@ func TestSpinner_Events(t *testing.T) {
 	testCases := map[string]struct {
 		eventsBuf *bytes.Buffer
 
-		pastEvents []string
-		newEvents  []string
+		pastEvents []TabRow
+		newEvents  []TabRow
 
 		wantedSEvents string
 	}{
 		"without existing events": {
 			eventsBuf: &bytes.Buffer{},
-			newEvents: []string{"hello", "world"},
+			newEvents: []TabRow{"hello", "world"},
 
 			wantedSEvents: "\nhello\nworld[up2]\r",
 		},
 		"with existing events": {
 			eventsBuf:  &bytes.Buffer{},
-			pastEvents: []string{"hello", "world"},
-			newEvents:  []string{"this", "is", "fine"},
+			pastEvents: []TabRow{"hello", "world"},
+			newEvents:  []TabRow{"this", "is", "fine"},
 
 			wantedSEvents: "[down1]erase[down1]erase[up2]\nthis\nis\nfine[up3]\r", // write new events
 		},

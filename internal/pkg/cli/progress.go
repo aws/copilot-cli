@@ -12,13 +12,13 @@ type progress interface {
 	// Stop ends displaying progress with a label.
 	Stop(label string)
 	// Events writes additional information in between the start and stop stages.
-	Events([]string)
+	Events([]termprogress.TabRow)
 }
 
 // envProgressOrder is the order in which we want to progress text to appear on the terminal.
 var envProgressOrder = []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textNATGateway, textRouteTables, textECSCluster, textALB}
 
-// Sub-task headers displayed while deploying an environment.
+// Row descriptions displayed while deploying an environment.
 const (
 	textVPC             termprogress.Text = "- Virtual private cloud on 2 availability zones to hold your services"
 	textInternetGateway termprogress.Text = "  - Internet gateway to connect the network to the internet"

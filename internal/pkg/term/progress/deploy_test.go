@@ -16,7 +16,7 @@ func TestHumanizeResourceEvents(t *testing.T) {
 		inDisplayOrder   []Text
 		inMatcher        map[Text]ResourceMatcher
 
-		wantedEvents []string
+		wantedEvents []TabRow
 	}{
 		"grabs the first failure": {
 			inResourceEvents: []deploy.ResourceEvent{
@@ -44,7 +44,7 @@ func TestHumanizeResourceEvents(t *testing.T) {
 				},
 			},
 
-			wantedEvents: []string{"vpc\t[FAILED]", "  first failure\t"},
+			wantedEvents: []TabRow{"vpc\t[FAILED]", "  first failure\t"},
 		},
 	}
 

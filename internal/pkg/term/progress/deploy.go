@@ -17,7 +17,7 @@ type ResourceMatcher func(deploy.Resource) bool
 // HumanizeResourceEvents groups raw deploy events under human-friendly progress texts that can be passed into the Events() method.
 // It iterates through the list of resources, if the resource matches a progress text then the progress text is displayed.
 // For every progress text that's matched, we prioritize failure events first, then in progress, and finally complete or skipped events.
-func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder []Text, matcher map[Text]ResourceMatcher) []string {
+func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder []Text, matcher map[Text]ResourceMatcher) []TabRow {
 	// Assign a status to text from all matched events.
 	// If a failure event occurred we keep that status otherwise we use the latest matched resource's status.
 	textStatus := make(map[Text]Status)
@@ -36,7 +36,7 @@ func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder 
 	}
 
 	// Serialize the text and status to a format digestible by Events().
-	var updates []string
+	var updates []TabRow
 	for _, text := range displayOrder {
 		status, ok := textStatus[text]
 		if !ok {
@@ -50,10 +50,9 @@ func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder 
 			coloredStatus = color.Red.Sprint(coloredStatus)
 		}
 
-		// The "\t" character is used to denote columns.
-		updates = append(updates, fmt.Sprintf("%s\t%s", color.Grey.Sprint(text), coloredStatus))
+		updates = append(updates, TabRow(fmt.Sprintf("%s\t%s", color.Grey.Sprint(text), coloredStatus)))
 		if status == StatusFailed {
-			updates = append(updates, fmt.Sprintf("  %s\t", textReason[text]))
+			updates = append(updates, TabRow(fmt.Sprintf("  %s\t", textReason[text])))
 		}
 	}
 	return updates

@@ -121,7 +121,7 @@ func (opts *InitEnvOpts) Execute() error {
 	return nil
 }
 
-func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []string {
+func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
 	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
 		textVPC: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::VPC"

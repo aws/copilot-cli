@@ -23,6 +23,9 @@ const (
 	noAdditionalFormatting = 0
 )
 
+// TabRow represents a row in a table where columns are separated with a "\t" character.
+type TabRow string
+
 // startStopper is the interface to interact with the spinner.
 type startStopper interface {
 	Start()
@@ -49,7 +52,7 @@ type Spinner struct {
 	spin startStopper
 	cur  mover
 
-	pastEvents   []string     // Already written entries.
+	pastEvents   []TabRow     // Already written entries.
 	eventsWriter writeFlusher // Writer to pretty format events in a table.
 }
 
@@ -86,7 +89,7 @@ func (s *Spinner) Stop(label string) {
 // If there are already existing events under the spinner, it replaces them with the new information.
 //
 // An event is displayed in a table, where columns are separated with the '\t' character.
-func (s *Spinner) Events(events []string) {
+func (s *Spinner) Events(events []TabRow) {
 	done := make(chan struct{})
 	go func() {
 		s.lock()
