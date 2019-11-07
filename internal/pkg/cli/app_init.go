@@ -261,7 +261,7 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s --project %s", opts.AppName, defaultEnvironmentName, viper.GetString(projectFlag))),
+			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s", opts.AppName, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
