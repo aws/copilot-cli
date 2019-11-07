@@ -228,11 +228,6 @@ Resources:
       Port: 80
       Protocol: HTTP
 
-  ECRRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-        RepositoryName: !Join [ '/', [ !Ref ProjectName, !Ref EnvironmentName ] ]
-
   EnvironmentManagerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -407,18 +402,6 @@ Outputs:
     Value: !Ref Cluster
     Export:
       Name: !Sub ${AWS::StackName}-ClusterId
-
-  ECRRepositoryArn:
-    Value: !GetAtt ECRRepository.Arn
-    Description: ECR Repository used by this environment.
-    Export:
-      Name: !Sub ${AWS::StackName}-ECRArn
-
-  ECRRepositoryName:
-    Value: !Ref ECRRepository
-    Description: Name of ECR Repository used by this environment.
-    Export:
-      Name: !Sub ${AWS::StackName}-ECRName
 
   EnvironmentManagerRoleARN:
     Value: !GetAtt EnvironmentManagerRole.Arn
