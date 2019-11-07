@@ -23,7 +23,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -229,10 +228,9 @@ func contains(s string, items []string) bool {
 }
 
 func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
-	project := viper.GetString(projectFlag)
-	envs, err := opts.envStore.ListEnvironments(project)
+	envs, err := opts.envStore.ListEnvironments(opts.projectName)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", project, err)
+		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
 	}
 	var names []string
 	for _, env := range envs {
