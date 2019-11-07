@@ -13,12 +13,11 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
-	pipelineAddEnvPrompt = "Would you like to add an environment to your pipeline?"
-	pipelineSelectEnvPrompt = "Which environment would you like to add to your pipeline?"
+	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
+	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?"
 
 	pipelineNoEnvError = "There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment."
@@ -39,6 +38,15 @@ type InitPipelineOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	globalOpts
+}
+
+func NewInitPipelineOpts() *InitPipelineOpts {
+	return &InitPipelineOpts{
+		globalOpts: newGlobalOpts(),
+		prompt:     prompt.New(),
+	}
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -76,7 +84,7 @@ func (opts *InitPipelineOpts) Ask() error {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *InitPipelineOpts) Validate() error {
 	// TODO
-	if viper.GetString(projectFlag) == "" {
+	if opts.projectName == "" {
 		return errNoProjectInWorkspace
 	}
 	return nil
@@ -120,10 +128,9 @@ func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
 }
 
 func (opts *InitPipelineOpts) getEnvironments() ([]*archer.Environment, error) {
-	project := viper.GetString(projectFlag)
-	envs, err := opts.envStore.ListEnvironments(project)
+	envs, err := opts.envStore.ListEnvironments(opts.projectName)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", project, err)
+		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
 	}
 
 	if len(envs) == 0 {
@@ -252,7 +259,7 @@ func (opts *InitPipelineOpts) askDeploy() error {
 
 // BuildPipelineInitCmd build the command for creating a new pipeline.
 func BuildPipelineInitCmd() *cobra.Command {
-	opts := &InitPipelineOpts{}
+	opts := NewInitPipelineOpts()
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a pipeline for applications in your workspace.",
@@ -265,8 +272,6 @@ func BuildPipelineInitCmd() *cobra.Command {
     --environments "stage,prod" \
     --deploy`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.prompt = prompt.New()
-
 			store, err := ssm.NewStore()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to environment datastore: %w", err)
