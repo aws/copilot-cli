@@ -12,8 +12,8 @@ type Status string
 
 // Common progression life-cycle for an update.
 const (
-	StatusInProgress Status = "IN_PROGRESS"
-	StatusFailed     Status = "FAILED"
-	StatusComplete   Status = "COMPLETE"
-	StatusSkipped    Status = "SKIPPED"
+	StatusInProgress Status = "in progress"
+	StatusFailed     Status = "failed"
+	StatusComplete   Status = "complete"
+	StatusSkipped    Status = "skipped"
 )

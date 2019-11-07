@@ -44,7 +44,7 @@ func TestHumanizeResourceEvents(t *testing.T) {
 				},
 			},
 
-			wantedEvents: []TabRow{"vpc\t[FAILED]", "  first failure\t"},
+			wantedEvents: []TabRow{"vpc\t[failed]", "  first failure\t"},
 		},
 	}
 

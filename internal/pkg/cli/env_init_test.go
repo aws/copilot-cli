@@ -206,7 +206,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
 				m.EXPECT().Start("Creating the infrastructure for the test environment")
 				m.EXPECT().Events([]termprogress.TabRow{
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, "FAILED")),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, "failed")),
 					termprogress.TabRow(fmt.Sprintf("  %s\t", "some reason")),
 				})
 				m.EXPECT().Stop(fmt.Sprintf("%s Failed to create the infrastructure for the test environment", color.ErrorMarker))

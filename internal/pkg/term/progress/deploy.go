@@ -59,13 +59,13 @@ func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder 
 }
 
 func toStatus(s string) Status {
-	if strings.HasSuffix(s, string(StatusFailed)) {
+	if strings.HasSuffix(s, "FAILED") {
 		return StatusFailed
 	}
-	if strings.HasSuffix(s, string(StatusComplete)) {
+	if strings.HasSuffix(s, "COMPLETE") {
 		return StatusComplete
 	}
-	if strings.HasSuffix(s, string(StatusSkipped)) {
+	if strings.HasSuffix(s, "SKIPPED") {
 		return StatusSkipped
 	}
 	return StatusInProgress
