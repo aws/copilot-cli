@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"fmt"
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
@@ -72,9 +71,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompt)
 
 			// WHEN
-			fmt.Printf("BEFORE %+v\n", opts)
 			err := opts.Ask()
-			fmt.Printf("AFTER %+v\n", opts)
 
 			// THEN
 			if tc.expectedError != nil {
@@ -85,6 +82,51 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inProjectEnvs []string
+		inProjectName string
+
+		expectedError error
+	}{
+		"errors if no environments initialized": {
+			inProjectEnvs: []string{},
+			inProjectName: "badgoose",
+
+			expectedError: errNoEnvsInProject,
+		},
+
+		"invalid project name": {
+			inProjectName: "",
+			expectedError: errNoProjectInWorkspace,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &InitPipelineOpts{
+				projectEnvs: tc.inProjectEnvs,
+
+				globalOpts: globalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.Nil(t, err)
 			}
 		})
 	}
