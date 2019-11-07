@@ -45,6 +45,10 @@ var basicNameTestCases = map[string]testCase{
 		input: "123chicken",
 		want:  errValueBadFormat,
 	},
+	"contains upper-case letters": {
+		input: "badGoose",
+		want:  errValueBadFormat,
+	},
 }
 
 func TestValidateProjectName(t *testing.T) {
@@ -100,31 +104,35 @@ func TestValidateEnvironmentName(t *testing.T) {
 func TestIsCorrectFormat(t *testing.T) {
 	testCases := map[string]struct {
 		input string
-		want  bool
+		isLegit bool
 	}{
 		"numbers only input": {
 			input: "1234",
-			want:  false,
+			isLegit:  false,
 		},
-		"alphabetic input only": {
-			input: "abcDaZ",
-			want:  true,
+		"lower-case alphabetic input only": {
+			input: "badgoose",
+			isLegit:  true,
 		},
 		"alphanumeric string input": {
-			input: "abC123",
-			want:  true,
+			input: "abc123",
+			isLegit:  true,
 		},
 		"contains hyphen": {
 			input: "bad-goose",
-			want:  true,
+			isLegit:  true,
 		},
 		"non-alphanumeric string input": {
 			input: "bad-goose!",
-			want:  false,
+			isLegit:  false,
 		},
 		"starts with non-letter": {
 			input: "1bad-goose",
-			want:  false,
+			isLegit:  false,
+		},
+		"contains capital letter": {
+			input: "badGoose",
+			isLegit:  false,
 		},
 	}
 
@@ -132,7 +140,7 @@ func TestIsCorrectFormat(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := isCorrectFormat(tc.input)
 
-			require.Equal(t, tc.want, got)
+			require.Equal(t, tc.isLegit, got)
 		})
 	}
 }

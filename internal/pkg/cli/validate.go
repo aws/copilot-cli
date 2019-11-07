@@ -15,7 +15,7 @@ import (
 var (
 	errValueEmpty      = errors.New("value must not be empty")
 	errValueTooLong    = errors.New("value must not exceed 255 characters")
-	errValueBadFormat  = errors.New("value must be start with letter and container only letters, numbers, and hyphens")
+	errValueBadFormat  = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString = errors.New("value must be a string")
 )
 
@@ -76,7 +76,7 @@ func basicNameValidation(val interface{}) error {
 }
 
 func isCorrectFormat(s string) bool {
-	valid, err := regexp.MatchString(`^[a-zA-Z][a-zA-Z0-9\-]+$`, s)
+	valid, err := regexp.MatchString(`^[a-z][a-z0-9\-]+$`, s)
 	if err != nil {
 		return false // bubble up error?
 	}
