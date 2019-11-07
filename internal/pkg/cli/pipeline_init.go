@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -19,9 +20,9 @@ const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?"
-
-	pipelineNoEnvError = "There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment."
 )
+
+var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -38,6 +39,9 @@ type InitPipelineOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	// Caches environments
+	projectEnvs []string
 
 	globalOpts
 }
@@ -87,6 +91,11 @@ func (opts *InitPipelineOpts) Validate() error {
 	if opts.projectName == "" {
 		return errNoProjectInWorkspace
 	}
+
+	if len(opts.projectEnvs) == 0 {
+		return errNoEnvsInProject
+	}
+
 	return nil
 }
 
@@ -127,34 +136,16 @@ func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
 	return opts.selectEnvironments(selectMoreEnvs)
 }
 
-func (opts *InitPipelineOpts) getEnvironments() ([]*archer.Environment, error) {
-	envs, err := opts.envStore.ListEnvironments(opts.projectName)
-	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
-	}
-
-	if len(envs) == 0 {
-		return nil, fmt.Errorf(pipelineNoEnvError)
-	}
-
-	return envs, nil
-}
-
-func (opts *InitPipelineOpts) listAvailableEnvironments() ([]string, error) {
-	envs, err := opts.getEnvironments()
-	if err != nil {
-		return nil, err
-	}
-
-	names := []string{}
-	for _, env := range envs {
+func (opts *InitPipelineOpts) listAvailableEnvironments() []string {
+	envs := []string{}
+	for _, env := range opts.projectEnvs {
 		// Check if environment has already been added to pipeline
-		if opts.envCanBeAdded(env.Name) {
-			names = append(names, env.Name)
+		if opts.envCanBeAdded(env) {
+			envs = append(envs, env)
 		}
 	}
 
-	return names, nil
+	return envs
 }
 
 func (opts *InitPipelineOpts) envCanBeAdded(selectedEnv string) bool {
@@ -169,10 +160,7 @@ func (opts *InitPipelineOpts) envCanBeAdded(selectedEnv string) bool {
 func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
 	selectMoreEnvs := false
 
-	envs, err := opts.listAvailableEnvironments()
-	if err != nil {
-		return selectMoreEnvs, fmt.Errorf("failed to list environments: %w", err)
-	}
+	envs := opts.listAvailableEnvironments()
 
 	if len(envs) == 0 && len(opts.Environments) != 0 {
 		log.Infoln("There are no more environments to add.")
@@ -257,6 +245,20 @@ func (opts *InitPipelineOpts) askDeploy() error {
 	return nil
 }
 
+func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
+	envs, err := opts.envStore.ListEnvironments(opts.projectName)
+	if err != nil {
+		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
+	}
+
+	envNames := []string{}
+	for _, env := range envs {
+		envNames = append(envNames, env.Name)
+	}
+
+	return envNames, nil
+}
+
 // BuildPipelineInitCmd build the command for creating a new pipeline.
 func BuildPipelineInitCmd() *cobra.Command {
 	opts := NewInitPipelineOpts()
@@ -277,6 +279,12 @@ func BuildPipelineInitCmd() *cobra.Command {
 				return fmt.Errorf("couldn't connect to environment datastore: %w", err)
 			}
 			opts.envStore = store
+
+			projectEnvs, err := opts.getEnvNames()
+			if err != nil {
+				return fmt.Errorf("couldn't get environments from datastore: %w", err)
+			}
+			opts.projectEnvs = projectEnvs
 
 			return opts.Validate()
 		},
