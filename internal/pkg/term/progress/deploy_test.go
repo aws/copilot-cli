@@ -44,13 +44,13 @@ func TestHumanizeResourceEvents(t *testing.T) {
 				},
 			},
 
-			wantedEvents: []TabRow{"vpc\t[failed]", "  first failure\t"},
+			wantedEvents: []TabRow{"vpc\t[Failed]", "  first failure\t"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := HumanizeResourceEvents(tc.inResourceEvents, tc.inDisplayOrder, tc.inMatcher)
+			got := HumanizeResourceEvents(tc.inDisplayOrder, tc.inResourceEvents, tc.inMatcher, nil)
 
 			require.Equal(t, tc.wantedEvents, got)
 		})

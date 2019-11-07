@@ -14,31 +14,41 @@ import (
 // ResourceMatcher is a function that returns true if the resource event matches a criteria.
 type ResourceMatcher func(deploy.Resource) bool
 
-// HumanizeResourceEvents groups raw deploy events under human-friendly progress texts that can be passed into the Events() method.
-// It iterates through the list of resources, if the resource matches a progress text then the progress text is displayed.
-// For every progress text that's matched, we prioritize failure events first, then in progress, and finally complete or skipped events.
-func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder []Text, matcher map[Text]ResourceMatcher) []TabRow {
+// HumanizeResourceEvents groups raw deploy events under human-friendly tab-separated texts
+// that can be passed into the Events() method. Every text to display starts with status in progress.
+// For every resource event that belongs to a text, we  preserve failure events if there was one.
+// Otherwise, the text remains in progress until the expected number of resources reach the complete status.
+func HumanizeResourceEvents(orderedTexts []Text, resourceEvents []deploy.ResourceEvent, matcher map[Text]ResourceMatcher, wantedCount map[Text]int) []TabRow {
 	// Assign a status to text from all matched events.
-	// If a failure event occurred we keep that status otherwise we use the latest matched resource's status.
-	textStatus := make(map[Text]Status)
-	textReason := make(map[Text]string)
+	statuses := make(map[Text]Status)
+	reasons := make(map[Text]string)
 	for text, matches := range matcher {
+		statuses[text] = StatusInProgress
 		for _, resourceEvent := range resourceEvents {
 			if !matches(resourceEvent.Resource) {
 				continue
 			}
-			if curStatus, ok := textStatus[text]; ok && curStatus == StatusFailed {
+			if oldStatus, ok := statuses[text]; ok && oldStatus == StatusFailed {
+				// There was a failure event, keep its status.
 				continue
 			}
-			textStatus[text] = toStatus(resourceEvent.Status)
-			textReason[text] = resourceEvent.StatusReason
+			status := toStatus(resourceEvent.Status)
+			if status == StatusComplete || status == StatusSkipped {
+				// If there are more resources that needs to have StatusComplete then the text should remain in StatusInProgress.
+				wantedCount[text] = wantedCount[text] - 1
+				if wantedCount[text] > 0 {
+					status = StatusInProgress
+				}
+			}
+			statuses[text] = status
+			reasons[text] = resourceEvent.StatusReason
 		}
 	}
 
 	// Serialize the text and status to a format digestible by Events().
-	var updates []TabRow
-	for _, text := range displayOrder {
-		status, ok := textStatus[text]
+	var rows []TabRow
+	for _, text := range orderedTexts {
+		status, ok := statuses[text]
 		if !ok {
 			continue
 		}
@@ -50,12 +60,12 @@ func HumanizeResourceEvents(resourceEvents []deploy.ResourceEvent, displayOrder 
 			coloredStatus = color.Red.Sprint(coloredStatus)
 		}
 
-		updates = append(updates, TabRow(fmt.Sprintf("%s\t%s", color.Grey.Sprint(text), coloredStatus)))
+		rows = append(rows, TabRow(fmt.Sprintf("%s\t%s", color.Grey.Sprint(text), coloredStatus)))
 		if status == StatusFailed {
-			updates = append(updates, TabRow(fmt.Sprintf("  %s\t", textReason[text])))
+			rows = append(rows, TabRow(fmt.Sprintf("  %s\t", reasons[text])))
 		}
 	}
-	return updates
+	return rows
 }
 
 func toStatus(s string) Status {

@@ -90,7 +90,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "test-pdx",
 			inProjectName: "",
 
-			wantedErr: "no project found, run `project init` first",
+			wantedErr: "no project found, run `project init` first please",
 		},
 	}
 
@@ -206,8 +206,15 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
 				m.EXPECT().Start("Creating the infrastructure for the test environment")
 				m.EXPECT().Events([]termprogress.TabRow{
-					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, "failed")),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, termprogress.StatusFailed)),
 					termprogress.TabRow(fmt.Sprintf("  %s\t", "some reason")),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textInternetGateway, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textPublicSubnets, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textPrivateSubnets, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textNATGateway, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textRouteTables, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textECSCluster, termprogress.StatusInProgress)),
+					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textALB, termprogress.StatusInProgress)),
 				})
 				m.EXPECT().Stop(fmt.Sprintf("%s Failed to create the infrastructure for the test environment", color.ErrorMarker))
 			},

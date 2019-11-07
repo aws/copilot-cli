@@ -64,7 +64,7 @@ func (opts *InitEnvOpts) Validate() error {
 		}
 	}
 	if opts.projectName == "" {
-		return errors.New("no project found, run `project init` first")
+		return errors.New("no project found, run `project init` first please")
 	}
 	return nil
 }
@@ -153,7 +153,17 @@ func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resou
 				strings.Contains(event.Type, "ElasticLoadBalancingV2")
 		},
 	}
-	return termprogress.HumanizeResourceEvents(resourceEvents, envProgressOrder, matcher)
+	resourceCounts := map[termprogress.Text]int{
+		textVPC:             1,
+		textInternetGateway: 2,
+		textPublicSubnets:   2,
+		textPrivateSubnets:  2,
+		textNATGateway:      4,
+		textRouteTables:     10,
+		textECSCluster:      1,
+		textALB:             4,
+	}
+	return termprogress.HumanizeResourceEvents(envProgressOrder, resourceEvents, matcher, resourceCounts)
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
