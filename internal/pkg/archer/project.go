@@ -42,8 +42,8 @@ type ProjectGetter interface {
 
 // ProjectResourceStore fetches resources related to the project.
 type ProjectResourceStore interface {
-	// Fetch all regional resources in a project.
+	// GetRegionalProjectResources fetches all regional resources in a project.
 	GetRegionalProjectResources(project *Project) ([]*ProjectRegionalResources, error)
-	// Fetch the project regional resources for a particular region.
+	// GetProjectResourcesByRegion fetches the project regional resources for a particular region.
 	GetProjectResourcesByRegion(project *Project, region string) (*ProjectRegionalResources, error)
 }
