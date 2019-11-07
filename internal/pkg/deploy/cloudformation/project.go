@@ -64,6 +64,72 @@ func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 	return nil
 }
 
+// GetProjectResourcesByRegion fetches all the regional resources for a particular region.
+func (cf CloudFormation) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
+	resources, err := cf.getResourcesForStackInstances(project, &region)
+	if err != nil {
+		return nil, fmt.Errorf("describing project resources: %w", err)
+	}
+	if len(resources) == 0 {
+		return nil, fmt.Errorf("no regional resources for project %s in region %s found", project.Name, region)
+	}
+
+	return resources[0], nil
+}
+
+// GetRegionalProjectResources fetches all the regional resources for a particular project.
+func (cf CloudFormation) GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error) {
+	resources, err := cf.getResourcesForStackInstances(project, nil)
+	if err != nil {
+		return nil, fmt.Errorf("describing project resources: %w", err)
+	}
+	return resources, nil
+}
+
+func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, region *string) ([]*archer.ProjectRegionalResources, error) {
+	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+		Project:   project.Name,
+		AccountID: project.AccountID}, cf.box)
+	listStackInstancesInput := &cloudformation.ListStackInstancesInput{
+		StackSetName:         aws.String(projectConfig.StackSetName()),
+		StackInstanceAccount: aws.String(project.AccountID),
+	}
+
+	if region != nil {
+		listStackInstancesInput.StackInstanceRegion = region
+	}
+
+	stackInstances, err := cf.client.ListStackInstances(listStackInstancesInput)
+
+	if err != nil {
+		return nil, fmt.Errorf("listing stack instances: %w", err)
+	}
+
+	regionalResources := []*archer.ProjectRegionalResources{}
+	for _, stackInstance := range stackInstances.Summaries {
+		// Since these stacks will likely be in another region, we can't use
+		// the default cf client. Instead, we'll have to create a new client
+		// configured with the stack's region.
+		regionAwareCFClient := cf.regionalClientProvider.Client(*stackInstance.Region)
+		cfStack, err := cf.describeStackWithClient(&cloudformation.DescribeStacksInput{
+			StackName: stackInstance.StackId,
+		}, regionAwareCFClient)
+
+		if err != nil {
+			return nil, fmt.Errorf("getting outputs for stack %s in region %s: %w", *stackInstance.StackId, *stackInstance.Region, err)
+		}
+
+		regionalResource, err := stack.ToProjectRegionalResources(cfStack)
+		if err != nil {
+			return nil, err
+		}
+		regionalResource.Region = *stackInstance.Region
+		regionalResources = append(regionalResources, regionalResource)
+	}
+
+	return regionalResources, nil
+}
+
 // AddAppToProject attempts to add new App specific resources to the Project resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.

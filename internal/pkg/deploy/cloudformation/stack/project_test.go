@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -129,6 +130,75 @@ func TestProjectTags(t *testing.T) {
 		},
 	}
 	require.ElementsMatch(t, expectedTags, proj.Tags())
+}
+
+func TestToRegionalResourcess(t *testing.T) {
+	testCases := map[string]struct {
+		givenStackOutputs map[string]string
+		wantedResource    archer.ProjectRegionalResources
+		wantedErr         error
+	}{
+		"should generate fully formed resource": {
+			givenStackOutputs: map[string]string{
+				projectOutputKMSKey:   "arn:aws:kms:us-west-2:01234567890:key/0000",
+				projectOutputS3Bucket: "tests3-bucket-us-west-2",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+			},
+			wantedResource: archer.ProjectRegionalResources{
+				KMSKeyARN: "arn:aws:kms:us-west-2:01234567890:key/0000",
+				S3Bucket:  "tests3-bucket-us-west-2",
+				RepositoryURLs: map[string]string{
+					"front-end": "0123456789.dkr.ecr.us-west-2.amazonaws.com/project/front-end",
+					"back-end":  "0123456789.dkr.ecr.us-west-2.amazonaws.com/project/back-end",
+				},
+			},
+		},
+		"should return error when no bucket exists": {
+			givenStackOutputs: map[string]string{
+				projectOutputKMSKey:   "arn:aws:kms:us-west-2:01234567890:key/0000",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+			},
+			wantedErr: fmt.Errorf("couldn't find S3 bucket output key PipelineBucket in stack stack"),
+		},
+		"should return error when no kms key exists": {
+			givenStackOutputs: map[string]string{
+				projectOutputS3Bucket: "tests3-bucket-us-west-2",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+			},
+			wantedErr: fmt.Errorf("couldn't find KMS output key KMSKeyARN in stack stack"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := ToProjectRegionalResources(mockProjectResourceStack("stack", tc.givenStackOutputs))
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, tc.wantedErr, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedResource, *got)
+			}
+		})
+	}
+}
+
+func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloudformation.Stack {
+	outputList := []*cloudformation.Output{}
+	for key, val := range outputs {
+		outputList = append(outputList, &cloudformation.Output{
+			OutputKey:   aws.String(key),
+			OutputValue: aws.String(val),
+		})
+	}
+
+	return &cloudformation.Stack{
+		StackId: aws.String(stackArn),
+		Outputs: outputList,
+	}
 }
 
 func TestProjectStackName(t *testing.T) {

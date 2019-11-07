@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -604,6 +605,203 @@ func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
 	}
 }
 
+func TestGetRegionalProjectResources(t *testing.T) {
+	mockProject := archer.Project{Name: "project", AccountID: "12345"}
+
+	testCases := map[string]struct {
+		cf             CloudFormation
+		clientProvider func(string) cloudformationiface.CloudFormationAPI
+		wantedResource archer.ProjectRegionalResources
+		want           error
+	}{
+		"should describe stack instances and convert to ProjectRegionalResources": {
+			wantedResource: archer.ProjectRegionalResources{
+				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
+				S3Bucket:       "tests3-bucket-us-west-2",
+				Region:         "us-east-9",
+				RepositoryURLs: map[string]string{},
+			},
+			clientProvider: func(region string) cloudformationiface.CloudFormationAPI {
+				if region != "us-east-9" {
+					t.FailNow()
+				}
+				return &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						require.Equal(t, "cross-region-stack", *input.StackName)
+						return &cloudformation.DescribeStacksOutput{
+								Stacks: []*cloudformation.Stack{mockValidProjectResourceStack()},
+							},
+							nil
+					},
+				}
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						return &cloudformation.ListStackInstancesOutput{
+							Summaries: []*cloudformation.StackInstanceSummary{
+								&cloudformation.StackInstanceSummary{
+									StackId: aws.String("cross-region-stack"),
+									Region:  aws.String("us-east-9"),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+		},
+
+		"should propagate describe errors": {
+			want: fmt.Errorf("describing project resources: getting outputs for stack cross-region-stack in region us-east-9: error calling cloudformation"),
+			clientProvider: func(region string) cloudformationiface.CloudFormationAPI {
+				if region != "us-east-9" {
+					t.FailNow()
+				}
+				return &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						require.Equal(t, "cross-region-stack", *input.StackName)
+						return nil, fmt.Errorf("error calling cloudformation")
+					},
+				}
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						return &cloudformation.ListStackInstancesOutput{
+							Summaries: []*cloudformation.StackInstanceSummary{
+								&cloudformation.StackInstanceSummary{
+									StackId: aws.String("cross-region-stack"),
+									Region:  aws.String("us-east-9"),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+		},
+
+		"should propagate list stack instances errors": {
+			want: fmt.Errorf("describing project resources: listing stack instances: error"),
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						return nil, fmt.Errorf("error")
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tc.cf.regionalClientProvider = mockClientBuilder{
+				mockClient: tc.clientProvider,
+			}
+			got, err := tc.cf.GetRegionalProjectResources(&mockProject)
+			if tc.want != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.want.Error())
+			} else {
+				require.True(t, len(got) == 1, "Expected only one resource")
+				// Assert that the project resources are the same.
+				require.Equal(t, tc.wantedResource, *got[0])
+			}
+		})
+	}
+}
+
+func TestGetProjectResourcesByRegion(t *testing.T) {
+	mockProject := archer.Project{Name: "project", AccountID: "12345"}
+
+	testCases := map[string]struct {
+		cf             CloudFormation
+		clientProvider func(string) cloudformationiface.CloudFormationAPI
+		wantedResource archer.ProjectRegionalResources
+		region         string
+		want           error
+	}{
+		"should describe stack instances and convert to ProjectRegionalResources": {
+			wantedResource: archer.ProjectRegionalResources{
+				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
+				S3Bucket:       "tests3-bucket-us-west-2",
+				Region:         "us-east-9",
+				RepositoryURLs: map[string]string{},
+			},
+			region: "us-east-9",
+			clientProvider: func(region string) cloudformationiface.CloudFormationAPI {
+				if region != "us-east-9" {
+					t.FailNow()
+				}
+				return &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						require.Equal(t, "cross-region-stack", *input.StackName)
+						return &cloudformation.DescribeStacksOutput{
+								Stacks: []*cloudformation.Stack{mockValidProjectResourceStack()},
+							},
+							nil
+					},
+				}
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						require.Equal(t, "us-east-9", *in.StackInstanceRegion)
+						return &cloudformation.ListStackInstancesOutput{
+							Summaries: []*cloudformation.StackInstanceSummary{
+								&cloudformation.StackInstanceSummary{
+									StackId: aws.String("cross-region-stack"),
+									Region:  aws.String("us-east-9"),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+		},
+		"should error when resources are found": {
+			want:   fmt.Errorf("no regional resources for project project in region us-east-9 found"),
+			region: "us-east-9",
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						return &cloudformation.ListStackInstancesOutput{}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tc.cf.regionalClientProvider = mockClientBuilder{
+				mockClient: tc.clientProvider,
+			}
+			got, err := tc.cf.GetProjectResourcesByRegion(&mockProject, tc.region)
+			if tc.want != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.want.Error())
+			} else {
+				require.NotNil(t, got)
+				// Assert that the project resources are the same.
+				require.Equal(t, tc.wantedResource, *got)
+			}
+		})
+	}
+}
+
 // Useful for mocking a successfully deployed stack
 func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudFormation {
 	return &mockCloudFormation{
@@ -638,6 +836,36 @@ func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudF
 				},
 			}, nil
 		},
+	}
+}
+
+type mockClientBuilder struct {
+	mockClient func(string) cloudformationiface.CloudFormationAPI
+}
+
+func (cf mockClientBuilder) Client(region string) cloudformationiface.CloudFormationAPI {
+	return cf.mockClient(region)
+}
+
+func mockValidProjectResourceStack() *cloudformation.Stack {
+	return mockProjectResourceStack("stack", map[string]string{
+		"KMSKeyARN":      "arn:aws:kms:us-west-2:01234567890:key/0000",
+		"PipelineBucket": "tests3-bucket-us-west-2",
+	})
+}
+
+func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloudformation.Stack {
+	outputList := []*cloudformation.Output{}
+	for key, val := range outputs {
+		outputList = append(outputList, &cloudformation.Output{
+			OutputKey:   aws.String(key),
+			OutputValue: aws.String(val),
+		})
+	}
+
+	return &cloudformation.Stack{
+		StackId: aws.String(stackArn),
+		Outputs: outputList,
 	}
 }
 

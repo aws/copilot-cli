@@ -1,5 +1,4 @@
 // +build integration
-
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -69,6 +68,11 @@ func Test_Project_Infrastructure(t *testing.T) {
 			AccountID: project.AccountID,
 		})
 		require.NoError(t, err)
+
+		// Query using our resources as well:
+		resources, err := deployer.GetRegionalProjectResources(&project)
+		require.NoError(t, err)
+		require.True(t, len(resources) == 0, "No resources for %s should exist.", projectRoleStackName)
 
 		// We should create the project StackSet
 		_, err = cfClient.DescribeStackSet(&awsCF.DescribeStackSetInput{
@@ -192,6 +196,19 @@ func Test_Project_Infrastructure(t *testing.T) {
 				AccountID: "000312697014",
 			},
 		)
+
+		// Query using our GetRegionalProjectResources function.
+		resources, err := deployer.GetRegionalProjectResources(&project)
+		require.NoError(t, err)
+		require.True(t, len(resources) == 1, "One stack should exist.")
+		stackResources := resources[0]
+		require.True(t, len(stackResources.RepositoryURLs) == 2, "Two repos should exist")
+		require.True(t, stackResources.RepositoryURLs["myapp-frontend"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.RepositoryURLs["myapp"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.S3Bucket != "", "S3 Bucket shouldn't be blank")
+		require.True(t, stackResources.KMSKeyARN != "", "KMSKey ARN shouldn't be blank")
+
+		// Validate resources by comparing physical output of the stacks.
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
 			StackSetName: aws.String(projectStackSetName),
 		})

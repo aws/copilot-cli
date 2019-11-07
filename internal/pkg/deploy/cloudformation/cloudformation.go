@@ -26,12 +26,6 @@ const (
 	appTagKey     = "ecs-application"
 )
 
-// CloudFormation wraps the CloudFormationAPI interface
-type CloudFormation struct {
-	client cloudformationiface.CloudFormationAPI
-	box    packd.Box
-}
-
 type stackConfiguration interface {
 	StackName() string
 	Template() (string, error)
@@ -39,11 +33,37 @@ type stackConfiguration interface {
 	Tags() []*cloudformation.Tag
 }
 
+// regionalClientProvider lets us make cross region describe calls
+// in one CloudFormation struct. We can dynamically generate clients
+// configured for a specific region.
+type regionalClientProvider interface {
+	Client(string) cloudformationiface.CloudFormationAPI
+}
+
+type cfClientBuilder struct {
+	session *session.Session
+}
+
+func (cf cfClientBuilder) Client(region string) cloudformationiface.CloudFormationAPI {
+	return cloudformation.New(cf.session, &aws.Config{Region: aws.String(region)})
+}
+
+// CloudFormation wraps the CloudFormationAPI interface
+type CloudFormation struct {
+	regionalClientProvider regionalClientProvider
+	client                 cloudformationiface.CloudFormationAPI
+	box                    packd.Box
+}
+
 // New returns a configured CloudFormation client.
 func New(sess *session.Session) CloudFormation {
+	cb := cfClientBuilder{
+		session: sess,
+	}
 	return CloudFormation{
-		client: cloudformation.New(sess),
-		box:    templates.Box(),
+		regionalClientProvider: cb,
+		client:                 cb.Client(*sess.Config.Region),
+		box:                    templates.Box(),
 	}
 }
 
@@ -188,13 +208,24 @@ func (cf CloudFormation) waitForStackCreation(stackConfig stackConfiguration) (*
 		return nil, fmt.Errorf("failed to create stack %s: %w", stackConfig.StackName(), err)
 	}
 
-	describeStackOutput, err := cf.client.DescribeStacks(describeStackInput)
+	return cf.describeStack(describeStackInput)
+}
+
+func (cf CloudFormation) describeStack(describeStackInput *cloudformation.DescribeStacksInput) (*cloudformation.Stack, error) {
+	return cf.describeStackWithClient(describeStackInput, cf.client)
+}
+
+// describeStackWithClient let's us use a preconfigured client to make calls to CloudFormation.
+// This is useful when we need to make cross-region calls.
+func (cf CloudFormation) describeStackWithClient(describeStackInput *cloudformation.DescribeStacksInput,
+	client cloudformationiface.CloudFormationAPI) (*cloudformation.Stack, error) {
+	describeStackOutput, err := client.DescribeStacks(describeStackInput)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(describeStackOutput.Stacks) == 0 {
-		return nil, fmt.Errorf("failed to find a stack named %s after it was created", stackConfig.StackName())
+		return nil, fmt.Errorf("failed to find a stack named %s", *describeStackInput.StackName)
 	}
 
 	return describeStackOutput.Stacks[0], nil
