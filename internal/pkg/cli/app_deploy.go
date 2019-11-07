@@ -40,7 +40,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		Long: `Deploy an application to an environment.`,
 		Example: `
   Deploy an application named "frontend" to a "test" environment.
-  $ archer app deploy --name frontend --env test`,
+  /code $ archer app deploy --name frontend --env test`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := input.init(); err != nil {
 				return err
@@ -64,7 +64,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		// },
 	}
 
-	cmd.Flags().StringVarP(&input.app, "app", "a", "", "application name")
+	cmd.Flags().StringVarP(&input.app, "name", "n", "", "application name")
 	cmd.Flags().StringVarP(&input.env, "env", "e", "", "environment name")
 	cmd.Flags().StringVarP(&input.imageTag, "tag", "t", "", "image tag")
 
