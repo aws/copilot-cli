@@ -15,7 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
-// CreateEnvironmentInput represents the fields required to deploy an environment.
+// CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	Project                  string // Name of the project this environment belongs to.
 	Name                     string // Name of the environment, must be unique within a project.
@@ -34,6 +34,12 @@ const (
 type CreateEnvironmentResponse struct {
 	Env *archer.Environment
 	Err error
+}
+
+// CreateProjectInput holds the fields required to create a project stack set.
+type CreateProjectInput struct {
+	Project   string // Name of the project that needs to be created.
+	AccountID string // AWS account ID to administrate the project.
 }
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -160,7 +166,7 @@ func (s *Source) Owner() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return oAndR.repo, nil
+	return oAndR.owner, nil
 }
 
 // PipelineStage represents configuration for each deployment stage

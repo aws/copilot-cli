@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
@@ -161,7 +161,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
-				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop("")
 			},
 			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
@@ -184,8 +184,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
-				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
-				m.EXPECT().Stop(fmt.Sprintf("%s Failed to accept changes for the test environment", color.ErrorMarker))
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Stop(log.Serrorf(fmtDeployEnvFailed, "test"))
 			},
 			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(errors.New("some deploy error"))
@@ -203,8 +203,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
-				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
-				m.EXPECT().Start("Creating the infrastructure for the test environment")
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Events([]termprogress.TabRow{
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textVPC, termprogress.StatusFailed)),
 					termprogress.TabRow(fmt.Sprintf("  %s\t", "some reason")),
@@ -216,7 +216,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textECSCluster, termprogress.StatusInProgress)),
 					termprogress.TabRow(fmt.Sprintf("%s\t[%s]", textALB, termprogress.StatusInProgress)),
 				})
-				m.EXPECT().Stop(fmt.Sprintf("%s Failed to create the infrastructure for the test environment", color.ErrorMarker))
+				m.EXPECT().Stop(log.Serrorf(fmtStreamEnvFailed, "test"))
 			},
 			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
@@ -252,9 +252,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
-				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
-				m.EXPECT().Start("Creating the infrastructure for the test environment")
-				m.EXPECT().Stop(fmt.Sprintf("%s Created the infrastructure for the test environment", color.SuccessMarker))
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 			},
 			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
@@ -290,9 +290,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
-				m.EXPECT().Start("Proposing infrastructure changes for the test environment")
-				m.EXPECT().Start("Creating the infrastructure for the test environment")
-				m.EXPECT().Stop(fmt.Sprintf("%s Created the infrastructure for the test environment", color.SuccessMarker))
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 			},
 			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)

@@ -47,6 +47,23 @@ func Successf(format string, args ...interface{}) {
 	fmt.Fprintf(DiagnosticWriter, wrappedFormat, args...)
 }
 
+// Ssuccess prefixes the message with a green "✔ Success!", and returns it.
+func Ssuccess(args ...interface{}) string {
+	return fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
+}
+
+// Ssuccessln prefixes the message with a green "✔ Success!", appends a new line, and returns it.
+func Ssuccessln(args ...interface{}) string {
+	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
+	return fmt.Sprintln(msg)
+}
+
+// Ssuccessf formats according to the specifier, prefixes the message with a green "✔ Success!", and returns it.
+func Ssuccessf(format string, args ...interface{}) string {
+	wrappedFormat := fmt.Sprintf("%s %s", successSprintf(successPrefix), format)
+	return fmt.Sprintf(wrappedFormat, args...)
+}
+
 // Error prefixes the message with a red "✘ Error!", and writes to standard error.
 func Error(args ...interface{}) {
 	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
@@ -63,6 +80,23 @@ func Errorln(args ...interface{}) {
 func Errorf(format string, args ...interface{}) {
 	wrappedFormat := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), format)
 	fmt.Fprintf(DiagnosticWriter, wrappedFormat, args...)
+}
+
+// Serror prefixes the message with a red "✘ Error!", and returns it.
+func Serror(args ...interface{}) string {
+	return fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
+}
+
+// Serrorln prefixes the message with a red "✘ Error!", appends a new line, and returns it.
+func Serrorln(args ...interface{}) string {
+	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
+	return fmt.Sprintln(msg)
+}
+
+// Serrorf formats according to the specifier, prefixes the message with a red "✘ Error!", and returns it.
+func Serrorf(format string, args ...interface{}) string {
+	wrappedFormat := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), format)
+	return fmt.Sprintf(wrappedFormat, args...)
 }
 
 // Warning prefixes the message with a "Note:", colors the *entire* message in yellow, writes to standard error.

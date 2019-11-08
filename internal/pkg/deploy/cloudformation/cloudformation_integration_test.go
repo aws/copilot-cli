@@ -64,7 +64,10 @@ func Test_Project_Infrastructure(t *testing.T) {
 			})
 		}()
 
-		err = deployer.CreateProjectResources(&project)
+		err = deployer.DeployProject(&deploy.CreateProjectInput{
+			Project:   project.Name,
+			AccountID: project.AccountID,
+		})
 		require.NoError(t, err)
 
 		// We should create the project StackSet
@@ -147,7 +150,10 @@ func Test_Project_Infrastructure(t *testing.T) {
 
 		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", projectRoleStackName)
 
-		err = deployer.CreateProjectResources(&project)
+		err = deployer.DeployProject(&deploy.CreateProjectInput{
+			Project:   project.Name,
+			AccountID: project.AccountID,
+		})
 		require.NoError(t, err)
 
 		// Add an application only

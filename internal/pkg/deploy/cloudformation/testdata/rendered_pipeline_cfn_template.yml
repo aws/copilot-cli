@@ -237,7 +237,7 @@ Resources:
               Configuration:
                 # TODO: #273 For now this set of configurations is GitHub-specific,
                 # change it to be more generic
-                Owner: amazon-ecs-cli-v2
+                Owner: hencrice
                 Repo: amazon-ecs-cli-v2
                 Branch: master
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager

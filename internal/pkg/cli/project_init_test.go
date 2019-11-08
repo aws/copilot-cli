@@ -11,7 +11,9 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -176,13 +178,18 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		expectedProject archer.Project
 		expectedError   error
-		mocking         func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService)
+		mocking         func(t *testing.T,
+			mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+			mockProgress *climocks.Mockprogress)
 	}{
 		"with a succesfull call to add project": {
 			expectedProject: archer.Project{
 				Name: "project",
 			},
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
 					Get().
@@ -197,15 +204,52 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					})
 				mockWorkspace.
 					EXPECT().
-					Create(gomock.Eq("project"))
+					Create(gomock.Eq("project")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+				mockDeployer.EXPECT().
+					DeployProject(&deploy.CreateProjectInput{
+						Project:   "project",
+						AccountID: "12345",
+					}).Return(nil)
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
 		},
-
+		"with an error while deploying project": {
+			expectedError: mockError,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+				mockProgress *climocks.Mockprogress) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
+				mockProjectStore.
+					EXPECT().
+					CreateProject(gomock.Any()).
+					Do(func(project *archer.Project) {
+						require.Equal(t, project.Name, "project")
+					})
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("project")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+				mockDeployer.EXPECT().
+					DeployProject(&deploy.CreateProjectInput{
+						Project:   "project",
+						AccountID: "12345",
+					}).Return(mockError)
+				mockProgress.EXPECT().Stop(log.Serrorf(fmtDeployProjectFailed, "project"))
+			},
+		},
 		"should ignore ErrProjectAlreadyExists from CreateProject": {
 			expectedProject: archer.Project{
 				Name: "project",
 			},
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
 					Get().
@@ -222,12 +266,21 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Any())
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+				mockDeployer.EXPECT().
+					DeployProject(&deploy.CreateProjectInput{
+						Project:   "project",
+						AccountID: "12345",
+					}).Return(nil)
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
 		},
 
 		"should return error from CreateProject": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
 					Get().
@@ -242,12 +295,16 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Any()).
 					Times(0)
+				mockProgress.EXPECT().Start(gomock.Any()).Times(0)
+				mockDeployer.EXPECT().DeployProject(gomock.Any()).Times(0)
 			},
 		},
 
 		"should return error from workspace.Create": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace, mockIdentityService *climocks.MockidentityService) {
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
+				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
 					Get().
@@ -262,6 +319,8 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project")).
 					Return(mockError)
+				mockProgress.EXPECT().Start(gomock.Any()).Times(0)
+				mockDeployer.EXPECT().DeployProject(gomock.Any()).Times(0)
 			},
 		},
 	}
@@ -273,14 +332,18 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			mockProjectStore := mocks.NewMockProjectStore(ctrl)
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			mockIdentityService := climocks.NewMockidentityService(ctrl)
+			mockDeployer := climocks.NewMockprojectDeployer(ctrl)
+			mockProgress := climocks.NewMockprogress(ctrl)
 
 			opts := &InitProjectOpts{
 				ProjectName:  "project",
 				projectStore: mockProjectStore,
 				identity:     mockIdentityService,
+				deployer:     mockDeployer,
 				ws:           mockWorkspace,
+				prog:         mockProgress,
 			}
-			tc.mocking(t, mockProjectStore, mockWorkspace, mockIdentityService)
+			tc.mocking(t, mockProjectStore, mockWorkspace, mockIdentityService, mockDeployer, mockProgress)
 
 			// WHEN
 			err := opts.Execute()
