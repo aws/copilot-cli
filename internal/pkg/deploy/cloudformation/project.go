@@ -148,7 +148,7 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 		return fmt.Errorf("adding %s environment resources to project: %w", env.Name, err)
 	}
 
-	if err := cf.addNewProjectStackInstances(projectConfig, env); err != nil {
+	if err := cf.addNewProjectStackInstances(projectConfig, env.Region); err != nil {
 		return fmt.Errorf("adding new stack instance for environment %s: %w", env.Name, err)
 	}
 
@@ -197,7 +197,7 @@ func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackCo
 
 // addNewStackInstances takes an environment and determines if we need to create a new
 // stack instance. We only spin up a new stack instance if the env is in a new region.
-func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.ProjectStackConfig, env *archer.Environment) error {
+func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.ProjectStackConfig, region string) error {
 	stackInstances, err := cf.client.ListStackInstances(&cloudformation.ListStackInstancesInput{
 		StackSetName: aws.String(projectConfig.StackSetName()),
 	})
@@ -210,7 +210,7 @@ func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.Projec
 	// adding an environment in a new region.
 	shouldDeployNewStackInstance := true
 	for _, stackInstance := range stackInstances.Summaries {
-		if *stackInstance.Region == env.Region {
+		if *stackInstance.Region == region {
 			shouldDeployNewStackInstance = false
 		}
 	}
@@ -223,7 +223,7 @@ func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.Projec
 	// the latest StackSet template.
 	createStacksOutput, err := cf.client.CreateStackInstances(&cloudformation.CreateStackInstancesInput{
 		Accounts:     []*string{aws.String(projectConfig.AccountID)},
-		Regions:      []*string{aws.String(env.Region)},
+		Regions:      []*string{aws.String(region)},
 		StackSetName: aws.String(projectConfig.StackSetName()),
 	})
 
