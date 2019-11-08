@@ -12,46 +12,45 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/mocks"
 )
 
 func TestSourceProjectApplications(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockProjectService := mocks.NewMockprojectService(ctrl)
+	mockWorkspaceService := mocks.NewMockWorkspace(ctrl)
 
 	mockProjectName := "mockProjectName"
 	mockError := errors.New("error")
-	mockApps := []*archer.Application{
-		&archer.Application{
-			Project: mockProjectName,
-		},
+	mockAppNames := []string{
+		mockProjectName,
 	}
 
 	testCases := map[string]struct {
 		setupMocks func()
 
-		wantErr  error
-		wantApps []*archer.Application
+		wantErr      error
+		wantAppNames []string
 	}{
 		"should wrap error returned from ListApplications": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().ListApplications(gomock.Eq(mockProjectName)).Times(1).Return(nil, mockError)
+				mockWorkspaceService.EXPECT().AppNames().Times(1).Return([]string{}, mockError)
 			},
-			wantErr: fmt.Errorf("get apps: %w", mockError),
+			wantErr: fmt.Errorf("get app names: %w", mockError),
 		},
 		"should return error given no apps returned": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().ListApplications(gomock.Eq(mockProjectName)).Times(1).Return([]*archer.Application{}, nil)
+				mockWorkspaceService.EXPECT().AppNames().Times(1).Return([]string{}, nil)
 			},
 			wantErr: errors.New("no applications found"),
 		},
 		"should set opts projectApplications field": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().ListApplications(gomock.Eq(mockProjectName)).Times(1).Return(mockApps, nil)
+				mockWorkspaceService.EXPECT().AppNames().Times(1).Return(mockAppNames, nil)
 			},
-			wantApps: mockApps,
+			wantAppNames: mockAppNames,
 		},
 	}
 
@@ -63,13 +62,13 @@ func TestSourceProjectApplications(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					projectName: mockProjectName,
 				},
-				projectService: mockProjectService,
+				workspaceService: mockWorkspaceService,
 			}
 
 			gotErr := opts.sourceProjectApplications()
 
 			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantApps, opts.projectApplications)
+			require.Equal(t, tc.wantAppNames, opts.localProjectAppNames)
 		})
 	}
 }
@@ -78,7 +77,7 @@ func TestSourceProjectEnvironments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockProjectService := mocks.NewMockprojectService(ctrl)
+	mockProjectService := climocks.NewMockprojectService(ctrl)
 
 	mockProjectName := "mockProjectName"
 	mockError := errors.New("error")
@@ -137,37 +136,29 @@ func TestSourceAppName(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockPrompt := mocks.NewMockprompter(ctrl)
+	mockPrompt := climocks.NewMockprompter(ctrl)
 
 	mockAppName := "myapp"
 
 	testCases := map[string]struct {
 		setupMocks func()
 
-		inputAppFlag        string
-		projectApplications []*archer.Application
+		inputAppFlag         string
+		localProjectAppNames []string
 
 		wantAppName string
 		wantErr     error
 	}{
 		"should validate the input app flag name": {
-			setupMocks:   func() {},
-			inputAppFlag: mockAppName,
-			projectApplications: []*archer.Application{
-				&archer.Application{
-					Name: mockAppName,
-				},
-			},
-			wantAppName: mockAppName,
+			setupMocks:           func() {},
+			inputAppFlag:         mockAppName,
+			localProjectAppNames: []string{mockAppName},
+			wantAppName:          mockAppName,
 		},
 		"should default the app name if there's only one option": {
-			setupMocks: func() {},
-			projectApplications: []*archer.Application{
-				&archer.Application{
-					Name: mockAppName,
-				},
-			},
-			wantAppName: mockAppName,
+			setupMocks:           func() {},
+			localProjectAppNames: []string{mockAppName},
+			wantAppName:          mockAppName,
 		},
 		"should prompt the user to select an app if there's multiple options": {
 			setupMocks: func() {
@@ -176,15 +167,8 @@ func TestSourceAppName(t *testing.T) {
 					Times(1).
 					Return(mockAppName, nil)
 			},
-			projectApplications: []*archer.Application{
-				&archer.Application{
-					Name: mockAppName,
-				},
-				&archer.Application{
-					Name: "anotherone",
-				},
-			},
-			wantAppName: mockAppName,
+			localProjectAppNames: []string{mockAppName, "anotherone"},
+			wantAppName:          mockAppName,
 		},
 	}
 
@@ -193,8 +177,8 @@ func TestSourceAppName(t *testing.T) {
 			tc.setupMocks()
 
 			opts := appDeployOpts{
-				projectApplications: tc.projectApplications,
-				prompt:              mockPrompt,
+				localProjectAppNames: tc.localProjectAppNames,
+				prompt:               mockPrompt,
 			}
 
 			gotErr := opts.sourceAppName()
@@ -209,7 +193,7 @@ func TestSourceEnvName(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockPrompt := mocks.NewMockprompter(ctrl)
+	mockPrompt := climocks.NewMockprompter(ctrl)
 
 	mockEnvName := "test"
 
