@@ -298,13 +298,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		_, responses := deployer.StreamEnvironmentCreation(&environmentToDeploy)
 		resp := <-responses
 		require.NoError(t, resp.Err)
-		deployedEnv := resp.Env
-
-		// And that we saved the state from the stack into our environment.
-		require.True(t,
-			strings.HasSuffix(deployedEnv.RegistryURL,
-				fmt.Sprintf("%s/%s", environmentToDeploy.Project, environmentToDeploy.Name)),
-			"Repository URL should end with project/env - saved URL was "+deployedEnv.RegistryURL)
 
 		// Ensure that the new stack exists
 		output, err = cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -324,28 +317,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.True(t,
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-EnvManagerRole", envStackName)),
 					"EnvironmentManagerRole ARN value should not be nil.")
-			},
-			"ECRRepositoryArn": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-ECRArn", envStackName),
-					*output.ExportName,
-					"Should export ECR Arn as stackname-Arn")
-
-				require.True(t,
-					strings.HasSuffix(*output.OutputValue,
-						fmt.Sprintf("repository/%s/%s", environmentToDeploy.Project, environmentToDeploy.Name)),
-					"ECR Repo Should be named repository/project_name/env_name")
-			},
-			"ECRRepositoryName": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-ECRName", envStackName),
-					*output.ExportName,
-					"Should export ECR name as stackname-ECRName")
-				require.Equal(t,
-					*output.OutputValue,
-					fmt.Sprintf("%s/%s", environmentToDeploy.Project, environmentToDeploy.Name),
-					"ECR Repo Name Should be named project_name/env_name",
-				)
 			},
 			"ClusterId": func(output *awsCF.Output) {
 				require.Equal(t,
@@ -411,6 +382,26 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"PublicLoadBalancerDNSName value should not be nil")
+			},
+			"HTTPListenerArn": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-HTTPListenerArn", envStackName),
+					*output.ExportName,
+					"Should export HTTPListenerArn as stackname-HTTPListenerArn")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"HTTPListenerArn value should not be nil")
+			},
+			"DefaultHTTPTargetGroupArn": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-DefaultHTTPTargetGroup", envStackName),
+					*output.ExportName,
+					"Should export HTTPListenerArn as stackname-DefaultHTTPTargetGroup")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"DefaultHTTPTargetGroupArn value should not be nil")
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
