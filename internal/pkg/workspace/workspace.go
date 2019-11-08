@@ -259,6 +259,7 @@ func (ws *Workspace) WriteManifest(manifestBlob []byte, filename string) (string
 }
 
 // ManifestFileName returns the manifest's name from an application name.
+// TODO extend this to pipeline manifest filenames too
 func (ws *Workspace) ManifestFileName(appName string) string {
 	return fmt.Sprintf(fmtManifestFileName, appName)
 }

@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
 )
@@ -18,10 +21,11 @@ import (
 const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?"
+	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository? (Enter full repository URL, e.g. https://github.com/myCompany/myRepo)" // TODO allow just <user>/<repo>?
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
+var errInvalidGitHubRepo = errors.New("Please enter a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -31,9 +35,11 @@ type InitPipelineOpts struct {
 	GitHubAccessToken string
 	EnableCD          bool
 	Deploy            bool
+	// TODO add git branch
 
 	// Interfaces to interact with dependencies.
-	prompt prompter
+	prompt         prompter
+	manifestWriter archer.ManifestIO
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -61,7 +67,8 @@ func (opts *InitPipelineOpts) Ask() error {
 
 	if opts.GitHubRepo == "" {
 		if err := opts.selectGitHubRepo(); err != nil {
-			return err
+			if err == errInvalidGitHubRepo {
+			}
 		}
 	}
 
@@ -93,19 +100,95 @@ func (opts *InitPipelineOpts) Validate() error {
 	if len(opts.projectEnvs) == 0 {
 		return errNoEnvsInProject
 	}
+	// validate github repo format
 
 	return nil
 }
 
 // Execute writes the pipline manifest file.
 func (opts *InitPipelineOpts) Execute() error {
-	opts.manifestPath = "pipeline.yml" // TODO: placeholder
+
+	// TODO create secret for GitHub Token
+	// err := opts.createSecret()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// write pipeline.yml file, populate with:
+	//   - github repo as source
+	//   - stage names (environments)
+	//   - enable/disable transition to prod envs
+
+	manifestPath, err := opts.createPipelineManifest()
+	if err != nil {
+		return err
+	}
+	opts.manifestPath = manifestPath
 
 	log.Infoln()
 	log.Successf("Wrote the pipeline for %s app at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(opts.manifestPath))
 	log.Infoln("Your pipeline manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln()
+
+	// TODO deploy manifest file
+
 	return nil
+}
+
+func (opts *InitPipelineOpts) createPipelineName() string {
+	repoName := opts.getRepoName()
+	fmt.Printf("repo name: %+v", repoName)
+	return fmt.Sprintf("pipeline-%s-%s", opts.projectName, repoName)
+}
+
+// TODO extract repo
+func (opts *InitPipelineOpts) getRepoName() string {
+	match := githubRepoExp.FindStringSubmatch(opts.GitHubRepo)
+	if len(match) != 0 {
+		matches := make(map[string]string)
+		for i, name := range githubRepoExp.SubexpNames() {
+			if i != 0 && name != "" {
+				matches[name] = match[i]
+			}
+		}
+		return matches["repo"]
+	}
+
+	return ""
+}
+
+func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
+	config := &manifest.GitHubProperties{
+		OwnerAndRepository: opts.GitHubRepo,
+		Branch:             "master", // todo - fix
+	}
+	return manifest.NewProvider(config)
+}
+
+func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
+	pipelineName := opts.createPipelineName()
+	provider, err := opts.createPipelineProvider()
+	if err != nil {
+		return "", fmt.Errorf("could not create pipeline: %w", err)
+	}
+
+	manifest, err := manifest.CreatePipeline(pipelineName, provider, opts.Environments)
+	if err != nil {
+		return "", fmt.Errorf("generate a manifest: %w", err)
+	}
+
+	fmt.Printf("MANIFEST: %+v", manifest.Source)
+
+	manifestBytes, err := manifest.Marshal()
+	if err != nil {
+		return "", fmt.Errorf("marshal manifest: %w", err)
+	}
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineName)
+	if err != nil {
+		return "", fmt.Errorf("write manifest for app %s: %w", pipelineName, err)
+	}
+
+	return manifestPath, nil
 }
 
 func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
@@ -186,14 +269,14 @@ func (opts *InitPipelineOpts) selectGitHubRepo() error {
 	repo, err := opts.prompt.Get(
 		pipelineEnterGitHubRepoPrompt,
 		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage.`),
-		nil)
+		validateGitHubRepo,
+	)
 
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub repository: %w", err)
 	}
 
 	opts.GitHubRepo = repo
-	// TODO validate github repo?
 
 	return nil
 }
@@ -287,6 +370,12 @@ func BuildPipelineInitCmd() *cobra.Command {
 			}
 			opts.projectEnvs = projectEnvs
 
+			ws, err := workspace.New()
+			if err != nil {
+				return fmt.Errorf("workspace cannot be created: %w", err)
+			}
+			opts.manifestWriter = ws
+
 			return opts.Validate()
 		},
 
@@ -299,6 +388,14 @@ func BuildPipelineInitCmd() *cobra.Command {
 			}
 			return opts.Execute()
 		},
+		// TODO: recommend editing pipeline.yml and deploying pipeline
+		// PostRunE: func(cmd *cobra.Command, args []string) error {
+		// 	log.Infoln("Recommended follow-up actions:")
+		// 	for _, followup := range opts.RecommendedActions() {
+		// 		log.Infof("- %s\n", followup)
+		// 	}
+		// 	return nil
+		// },
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)

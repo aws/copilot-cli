@@ -131,3 +131,48 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestInitPipelineOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inProjectEnvs []string
+		inProjectName string
+
+		expectedError error
+	}{
+		"errors if no environments initialized": {
+			inProjectEnvs: []string{},
+			inProjectName: "badgoose",
+
+			expectedError: errNoEnvsInProject,
+		},
+
+		"invalid project name": {
+			inProjectName: "",
+			expectedError: errNoProjectInWorkspace,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &InitPipelineOpts{
+				projectEnvs: tc.inProjectEnvs,
+
+				globalOpts: globalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}

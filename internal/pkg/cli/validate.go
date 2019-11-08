@@ -19,6 +19,8 @@ var (
 	errValueNotAString = errors.New("value must be a string")
 )
 
+var githubRepoExp = regexp.MustCompile(`https:\/\/github\.com\/(?P<owner>.+)\/(?P<repo>.+)`)
+
 func validateProjectName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("project name %v is invalid: %w", val, err)
@@ -81,4 +83,15 @@ func isCorrectFormat(s string) bool {
 		return false // bubble up error?
 	}
 	return valid
+}
+
+func validateGitHubRepo(val interface{}) error {
+	repo, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if !githubRepoExp.MatchString(repo) {
+		return fmt.Errorf("GitHub repository name %v is invalid. Please enter full name, e.g. https://github.com/myCompany/myRepo", val)
+	}
+	return nil
 }

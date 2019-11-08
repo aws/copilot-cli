@@ -94,7 +94,7 @@ type PipelineStage struct {
 }
 
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, stageNames ...string) (*PipelineManifest, error) {
+func CreatePipeline(pipelineName string, provider Provider, stageNames []string) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
 	if len(stageNames) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
