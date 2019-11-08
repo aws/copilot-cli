@@ -166,7 +166,7 @@ func (s *Source) Owner() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return oAndR.repo, nil
+	return oAndR.owner, nil
 }
 
 // PipelineStage represents configuration for each deployment stage
