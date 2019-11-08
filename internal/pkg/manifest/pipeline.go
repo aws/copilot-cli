@@ -15,6 +15,11 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
+const (
+	GithubProviderName    = "GitHub"
+	GithubSecretIdKeyName = "githubPersonalAccessTokenSecretId"
+)
+
 // Provider defines a source of the artifacts
 // that will be built and deployed via a pipeline
 type Provider interface {
@@ -28,11 +33,11 @@ type githubProvider struct {
 }
 
 func (p *githubProvider) Name() string {
-	return "GitHub"
+	return GithubProviderName
 }
 
 func (p *githubProvider) String() string {
-	return "GitHub"
+	return GithubProviderName
 }
 
 func (p *githubProvider) Properties() map[string]interface{} {
@@ -46,8 +51,9 @@ type GitHubProperties struct {
 	// to specify the name of the field in the output properties
 
 	// An example for OwnerAndRepository would be: "aws/amazon-ecs-cli-v2"
-	OwnerAndRepository string `structs:"repository" yaml:"repository"`
-	Branch     string `structs:"branch" yaml:"branch"`
+	OwnerAndRepository    string `structs:"repository" yaml:"repository"`
+	Branch                string `structs:"branch" yaml:"branch"`
+	GithubSecretIdKeyName string `structs: "access_token_secret" yaml: "access_token_secret` // TODO fix naming
 }
 
 // NewProvider creates a source provider based on the type of

@@ -24,11 +24,6 @@ type CreateEnvironmentInput struct {
 	ToolsAccountPrincipalARN string // The Principal ARN of the tools account.
 }
 
-const (
-	GithubProviderName    = "GitHub"
-	GithubSecretIdKeyName = "githubPersonalAccessTokenSecretId"
-)
-
 // CreateEnvironmentResponse holds the created environment on successful deployment.
 // Otherwise, the environment is set to nil and a descriptive error is returned.
 type CreateEnvironmentResponse struct {
@@ -100,11 +95,12 @@ type Source struct {
 	Properties map[string]interface{}
 }
 
-// GitHubPersonalAccessTokenSecretID returns the ID of the secret in the Secrets manager,
-// which stores the GitHub OAuth token if the provider is "GitHub". Otherwise,
-// it returns an error.
+// GitHubPersonalAccessTokenSecretID returns the ID of the secret in the
+// Secrets manager, which stores the GitHub Personal Access token if the
+// provider is "GitHub". Otherwise, it returns an error.
 func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
-	secretID, exists := s.Properties[GithubSecretIdKeyName]
+	// TODO type check if properties are GitHubProperties?
+	secretID, exists := s.Properties[manifest.GithubSecretIdKeyName]
 	if !exists {
 		return "", errors.New("the GitHub token secretID is not configured")
 	}
@@ -114,7 +110,7 @@ func (s *Source) GitHubPersonalAccessTokenSecretID() (string, error) {
 		return "", fmt.Errorf("unable to locate the GitHub token secretID from %v", secretID)
 	}
 
-	if s.ProviderName != GithubProviderName {
+	if s.ProviderName != manifest.GithubProviderName {
 		return "", fmt.Errorf("failed attempt to retrieve GitHub token from a non-GitHub provider")
 	}
 
@@ -127,7 +123,7 @@ type ownerAndRepo struct {
 }
 
 func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
-	if s.ProviderName != GithubProviderName {
+	if s.ProviderName != manifest.GithubProviderName {
 		return nil, fmt.Errorf("invalid provider: %s", s.ProviderName)
 	}
 	ownerAndRepoI, exists := s.Properties["repository"]
@@ -183,7 +179,7 @@ func (s *PipelineStage) AppTemplatePath(appName string) string {
 	return fmt.Sprintf(archer.AppCfnTemplateNameFormat, appName)
 }
 
-// AppTemplateConfigurationPath returns the full path to the application CFN 
+// AppTemplateConfigurationPath returns the full path to the application CFN
 // template configuration file built during the build stage.
 func (s *PipelineStage) AppTemplateConfigurationPath(appName string) string {
 	return fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat,

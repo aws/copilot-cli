@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -40,9 +41,12 @@ type InitPipelineOpts struct {
 	// Interfaces to interact with dependencies.
 	prompt         prompter
 	manifestWriter archer.ManifestIO
+	secretsmanager archer.SecretsManager
 
 	// Outputs stored on successful actions.
 	manifestPath string
+	secretArn    string
+	secretName   string
 
 	// Caches environments
 	projectEnvs []string
@@ -100,19 +104,20 @@ func (opts *InitPipelineOpts) Validate() error {
 	if len(opts.projectEnvs) == 0 {
 		return errNoEnvsInProject
 	}
-	// validate github repo format
 
 	return nil
 }
 
 // Execute writes the pipline manifest file.
 func (opts *InitPipelineOpts) Execute() error {
-
-	// TODO create secret for GitHub Token
-	// err := opts.createSecret()
-	// if err != nil {
-	// 	return err
-	// }
+	secretName := opts.createSecretName()
+	secretArn, err := opts.secretsmanager.CreateSecret(secretName, opts.GitHubAccessToken)
+	if err != nil {
+		return err
+	}
+	opts.secretArn = secretArn
+	opts.secretName = secretName
+	log.Successf("Created secret: %s for GitHub repo: %s'\n", color.HighlightResource(secretName), color.HighlightResource(opts.GitHubRepo))
 
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
@@ -125,6 +130,8 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.manifestPath = manifestPath
 
+	// TODO create buildspec file
+
 	log.Infoln()
 	log.Successf("Wrote the pipeline for %s app at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(opts.manifestPath))
 	log.Infoln("Your pipeline manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
@@ -135,9 +142,13 @@ func (opts *InitPipelineOpts) Execute() error {
 	return nil
 }
 
+func (opts *InitPipelineOpts) createSecretName() string {
+	repoName := opts.getRepoName()
+	return fmt.Sprintf("github-token-%s-%s", opts.projectName, repoName)
+}
+
 func (opts *InitPipelineOpts) createPipelineName() string {
 	repoName := opts.getRepoName()
-	fmt.Printf("repo name: %+v", repoName)
 	return fmt.Sprintf("pipeline-%s-%s", opts.projectName, repoName)
 }
 
@@ -159,8 +170,9 @@ func (opts *InitPipelineOpts) getRepoName() string {
 
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
-		OwnerAndRepository: opts.GitHubRepo,
-		Branch:             "master", // todo - fix
+		OwnerAndRepository:    opts.GitHubRepo,
+		Branch:                "master", // todo - fix
+		GithubSecretIdKeyName: opts.secretName,
 	}
 	return manifest.NewProvider(config)
 }
@@ -176,8 +188,6 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
-
-	fmt.Printf("MANIFEST: %+v", manifest.Source)
 
 	manifestBytes, err := manifest.Marshal()
 	if err != nil {
@@ -375,6 +385,12 @@ func BuildPipelineInitCmd() *cobra.Command {
 				return fmt.Errorf("workspace cannot be created: %w", err)
 			}
 			opts.manifestWriter = ws
+
+			secretsmanager, err := secretsmanager.NewStore()
+			if err != nil {
+				return fmt.Errorf("couldn't create secrets manager: %w", err)
+			}
+			opts.secretsmanager = secretsmanager
 
 			return opts.Validate()
 		},

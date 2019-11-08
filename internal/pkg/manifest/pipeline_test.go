@@ -20,7 +20,7 @@ func TestNewProvider(t *testing.T) {
 		"successfully create GitHub provider": {
 			providerConfig: &GitHubProperties{
 				OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-				Branch:     "master",
+				Branch:             "master",
 			},
 		},
 	}
@@ -52,7 +52,7 @@ func TestCreatePipeline(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
 					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:     "master",
+					Branch:             "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -64,7 +64,7 @@ func TestCreatePipeline(t *testing.T) {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
 					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-					Branch:     "master",
+					Branch:             "master",
 				})
 				require.NoError(t, err, "failed to create provider")
 				return p
@@ -111,17 +111,17 @@ source:
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
 stages:
-    - 
+    -
       # The name of the environment to deploy to.
       name: chicken
-    - 
+    -
       # The name of the environment to deploy to.
       name: wings
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
 		OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-		Branch:     "master",
+		Branch:             "master",
 	})
 	require.NoError(t, err)
 
@@ -151,7 +151,7 @@ source:
     branch: master
 
 stages:
-    - 
+    -
       name: test
     -
       name: prod
@@ -176,9 +176,9 @@ source:
     branch: master
 
 stages:
-    - 
+    -
       name: chicken
-    - 
+    -
       name: wings
 `,
 			expectedManifest: &PipelineManifest{
