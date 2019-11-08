@@ -16,15 +16,26 @@ func init() {
 	bindProjectName()
 }
 
-// globalOpts holds fields that are used across multiple commands.
-type globalOpts struct {
+// GlobalOpts holds fields that are used across multiple commands.
+type GlobalOpts struct {
 	projectName string
 }
 
-func newGlobalOpts() globalOpts {
-	return globalOpts{
+// NewGlobalOpts returns a GlobalOpts with the project name retrieved from viper.
+func NewGlobalOpts() *GlobalOpts {
+	return &GlobalOpts{
 		projectName: viper.GetString(projectFlag),
 	}
+}
+
+// ProjectName returns the project name.
+// If the name is empty, it caches it after querying viper.
+func (o *GlobalOpts) ProjectName() string {
+	if o.projectName != "" {
+		return o.projectName
+	}
+	o.projectName = viper.GetString(projectFlag)
+	return o.projectName
 }
 
 // actionCommand is the interface that every command that creates a resource implements.

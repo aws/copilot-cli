@@ -89,6 +89,7 @@ func NewInitOpts() (*InitOpts, error) {
 		prog:          spin,
 		prompt:        prompt,
 		identity:      id,
+		GlobalOpts:    NewGlobalOpts(),
 	}
 	return &InitOpts{
 		initProject: initProject,

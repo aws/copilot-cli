@@ -46,7 +46,7 @@ type PackageAppOpts struct {
 	fs           afero.Fs
 	prompt       prompter
 
-	globalOpts // Embed global options.
+	*GlobalOpts // Embed global options.
 }
 
 // NewPackageAppOpts returns a new PackageAppOpts where the image tag is set to "manual-{short git sha}".
@@ -60,7 +60,7 @@ func NewPackageAppOpts() *PackageAppOpts {
 			paramsWriter: ioutil.Discard,
 			fs:           &afero.Afero{Fs: afero.NewOsFs()},
 			prompt:       prompt.New(),
-			globalOpts:   newGlobalOpts(),
+			GlobalOpts:   NewGlobalOpts(),
 		}
 	}
 	return &PackageAppOpts{
@@ -69,7 +69,7 @@ func NewPackageAppOpts() *PackageAppOpts {
 		paramsWriter: ioutil.Discard,
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		prompt:       prompt.New(),
-		globalOpts:   newGlobalOpts(),
+		GlobalOpts:   NewGlobalOpts(),
 	}
 }
 
@@ -105,7 +105,7 @@ func (opts *PackageAppOpts) Ask() error {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (opts *PackageAppOpts) Validate() error {
-	if opts.projectName == "" {
+	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 	if opts.Tag == "" {
@@ -121,7 +121,7 @@ func (opts *PackageAppOpts) Validate() error {
 		}
 	}
 	if opts.EnvName != "" {
-		if _, err := opts.envStore.GetEnvironment(opts.projectName, opts.EnvName); err != nil {
+		if _, err := opts.envStore.GetEnvironment(opts.ProjectName(), opts.EnvName); err != nil {
 			return err
 		}
 	}
@@ -130,7 +130,7 @@ func (opts *PackageAppOpts) Validate() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (opts *PackageAppOpts) Execute() error {
-	env, err := opts.envStore.GetEnvironment(opts.projectName, opts.EnvName)
+	env, err := opts.envStore.GetEnvironment(opts.ProjectName(), opts.EnvName)
 	if err != nil {
 		return err
 	}
@@ -230,9 +230,9 @@ func contains(s string, items []string) bool {
 }
 
 func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
-	envs, err := opts.envStore.ListEnvironments(opts.projectName)
+	envs, err := opts.envStore.ListEnvironments(opts.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", opts.projectName, err)
+		return nil, fmt.Errorf("list environments for project %s: %w", opts.ProjectName(), err)
 	}
 	var names []string
 	for _, env := range envs {

@@ -30,7 +30,7 @@ import (
 // BuildAppDeployCommand builds the `app deploy` subcommand.
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
-		globalOpts: newGlobalOpts(),
+		GlobalOpts: NewGlobalOpts(),
 		prompt:     prompt.New(),
 		spinner:    termprogress.NewSpinner(),
 	}
@@ -72,7 +72,7 @@ func BuildAppDeployCommand() *cobra.Command {
 }
 
 type appDeployOpts struct {
-	globalOpts
+	*GlobalOpts
 	app      string
 	env      string
 	imageTag string
@@ -89,7 +89,7 @@ type appDeployOpts struct {
 }
 
 func (opts appDeployOpts) String() string {
-	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", opts.projectName, opts.app, opts.env, opts.imageTag)
+	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", opts.ProjectName(), opts.app, opts.env, opts.imageTag)
 }
 
 type projectService interface {
@@ -122,7 +122,7 @@ func (opts *appDeployOpts) init() error {
 }
 
 func (opts *appDeployOpts) sourceInputs() error {
-	if opts.projectName == "" {
+	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 
@@ -158,7 +158,7 @@ func (opts *appDeployOpts) sourceProjectData() error {
 }
 
 func (opts *appDeployOpts) sourceProjectApplications() error {
-	apps, err := opts.projectService.ListApplications(opts.projectName)
+	apps, err := opts.projectService.ListApplications(opts.ProjectName())
 
 	if err != nil {
 		return fmt.Errorf("get apps: %w", err)
@@ -175,7 +175,7 @@ func (opts *appDeployOpts) sourceProjectApplications() error {
 }
 
 func (opts *appDeployOpts) sourceProjectEnvironments() error {
-	envs, err := opts.projectService.ListEnvironments(opts.projectName)
+	envs, err := opts.projectService.ListEnvironments(opts.ProjectName())
 
 	if err != nil {
 		return fmt.Errorf("get environments: %w", err)
@@ -184,7 +184,7 @@ func (opts *appDeployOpts) sourceProjectEnvironments() error {
 	if len(envs) == 0 {
 		// TODO: recommend follow up command - env init?
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
-			color.HighlightUserInput(opts.projectName),
+			color.HighlightUserInput(opts.ProjectName()),
 			color.HighlightCode("archer env init"))
 
 		return errors.New("no environments found")
@@ -288,7 +288,7 @@ func (opts *appDeployOpts) sourceImageTag() error {
 func (opts appDeployOpts) deployApp() error {
 	// TODO: remove ECR repository creation
 	// Ideally this `getRepositoryURI` flow will not create an ECR repository, one will exist after the `app init` workflow.
-	uri, err := getRepositoryURI(opts.projectName, opts.app)
+	uri, err := getRepositoryURI(opts.ProjectName(), opts.app)
 	if err != nil {
 		return fmt.Errorf("get repository URI: %w", err)
 	}
@@ -356,7 +356,7 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 		paramsWriter: ioutil.Discard,
 		envStore:     opts.projectService,
 		ws:           opts.workspaceService,
-		globalOpts:   opts.globalOpts,
+		GlobalOpts:   opts.GlobalOpts,
 	}
 
 	if err := appPackage.Execute(); err != nil {

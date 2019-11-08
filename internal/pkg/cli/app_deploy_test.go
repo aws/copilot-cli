@@ -15,14 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
 
-func TestSourceInputs(t *testing.T) {
-	opts := appDeployOpts{}
-
-	got := opts.sourceInputs()
-
-	require.Equal(t, errNoProjectInWorkspace, got)
-}
-
 func TestSourceProjectApplications(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -68,7 +60,7 @@ func TestSourceProjectApplications(t *testing.T) {
 			tc.setupMocks()
 
 			opts := appDeployOpts{
-				globalOpts: globalOpts{
+				GlobalOpts: &GlobalOpts{
 					projectName: mockProjectName,
 				},
 				projectService: mockProjectService,
@@ -127,7 +119,7 @@ func TestSourceProjectEnvironments(t *testing.T) {
 			tc.setupMocks()
 
 			opts := appDeployOpts{
-				globalOpts: globalOpts{
+				GlobalOpts: &GlobalOpts{
 					projectName: mockProjectName,
 				},
 				projectService: mockProjectService,
