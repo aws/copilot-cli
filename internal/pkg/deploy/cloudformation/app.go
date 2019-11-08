@@ -49,7 +49,7 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 		StackName:     aws.String(stackName),
 		TemplateBody:  aws.String(template),
 		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
-		ChangeSetType: aws.String("UPDATE"),
+		ChangeSetType: aws.String(cloudformation.ChangeSetTypeUpdate),
 	})
 
 	if err != nil {
@@ -57,16 +57,28 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 		return fmt.Errorf("create change set: %w", err)
 	}
 
-	err = cf.client.WaitUntilChangeSetCreateComplete(&cloudformation.DescribeChangeSetInput{
+	describeChangeSetInput := &cloudformation.DescribeChangeSetInput{
 		ChangeSetName: aws.String(changeSetName),
 		StackName:     aws.String(stackName),
-	})
+	}
 
-	// NOTE: WaitUntilChangeSetCreateComplete just straight up fails if there are no changes to apply.
+	err = cf.client.WaitUntilChangeSetCreateComplete(describeChangeSetInput)
+
+	// NOTE: If WaitUntilChangeSetCreateComplete returns an error it's possible that there
+	// are simply no changes between the previous and proposed Stack ChangeSets. We make a call to
+	// DescribeChangeSet to see if that is indeed the case and handle it gracefully.
 	if err != nil {
-		// TODO: find a better way to handle no ChangeSet changes.
-		// Chances are here that there are no changes to apply, but it's janky to handle.
-		return fmt.Errorf("wait for change set create complete: %w", err)
+		out, describeChangeSetErr := cf.client.DescribeChangeSet(describeChangeSetInput)
+
+		if describeChangeSetErr != nil {
+			return fmt.Errorf("describe change set: %w", describeChangeSetErr)
+		}
+
+		if len(out.Changes) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("wait for change set create complete: %w", describeChangeSetErr)
 	}
 
 	_, err = cf.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{

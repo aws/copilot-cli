@@ -4,6 +4,8 @@
 package cloudformation
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -15,7 +17,7 @@ func TestDeployApp(t *testing.T) {
 	mockTemplate := "mockTemplate"
 	mockStackName := "mockStackName"
 	mockChangeSetName := "mockChangeSetName"
-	// mockError := errors.New("mockError")
+	mockError := errors.New("mockError")
 
 	testCases := map[string]struct {
 		mockCreateStack                      func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
@@ -24,6 +26,7 @@ func TestDeployApp(t *testing.T) {
 		mockWaitUntilChangeSetCreateComplete func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
 		mockExecuteChangeSet                 func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
 		mockWaitUntilStackUpdateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockDescribeChangeSet                func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
 
 		wantErr error
 	}{
@@ -62,7 +65,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockStackName, *in.StackName)
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
-				require.Equal(t, "UPDATE", *in.ChangeSetType)
+				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
@@ -90,6 +93,85 @@ func TestDeployApp(t *testing.T) {
 				return nil
 			},
 		},
+		"should describe stack to check for no changes scenario if WaitUntilChangeSetCreateComplete fails": {
+			mockCreateStack: func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockStackName, *in.StackName)
+				require.Equal(t, mockTemplate, *in.TemplateBody)
+				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+
+				return nil, awserr.New(cloudformation.ErrCodeAlreadyExistsException, "", nil)
+			},
+			mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+				require.Equal(t, mockTemplate, *in.TemplateBody)
+				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+
+				return &cloudformation.CreateChangeSetOutput{}, nil
+			},
+			mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+
+				return mockError
+			},
+			mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+
+				return &cloudformation.DescribeChangeSetOutput{
+					Changes: []*cloudformation.Change{},
+				}, nil
+			},
+		},
+		"should wrap DescribeChangeSet error if WaitUntilChangeSetCreateComplete fails": {
+			mockCreateStack: func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockStackName, *in.StackName)
+				require.Equal(t, mockTemplate, *in.TemplateBody)
+				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+
+				return nil, awserr.New(cloudformation.ErrCodeAlreadyExistsException, "", nil)
+			},
+			mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+				require.Equal(t, mockTemplate, *in.TemplateBody)
+				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+
+				return &cloudformation.CreateChangeSetOutput{}, nil
+			},
+			mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+
+				return mockError
+			},
+			mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
+				require.Equal(t, mockStackName, *in.StackName)
+
+				return nil, mockError
+			},
+			wantErr: fmt.Errorf("describe change set: %w", mockError),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -104,6 +186,7 @@ func TestDeployApp(t *testing.T) {
 					mockWaitUntilChangeSetCreateComplete: tc.mockWaitUntilChangeSetCreateComplete,
 					mockExecuteChangeSet:                 tc.mockExecuteChangeSet,
 					mockWaitUntilStackUpdateComplete:     tc.mockWaitUntilStackUpdateComplete,
+					mockDescribeChangeSet:                tc.mockDescribeChangeSet,
 				},
 			}
 
