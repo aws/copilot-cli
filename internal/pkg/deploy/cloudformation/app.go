@@ -64,14 +64,21 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 
 	err = cf.client.WaitUntilChangeSetCreateComplete(describeChangeSetInput)
 
+	// NOTE: If WaitUntilChangeSetCreateComplete returns an error it's possible that there
+	// are simply no changes between the previous and proposed Stack ChangeSets. We make a call to
+	// DescribeChangeSet to see if that is indeed the case and handle it gracefully.
 	if err != nil {
-		out, err := cf.client.DescribeChangeSet(describeChangeSetInput)
+		out, describeChangeSetErr := cf.client.DescribeChangeSet(describeChangeSetInput)
+
+		if describeChangeSetErr != nil {
+			return fmt.Errorf("describe change set: %w", describeChangeSetErr)
+		}
 
 		if len(out.Changes) == 0 {
 			return nil
 		}
 
-		return fmt.Errorf("wait for change set create complete: %w", err)
+		return fmt.Errorf("wait for change set create complete: %w", describeChangeSetErr)
 	}
 
 	_, err = cf.client.ExecuteChangeSet(&cloudformation.ExecuteChangeSetInput{
