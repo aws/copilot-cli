@@ -146,7 +146,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 	// We'll generate a new list of Accounts to add to our project
 	// infrastructure by appending the environment's account if it
 	// doesn't already exist.
-	appList := []string{}
+	var appList []string
 	shouldAddNewApp := true
 	for _, app := range previouslyDeployedConfig.Apps {
 		appList = append(appList, app)
@@ -190,7 +190,7 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 	// We'll generate a new list of Accounts to add to our project
 	// infrastructure by appending the environment's account if it
 	// doesn't already exist.
-	accountList := []string{}
+	var accountList []string
 	shouldAddNewAccountID := true
 	for _, accountID := range previouslyDeployedConfig.Accounts {
 		accountList = append(accountList, accountID)
