@@ -6,10 +6,11 @@
 // to that directory and managing manifest files (reading, writing and listing).
 // The typical workspace will be structured like:
 //  .
-//  ├── ecs-project           (manifest directory)
-//  │   ├── .ecs-workspace    (workspace summary)
-//  │   └── my-app.yml        (manifest)
-//  └── my-app                (customer application)
+//  ├── ecs-project                    (manifest directory)
+//  │   ├── .ecs-workspace             (workspace summary)
+//  │   ├── my-app.yml                 (application manifest)
+//  │   └── project-repo-pipeline.yml  (pipeline manifest)
+//  └── my-app                         (customer application)
 //
 package workspace
 
@@ -29,10 +30,11 @@ const (
 	// ManifestDirectoryName is the name of the directory where application manifests will be stored.
 	ManifestDirectoryName = "ecs-project"
 
-	workspaceSummaryFileName  = ".ecs-workspace"
-	maximumParentDirsToSearch = 5
-	manifestFileSuffix        = "-app.yml"
-	fmtManifestFileName       = "%s" + manifestFileSuffix
+	workspaceSummaryFileName   = ".ecs-workspace"
+	maximumParentDirsToSearch  = 5
+	appManifestFileSuffix      = "-app.yml"
+	pipelineManifestFileSuffix = "-pipeline.yml"
+	fmtManifestFileName        = "%s" + appManifestFileSuffix
 )
 
 // Workspace manages a local workspace, including creating and managing manifest files.
@@ -139,7 +141,7 @@ func (ws *Workspace) AppNames() ([]string, error) {
 		appFile := filepath.Base(manifest)
 		// TODO: #242 Extract the names of applications from app manifests
 		// instead of from file names.
-		appName := appFile[0 : len(appFile)-len(manifestFileSuffix)]
+		appName := appFile[0 : len(appFile)-len(appManifestFileSuffix)]
 		apps = append(apps, appName)
 	}
 	return apps, nil
@@ -194,7 +196,8 @@ func (ws *Workspace) manifestDirectoryPath() (string, error) {
 	}
 }
 
-// ListManifestFiles returns a list of all the local manifests filenames.
+// ListManifestFiles returns a list of all the local application manifest filenames.
+// TODO add pipeline manifest ls?
 func (ws *Workspace) ListManifestFiles() ([]string, error) {
 	manifestDir, err := ws.manifestDirectoryPath()
 	if err != nil {
@@ -207,7 +210,7 @@ func (ws *Workspace) ListManifestFiles() ([]string, error) {
 
 	var manifestFiles []string
 	for _, file := range manifestDirFiles {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), manifestFileSuffix) {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), appManifestFileSuffix) {
 			manifestFiles = append(manifestFiles, file.Name())
 		}
 	}
@@ -243,12 +246,12 @@ func (ws *Workspace) ReadManifestFile(manifestFile string) ([]byte, error) {
 
 // WriteManifest takes a manifest blob and writes it to the manifest directory.
 // If successful returns the path of the manifest file, otherwise returns an empty string and the error.
-func (ws *Workspace) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
+func (ws *Workspace) WriteManifest(manifestBlob []byte, filename string) (string, error) {
 	manifestPath, err := ws.manifestDirectoryPath()
 	if err != nil {
 		return "", err
 	}
-	p := filepath.Join(manifestPath, ws.ManifestFileName(applicationName))
+	p := filepath.Join(manifestPath, ws.ManifestFileName(filename))
 	if err := ws.fsUtils.WriteFile(p, manifestBlob, 0644); err != nil {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}

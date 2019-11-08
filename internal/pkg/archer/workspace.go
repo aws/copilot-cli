@@ -20,7 +20,7 @@ type Workspace interface {
 
 // ManifestIO can read, write and list local manifest files.
 type ManifestIO interface {
-	WriteManifest(manifestBlob []byte, applicationName string) (string, error)
+	WriteManifest(manifestBlob []byte, filename string) (string, error)
 	ReadManifestFile(manifestFileName string) ([]byte, error)
 	ListManifestFiles() ([]string, error)
 }
