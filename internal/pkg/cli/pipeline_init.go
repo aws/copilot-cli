@@ -41,12 +41,12 @@ type InitPipelineOpts struct {
 	// Caches environments
 	projectEnvs []string
 
-	globalOpts
+	*GlobalOpts
 }
 
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
-		globalOpts: newGlobalOpts(),
+		GlobalOpts: NewGlobalOpts(),
 		prompt:     prompt.New(),
 	}
 }
@@ -86,7 +86,7 @@ func (opts *InitPipelineOpts) Ask() error {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *InitPipelineOpts) Validate() error {
 	// TODO
-	if opts.projectName == "" {
+	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 
@@ -249,9 +249,9 @@ func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
 		return nil, fmt.Errorf("couldn't connect to environment datastore: %w", err)
 	}
 
-	envs, err := store.ListEnvironments(opts.projectName)
+	envs, err := store.ListEnvironments(opts.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("could not list environments for project %s: %w", opts.projectName, err)
+		return nil, fmt.Errorf("could not list environments for project %s: %w", opts.ProjectName(), err)
 	}
 
 	if len(envs) == 0 {

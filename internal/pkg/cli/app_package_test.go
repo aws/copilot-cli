@@ -169,11 +169,12 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			tc.expectPrompt(mockPrompt)
 
 			opts := &PackageAppOpts{
-				AppName:  tc.inAppName,
-				EnvName:  tc.inEnvName,
-				ws:       mockWorkspace,
-				envStore: mockEnvStore,
-				prompt:   mockPrompt,
+				AppName:    tc.inAppName,
+				EnvName:    tc.inEnvName,
+				ws:         mockWorkspace,
+				envStore:   mockEnvStore,
+				prompt:     mockPrompt,
+				GlobalOpts: &GlobalOpts{},
 			}
 
 			// WHEN
@@ -293,7 +294,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 				ws:       mockWorkspace,
 				envStore: mockEnvStore,
 
-				globalOpts: globalOpts{projectName: tc.inProjectName},
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -476,7 +477,7 @@ count: 1`), nil)
 				paramsWriter: paramsBuf,
 				fs:           mockFS,
 
-				globalOpts: globalOpts{projectName: tc.inProjectName},
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN

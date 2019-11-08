@@ -45,7 +45,7 @@ type InitEnvOpts struct {
 	prog   progress
 	prompt prompter
 
-	globalOpts // Embed global options.
+	*GlobalOpts // Embed global options.
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -71,7 +71,7 @@ func (opts *InitEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if opts.projectName == "" {
+	if opts.ProjectName() == "" {
 		return errors.New("no project found, run `project init` first please")
 	}
 	return nil
@@ -80,7 +80,7 @@ func (opts *InitEnvOpts) Validate() error {
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *InitEnvOpts) Execute() error {
 	// Ensure the project actually exists before we do a deployment.
-	if _, err := opts.projectGetter.GetProject(opts.projectName); err != nil {
+	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     opts.EnvName,
-		Project:                  opts.projectName,
+		Project:                  opts.ProjectName(),
 		Prod:                     opts.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.ARN,
@@ -104,7 +104,7 @@ func (opts *InitEnvOpts) Execute() error {
 			// Do nothing if the stack already exists.
 			opts.prog.Stop("")
 			log.Successf("Environment %s already exists under project %s! Do nothing.\n",
-				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.projectName))
+				color.HighlightUserInput(opts.EnvName), color.HighlightResource(opts.ProjectName()))
 			return nil
 		}
 		opts.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(opts.EnvName)))
@@ -185,7 +185,7 @@ func BuildEnvInitCmd() *cobra.Command {
 		EnvProfile: "default",
 		prog:       termprogress.NewSpinner(),
 		prompt:     prompt.New(),
-		globalOpts: newGlobalOpts(),
+		GlobalOpts: NewGlobalOpts(),
 	}
 
 	cmd := &cobra.Command{

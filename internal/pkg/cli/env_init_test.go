@@ -55,7 +55,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			addEnv := &InitEnvOpts{
 				EnvName:    tc.inputEnv,
 				prompt:     mockPrompter,
-				globalOpts: globalOpts{projectName: tc.inputProject},
+				GlobalOpts: &GlobalOpts{projectName: tc.inputProject},
 			}
 			tc.setupMocks()
 
@@ -99,7 +99,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &InitEnvOpts{
 				EnvName:    tc.inEnvName,
-				globalOpts: globalOpts{projectName: tc.inProjectName},
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -352,7 +352,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				envDeployer:   mockEnvDeployer,
 				identity:      mockIdentity,
 				prog:          mockProgress,
-				globalOpts:    globalOpts{projectName: tc.inProjectName},
+				GlobalOpts:    &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
