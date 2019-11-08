@@ -83,6 +83,8 @@ func (s *Spinner) Stop(label string) {
 		fmt.Fprintf(s.eventsWriter, "%s\n", event)
 	}
 	s.eventsWriter.Flush()
+	// Reset event entries once the spinner stops.
+	s.pastEvents = nil
 }
 
 // Events writes additional information below the spinner while the spinner is still in progress.

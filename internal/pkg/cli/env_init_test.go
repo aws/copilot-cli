@@ -122,7 +122,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 		expectProjectGetter func(m *mocks.MockProjectGetter)
 		expectEnvCreator    func(m *mocks.MockEnvironmentCreator)
-		expectEnvDeployer   func(m *climocks.MockenvironmentDeployer)
+		expectDeployer      func(m *climocks.Mockdeployer)
 		expectIdentity      func(m *climocks.MockidentityService)
 		expectProgress      func(m *climocks.Mockprogress)
 
@@ -164,7 +164,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop("")
 			},
-			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
+			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
 					Name:                     "test",
 					Project:                  "phonetool",
@@ -187,7 +187,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop(log.Serrorf(fmtDeployEnvFailed, "test"))
 			},
-			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
+			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(errors.New("some deploy error"))
 			},
 			wantedErrorS: "some deploy error",
@@ -218,7 +218,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				})
 				m.EXPECT().Stop(log.Serrorf(fmtStreamEnvFailed, "test"))
 			},
-			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
+			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
@@ -241,6 +241,47 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "some stream error",
 		},
+		"failed to create stack set instance": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+
+			expectProjectGetter: func(m *mocks.MockProjectGetter) {
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToProjectFailed, "1234", "mars-1", "phonetool"))
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
+				events := make(chan []deploy.ResourceEvent, 1)
+				responses := make(chan deploy.CreateEnvironmentResponse, 1)
+				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
+				env := &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
+				}
+				responses <- deploy.CreateEnvironmentResponse{
+					Env: env,
+					Err: nil,
+				}
+				close(events)
+				close(responses)
+				m.EXPECT().AddEnvToProject(&archer.Project{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
+			},
+			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
+				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
+			},
+			wantedErrorS: "deploy env test to project phonetool: some cfn error",
+		},
 		"returns error from CreateEnvironment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
@@ -255,26 +296,33 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
+			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				responses <- deploy.CreateEnvironmentResponse{
 					Env: &archer.Environment{
-						Project: "phonetool",
-						Name:    "test",
+						Project:   "phonetool",
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "mars-1",
 					},
 					Err: nil,
 				}
 				close(events)
 				close(responses)
+				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project: "phonetool",
-					Name:    "test",
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
 				}).Return(errors.New("some create error"))
 			},
 			wantedErrorS: "store environment: some create error",
@@ -293,26 +341,33 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectEnvDeployer: func(m *climocks.MockenvironmentDeployer) {
+			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				responses <- deploy.CreateEnvironmentResponse{
 					Env: &archer.Environment{
-						Project: "phonetool",
-						Name:    "test",
+						Project:   "phonetool",
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "mars-1",
 					},
 					Err: nil,
 				}
 				close(events)
 				close(responses)
+				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project: "phonetool",
-					Name:    "test",
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
 				}).Return(nil)
 			},
 		},
@@ -326,7 +381,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			mockProjectGetter := mocks.NewMockProjectGetter(ctrl)
 			mockEnvCreator := mocks.NewMockEnvironmentCreator(ctrl)
-			mockEnvDeployer := climocks.NewMockenvironmentDeployer(ctrl)
+			mockDeployer := climocks.NewMockdeployer(ctrl)
 			mockIdentity := climocks.NewMockidentityService(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)
 			if tc.expectProjectGetter != nil {
@@ -335,8 +390,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			if tc.expectEnvCreator != nil {
 				tc.expectEnvCreator(mockEnvCreator)
 			}
-			if tc.expectEnvDeployer != nil {
-				tc.expectEnvDeployer(mockEnvDeployer)
+			if tc.expectDeployer != nil {
+				tc.expectDeployer(mockDeployer)
 			}
 			if tc.expectIdentity != nil {
 				tc.expectIdentity(mockIdentity)
@@ -349,7 +404,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				EnvName:       tc.inEnvName,
 				projectGetter: mockProjectGetter,
 				envCreator:    mockEnvCreator,
-				envDeployer:   mockEnvDeployer,
+				deployer:      mockDeployer,
 				identity:      mockIdentity,
 				prog:          mockProgress,
 				GlobalOpts:    &GlobalOpts{projectName: tc.inProjectName},

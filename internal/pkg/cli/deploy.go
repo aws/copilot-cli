@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 )
 
@@ -14,4 +15,11 @@ type environmentDeployer interface {
 
 type projectDeployer interface {
 	DeployProject(in *deploy.CreateProjectInput) error
+	AddAppToProject(project *archer.Project, app *archer.Application) error
+	AddEnvToProject(project *archer.Project, env *archer.Environment) error
+}
+
+type deployer interface {
+	environmentDeployer
+	projectDeployer
 }

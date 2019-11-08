@@ -85,7 +85,7 @@ func NewInitOpts() (*InitOpts, error) {
 		IsProduction:  false,
 		envCreator:    ssm,
 		projectGetter: ssm,
-		envDeployer:   deployer,
+		deployer:      deployer,
 		prog:          spin,
 		prompt:        prompt,
 		identity:      id,

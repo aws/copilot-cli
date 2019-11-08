@@ -22,11 +22,14 @@ import (
 )
 
 const (
-	fmtDeployEnvStart    = "Proposing infrastructure changes for the %s environment."
-	fmtDeployEnvFailed   = "Failed to accept changes for the %s environment."
-	fmtStreamEnvStart    = "Creating the infrastructure for the %s environment."
-	fmtStreamEnvFailed   = "Failed to create the infrastructure for the %s environment."
-	fmtStreamEnvComplete = "Created the infrastructure for the %s environment."
+	fmtDeployEnvStart          = "Proposing infrastructure changes for the %s environment."
+	fmtDeployEnvFailed         = "Failed to accept changes for the %s environment."
+	fmtStreamEnvStart          = "Creating the infrastructure for the %s environment."
+	fmtStreamEnvFailed         = "Failed to create the infrastructure for the %s environment."
+	fmtStreamEnvComplete       = "Created the infrastructure for the %s environment."
+	fmtAddEnvToProjectStart    = "Linking account %s and region %s to project %s."
+	fmtAddEnvToProjectFailed   = "Failed to link account %s and region %s to project %s."
+	fmtAddEnvToProjectComplete = "Linked account %s and region %s project %s."
 )
 
 // InitEnvOpts contains the fields to collect for adding an environment.
@@ -39,7 +42,7 @@ type InitEnvOpts struct {
 	// Interfaces to interact with dependencies.
 	projectGetter archer.ProjectGetter
 	envCreator    archer.EnvironmentCreator
-	envDeployer   environmentDeployer
+	deployer      deployer
 	identity      identityService
 
 	prog   progress
@@ -79,16 +82,17 @@ func (opts *InitEnvOpts) Validate() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (opts *InitEnvOpts) Execute() error {
-	// Ensure the project actually exists before we do a deployment.
-	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
+	project, err := opts.projectGetter.GetProject(opts.ProjectName())
+	if err != nil {
+		// Ensure the project actually exists before we do a deployment.
 		return err
 	}
-
 	caller, err := opts.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
+	// 1. Start creating the CloudFormation stack for the environment.
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     opts.EnvName,
 		Project:                  opts.ProjectName(),
@@ -96,9 +100,8 @@ func (opts *InitEnvOpts) Execute() error {
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.ARN,
 	}
-
 	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
-	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
+	if err := opts.deployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -110,8 +113,10 @@ func (opts *InitEnvOpts) Execute() error {
 		opts.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(opts.EnvName)))
 		return err
 	}
+
+	// 2. Display updates while the deployment is happening.
 	opts.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(opts.EnvName)))
-	stackEvents, responses := opts.envDeployer.StreamEnvironmentCreation(deployEnvInput)
+	stackEvents, responses := opts.deployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		opts.prog.Events(opts.humanizeEnvironmentEvents(stackEvent))
 	}
@@ -121,6 +126,16 @@ func (opts *InitEnvOpts) Execute() error {
 		return resp.Err
 	}
 	opts.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(opts.EnvName)))
+
+	// 3. Add the stack set instance to the project stackset.
+	opts.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
+	if err := opts.deployer.AddEnvToProject(project, resp.Env); err != nil {
+		opts.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
+		return fmt.Errorf("deploy env %s to project %s: %w", resp.Env.Name, project.Name, err)
+	}
+	opts.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
+
+	// 4. Store the environment in SSM.
 	if err := opts.envCreator.CreateEnvironment(resp.Env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
@@ -215,7 +230,7 @@ func BuildEnvInitCmd() *cobra.Command {
 			}
 			opts.envCreator = store
 			opts.projectGetter = store
-			opts.envDeployer = cloudformation.New(profileSess)
+			opts.deployer = cloudformation.New(profileSess)
 			opts.identity = identity.New(defaultSession)
 			return nil
 		},

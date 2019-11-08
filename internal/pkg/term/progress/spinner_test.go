@@ -108,6 +108,7 @@ func TestSpinner_Stop(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.wantedSEvents, tc.eventsBuf.String())
+			require.Nil(t, s.pastEvents)
 		})
 	}
 }
