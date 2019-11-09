@@ -424,7 +424,7 @@ type: Load Balanced Web App`), nil)
 
 			wantedErr: &store.ErrNoSuchProject{ProjectName: "phonetool"},
 		},
-		"error while getting regional resources from deployer": {
+		"error while getting regional resources from describer": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 			inAppName:     "frontend",
@@ -604,7 +604,7 @@ count: 1`), nil)
 
 				store:        mockStore,
 				ws:           mockWorkspace,
-				deployer:     mockDeployer,
+				describer:    mockDeployer,
 				stackWriter:  templateBuf,
 				paramsWriter: paramsBuf,
 				fs:           mockFS,

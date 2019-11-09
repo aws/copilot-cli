@@ -43,7 +43,7 @@ type PackageAppOpts struct {
 	// Interfaces to interact with dependencies.
 	ws           archer.Workspace
 	store        projectService
-	deployer     projectResourcesGetter
+	describer    projectResourcesGetter
 	stackWriter  io.Writer
 	paramsWriter io.Writer
 	fs           afero.Fs
@@ -186,7 +186,7 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 	if err != nil {
 		return nil, err
 	}
-	resources, err := opts.deployer.GetProjectResourcesByRegion(proj, env.Region)
+	resources, err := opts.describer.GetProjectResourcesByRegion(proj, env.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func BuildAppPackageCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("error retrieving default session: %w", err)
 			}
-			opts.deployer = cloudformation.New(sess)
+			opts.describer = cloudformation.New(sess)
 			return opts.Validate()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

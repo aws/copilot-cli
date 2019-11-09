@@ -353,7 +353,7 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 		stackWriter:  buffer,
 		paramsWriter: ioutil.Discard,
 		store:        opts.projectService,
-		deployer:     cloudformation.New(sess),
+		describer:    cloudformation.New(sess),
 		ws:           opts.workspaceService,
 		GlobalOpts:   opts.GlobalOpts,
 	}
