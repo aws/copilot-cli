@@ -174,6 +174,7 @@ func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error
 		Branch:                "master", // todo - fix
 		GithubSecretIdKeyName: opts.secretName,
 	}
+
 	return manifest.NewProvider(config)
 }
 
@@ -245,6 +246,7 @@ func (opts *InitPipelineOpts) envCanBeAdded(selectedEnv string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 

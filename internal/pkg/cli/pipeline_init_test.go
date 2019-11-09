@@ -116,7 +116,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			opts := &InitPipelineOpts{
 				projectEnvs: tc.inProjectEnvs,
 
-				globalOpts: globalOpts{projectName: tc.inProjectName},
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -155,13 +155,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
 			opts := &InitPipelineOpts{
 				projectEnvs: tc.inProjectEnvs,
 
-				globalOpts: globalOpts{projectName: tc.inProjectName},
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -173,6 +170,98 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 			}
+		})
+	}
+}
+
+// Tests for helpers
+func TestInitPipelineOpts_getRepoName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo string
+		expected     string
+	}{
+		"matches repo name": {
+			inGitHubRepo: "https://github.com/bad/goose",
+			expected:     "goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+			}
+
+			// WHEN
+			actual := opts.getRepoName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestInitPipelineOpts_createSecretName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo  string
+		inProjectName string
+
+		expected string
+	}{
+		"matches repo name": {
+			inGitHubRepo:  "https://github.com/bad/goose",
+			inProjectName: "badgoose",
+
+			expected: "github-token-badgoose-goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			actual := opts.createSecretName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestInitPipelineOpts_createPipelineName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo  string
+		inProjectName string
+
+		expected string
+	}{
+		"matches repo name": {
+			inGitHubRepo:  "https://github.com/bad/goose",
+			inProjectName: "badgoose",
+
+			expected: "pipeline-badgoose-goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			actual := opts.createPipelineName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }
