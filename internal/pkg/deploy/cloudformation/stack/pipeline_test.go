@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudformation
+package stack
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ func TestPipelineStackName(t *testing.T) {
 }
 
 func TestPipelineTemplateRendering(t *testing.T) {
-	expectedTemplate, err := ioutil.ReadFile("./testdata/rendered_pipeline_cfn_template.yml")
+	expectedTemplate, err := ioutil.ReadFile("../testdata/rendered_pipeline_cfn_template.yml")
 	require.NoError(t, err, "expected template can not be read")
 
 	pipeline := newPipelineStackConfig(
