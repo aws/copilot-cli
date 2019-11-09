@@ -265,8 +265,8 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-
-
+        
+        
         # test is the same as the name of the environment
         # this pipeline stage deploys to
         - Name: DeployTo-chickenProject-test

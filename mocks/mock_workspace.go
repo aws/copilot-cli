@@ -34,18 +34,18 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // WriteManifest mocks base method
-func (m *MockWorkspace) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
+func (m *MockWorkspace) WriteManifest(manifestBlob []byte, filename string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, applicationName)
+	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, filename)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WriteManifest indicates an expected call of WriteManifest
-func (mr *MockWorkspaceMockRecorder) WriteManifest(manifestBlob, applicationName interface{}) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) WriteManifest(manifestBlob, filename interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteManifest", reflect.TypeOf((*MockWorkspace)(nil).WriteManifest), manifestBlob, applicationName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteManifest", reflect.TypeOf((*MockWorkspace)(nil).WriteManifest), manifestBlob, filename)
 }
 
 // ReadManifestFile mocks base method
@@ -160,18 +160,18 @@ func (m *MockManifestIO) EXPECT() *MockManifestIOMockRecorder {
 }
 
 // WriteManifest mocks base method
-func (m *MockManifestIO) WriteManifest(manifestBlob []byte, applicationName string) (string, error) {
+func (m *MockManifestIO) WriteManifest(manifestBlob []byte, filename string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, applicationName)
+	ret := m.ctrl.Call(m, "WriteManifest", manifestBlob, filename)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WriteManifest indicates an expected call of WriteManifest
-func (mr *MockManifestIOMockRecorder) WriteManifest(manifestBlob, applicationName interface{}) *gomock.Call {
+func (mr *MockManifestIOMockRecorder) WriteManifest(manifestBlob, filename interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteManifest", reflect.TypeOf((*MockManifestIO)(nil).WriteManifest), manifestBlob, applicationName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteManifest", reflect.TypeOf((*MockManifestIO)(nil).WriteManifest), manifestBlob, filename)
 }
 
 // ReadManifestFile mocks base method
