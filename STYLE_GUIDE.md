@@ -98,11 +98,11 @@ The gradients in order of lowest to highest emphasis are: _plain_, _bright_, _bo
 ![gradient](https://user-images.githubusercontent.com/879348/65549210-ef8c6f00-ded1-11e9-865d-b30ef7b94223.png) 
 
 Common categorical data are debug, info, warning, success, failure messages. 
-We respectively use _white_, _bright white (default)_, _bright yellow_, _bright green_ and _bright red_ for these messages.  
-For highlighting user input, use _bright cyan_.  
-For highlighting created resources, use _bold underlined white bright_.  
-For highlighting follow-up commands, use _bright magenta_.  
-![colors](https://user-images.githubusercontent.com/879348/65549416-5578f680-ded2-11e9-8d0f-21e0737f43ef.png)
+We respectively use _white_, default, _yellow_, _bright green_ and _bright red_ for these messages.  
+For highlighting user input, use _cyan_.  
+For highlighting created resources, use _bold underlined_.  
+For highlighting follow-up commands, use _magenta_.  
+![colors](https://user-images.githubusercontent.com/879348/68536239-80919b00-0304-11ea-9393-d6f0ff1f6d68.png)
 
 ### Data
 Commands that perform “read” operations should write their results to `stdout`. 
