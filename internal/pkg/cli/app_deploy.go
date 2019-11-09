@@ -341,6 +341,10 @@ func (opts appDeployOpts) deployApp() error {
 
 func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	buffer := &bytes.Buffer{}
+	sess, err := session.Default()
+	if err != nil {
+		return "", fmt.Errorf("create default session: %w", err)
+	}
 
 	appPackage := PackageAppOpts{
 		AppName:      opts.app,
@@ -348,7 +352,8 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 		Tag:          opts.imageTag,
 		stackWriter:  buffer,
 		paramsWriter: ioutil.Discard,
-		envStore:     opts.projectService,
+		store:        opts.projectService,
+		deployer:     cloudformation.New(sess),
 		ws:           opts.workspaceService,
 		GlobalOpts:   opts.GlobalOpts,
 	}

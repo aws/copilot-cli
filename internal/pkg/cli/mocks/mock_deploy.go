@@ -128,6 +128,59 @@ func (mr *MockprojectDeployerMockRecorder) AddEnvToProject(project, env interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEnvToProject", reflect.TypeOf((*MockprojectDeployer)(nil).AddEnvToProject), project, env)
 }
 
+// MockprojectResourcesGetter is a mock of projectResourcesGetter interface
+type MockprojectResourcesGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockprojectResourcesGetterMockRecorder
+}
+
+// MockprojectResourcesGetterMockRecorder is the mock recorder for MockprojectResourcesGetter
+type MockprojectResourcesGetterMockRecorder struct {
+	mock *MockprojectResourcesGetter
+}
+
+// NewMockprojectResourcesGetter creates a new mock instance
+func NewMockprojectResourcesGetter(ctrl *gomock.Controller) *MockprojectResourcesGetter {
+	mock := &MockprojectResourcesGetter{ctrl: ctrl}
+	mock.recorder = &MockprojectResourcesGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockprojectResourcesGetter) EXPECT() *MockprojectResourcesGetterMockRecorder {
+	return m.recorder
+}
+
+// GetProjectResourcesByRegion mocks base method
+func (m *MockprojectResourcesGetter) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectResourcesByRegion", project, region)
+	ret0, _ := ret[0].(*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectResourcesByRegion indicates an expected call of GetProjectResourcesByRegion
+func (mr *MockprojectResourcesGetterMockRecorder) GetProjectResourcesByRegion(project, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectResourcesByRegion", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetProjectResourcesByRegion), project, region)
+}
+
+// GetRegionalProjectResources mocks base method
+func (m *MockprojectResourcesGetter) GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegionalProjectResources", project)
+	ret0, _ := ret[0].([]*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegionalProjectResources indicates an expected call of GetRegionalProjectResources
+func (mr *MockprojectResourcesGetterMockRecorder) GetRegionalProjectResources(project interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetRegionalProjectResources), project)
+}
+
 // Mockdeployer is a mock of deployer interface
 type Mockdeployer struct {
 	ctrl     *gomock.Controller

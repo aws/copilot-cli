@@ -14,7 +14,9 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
@@ -40,7 +42,8 @@ type PackageAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	ws           archer.Workspace
-	envStore     archer.EnvironmentStore
+	store        projectService
+	deployer     projectResourcesGetter
 	stackWriter  io.Writer
 	paramsWriter io.Writer
 	fs           afero.Fs
@@ -94,6 +97,9 @@ func (opts *PackageAppOpts) Ask() error {
 		if err != nil {
 			return err
 		}
+		if len(names) == 0 {
+			return fmt.Errorf("there are no environments in project %s", opts.ProjectName())
+		}
 		env, err := opts.prompt.SelectOne(appPackageEnvNamePrompt, "", names)
 		if err != nil {
 			return fmt.Errorf("prompt environment name: %w", err)
@@ -121,7 +127,7 @@ func (opts *PackageAppOpts) Validate() error {
 		}
 	}
 	if opts.EnvName != "" {
-		if _, err := opts.envStore.GetEnvironment(opts.ProjectName(), opts.EnvName); err != nil {
+		if _, err := opts.store.GetEnvironment(opts.ProjectName(), opts.EnvName); err != nil {
 			return err
 		}
 	}
@@ -130,7 +136,7 @@ func (opts *PackageAppOpts) Validate() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (opts *PackageAppOpts) Execute() error {
-	env, err := opts.envStore.GetEnvironment(opts.ProjectName(), opts.EnvName)
+	env, err := opts.store.GetEnvironment(opts.ProjectName(), opts.EnvName)
 	if err != nil {
 		return err
 	}
@@ -175,12 +181,31 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 	if err != nil {
 		return nil, err
 	}
+
+	proj, err := opts.store.GetProject(opts.ProjectName())
+	if err != nil {
+		return nil, err
+	}
+	resources, err := opts.deployer.GetProjectResourcesByRegion(proj, env.Region)
+	if err != nil {
+		return nil, err
+	}
+
+	repoURL, ok := resources.RepositoryURLs[opts.AppName]
+	if !ok {
+		return nil, &errRepoNotFound{
+			appName:       opts.AppName,
+			envRegion:     env.Region,
+			projAccountID: proj.AccountID,
+		}
+	}
+
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
 		appStack := stack.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
 			App:          mft.(*manifest.LBFargateManifest),
 			Env:          env,
-			ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/test/frontend", // TODO dummy link, need to fetch the repository from the project.
+			ImageRepoURL: repoURL,
 			ImageTag:     opts.Tag,
 		})
 		tpl, err := appStack.Template()
@@ -231,7 +256,7 @@ func contains(s string, items []string) bool {
 }
 
 func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
-	envs, err := opts.envStore.ListEnvironments(opts.ProjectName())
+	envs, err := opts.store.ListEnvironments(opts.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", opts.ProjectName(), err)
 	}
@@ -240,6 +265,26 @@ func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
 		names = append(names, env.Name)
 	}
 	return names, nil
+}
+
+type errRepoNotFound struct {
+	appName       string
+	envRegion     string
+	projAccountID string
+}
+
+func (e *errRepoNotFound) Error() string {
+	return fmt.Sprintf("ECR repository not found for application %s in region %s and account %s", e.appName, e.envRegion, e.projAccountID)
+}
+
+func (e *errRepoNotFound) Is(target error) bool {
+	t, ok := target.(*errRepoNotFound)
+	if !ok {
+		return false
+	}
+	return e.appName == t.appName &&
+		e.envRegion == t.envRegion &&
+		e.projAccountID == t.projAccountID
 }
 
 // BuildAppPackageCmd builds the command for printing an application's CloudFormation template.
@@ -268,7 +313,13 @@ func BuildAppPackageCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("couldn't connect to application datastore: %w", err)
 			}
-			opts.envStore = store
+			opts.store = store
+
+			sess, err := session.Default()
+			if err != nil {
+				return fmt.Errorf("error retrieving default session: %w", err)
+			}
+			opts.deployer = cloudformation.New(sess)
 			return opts.Validate()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
