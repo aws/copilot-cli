@@ -42,7 +42,8 @@ type InitEnvOpts struct {
 	// Interfaces to interact with dependencies.
 	projectGetter archer.ProjectGetter
 	envCreator    archer.EnvironmentCreator
-	deployer      deployer
+	envDeployer   deployer
+	projDeployer  deployer
 	identity      identityService
 
 	prog   progress
@@ -101,7 +102,7 @@ func (opts *InitEnvOpts) Execute() error {
 		ToolsAccountPrincipalARN: caller.ARN,
 	}
 	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
-	if err := opts.deployer.DeployEnvironment(deployEnvInput); err != nil {
+	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -116,7 +117,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	// 2. Display updates while the deployment is happening.
 	opts.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(opts.EnvName)))
-	stackEvents, responses := opts.deployer.StreamEnvironmentCreation(deployEnvInput)
+	stackEvents, responses := opts.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		opts.prog.Events(opts.humanizeEnvironmentEvents(stackEvent))
 	}
@@ -129,7 +130,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	// 3. Add the stack set instance to the project stackset.
 	opts.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
-	if err := opts.deployer.AddEnvToProject(project, resp.Env); err != nil {
+	if err := opts.projDeployer.AddEnvToProject(project, resp.Env); err != nil {
 		opts.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
 		return fmt.Errorf("deploy env %s to project %s: %w", resp.Env.Name, project.Name, err)
 	}
@@ -230,7 +231,8 @@ func BuildEnvInitCmd() *cobra.Command {
 			}
 			opts.envCreator = store
 			opts.projectGetter = store
-			opts.deployer = cloudformation.New(profileSess)
+			opts.envDeployer = cloudformation.New(profileSess)
+			opts.projDeployer = cloudformation.New(defaultSession)
 			opts.identity = identity.New(defaultSession)
 			return nil
 		},
