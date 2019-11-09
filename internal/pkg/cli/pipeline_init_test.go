@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -134,29 +135,56 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectEnvs []string
-		inProjectName string
+		inEnvironments []string
+		inGitHubToken  string
+		inGitHubRepo   string
+		inProjectName  string
 
-		expectedError error
+		mockSecretsManager func(m *archerMocks.MockSecretsManager)
+		mockManifestWriter func(m *archerMocks.MockManifestIO)
+
+		expectedSecretName string
+		expectedError      error
 	}{
-		"errors if no environments initialized": {
-			inProjectEnvs: []string{},
-			inProjectName: "badgoose",
+		"creates secret and writes manifest": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "https://github.com/badgoose/goose",
+			inProjectName:  "badgoose",
 
-			expectedError: errNoEnvsInProject,
+			mockSecretsManager: func(m *archerMocks.MockSecretsManager) {
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
+			},
+			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "pipeline-badgoose-goose").Return("pipeline-badgoose-goose", nil)
+			},
+
+			expectedSecretName: "github-token-badgoose-goose",
+			expectedError:      nil,
 		},
 
-		"invalid project name": {
-			inProjectName: "",
-			expectedError: errNoProjectInWorkspace,
-		},
+		// error if no envs
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSecretsManager := archerMocks.NewMockSecretsManager(ctrl)
+			mockWriter := archerMocks.NewMockManifestIO(ctrl)
+
+			tc.mockSecretsManager(mockSecretsManager)
+			tc.mockManifestWriter(mockWriter)
+
 			opts := &InitPipelineOpts{
-				projectEnvs: tc.inProjectEnvs,
+				Environments:      tc.inEnvironments,
+				GitHubRepo:        tc.inGitHubRepo,
+				GitHubAccessToken: tc.inGitHubToken,
+
+				secretsmanager: mockSecretsManager,
+				manifestWriter: mockWriter,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -169,6 +197,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.Equal(t, tc.expectedError, err)
 			} else {
 				require.Nil(t, err)
+				require.Equal(t, tc.expectedSecretName, opts.secretName)
 			}
 		})
 	}

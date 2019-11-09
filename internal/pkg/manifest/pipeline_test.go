@@ -122,9 +122,9 @@ stages:
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
-		OwnerAndRepository: "aws/amazon-ecs-cli-v2",
-		access_token_secret: "github-token-badgoose-backend",
-		Branch:             "master",
+		OwnerAndRepository:    "aws/amazon-ecs-cli-v2",
+		GithubSecretIdKeyName: "github-token-badgoose-backend",
+		Branch:                "master",
 	})
 	require.NoError(t, err)
 
@@ -192,8 +192,8 @@ stages:
 					ProviderName: "GitHub",
 					Properties: map[string]interface{}{
 						"access_token_secret": "github-token-badgoose-backend",
-						"repository": "aws/somethingCool",
-						"branch":     "master",
+						"repository":          "aws/somethingCool",
+						"branch":              "master",
 					},
 				},
 				Stages: []PipelineStage{
