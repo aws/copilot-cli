@@ -76,7 +76,7 @@ func TestCreatePipeline(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages...)
+			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
@@ -105,6 +105,7 @@ source:
   # the artifacts should be sourced from. For example, the GitHub provider
   # has the following properties: repository, branch.
   properties:
+    access_token_secret: github-token-badgoose-backend
     branch: master
     repository: aws/amazon-ecs-cli-v2
 
@@ -117,15 +118,17 @@ stages:
     -
       # The name of the environment to deploy to.
       name: wings
+
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
 		OwnerAndRepository: "aws/amazon-ecs-cli-v2",
+		access_token_secret: "github-token-badgoose-backend",
 		Branch:             "master",
 	})
 	require.NoError(t, err)
 
-	m, err := CreatePipeline(pipelineName, provider, "chicken", "wings")
+	m, err := CreatePipeline(pipelineName, provider, []string{"chicken", "wings"})
 	require.NoError(t, err)
 
 	b, err := m.Marshal()
@@ -173,6 +176,7 @@ source:
   provider: GitHub
   properties:
     repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
     branch: master
 
 stages:
@@ -187,6 +191,7 @@ stages:
 				Source: &Source{
 					ProviderName: "GitHub",
 					Properties: map[string]interface{}{
+						"access_token_secret": "github-token-badgoose-backend",
 						"repository": "aws/somethingCool",
 						"branch":     "master",
 					},

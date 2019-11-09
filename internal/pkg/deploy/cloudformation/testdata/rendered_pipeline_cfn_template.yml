@@ -9,8 +9,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: CodePipeline for the chickenProject
 Parameters:
   # TODO: #273 make this source-provider-agnostic
-  GitHubOAuthSecretId:
-    Description: The secretId of the GitHub OAuth token stored in the Secrets Manager
+  GitHubAccessTokenSecretId:
+    Description: The secretId of the GitHub Personal Access token stored in the Secrets Manager
     Type: String
     Default: testGitHubSecret
 Resources:
@@ -244,7 +244,7 @@ Resources:
                 # Use the *entire* SecretString with version AWSCURRENT
                 OAuthToken: !Sub
                     - '{{resolve:secretsmanager:${SecretId}}}'
-                    - { SecretId: !Ref GitHubOAuthSecretId }
+                    - { SecretId: !Ref GitHubAccessTokenSecretId }
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
@@ -265,8 +265,8 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        
-        
+
+
         # test is the same as the name of the environment
         # this pipeline stage deploys to
         - Name: DeployTo-chickenProject-test
