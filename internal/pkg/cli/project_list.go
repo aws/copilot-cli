@@ -40,7 +40,7 @@ func BuildProjectListCommand() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all projects in your account",
+		Short: "Lists all projects in your account.",
 		Example: `
   List all the projects in your account and region
   /code $ archer project ls`,

@@ -13,8 +13,8 @@ import (
 func BuildPipelineCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
-		Short: "Pipeline commands",
-		Long: `Command for working with pipelines.`,
+		Short: "Pipeline commands.",
+		Long:  `Command for working with pipelines.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			bindProjectName()
 		},
@@ -29,4 +29,3 @@ func BuildPipelineCmd() *cobra.Command {
 
 	return cmd
 }
-

@@ -281,9 +281,9 @@ func BuildAppPackageCmd() *cobra.Command {
 		},
 	}
 	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
-	cmd.Flags().StringVarP(&opts.AppName, "name", "n", opts.AppName, "Name of the application.")
-	cmd.Flags().StringVarP(&opts.EnvName, "env", "e", opts.EnvName, "Name of the environment.")
-	cmd.Flags().StringVar(&opts.Tag, "tag", opts.Tag, `Optional. The application's image tag. Defaults to your latest git commit's hash.`)
-	cmd.Flags().StringVar(&opts.OutputDir, "output-dir", opts.OutputDir, "Optional. Writes the stack template and template configuration to a directory.")
+	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, opts.AppName, appFlagDescription)
+	cmd.Flags().StringVarP(&opts.EnvName, envFlag, envFlagShort, opts.EnvName, envFlagDescription)
+	cmd.Flags().StringVar(&opts.Tag, imageTagFlag, opts.Tag, imageTagFlagDescription)
+	cmd.Flags().StringVar(&opts.OutputDir, stackOutputDirFlag, opts.OutputDir, stackOutputDirFlagDescription)
 	return cmd
 }

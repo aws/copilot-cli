@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -14,9 +15,9 @@ import (
 
 // BuildVersionCmd builds the command for displaying the version
 func BuildVersionCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Print the version number",
+		Short: "Print the version number.",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("version: %s, built for %s\n", version.Version, version.Platform)
 		},
@@ -24,4 +25,6 @@ func BuildVersionCmd() *cobra.Command {
 			"group": group.Settings,
 		},
 	}
+	cmd.SetUsageTemplate(template.Usage)
+	return cmd
 }

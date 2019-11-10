@@ -313,8 +313,8 @@ This command is also run as part of "archer init".`,
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.AppType, "app-type", "t", "" /* default */, "Type of application to create.")
-	cmd.Flags().StringVarP(&opts.AppName, "name", "n", "" /* default */, "Name of the application.")
-	cmd.Flags().StringVarP(&opts.DockerfilePath, "dockerfile", "d", "" /* default */, "Path to the Dockerfile.")
+	cmd.Flags().StringVarP(&opts.AppType, appTypeFlag, appTypeFlagShort, "" /* default */, appTypeFlagDescription)
+	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
+	cmd.Flags().StringVarP(&opts.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "" /* default */, dockerFileFlagDescription)
 	return cmd
 }

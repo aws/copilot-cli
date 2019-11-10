@@ -36,8 +36,9 @@ func BuildAppDeployCommand() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:  "deploy",
-		Long: `Deploy an application to an environment.`,
+		Use:   "deploy",
+		Short: "Deploy an application to an environment.",
+		Long:  `Deploy an application to an environment.`,
 		Example: `
   Deploy an application named "frontend" to a "test" environment.
   /code $ archer app deploy --name frontend --env test`,
@@ -64,9 +65,9 @@ func BuildAppDeployCommand() *cobra.Command {
 		// },
 	}
 
-	cmd.Flags().StringVarP(&input.app, "name", "n", "", "application name")
-	cmd.Flags().StringVarP(&input.env, "env", "e", "", "environment name")
-	cmd.Flags().StringVarP(&input.imageTag, "tag", "t", "", "image tag")
+	cmd.Flags().StringVarP(&input.app, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&input.env, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&input.imageTag, imageTagFlag, "", imageTagFlagDescription)
 
 	return cmd
 }

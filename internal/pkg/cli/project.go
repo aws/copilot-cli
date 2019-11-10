@@ -14,7 +14,7 @@ import (
 func BuildProjCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project",
-		Short: "Project commands",
+		Short: "Project commands.",
 		Long: `Command for working with projects.
 A Project represents all of your deployment environments.`,
 	}
