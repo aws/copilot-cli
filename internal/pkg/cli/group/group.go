@@ -8,7 +8,7 @@ package group
 
 const (
 	GettingStarted = "Getting Started ✨"
-	Develop = "Develop 🔧"
-	Settings = "Settings"
-	Release = "Release 🚀"
+	Develop        = "Develop 🔧"
+	Settings       = "Settings ⚙️"
+	Release        = "Release 🚀"
 )

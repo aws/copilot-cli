@@ -16,9 +16,9 @@ import (
 func BuildVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print the version number of Archer",
+		Short: "Print the version number",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Archer version: %s, built for %s\n", version.Version, version.Platform)
+			fmt.Printf("version: %s, built for %s\n", version.Version, version.Platform)
 		},
 		Annotations: map[string]string{
 			"group": group.Settings,
