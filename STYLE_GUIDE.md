@@ -9,6 +9,7 @@
 * [Autocomplete](#autocomplete)
 * [Use full sentences](#use-full-sentences)
 * [Stdout vs. Stderr](#stdout-vs-stderr)
+* [Screen sizes](#screen-sizes)
 * [Output](#output)
   * [Colors](#colors)
   * [Data](#data)
@@ -87,6 +88,13 @@ All other information should be written to `stderr`.
 
 Typically, for listing or showing a resource we write a table to  `stdout`. For mutation commands, we write the prompts and 
 diagnostic messages to `stderr` and at the end write the id of the resources created to `stdout`.
+
+## Screen sizes
+By default most terminals default to [80x24 character screens](https://softwareengineering.stackexchange.com/questions/148754/why-is-24-lines-a-common-default-terminal-height).
+Break your sentences such that they don't go beyond 80 characters in a single line. 
+Otherwise, new line breaks might be oddly placed in screens of varying sizes.
+While displaying [progress](#progress), don't show more than 24 lines at a time. Otherwise, the cursor
+won't be able to move above 24 lines and you'll have truncated progress events.
 
 ## Output
 ### Colors

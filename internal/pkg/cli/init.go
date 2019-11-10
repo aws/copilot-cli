@@ -110,7 +110,8 @@ func (opts *InitOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
 to help you get set up with a project on ECS. A project is a collection of 
-containerized applications (or micro-services) that operate together.` + "\n")
+containerized applications (or micro-services) that operate together.`)
+	log.Infoln()
 
 	if err := opts.loadProject(); err != nil {
 		return err
