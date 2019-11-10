@@ -79,13 +79,13 @@ type appDeployOpts struct {
 
 	projectService   projectService
 	ecrService       ecr.Service
-	workspaceService *workspace.Workspace
+	workspaceService archer.Workspace
 
 	prompt  prompter
 	spinner progress
 
-	projectApplications []*archer.Application
-	projectEnvironments []*archer.Environment
+	localProjectAppNames []string
+	projectEnvironments  []*archer.Environment
 }
 
 func (opts appDeployOpts) String() string {
@@ -158,18 +158,18 @@ func (opts *appDeployOpts) sourceProjectData() error {
 }
 
 func (opts *appDeployOpts) sourceProjectApplications() error {
-	apps, err := opts.projectService.ListApplications(opts.ProjectName())
+	appNames, err := opts.workspaceService.AppNames()
 
 	if err != nil {
-		return fmt.Errorf("get apps: %w", err)
+		return fmt.Errorf("get app names: %w", err)
 	}
 
-	if len(apps) == 0 {
+	if len(appNames) == 0 {
 		// TODO: recommend follow up command - app init?
 		return errors.New("no applications found")
 	}
 
-	opts.projectApplications = apps
+	opts.localProjectAppNames = appNames
 
 	return nil
 }
@@ -196,16 +196,9 @@ func (opts *appDeployOpts) sourceProjectEnvironments() error {
 }
 
 func (opts *appDeployOpts) sourceAppName() error {
-	appNames := []string{}
-
-	// TODO: limit application options to only those in the local workspace
-	for _, app := range opts.projectApplications {
-		appNames = append(appNames, app.Name)
-	}
-
 	if opts.app == "" {
-		if len(appNames) == 1 {
-			opts.app = appNames[0]
+		if len(opts.localProjectAppNames) == 1 {
+			opts.app = opts.localProjectAppNames[0]
 
 			// NOTE: defaulting the app name, tell the user
 			log.Infof("Only found one app, defaulting to: %s\n", color.HighlightUserInput(opts.app))
@@ -213,7 +206,7 @@ func (opts *appDeployOpts) sourceAppName() error {
 			return nil
 		}
 
-		selectedAppName, err := opts.prompt.SelectOne("Select an application", "", appNames)
+		selectedAppName, err := opts.prompt.SelectOne("Select an application", "", opts.localProjectAppNames)
 
 		if err != nil {
 			return fmt.Errorf("select app name: %w", err)
@@ -222,7 +215,7 @@ func (opts *appDeployOpts) sourceAppName() error {
 		opts.app = selectedAppName
 	}
 
-	for _, appName := range appNames {
+	for _, appName := range opts.localProjectAppNames {
 		if opts.app == appName {
 			return nil
 		}
