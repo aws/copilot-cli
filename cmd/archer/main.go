@@ -30,10 +30,10 @@ func main() {
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archer",
-		Short: "Launch and manage applications on Amazon ECS and AWS Fargate",
+		Short: "Launch and manage applications on Amazon ECS and AWS Fargate.",
 		Example: `
   Display the help menu for the init command
-  $ archer init --help`,
+  /code $ archer init --help`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// If we don't set a Run() function the help menu doesn't show up.
 			// See https://github.com/spf13/cobra/issues/790

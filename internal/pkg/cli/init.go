@@ -85,7 +85,8 @@ func NewInitOpts() (*InitOpts, error) {
 		IsProduction:  false,
 		envCreator:    ssm,
 		projectGetter: ssm,
-		deployer:      deployer,
+		envDeployer:   deployer,
+		projDeployer:  deployer, // TODO #317
 		prog:          spin,
 		prompt:        prompt,
 		identity:      id,
@@ -107,9 +108,10 @@ func NewInitOpts() (*InitOpts, error) {
 
 func (opts *InitOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your workspace.")
-	log.Infoln(`Welcome the the ECS CLI! We're going to walk you through some questions to help you get set up
-with a project on ECS. A project is a collection of containerized applications (or micro-services)
-that operate together.` + "\n")
+	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
+to help you get set up with a project on ECS. A project is a collection of 
+containerized applications (or micro-services) that operate together.`)
+	log.Infoln()
 
 	if err := opts.loadProject(); err != nil {
 		return err
@@ -178,7 +180,7 @@ func BuildInitCmd() *cobra.Command {
 	opts, err := NewInitOpts()
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Create a new ECS application",
+		Short: "Create a new ECS application.",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return err
 		},
@@ -197,11 +199,11 @@ func BuildInitCmd() *cobra.Command {
 			}
 		},
 	}
-	cmd.Flags().StringVarP(opts.projectName, "project", "p", "", "Name of the project.")
-	cmd.Flags().StringVarP(opts.appName, "app", "a", "", "Name of the application.")
-	cmd.Flags().StringVarP(opts.appType, "app-type", "t", "", "Type of application to create.")
-	cmd.Flags().StringVarP(opts.dockerfilePath, "dockerfile", "d", "", "Path to the Dockerfile.")
-	cmd.Flags().BoolVar(&opts.ShouldDeploy, "deploy", false, "Deploy your application to a \"test\" environment.")
+	cmd.Flags().StringVarP(opts.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(opts.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(opts.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
+	cmd.Flags().StringVarP(opts.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().BoolVar(&opts.ShouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,

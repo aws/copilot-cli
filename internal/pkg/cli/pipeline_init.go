@@ -272,7 +272,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a pipeline for applications in your workspace.",
-		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications."`,
+		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications.`,
 		Example: `
   Create a pipeline for the applications in your workspace:
   /code $ archer pipeline init \
@@ -300,11 +300,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVarP(&opts.GitHubRepo, "github-repo", "r", "", "GitHub repository for your application.")
-	cmd.Flags().StringVarP(&opts.GitHubAccessToken, "github-access-token", "t", "", "GitHub personal access token for your GitHub repository.")
-	cmd.Flags().BoolVarP(&opts.Deploy, "deploy", "d", false, "Deploy pipline automatically.")
-	cmd.Flags().BoolVarP(&opts.EnableCD, "enable-cd", "", false, "Enables automatic deployment to production environment.")
-	cmd.Flags().StringSliceVarP(&opts.Environments, "environments", "e", []string{}, "Environments to add to the pipeline.")
+	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployPipelineFlagDescription)
+	cmd.Flags().BoolVar(&opts.EnableCD, enableCDFlag, false, enableCDFlagDescription)
+	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd
 }

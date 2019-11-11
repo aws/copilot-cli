@@ -13,12 +13,15 @@ import (
 )
 
 // Predefined colors.
+// Refer to https://en.wikipedia.org/wiki/ANSI_escape_code to validate if colors would
+// be visible on white or black screen backgrounds.
 var (
-	Grey               = color.New(color.FgWhite)
-	Red                = color.New(color.FgHiRed)
-	Cyan               = color.New(color.FgHiCyan)
-	WhiteBoldUnderline = color.New(color.FgHiWhite, color.Bold, color.Underline)
-	Magenta            = color.New(color.FgHiMagenta)
+	Grey          = color.New(color.FgWhite)
+	Red           = color.New(color.FgHiRed)
+	Cyan          = color.New(color.FgCyan)
+	BoldUnderline = color.New(color.Bold, color.Underline)
+	Magenta       = color.New(color.FgMagenta)
+	Blue          = color.New(color.FgBlue)
 )
 
 const colorEnvVar = "COLOR"
@@ -54,7 +57,7 @@ func HighlightUserInput(s string) string {
 
 // HighlightResource colors the string to denote it as a resource created by the CLI, and returns it.
 func HighlightResource(s string) string {
-	return WhiteBoldUnderline.Sprint(s)
+	return BoldUnderline.Sprint(s)
 }
 
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.

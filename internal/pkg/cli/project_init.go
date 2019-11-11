@@ -189,7 +189,8 @@ func BuildProjectInitCommand() *cobra.Command {
 	opts, err := NewInitProjectOpts()
 
 	cmd := &cobra.Command{
-		Use: "init [name]",
+		Use:   "init [name]",
+		Short: "Creates a new empty project.",
 		Long: `Creates a new empty project.
 A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `

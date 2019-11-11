@@ -15,7 +15,7 @@ import (
 func BuildEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "env",
-		Short: "Environment commands",
+		Short: "Environment commands.",
 		Long: `Command for working with environments.
 An environment represents a deployment stage.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

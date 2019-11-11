@@ -42,7 +42,8 @@ type InitEnvOpts struct {
 	// Interfaces to interact with dependencies.
 	projectGetter archer.ProjectGetter
 	envCreator    archer.EnvironmentCreator
-	deployer      deployer
+	envDeployer   deployer
+	projDeployer  deployer
 	identity      identityService
 
 	prog   progress
@@ -101,7 +102,7 @@ func (opts *InitEnvOpts) Execute() error {
 		ToolsAccountPrincipalARN: caller.ARN,
 	}
 	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
-	if err := opts.deployer.DeployEnvironment(deployEnvInput); err != nil {
+	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
@@ -116,7 +117,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	// 2. Display updates while the deployment is happening.
 	opts.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(opts.EnvName)))
-	stackEvents, responses := opts.deployer.StreamEnvironmentCreation(deployEnvInput)
+	stackEvents, responses := opts.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		opts.prog.Events(opts.humanizeEnvironmentEvents(stackEvent))
 	}
@@ -129,7 +130,7 @@ func (opts *InitEnvOpts) Execute() error {
 
 	// 3. Add the stack set instance to the project stackset.
 	opts.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
-	if err := opts.deployer.AddEnvToProject(project, resp.Env); err != nil {
+	if err := opts.projDeployer.AddEnvToProject(project, resp.Env); err != nil {
 		opts.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(opts.ProjectName())))
 		return fmt.Errorf("deploy env %s to project %s: %w", resp.Env.Name, project.Name, err)
 	}
@@ -205,12 +206,12 @@ func BuildEnvInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init [name]",
-		Short: "Create a new environment in your project.",
+		Short: "Creates a new environment in your project.",
 		Example: `
-  Create a test environment in your "default" AWS profile.
+  Creates a test environment in your "default" AWS profile.
   /code $ archer env init test
 
-  Create a prod-iad environment using your "prod-admin" AWS profile.
+  Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ archer env init prod-iad --profile prod-admin --prod`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -230,7 +231,8 @@ func BuildEnvInitCmd() *cobra.Command {
 			}
 			opts.envCreator = store
 			opts.projectGetter = store
-			opts.deployer = cloudformation.New(profileSess)
+			opts.envDeployer = cloudformation.New(profileSess)
+			opts.projDeployer = cloudformation.New(defaultSession)
 			opts.identity = identity.New(defaultSession)
 			return nil
 		},
@@ -244,8 +246,8 @@ func BuildEnvInitCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
-	cmd.Flags().StringVar(&opts.EnvProfile, "profile", "default", "Name of the profile. Defaults to \"default\".")
-	cmd.Flags().BoolVar(&opts.IsProduction, "prod", false, "If the environment contains production services.")
+	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "default", profileFlagDescription)
+	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
 
 	return cmd
 }

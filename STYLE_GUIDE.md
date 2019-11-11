@@ -9,6 +9,7 @@
 * [Autocomplete](#autocomplete)
 * [Use full sentences](#use-full-sentences)
 * [Stdout vs. Stderr](#stdout-vs-stderr)
+* [Screen sizes](#screen-sizes)
 * [Output](#output)
   * [Colors](#colors)
   * [Data](#data)
@@ -88,6 +89,13 @@ All other information should be written to `stderr`.
 Typically, for listing or showing a resource we write a table to  `stdout`. For mutation commands, we write the prompts and 
 diagnostic messages to `stderr` and at the end write the id of the resources created to `stdout`.
 
+## Screen sizes
+By default most terminals default to [80x24 character screens](https://softwareengineering.stackexchange.com/questions/148754/why-is-24-lines-a-common-default-terminal-height).
+Break your sentences such that they don't go beyond 80 characters in a single line. 
+Otherwise, new line breaks might be oddly placed in screens of varying sizes.
+While displaying [progress](#progress), don't show more than 24 lines at a time. Otherwise, the cursor
+won't be able to move above 24 lines and you'll have truncated progress events.
+
 ## Output
 ### Colors
 We use [colors](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors) to set highlights — catching the user’s eye with important information. 
@@ -98,11 +106,11 @@ The gradients in order of lowest to highest emphasis are: _plain_, _bright_, _bo
 ![gradient](https://user-images.githubusercontent.com/879348/65549210-ef8c6f00-ded1-11e9-865d-b30ef7b94223.png) 
 
 Common categorical data are debug, info, warning, success, failure messages. 
-We respectively use _white_, _bright white (default)_, _bright yellow_, _bright green_ and _bright red_ for these messages.  
-For highlighting user input, use _bright cyan_.  
-For highlighting created resources, use _bold underlined white bright_.  
-For highlighting follow-up commands, use _bright magenta_.  
-![colors](https://user-images.githubusercontent.com/879348/65549416-5578f680-ded2-11e9-8d0f-21e0737f43ef.png)
+We respectively use _white_, default, _yellow_, _bright green_ and _bright red_ for these messages.  
+For highlighting user input, use _cyan_.  
+For highlighting created resources, use _bold underlined_.  
+For highlighting follow-up commands, use _magenta_.  
+![colors](https://user-images.githubusercontent.com/879348/68536239-80919b00-0304-11ea-9393-d6f0ff1f6d68.png)
 
 ### Data
 Commands that perform “read” operations should write their results to `stdout`. 

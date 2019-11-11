@@ -19,6 +19,11 @@ type projectDeployer interface {
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
 }
 
+type projectResourcesGetter interface {
+	GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
+	GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
+}
+
 type deployer interface {
 	environmentDeployer
 	projectDeployer

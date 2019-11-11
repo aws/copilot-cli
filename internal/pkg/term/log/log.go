@@ -14,7 +14,7 @@ import (
 var (
 	successSprintf = color.HiGreenString
 	errorSprintf   = color.HiRedString
-	warningSprintf = color.HiYellowString
+	warningSprintf = color.YellowString
 	debugSprintf   = color.WhiteString
 )
 

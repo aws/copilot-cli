@@ -35,10 +35,6 @@ const (
 	lbFargateTaskCountKey           = "TaskCount"
 )
 
-const (
-	ecrURLFormatString = "%s.dkr.ecr.%s.amazonaws.com/%s"
-)
-
 // LBFargateStackConfig represents the configuration needed to create a CloudFormation stack from a
 // load balanced Fargate application.
 type LBFargateStackConfig struct {
@@ -181,8 +177,7 @@ type lbFargateTemplateParams struct {
 }
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
-	imgLoc := fmt.Sprintf("%s/%s:%s", c.Env.Project, c.App.Name, c.ImageTag)
-	url := fmt.Sprintf(ecrURLFormatString, c.Env.AccountID, c.Env.Region, imgLoc)
+	url := fmt.Sprintf("%s:%s", c.ImageRepoURL, c.ImageTag)
 	return &lbFargateTemplateParams{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
 			App: &manifest.LBFargateManifest{

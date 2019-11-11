@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cloudformation
+package stack
 
 import (
 	"bytes"
@@ -36,7 +36,7 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", &ErrTemplateNotFound{templateLocation: pipelineCfnTemplatePath, parentErr: err}
 	}
-	
+
 	tpl, err := template.New("pipelineCfn").Parse(content)
 	if err != nil {
 		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",

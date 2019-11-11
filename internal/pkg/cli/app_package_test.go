@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -25,9 +26,9 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		inAppName string
 		inEnvName string
 
-		expectWS       func(m *mocks.MockWorkspace)
-		expectEnvStore func(m *mocks.MockEnvironmentStore)
-		expectPrompt   func(m *climocks.Mockprompter)
+		expectWS     func(m *mocks.MockWorkspace)
+		expectStore  func(m *climocks.MockprojectService)
+		expectPrompt func(m *climocks.Mockprompter)
 
 		wantedAppName string
 		wantedEnvName string
@@ -37,7 +38,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
@@ -50,7 +51,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{}, nil)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
@@ -64,7 +65,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, errors.New("some ssm error"))
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
@@ -74,11 +75,26 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			wantedAppName: "frontend",
 			wantedErrorS:  "list environments for project : some ssm error",
 		},
+		"empty environments error": {
+			inAppName: "frontend",
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppNames().Times(0)
+			},
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, nil)
+			},
+			expectPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedAppName: "frontend",
+			wantedErrorS:  "there are no environments in project ",
+		},
 		"prompt for all options": {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
 					{
 						Name: "test",
@@ -102,7 +118,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
@@ -118,7 +134,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
 					{
 						Name: "test",
@@ -142,7 +158,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *climocks.Mockprompter) {
@@ -161,18 +177,18 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
-			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+			mockStore := climocks.NewMockprojectService(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 
 			tc.expectWS(mockWorkspace)
-			tc.expectEnvStore(mockEnvStore)
+			tc.expectStore(mockStore)
 			tc.expectPrompt(mockPrompt)
 
 			opts := &PackageAppOpts{
 				AppName:    tc.inAppName,
 				EnvName:    tc.inEnvName,
 				ws:         mockWorkspace,
-				envStore:   mockEnvStore,
+				store:      mockStore,
 				prompt:     mockPrompt,
 				GlobalOpts: &GlobalOpts{},
 			}
@@ -200,8 +216,8 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		inAppName     string
 		inTag         string
 
-		expectWS       func(m *mocks.MockWorkspace)
-		expectEnvStore func(m *mocks.MockEnvironmentStore)
+		expectWS    func(m *mocks.MockWorkspace)
+		expectStore func(m *climocks.MockprojectService)
 
 		wantedErrorS string
 	}{
@@ -209,7 +225,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -220,7 +236,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErrorS: "image tag cannot be empty, please provide the `--tag` flag",
@@ -233,7 +249,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -247,7 +263,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Return([]string{"backend"}, nil)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -261,7 +277,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppNames().Times(0)
 			},
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
 					ProjectName:     "phonetool",
 					EnvironmentName: "test",
@@ -282,17 +298,17 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
-			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+			mockStore := climocks.NewMockprojectService(ctrl)
 			tc.expectWS(mockWorkspace)
-			tc.expectEnvStore(mockEnvStore)
+			tc.expectStore(mockStore)
 
 			opts := &PackageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
 				Tag:     tc.inTag,
 
-				ws:       mockWorkspace,
-				envStore: mockEnvStore,
+				ws:    mockWorkspace,
+				store: mockStore,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -318,8 +334,9 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 		inTagName     string
 		inOutputDir   string
 
-		expectEnvStore  func(m *mocks.MockEnvironmentStore)
+		expectStore     func(m *climocks.MockprojectService)
 		expectWorkspace func(m *mocks.MockWorkspace)
+		expectDeployer  func(m *climocks.MockprojectResourcesGetter)
 		expectFS        func(t *testing.T, mockFS *afero.Afero)
 
 		wantedErr error
@@ -328,7 +345,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
 					ProjectName:     "phonetool",
 					EnvironmentName: "test",
@@ -337,6 +354,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().ReadManifestFile(gomock.Any()).Times(0)
 			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
 			wantedErr: &store.ErrNoSuchEnvironment{
 				ProjectName:     "phonetool",
@@ -348,7 +366,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 			inAppName:     "frontend",
 
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
 					Project: "phonetool",
 					Name:    "test",
@@ -360,6 +378,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 					ManifestName: "frontend-app.yml",
 				})
 			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
 			wantedErr: &workspace.ErrManifestNotFound{
 				ManifestName: "frontend-app.yml",
@@ -370,7 +389,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 			inAppName:     "frontend",
 
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
 					Project: "phonetool",
 					Name:    "test",
@@ -380,8 +399,96 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				m.EXPECT().ManifestFileName("frontend").Return("frontend-app.yml")
 				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte("somecontent"), nil)
 			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
 			wantedErr: &manifest.ErrUnmarshalAppManifest{},
+		},
+		"error while getting project from store": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project: "phonetool",
+					Name:    "test",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(nil, &store.ErrNoSuchProject{ProjectName: "phonetool"})
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ManifestFileName("frontend").Return("frontend-app.yml")
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
+
+			wantedErr: &store.ErrNoSuchProject{ProjectName: "phonetool"},
+		},
+		"error while getting regional resources from describer": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "1111",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ManifestFileName("frontend").Return("frontend-app.yml")
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
+				}, "us-west-2").Return(nil, &cloudformation.ErrStackSetOutOfDate{})
+			},
+			wantedErr: &cloudformation.ErrStackSetOutOfDate{},
+		},
+		"error if the repository does not exist": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "1111",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().ManifestFileName("frontend").Return("frontend-app.yml")
+				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
+				}, "us-west-2").Return(&archer.ProjectRegionalResources{
+					RepositoryURLs: map[string]string{},
+				}, nil)
+			},
+			wantedErr: &errRepoNotFound{
+				appName:       "frontend",
+				envRegion:     "us-west-2",
+				projAccountID: "1234",
+			},
 		},
 		"print CFN template": {
 			inProjectName: "phonetool",
@@ -389,12 +496,16 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			inAppName:     "frontend",
 			inTagName:     "latest",
 
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
 					Project:   "phonetool",
 					Name:      "test",
 					AccountID: "1111",
 					Region:    "us-west-2",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
 				}, nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
@@ -409,6 +520,13 @@ http:
 cpu: 256
 memory: 512
 count: 1`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
+					RepositoryURLs: map[string]string{
+						"frontend": "some url",
+					},
+				}, nil)
 			},
 		},
 		"with output directory": {
@@ -418,12 +536,16 @@ count: 1`), nil)
 			inTagName:     "latest",
 			inOutputDir:   "./infrastructure",
 
-			expectEnvStore: func(m *mocks.MockEnvironmentStore) {
+			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
 					Project:   "phonetool",
 					Name:      "test",
 					AccountID: "1111",
 					Region:    "us-west-2",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
 				}, nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
@@ -438,6 +560,13 @@ http:
 cpu: 256
 memory: 512
 count: 1`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
+					RepositoryURLs: map[string]string{
+						"frontend": "some url",
+					},
+				}, nil)
 			},
 			expectFS: func(t *testing.T, mockFS *afero.Afero) {
 				stackPath := filepath.Join("infrastructure", "frontend.stack.yml")
@@ -457,10 +586,12 @@ count: 1`), nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+			mockStore := climocks.NewMockprojectService(ctrl)
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
-			tc.expectEnvStore(mockEnvStore)
+			mockDeployer := climocks.NewMockprojectResourcesGetter(ctrl)
+			tc.expectStore(mockStore)
 			tc.expectWorkspace(mockWorkspace)
+			tc.expectDeployer(mockDeployer)
 
 			templateBuf := &strings.Builder{}
 			paramsBuf := &strings.Builder{}
@@ -471,8 +602,9 @@ count: 1`), nil)
 				Tag:       tc.inTagName,
 				OutputDir: tc.inOutputDir,
 
-				envStore:     mockEnvStore,
+				store:        mockStore,
 				ws:           mockWorkspace,
+				describer:    mockDeployer,
 				stackWriter:  templateBuf,
 				paramsWriter: paramsBuf,
 				fs:           mockFS,
