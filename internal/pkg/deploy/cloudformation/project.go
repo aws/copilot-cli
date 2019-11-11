@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 )
 
 // DeployProject sets up everything required for our project-wide resources.
@@ -216,6 +217,34 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 
 	if err := cf.addNewProjectStackInstances(projectConfig, env.Region); err != nil {
 		return fmt.Errorf("adding new stack instance for environment %s: %w", env.Name, err)
+	}
+
+	return nil
+}
+
+var getRegionFromClient = func(client cloudformationiface.CloudFormationAPI) (string, error) {
+	concrete, ok := client.(*cloudformation.CloudFormation)
+	if !ok {
+		return "", errors.New("failed to retrieve the region")
+	}
+	return *concrete.Client.Config.Region, nil
+}
+
+// AddPipelineResourcesToProject conditionally adds resources needed to support
+// a pipeline in the project region (i.e. the same region that hosts our SSM store).
+// This is necessary because the project region might not contain any environment.
+func (cf CloudFormation) AddPipelineResourcesToProject(
+	project *archer.Project, projectRegion string) error {
+	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+		Project:   project.Name,
+		AccountID: project.AccountID,
+	}, cf.box)
+
+	// conditionally create a new stack instance in the project region
+	// if there's no existing stack instance.
+	if err := cf.addNewProjectStackInstances(projectConfig, projectRegion); err != nil {
+		return fmt.Errorf("failed to add stack instance for pipeline, project: %s, region: %s, error: %w",
+			project.Name, projectRegion, err)
 	}
 
 	return nil

@@ -313,6 +313,208 @@ func TestAddEnvToProject(t *testing.T) {
 	}
 }
 
+func TestAddPipelineResourcesToProject(t *testing.T) {
+	mockProject := archer.Project{
+		Name:      "testproject",
+		AccountID: "1234",
+	}
+	testCases := map[string]struct {
+		cf                  CloudFormation
+		project             *archer.Project
+		getRegionFromClient func(client cloudformationiface.CloudFormationAPI) (string, error)
+		expectedErr         error
+	}{
+		"with no existing account nor environment, add pipeline supporting resources": {
+			project: &mockProject,
+			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
+				return "us-west-2", nil
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStackSet: func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
+							// no existing account used for this project
+						})
+						require.NoError(t, err)
+						return &cloudformation.DescribeStackSetOutput{
+							StackSet: &cloudformation.StackSet{
+								TemplateBody: aws.String(string(body)),
+							},
+						}, nil
+					},
+					mockUpdateStackSet: func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
+						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
+						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
+						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
+						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
+						require.Equal(t, "ecs-project", *in.Tags[0].Key)
+						require.Equal(t, mockProject.Name, *in.Tags[0].Value)
+
+						require.Equal(t, "1", *in.OperationId)
+
+						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
+						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
+						require.NoError(t, err)
+						require.ElementsMatch(t, []string{mockProject.AccountID}, configToDeploy.Accounts)
+						require.Empty(t, configToDeploy.Apps, "There should be no new apps to deploy")
+						require.Equal(t, 1, configToDeploy.Version)
+						return &cloudformation.UpdateStackSetOutput{
+							OperationId: aws.String("1"),
+						}, nil
+					},
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						// no existing environment in this region, which implies there's no stack instance in this region,
+						// so return an empty slice.
+						return &cloudformation.ListStackInstancesOutput{
+							Summaries: []*cloudformation.StackInstanceSummary{},
+						}, nil
+					},
+					mockCreateStackInstances: func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
+						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
+						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
+						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
+						return &cloudformation.CreateStackInstancesOutput{
+							OperationId: aws.String("1"),
+						}, nil
+					},
+					mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+						return &cloudformation.DescribeStackSetOperationOutput{
+							StackSetOperation: &cloudformation.StackSetOperation{
+								Status: aws.String("SUCCEEDED"),
+							},
+						}, nil
+					},
+				},
+				box: templates.Box(),
+			},
+		},
+
+		"with existing account, no existing environment in a region, add pipeline supporting resources to that region": {
+			project: &mockProject,
+			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
+				return "us-west-2", nil
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStackSet: func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
+							Metadata: stack.ProjectResourcesConfig{
+								// one accountId is associated with this project
+								Accounts: []string{"1234"},
+							},
+						})
+						require.NoError(t, err)
+						return &cloudformation.DescribeStackSetOutput{
+							StackSet: &cloudformation.StackSet{
+								TemplateBody: aws.String(string(body)),
+							},
+						}, nil
+					},
+					mockUpdateStackSet: func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+						require.Fail(t, "UpdateStackSet should not be called because there's no nwe account")
+						return nil, errors.New("should not get here")
+					},
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						return &cloudformation.ListStackInstancesOutput{
+							// even though this account has been used with this project,
+							// in the particular region we are provisioning the pipeline supporting
+							// resources, there's no existing archer environment.
+							Summaries: []*cloudformation.StackInstanceSummary{},
+						}, nil
+					},
+					mockCreateStackInstances: func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
+						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
+						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
+						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
+						return &cloudformation.CreateStackInstancesOutput{
+							OperationId: aws.String("1"),
+						}, nil
+					},
+
+					mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+						return &cloudformation.DescribeStackSetOperationOutput{
+							StackSetOperation: &cloudformation.StackSetOperation{
+								Status: aws.String("SUCCEEDED"),
+							},
+						}, nil
+					},
+				},
+				box: templates.Box(),
+			},
+		},
+
+		"with existing account and existing environment in a region, should not add pipeline supporting resources": {
+			project: &mockProject,
+			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
+				return "us-west-2", nil
+			},
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStackSet: func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
+							Metadata: stack.ProjectResourcesConfig{
+								// one accountId is associated with this project
+								Accounts: []string{"1234"},
+							},
+						})
+						require.NoError(t, err)
+						return &cloudformation.DescribeStackSetOutput{
+							StackSet: &cloudformation.StackSet{
+								TemplateBody: aws.String(string(body)),
+							},
+						}, nil
+					},
+					mockUpdateStackSet: func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+						require.Fail(t, "UpdateStackSet should not be called because there's no nwe account")
+						return nil, errors.New("should not get here")
+					},
+					mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+						// this region happened to already has an environment deployed to it
+						// so there's an exsiting stack instance
+						return &cloudformation.ListStackInstancesOutput{
+							Summaries: []*cloudformation.StackInstanceSummary{
+								&cloudformation.StackInstanceSummary{
+									Region:  aws.String("us-west-2"),
+									Account: aws.String(mockProject.AccountID),
+								},
+							},
+						}, nil
+					},
+					mockCreateStackInstances: func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
+						require.Fail(t, "CreateStackInstances should not be called because there's an existing stack instance in this region")
+						return nil, errors.New("should not get here")
+					},
+
+					mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+						require.Fail(t, "DescribeStackSetOperation should not be called because there's an existing stack instance in this region")
+						return nil, errors.New("should not get here")
+					},
+				},
+				box: templates.Box(),
+			},
+		},
+	}
+
+	actual := getRegionFromClient
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			getRegionFromClient = tc.getRegionFromClient
+			got := tc.cf.AddPipelineResourcesToProject(tc.project, "us-west-2")
+
+			if tc.expectedErr != nil {
+				require.EqualError(t, got, tc.expectedErr.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+	getRegionFromClient = actual
+}
+
 func TestAddAppToProject(t *testing.T) {
 	mockProject := archer.Project{
 		Name:      "testproject",

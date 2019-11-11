@@ -1,4 +1,5 @@
 // +build integration
+
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/stretchr/testify/require"
@@ -257,6 +259,96 @@ func Test_Project_Infrastructure(t *testing.T) {
 			require.NotNil(t, validationFunction, "Unexpected output key %s in stack.", key)
 			validationFunction(output)
 		}
+	})
+
+	t.Run("Deploys supporting infrastructure for pipeline (KMS Key, S3 Bucket)", func(t *testing.T) {
+		project := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
+		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
+
+		// Make sure we delete the stacks after the test is done
+		defer func() {
+			// Clean up any StackInstances we may have created.
+			if stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+				StackSetName: aws.String(projectStackSetName),
+			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
+				projectStackInstance := stackInstances.Summaries[0]
+				cfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
+					Accounts:     []*string{projectStackInstance.Account},
+					Regions:      []*string{projectStackInstance.Region},
+					RetainStacks: aws.Bool(false),
+					StackSetName: projectStackInstance.StackSetId,
+				})
+
+				cfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
+					StackName: projectStackInstance.StackId,
+				})
+			}
+			// Delete the StackSet once all the StackInstances are cleaned up
+			cfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
+				StackSetName: aws.String(projectStackSetName),
+			})
+
+			cfClient.DeleteStack(&awsCF.DeleteStackInput{
+				StackName: aws.String(projectRoleStackName),
+			})
+		}()
+
+		// Given our stack doesn't exist
+		_, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
+			StackName: aws.String(projectRoleStackName),
+		})
+		require.Error(t, err, "DescribeStacks should return an error because the stack does not exist")
+		awsErr, ok := err.(awserr.Error)
+		require.True(t, ok, "the returned error should be an awserr")
+		require.Equal(t, awsErr.Code(), "ValidationError")
+		require.Contains(t, awsErr.Message(), "does not exist", "the returned error should indicate that the stack does not exist")
+
+		// create a stackset
+		err = deployer.DeployProject(&deploy.CreateProjectInput{
+			Project:   project.Name,
+			AccountID: project.AccountID,
+		})
+		require.NoError(t, err)
+
+		// Add resources needed to support a pipeline in a region
+		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
+		require.NoError(t, err)
+
+		// Add another pipeline to the same project and region. This should not create
+		// Additional stack instance
+		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
+		require.NoError(t, err)
+
+		stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+			StackSetName: aws.String(projectStackSetName),
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same project should not create 2 stack instances")
+
+		// add an environment should not create new stack instance in the same region
+		err = deployer.AddEnvToProject(
+			&project,
+			&archer.Environment{
+				Name:      "test",
+				Region:    *sess.Config.Region,
+				AccountID: "000312697014",
+			},
+		)
+
+		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+			StackSetName: aws.String(projectStackSetName),
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same project should not create 2 stack instances")
+
+		// Ensure the bucket and KMS key were created
+		resources, err := deployer.GetRegionalProjectResources(&project)
+		require.NoError(t, err)
+		require.True(t, len(resources) == 1, "One stack should exist.")
+		stackResources := resources[0]
+		require.True(t, stackResources.S3Bucket != "", "S3 Bucket shouldn't be blank")
+		require.True(t, stackResources.KMSKeyARN != "", "KMSKey ARN shouldn't be blank")
 	})
 }
 
