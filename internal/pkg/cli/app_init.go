@@ -20,7 +20,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // InitAppOpts holds the configuration needed to create a new application.
@@ -38,6 +37,8 @@ type InitAppOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	*GlobalOpts
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -77,7 +78,7 @@ func (opts *InitAppOpts) Validate() error {
 			return err
 		}
 	}
-	if viper.GetString(projectFlag) == "" {
+	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 	return nil
@@ -85,8 +86,7 @@ func (opts *InitAppOpts) Validate() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (opts *InitAppOpts) Execute() error {
-	projectName := viper.GetString(projectFlag)
-	if err := opts.ensureNoExistingApp(projectName, opts.AppName); err != nil {
+	if err := opts.ensureNoExistingApp(opts.ProjectName(), opts.AppName); err != nil {
 		return err
 	}
 
@@ -97,7 +97,7 @@ func (opts *InitAppOpts) Execute() error {
 
 	opts.manifestPath = manifestPath
 
-	if err := opts.createAppInProject(projectName); err != nil {
+	if err := opts.createAppInProject(opts.ProjectName()); err != nil {
 		return err
 	}
 
@@ -161,7 +161,7 @@ func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
 		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
-Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, viper.GetString(projectFlag)),
+Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, opts.ProjectName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
@@ -292,6 +292,7 @@ This command is also run as part of "archer init".`,
 				return fmt.Errorf("workspace cannot be created: %w", err)
 			}
 			opts.manifestWriter = ws
+			opts.GlobalOpts = NewGlobalOpts()
 
 			return opts.Validate()
 		},

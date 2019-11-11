@@ -15,7 +15,6 @@ import (
 	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
 
@@ -108,8 +107,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
 
-				fs:     &afero.Afero{Fs: afero.NewMemMapFs()},
-				prompt: mockPrompt,
+				fs:         &afero.Afero{Fs: afero.NewMemMapFs()},
+				prompt:     mockPrompt,
+				GlobalOpts: &GlobalOpts{},
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)
@@ -168,13 +168,12 @@ func TestAppInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			viper.Set(projectFlag, tc.inProjectName)
-			defer viper.Set(projectFlag, "")
 			opts := InitAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
 				fs:             &afero.Afero{Fs: afero.NewMemMapFs()},
+				GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
@@ -284,8 +283,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			viper.Set(projectFlag, tc.inProjectName)
-			defer viper.Set(projectFlag, "")
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -297,6 +294,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				DockerfilePath: tc.inDockerfilePath,
 				manifestWriter: mockWriter,
 				appStore:       mockAppStore,
+
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 			tc.mockManifestWriter(mockWriter)
 			tc.mockAppStore(mockAppStore)
