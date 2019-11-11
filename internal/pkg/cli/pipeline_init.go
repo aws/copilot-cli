@@ -150,20 +150,20 @@ func (opts *InitPipelineOpts) createPipelineName() string {
 	return fmt.Sprintf("pipeline-%s-%s", opts.projectName, repoName)
 }
 
-// TODO extract repo
 func (opts *InitPipelineOpts) getRepoName() string {
 	match := githubRepoExp.FindStringSubmatch(opts.GitHubRepo)
-	if len(match) != 0 {
-		matches := make(map[string]string)
-		for i, name := range githubRepoExp.SubexpNames() {
-			if i != 0 && name != "" {
-				matches[name] = match[i]
-			}
-		}
-		return matches["repo"]
+	if len(match) == 0 {
+		return ""
 	}
 
-	return ""
+	matches := make(map[string]string)
+	for i, name := range githubRepoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			matches[name] = match[i]
+		}
+	}
+
+	return matches["repo"]
 }
 
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
