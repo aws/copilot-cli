@@ -26,7 +26,6 @@ const (
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
-var errInvalidGitHubRepo = errors.New("Please enter a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -71,8 +70,7 @@ func (opts *InitPipelineOpts) Ask() error {
 
 	if opts.GitHubRepo == "" {
 		if err := opts.selectGitHubRepo(); err != nil {
-			if err == errInvalidGitHubRepo {
-			}
+			return err
 		}
 	}
 

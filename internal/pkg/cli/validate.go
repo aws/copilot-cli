@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	errValueEmpty      = errors.New("value must not be empty")
-	errValueTooLong    = errors.New("value must not exceed 255 characters")
-	errValueBadFormat  = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
-	errValueNotAString = errors.New("value must be a string")
+	errValueEmpty        = errors.New("value must not be empty")
+	errValueTooLong      = errors.New("value must not exceed 255 characters")
+	errValueBadFormat    = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
+	errValueNotAString   = errors.New("value must be a string")
+	errInvalidGitHubRepo = errors.New("Please enter a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 )
 
 var githubRepoExp = regexp.MustCompile(`https:\/\/github\.com\/(?P<owner>.+)\/(?P<repo>.+)`)
@@ -91,7 +92,7 @@ func validateGitHubRepo(val interface{}) error {
 		return errValueNotAString
 	}
 	if !githubRepoExp.MatchString(repo) {
-		return fmt.Errorf("GitHub repository name %v is invalid. Please enter full name, e.g. https://github.com/myCompany/myRepo", val)
+		return fmt.Errorf("GitHub repository name %v is invalid. %w", val, errInvalidGitHubRepo)
 	}
 	return nil
 }
