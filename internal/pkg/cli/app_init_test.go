@@ -71,9 +71,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Eq("Which Dockerfile would you like to use for frontend app?"), gomock.Any(), gomock.Eq(
 					[]string{
-						".",
-						"backend",
-						"frontend",
+						"./Dockerfile",
+						"backend/Dockerfile",
+						"frontend/Dockerfile",
 						"Enter a custom path",
 					})).
 					Return(wantedDockerfilePath, nil)

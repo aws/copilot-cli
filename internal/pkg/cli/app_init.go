@@ -193,7 +193,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := opts.listDockerfileDirs()
+	dockerfiles, err := opts.listDockerfileSelections()
 	if err != nil {
 		return err
 	}
@@ -258,6 +258,19 @@ func (opts *InitAppOpts) listDockerfileDirs() ([]string, error) {
 	}
 	sort.Strings(directories)
 	return directories, nil
+}
+
+func (opts *InitAppOpts) listDockerfileSelections() ([]string, error) {
+	dockerfileDirs, err := opts.listDockerfileDirs()
+	if err != nil {
+		return nil, err
+	}
+	var dockerfiles []string
+	for _, dir := range dockerfileDirs {
+		file := dir + "/Dockerfile"
+		dockerfiles = append(dockerfiles, file)
+	}
+	return dockerfiles, nil
 }
 
 func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
