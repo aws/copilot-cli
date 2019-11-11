@@ -22,7 +22,7 @@ import (
 const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository? (Enter full repository URL, e.g. https://github.com/myCompany/myRepo)" // TODO allow just <user>/<repo>?
+	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
@@ -278,7 +278,7 @@ func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
 	repo, err := opts.prompt.Get(
 		pipelineEnterGitHubRepoPrompt,
-		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage.`),
+		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. https://github.com/myCompany/myRepo`),
 		validateGitHubRepo,
 	)
 
