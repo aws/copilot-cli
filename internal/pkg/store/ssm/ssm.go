@@ -123,9 +123,6 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 		return nil, fmt.Errorf("get project %s: %w", projectName, err)
 	}
 
-	if projectParam.Parameter.Value == nil {
-
-	}
 	var project archer.Project
 	if err := json.Unmarshal([]byte(*projectParam.Parameter.Value), &project); err != nil {
 		return nil, fmt.Errorf("read details for project %s: %w", projectName, err)
