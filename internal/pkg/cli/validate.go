@@ -17,7 +17,7 @@ var (
 	errValueTooLong      = errors.New("value must not exceed 255 characters")
 	errValueBadFormat    = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString   = errors.New("value must be a string")
-	errInvalidGitHubRepo = errors.New("Please enter a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
+	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 )
 
 var githubRepoExp = regexp.MustCompile(`https:\/\/github\.com\/(?P<owner>.+)\/(?P<repo>.+)`)
