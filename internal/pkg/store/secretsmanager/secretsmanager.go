@@ -5,9 +5,6 @@
 package secretsmanager
 
 import (
-	// "fmt"
-
-	// "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -18,8 +15,7 @@ import (
 // configuration in SecretsManager.
 type SecretsManager struct {
 	secretsManager secretsmanageriface.SecretsManagerAPI
-	// identity      identityService
-	sessionRegion string
+	sessionRegion  string
 }
 
 // NewSecretsManager returns a SecretsManager configured with the input session.
@@ -32,12 +28,11 @@ func NewStore() (*SecretsManager, error) {
 
 	return &SecretsManager{
 		secretsManager: secretsmanager.New(sess),
-		// identity:      identity.New(sess),
-		sessionRegion: *sess.Config.Region,
+		sessionRegion:  *sess.Config.Region,
 	}, nil
 }
 
-// CreateSecret creates a secret.
+// CreateSecret creates a secret and returns secretn ARN
 // NOTE: Currently the default KMS key ("aws/secretsmanager") is used for
 // encrypting the secret.
 func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, error) {
