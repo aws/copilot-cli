@@ -503,7 +503,7 @@ func TestAddPipelineResourcesToProject(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			getRegionFromClient = tc.getRegionFromClient
-			got := tc.cf.AddPipelineResourcesToProject(tc.project, "chickenPipeline")
+			got := tc.cf.AddPipelineResourcesToProject(tc.project, "us-west-2")
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, got, tc.expectedErr.Error())

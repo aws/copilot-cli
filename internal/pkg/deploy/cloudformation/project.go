@@ -230,66 +230,21 @@ var getRegionFromClient = func(client cloudformationiface.CloudFormationAPI) (st
 	return *concrete.Client.Config.Region, nil
 }
 
-// AddPipelineResourcesToProject adds resources needed to support a pipeline
-// to a project. It conditionally creates resources needed for the pipeline
-// in a AWS region in case there's no existing environment
-// (which would have provisioned these resources) for the project
-func (cf CloudFormation) AddPipelineResourcesToProject(project *archer.Project, pipelineName string) error {
+// AddPipelineResourcesToProject conditionally adds resources needed to support
+// a pipeline in the project region (i.e. the same region that hosts our SSM store).
+// This is necessary because the project region might not contain any environment.
+func (cf CloudFormation) AddPipelineResourcesToProject(
+	project *archer.Project, projectRegion string) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	}, cf.box)
-	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
-	if err != nil {
-		return fmt.Errorf("getting previous deployed stackset %w", err)
-	}
 
-	// if the the tool's account Id and region used by ssm store match one
-	// of the existing environment, then it implies that the customer have
-	// deployed an environment into the accountID + region combo that we are
-	// going to create the pipeline in, so there's no need to provision new
-	// resources.
-
-	// First, check whether we need to update the stackset. Since it's possible
-	// that the pipeline is being created in a accountId+region combo where
-	// there's no existing archer environment.
-	accountList := []string{}
-	shouldAddNewAccountID := true
-	for _, accountID := range previouslyDeployedConfig.Accounts {
-		accountList = append(accountList, accountID)
-		if accountID == project.AccountID {
-			shouldAddNewAccountID = false
-		}
-	}
-
-	if shouldAddNewAccountID {
-		// only update the stackset when a new account is added
-		accountList = append(accountList, project.AccountID)
-		newDeploymentConfig := stack.ProjectResourcesConfig{
-			Version:  previouslyDeployedConfig.Version + 1,
-			Apps:     previouslyDeployedConfig.Apps,
-			Accounts: accountList,
-			Project:  projectConfig.Project,
-		}
-
-		if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
-			return fmt.Errorf("failed to update resources needed to support the pipeline, project: %s, pipeline: %s, error: %w",
-				project.Name, pipelineName, err)
-		}
-	}
-
-	region, err := getRegionFromClient(cf.client)
-	if err != nil {
-		return fmt.Errorf("failed to provision resources needed to support the pipeline, project: %s, pipeline: %s, error: %w",
-			project.Name, pipelineName, err)
-	}
-
-	// conditionally create a new stack instance in a region for a project
-	// if there's no existing stack instance. Have to do this regardless of
-	// whether the stackset has been updated above because we may need to
-	// provision these resources in a new region in an exist account.
-	if err := cf.addNewProjectStackInstances(projectConfig, region); err != nil {
-		return fmt.Errorf("failed to add stack instance for pipeline%s: %w", pipelineName, err)
+	// conditionally create a new stack instance in the project region
+	// if there's no existing stack instance.
+	if err := cf.addNewProjectStackInstances(projectConfig, projectRegion); err != nil {
+		return fmt.Errorf("failed to add stack instance for pipeline, project: %s, region: %s, error: %w",
+			project.Name, projectRegion, err)
 	}
 
 	return nil

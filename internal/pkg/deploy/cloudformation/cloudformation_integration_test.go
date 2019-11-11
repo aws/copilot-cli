@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/stretchr/testify/require"
@@ -294,11 +295,14 @@ func Test_Project_Infrastructure(t *testing.T) {
 		}()
 
 		// Given our stack doesn't exist
-		roleStackOutput, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
+		_, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
 			StackName: aws.String(projectRoleStackName),
 		})
-
-		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", projectRoleStackName)
+		require.Error(t, err, "DescribeStacks should return an error because the stack does not exist")
+		awsErr, ok := err.(awserr.Error)
+		require.True(t, ok, "the returned error should be an awserr")
+		require.Equal(t, awsErr.Code(), "ValidationError")
+		require.Contains(t, awsErr.Message(), "does not exist", "the returned error should indicate that the stack does not exist")
 
 		// create a stackset
 		err = deployer.DeployProject(&deploy.CreateProjectInput{
@@ -308,12 +312,12 @@ func Test_Project_Infrastructure(t *testing.T) {
 		require.NoError(t, err)
 
 		// Add resources needed to support a pipeline in a region
-		err = deployer.AddPipelineResourcesToProject(&project, "chicken-pipeline")
+		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
 		require.NoError(t, err)
 
 		// Add another pipeline to the same project and region. This should not create
 		// Additional stack instance
-		err = deployer.AddPipelineResourcesToProject(&project, "wings-pipeline")
+		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
 		require.NoError(t, err)
 
 		stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
