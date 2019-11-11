@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	archerMocks "github.com/aws/amazon-ecs-cli-v2/mocks"
+	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -140,8 +140,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inGitHubRepo   string
 		inProjectName  string
 
-		mockSecretsManager func(m *archerMocks.MockSecretsManager)
-		mockManifestWriter func(m *archerMocks.MockManifestIO)
+		mockSecretsManager func(m *archermocks.MockSecretsManager)
+		mockManifestWriter func(m *archermocks.MockManifestIO)
 
 		expectedSecretName string
 		expectedError      error
@@ -152,10 +152,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "https://github.com/badgoose/goose",
 			inProjectName:  "badgoose",
 
-			mockSecretsManager: func(m *archerMocks.MockSecretsManager) {
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archerMocks.MockManifestIO) {
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
 				m.EXPECT().WriteManifest(gomock.Any(), "pipeline-badgoose-goose").Return("pipeline-badgoose-goose", nil)
 			},
 
@@ -172,8 +172,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSecretsManager := archerMocks.NewMockSecretsManager(ctrl)
-			mockWriter := archerMocks.NewMockManifestIO(ctrl)
+			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
+			mockWriter := archermocks.NewMockManifestIO(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockManifestWriter(mockWriter)
