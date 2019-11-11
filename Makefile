@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 PACKAGES=./internal...
+SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
+BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
 GOBIN=${PWD}/bin/tools
 COVERAGE=coverage.out
 
@@ -25,19 +27,40 @@ compile-linux:
 compile-darwin:
 	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/archer ./scripts/build_binary.sh
 
-packr-build: tools
+packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
 	env -i PATH=$$PATH:${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
 	go generate ./...
 
-packr-clean: tools
+packr-clean: tools package-custom-resources-clean
 	@echo "Cleaning up static files generated code" &&\
 	cd templates &&\
 	${GOBIN}/packr2 clean &&\
 	cd ..\
 
 .PHONY: test
-test: packr-build run-unit-test packr-clean
+test: packr-build run-unit-test custom-resource-tests packr-clean
+
+custom-resource-tests:
+	@echo "Running custom resource unit tests" &&\
+	cd ${SOURCE_CUSTOM_RESOURCES} &&\
+	npm test &&\
+	cd ..
+
+# Minifies the resources in cf-custom-resources/lib and copies
+# those minified assets into templates/custom-resources so that
+# they can be packed.
+package-custom-resources:
+	@echo "Packaging custom resources to templates/custom-resources" &&\
+	cd ${SOURCE_CUSTOM_RESOURCES} &&\
+	npm run package &&\
+	cd ..
+
+# We only need the minified custom resources during building. After
+# they're packed, we can remove them.
+package-custom-resources-clean:
+	@echo "Removing minified templates/custom-resources" &&\
+	rm ${BUILT_CUSTOM_RESOURCES}/*.js
 
 run-unit-test:
 	go test -race -cover -count=1 -coverprofile ${COVERAGE} ${PACKAGES}
@@ -84,6 +107,8 @@ e2e-test-update-golden-files:
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
+	@echo "Installing custom resource dependencies" &&\
+	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
 
 .PHONY: gen-mocks
 gen-mocks: tools
