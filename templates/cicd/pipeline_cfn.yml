@@ -261,9 +261,6 @@ Resources:
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                # TODO: We need the actual name of the CFN execution role here
-                # (created while an environment AWS account is provisioned
-                # through Archer).
                 RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
