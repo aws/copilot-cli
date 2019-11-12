@@ -109,6 +109,8 @@ Outputs:
   KMSKeyARN:
     Description: KMS Key used by CodePipeline for encrypting artifacts.
     Value: !GetAtt KMSKey.Arn
+    Export:
+      Name: {{$project}}-ArtifactKey
   PipelineBucket:
     Description: Bucket used for CodePipeline to stage resources in.
     Value: !Ref PipelineBuiltArtifactBucket
