@@ -91,19 +91,6 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
       Source:
         Type: CODEPIPELINE
-        # TODO: Fill in the actual build commands
-        # TODO: Fill in the paths to the CFN templates that this pipeline will deploy
-        BuildSpec: |
-          version: 0.2
-          phases:
-            install:
-              runtime-versions:
-                docker: 18
-            build:
-              commands:
-                - ls
-          artifacts:
-            files: '**/*'
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
