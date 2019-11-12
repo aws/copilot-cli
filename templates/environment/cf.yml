@@ -241,14 +241,27 @@ Resources:
           Action: sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: execute
+        - PolicyName: executeCfn
+          # This policy is more permissive than the managed PowerUserAccess
+          # since it allows arbitrary role creation, which is needed for the
+          # ECS task role specified by the customers.
+          # TODO: #335 Scope down the permissions given the the CFN execution
+          # role.
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
             - 
               Effect: Allow
-              Action: "*"
-              Resource: "*"
+              NotAction:
+                - 'organizations:*'
+                - 'account:*'
+              Resource: '*'
+            - 
+              Effect: Allow
+              Action:
+                - 'organizations:DescribeOrganization'
+                - 'account:ListRegions'
+              Resource: '*'
 
   EnvironmentManagerRole:
     Type: AWS::IAM::Role
