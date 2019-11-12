@@ -406,6 +406,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-EnvManagerRole", envStackName)),
 					"EnvironmentManagerRole ARN value should not be nil.")
 			},
+			"CFNExecutionRoleARN": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-CRNExecutionRoleARN", envStackName),
+					*output.ExportName,
+					"Should export CRNExecutionRole ARN")
+
+				require.True(t,
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-CRNExecutionRole", envStackName)),
+					"CRNExecutionRole ARN value should not be nil.")
+			},
 			"ClusterId": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-ClusterId", envStackName),
