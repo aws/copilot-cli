@@ -5,9 +5,6 @@
 package deploy
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
