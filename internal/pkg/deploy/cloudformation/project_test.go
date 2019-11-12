@@ -523,12 +523,12 @@ func TestAddAppToProject(t *testing.T) {
 	testCases := map[string]struct {
 		cf      CloudFormation
 		project *archer.Project
-		app     *archer.Application
+		app     string
 		want    error
 	}{
 		"with no existing deployments and adding an app": {
 			project: &mockProject,
-			app:     &archer.Application{Name: "TestApp"},
+			app:     "TestApp",
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -581,7 +581,7 @@ func TestAddAppToProject(t *testing.T) {
 		},
 		"with new app to existing project with existing apps": {
 			project: &mockProject,
-			app:     &archer.Application{Name: "test"},
+			app:     "test",
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -623,7 +623,7 @@ func TestAddAppToProject(t *testing.T) {
 		},
 		"with ewxisting app to existing project with existing apps": {
 			project: &mockProject,
-			app:     &archer.Application{Name: "test"},
+			app:     "test",
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,

@@ -165,9 +165,7 @@ func Test_Project_Infrastructure(t *testing.T) {
 		// Add an application only
 		err = deployer.AddAppToProject(
 			&project,
-			&archer.Application{
-				Name: "myapp",
-			},
+			"myapp",
 		)
 
 		require.NoError(t, err)
@@ -175,9 +173,7 @@ func Test_Project_Infrastructure(t *testing.T) {
 		// Add an application with dash
 		err = deployer.AddAppToProject(
 			&project,
-			&archer.Application{
-				Name: "myapp-frontend",
-			},
+			"myapp-frontend",
 		)
 
 		require.NoError(t, err)

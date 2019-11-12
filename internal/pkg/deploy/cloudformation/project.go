@@ -134,14 +134,14 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 // AddAppToProject attempts to add new App specific resources to the Project resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
-func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer.Application) error {
+func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	}, cf.box)
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
-		return fmt.Errorf("adding %s app resources to project %s: %w", newApp.Name, project.Name, err)
+		return fmt.Errorf("adding %s app resources to project %s: %w", appName, project.Name, err)
 	}
 
 	// We'll generate a new list of Accounts to add to our project
@@ -151,7 +151,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 	shouldAddNewApp := true
 	for _, app := range previouslyDeployedConfig.Apps {
 		appList = append(appList, app)
-		if app == newApp.Name {
+		if app == appName {
 			shouldAddNewApp = false
 		}
 	}
@@ -160,7 +160,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 		return nil
 	}
 
-	appList = append(appList, newApp.Name)
+	appList = append(appList, appName)
 
 	newDeploymentConfig := stack.ProjectResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
@@ -169,7 +169,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, newApp *archer
 		Project:  projectConfig.Project,
 	}
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
-		return fmt.Errorf("adding %s app resources to project: %w", newApp.Name, err)
+		return fmt.Errorf("adding %s app resources to project: %w", appName, err)
 	}
 
 	return nil

@@ -11,16 +11,24 @@ import (
 	"sort"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+)
+
+const (
+	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
+	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
+	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
 
 // InitAppOpts holds the configuration needed to create a new application.
@@ -32,12 +40,17 @@ type InitAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
-	appStore       archer.ApplicationStore
 	manifestWriter archer.ManifestIO
+	appStore       archer.ApplicationStore
+	projGetter     archer.ProjectGetter
+	projDeployer   projectDeployer
 	prompt         prompter
+	prog           progress
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	*GlobalOpts
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -77,7 +90,7 @@ func (opts *InitAppOpts) Validate() error {
 			return err
 		}
 	}
-	if viper.GetString(projectFlag) == "" {
+	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 	return nil
@@ -85,8 +98,7 @@ func (opts *InitAppOpts) Validate() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (opts *InitAppOpts) Execute() error {
-	projectName := viper.GetString(projectFlag)
-	if err := opts.ensureNoExistingApp(projectName, opts.AppName); err != nil {
+	if err := opts.ensureNoExistingApp(opts.ProjectName(), opts.AppName); err != nil {
 		return err
 	}
 
@@ -94,18 +106,25 @@ func (opts *InitAppOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-
 	opts.manifestPath = manifestPath
-
-	if err := opts.createAppInProject(projectName); err != nil {
-		return err
-	}
 
 	log.Infoln()
 	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
-	return nil
+
+	proj, err := opts.projGetter.GetProject(opts.ProjectName())
+	if err != nil {
+		return fmt.Errorf("get project %s: %w", opts.ProjectName(), err)
+	}
+	opts.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, opts.AppName))
+	if err := opts.projDeployer.AddAppToProject(proj, opts.AppName); err != nil {
+		opts.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, opts.AppName))
+		return fmt.Errorf("add app %s to project %s: %w", opts.AppName, opts.ProjectName(), err)
+	}
+	opts.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, opts.AppName))
+
+	return opts.createAppInProject(opts.ProjectName())
 }
 
 func (opts *InitAppOpts) createManifest() (string, error) {
@@ -161,7 +180,7 @@ func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
 		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
 		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
-Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, viper.GetString(projectFlag)),
+Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, opts.ProjectName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
@@ -174,7 +193,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := opts.listDockerfileDirs()
+	dockerfiles, err := opts.listDockerfileSelections()
 	if err != nil {
 		return err
 	}
@@ -241,6 +260,19 @@ func (opts *InitAppOpts) listDockerfileDirs() ([]string, error) {
 	return directories, nil
 }
 
+func (opts *InitAppOpts) listDockerfileSelections() ([]string, error) {
+	dockerfileDirs, err := opts.listDockerfileDirs()
+	if err != nil {
+		return nil, err
+	}
+	var dockerfiles []string
+	for _, dir := range dockerfileDirs {
+		file := dir + "/Dockerfile"
+		dockerfiles = append(dockerfiles, file)
+	}
+	return dockerfiles, nil
+}
+
 func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
 	_, err := opts.appStore.GetApplication(projectName, opts.AppName)
 	// If the app doesn't exist - that's perfect, return no error.
@@ -286,6 +318,7 @@ This command is also run as part of "archer init".`,
 				return fmt.Errorf("couldn't connect to project datastore: %w", err)
 			}
 			opts.appStore = store
+			opts.projGetter = store
 
 			ws, err := workspace.New()
 			if err != nil {
@@ -293,6 +326,14 @@ This command is also run as part of "archer init".`,
 			}
 			opts.manifestWriter = ws
 
+			sess, err := session.Default()
+			if err != nil {
+				return err
+			}
+			opts.projDeployer = cloudformation.New(sess)
+
+			opts.prog = termprogress.NewSpinner()
+			opts.GlobalOpts = NewGlobalOpts()
 			return opts.Validate()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

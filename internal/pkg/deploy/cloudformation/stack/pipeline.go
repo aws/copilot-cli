@@ -40,12 +40,12 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	tpl, err := template.New("pipelineCfn").Parse(content)
 	if err != nil {
 		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",
-		p.ProjectName, p.Name, err)
+			p.ProjectName, p.Name, err)
 	}
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, p); err != nil {
 		return "", fmt.Errorf("execute CloudFormation template for project %s, pipeline %s, error: %w",
-		p.ProjectName, p.Name, err)
+			p.ProjectName, p.Name, err)
 	}
 	return buf.String(), nil
 }

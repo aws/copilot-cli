@@ -78,6 +78,10 @@ func NewInitOpts() (*InitOpts, error) {
 		manifestWriter: ws,
 		prompt:         prompt,
 		appStore:       ssm,
+		projGetter:     ssm,
+		projDeployer:   deployer,
+		prog:           spin,
+		GlobalOpts:     NewGlobalOpts(),
 	}
 	initEnv := &InitEnvOpts{
 		EnvName:       defaultEnvironmentName,

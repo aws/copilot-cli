@@ -4,10 +4,10 @@
 package cli
 
 import (
-	"fmt"
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -72,9 +72,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompt)
 
 			// WHEN
-			fmt.Printf("BEFORE %+v\n", opts)
 			err := opts.Ask()
-			fmt.Printf("AFTER %+v\n", opts)
 
 			// THEN
 			if tc.expectedError != nil {
@@ -86,6 +84,213 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
 			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inProjectEnvs []string
+		inProjectName string
+
+		expectedError error
+	}{
+		"errors if no environments initialized": {
+			inProjectEnvs: []string{},
+			inProjectName: "badgoose",
+
+			expectedError: errNoEnvsInProject,
+		},
+
+		"invalid project name": {
+			inProjectName: "",
+			expectedError: errNoProjectInWorkspace,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &InitPipelineOpts{
+				projectEnvs: tc.inProjectEnvs,
+
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inEnvironments []string
+		inGitHubToken  string
+		inGitHubRepo   string
+		inProjectName  string
+
+		mockSecretsManager func(m *archermocks.MockSecretsManager)
+		mockManifestWriter func(m *archermocks.MockManifestIO)
+
+		expectedSecretName string
+		expectedError      error
+	}{
+		"creates secret and writes manifest": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "https://github.com/badgoose/goose",
+			inProjectName:  "badgoose",
+
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
+			},
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
+				m.EXPECT().WriteManifest(gomock.Any(), "pipeline-badgoose-goose").Return("pipeline-badgoose-goose", nil)
+			},
+
+			expectedSecretName: "github-token-badgoose-goose",
+			expectedError:      nil,
+		},
+
+		// error if no envs
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
+			mockWriter := archermocks.NewMockManifestIO(ctrl)
+
+			tc.mockSecretsManager(mockSecretsManager)
+			tc.mockManifestWriter(mockWriter)
+
+			opts := &InitPipelineOpts{
+				Environments:      tc.inEnvironments,
+				GitHubRepo:        tc.inGitHubRepo,
+				GitHubAccessToken: tc.inGitHubToken,
+
+				secretsmanager: mockSecretsManager,
+				manifestWriter: mockWriter,
+
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError, err)
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.expectedSecretName, opts.secretName)
+			}
+		})
+	}
+}
+
+// Tests for helpers
+func TestInitPipelineOpts_getRepoName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo string
+		expected     string
+	}{
+		"matches repo name": {
+			inGitHubRepo: "https://github.com/bad/goose",
+			expected:     "goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+			}
+
+			// WHEN
+			actual := opts.getRepoName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestInitPipelineOpts_createSecretName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo  string
+		inProjectName string
+
+		expected string
+	}{
+		"matches repo name": {
+			inGitHubRepo:  "https://github.com/bad/goose",
+			inProjectName: "badgoose",
+
+			expected: "github-token-badgoose-goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			actual := opts.createSecretName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestInitPipelineOpts_createPipelineName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubRepo  string
+		inProjectName string
+
+		expected string
+	}{
+		"matches repo name": {
+			inGitHubRepo:  "https://github.com/bad/goose",
+			inProjectName: "badgoose",
+
+			expected: "pipeline-badgoose-goose",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{
+				GitHubRepo: tc.inGitHubRepo,
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			actual := opts.createPipelineName()
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

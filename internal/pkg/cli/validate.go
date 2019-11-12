@@ -13,11 +13,14 @@ import (
 )
 
 var (
-	errValueEmpty      = errors.New("value must not be empty")
-	errValueTooLong    = errors.New("value must not exceed 255 characters")
-	errValueBadFormat  = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
-	errValueNotAString = errors.New("value must be a string")
+	errValueEmpty        = errors.New("value must not be empty")
+	errValueTooLong      = errors.New("value must not exceed 255 characters")
+	errValueBadFormat    = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
+	errValueNotAString   = errors.New("value must be a string")
+	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 )
+
+var githubRepoExp = regexp.MustCompile(`https:\/\/github\.com\/(?P<owner>.+)\/(?P<repo>.+)`)
 
 func validateProjectName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
@@ -81,4 +84,15 @@ func isCorrectFormat(s string) bool {
 		return false // bubble up error?
 	}
 	return valid
+}
+
+func validateGitHubRepo(val interface{}) error {
+	repo, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if !githubRepoExp.MatchString(repo) {
+		return fmt.Errorf("GitHub repository name %v is invalid. %w", val, errInvalidGitHubRepo)
+	}
+	return nil
 }

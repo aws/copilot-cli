@@ -15,7 +15,7 @@ type environmentDeployer interface {
 
 type projectDeployer interface {
 	DeployProject(in *deploy.CreateProjectInput) error
-	AddAppToProject(project *archer.Project, app *archer.Application) error
+	AddAppToProject(project *archer.Project, appName string) error
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
 }
 

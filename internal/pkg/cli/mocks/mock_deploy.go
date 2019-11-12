@@ -101,17 +101,17 @@ func (mr *MockprojectDeployerMockRecorder) DeployProject(in interface{}) *gomock
 }
 
 // AddAppToProject mocks base method
-func (m *MockprojectDeployer) AddAppToProject(project *archer.Project, app *archer.Application) error {
+func (m *MockprojectDeployer) AddAppToProject(project *archer.Project, appName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddAppToProject", project, app)
+	ret := m.ctrl.Call(m, "AddAppToProject", project, appName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddAppToProject indicates an expected call of AddAppToProject
-func (mr *MockprojectDeployerMockRecorder) AddAppToProject(project, app interface{}) *gomock.Call {
+func (mr *MockprojectDeployerMockRecorder) AddAppToProject(project, appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*MockprojectDeployer)(nil).AddAppToProject), project, app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*MockprojectDeployer)(nil).AddAppToProject), project, appName)
 }
 
 // AddEnvToProject mocks base method
@@ -248,17 +248,17 @@ func (mr *MockdeployerMockRecorder) DeployProject(in interface{}) *gomock.Call {
 }
 
 // AddAppToProject mocks base method
-func (m *Mockdeployer) AddAppToProject(project *archer.Project, app *archer.Application) error {
+func (m *Mockdeployer) AddAppToProject(project *archer.Project, appName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddAppToProject", project, app)
+	ret := m.ctrl.Call(m, "AddAppToProject", project, appName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddAppToProject indicates an expected call of AddAppToProject
-func (mr *MockdeployerMockRecorder) AddAppToProject(project, app interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) AddAppToProject(project, appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*Mockdeployer)(nil).AddAppToProject), project, app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*Mockdeployer)(nil).AddAppToProject), project, appName)
 }
 
 // AddEnvToProject mocks base method

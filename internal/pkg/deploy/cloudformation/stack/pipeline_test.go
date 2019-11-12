@@ -84,7 +84,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			Properties: map[string]interface{}{
 				"repository":                 "hencrice/amazon-ecs-cli-v2",
 				"branch":                     "master",
-				deploy.GithubSecretIdKeyName: "testGitHubSecret",
+				"access_token_secret":        "testGitHubSecret",
 			},
 		},
 		Stages: []deploy.PipelineStage{
