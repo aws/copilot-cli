@@ -9,12 +9,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
-// CreateProjectInput holds the fields required to create a project stack set.
-type CreateProjectInput struct {
-	Project   string // Name of the project that needs to be created.
-	AccountID string // AWS account ID to administrate the project.
-}
-
 // CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
 type CreateLBFargateAppInput struct {
 	App          *manifest.LBFargateManifest
