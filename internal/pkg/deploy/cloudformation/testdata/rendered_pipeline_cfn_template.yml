@@ -86,7 +86,7 @@ Resources:
       Description: !Ref AWS::StackName
       # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
       # created in the same region as this pipeline.
-      EncryptionKey: !ImportValue ArtifactKey
+      EncryptionKey: !ImportValue chickenProject-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: CODEPIPELINE
