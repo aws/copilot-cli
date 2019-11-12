@@ -23,6 +23,7 @@ const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineDefaultFilename       = "pipeline.yml"
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
@@ -35,6 +36,7 @@ type InitPipelineOpts struct {
 	GitHubAccessToken string
 	EnableCD          bool
 	Deploy            bool
+	PipelineFilename  string
 	// TODO add git branch
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
@@ -178,6 +180,7 @@ func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error
 }
 
 func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
+	// TODO change this to flag
 	pipelineName := opts.createPipelineName()
 	provider, err := opts.createPipelineProvider()
 	if err != nil {
@@ -193,9 +196,9 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineName)
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineDefaultFilename)
 	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", pipelineName, err)
+		return "", fmt.Errorf("write manifest for app %s: %w", pipelineDefaultFilename, err)
 	}
 
 	return manifestPath, nil

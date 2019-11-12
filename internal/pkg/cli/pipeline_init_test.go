@@ -156,7 +156,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "pipeline-badgoose-goose").Return("pipeline-badgoose-goose", nil)
+				m.EXPECT().WriteManifest(gomock.Any(), "pipeline.yml").Return("pipeline.yml", nil)
 			},
 
 			expectedSecretName: "github-token-badgoose-goose",
