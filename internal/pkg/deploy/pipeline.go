@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
-
 // CreatePipelineInput represents the fields required to deploy a pipeline.
 type CreatePipelineInput struct {
 	// Name of the project this pipeline belongs to
@@ -180,4 +179,3 @@ type AssociatedEnvironment struct {
 	// Whether or not this environment is a production environment.
 	Prod bool
 }
-

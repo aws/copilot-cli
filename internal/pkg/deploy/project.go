@@ -10,4 +10,3 @@ type CreateProjectInput struct {
 	Project   string // Name of the project that needs to be created.
 	AccountID string // AWS account ID to administrate the project.
 }
-
