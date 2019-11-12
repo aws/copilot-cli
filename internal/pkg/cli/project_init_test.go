@@ -176,17 +176,17 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
-		expectedProject archer.Project
-		expectedError   error
-		mocking         func(t *testing.T,
+		inDomainName string
+
+		expectedError error
+		mocking       func(t *testing.T,
 			mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
 			mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 			mockProgress *climocks.Mockprogress)
 	}{
 		"with a succesfull call to add project": {
-			expectedProject: archer.Project{
-				Name: "project",
-			},
+			inDomainName: "amazon.com",
+
 			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
@@ -201,6 +201,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					CreateProject(gomock.Any()).
 					Do(func(project *archer.Project) {
 						require.Equal(t, project.Name, "project")
+						require.Equal(t, project.Domain, "amazon.com")
 					})
 				mockWorkspace.
 					EXPECT().
@@ -244,9 +245,6 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			},
 		},
 		"should ignore ErrProjectAlreadyExists from CreateProject": {
-			expectedProject: archer.Project{
-				Name: "project",
-			},
 			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
@@ -336,7 +334,9 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			mockProgress := climocks.NewMockprogress(ctrl)
 
 			opts := &InitProjectOpts{
-				ProjectName:  "project",
+				ProjectName: "project",
+				DomainName:  tc.inDomainName,
+
 				projectStore: mockProjectStore,
 				identity:     mockIdentityService,
 				deployer:     mockDeployer,

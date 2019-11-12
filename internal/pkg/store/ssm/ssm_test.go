@@ -4,6 +4,7 @@
 package ssm
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/route53domains"
+	"github.com/aws/aws-sdk-go/service/route53domains/route53domainsiface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/stretchr/testify/require"
@@ -245,19 +248,23 @@ func TestStore_GetProject(t *testing.T) {
 }
 
 func TestStore_CreateProject(t *testing.T) {
-	testProject := archer.Project{Name: "chicken", AccountID: "1234"}
-	testProjectString := fmt.Sprintf("{\"name\":\"chicken\",\"account\":\"1234\",\"version\":\"%s\"}", schemaVersion)
-	marshal(testProject)
-	testProjectPath := fmt.Sprintf(fmtProjectPath, testProject.Name)
-
 	testCases := map[string]struct {
-		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
-		wantedErr        error
+		inProject *archer.Project
+
+		mockGetDomainDetails func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error)
+		mockPutParameter     func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+		wantedErr            error
 	}{
 		"with no existing project": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
+
+			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DomainName)
+				return &route53domains.GetDomainDetailOutput{}, nil
+			},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-				require.Equal(t, testProjectPath, *param.Name)
-				require.Equal(t, testProjectString, *param.Value)
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","version":"%s"}`, schemaVersion), *param.Value)
 
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
@@ -265,21 +272,29 @@ func TestStore_CreateProject(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
+		"with an unexpected domain name error": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
+			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DomainName)
+				return nil, errors.New("some error")
+			},
+			wantedErr: errors.New("get domain details for phonetool.com: some error"),
+		},
 		"with existing project": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234"},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-				require.Equal(t, testProjectPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
 			wantedErr: &store.ErrProjectAlreadyExists{
-				ProjectName: "chicken",
+				ProjectName: "phonetool",
 			},
 		},
 		"with SSM error": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234"},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-				require.Equal(t, testProjectPath, *param.Name)
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("create project chicken: broken"),
+			wantedErr: fmt.Errorf("create project phonetool: broken"),
 		},
 	}
 
@@ -291,10 +306,14 @@ func TestStore_CreateProject(t *testing.T) {
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
+				domains: &mockRoute53Domains{
+					t:                    t,
+					mockGetDomainDetails: tc.mockGetDomainDetails,
+				},
 			}
 
 			// WHEN
-			err := store.CreateProject(&archer.Project{Name: "chicken", AccountID: "1234", Version: "1.0"})
+			err := store.CreateProject(tc.inProject)
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -925,4 +944,14 @@ type mockIdentityService struct {
 
 func (m mockIdentityService) Get() (identity.Caller, error) {
 	return m.mockIdentityServiceGet()
+}
+
+type mockRoute53Domains struct {
+	route53domainsiface.Route53DomainsAPI
+	t                    *testing.T
+	mockGetDomainDetails func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error)
+}
+
+func (m *mockRoute53Domains) GetDomainDetail(in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
+	return m.mockGetDomainDetails(m.t, in)
 }

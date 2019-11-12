@@ -20,6 +20,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/route53domains"
+	"github.com/aws/aws-sdk-go/service/route53domains/route53domainsiface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
@@ -52,6 +54,7 @@ type identityService interface {
 type SSM struct {
 	systemManager ssmiface.SSMAPI
 	identity      identityService
+	domains       route53domainsiface.Route53DomainsAPI
 	sessionRegion string
 }
 
@@ -66,6 +69,9 @@ func NewStore() (*SSM, error) {
 	return &SSM{
 		systemManager: ssm.New(sess),
 		identity:      identity.New(sess),
+		// If the region is not set to us-east-1, we can't find out if a domain name exists in the account.
+		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
+		domains:       route53domains.New(sess, aws.NewConfig().WithRegion("us-east-1")),
 		sessionRegion: *sess.Config.Region,
 	}, nil
 }
@@ -78,6 +84,13 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 	data, err := marshal(project)
 	if err != nil {
 		return fmt.Errorf("serializing project %s: %w", project.Name, err)
+	}
+
+	if project.Domain != "" {
+		in := &route53domains.GetDomainDetailInput{DomainName: aws.String(project.Domain)}
+		if _, err := s.domains.GetDomainDetail(in); err != nil {
+			return fmt.Errorf("get domain details for %s: %w", project.Domain, err)
+		}
 	}
 
 	_, err = s.systemManager.PutParameter(&ssm.PutParameterInput{

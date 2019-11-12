@@ -31,6 +31,7 @@ const (
 // InitProjectOpts contains the fields to collect for creating a project.
 type InitProjectOpts struct {
 	ProjectName string
+	DomainName  string
 
 	identity     identityService
 	projectStore archer.ProjectStore
@@ -124,6 +125,7 @@ func (opts *InitProjectOpts) Execute() error {
 	err = opts.projectStore.CreateProject(&archer.Project{
 		AccountID: caller.Account,
 		Name:      opts.ProjectName,
+		Domain:    opts.DomainName,
 	})
 	if err != nil {
 		// If the project already exists, move on - otherwise return the error.
@@ -220,5 +222,6 @@ A project is a collection of containerized applications (or micro-services) that
 			}
 		},
 	}
+	cmd.Flags().StringVar(&opts.DomainName, domainNameFlag, "", domainNameFlagDescription)
 	return cmd
 }
