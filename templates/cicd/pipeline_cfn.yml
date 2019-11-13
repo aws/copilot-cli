@@ -91,6 +91,7 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
       Source:
         Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
