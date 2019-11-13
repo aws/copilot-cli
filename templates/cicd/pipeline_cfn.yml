@@ -224,13 +224,16 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        {{$length := len .Stages}}{{if gt $length 0}}
-        {{range $stage := .Stages}}
-        # {{$stage.Name}} is the same as the name of the environment
-        # this pipeline stage deploys to
+{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
         - Name: DeployTo-{{$.ProjectName}}-{{$stage.Name}}
-          Actions:{{range $app := $stage.LocalApplications}}
-            # TODO: #220 Add manual approval action if this stage is a prod stage
+          Actions:{{if $stage.Prod}}
+            - Name: ApprovePromotionTo-{{$stage.Name}}
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              RunOrder: 1{{end}}{{range $app := $stage.LocalApplications}}
             - Name: CreateOrUpdate-{{$app}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
@@ -252,9 +255,6 @@ Resources:
                 RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed

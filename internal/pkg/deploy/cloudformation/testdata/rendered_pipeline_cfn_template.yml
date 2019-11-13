@@ -253,13 +253,9 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        
-        
-        # test is the same as the name of the environment
-        # this pipeline stage deploys to
+
         - Name: DeployTo-chickenProject-test
           Actions:
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-frontend-test
               Region: us-west-2
               ActionTypeId:
@@ -281,15 +277,11 @@ Resources:
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-test
               Region: us-west-2
               ActionTypeId:
@@ -311,19 +303,20 @@ Resources:
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-        # prod is the same as the name of the environment
-        # this pipeline stage deploys to
         - Name: DeployTo-chickenProject-prod
           Actions:
-            # TODO: #220 Add manual approval action if this stage is a prod stage
+            - Name: ApprovePromotionTo-prod
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              RunOrder: 1
             - Name: CreateOrUpdate-frontend-prod
               Region: us-east-1
               ActionTypeId:
@@ -345,15 +338,11 @@ Resources:
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-prod
               Region: us-east-1
               ActionTypeId:
@@ -375,9 +364,6 @@ Resources:
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
