@@ -222,7 +222,7 @@ func (opts *appDeployOpts) sourceAppName() error {
 		}
 	}
 
-	return fmt.Errorf("invalid app name")
+	return fmt.Errorf("invalid app name: %s", opts.app)
 }
 
 func (opts *appDeployOpts) sourceEnvName() error {
@@ -257,7 +257,7 @@ func (opts *appDeployOpts) sourceEnvName() error {
 		}
 	}
 
-	return fmt.Errorf("invalid env name")
+	return fmt.Errorf("invalid env name: %s", opts.env)
 }
 
 func (opts *appDeployOpts) sourceImageTag() error {
