@@ -197,13 +197,11 @@ func (opts *InitAppOpts) askDockerfile() error {
 	if err != nil {
 		return err
 	}
-	selections := make([]string, len(dockerfiles))
-	copy(selections, dockerfiles)
 
 	sel, err := opts.prompt.SelectOne(
 		fmt.Sprintf("Which Dockerfile would you like to use for %s app?", opts.AppName),
 		"Dockerfile to use for building your application's container image.",
-		selections,
+		dockerfiles,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
