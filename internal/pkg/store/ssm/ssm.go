@@ -69,8 +69,10 @@ func NewStore() (*SSM, error) {
 	return &SSM{
 		systemManager: ssm.New(sess),
 		identity:      identity.New(sess),
-		// If the region is not set to us-east-1, we can't find out if a domain name exists in the account.
+
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
+		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
+		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
 		domains:       route53domains.New(sess, aws.NewConfig().WithRegion("us-east-1")),
 		sessionRegion: *sess.Config.Region,
 	}, nil
