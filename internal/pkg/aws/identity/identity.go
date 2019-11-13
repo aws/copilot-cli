@@ -26,9 +26,9 @@ func New(s *session.Session) Service {
 
 // Caller holds information about a calling entity.
 type Caller struct {
-	ARN     string
-	Account string
-	UserID  string
+	RootUserARN string
+	Account     string
+	UserID      string
 }
 
 // Get returns the Caller associated with the Client's session.
@@ -40,8 +40,8 @@ func (s Service) Get() (Caller, error) {
 	}
 
 	return Caller{
-		ARN:     *out.Arn,
-		Account: *out.Account,
-		UserID:  *out.UserId,
+		RootUserARN: fmt.Sprintf("arn:aws:iam::%s:root", *out.Account),
+		Account:     *out.Account,
+		UserID:      *out.UserId,
 	}, nil
 }

@@ -132,7 +132,7 @@ func TestProjectTags(t *testing.T) {
 	require.ElementsMatch(t, expectedTags, proj.Tags())
 }
 
-func TestToRegionalResourcess(t *testing.T) {
+func TestToRegionalResources(t *testing.T) {
 	testCases := map[string]struct {
 		givenStackOutputs map[string]string
 		wantedResource    archer.ProjectRegionalResources
