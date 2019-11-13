@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package ssm
+package store
 
 import (
 	"errors"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/route53domains"
@@ -117,8 +116,8 @@ func TestStore_ListProjects(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -178,7 +177,7 @@ func TestStore_GetProject(t *testing.T) {
 					Account: "12345",
 				}, nil
 			},
-			wantedErr: &store.ErrNoSuchProject{
+			wantedErr: &ErrNoSuchProject{
 				ProjectName: "chicken",
 				AccountID:   "12345",
 				Region:      "us-west-2",
@@ -192,7 +191,7 @@ func TestStore_GetProject(t *testing.T) {
 			mockIdentityServiceGet: func() (identity.Caller, error) {
 				return identity.Caller{}, fmt.Errorf("Error")
 			},
-			wantedErr: &store.ErrNoSuchProject{
+			wantedErr: &ErrNoSuchProject{
 				ProjectName: "chicken",
 				AccountID:   "unknown",
 				Region:      "us-west-2",
@@ -223,12 +222,12 @@ func TestStore_GetProject(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
-				identity: mockIdentityService{
+				idClient: mockIdentityService{
 					mockIdentityServiceGet: tc.mockIdentityServiceGet,
 				},
 				sessionRegion: "us-west-2",
@@ -285,7 +284,7 @@ func TestStore_CreateProject(t *testing.T) {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
-			wantedErr: &store.ErrProjectAlreadyExists{
+			wantedErr: &ErrProjectAlreadyExists{
 				ProjectName: "phonetool",
 			},
 		},
@@ -301,12 +300,12 @@ func TestStore_CreateProject(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
-				domains: &mockRoute53Domains{
+				domainsClient: &mockRoute53Domains{
 					t:                    t,
 					mockGetDomainDetails: tc.mockGetDomainDetails,
 				},
@@ -421,8 +420,8 @@ func TestStore_ListEnvironments(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -474,7 +473,7 @@ func TestStore_GetEnvironment(t *testing.T) {
 				require.Equal(t, testEnvironmentPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &store.ErrNoSuchEnvironment{
+			wantedErr: &ErrNoSuchEnvironment{
 				ProjectName:     testEnvironment.Project,
 				EnvironmentName: testEnvironment.Name,
 			},
@@ -502,8 +501,8 @@ func TestStore_GetEnvironment(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
@@ -572,7 +571,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: &store.ErrEnvironmentAlreadyExists{
+			wantedErr: &ErrEnvironmentAlreadyExists{
 				EnvironmentName: testEnvironment.Name,
 				ProjectName:     testEnvironment.Project,
 			},
@@ -597,8 +596,8 @@ func TestStore_CreateEnvironment(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 					mockGetParameter: tc.mockGetParameter,
@@ -720,8 +719,8 @@ func TestStore_ListApplications(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -773,7 +772,7 @@ func TestStore_GetApp(t *testing.T) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &store.ErrNoSuchApplication{
+			wantedErr: &ErrNoSuchApplication{
 				ProjectName:     testApplication.Project,
 				ApplicationName: testApplication.Name,
 			},
@@ -801,8 +800,8 @@ func TestStore_GetApp(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
@@ -871,7 +870,7 @@ func TestStore_CreateApplication(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: &store.ErrApplicationAlreadyExists{
+			wantedErr: &ErrApplicationAlreadyExists{
 				ApplicationName: testApplication.Name,
 				ProjectName:     testApplication.Project,
 			},
@@ -896,8 +895,8 @@ func TestStore_CreateApplication(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			store := &SSM{
-				systemManager: &mockSSM{
+			store := &Store{
+				ssmClient: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 					mockGetParameter: tc.mockGetParameter,

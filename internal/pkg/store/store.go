@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package ssm implements CRUD operations for project, environment, application and
+Package store implements CRUD operations for project, environment, application and
 pipeline configuration. This configuration contains the archer projects
 a customer has, and the environments and pipelines associated with each
 project.
 */
-package ssm
+package store
 
 import (
 	"encoding/json"
@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/route53domains"
@@ -28,7 +27,7 @@ import (
 
 // Parameter name formats for resources in a project. Projects are laid out in SSM
 // based on path - each parameter's key has a certain format, and you can have
-// heirarchies based on that format. Projects are at the root of the hierarchy.
+// hierarchies based on that format. Projects are at the root of the hierarchy.
 // Searching SSM for all parameters with the `rootProjectPath` key will give you
 // all the project keys, for example.
 
@@ -49,37 +48,35 @@ type identityService interface {
 	Get() (identity.Caller, error)
 }
 
-// SSM store is in charge of fetching and creating projects, environment and pipeline
-// configuration in SSM.
-type SSM struct {
-	systemManager ssmiface.SSMAPI
-	identity      identityService
-	domains       route53domainsiface.Route53DomainsAPI
+// Store is in charge of fetching and creating projects, environment and pipeline configuration in SSM.
+type Store struct {
+	idClient      identityService
+	domainsClient route53domainsiface.Route53DomainsAPI
+	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }
 
-// NewStore returns a Store allowing you to query or create Projects or Environments.
-func NewStore() (*SSM, error) {
+// New returns a Store allowing you to query or create Projects or Environments.
+func New() (*Store, error) {
 	sess, err := session.Default()
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &SSM{
-		systemManager: ssm.New(sess),
-		identity:      identity.New(sess),
-
+	return &Store{
+		idClient: identity.New(sess),
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
 		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
 		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
-		domains:       route53domains.New(sess, aws.NewConfig().WithRegion("us-east-1")),
+		domainsClient: route53domains.New(sess, aws.NewConfig().WithRegion("us-east-1")),
+		ssmClient:     ssm.New(sess),
 		sessionRegion: *sess.Config.Region,
 	}, nil
 }
 
 // CreateProject instantiates a new project, validates its uniqueness and stores it in SSM.
-func (s *SSM) CreateProject(project *archer.Project) error {
+func (s *Store) CreateProject(project *archer.Project) error {
 	projectPath := fmt.Sprintf(fmtProjectPath, project.Name)
 	project.Version = schemaVersion
 
@@ -90,12 +87,12 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 
 	if project.Domain != "" {
 		in := &route53domains.GetDomainDetailInput{DomainName: aws.String(project.Domain)}
-		if _, err := s.domains.GetDomainDetail(in); err != nil {
+		if _, err := s.domainsClient.GetDomainDetail(in); err != nil {
 			return fmt.Errorf("get domain details for %s: %w", project.Domain, err)
 		}
 	}
 
-	_, err = s.systemManager.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(projectPath),
 		Description: aws.String("An ECS-CLI Project"),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -106,7 +103,7 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &store.ErrProjectAlreadyExists{
+				return &ErrProjectAlreadyExists{
 					ProjectName: project.Name,
 				}
 			}
@@ -117,9 +114,9 @@ func (s *SSM) CreateProject(project *archer.Project) error {
 }
 
 // GetProject fetches a project by name. If it can't be found, return a ErrNoSuchProject
-func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
+func (s *Store) GetProject(projectName string) (*archer.Project, error) {
 	projectPath := fmt.Sprintf(fmtProjectPath, projectName)
-	projectParam, err := s.systemManager.GetParameter(&ssm.GetParameterInput{
+	projectParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(projectPath),
 	})
 
@@ -128,7 +125,7 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
 				account, region := s.getCallerAccountAndRegion()
-				return nil, &store.ErrNoSuchProject{
+				return nil, &ErrNoSuchProject{
 					ProjectName: projectName,
 					AccountID:   account,
 					Region:      region,
@@ -146,7 +143,7 @@ func (s *SSM) GetProject(projectName string) (*archer.Project, error) {
 }
 
 // ListProjects returns the list of existing projects in the customer's account and region.
-func (s *SSM) ListProjects() ([]*archer.Project, error) {
+func (s *Store) ListProjects() ([]*archer.Project, error) {
 	var projects []*archer.Project
 	serializedProjects, err := s.listParams(rootProjectPath)
 	if err != nil {
@@ -165,7 +162,7 @@ func (s *SSM) ListProjects() ([]*archer.Project, error) {
 
 // CreateEnvironment instantiates a new environment within an existing project. Returns ErrEnvironmentAlreadyExists
 // if the environment already exists in the project.
-func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
+func (s *Store) CreateEnvironment(environment *archer.Environment) error {
 	if _, err := s.GetProject(environment.Project); err != nil {
 		return err
 	}
@@ -176,7 +173,7 @@ func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
 		return fmt.Errorf("serializing environment %s: %w", environment.Name, err)
 	}
 
-	paramOutput, err := s.systemManager.PutParameter(&ssm.PutParameterInput{
+	paramOutput, err := s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(environmentPath),
 		Description: aws.String(fmt.Sprintf("The %s deployment stage", environment.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -187,7 +184,7 @@ func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &store.ErrEnvironmentAlreadyExists{
+				return &ErrEnvironmentAlreadyExists{
 					EnvironmentName: environment.Name,
 					ProjectName:     environment.Project}
 			}
@@ -202,9 +199,9 @@ func (s *SSM) CreateEnvironment(environment *archer.Environment) error {
 
 // GetEnvironment gets an environment belonging to a particular project by name. If no environment is found
 // it returns ErrNoSuchEnvironment.
-func (s *SSM) GetEnvironment(projectName string, environmentName string) (*archer.Environment, error) {
+func (s *Store) GetEnvironment(projectName string, environmentName string) (*archer.Environment, error) {
 	environmentPath := fmt.Sprintf(fmtEnvParamPath, projectName, environmentName)
-	environmentParam, err := s.systemManager.GetParameter(&ssm.GetParameterInput{
+	environmentParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(environmentPath),
 	})
 
@@ -212,7 +209,7 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
-				return nil, &store.ErrNoSuchEnvironment{
+				return nil, &ErrNoSuchEnvironment{
 					ProjectName:     projectName,
 					EnvironmentName: environmentName,
 				}
@@ -230,7 +227,7 @@ func (s *SSM) GetEnvironment(projectName string, environmentName string) (*arche
 }
 
 // ListEnvironments returns all environments belonging to a particular project.
-func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error) {
+func (s *Store) ListEnvironments(projectName string) ([]*archer.Environment, error) {
 	var environments []*archer.Environment
 
 	environmentsPath := fmt.Sprintf(rootEnvParamPath, projectName)
@@ -251,7 +248,7 @@ func (s *SSM) ListEnvironments(projectName string) ([]*archer.Environment, error
 
 // CreateApplication instantiates a new application within an existing project. Returns ErrApplicationAlreadyExists
 // if the application already exists in the project.
-func (s *SSM) CreateApplication(app *archer.Application) error {
+func (s *Store) CreateApplication(app *archer.Application) error {
 	if _, err := s.GetProject(app.Project); err != nil {
 		return err
 	}
@@ -262,7 +259,7 @@ func (s *SSM) CreateApplication(app *archer.Application) error {
 		return fmt.Errorf("serializing application %s: %w", app.Name, err)
 	}
 
-	paramOutput, err := s.systemManager.PutParameter(&ssm.PutParameterInput{
+	paramOutput, err := s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(applicationPath),
 		Description: aws.String(fmt.Sprintf("ECS-CLI v2 Application %s", app.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -273,7 +270,7 @@ func (s *SSM) CreateApplication(app *archer.Application) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &store.ErrApplicationAlreadyExists{
+				return &ErrApplicationAlreadyExists{
 					ApplicationName: app.Name,
 					ProjectName:     app.Project}
 			}
@@ -288,9 +285,9 @@ func (s *SSM) CreateApplication(app *archer.Application) error {
 
 // GetApplication gets an application belonging to a particular project by name. If no app is found
 // it returns ErrNoSuchApplication.
-func (s *SSM) GetApplication(projectName, appName string) (*archer.Application, error) {
+func (s *Store) GetApplication(projectName, appName string) (*archer.Application, error) {
 	appPath := fmt.Sprintf(fmtAppParamPath, projectName, appName)
-	appParam, err := s.systemManager.GetParameter(&ssm.GetParameterInput{
+	appParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(appPath),
 	})
 
@@ -298,7 +295,7 @@ func (s *SSM) GetApplication(projectName, appName string) (*archer.Application, 
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
-				return nil, &store.ErrNoSuchApplication{
+				return nil, &ErrNoSuchApplication{
 					ProjectName:     projectName,
 					ApplicationName: appName,
 				}
@@ -316,7 +313,7 @@ func (s *SSM) GetApplication(projectName, appName string) (*archer.Application, 
 }
 
 // ListApplications returns all applications belonging to a particular project.
-func (s *SSM) ListApplications(projectName string) ([]*archer.Application, error) {
+func (s *Store) ListApplications(projectName string) ([]*archer.Application, error) {
 	var applications []*archer.Application
 
 	applicationsPath := fmt.Sprintf(rootAppParamPath, projectName)
@@ -335,12 +332,12 @@ func (s *SSM) ListApplications(projectName string) ([]*archer.Application, error
 	return applications, nil
 }
 
-func (s *SSM) listParams(path string) ([]*string, error) {
+func (s *Store) listParams(path string) ([]*string, error) {
 	var serializedParams []*string
 
 	var nextToken *string = nil
 	for {
-		params, err := s.systemManager.GetParametersByPath(&ssm.GetParametersByPathInput{
+		params, err := s.ssmClient.GetParametersByPath(&ssm.GetParametersByPathInput{
 			Path:      aws.String(path),
 			Recursive: aws.Bool(false),
 			NextToken: nextToken,
@@ -364,8 +361,8 @@ func (s *SSM) listParams(path string) ([]*string, error) {
 
 // Retrieves the caller's Account ID with a best effort. If it fails to fetch the Account ID,
 // this returns "unknown".
-func (s *SSM) getCallerAccountAndRegion() (string, string) {
-	identity, err := s.identity.Get()
+func (s *Store) getCallerAccountAndRegion() (string, string) {
+	identity, err := s.idClient.Get()
 	region := s.sessionRegion
 	if err != nil {
 		log.Printf("Failed to get caller's Account ID %v", err)

@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -48,7 +47,7 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 		return nil, err
 	}
 
-	ssmStore, err := ssm.NewStore()
+	store, err := store.New()
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +58,7 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 	}
 	return &InitProjectOpts{
 		identity:     identity.New(defaultSession),
-		projectStore: ssmStore,
+		projectStore: store,
 		ws:           ws,
 		deployer:     cloudformation.New(defaultSession),
 		prompt:       prompt.New(),

@@ -19,7 +19,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -309,7 +309,7 @@ func BuildAppPackageCmd() *cobra.Command {
 			}
 			opts.ws = ws
 
-			store, err := ssm.NewStore()
+			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to application datastore: %w", err)
 			}

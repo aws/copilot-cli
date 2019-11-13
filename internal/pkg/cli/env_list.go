@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -88,7 +88,7 @@ func BuildEnvListCmd() *cobra.Command {
 			return opts.Ask()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := ssm.NewStore()
+			ssmStore, err := store.New()
 			if err != nil {
 				return err
 			}

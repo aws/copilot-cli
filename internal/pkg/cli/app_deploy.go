@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -19,7 +20,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -100,7 +100,7 @@ type projectService interface {
 }
 
 func (opts *appDeployOpts) init() error {
-	projectService, err := ssm.NewStore()
+	projectService, err := store.New()
 	if err != nil {
 		return fmt.Errorf("create project service: %w", err)
 	}

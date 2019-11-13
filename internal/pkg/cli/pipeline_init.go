@@ -9,8 +9,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -337,7 +337,7 @@ func (opts *InitPipelineOpts) askDeploy() error {
 }
 
 func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
-	store, err := ssm.NewStore()
+	store, err := store.New()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to environment datastore: %w", err)
 	}
