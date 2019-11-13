@@ -23,7 +23,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 	const (
 		wantedAppType        = manifest.LoadBalancedWebApplication
 		wantedAppName        = "frontend"
-		wantedDockerfilePath = "./frontend/Dockerfile"
+		wantedDockerfilePath = "./frontend"
 	)
 	testCases := map[string]struct {
 		inAppType        string
@@ -74,24 +74,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 						"./Dockerfile",
 						"backend/Dockerfile",
 						"frontend/Dockerfile",
-						"Enter a custom path",
 					})).
 					Return(wantedDockerfilePath, nil)
-			},
-		},
-		"choose a custom Dockerfile": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which Dockerfile would you like to use for frontend app?"), gomock.Any(), gomock.Eq(
-					[]string{
-						"Enter a custom path",
-					})).
-					Return("Enter a custom path", nil)
-				m.EXPECT().Get(gomock.Eq("OK, what's the path to your Dockerfile?"), gomock.Any(), gomock.Any()).Return(wantedDockerfilePath, nil)
 			},
 		},
 	}
@@ -142,7 +126,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"invalid app name": {
 			inAppName: "1234",
-			wantedErr: errors.New(fmt.Sprintf("application name 1234 is invalid: %s", errValueBadFormat)),
+			wantedErr: fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
 		},
 		"invalid dockerfile path": {
 			inDockerfilePath: "./hello/Dockerfile",

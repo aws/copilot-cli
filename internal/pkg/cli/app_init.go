@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -196,27 +197,19 @@ func (opts *InitAppOpts) askDockerfile() error {
 	if err != nil {
 		return err
 	}
-	const customPathOpt = "Enter a custom path"
-	selections := make([]string, len(dockerfiles))
-	copy(selections, dockerfiles)
-	selections = append(selections, customPathOpt)
 
 	sel, err := opts.prompt.SelectOne(
 		fmt.Sprintf("Which Dockerfile would you like to use for %s app?", opts.AppName),
 		"Dockerfile to use for building your application's container image.",
-		selections,
+		dockerfiles,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
 	}
 
-	if sel == customPathOpt {
-		sel, err = opts.prompt.Get("OK, what's the path to your Dockerfile?", "", nil)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to get Dockerfile: %w", err)
-	}
-	opts.DockerfilePath = sel
+	// NOTE: Trim "/Dockerfile" from the selected option for storing in the app manifest.
+	opts.DockerfilePath = strings.TrimSuffix(sel, "/Dockerfile")
+
 	return nil
 }
 
