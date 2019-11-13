@@ -82,8 +82,8 @@ Resources:
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Ref AWS::StackName
-      Description: !Ref AWS::StackName
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Description: !Sub Build for ${AWS::StackName}
       # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
       # created in the same region as this pipeline.
       EncryptionKey: !ImportValue chickenProject-ArtifactKey
@@ -99,10 +99,67 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
+  IntegTestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-IntegTestRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  IntegTestProjecttest:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-IntegTest-test
+      Description: !Sub Integration tests for ${AWS::StackName}-test
+      ServiceRole: !GetAtt IntegTestRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        EnvironmentVariables:
+          - Name: PIPELINE_STAGE
+            Type: PLAINTEXT
+            Value: test
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec_integ.yml
+      TimeoutInMinutes: 480
+  IntegTestProjectprod:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-IntegTest-prod
+      Description: !Sub Integration tests for ${AWS::StackName}-prod
+      ServiceRole: !GetAtt IntegTestRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        EnvironmentVariables:
+          - Name: PIPELINE_STAGE
+            Type: PLAINTEXT
+            Value: prod
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec_integ.yml
+      TimeoutInMinutes: 480
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-codepipeline-role
+      RoleName: !Sub ${AWS::StackName}-CodepipelineRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -117,7 +174,7 @@ Resources:
   PipelineRolePolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-codepipeline-policy
+      PolicyName: !Sub ${AWS::StackName}-CodepipelinePolicy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -236,11 +293,9 @@ Resources:
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
-        -
-          Name: Build
+        - Name: Build
           Actions:
-          -
-            Name: Build
+          - Name: Build
             ActionTypeId:
               Category: Build
               Owner: AWS
@@ -254,7 +309,7 @@ Resources:
             OutputArtifacts:
               - Name: BuildOutput
 
-        - Name: DeployTo-chickenProject-test
+        - Name: DeployTo-test
           Actions:
             - Name: CreateOrUpdate-frontend-test
               Region: us-west-2
@@ -308,7 +363,20 @@ Resources:
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-        - Name: DeployTo-chickenProject-prod
+        - Name: Validate-test
+          Actions:
+          - Name: IntegTests
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref IntegTestProjecttest
+            RunOrder: 1
+            InputArtifacts:
+              - Name: SCCheckoutArtifact
+        - Name: DeployTo-prod
           Actions:
             - Name: ApprovePromotionTo-prod
               ActionTypeId:
@@ -369,3 +437,16 @@ Resources:
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
+        - Name: Validate-prod
+          Actions:
+          - Name: IntegTests
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref IntegTestProjectprod
+            RunOrder: 1
+            InputArtifacts:
+              - Name: SCCheckoutArtifact
