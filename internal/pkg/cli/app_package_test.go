@@ -185,12 +185,13 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			tc.expectPrompt(mockPrompt)
 
 			opts := &PackageAppOpts{
-				AppName:    tc.inAppName,
-				EnvName:    tc.inEnvName,
-				ws:         mockWorkspace,
-				store:      mockStore,
-				prompt:     mockPrompt,
-				GlobalOpts: &GlobalOpts{},
+				AppName: tc.inAppName,
+				EnvName: tc.inEnvName,
+				ws:      mockWorkspace,
+				store:   mockStore,
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			// WHEN

@@ -19,7 +19,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -44,7 +43,6 @@ type InitAppOpts struct {
 	appStore       archer.ApplicationStore
 	projGetter     archer.ProjectGetter
 	projDeployer   projectDeployer
-	prompt         prompter
 	prog           progress
 
 	// Outputs stored on successful actions.
@@ -304,7 +302,6 @@ This command is also run as part of "archer init".`,
   /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
-			opts.prompt = prompt.New()
 
 			store, err := store.New()
 			if err != nil {

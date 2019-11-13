@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
@@ -41,7 +40,6 @@ type InitPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	prompt         prompter
 	manifestWriter archer.ManifestIO
 	secretsmanager archer.SecretsManager
 
@@ -59,7 +57,6 @@ type InitPipelineOpts struct {
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
 		GlobalOpts: NewGlobalOpts(),
-		prompt:     prompt.New(),
 	}
 }
 

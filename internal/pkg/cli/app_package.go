@@ -21,7 +21,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -47,7 +46,6 @@ type PackageAppOpts struct {
 	stackWriter  io.Writer
 	paramsWriter io.Writer
 	fs           afero.Fs
-	prompt       prompter
 
 	*GlobalOpts // Embed global options.
 }
@@ -62,7 +60,6 @@ func NewPackageAppOpts() *PackageAppOpts {
 			stackWriter:  os.Stdout,
 			paramsWriter: ioutil.Discard,
 			fs:           &afero.Afero{Fs: afero.NewOsFs()},
-			prompt:       prompt.New(),
 			GlobalOpts:   NewGlobalOpts(),
 		}
 	}
@@ -71,7 +68,6 @@ func NewPackageAppOpts() *PackageAppOpts {
 		stackWriter:  os.Stdout,
 		paramsWriter: ioutil.Discard,
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		prompt:       prompt.New(),
 		GlobalOpts:   NewGlobalOpts(),
 	}
 }

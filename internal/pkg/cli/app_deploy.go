@@ -23,7 +23,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 )
 
@@ -31,7 +30,6 @@ import (
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
 		GlobalOpts: NewGlobalOpts(),
-		prompt:     prompt.New(),
 		spinner:    termprogress.NewSpinner(),
 	}
 
@@ -82,7 +80,6 @@ type appDeployOpts struct {
 	ecrService       ecr.Service
 	workspaceService archer.Workspace
 
-	prompt  prompter
 	spinner progress
 
 	localProjectAppNames []string

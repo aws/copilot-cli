@@ -186,7 +186,9 @@ func TestSourceAppName(t *testing.T) {
 			opts := appDeployOpts{
 				app:                  tc.inputAppFlag,
 				localProjectAppNames: tc.localProjectAppNames,
-				prompt:               mockPrompt,
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			gotErr := opts.sourceAppName()
@@ -270,7 +272,9 @@ func TestSourceEnvName(t *testing.T) {
 			opts := appDeployOpts{
 				env:                 tc.inputEnvFlag,
 				projectEnvironments: tc.projectEnvironments,
-				prompt:              mockPrompt,
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			gotErr := opts.sourceEnvName()

@@ -64,9 +64,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubAccessToken,
 
-				prompt: mockPrompt,
-
 				projectEnvs: tc.inProjectEnvs,
+
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			tc.mockPrompt(mockPrompt)

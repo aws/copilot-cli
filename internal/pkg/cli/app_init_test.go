@@ -93,8 +93,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				DockerfilePath: tc.inDockerfilePath,
 
 				fs:         &afero.Afero{Fs: afero.NewMemMapFs()},
-				prompt:     mockPrompt,
-				GlobalOpts: &GlobalOpts{},
+				GlobalOpts: &GlobalOpts{
+					prompt:     mockPrompt,
+				},
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)
