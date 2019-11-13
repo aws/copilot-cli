@@ -29,9 +29,11 @@ func TestEnvList_Execute(t *testing.T) {
 	}{
 		"with envs": {
 			listOpts: ListEnvOpts{
-				ProjectName:   "coolproject",
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -50,9 +52,11 @@ func TestEnvList_Execute(t *testing.T) {
 		"with invalid project name": {
 			expectedErr: mockError,
 			listOpts: ListEnvOpts{
-				ProjectName:   "coolproject",
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -68,9 +72,11 @@ func TestEnvList_Execute(t *testing.T) {
 		"with failed call to list": {
 			expectedErr: mockError,
 			listOpts: ListEnvOpts{
-				ProjectName:   "coolproject",
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -85,9 +91,11 @@ func TestEnvList_Execute(t *testing.T) {
 		},
 		"with production envs": {
 			listOpts: ListEnvOpts{
-				ProjectName:   "coolproject",
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -154,15 +162,17 @@ func TestEnvList_Ask(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			listEnvs := &ListEnvOpts{
-				ProjectName: tc.inputProject,
-				prompter:    mockPrompter,
+				GlobalOpts: &GlobalOpts{
+					prompt:      mockPrompter,
+					projectName: tc.inputProject,
+				},
 			}
 			tc.setupMocks()
 
 			err := listEnvs.Ask()
 
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedProject, listEnvs.ProjectName, "expected project names to match")
+			require.Equal(t, tc.wantedProject, listEnvs.ProjectName(), "expected project names to match")
 		})
 	}
 }

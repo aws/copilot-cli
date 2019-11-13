@@ -76,7 +76,6 @@ func NewInitOpts() (*InitOpts, error) {
 	initApp := &InitAppOpts{
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 		manifestWriter: ws,
-		prompt:         prompt,
 		appStore:       ssm,
 		projGetter:     ssm,
 		projDeployer:   deployer,
@@ -92,7 +91,6 @@ func NewInitOpts() (*InitOpts, error) {
 		envDeployer:   deployer,
 		projDeployer:  deployer, // TODO #317
 		prog:          spin,
-		prompt:        prompt,
 		identity:      id,
 		GlobalOpts:    NewGlobalOpts(),
 	}

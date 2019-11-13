@@ -53,9 +53,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			addEnv := &InitEnvOpts{
-				EnvName:    tc.inputEnv,
-				prompt:     mockPrompter,
-				GlobalOpts: &GlobalOpts{projectName: tc.inputProject},
+				EnvName: tc.inputEnv,
+				GlobalOpts: &GlobalOpts{
+					prompt:      mockPrompter,
+					projectName: tc.inputProject,
+				},
 			}
 			tc.setupMocks()
 
