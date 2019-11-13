@@ -78,6 +78,20 @@ func (mr *MockWorkspaceMockRecorder) ListManifestFiles() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListManifestFiles", reflect.TypeOf((*MockWorkspace)(nil).ListManifestFiles))
 }
 
+// AppManifestFileName mocks base method
+func (m *MockWorkspace) AppManifestFileName(appName string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppManifestFileName", appName)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// AppManifestFileName indicates an expected call of AppManifestFileName
+func (mr *MockWorkspaceMockRecorder) AppManifestFileName(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppManifestFileName", reflect.TypeOf((*MockWorkspace)(nil).AppManifestFileName), appName)
+}
+
 // Create mocks base method
 func (m *MockWorkspace) Create(projectName string) error {
 	m.ctrl.T.Helper()
@@ -120,20 +134,6 @@ func (m *MockWorkspace) AppNames() ([]string, error) {
 func (mr *MockWorkspaceMockRecorder) AppNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppNames", reflect.TypeOf((*MockWorkspace)(nil).AppNames))
-}
-
-// ManifestFileName mocks base method
-func (m *MockWorkspace) ManifestFileName(appName string) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ManifestFileName", appName)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// ManifestFileName indicates an expected call of ManifestFileName
-func (mr *MockWorkspaceMockRecorder) ManifestFileName(appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManifestFileName", reflect.TypeOf((*MockWorkspace)(nil).ManifestFileName), appName)
 }
 
 // MockManifestIO is a mock of ManifestIO interface
@@ -202,4 +202,18 @@ func (m *MockManifestIO) ListManifestFiles() ([]string, error) {
 func (mr *MockManifestIOMockRecorder) ListManifestFiles() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListManifestFiles", reflect.TypeOf((*MockManifestIO)(nil).ListManifestFiles))
+}
+
+// AppManifestFileName mocks base method
+func (m *MockManifestIO) AppManifestFileName(appName string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppManifestFileName", appName)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// AppManifestFileName indicates an expected call of AppManifestFileName
+func (mr *MockManifestIOMockRecorder) AppManifestFileName(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppManifestFileName", reflect.TypeOf((*MockManifestIO)(nil).AppManifestFileName), appName)
 }

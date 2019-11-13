@@ -201,7 +201,6 @@ func TestWriteManifest(t *testing.T) {
 	testCases := map[string]struct {
 		expectedContent string
 		manifestFile    string
-		appName         string
 		workingDir      string
 		expectedPath    string
 		expectedError   error
@@ -209,7 +208,6 @@ func TestWriteManifest(t *testing.T) {
 	}{
 		"new content": {
 			manifestFile:    "frontend-app.yml",
-			appName:         "frontend",
 			expectedContent: "frontend",
 			workingDir:      "test/",
 			expectedPath:    "test/ecs-project/frontend-app.yml",
@@ -219,7 +217,6 @@ func TestWriteManifest(t *testing.T) {
 		},
 		"no manifest dir": {
 			manifestFile:  "frontend-app.yml",
-			appName:       "frontend",
 			expectedPath:  "",
 			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
 			workingDir:    "/",
@@ -238,7 +235,7 @@ func TestWriteManifest(t *testing.T) {
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
-			manifestPath, err := ws.WriteManifest([]byte(tc.expectedContent), tc.appName)
+			manifestPath, err := ws.WriteManifest([]byte(tc.expectedContent), tc.manifestFile)
 			require.Equal(t, tc.expectedPath, manifestPath)
 			if tc.expectedError == nil {
 				require.NoError(t, err)

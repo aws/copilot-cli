@@ -36,6 +36,7 @@ type InitPipelineOpts struct {
 	EnableCD          bool
 	Deploy            bool
 	// TODO add git branch
+	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
 	prompt         prompter

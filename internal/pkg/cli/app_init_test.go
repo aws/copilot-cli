@@ -197,7 +197,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -235,7 +237,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -254,7 +258,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -281,7 +287,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedErr:        fmt.Errorf("application frontend already exists under project project"),
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil).Times(0)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile).Times(0)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
 			},
 			mockProgress:     func(m *climocks.Mockprogress) {},
 			mockProjGetter:   func(m *mocks.MockProjectGetter) {},
@@ -302,7 +310,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedErr:        fmt.Errorf("couldn't check if application frontend exists in project project: oops"),
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil).Times(0)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile).Times(0)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
 			},
 			mockProgress:     func(m *climocks.Mockprogress) {},
 			mockProjGetter:   func(m *mocks.MockProjectGetter) {},
@@ -322,7 +332,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedErr:        fmt.Errorf("saving application frontend: oops"),
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "frontend").Return("/frontend", nil)
+				manifestFile := "/frontend-app.yml"
+				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
+				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(gomock.Any())

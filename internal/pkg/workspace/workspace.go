@@ -9,7 +9,7 @@
 //  ├── ecs-project                    (manifest directory)
 //  │   ├── .ecs-workspace             (workspace summary)
 //  │   ├── my-app.yml                 (application manifest)
-//  │   └── project-repo-pipeline.yml  (pipeline manifest)
+//  │   └── pipeline.yml               (pipeline manifest)
 //  └── my-app                         (customer application)
 //
 package workspace
@@ -30,11 +30,10 @@ const (
 	// ManifestDirectoryName is the name of the directory where application manifests will be stored.
 	ManifestDirectoryName = "ecs-project"
 
-	workspaceSummaryFileName   = ".ecs-workspace"
-	maximumParentDirsToSearch  = 5
-	appManifestFileSuffix      = "-app.yml"
-	pipelineManifestFileSuffix = "-pipeline.yml"
-	fmtManifestFileName        = "%s" + appManifestFileSuffix
+	workspaceSummaryFileName  = ".ecs-workspace"
+	maximumParentDirsToSearch = 5
+	appManifestFileSuffix     = "-app.yml"
+	fmtAppManifestFileName    = "%s" + appManifestFileSuffix
 )
 
 // Workspace manages a local workspace, including creating and managing manifest files.
@@ -251,15 +250,16 @@ func (ws *Workspace) WriteManifest(manifestBlob []byte, filename string) (string
 	if err != nil {
 		return "", err
 	}
-	p := filepath.Join(manifestPath, ws.ManifestFileName(filename))
-	if err := ws.fsUtils.WriteFile(p, manifestBlob, 0644); err != nil {
+
+	path := filepath.Join(manifestPath, filename)
+	if err := ws.fsUtils.WriteFile(path, manifestBlob, 0644); err != nil {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}
-	return p, nil
+	return path, nil
 }
 
 // ManifestFileName returns the manifest's name from an application name.
 // TODO extend this to pipeline manifest filenames too
-func (ws *Workspace) ManifestFileName(appName string) string {
-	return fmt.Sprintf(fmtManifestFileName, appName)
+func (ws *Workspace) AppManifestFileName(appName string) string {
+	return fmt.Sprintf(fmtAppManifestFileName, appName)
 }
