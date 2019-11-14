@@ -1,127 +1,50 @@
+// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package cloudformation provides functionality to deploy archer resources with AWS CloudFormation.
 package cloudformation
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-
-	"github.com/gobuffalo/packd"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 )
 
-// envStackConfig is for providing all the values to set up an
-// environment stack and to interpret the outputs from it.
-type envStackConfig struct {
-	*deploy.CreateEnvironmentInput
-	box packd.Box
+// DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
+//
+// If the deployment succeeds, returns nil.
+// If the stack already exists, returns a ErrStackAlreadyExists.
+// If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
+// Otherwise, returns a wrapped error.
+func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
+	return cf.deploy(stack.NewEnvStackConfig(env, cf.box))
 }
 
-const (
-	// EnvParamIncludeLBKey is the CF Param Key Name for whether to include a LB
-	EnvParamIncludeLBKey = "IncludePublicLoadBalancer"
-	// EnvParamProjectNameKey is the CF Param Key Name for providing the project name
-	EnvParamProjectNameKey = "ProjectName"
-	// EnvParamEnvNameKey is the CF Param Key Name for providing the environment name
-	EnvParamEnvNameKey            = "EnvironmentName"
-	envParamToolsAccountPrincipal = "ToolsAccountPrincipalARN"
-	// EnvOutputECRKey is the CF Output Key Name for the ECR Repo Name
-	EnvOutputECRKey = "ECRRepositoryName"
+// StreamEnvironmentCreation streams resource update events while a deployment is taking place.
+// Once the CloudFormation stack operation halts, the update channel is closed and a
+// CreateEnvironmentResponse is sent to the second channel.
+func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
+	done := make(chan struct{})
+	events := make(chan []deploy.ResourceEvent)
+	resp := make(chan deploy.CreateEnvironmentResponse, 1)
 
-	ecrURLFormatString = "%s.dkr.ecr.%s.amazonaws.com/%s"
-
-	envTemplatePath = "environment/cf.yml"
-)
-
-// newEnvStackConfig sets up a struct which can provide values to CloudFormation for
-// spinning up an environment.
-func newEnvStackConfig(input *deploy.CreateEnvironmentInput, box packd.Box) *envStackConfig {
-	return &envStackConfig{
-		CreateEnvironmentInput: input,
-		box:                    box,
-	}
+	stack := stack.NewEnvStackConfig(env, cf.box)
+	go cf.streamResourceEvents(done, events, stack.StackName())
+	go cf.streamEnvironmentResponse(done, resp, stack)
+	return events, resp
 }
 
-// Template returns the environment CloudFormation template.
-func (e *envStackConfig) Template() (string, error) {
-	template, err := e.box.FindString(envTemplatePath)
+// streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
+// The done channel is closed once this method exits to notify other streams that they should stop working.
+func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *stack.EnvStackConfig) {
+	defer close(done)
+	deployed, err := cf.waitForStackCreation(stack)
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: envTemplatePath, parentErr: err}
+		resp <- deploy.CreateEnvironmentResponse{Err: err}
+		return
 	}
-	return template, nil
-}
-
-// Parameters returns the parameters to be passed into a environment CloudFormation template.
-func (e *envStackConfig) Parameters() []*cloudformation.Parameter {
-	return []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(EnvParamIncludeLBKey),
-			ParameterValue: aws.String(strconv.FormatBool(e.PublicLoadBalancer)),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamProjectNameKey),
-			ParameterValue: aws.String(e.Project),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamEnvNameKey),
-			ParameterValue: aws.String(e.Name),
-		},
-		{
-			ParameterKey:   aws.String(envParamToolsAccountPrincipal),
-			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
-		},
+	env, err := stack.ToEnv(deployed)
+	resp <- deploy.CreateEnvironmentResponse{
+		Env: env,
+		Err: err,
 	}
-}
-
-// Tags returns the tags that should be applied to the environment CloudFormation stack.
-func (e *envStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
-		{
-			Key:   aws.String(projectTagKey),
-			Value: aws.String(e.Project),
-		},
-		{
-			Key:   aws.String(envTagKey),
-			Value: aws.String(e.Name),
-		},
-	}
-}
-
-// StackName returns the name of the CloudFormation stack (based on the project and env names).
-func (e *envStackConfig) StackName() string {
-	return fmt.Sprintf("%s-%s", e.Project, e.Name)
-}
-
-// ToEnv inspects an environment cloudformation stack and constructs an environment
-// struct out of it (including resources like ECR Repo)
-func (e *envStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment, error) {
-	stackARN, err := arn.Parse(*stack.StackId)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't extract region and account from stack ID %s: %w", *stack.StackId, err)
-	}
-
-	stackOutputs := make(map[string]string)
-	for _, output := range stack.Outputs {
-		stackOutputs[*output.OutputKey] = *output.OutputValue
-	}
-
-	createdEnv := archer.Environment{
-		Name:      e.Name,
-		Project:   e.Project,
-		Prod:      e.Prod,
-		Region:    stackARN.Region,
-		AccountID: stackARN.AccountID,
-	}
-
-	if stackOutputs[EnvOutputECRKey] != "" {
-		createdEnv.RegistryURL = fmt.Sprintf(ecrURLFormatString,
-			createdEnv.AccountID,
-			createdEnv.Region,
-			stackOutputs[EnvOutputECRKey])
-	}
-
-	return &createdEnv, nil
 }

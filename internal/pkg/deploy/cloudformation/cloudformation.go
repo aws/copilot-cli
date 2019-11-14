@@ -67,55 +67,6 @@ func New(sess *session.Session) CloudFormation {
 	}
 }
 
-// DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
-//
-// If the deployment succeeds, returns nil.
-// If the stack already exists, returns a ErrStackAlreadyExists.
-// If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
-// Otherwise, returns a wrapped error.
-func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	return cf.deploy(newEnvStackConfig(env, cf.box))
-}
-
-// StreamEnvironmentCreation streams resource update events while a deployment is taking place.
-// Once the CloudFormation stack operation halts, the update channel is closed and a
-// CreateEnvironmentResponse is sent to the second channel.
-func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	done := make(chan struct{})
-	events := make(chan []deploy.ResourceEvent)
-	resp := make(chan deploy.CreateEnvironmentResponse, 1)
-
-	stack := newEnvStackConfig(env, cf.box)
-	go cf.streamResourceEvents(done, events, stack.StackName())
-	go cf.streamEnvironmentResponse(done, resp, stack)
-	return events, resp
-}
-
-func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
-	template, err := stackConfig.Template()
-	if err != nil {
-		return fmt.Errorf("template creation: %w", err)
-	}
-
-	in, err := createChangeSetInput(stackConfig.StackName(), template, withCreateChangeSetType(), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
-	if err != nil {
-		return err
-	}
-
-	if err := cf.deployChangeSet(in); err != nil {
-		if stackExists(err) {
-			// Explicitly return a StackAlreadyExists error for the caller to decide if they want to ignore the
-			// operation or fail the program.
-			return &ErrStackAlreadyExists{
-				stackName: stackConfig.StackName(),
-				parentErr: err,
-			}
-		}
-		return err
-	}
-	return nil
-}
-
 // streamResourceEvents sends a list of ResourceEvent every 3 seconds to the events channel.
 // The events channel is closed only when the done channel receives a message.
 // If an error occurs while describing stack events, it is ignored so that the stream is not interrupted.
@@ -150,22 +101,6 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 			close(events)       // Close the channel to let receivers know that there won't be any more events.
 			return              // Exit for-loop.
 		}
-	}
-}
-
-// streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
-// The done channel is closed once this method exits to notify other streams that they should stop working.
-func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *envStackConfig) {
-	defer close(done)
-	deployed, err := cf.waitForStackCreation(stack)
-	if err != nil {
-		resp <- deploy.CreateEnvironmentResponse{Err: err}
-		return
-	}
-	env, err := stack.ToEnv(deployed)
-	resp <- deploy.CreateEnvironmentResponse{
-		Env: env,
-		Err: err,
 	}
 }
 
@@ -229,6 +164,31 @@ func (cf CloudFormation) describeStackWithClient(describeStackInput *cloudformat
 	}
 
 	return describeStackOutput.Stacks[0], nil
+}
+
+func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
+	template, err := stackConfig.Template()
+	if err != nil {
+		return fmt.Errorf("template creation: %w", err)
+	}
+
+	in, err := createChangeSetInput(stackConfig.StackName(), template, withCreateChangeSetType(), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
+	if err != nil {
+		return err
+	}
+
+	if err := cf.deployChangeSet(in); err != nil {
+		if stackExists(err) {
+			// Explicitly return a StackAlreadyExists error for the caller to decide if they want to ignore the
+			// operation or fail the program.
+			return &ErrStackAlreadyExists{
+				stackName: stackConfig.StackName(),
+				parentErr: err,
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput) error {

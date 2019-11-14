@@ -1,165 +1,179 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package cloudformation provides functionality to deploy archer resources with AWS CloudFormation.
 package cloudformation
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnvTemplate(t *testing.T) {
+func TestStreamEnvironmentCreation(t *testing.T) {
 	testCases := map[string]struct {
-		box            packd.Box
-		expectedOutput string
-		want           error
+		in *deploy.CreateEnvironmentInput
+
+		mockWaitUntilStackCreateComplete func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockDescribeStacks               func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+		mockDescribeStackEvents          func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
+
+		wantedEvents []deploy.ResourceEvent
+		wantedResult deploy.CreateEnvironmentResponse
 	}{
-		"should return error given template not found": {
-			box:  emptyEnvBox(),
-			want: fmt.Errorf("failed to find the cloudformation template at %s", envTemplatePath),
-		},
-		"should return template body when present": {
-			box:            envBoxWithTemplateFile(),
-			expectedOutput: mockTemplate,
-		},
-	}
+		"error while creating stack": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			envStack := newEnvStackConfig(mockDeployEnvironmentInput(), tc.box)
-			got, err := envStack.Template()
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return errors.New("wait until error")
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStackEventsOutput{
+					StackEvents: []*cloudformation.StackEvent{
+						{
+							LogicalResourceId:    aws.String("vpc"),
+							ResourceType:         aws.String("AWS::EC2::VPC"),
+							ResourceStatus:       aws.String(cloudformation.ResourceStatusCreateInProgress),
+							ResourceStatusReason: aws.String("create initiated"),
+						},
+					},
+				}, nil
+			},
 
-			if tc.want != nil {
-				require.EqualError(t, tc.want, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedOutput, got)
-			}
-		})
-	}
-}
+			wantedEvents: []deploy.ResourceEvent{
+				{
+					Resource: deploy.Resource{
+						LogicalName: "vpc",
+						Type:        "AWS::EC2::VPC",
+					},
+					Status:       cloudformation.ResourceStatusCreateInProgress,
+					StatusReason: "create initiated",
+				},
+			},
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: nil,
+				Err: errors.New("failed to create stack phonetool-test: wait until error"),
+			},
+		},
+		"swallows error while describing stack": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
 
-func TestEnvParameters(t *testing.T) {
-	deploymentInput := mockDeployEnvironmentInput()
-	env := newEnvStackConfig(deploymentInput, emptyEnvBox())
-	expectedParams := []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(EnvParamIncludeLBKey),
-			ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamProjectNameKey),
-			ParameterValue: aws.String(deploymentInput.Project),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamEnvNameKey),
-			ParameterValue: aws.String(deploymentInput.Name),
-		},
-		{
-			ParameterKey:   aws.String(envParamToolsAccountPrincipal),
-			ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
-		},
-	}
-	require.ElementsMatch(t, expectedParams, env.Parameters())
-}
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return errors.New("wait until error")
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return nil, errors.New("describe stack events error")
+			},
 
-func TestEnvTags(t *testing.T) {
-	deploymentInput := mockDeployEnvironmentInput()
-	env := newEnvStackConfig(deploymentInput, emptyEnvBox())
-	expectedTags := []*cloudformation.Tag{
-		{
-			Key:   aws.String(projectTagKey),
-			Value: aws.String(deploymentInput.Project),
+			wantedEvents: nil,
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: nil,
+				Err: errors.New("failed to create stack phonetool-test: wait until error"),
+			},
 		},
-		{
-			Key:   aws.String(envTagKey),
-			Value: aws.String(deploymentInput.Name),
-		},
-	}
-	require.ElementsMatch(t, expectedTags, env.Tags())
-}
+		"sends an environment on success": {
+			in: &deploy.CreateEnvironmentInput{
+				Project: "phonetool",
+				Name:    "test",
+			},
 
-func TestStackName(t *testing.T) {
-	deploymentInput := mockDeployEnvironmentInput()
-	env := newEnvStackConfig(deploymentInput, emptyEnvBox())
-	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name), env.StackName())
-}
+			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return nil
+			},
+			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							StackId: aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:902697171733:stack/%s", "phonetool-test")),
+						},
+					},
+				}, nil
+			},
+			mockDescribeStackEvents: func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
+				return &cloudformation.DescribeStackEventsOutput{
+					StackEvents: []*cloudformation.StackEvent{
+						{
+							LogicalResourceId:    aws.String("vpc"),
+							ResourceType:         aws.String("AWS::EC2::VPC"),
+							ResourceStatus:       aws.String(cloudformation.ResourceStatusCreateInProgress),
+							ResourceStatusReason: aws.String("create initiated"),
+						},
+					},
+				}, nil
+			},
 
-func TestToEnv(t *testing.T) {
-	mockDeployInput := mockDeployEnvironmentInput()
-	testCases := map[string]struct {
-		expectedEnv archer.Environment
-		mockStack   *cloudformation.Stack
-		want        error
-	}{
-		"should return error if Stack ID is invalid": {
-			want:      fmt.Errorf("couldn't extract region and account from stack ID : arn: invalid prefix"),
-			mockStack: mockEnvironmentStack("", ""),
-		},
-		"should return a well formed environment": {
-			mockStack: mockEnvironmentStack("arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env", "project/env"),
-			expectedEnv: archer.Environment{
-				Name:        mockDeployInput.Name,
-				Project:     mockDeployInput.Project,
-				Prod:        mockDeployInput.Prod,
-				AccountID:   "902697171733",
-				Region:      "eu-west-3",
-				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
+			wantedEvents: []deploy.ResourceEvent{
+				{
+					Resource: deploy.Resource{
+						LogicalName: "vpc",
+						Type:        "AWS::EC2::VPC",
+					},
+					Status:       cloudformation.ResourceStatusCreateInProgress,
+					StatusReason: "create initiated",
+				},
+			},
+			wantedResult: deploy.CreateEnvironmentResponse{
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "eu-west-3",
+					AccountID: "902697171733",
+				},
+				Err: nil,
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			envStack := newEnvStackConfig(mockDeployInput, emptyBox())
-			got, err := envStack.ToEnv(tc.mockStack)
+			// GIVEN
+			cf := CloudFormation{
+				client: &mockCloudFormation{
+					t:                                t,
+					mockDescribeStackEvents:          tc.mockDescribeStackEvents,
+					mockDescribeStacks:               tc.mockDescribeStacks,
+					mockWaitUntilStackCreateComplete: tc.mockWaitUntilStackCreateComplete,
+				},
+				box: emptyEnvBox(),
+			}
 
-			if tc.want != nil {
-				require.EqualError(t, tc.want, err.Error())
+			// WHEN
+			events, resp := cf.StreamEnvironmentCreation(tc.in)
+
+			// THEN
+			require.Equal(t, tc.wantedEvents, <-events)
+			got := <-resp
+			if tc.wantedResult.Err != nil {
+				require.EqualError(t, got.Err, tc.wantedResult.Err.Error(), "expected %v got %v", tc.wantedResult.Err, got.Err)
 			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedEnv, *got)
+				require.Equal(t, tc.wantedResult, got)
 			}
 		})
 	}
 }
-func mockEnvironmentStack(stackArn, ecrOutput string) *cloudformation.Stack {
-	return &cloudformation.Stack{
-		StackId: aws.String(stackArn),
-		Outputs: []*cloudformation.Output{
-			&cloudformation.Output{
-				OutputKey:   aws.String(EnvOutputECRKey),
-				OutputValue: aws.String(ecrOutput),
-			},
-		},
-	}
-}
 
-func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
-	return &deploy.CreateEnvironmentInput{
-		Name:                     "env",
-		Project:                  "project",
-		Prod:                     true,
-		PublicLoadBalancer:       true,
-		ToolsAccountPrincipalARN: "mockToolsAccountPrincipalARN",
-	}
-}
 func emptyEnvBox() packd.Box {
 	return packd.NewMemoryBox()
-}
-
-func envBoxWithTemplateFile() packd.Box {
-	box := packd.NewMemoryBox()
-
-	box.AddString(envTemplatePath, mockTemplate)
-
-	return box
 }
