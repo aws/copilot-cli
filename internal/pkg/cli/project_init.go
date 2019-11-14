@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -31,6 +30,7 @@ const (
 // InitProjectOpts contains the fields to collect for creating a project.
 type InitProjectOpts struct {
 	ProjectName string
+	DomainName  string
 
 	identity     identityService
 	projectStore archer.ProjectStore
@@ -47,7 +47,7 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 		return nil, err
 	}
 
-	ssmStore, err := ssm.NewStore()
+	store, err := store.New()
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func NewInitProjectOpts() (*InitProjectOpts, error) {
 	}
 	return &InitProjectOpts{
 		identity:     identity.New(defaultSession),
-		projectStore: ssmStore,
+		projectStore: store,
 		ws:           ws,
 		deployer:     cloudformation.New(defaultSession),
 		prompt:       prompt.New(),
@@ -124,6 +124,7 @@ func (opts *InitProjectOpts) Execute() error {
 	err = opts.projectStore.CreateProject(&archer.Project{
 		AccountID: caller.Account,
 		Name:      opts.ProjectName,
+		Domain:    opts.DomainName,
 	})
 	if err != nil {
 		// If the project already exists, move on - otherwise return the error.
@@ -220,5 +221,6 @@ A project is a collection of containerized applications (or micro-services) that
 			}
 		},
 	}
+	cmd.Flags().StringVar(&opts.DomainName, domainNameFlag, "", domainNameFlagDescription)
 	return cmd
 }

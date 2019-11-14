@@ -7,6 +7,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/viper"
 )
@@ -19,12 +20,14 @@ func init() {
 // GlobalOpts holds fields that are used across multiple commands.
 type GlobalOpts struct {
 	projectName string
+	prompt      prompter
 }
 
 // NewGlobalOpts returns a GlobalOpts with the project name retrieved from viper.
 func NewGlobalOpts() *GlobalOpts {
 	return &GlobalOpts{
 		projectName: viper.GetString(projectFlag),
+		prompt:      prompt.New(),
 	}
 }
 

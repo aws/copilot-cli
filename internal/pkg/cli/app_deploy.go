@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -19,11 +20,9 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 )
 
@@ -31,7 +30,6 @@ import (
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
 		GlobalOpts: NewGlobalOpts(),
-		prompt:     prompt.New(),
 		spinner:    termprogress.NewSpinner(),
 	}
 
@@ -82,7 +80,6 @@ type appDeployOpts struct {
 	ecrService       ecr.Service
 	workspaceService archer.Workspace
 
-	prompt  prompter
 	spinner progress
 
 	localProjectAppNames []string
@@ -100,7 +97,7 @@ type projectService interface {
 }
 
 func (opts *appDeployOpts) init() error {
-	projectService, err := ssm.NewStore()
+	projectService, err := store.New()
 	if err != nil {
 		return fmt.Errorf("create project service: %w", err)
 	}
@@ -222,7 +219,7 @@ func (opts *appDeployOpts) sourceAppName() error {
 		}
 	}
 
-	return fmt.Errorf("invalid app name")
+	return fmt.Errorf("invalid app name: %s", opts.app)
 }
 
 func (opts *appDeployOpts) sourceEnvName() error {
@@ -257,7 +254,7 @@ func (opts *appDeployOpts) sourceEnvName() error {
 		}
 	}
 
-	return fmt.Errorf("invalid env name")
+	return fmt.Errorf("invalid env name: %s", opts.env)
 }
 
 func (opts *appDeployOpts) sourceImageTag() error {

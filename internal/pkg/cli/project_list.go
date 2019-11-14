@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ func BuildProjectListCommand() *cobra.Command {
   List all the projects in your account and region
   /code $ archer project ls`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := ssm.NewStore()
+			ssmStore, err := store.New()
 			if err != nil {
 				return err
 			}

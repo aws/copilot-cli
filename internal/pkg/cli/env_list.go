@@ -9,31 +9,29 @@ import (
 	"os"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // ListEnvOpts contains the fields to collect for listing an environment.
 type ListEnvOpts struct {
-	ProjectName   string
 	manager       archer.EnvironmentLister
 	projectGetter archer.ProjectGetter
-	prompter      prompter
 
 	w io.Writer
+
+	*GlobalOpts
 }
 
 // Ask asks for fields that are required but not passed in.
 func (opts *ListEnvOpts) Ask() error {
-	if opts.ProjectName != "" {
+	if opts.ProjectName() != "" {
 		return nil
 	}
 
 	// TODO: Make this a SelectOne prompt based on existing projects?
-	projectName, err := opts.prompter.Get(
+	projectName, err := opts.prompt.Get(
 		"Which project's environments would you like to list?",
 		"A project groups all of your environments together.",
 		validateProjectName)
@@ -42,7 +40,7 @@ func (opts *ListEnvOpts) Ask() error {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
 
-	opts.ProjectName = projectName
+	opts.projectName = projectName
 
 	return nil
 }
@@ -50,11 +48,11 @@ func (opts *ListEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (opts *ListEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := opts.projectGetter.GetProject(opts.ProjectName); err != nil {
+	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
 		return err
 	}
 
-	envs, err := opts.manager.ListEnvironments(opts.ProjectName)
+	envs, err := opts.manager.ListEnvironments(opts.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -74,8 +72,8 @@ func (opts *ListEnvOpts) Execute() error {
 // BuildEnvListCmd builds the command for listing environments in a project.
 func BuildEnvListCmd() *cobra.Command {
 	opts := ListEnvOpts{
-		w:        os.Stdout,
-		prompter: prompt.New(),
+		w:          os.Stdout,
+		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
@@ -84,11 +82,10 @@ func BuildEnvListCmd() *cobra.Command {
   Lists all the environments for the test project
   /code $ archer env ls --project test`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			opts.ProjectName = viper.GetString("project")
 			return opts.Ask()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := ssm.NewStore()
+			ssmStore, err := store.New()
 			if err != nil {
 				return err
 			}

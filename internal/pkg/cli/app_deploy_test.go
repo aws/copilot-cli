@@ -170,6 +170,13 @@ func TestSourceAppName(t *testing.T) {
 			localProjectAppNames: []string{mockAppName, "anotherone"},
 			wantAppName:          mockAppName,
 		},
+		"should return error if flag input value is not valid": {
+			setupMocks:           func() {},
+			inputAppFlag:         mockAppName,
+			localProjectAppNames: []string{"anotherone"},
+			wantErr:              fmt.Errorf("invalid app name: %s", mockAppName),
+			wantAppName:          mockAppName,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -177,8 +184,11 @@ func TestSourceAppName(t *testing.T) {
 			tc.setupMocks()
 
 			opts := appDeployOpts{
+				app:                  tc.inputAppFlag,
 				localProjectAppNames: tc.localProjectAppNames,
-				prompt:               mockPrompt,
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			gotErr := opts.sourceAppName()
@@ -242,6 +252,17 @@ func TestSourceEnvName(t *testing.T) {
 			},
 			wantEnvName: mockEnvName,
 		},
+		"should return error if flag input value is not valid": {
+			setupMocks:   func() {},
+			inputEnvFlag: mockEnvName,
+			projectEnvironments: []*archer.Environment{
+				&archer.Environment{
+					Name: "anotherone",
+				},
+			},
+			wantErr:     fmt.Errorf("invalid env name: %s", mockEnvName),
+			wantEnvName: mockEnvName,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -249,8 +270,11 @@ func TestSourceEnvName(t *testing.T) {
 			tc.setupMocks()
 
 			opts := appDeployOpts{
+				env:                 tc.inputEnvFlag,
 				projectEnvironments: tc.projectEnvironments,
-				prompt:              mockPrompt,
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompt,
+				},
 			}
 
 			gotErr := opts.sourceEnvName()

@@ -19,9 +19,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -47,7 +46,6 @@ type PackageAppOpts struct {
 	stackWriter  io.Writer
 	paramsWriter io.Writer
 	fs           afero.Fs
-	prompt       prompter
 
 	*GlobalOpts // Embed global options.
 }
@@ -62,7 +60,6 @@ func NewPackageAppOpts() *PackageAppOpts {
 			stackWriter:  os.Stdout,
 			paramsWriter: ioutil.Discard,
 			fs:           &afero.Afero{Fs: afero.NewOsFs()},
-			prompt:       prompt.New(),
 			GlobalOpts:   NewGlobalOpts(),
 		}
 	}
@@ -71,7 +68,6 @@ func NewPackageAppOpts() *PackageAppOpts {
 		stackWriter:  os.Stdout,
 		paramsWriter: ioutil.Discard,
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		prompt:       prompt.New(),
 		GlobalOpts:   NewGlobalOpts(),
 	}
 }
@@ -173,7 +169,7 @@ type cfnTemplates struct {
 
 // getTemplates returns the CloudFormation stack's template and its parameters.
 func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
-	raw, err := opts.ws.ReadManifestFile(opts.ws.ManifestFileName(opts.AppName))
+	raw, err := opts.ws.ReadManifestFile(opts.ws.AppManifestFileName(opts.AppName))
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +305,7 @@ func BuildAppPackageCmd() *cobra.Command {
 			}
 			opts.ws = ws
 
-			store, err := ssm.NewStore()
+			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to application datastore: %w", err)
 			}

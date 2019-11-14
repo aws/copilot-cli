@@ -227,9 +227,45 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
+  
+  CloudformationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 'cloudformation.amazonaws.com'
+          Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: executeCfn
+          # This policy is more permissive than the managed PowerUserAccess
+          # since it allows arbitrary role creation, which is needed for the
+          # ECS task role specified by the customers.
+          # TODO: #335 Scope down the permissions given the the CFN execution
+          # role.
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - 
+              Effect: Allow
+              NotAction:
+                - 'organizations:*'
+                - 'account:*'
+              Resource: '*'
+            - 
+              Effect: Allow
+              Action:
+                - 'organizations:DescribeOrganization'
+                - 'account:ListRegions'
+              Resource: '*'
 
   EnvironmentManagerRole:
     Type: AWS::IAM::Role
+    DependsOn: CloudformationExecutionRole
     Properties:
       RoleName: !Sub ${AWS::StackName}-EnvManagerRole
       AssumeRolePolicyDocument:
@@ -302,6 +338,13 @@ Resources:
               "cloudformation:UpdateTerminationProtection"
             ]
             Resource: "*"
+          - Sid: PipelineExecution
+            Effect: Allow
+            Action: [
+              "iam:GetRole",
+              "iam:PassRole"
+            ]
+            Resource: !GetAtt CloudformationExecutionRole.Arn
           - Sid: ECR
             Effect: Allow
             Action: [
@@ -408,3 +451,8 @@ Outputs:
     Description: The role to be assumed by the ecs-cli to manage environments.
     Export:
       Name: !Sub ${AWS::StackName}-EnvironmentManagerRoleARN
+  CFNExecutionRoleARN:
+    Value: !GetAtt CloudformationExecutionRole.Arn
+    Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
+    Export:
+      Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN

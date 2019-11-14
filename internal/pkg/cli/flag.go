@@ -23,6 +23,7 @@ const (
 	githubAccessTokenFlag = "github-access-token"
 	enableCDFlag          = "enable-cd"
 	envsFlag              = "environments"
+	domainNameFlag        = "domain"
 )
 
 // Short flag names.
@@ -58,4 +59,5 @@ const (
 	deployPipelineFlagDescription    = "Deploys the pipeline."
 	enableCDFlagDescription          = "Enables automatic deployment to production environment."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
+	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 )

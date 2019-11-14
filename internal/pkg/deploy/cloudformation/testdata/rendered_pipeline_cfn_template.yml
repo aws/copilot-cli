@@ -86,7 +86,7 @@ Resources:
       Description: !Ref AWS::StackName
       # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
       # created in the same region as this pipeline.
-      EncryptionKey: !ImportValue ArtifactKey
+      EncryptionKey: !ImportValue chickenProject-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: CODEPIPELINE
@@ -97,19 +97,7 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
       Source:
         Type: CODEPIPELINE
-        # TODO: Fill in the actual build commands
-        # TODO: Fill in the paths to the CFN templates that this pipeline will deploy
-        BuildSpec: |
-          version: 0.2
-          phases:
-            install:
-              runtime-versions:
-                docker: 18
-            build:
-              commands:
-                - ls
-          artifacts:
-            files: '**/*'
+        BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
@@ -265,13 +253,9 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        
-        
-        # test is the same as the name of the environment
-        # this pipeline stage deploys to
+
         - Name: DeployTo-chickenProject-test
           Actions:
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-frontend-test
               Region: us-west-2
               ActionTypeId:
@@ -290,21 +274,14 @@ Resources:
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                # TODO: We need the actual name of the CFN execution role here
-                # (created while an environment AWS account is provisioned
-                # through Archer).
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-test
               Region: us-west-2
               ActionTypeId:
@@ -323,25 +300,23 @@ Resources:
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                # TODO: We need the actual name of the CFN execution role here
-                # (created while an environment AWS account is provisioned
-                # through Archer).
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-        # prod is the same as the name of the environment
-        # this pipeline stage deploys to
         - Name: DeployTo-chickenProject-prod
           Actions:
-            # TODO: #220 Add manual approval action if this stage is a prod stage
+            - Name: ApprovePromotionTo-prod
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              RunOrder: 1
             - Name: CreateOrUpdate-frontend-prod
               Region: us-east-1
               ActionTypeId:
@@ -360,21 +335,14 @@ Resources:
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                # TODO: We need the actual name of the CFN execution role here
-                # (created while an environment AWS account is provisioned
-                # through Archer).
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
-            # TODO: #220 Add manual approval action if this stage is a prod stage
             - Name: CreateOrUpdate-backend-prod
               Region: us-east-1
               ActionTypeId:
@@ -393,15 +361,9 @@ Resources:
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                # TODO: We need the actual name of the CFN execution role here
-                # (created while an environment AWS account is provisioned
-                # through Archer).
                 RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              # After we complete #220, the manual approval action will have a
-              # RunOrder of 1 such that it can block the deployment if this
-              # is a prod stage
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed

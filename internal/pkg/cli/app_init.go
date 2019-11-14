@@ -9,17 +9,16 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -44,7 +43,6 @@ type InitAppOpts struct {
 	appStore       archer.ApplicationStore
 	projGetter     archer.ProjectGetter
 	projDeployer   projectDeployer
-	prompt         prompter
 	prog           progress
 
 	// Outputs stored on successful actions.
@@ -136,7 +134,8 @@ func (opts *InitAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, opts.AppName)
+	filename := opts.manifestWriter.AppManifestFileName(opts.AppName)
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, filename)
 	if err != nil {
 		return "", fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
 	}
@@ -197,27 +196,19 @@ func (opts *InitAppOpts) askDockerfile() error {
 	if err != nil {
 		return err
 	}
-	const customPathOpt = "Enter a custom path"
-	selections := make([]string, len(dockerfiles))
-	copy(selections, dockerfiles)
-	selections = append(selections, customPathOpt)
 
 	sel, err := opts.prompt.SelectOne(
 		fmt.Sprintf("Which Dockerfile would you like to use for %s app?", opts.AppName),
 		"Dockerfile to use for building your application's container image.",
-		selections,
+		dockerfiles,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
 	}
 
-	if sel == customPathOpt {
-		sel, err = opts.prompt.Get("OK, what's the path to your Dockerfile?", "", nil)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to get Dockerfile: %w", err)
-	}
-	opts.DockerfilePath = sel
+	// NOTE: Trim "/Dockerfile" from the selected option for storing in the app manifest.
+	opts.DockerfilePath = strings.TrimSuffix(sel, "/Dockerfile")
+
 	return nil
 }
 
@@ -311,9 +302,8 @@ This command is also run as part of "archer init".`,
   /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
-			opts.prompt = prompt.New()
 
-			store, err := ssm.NewStore()
+			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to project datastore: %w", err)
 			}

@@ -9,11 +9,10 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
@@ -23,6 +22,7 @@ const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineDefaultFilename       = "pipeline.yml"
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
@@ -35,10 +35,11 @@ type InitPipelineOpts struct {
 	GitHubAccessToken string
 	EnableCD          bool
 	Deploy            bool
+	PipelineFilename  string
 	// TODO add git branch
+	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	prompt         prompter
 	manifestWriter archer.ManifestIO
 	secretsmanager archer.SecretsManager
 
@@ -56,7 +57,6 @@ type InitPipelineOpts struct {
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
 		GlobalOpts: NewGlobalOpts(),
-		prompt:     prompt.New(),
 	}
 }
 
@@ -177,6 +177,7 @@ func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error
 }
 
 func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
+	// TODO change this to flag
 	pipelineName := opts.createPipelineName()
 	provider, err := opts.createPipelineProvider()
 	if err != nil {
@@ -192,9 +193,9 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineName)
+	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineDefaultFilename)
 	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", pipelineName, err)
+		return "", fmt.Errorf("write manifest for app %s: %w", pipelineDefaultFilename, err)
 	}
 
 	return manifestPath, nil
@@ -337,7 +338,7 @@ func (opts *InitPipelineOpts) askDeploy() error {
 }
 
 func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
-	store, err := ssm.NewStore()
+	store, err := store.New()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to environment datastore: %w", err)
 	}

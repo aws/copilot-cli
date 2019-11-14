@@ -13,11 +13,10 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/ssm"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -46,8 +45,7 @@ type InitEnvOpts struct {
 	projDeployer  deployer
 	identity      identityService
 
-	prog   progress
-	prompt prompter
+	prog progress
 
 	*GlobalOpts // Embed global options.
 }
@@ -200,7 +198,6 @@ func BuildEnvInitCmd() *cobra.Command {
 	opts := InitEnvOpts{
 		EnvProfile: "default",
 		prog:       termprogress.NewSpinner(),
-		prompt:     prompt.New(),
 		GlobalOpts: NewGlobalOpts(),
 	}
 
@@ -217,7 +214,7 @@ func BuildEnvInitCmd() *cobra.Command {
 			if len(args) > 0 {
 				opts.EnvName = args[0]
 			}
-			store, err := ssm.NewStore()
+			store, err := store.New()
 			if err != nil {
 				return err
 			}
