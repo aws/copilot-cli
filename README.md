@@ -1,5 +1,7 @@
 # Amazon ECS CLI v2
 
+>⚠️ The ECS CLI v2 is currently under active development and is not suitable for production workloads. 
+
 The ECS CLI is a tool for developers to create, release and manage production ready containerized applications on ECS.
 From getting started, pushing to staging and releasing to production, the ECS CLI can help manage the entire lifecycle
 of your application development.
