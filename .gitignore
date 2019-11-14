@@ -3,3 +3,4 @@ coverage.out
 .idea/*
 .vscode/*
 *.swp
+node_modules/

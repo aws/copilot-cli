@@ -1,0 +1,40 @@
+{
+  "name": "ecs_cli_custom_resources",
+  "private": true,
+  "version": "0.0.1",
+  "description": "This module is part of the [ECS CLI V2](https://github.com/aws/amazon-ecs-cli-v2) project.",
+  "main": "lib/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "echo No build",
+    "test": "jest",
+    "lint": "eslint lib",
+    "build+test+package": "npm run build+test",
+    "build+test": "npm run build && npm test",
+    "package": "minify lib -d ../templates/custom-resources"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com",
+    "organization": true
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "aws-sdk": "^2.540.0",
+    "aws-sdk-mock": "^4.5.0",
+    "babel-minify": "^0.5.1",
+    "eslint": "^6.5.1",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-node": "^10.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "jest": "^24.9.0",
+    "lambda-tester": "^3.6.0",
+    "nock": "^11.3.5",
+    "ts-jest": "^24.1.0"
+  }
+}
