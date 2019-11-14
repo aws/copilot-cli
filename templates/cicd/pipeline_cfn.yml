@@ -108,7 +108,7 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
-  IntegTestProject{{$stage.Name}}:
+  IntegTestProject{{logicalIDSafe $stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
       Name: !Sub ${AWS::StackName}-IntegTest-{{$stage.Name}}
@@ -294,16 +294,14 @@ Resources:
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}
-        - Name: Validate-{{$stage.Name}}
-          Actions:
-          - Name: IntegTests
-            ActionTypeId:
-              Category: Build
-              Owner: AWS
-              Version: 1
-              Provider: CodeBuild
-            Configuration:
-              ProjectName: !Ref IntegTestProject{{$stage.Name}}
-            RunOrder: 1
-            InputArtifacts:
-              - Name: SCCheckoutArtifact{{end}}{{end}}
+            - Name: Approve-{{$stage.Name}}
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref IntegTestProject{{logicalIDSafe $stage.Name}}
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact{{end}}{{end}}

@@ -37,7 +37,9 @@ func (p *pipelineStackConfig) Template() (string, error) {
 		return "", &ErrTemplateNotFound{templateLocation: pipelineCfnTemplatePath, parentErr: err}
 	}
 
-	tpl, err := template.New("pipelineCfn").Parse(content)
+	tpl, err := template.New("pipelineCfn").
+		Funcs(templateFunctions).
+		Parse(content)
 	if err != nil {
 		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",
 			p.ProjectName, p.Name, err)
