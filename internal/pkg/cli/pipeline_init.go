@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/gobuffalo/packd"
 
 	"github.com/spf13/cobra"
 )
@@ -42,6 +43,7 @@ type InitPipelineOpts struct {
 	// Interfaces to interact with dependencies.
 	manifestWriter archer.ManifestIO
 	secretsmanager archer.SecretsManager
+	box            packd.Box
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -193,12 +195,16 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, pipelineDefaultFilename)
+	manifestPath, err := opts.manifestWriter.WriteFile(manifestBytes, pipelineDefaultFilename)
 	if err != nil {
 		return "", fmt.Errorf("write manifest for app %s: %w", pipelineDefaultFilename, err)
 	}
 
 	return manifestPath, nil
+}
+
+func (opts *InitPipelineOpts) createBuildspec() (string, error) {
+	return "", nil
 }
 
 func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {

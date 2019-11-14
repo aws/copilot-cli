@@ -213,7 +213,7 @@ A project is a collection of containerized applications (or micro-services) that
 			return opts.Execute()
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
-			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ManifestDirectoryName), color.HighlightUserInput(opts.ProjectName))
+			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ProjectDirectoryName), color.HighlightUserInput(opts.ProjectName))
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
 			for _, followUp := range opts.RecommendedActions() {

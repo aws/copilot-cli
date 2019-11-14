@@ -353,7 +353,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				})
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().ReadManifestFile(gomock.Any()).Times(0)
+				m.EXPECT().ReadFile(gomock.Any()).Times(0)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
@@ -375,7 +375,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return(nil, &workspace.ErrManifestNotFound{
+				m.EXPECT().ReadFile("frontend-app.yml").Return(nil, &workspace.ErrManifestNotFound{
 					ManifestName: "frontend-app.yml",
 				})
 			},
@@ -398,7 +398,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte("somecontent"), nil)
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte("somecontent"), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
@@ -418,7 +418,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
@@ -444,7 +444,7 @@ type: Load Balanced Web App`), nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -474,7 +474,7 @@ type: Load Balanced Web App`), nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -511,7 +511,7 @@ type: Load Balanced Web App`), nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
 type: Load Balanced Web App
 image:
   build: frontend/Dockerfile
@@ -551,7 +551,7 @@ count: 1`), nil)
 			},
 			expectWorkspace: func(m *mocks.MockWorkspace) {
 				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
-				m.EXPECT().ReadManifestFile("frontend-app.yml").Return([]byte(`name: frontend
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
 type: Load Balanced Web App
 image:
   build: frontend/Dockerfile

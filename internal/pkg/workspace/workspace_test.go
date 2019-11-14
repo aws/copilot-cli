@@ -186,7 +186,7 @@ func TestReadManifest(t *testing.T) {
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
-			content, err := ws.ReadManifestFile(tc.manifestFile)
+			content, err := ws.ReadFile(tc.manifestFile)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedContent, string(content))
@@ -235,11 +235,11 @@ func TestWriteManifest(t *testing.T) {
 				workingDir: tc.workingDir,
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
-			manifestPath, err := ws.WriteManifest([]byte(tc.expectedContent), tc.manifestFile)
+			manifestPath, err := ws.WriteFile([]byte(tc.expectedContent), tc.manifestFile)
 			require.Equal(t, tc.expectedPath, manifestPath)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
-				readContent, err := ws.ReadManifestFile(tc.manifestFile)
+				readContent, err := ws.ReadFile(tc.manifestFile)
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedContent, string(readContent))
 			} else {

@@ -428,7 +428,7 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 		return "", errors.New("couldn't match manifest file name")
 	}
 
-	manifestBytes, err := opts.workspaceService.ReadManifestFile(targetManifestFile)
+	manifestBytes, err := opts.workspaceService.ReadFile(targetManifestFile)
 	if err != nil {
 		return "", err
 	}

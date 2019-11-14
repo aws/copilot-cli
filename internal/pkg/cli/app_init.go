@@ -135,7 +135,7 @@ func (opts *InitAppOpts) createManifest() (string, error) {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
 	filename := opts.manifestWriter.AppManifestFileName(opts.AppName)
-	manifestPath, err := opts.manifestWriter.WriteManifest(manifestBytes, filename)
+	manifestPath, err := opts.manifestWriter.WriteFile(manifestBytes, filename)
 	if err != nil {
 		return "", fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
 	}

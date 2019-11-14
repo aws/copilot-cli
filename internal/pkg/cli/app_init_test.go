@@ -92,9 +92,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
 
-				fs:         &afero.Afero{Fs: afero.NewMemMapFs()},
+				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 				GlobalOpts: &GlobalOpts{
-					prompt:     mockPrompt,
+					prompt: mockPrompt,
 				},
 			}
 			tc.mockFileSystem(opts.fs)
@@ -200,7 +200,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -240,7 +240,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -261,7 +261,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockAppStore: func(m *mocks.MockApplicationStore) {
 				m.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -290,7 +290,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile).Times(0)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
 			},
 			mockProgress:     func(m *climocks.Mockprogress) {},
 			mockProjGetter:   func(m *mocks.MockProjectGetter) {},
@@ -313,7 +313,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile).Times(0)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil).Times(0)
 			},
 			mockProgress:     func(m *climocks.Mockprogress) {},
 			mockProjGetter:   func(m *mocks.MockProjectGetter) {},
@@ -335,7 +335,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockManifestWriter: func(m *mocks.MockManifestIO) {
 				manifestFile := "/frontend-app.yml"
 				m.EXPECT().AppManifestFileName("frontend").Return(manifestFile)
-				m.EXPECT().WriteManifest(gomock.Any(), manifestFile).Return("/frontend", nil)
+				m.EXPECT().WriteFile(gomock.Any(), manifestFile).Return("/frontend", nil)
 			},
 			mockProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(gomock.Any())

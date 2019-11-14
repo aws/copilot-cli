@@ -8,6 +8,7 @@ import (
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
+	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -144,11 +145,12 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
 		mockManifestWriter func(m *archermocks.MockManifestIO)
+		mockBox            func(box *packd.MemoryBox)
 
 		expectedSecretName string
 		expectedError      error
 	}{
-		"creates secret and writes manifest": {
+		"creates secret and writes manifests": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
@@ -158,14 +160,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteManifest(gomock.Any(), "pipeline.yml").Return("pipeline.yml", nil)
+				m.EXPECT().WriteFile(gomock.Any(), "pipeline.yml").Return("pipeline.yml", nil)
 			},
-
+			mockBox: func(m *packd.MemoryBox) {
+			},
 			expectedSecretName: "github-token-badgoose-goose",
 			expectedError:      nil,
 		},
-
-		// error if no envs
 	}
 
 	for name, tc := range testCases {
@@ -176,9 +177,11 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
 			mockWriter := archermocks.NewMockManifestIO(ctrl)
+			mockBox := packd.NewMemoryBox()
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockManifestWriter(mockWriter)
+			tc.mockBox(mockBox)
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
@@ -187,6 +190,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 				secretsmanager: mockSecretsManager,
 				manifestWriter: mockWriter,
+				box:            mockBox,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -196,7 +200,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			// THEN
 			if tc.expectedError != nil {
-				require.Equal(t, tc.expectedError, err)
+				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.expectedSecretName, opts.secretName)
