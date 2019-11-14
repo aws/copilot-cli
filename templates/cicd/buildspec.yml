@@ -13,6 +13,7 @@ phases:
       - export GOPATH="/go"
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
+      # TODO download a validated version of the CLI instead of latest from master.
       - git clone https://github.com/aws/amazon-ecs-cli-v2
   pre_build:
     commands:
