@@ -499,7 +499,7 @@ func TestAddPipelineResourcesToProject(t *testing.T) {
 		},
 	}
 
-	actual := getRegionFromClient
+	actual := getRegionFromClient // FIXME refactor using defer func
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			getRegionFromClient = tc.getRegionFromClient

@@ -36,7 +36,6 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 
 // DeployEnvironment mocks base method
 func (m *MockenvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -44,13 +43,11 @@ func (m *MockenvironmentDeployer) DeployEnvironment(env *deploy.CreateEnvironmen
 
 // DeployEnvironment indicates an expected call of DeployEnvironment
 func (mr *MockenvironmentDeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployEnvironment), env)
 }
 
 // StreamEnvironmentCreation mocks base method
 func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
 	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
 	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
@@ -59,8 +56,80 @@ func (m *MockenvironmentDeployer) StreamEnvironmentCreation(env *deploy.CreateEn
 
 // StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
 func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).StreamEnvironmentCreation), env)
+}
+
+// MockpipelineDeployer is a mock of pipelineDeployer interface
+type MockpipelineDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockpipelineDeployerMockRecorder
+}
+
+// MockpipelineDeployerMockRecorder is the mock recorder for MockpipelineDeployer
+type MockpipelineDeployerMockRecorder struct {
+	mock *MockpipelineDeployer
+}
+
+// NewMockpipelineDeployer creates a new mock instance
+func NewMockpipelineDeployer(ctrl *gomock.Controller) *MockpipelineDeployer {
+	mock := &MockpipelineDeployer{ctrl: ctrl}
+	mock.recorder = &MockpipelineDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockpipelineDeployer) EXPECT() *MockpipelineDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeployPipeline mocks base method
+func (m *MockpipelineDeployer) DeployPipeline(env *deploy.CreatePipelineInput) error {
+	ret := m.ctrl.Call(m, "DeployPipeline", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployPipeline indicates an expected call of DeployPipeline
+func (mr *MockpipelineDeployerMockRecorder) DeployPipeline(env interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployPipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).DeployPipeline), env)
+}
+
+// AddPipelineResourcesToProject mocks base method
+func (m *MockpipelineDeployer) AddPipelineResourcesToProject(project *archer.Project, region string) error {
+	ret := m.ctrl.Call(m, "AddPipelineResourcesToProject", project, region)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPipelineResourcesToProject indicates an expected call of AddPipelineResourcesToProject
+func (mr *MockpipelineDeployerMockRecorder) AddPipelineResourcesToProject(project, region interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPipelineResourcesToProject", reflect.TypeOf((*MockpipelineDeployer)(nil).AddPipelineResourcesToProject), project, region)
+}
+
+// GetProjectResourcesByRegion mocks base method
+func (m *MockpipelineDeployer) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
+	ret := m.ctrl.Call(m, "GetProjectResourcesByRegion", project, region)
+	ret0, _ := ret[0].(*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectResourcesByRegion indicates an expected call of GetProjectResourcesByRegion
+func (mr *MockpipelineDeployerMockRecorder) GetProjectResourcesByRegion(project, region interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectResourcesByRegion", reflect.TypeOf((*MockpipelineDeployer)(nil).GetProjectResourcesByRegion), project, region)
+}
+
+// GetRegionalProjectResources mocks base method
+func (m *MockpipelineDeployer) GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error) {
+	ret := m.ctrl.Call(m, "GetRegionalProjectResources", project)
+	ret0, _ := ret[0].([]*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegionalProjectResources indicates an expected call of GetRegionalProjectResources
+func (mr *MockpipelineDeployerMockRecorder) GetRegionalProjectResources(project interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*MockpipelineDeployer)(nil).GetRegionalProjectResources), project)
 }
 
 // MockprojectDeployer is a mock of projectDeployer interface
@@ -88,7 +157,6 @@ func (m *MockprojectDeployer) EXPECT() *MockprojectDeployerMockRecorder {
 
 // DeployProject mocks base method
 func (m *MockprojectDeployer) DeployProject(in *deploy.CreateProjectInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployProject", in)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -96,13 +164,11 @@ func (m *MockprojectDeployer) DeployProject(in *deploy.CreateProjectInput) error
 
 // DeployProject indicates an expected call of DeployProject
 func (mr *MockprojectDeployerMockRecorder) DeployProject(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployProject", reflect.TypeOf((*MockprojectDeployer)(nil).DeployProject), in)
 }
 
 // AddAppToProject mocks base method
 func (m *MockprojectDeployer) AddAppToProject(project *archer.Project, appName string) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddAppToProject", project, appName)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -110,13 +176,11 @@ func (m *MockprojectDeployer) AddAppToProject(project *archer.Project, appName s
 
 // AddAppToProject indicates an expected call of AddAppToProject
 func (mr *MockprojectDeployerMockRecorder) AddAppToProject(project, appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*MockprojectDeployer)(nil).AddAppToProject), project, appName)
 }
 
 // AddEnvToProject mocks base method
 func (m *MockprojectDeployer) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEnvToProject", project, env)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -124,7 +188,6 @@ func (m *MockprojectDeployer) AddEnvToProject(project *archer.Project, env *arch
 
 // AddEnvToProject indicates an expected call of AddEnvToProject
 func (mr *MockprojectDeployerMockRecorder) AddEnvToProject(project, env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEnvToProject", reflect.TypeOf((*MockprojectDeployer)(nil).AddEnvToProject), project, env)
 }
 
@@ -153,7 +216,6 @@ func (m *MockprojectResourcesGetter) EXPECT() *MockprojectResourcesGetterMockRec
 
 // GetProjectResourcesByRegion mocks base method
 func (m *MockprojectResourcesGetter) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProjectResourcesByRegion", project, region)
 	ret0, _ := ret[0].(*archer.ProjectRegionalResources)
 	ret1, _ := ret[1].(error)
@@ -162,13 +224,11 @@ func (m *MockprojectResourcesGetter) GetProjectResourcesByRegion(project *archer
 
 // GetProjectResourcesByRegion indicates an expected call of GetProjectResourcesByRegion
 func (mr *MockprojectResourcesGetterMockRecorder) GetProjectResourcesByRegion(project, region interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectResourcesByRegion", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetProjectResourcesByRegion), project, region)
 }
 
 // GetRegionalProjectResources mocks base method
 func (m *MockprojectResourcesGetter) GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRegionalProjectResources", project)
 	ret0, _ := ret[0].([]*archer.ProjectRegionalResources)
 	ret1, _ := ret[1].(error)
@@ -177,7 +237,6 @@ func (m *MockprojectResourcesGetter) GetRegionalProjectResources(project *archer
 
 // GetRegionalProjectResources indicates an expected call of GetRegionalProjectResources
 func (mr *MockprojectResourcesGetterMockRecorder) GetRegionalProjectResources(project interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetRegionalProjectResources), project)
 }
 
@@ -206,7 +265,6 @@ func (m *Mockdeployer) EXPECT() *MockdeployerMockRecorder {
 
 // DeployEnvironment mocks base method
 func (m *Mockdeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -214,13 +272,11 @@ func (m *Mockdeployer) DeployEnvironment(env *deploy.CreateEnvironmentInput) err
 
 // DeployEnvironment indicates an expected call of DeployEnvironment
 func (mr *MockdeployerMockRecorder) DeployEnvironment(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployEnvironment), env)
 }
 
 // StreamEnvironmentCreation mocks base method
 func (m *Mockdeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse) {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamEnvironmentCreation", env)
 	ret0, _ := ret[0].(<-chan []deploy.ResourceEvent)
 	ret1, _ := ret[1].(<-chan deploy.CreateEnvironmentResponse)
@@ -229,13 +285,11 @@ func (m *Mockdeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentIn
 
 // StreamEnvironmentCreation indicates an expected call of StreamEnvironmentCreation
 func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*Mockdeployer)(nil).StreamEnvironmentCreation), env)
 }
 
 // DeployProject mocks base method
 func (m *Mockdeployer) DeployProject(in *deploy.CreateProjectInput) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployProject", in)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -243,13 +297,11 @@ func (m *Mockdeployer) DeployProject(in *deploy.CreateProjectInput) error {
 
 // DeployProject indicates an expected call of DeployProject
 func (mr *MockdeployerMockRecorder) DeployProject(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployProject", reflect.TypeOf((*Mockdeployer)(nil).DeployProject), in)
 }
 
 // AddAppToProject mocks base method
 func (m *Mockdeployer) AddAppToProject(project *archer.Project, appName string) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddAppToProject", project, appName)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -257,13 +309,11 @@ func (m *Mockdeployer) AddAppToProject(project *archer.Project, appName string) 
 
 // AddAppToProject indicates an expected call of AddAppToProject
 func (mr *MockdeployerMockRecorder) AddAppToProject(project, appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*Mockdeployer)(nil).AddAppToProject), project, appName)
 }
 
 // AddEnvToProject mocks base method
 func (m *Mockdeployer) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
-	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddEnvToProject", project, env)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -271,6 +321,55 @@ func (m *Mockdeployer) AddEnvToProject(project *archer.Project, env *archer.Envi
 
 // AddEnvToProject indicates an expected call of AddEnvToProject
 func (mr *MockdeployerMockRecorder) AddEnvToProject(project, env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEnvToProject", reflect.TypeOf((*Mockdeployer)(nil).AddEnvToProject), project, env)
+}
+
+// DeployPipeline mocks base method
+func (m *Mockdeployer) DeployPipeline(env *deploy.CreatePipelineInput) error {
+	ret := m.ctrl.Call(m, "DeployPipeline", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployPipeline indicates an expected call of DeployPipeline
+func (mr *MockdeployerMockRecorder) DeployPipeline(env interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployPipeline", reflect.TypeOf((*Mockdeployer)(nil).DeployPipeline), env)
+}
+
+// AddPipelineResourcesToProject mocks base method
+func (m *Mockdeployer) AddPipelineResourcesToProject(project *archer.Project, region string) error {
+	ret := m.ctrl.Call(m, "AddPipelineResourcesToProject", project, region)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPipelineResourcesToProject indicates an expected call of AddPipelineResourcesToProject
+func (mr *MockdeployerMockRecorder) AddPipelineResourcesToProject(project, region interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPipelineResourcesToProject", reflect.TypeOf((*Mockdeployer)(nil).AddPipelineResourcesToProject), project, region)
+}
+
+// GetProjectResourcesByRegion mocks base method
+func (m *Mockdeployer) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
+	ret := m.ctrl.Call(m, "GetProjectResourcesByRegion", project, region)
+	ret0, _ := ret[0].(*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectResourcesByRegion indicates an expected call of GetProjectResourcesByRegion
+func (mr *MockdeployerMockRecorder) GetProjectResourcesByRegion(project, region interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectResourcesByRegion", reflect.TypeOf((*Mockdeployer)(nil).GetProjectResourcesByRegion), project, region)
+}
+
+// GetRegionalProjectResources mocks base method
+func (m *Mockdeployer) GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error) {
+	ret := m.ctrl.Call(m, "GetRegionalProjectResources", project)
+	ret0, _ := ret[0].([]*archer.ProjectRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegionalProjectResources indicates an expected call of GetRegionalProjectResources
+func (mr *MockdeployerMockRecorder) GetRegionalProjectResources(project interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*Mockdeployer)(nil).GetRegionalProjectResources), project)
 }

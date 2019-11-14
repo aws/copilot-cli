@@ -40,7 +40,7 @@ type CreatePipelineInput struct {
 // intermediate artifacts produced by the pipeline.
 type ArtifactBucket struct {
 	// The ARN of the S3 bucket.
-	BucketArn string
+	BucketName string
 
 	// The ARN of the KMS key used to en/decrypt artifacts stored in this bucket.
 	KeyArn string
@@ -53,19 +53,9 @@ func (a *ArtifactBucket) Region() (string, error) {
 	parsedArn, err := arn.Parse(a.KeyArn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse region out of key ARN: %s, error: %w",
-			a.BucketArn, err)
+			a.BucketName, err)
 	}
 	return parsedArn.Region, nil
-}
-
-// BucketName parses out the name of the bucket from its ARN.
-func (a *ArtifactBucket) BucketName() (string, error) {
-	parsedArn, err := arn.Parse(a.BucketArn)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse the name of the bucket out of bucket ARN: %s, error: %w",
-			a.BucketArn, err)
-	}
-	return parsedArn.Resource, nil
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -119,6 +109,7 @@ func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)
 	}
 
+	// TODO FIX THIS
 	result := strings.Split(ownerAndRepoStr, "/")
 	if len(result) != 2 {
 		return nil, fmt.Errorf("unable to locate the repository from the properties: %s", ownerAndRepoStr)

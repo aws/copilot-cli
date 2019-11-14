@@ -86,6 +86,7 @@ type PipelineManifest struct {
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
 	Stages  []PipelineStage            `yaml:"stages"`
+	// ArtifactBuckets?
 }
 
 // Source defines the source of the artifacts to be built and deployed.

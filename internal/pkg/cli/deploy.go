@@ -1,6 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 package cli
 
 import (
@@ -11,6 +12,13 @@ import (
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
+}
+
+type pipelineDeployer interface {
+	DeployPipeline(env *deploy.CreatePipelineInput) error
+	AddPipelineResourcesToProject(project *archer.Project, region string) error
+	projectResourcesGetter
+	// TODO: Add StreamPipelineCreation method
 }
 
 type projectDeployer interface {
@@ -27,4 +35,5 @@ type projectResourcesGetter interface {
 type deployer interface {
 	environmentDeployer
 	projectDeployer
+	pipelineDeployer
 }

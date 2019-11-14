@@ -49,8 +49,8 @@ Resources:
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
             Resource:{{range .ArtifactBuckets}}
-              - {{.BucketArn}}
-              - !Join ['', ['{{.BucketArn}}', '/*']]{{end}}
+              - {{.BucketName}}
+              - !Join ['', ['{{.BucketName}}', '/*']]{{end}}
           -
             Effect: Allow
             Action:
@@ -191,8 +191,8 @@ Resources:
               - s3:GetObject
               - s3:ListBucket
             Resource:{{range .ArtifactBuckets}}
-              - {{.BucketArn}}
-              - !Join ['', ['{{.BucketArn}}', '/*']]{{end}}
+              - {{.BucketName}}
+              - !Join ['', ['{{.BucketName}}', '/*']]{{end}}
           -
             Effect: Allow
             Action:

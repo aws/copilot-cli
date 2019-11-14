@@ -21,7 +21,7 @@ type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
 }
 
-func newPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
+func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
 	return &pipelineStackConfig{
 		CreatePipelineInput: in,
 	}
@@ -46,7 +46,7 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	}
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, p); err != nil {
-		return "", fmt.Errorf("execute CloudFormation template for project %s, pipeline %s, error: %w",
+		return "", fmt.Errorf("execute CloudFormation template for project: %s, pipeline: %s, error: %w",
 			p.ProjectName, p.Name, err)
 	}
 	return buf.String(), nil

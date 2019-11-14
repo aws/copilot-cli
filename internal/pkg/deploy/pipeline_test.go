@@ -52,6 +52,17 @@ func TestParseOwnerAndRepo(t *testing.T) {
 			expectedOwner:  "chicken",
 			expectedRepo:   "wings",
 		},
+		"valid repository property": {
+			src: &Source{
+				ProviderName: "GitHub",
+				Properties: map[string]interface{}{
+					"repository": "https://github.com/badgoose/chaOS",
+				},
+			},
+			expectedErrMsg: nil,
+			expectedOwner:  "badgoose",
+			expectedRepo:   "chaOS",
+		},
 	}
 
 	for name, tc := range testCases {
