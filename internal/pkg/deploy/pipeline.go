@@ -20,13 +20,17 @@ import (
 type CreatePipelineInput struct {
 	// Name of the project this pipeline belongs to
 	ProjectName string
+
 	// Name of the pipeline
 	Name string
+
 	// The source code provider for this pipeline
 	Source *Source
+
 	// The stages of the pipeline. The order of stages in this list
 	// will be the order we deploy to
 	Stages []PipelineStage
+
 	// A list of artifact buckets and corresponding KMS keys that will
 	// be used in this pipeline.
 	ArtifactBuckets []ArtifactBucket
@@ -37,6 +41,7 @@ type CreatePipelineInput struct {
 type ArtifactBucket struct {
 	// The ARN of the S3 bucket.
 	BucketArn string
+
 	// The ARN of the KMS key used to en/decrypt artifacts stored in this bucket.
 	KeyArn string
 }
@@ -172,10 +177,13 @@ type AssociatedEnvironment struct {
 	// Name of the environment, must be unique within a project.
 	// This is also the name of the pipeline stage.
 	Name string
+
 	// The region this environment is stored in.
 	Region string
+
 	// AccountID of the account this environment is stored in.
 	AccountID string
+
 	// Whether or not this environment is a production environment.
 	Prod bool
 }
