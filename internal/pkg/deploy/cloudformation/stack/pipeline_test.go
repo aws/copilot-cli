@@ -89,11 +89,11 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		},
 		Stages: []deploy.PipelineStage{
 			{
-				AssociatedEnvironment: mockAssociatedEnv("test", "us-west-2", false),
+				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
 				LocalApplications:     []string{"frontend", "backend"},
 			},
 			{
-				AssociatedEnvironment: mockAssociatedEnv("prod", "us-east-1", true),
+				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
 				LocalApplications:     []string{"frontend", "backend"},
 			},
 		},

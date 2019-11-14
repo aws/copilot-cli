@@ -82,8 +82,8 @@ Resources:
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Ref AWS::StackName
-      Description: !Ref AWS::StackName
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Description: !Sub Build for ${AWS::StackName}
       # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
       # created in the same region as this pipeline.
       EncryptionKey: !ImportValue chickenProject-ArtifactKey
@@ -99,10 +99,67 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
+  IntegTestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-IntegTestRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  IntegTestProjecttestDASHchicken:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-IntegTest-test-chicken
+      Description: !Sub Integration tests for ${AWS::StackName}-test-chicken
+      ServiceRole: !GetAtt IntegTestRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        EnvironmentVariables:
+          - Name: PIPELINE_STAGE
+            Type: PLAINTEXT
+            Value: test-chicken
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec_integ.yml
+      TimeoutInMinutes: 480
+  IntegTestProjectprodDASHcanDASHfly:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-IntegTest-prod-can-fly
+      Description: !Sub Integration tests for ${AWS::StackName}-prod-can-fly
+      ServiceRole: !GetAtt IntegTestRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+        EnvironmentVariables:
+          - Name: PIPELINE_STAGE
+            Type: PLAINTEXT
+            Value: prod-can-fly
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec_integ.yml
+      TimeoutInMinutes: 480
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-codepipeline-role
+      RoleName: !Sub ${AWS::StackName}-CodepipelineRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -117,7 +174,7 @@ Resources:
   PipelineRolePolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub ${AWS::StackName}-codepipeline-policy
+      PolicyName: !Sub ${AWS::StackName}-CodepipelinePolicy
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -174,8 +231,8 @@ Resources:
             Action:
               - sts:AssumeRole
             Resource:
-              - arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-              - arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
+              - arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
+              - arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
       Roles:
         -
           !Ref PipelineRole
@@ -236,11 +293,9 @@ Resources:
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
-        -
-          Name: Build
+        - Name: Build
           Actions:
-          -
-            Name: Build
+          - Name: Build
             ActionTypeId:
               Category: Build
               Owner: AWS
@@ -254,9 +309,9 @@ Resources:
             OutputArtifacts:
               - Name: BuildOutput
 
-        - Name: DeployTo-chickenProject-test
+        - Name: DeployTo-test-chicken
           Actions:
-            - Name: CreateOrUpdate-frontend-test
+            - Name: CreateOrUpdate-frontend-test-chicken
               Region: us-west-2
               ActionTypeId:
                 Category: Deploy
@@ -265,24 +320,24 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-frontend-test
+                ChangeSetName: chickenProject-frontend-test-chicken
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-frontend-test
+                StackName: chickenProject-frontend-test-chicken
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::frontend.stack.yml
-                TemplateConfiguration: BuildOutput::frontend-test.params.json
+                TemplateConfiguration: BuildOutput::frontend-test-chicken.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-chicken-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-            - Name: CreateOrUpdate-backend-test
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
+            - Name: CreateOrUpdate-backend-test-chicken
               Region: us-west-2
               ActionTypeId:
                 Category: Deploy
@@ -291,33 +346,44 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-backend-test
+                ChangeSetName: chickenProject-backend-test-chicken
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-backend-test
+                StackName: chickenProject-backend-test-chicken
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::backend.stack.yml
-                TemplateConfiguration: BuildOutput::backend-test.params.json
+                TemplateConfiguration: BuildOutput::backend-test-chicken.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-chicken-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-EnvManagerRole
-        - Name: DeployTo-chickenProject-prod
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
+            - Name: Approve-test-chicken
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref IntegTestProjecttestDASHchicken
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+        - Name: DeployTo-prod-can-fly
           Actions:
-            - Name: ApprovePromotionTo-prod
+            - Name: ApprovePromotionTo-prod-can-fly
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
                 Provider: Manual
                 Version: 1
               RunOrder: 1
-            - Name: CreateOrUpdate-frontend-prod
+            - Name: CreateOrUpdate-frontend-prod-can-fly
               Region: us-east-1
               ActionTypeId:
                 Category: Deploy
@@ -326,24 +392,24 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-frontend-prod
+                ChangeSetName: chickenProject-frontend-prod-can-fly
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-frontend-prod
+                StackName: chickenProject-frontend-prod-can-fly
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::frontend.stack.yml
-                TemplateConfiguration: BuildOutput::frontend-prod.params.json
+                TemplateConfiguration: BuildOutput::frontend-prod-can-fly.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
-            - Name: CreateOrUpdate-backend-prod
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
+            - Name: CreateOrUpdate-backend-prod-can-fly
               Region: us-east-1
               ActionTypeId:
                 Category: Deploy
@@ -352,20 +418,31 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-backend-prod
+                ChangeSetName: chickenProject-backend-prod-can-fly
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-backend-prod
+                StackName: chickenProject-backend-prod-can-fly
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::backend.stack.yml
-                TemplateConfiguration: BuildOutput::backend-prod.params.json
+                TemplateConfiguration: BuildOutput::backend-prod-can-fly.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
-                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-CFNExecutionRole
+                RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-EnvManagerRole
+              RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
+            - Name: Approve-prod-can-fly
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref IntegTestProjectprodDASHcanDASHfly
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
