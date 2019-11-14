@@ -324,8 +324,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-test-chicken
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::frontend.stack.yml
-                TemplateConfiguration: BuildOutput::frontend-test-chicken.params.json
+                TemplatePath: BuildOutput::infrastructure/frontend.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/frontend-test-chicken.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -350,8 +350,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-test-chicken
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::backend.stack.yml
-                TemplateConfiguration: BuildOutput::backend-test-chicken.params.json
+                TemplatePath: BuildOutput::infrastructure/backend.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/backend-test-chicken.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -396,8 +396,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-frontend-prod-can-fly
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::frontend.stack.yml
-                TemplateConfiguration: BuildOutput::frontend-prod-can-fly.params.json
+                TemplatePath: BuildOutput::infrastructure/frontend.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/frontend-prod-can-fly.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -422,8 +422,8 @@ Resources:
                 ActionMode: CREATE_UPDATE
                 StackName: chickenProject-backend-prod-can-fly
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::backend.stack.yml
-                TemplateConfiguration: BuildOutput::backend-prod-can-fly.params.json
+                TemplatePath: BuildOutput::infrastructure/backend.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/backend-prod-can-fly.params.json
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
