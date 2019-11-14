@@ -15,21 +15,17 @@ import (
 
 // TODO: wrap the `os/exec` stuff in a `command` package to make mocking and testing easier on this package.
 
-// Service wraps a repository URI endpoint.
-type Service struct {
-	repositoryURI string
+// Service exists for mockability.
+type Service struct{}
+
+// New returns a Service.
+func New() Service {
+	return Service{}
 }
 
-// New returns a Service configured with the input URI.
-func New(uri string) Service {
-	return Service{
-		repositoryURI: uri,
-	}
-}
-
-// Build will `os/exec` a `docker build` command with the input tag and Dockerfile image path.
-func (s Service) Build(imageTag, path string) error {
-	imageName := fmt.Sprintf("%s:%s", s.repositoryURI, imageTag)
+// Build will `os/exec` a `docker build` command with the input uri, tag, and Dockerfile image path.
+func (s Service) Build(uri, imageTag, path string) error {
+	imageName := fmt.Sprintf("%s:%s", uri, imageTag)
 
 	cmd := newCommand("docker", "build", "-t", imageName, path)
 
@@ -40,9 +36,9 @@ func (s Service) Build(imageTag, path string) error {
 	return nil
 }
 
-// Login will `os/exec` a `docker login` command against the Service repository URI with the input auth data.
-func (s Service) Login(auth ecr.Auth) error {
-	cmd := newCommand("docker", "login", "-u", auth.Username, "--password-stdin", s.repositoryURI)
+// Login will `os/exec` a `docker login` command against the Service repository URI with the input uri and auth data.
+func (s Service) Login(uri string, auth ecr.Auth) error {
+	cmd := newCommand("docker", "login", "-u", auth.Username, "--password-stdin", uri)
 	cmd.Stdin = strings.NewReader(auth.Password)
 
 	if err := cmd.Run(); err != nil {
@@ -52,9 +48,9 @@ func (s Service) Login(auth ecr.Auth) error {
 	return nil
 }
 
-// Push will `os/exec` a `docker push` command against the Service repository URI with the input image tag.
-func (s Service) Push(imageTag string) error {
-	path := s.repositoryURI + ":" + imageTag
+// Push will `os/exec` a `docker push` command against the Service repository URI with the input uri and image tag.
+func (s Service) Push(uri, imageTag string) error {
+	path := uri + ":" + imageTag
 
 	cmd := newCommand("docker", "push", path)
 
