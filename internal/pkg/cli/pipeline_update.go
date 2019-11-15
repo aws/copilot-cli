@@ -101,7 +101,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 		return nil, err
 	}
 
-	buckets := []deploy.ArtifactBucket{}
+	var buckets []deploy.ArtifactBucket
 	for _, resource := range regionalResources {
 		bucket := deploy.ArtifactBucket{
 			BucketName: resource.S3Bucket,
