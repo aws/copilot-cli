@@ -1,6 +1,6 @@
 # Amazon ECS CLI v2
 
->⚠️ The ECS CLI v2 is currently under active development and is not suitable for production workloads. 
+>⚠️ Before you get started please note that this feature is in preview and the intention is to ensure it meets your requirements and give us any feedback on your use case. Please do not run production workloads till we announce the general availability of this feature. Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms: https://aws.amazon.com/service-terms/ . 
 
 The ECS CLI is a tool for developers to create, release and manage production ready containerized applications on ECS.
 From getting started, pushing to staging and releasing to production, the ECS CLI can help manage the entire lifecycle
@@ -31,6 +31,9 @@ The CLI must support workflows around troubleshooting and debugging to help when
 * **Deliver applications continuously.**
 While the ECS CLI can be used to manually deploy changes to an application, we always help customers to move to CI/CD by helping them set up and manage pipelines.
 
+#### Security disclosures
+
+If you think you’ve found a potential security issue, please do not post it in the Issues.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or email AWS security directly at [aws-security@amazon.com](mailto:aws-security@amazon.com).
 
 ## 📝 License
 This library is licensed under the Apache 2.0 License.
