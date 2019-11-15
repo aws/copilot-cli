@@ -12,6 +12,7 @@ const (
 	envFlag     = "env"
 	appTypeFlag = "app-type"
 	profileFlag = "profile"
+	yesFlag     = "yes"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -49,7 +50,8 @@ const (
 	appFlagDescription     = "Name of the application."
 	envFlagDescription     = "Name of the environment."
 	appTypeFlagDescription = "Type of application to create."
-	profileFlagDescription = `Name of the profile.`
+	profileFlagDescription = "Name of the profile."
+	yesFlagDescription     = "Skips confirmation prompt."
 
 	dockerFileFlagDescription        = "Path to the Dockerfile."
 	imageTagFlagDescription          = `Optional. The application's image tag.`
