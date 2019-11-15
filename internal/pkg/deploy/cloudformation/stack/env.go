@@ -21,25 +21,24 @@ type EnvStackConfig struct {
 }
 
 const (
-	// EnvParamIncludeLBKey is the CF Param Key Name for whether to include a LB
-	EnvParamIncludeLBKey = "IncludePublicLoadBalancer"
-
-	// EnvParamProjectNameKey is the CF Param Key Name for providing the project name
-	EnvParamProjectNameKey = "ProjectName"
-
-	// EnvParamEnvNameKey is the CF Param Key Name for providing the environment name
-	EnvParamEnvNameKey = "EnvironmentName"
-
-	// EnvTemplatePath is the path where the cloudformation for the environment is written
+	// EnvTemplatePath is the path where the cloudformation for the environment is written.
 	EnvTemplatePath = "environment/cf.yml"
-
-	// EnvOutputECRKey is the CF Output Key Name for the ECR Repo Name
-	EnvOutputECRKey = "ECRRepositoryName"
-
-	envParamToolsAccountPrincipal = "ToolsAccountPrincipalARN"
 )
 
-// newEnvStackConfig sets up a struct which can provide values to CloudFormation for
+// Parameter keys.
+const (
+	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
+	envParamProjectNameKey           = "ProjectName"
+	envParamEnvNameKey               = "EnvironmentName"
+	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
+)
+
+// Output keys.
+const (
+	envOutputManagerRoleKey = "EnvironmentManagerRoleARN"
+)
+
+// NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up an environment.
 func NewEnvStackConfig(input *deploy.CreateEnvironmentInput, box packd.Box) *EnvStackConfig {
 	return &EnvStackConfig{
@@ -61,19 +60,19 @@ func (e *EnvStackConfig) Template() (string, error) {
 func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 	return []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(EnvParamIncludeLBKey),
+			ParameterKey:   aws.String(envParamIncludeLBKey),
 			ParameterValue: aws.String(strconv.FormatBool(e.PublicLoadBalancer)),
 		},
 		{
-			ParameterKey:   aws.String(EnvParamProjectNameKey),
+			ParameterKey:   aws.String(envParamProjectNameKey),
 			ParameterValue: aws.String(e.Project),
 		},
 		{
-			ParameterKey:   aws.String(EnvParamEnvNameKey),
+			ParameterKey:   aws.String(envParamEnvNameKey),
 			ParameterValue: aws.String(e.Name),
 		},
 		{
-			ParameterKey:   aws.String(envParamToolsAccountPrincipal),
+			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
 			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
 		},
 	}
@@ -110,13 +109,13 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 	for _, output := range stack.Outputs {
 		stackOutputs[*output.OutputKey] = *output.OutputValue
 	}
-
 	createdEnv := archer.Environment{
-		Name:      e.Name,
-		Project:   e.Project,
-		Prod:      e.Prod,
-		Region:    stackARN.Region,
-		AccountID: stackARN.AccountID,
+		Name:           e.Name,
+		Project:        e.Project,
+		Prod:           e.Prod,
+		Region:         stackARN.Region,
+		AccountID:      stackARN.AccountID,
+		ManagerRoleARN: stackOutputs[envOutputManagerRoleKey],
 	}
 
 	return &createdEnv, nil
