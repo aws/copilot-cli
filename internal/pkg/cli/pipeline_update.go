@@ -73,7 +73,7 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 	}
 
 	for _, stage := range manifestStages {
-		env, err := opts.envStore.GetEnvironment(opts.project.Name, stage.Name)
+		env, err := opts.envStore.GetEnvironment(opts.ProjectName(), stage.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -113,12 +113,12 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.project.Name)))
+	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
 	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
 	if err != nil {
 		return nil
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.project.Name)))
+	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.ProjectName())))
 
 	// read pipeline manifest
 	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
