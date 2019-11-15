@@ -36,7 +36,6 @@ var errNoPipelineFile = errors.New("There was no pipeline manifest found in your
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
-	// Fields with matching flags.
 	PipelineFile string
 	// Deploy bool
 
@@ -56,14 +55,6 @@ func NewUpdatePipelineOpts() *UpdatePipelineOpts {
 		prog:       termprogress.NewSpinner(),
 	}
 }
-
-// func (opts *UpdatePipelineOpts) Ask() error {
-// 	if opts.PipelineFile() == "" {
-// 		return errNoPipelineFile
-// 	}
-
-// 	return nil
-// }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *UpdatePipelineOpts) Validate() error {
@@ -219,12 +210,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// if err := opts.Ask(); err != nil {
-			// 	return err
-			// }
-			// if err := opts.Validate(); err != nil {
-			// 	return err
-			// }
 			return opts.Execute()
 		},
 	}
