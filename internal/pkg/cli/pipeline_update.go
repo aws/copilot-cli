@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -46,7 +45,6 @@ type UpdatePipelineOpts struct {
 	prog             progress
 	region           string
 	envStore         archer.EnvironmentStore
-	account          string
 	ws               archer.Workspace
 
 	*GlobalOpts
@@ -210,14 +208,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 
 			region := aws.StringValue(defaultSession.Config.Region)
 			opts.region = region
-
-			identityService := identity.New(defaultSession)
-			caller, err := identityService.Get()
-			if err != nil {
-				return nil
-			}
-			account := caller.Account
-			opts.account = account
 
 			ws, err := workspace.New()
 			if err != nil {
