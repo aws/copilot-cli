@@ -29,6 +29,10 @@ import (
 const (
 	// ProjectDirectoryName is the name of the directory where generated infrastructure code will be stored.
 	ProjectDirectoryName = "ecs-project"
+	// PipelineFileName is the name of the pipeline manifest file.
+	PipelineFileName = "pipeline.yml"
+	// BuildspecFileName is the name of the CodeBuild build specification for the "build" stage of the pipeline.
+	BuildspecFileName = "buildspec.yml"
 
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5

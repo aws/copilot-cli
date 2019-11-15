@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -14,6 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
 
 	"github.com/spf13/cobra"
@@ -23,7 +26,10 @@ const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
-	pipelineDefaultFilename       = "pipeline.yml"
+)
+
+const (
+	buildspecTemplatePath = "cicd/buildspec.yml"
 )
 
 var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
@@ -41,14 +47,15 @@ type InitPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	manifestWriter archer.ManifestIO
+	workspace      archer.ManifestIO
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 
 	// Outputs stored on successful actions.
-	manifestPath string
-	secretArn    string
-	secretName   string
+	manifestPath  string
+	buildspecPath string
+	secretArn     string
+	secretName    string
 
 	// Caches environments
 	projectEnvs []string
@@ -108,7 +115,7 @@ func (opts *InitPipelineOpts) Validate() error {
 	return nil
 }
 
-// Execute writes the pipline manifest file.
+// Execute writes the pipeline manifest file.
 func (opts *InitPipelineOpts) Execute() error {
 	secretName := opts.createSecretName()
 	secretArn, err := opts.secretsmanager.CreateSecret(secretName, opts.GitHubAccessToken)
@@ -117,7 +124,6 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.secretArn = secretArn
 	opts.secretName = secretName
-	log.Successf("Created secret: %s for GitHub repo: %s'\n", color.HighlightResource(secretName), color.HighlightResource(opts.GitHubRepo))
 
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
@@ -130,16 +136,29 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.manifestPath = manifestPath
 
-	// TODO create buildspec file
+	buildspecPath, err := opts.createBuildspec()
+	if err != nil {
+		return err
+	}
+	opts.buildspecPath = buildspecPath
 
-	log.Infoln()
-	log.Successf("Wrote the pipeline for %s app at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(opts.manifestPath))
-	log.Infoln("Your pipeline manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
-	log.Infoln()
+	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(relPath(opts.manifestPath)))
+	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(relPath(opts.buildspecPath)))
+	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
+	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
 	// TODO deploy manifest file
 
 	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (opts *InitPipelineOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Update the %s phase of your buildspec to unit test your applications before pushing the images.", color.HighlightResource("build")),
+		fmt.Sprint("Update your pipeline manifest to add additional stages."),
+		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("archer pipeline update")),
+	}
 }
 
 func (opts *InitPipelineOpts) createSecretName() string {
@@ -195,16 +214,24 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := opts.manifestWriter.WriteFile(manifestBytes, pipelineDefaultFilename)
+	manifestPath, err := opts.workspace.WriteFile(manifestBytes, workspace.PipelineFileName)
 	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", pipelineDefaultFilename, err)
+		return "", fmt.Errorf("write file %s to workspace: %w", workspace.PipelineFileName, err)
 	}
 
 	return manifestPath, nil
 }
 
 func (opts *InitPipelineOpts) createBuildspec() (string, error) {
-	return "", nil
+	content, err := opts.box.FindString(buildspecTemplatePath)
+	if err != nil {
+		return "", fmt.Errorf("find template for %s: %w", buildspecTemplatePath, err)
+	}
+	path, err := opts.workspace.WriteFile([]byte(content), workspace.BuildspecFileName)
+	if err != nil {
+		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
+	}
+	return path, nil
 }
 
 func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
@@ -234,7 +261,7 @@ func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
 }
 
 func (opts *InitPipelineOpts) listAvailableEnvironments() []string {
-	envs := []string{}
+	var envs []string
 	for _, env := range opts.projectEnvs {
 		// Check if environment has already been added to pipeline
 		if opts.envCanBeAdded(env) {
@@ -279,6 +306,20 @@ func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
 	selectMoreEnvs = true
 
 	return selectMoreEnvs, nil
+}
+
+// relPath returns the full path relative to the current working directory.
+// If there is an error during the process, returns the full path.
+func relPath(fullPath string) string {
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return fullPath
+	}
+	relPath, err := filepath.Rel(wkdir, fullPath)
+	if err != nil {
+		return fullPath
+	}
+	return relPath
 }
 
 // TODO: Nice-to-have: have an opts.listRemoteRepos() method that execs out to `git remote -v` and parse repo name to offer select menu
@@ -358,7 +399,7 @@ func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
 		return nil, errNoEnvsInProject
 	}
 
-	envNames := []string{}
+	var envNames []string
 	for _, env := range envs {
 		envNames = append(envNames, env.Name)
 	}
@@ -391,13 +432,14 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("workspace cannot be created: %w", err)
 			}
-			opts.manifestWriter = ws
+			opts.workspace = ws
 
 			secretsmanager, err := secretsmanager.NewStore()
 			if err != nil {
 				return fmt.Errorf("couldn't create secrets manager: %w", err)
 			}
 			opts.secretsmanager = secretsmanager
+			opts.box = templates.Box()
 
 			return opts.Validate()
 		},
@@ -411,14 +453,14 @@ func BuildPipelineInitCmd() *cobra.Command {
 			}
 			return opts.Execute()
 		},
-		// TODO: recommend editing pipeline.yml and deploying pipeline
-		// PostRunE: func(cmd *cobra.Command, args []string) error {
-		// 	log.Infoln("Recommended follow-up actions:")
-		// 	for _, followup := range opts.RecommendedActions() {
-		// 		log.Infof("- %s\n", followup)
-		// 	}
-		// 	return nil
-		// },
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
+		},
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)

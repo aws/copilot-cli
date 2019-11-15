@@ -4,9 +4,13 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
@@ -147,8 +151,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockManifestWriter func(m *archermocks.MockManifestIO)
 		mockBox            func(box *packd.MemoryBox)
 
-		expectedSecretName string
-		expectedError      error
+		expectedSecretName    string
+		expectManifestPath    string
+		expectedBuildspecPath string
+		expectedError         error
 	}{
 		"creates secret and writes manifests": {
 			inEnvironments: []string{"test"},
@@ -160,12 +166,51 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteFile(gomock.Any(), "pipeline.yml").Return("pipeline.yml", nil)
+				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
+			},
+			mockBox: func(m *packd.MemoryBox) {
+				m.AddString(buildspecTemplatePath, "hello")
+			},
+			expectedSecretName:    "github-token-badgoose-goose",
+			expectManifestPath:    workspace.PipelineFileName,
+			expectedBuildspecPath: workspace.BuildspecFileName,
+			expectedError:         nil,
+		},
+		"returns an error if buildspec template does not exist": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "https://github.com/badgoose/goose",
+			inProjectName:  "badgoose",
+
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
+			},
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
+				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Times(0)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 			},
-			expectedSecretName: "github-token-badgoose-goose",
-			expectedError:      nil,
+			expectedError: fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
+		},
+		"returns an error if can't write buildspec": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "https://github.com/badgoose/goose",
+			inProjectName:  "badgoose",
+
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
+			},
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
+				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Return("", errors.New("some error"))
+			},
+			mockBox: func(m *packd.MemoryBox) {
+				m.AddString(buildspecTemplatePath, "hello")
+			},
+			expectedError: fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
 		},
 	}
 
@@ -189,7 +234,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				GitHubAccessToken: tc.inGitHubToken,
 
 				secretsmanager: mockSecretsManager,
-				manifestWriter: mockWriter,
+				workspace:      mockWriter,
 				box:            mockBox,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
@@ -204,6 +249,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.expectedSecretName, opts.secretName)
+				require.Equal(t, tc.expectManifestPath, opts.manifestPath)
+				require.Equal(t, tc.expectedBuildspecPath, opts.buildspecPath)
 			}
 		})
 	}
