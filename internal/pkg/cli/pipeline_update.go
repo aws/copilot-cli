@@ -45,6 +45,7 @@ type UpdatePipelineOpts struct {
 	project          *archer.Project
 	prog             progress
 	region           string
+	envStore         archer.EnvironmentStore
 	account          string
 	ws               archer.Workspace
 
@@ -82,17 +83,22 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 		return nil, err
 	}
 
-	for _, mstage := range manifestStages {
-		dstage := deploy.PipelineStage{
+	for _, stage := range manifestStages {
+		env, err := opts.envStore.GetEnvironment(opts.project.Name, stage.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		pipelineStage := deploy.PipelineStage{
 			LocalApplications: apps,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
-				Name:      mstage.Name,
-				Region:    opts.region,  // FIXME
-				AccountID: opts.account, // FIXME
-				Prod:      false,
+				Name:      stage.Name,
+				Region:    env.Region,
+				AccountID: env.AccountID,
+				Prod:      env.Prod,
 			},
 		}
-		stages = append(stages, dstage)
+		stages = append(stages, pipelineStage)
 	}
 
 	return stages, nil
@@ -130,20 +136,21 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	if err != nil {
 		return nil
 	}
-
 	pipeline, err := manifest.UnmarshalPipeline(data)
 	// TODO nil check source?
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
 		Properties:   pipeline.Source.Properties,
 	}
-	// convert stages to deployment stages
+
+	// convert environments to deployment stages
 	stages, err := opts.convertStages(pipeline.Stages)
 	if err != nil {
 		return nil
 	}
+
 	// get cross-regional resources
-	artifacts, err := opts.getArtifactBuckets()
+	artifactBuckets, err := opts.getArtifactBuckets()
 	if err != nil {
 		return nil
 	}
@@ -153,16 +160,14 @@ func (opts *UpdatePipelineOpts) Execute() error {
 		Name:            pipeline.Name,
 		Source:          source,
 		Stages:          stages,
-		ArtifactBuckets: artifacts,
+		ArtifactBuckets: artifactBuckets,
 	}
 
-	// convert it to cloudfomration
-
-	// deploy it via CFN client
+	// deploy pipeline
 	opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineFile)))
 
 	if err := opts.pipelineDeployer.DeployPipeline(deployPipelineInput); err != nil {
-		// check if pipeline already exists?
+		// TODO if pipeline already exists, still update?
 		opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineFile)))
 		return fmt.Errorf("deploy pipeline: %w", err)
 	}
@@ -189,6 +194,8 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("couldn't connect to project datastore: %w", err)
 			}
+			opts.envStore = store
+
 			project, err := store.GetProject(opts.ProjectName())
 			if err != nil {
 				return fmt.Errorf("get project %s: %w", opts.ProjectName(), err)
