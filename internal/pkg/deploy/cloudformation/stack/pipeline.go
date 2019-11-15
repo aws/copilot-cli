@@ -27,6 +27,8 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 	}
 }
 
+// TODO https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-limits.html
+// Role names limited to 64 chars bc UGH
 func (p *pipelineStackConfig) StackName() string {
 	return p.ProjectName + "-" + p.Name
 }
