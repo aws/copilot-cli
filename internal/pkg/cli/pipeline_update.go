@@ -32,7 +32,7 @@ const (
 
 var errNoPipelineFile = errors.New("There was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline.")
 
-// UpdatePipelineOpts holds the configuration needed to update an existing pipeilne
+// UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
 	// Fields with matching flags.
 	PipelineFile string
@@ -164,7 +164,7 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	return nil
 }
 
-// BuildPipelineUpdateCmd build the command for creating a new pipeline.
+// BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
 func BuildPipelineUpdateCmd() *cobra.Command {
 	opts := NewUpdatePipelineOpts()
 	cmd := &cobra.Command{
