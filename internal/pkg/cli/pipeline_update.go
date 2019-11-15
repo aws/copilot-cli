@@ -8,11 +8,11 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -25,8 +25,6 @@ import (
 )
 
 const (
-	defaultPipelineFilename = "pipeline.yml"
-
 	fmtUpdatePipelineFailed   = "Failed to accept changes for pipeline: %s."
 	fmtUpdatePipelineStart    = "Proposing infrastructure changes for the pipeline: %s"
 	fmtUpdatePipelineComplete = "Successfully updated pipeline: %s"
@@ -85,10 +83,10 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 		dstage := deploy.PipelineStage{
 			LocalApplications: apps,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
-				Name: mstage.Name,
-				Region: opts.region, // FIXME
+				Name:      mstage.Name,
+				Region:    opts.region,  // FIXME
 				AccountID: opts.account, // FIXME
-				Prod: false,
+				Prod:      false,
 			},
 		}
 		stages = append(stages, dstage)
@@ -107,7 +105,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	for _, resource := range regionalResources {
 		bucket := deploy.ArtifactBucket{
 			BucketName: resource.S3Bucket,
-			KeyArn: resource.KMSKeyARN,
+			KeyArn:     resource.KMSKeyARN,
 		}
 		buckets = append(buckets, bucket)
 	}
@@ -118,7 +116,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 func (opts *UpdatePipelineOpts) Execute() error {
 
 	// read pipeline manifest
-	data, err := opts.ws.ReadFile(defaultPipelineFilename)
+	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
 	if err != nil {
 		return nil
 	}
@@ -128,7 +126,7 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	// TODO nil check source?
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
-		Properties: pipeline.Source.Properties,
+		Properties:   pipeline.Source.Properties,
 	}
 	// convert stages to deployment stages
 	stages, err := opts.convertStages(pipeline.Stages)
@@ -142,10 +140,10 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		ProjectName: opts.ProjectName(),
-		Name:        pipeline.Name,
-		Source: source,
-		Stages: stages,
+		ProjectName:     opts.ProjectName(),
+		Name:            pipeline.Name,
+		Source:          source,
+		Stages:          stages,
 		ArtifactBuckets: artifacts,
 	}
 
@@ -228,8 +226,7 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			return opts.Execute()
 		},
 	}
-	// TODO defaultPipelineFilename -- need to store that somewhere on pipeline init?
-	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, defaultPipelineFilename, pipelineFileFlagDescription)
+	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
 	// cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployFlagDescription)
 
 	return cmd
