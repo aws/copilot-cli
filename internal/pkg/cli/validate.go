@@ -20,7 +20,7 @@ var (
 	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 )
 
-var githubRepoExp = regexp.MustCompile(`https:\/\/github\.com\/(?P<owner>.+)\/(?P<repo>.+)`)
+var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
 func validateProjectName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {

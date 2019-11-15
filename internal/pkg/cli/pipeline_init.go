@@ -326,7 +326,7 @@ func relPath(fullPath string) string {
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
 	repo, err := opts.prompt.Get(
 		pipelineEnterGitHubRepoPrompt,
-		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. https://github.com/myCompany/myRepo`),
+		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`),
 		validateGitHubRepo,
 	)
 

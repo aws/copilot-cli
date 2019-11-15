@@ -144,3 +144,32 @@ func TestIsCorrectFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateGitHubRepo(t *testing.T) {
+	testCases := map[string]struct {
+		input string
+		err error
+	}{
+		"full url": {
+			input: "https://github.com/badgoose/chaos",
+			err:  nil,
+		},
+		"owner and repo only": {
+			input: "badgoose/chaos",
+			err:  nil,
+		},
+		"invalid repo": {
+			input: "THEGOOSE",
+			err: errInvalidGitHubRepo,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateGitHubRepo(tc.input)
+
+			require.True(t, errors.Is(got, tc.err))
+		})
+	}
+}
+

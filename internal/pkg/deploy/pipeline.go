@@ -8,12 +8,19 @@ package deploy
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+)
+
+// NOTE: this is duplicated from validate.go
+var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
+
+const (
+	fmtInvalidGitHubRepo = "unable to locate the repository from the properties: %+v"
 )
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
@@ -106,17 +113,24 @@ func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 	}
 	ownerAndRepoStr, ok := ownerAndRepoI.(string)
 	if !ok {
-		return nil, fmt.Errorf("unable to locate the repository from the properties: %+v", ownerAndRepoI)
+		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoI)
 	}
 
-	// TODO FIX THIS
-	result := strings.Split(ownerAndRepoStr, "/")
-	if len(result) != 2 {
-		return nil, fmt.Errorf("unable to locate the repository from the properties: %s", ownerAndRepoStr)
+	match := githubRepoExp.FindStringSubmatch(ownerAndRepoStr)
+	if len(match) == 0 {
+		return nil, fmt.Errorf(fmtInvalidGitHubRepo, ownerAndRepoStr)
 	}
+
+	matches := make(map[string]string)
+	for i, name := range githubRepoExp.SubexpNames() {
+		if i != 0 && name != "" {
+			matches[name] = match[i]
+		}
+	}
+
 	return &ownerAndRepo{
-		owner: result[0],
-		repo:  result[1],
+		owner: matches["owner"],
+		repo:  matches["repo"],
 	}, nil
 }
 

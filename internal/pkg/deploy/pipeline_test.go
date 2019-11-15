@@ -52,7 +52,7 @@ func TestParseOwnerAndRepo(t *testing.T) {
 			expectedOwner:  "chicken",
 			expectedRepo:   "wings",
 		},
-		"valid repository property": {
+		"valid full repository name": {
 			src: &Source{
 				ProviderName: "GitHub",
 				Properties: map[string]interface{}{
