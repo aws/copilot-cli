@@ -25,6 +25,9 @@ import (
 )
 
 const (
+	fmtAddPipelineResourcesStart    = "Adding pipeline resources to your project: %s"
+	fmtAddPipelineResourcesComplete = "Successfully added pipeline resources to your project: %s"
+
 	fmtUpdatePipelineFailed   = "Failed to accept changes for pipeline: %s."
 	fmtUpdatePipelineStart    = "Proposing infrastructure changes for the pipeline: %s"
 	fmtUpdatePipelineComplete = "Successfully updated pipeline: %s"
@@ -114,6 +117,13 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 }
 
 func (opts *UpdatePipelineOpts) Execute() error {
+	// bootstrap pipeline resources
+	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.project.Name)))
+	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
+	if err != nil {
+		return nil
+	}
+	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.project.Name)))
 
 	// read pipeline manifest
 	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
@@ -122,7 +132,6 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	}
 
 	pipeline, err := manifest.UnmarshalPipeline(data)
-	// convert source TODO combine?
 	// TODO nil check source?
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
@@ -191,12 +200,9 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 				return err
 			}
 			opts.pipelineDeployer = cloudformation.New(defaultSession)
-			region := aws.StringValue(defaultSession.Config.Region)
 
-			err = opts.pipelineDeployer.AddPipelineResourcesToProject(project, region)
-			if err != nil {
-				return nil
-			}
+			region := aws.StringValue(defaultSession.Config.Region)
+			opts.region = region
 
 			identityService := identity.New(defaultSession)
 			caller, err := identityService.Get()
@@ -205,7 +211,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			}
 			account := caller.Account
 			opts.account = account
-			opts.region = region
 
 			ws, err := workspace.New()
 			if err != nil {
