@@ -56,20 +56,6 @@ func (s Service) GetECRAuth() (Auth, error) {
 	}, nil
 }
 
-// CreateRepository creates an ECR repository with input name and returns the repository URI.
-func (s Service) CreateRepository(name string) (string, error) {
-	result, err := s.ecr.CreateRepository(&ecr.CreateRepositoryInput{
-		RepositoryName:     aws.String(name),
-		ImageTagMutability: aws.String("IMMUTABLE"),
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("create repository: %w", err)
-	}
-
-	return *result.Repository.RepositoryUri, nil
-}
-
 // GetRepository returns the ECR repository URI.
 func (s Service) GetRepository(name string) (string, error) {
 	result, err := s.ecr.DescribeRepositories(&ecr.DescribeRepositoriesInput{

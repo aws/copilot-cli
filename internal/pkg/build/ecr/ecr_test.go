@@ -88,55 +88,6 @@ func TestGetECRAuth(t *testing.T) {
 	}
 }
 
-func TestCreateRepository(t *testing.T) {
-	mockError := errors.New("error")
-
-	mockRepoName := "mockRepoName"
-	mockRepoURI := "mockRepoURI"
-
-	testCases := map[string]struct {
-		mockCreateRepository func(*ecr.CreateRepositoryInput) (*ecr.CreateRepositoryOutput, error)
-
-		wantURI string
-		wantErr error
-	}{
-		"should return wrapped error given error returned from CreateRepository": {
-			mockCreateRepository: func(*ecr.CreateRepositoryInput) (*ecr.CreateRepositoryOutput, error) {
-				return nil, mockError
-			},
-			wantErr: fmt.Errorf("create repository: %w", mockError),
-		},
-		"should return repository URI": {
-			mockCreateRepository: func(input *ecr.CreateRepositoryInput) (*ecr.CreateRepositoryOutput, error) {
-				require.Equal(t, mockRepoName, *input.RepositoryName)
-				require.Equal(t, "IMMUTABLE", *input.ImageTagMutability)
-
-				return &ecr.CreateRepositoryOutput{
-					Repository: &ecr.Repository{
-						RepositoryUri: aws.String(mockRepoURI),
-					},
-				}, nil
-			},
-			wantURI: mockRepoURI,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			service := Service{
-				mockECR{
-					mockCreateRepository: tc.mockCreateRepository,
-				},
-			}
-
-			gotURI, gotErr := service.CreateRepository(mockRepoName)
-
-			require.Equal(t, tc.wantURI, gotURI)
-			require.Equal(t, tc.wantErr, gotErr)
-		})
-	}
-}
-
 func TestGetRepository(t *testing.T) {
 	mockError := errors.New("error")
 

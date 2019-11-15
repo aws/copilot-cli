@@ -29,8 +29,9 @@ import (
 // BuildAppDeployCommand builds the `app deploy` subcommand.
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
-		GlobalOpts: NewGlobalOpts(),
-		spinner:    termprogress.NewSpinner(),
+		GlobalOpts:    NewGlobalOpts(),
+		spinner:       termprogress.NewSpinner(),
+		dockerService: docker.New(),
 	}
 
 	cmd := &cobra.Command{
@@ -76,14 +77,19 @@ type appDeployOpts struct {
 	env      string
 	imageTag string
 
-	projectService   projectService
-	ecrService       ecr.Service
-	workspaceService archer.Workspace
+	projectService     projectService
+	workspaceService   archer.Workspace
+	ecrService         ecrService
+	dockerService      dockerService
+	appPackageCfClient projectResourcesGetter
+	appDeployCfClient  cloudformation.CloudFormation
 
 	spinner progress
 
 	localProjectAppNames []string
 	projectEnvironments  []*archer.Environment
+
+	targetEnvironment *archer.Environment
 }
 
 func (opts appDeployOpts) String() string {
@@ -96,19 +102,23 @@ type projectService interface {
 	archer.ApplicationStore
 }
 
+type ecrService interface {
+	GetRepository(name string) (string, error)
+	GetECRAuth() (ecr.Auth, error)
+}
+
+type dockerService interface {
+	Build(uri, tag, path string) error
+	Login(uri string, auth ecr.Auth) error
+	Push(uri, tag string) error
+}
+
 func (opts *appDeployOpts) init() error {
 	projectService, err := store.New()
 	if err != nil {
 		return fmt.Errorf("create project service: %w", err)
 	}
 	opts.projectService = projectService
-
-	// TODO: toolsAccountSession may need to be regionalized?
-	toolsAccountSession, err := session.Default()
-	if err != nil {
-		return fmt.Errorf("initialize tools account session: %w", err)
-	}
-	opts.ecrService = ecr.New(toolsAccountSession)
 
 	workspaceService, err := workspace.New()
 	if err != nil {
@@ -132,7 +142,11 @@ func (opts *appDeployOpts) sourceInputs() error {
 		return err
 	}
 
-	if err := opts.sourceEnvName(); err != nil {
+	if err := opts.sourceTargetEnv(); err != nil {
+		return err
+	}
+
+	if err := opts.configureClients(); err != nil {
 		return err
 	}
 
@@ -222,21 +236,20 @@ func (opts *appDeployOpts) sourceAppName() error {
 	return fmt.Errorf("invalid app name: %s", opts.app)
 }
 
-func (opts *appDeployOpts) sourceEnvName() error {
-	envNames := []string{}
-
-	for _, env := range opts.projectEnvironments {
-		envNames = append(envNames, env.Name)
-	}
-
+func (opts *appDeployOpts) sourceTargetEnv() error {
 	if opts.env == "" {
-		if len(envNames) == 1 {
-			opts.env = envNames[0]
+		if len(opts.projectEnvironments) == 1 {
+			opts.targetEnvironment = opts.projectEnvironments[0]
 
 			// NOTE: defaulting the env name, tell the user.
-			log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(opts.env))
+			log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(opts.targetEnvironment.Name))
 
 			return nil
+		}
+
+		var envNames []string
+		for _, env := range opts.projectEnvironments {
+			envNames = append(envNames, env.Name)
 		}
 
 		selectedEnvName, err := opts.prompt.SelectOne("Select an environment", "", envNames)
@@ -248,13 +261,37 @@ func (opts *appDeployOpts) sourceEnvName() error {
 		opts.env = selectedEnvName
 	}
 
-	for _, envName := range envNames {
-		if opts.env == envName {
+	for _, env := range opts.projectEnvironments {
+		if opts.env == env.Name {
+			opts.targetEnvironment = env
+
 			return nil
 		}
 	}
 
 	return fmt.Errorf("invalid env name: %s", opts.env)
+}
+
+func (opts *appDeployOpts) configureClients() error {
+	defaultSessEnvRegion, err := session.DefaultWithRegion(opts.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("create ECR session with region %s: %w", opts.targetEnvironment.Region, err)
+	}
+
+	// ECR client against tools account profile AND target environment region
+	opts.ecrService = ecr.New(defaultSessEnvRegion)
+
+	// app deploy CF client against tools account profile AND target environment region
+	opts.appDeployCfClient = cloudformation.New(defaultSessEnvRegion)
+
+	// app package CF client against tools account
+	appPackageCfSess, err := session.Default()
+	if err != nil {
+		return fmt.Errorf("create app package CF session: %w", err)
+	}
+	opts.appPackageCfClient = cloudformation.New(appPackageCfSess)
+
+	return nil
 }
 
 func (opts *appDeployOpts) sourceImageTag() error {
@@ -277,22 +314,20 @@ func (opts *appDeployOpts) sourceImageTag() error {
 }
 
 func (opts appDeployOpts) deployApp() error {
-	// TODO: remove ECR repository creation
-	// Ideally this `getRepositoryURI` flow will not create an ECR repository, one will exist after the `app init` workflow.
-	uri, err := getRepositoryURI(opts.ProjectName(), opts.app)
-	if err != nil {
-		return fmt.Errorf("get repository URI: %w", err)
-	}
+	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
 
-	dockerService := docker.New(uri)
+	uri, err := opts.ecrService.GetRepository(repoName)
+	if err != nil {
+		return fmt.Errorf("get ECR repository URI: %w", err)
+	}
 
 	appDockerfilePath, err := opts.getAppDockerfilePath()
 	if err != nil {
 		return err
 	}
 
-	if err := dockerService.Build(opts.imageTag, appDockerfilePath); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s, %w", appDockerfilePath, opts.imageTag, err)
+	if err := opts.dockerService.Build(uri, opts.imageTag, appDockerfilePath); err != nil {
+		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", appDockerfilePath, opts.imageTag, err)
 	}
 
 	auth, err := opts.ecrService.GetECRAuth()
@@ -301,27 +336,27 @@ func (opts appDeployOpts) deployApp() error {
 		return fmt.Errorf("get ECR auth data: %w", err)
 	}
 
-	dockerService.Login(auth)
+	opts.dockerService.Login(uri, auth)
 
 	if err != nil {
 		return err
 	}
 
-	if err = dockerService.Push(opts.imageTag); err != nil {
+	if err = opts.dockerService.Push(uri, opts.imageTag); err != nil {
 		return err
 	}
 
 	template, err := opts.getAppDeployTemplate()
 
-	stackName := fmt.Sprintf("%s-%s", opts.app, opts.env)
+	stackName := fmt.Sprintf("%s-%s", opts.app, opts.targetEnvironment.Name)
 	changeSetName := fmt.Sprintf("%s-%s", stackName, opts.imageTag)
 
-	opts.spinner.Start(fmt.Sprintf("Deploying %s to %s.",
-		fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app),
-			color.HighlightUserInput(opts.imageTag)),
-		color.HighlightUserInput(opts.env)))
+	opts.spinner.Start(
+		fmt.Sprintf("Deploying %s to %s.",
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app), color.HighlightUserInput(opts.imageTag)),
+			color.HighlightUserInput(opts.targetEnvironment.Name)))
 
-	if err := applyAppDeployTemplate(template, stackName, changeSetName); err != nil {
+	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName); err != nil {
 		opts.spinner.Stop("Error!")
 
 		return err
@@ -329,28 +364,24 @@ func (opts appDeployOpts) deployApp() error {
 
 	opts.spinner.Stop("Done!")
 
-	log.Successf("Deployed %s to %s.\n", fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app),
-		color.HighlightUserInput(opts.imageTag)),
-		color.HighlightUserInput(opts.env))
+	log.Successf("Deployed %s to %s.\n",
+		fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app), color.HighlightUserInput(opts.imageTag)),
+		color.HighlightUserInput(opts.targetEnvironment.Name))
 
 	return nil
 }
 
 func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	buffer := &bytes.Buffer{}
-	sess, err := session.Default()
-	if err != nil {
-		return "", fmt.Errorf("create default session: %w", err)
-	}
 
 	appPackage := PackageAppOpts{
 		AppName:      opts.app,
-		EnvName:      opts.env,
+		EnvName:      opts.targetEnvironment.Name,
 		Tag:          opts.imageTag,
 		stackWriter:  buffer,
 		paramsWriter: ioutil.Discard,
 		store:        opts.projectService,
-		describer:    cloudformation.New(sess),
+		describer:    opts.appPackageCfClient,
 		ws:           opts.workspaceService,
 		GlobalOpts:   opts.GlobalOpts,
 	}
@@ -362,50 +393,12 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	return buffer.String(), nil
 }
 
-func applyAppDeployTemplate(template, stackName, changeSetName string) error {
-	// TODO: create a session from the environment profile to support cross-account?
-	session, err := session.Default()
-	if err != nil {
-		// TODO: handle err
-		return err
-	}
-
-	cfClient := cloudformation.New(session)
-
-	if err := cfClient.DeployApp(template, stackName, changeSetName); err != nil {
+func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName string) error {
+	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName); err != nil {
 		return fmt.Errorf("deploy application: %w", err)
 	}
 
 	return nil
-}
-
-func getRepositoryURI(projectName, appName string) (string, error) {
-	sess, err := session.Default()
-
-	if err != nil {
-		return "", err
-	}
-
-	ecrService := ecr.New(sess)
-
-	// assume the ECR repository name is the projectName/appName
-	repoName := fmt.Sprintf("%s/%s", projectName, appName)
-
-	// try to describe the repository to see if it exists
-	// NOTE: this should go away once ECR repositories are managed elsewhere
-	uri, err := ecrService.GetRepository(repoName)
-	// if there was an error assume the repo doesn't exist and try to create it
-	if err == nil {
-		return uri, nil
-	}
-
-	uri, err = ecrService.CreateRepository(repoName)
-
-	if err != nil {
-		return "", err
-	}
-
-	return uri, nil
 }
 
 func (opts appDeployOpts) getAppDockerfilePath() (string, error) {

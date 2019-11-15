@@ -22,6 +22,13 @@ func Default() (*session.Session, error) {
 	})
 }
 
+// DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
+func DefaultWithRegion(region string) (*session.Session, error) {
+	return session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	})
+}
+
 // FromProfile returns a session configured against the input profile name.
 func FromProfile(name string) (*session.Session, error) {
 	return session.NewSessionWithOptions(session.Options{

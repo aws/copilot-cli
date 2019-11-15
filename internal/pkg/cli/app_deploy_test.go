@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 )
@@ -199,13 +200,16 @@ func TestSourceAppName(t *testing.T) {
 	}
 }
 
-func TestSourceEnvName(t *testing.T) {
+func TestSourceTargetEnv(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockPrompt := climocks.NewMockprompter(ctrl)
 
-	mockEnvName := "test"
+	mockEnvName := "mockEnvName"
+	mockEnv := &archer.Environment{
+		Name: mockEnvName,
+	}
 
 	testCases := map[string]struct {
 		setupMocks func()
@@ -213,44 +217,30 @@ func TestSourceEnvName(t *testing.T) {
 		inputEnvFlag        string
 		projectEnvironments []*archer.Environment
 
-		wantEnvName string
-		wantErr     error
+		wantErr error
 	}{
 		"should validate the input env flag name": {
-			setupMocks:   func() {},
-			inputEnvFlag: mockEnvName,
-			projectEnvironments: []*archer.Environment{
-				&archer.Environment{
-					Name: mockEnvName,
-				},
-			},
-			wantEnvName: mockEnvName,
+			setupMocks:          func() {},
+			inputEnvFlag:        mockEnvName,
+			projectEnvironments: []*archer.Environment{mockEnv},
 		},
 		"should default the env name if there's only one option": {
-			setupMocks: func() {},
-			projectEnvironments: []*archer.Environment{
-				&archer.Environment{
-					Name: mockEnvName,
-				},
-			},
-			wantEnvName: mockEnvName,
+			setupMocks:          func() {},
+			projectEnvironments: []*archer.Environment{mockEnv},
 		},
 		"should prompt the user to select an env if there's multiple options": {
 			setupMocks: func() {
 				mockPrompt.EXPECT().
-					SelectOne(gomock.Eq("Select an environment"), gomock.Eq(""), gomock.Eq([]string{mockEnvName, "anotherone"})).
+					SelectOne(gomock.Eq("Select an environment"), gomock.Eq(""), gomock.Eq([]string{mockEnv.Name, "anotherone"})).
 					Times(1).
 					Return(mockEnvName, nil)
 			},
 			projectEnvironments: []*archer.Environment{
-				&archer.Environment{
-					Name: mockEnvName,
-				},
+				mockEnv,
 				&archer.Environment{
 					Name: "anotherone",
 				},
 			},
-			wantEnvName: mockEnvName,
 		},
 		"should return error if flag input value is not valid": {
 			setupMocks:   func() {},
@@ -260,8 +250,7 @@ func TestSourceEnvName(t *testing.T) {
 					Name: "anotherone",
 				},
 			},
-			wantErr:     fmt.Errorf("invalid env name: %s", mockEnvName),
-			wantEnvName: mockEnvName,
+			wantErr: fmt.Errorf("invalid env name: %s", mockEnvName),
 		},
 	}
 
@@ -277,10 +266,72 @@ func TestSourceEnvName(t *testing.T) {
 				},
 			}
 
-			gotErr := opts.sourceEnvName()
+			gotErr := opts.sourceTargetEnv()
 
 			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantEnvName, opts.env)
+		})
+	}
+}
+
+type mockECRService struct {
+	t *testing.T
+
+	mockGetRepository func(t *testing.T, name string) (string, error)
+	mockGetECRAuth    func() (ecr.Auth, error)
+}
+
+func (m mockECRService) GetRepository(name string) (string, error) {
+	return m.mockGetRepository(m.t, name)
+}
+
+func (m mockECRService) GetECRAuth() (ecr.Auth, error) {
+	return m.GetECRAuth()
+}
+
+// TODO: expand on test suite once workspace/manifest and docker commands are more mockable
+func TestDeployApp(t *testing.T) {
+	mockProjectName := "mockProjectName"
+	mockApp := "mockApp"
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		projectName string
+		app         string
+
+		mockGetRepository func(t *testing.T, name string) (string, error)
+
+		want error
+	}{
+		"wrap error returned from ECR GetRepository": {
+			projectName: mockProjectName,
+			app:         mockApp,
+
+			mockGetRepository: func(t *testing.T, name string) (string, error) {
+				require.Equal(t, fmt.Sprintf("%s/%s", mockProjectName, mockApp), name)
+
+				return "", mockError
+			},
+
+			want: fmt.Errorf("get ECR repository URI: %w", mockError),
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := appDeployOpts{
+				GlobalOpts: &GlobalOpts{
+					projectName: test.projectName,
+				},
+				app: test.app,
+				ecrService: mockECRService{
+					t:                 t,
+					mockGetRepository: test.mockGetRepository,
+				},
+			}
+
+			got := opts.deployApp()
+
+			require.Equal(t, test.want, got)
 		})
 	}
 }
