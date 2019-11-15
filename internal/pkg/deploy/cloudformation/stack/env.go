@@ -37,8 +37,6 @@ const (
 	EnvOutputECRKey = "ECRRepositoryName"
 
 	envParamToolsAccountPrincipal = "ToolsAccountPrincipalARN"
-
-	ecrURLFormatString = "%s.dkr.ecr.%s.amazonaws.com/%s"
 )
 
 // newEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -119,13 +117,6 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 		Prod:      e.Prod,
 		Region:    stackARN.Region,
 		AccountID: stackARN.AccountID,
-	}
-
-	if stackOutputs[EnvOutputECRKey] != "" {
-		createdEnv.RegistryURL = fmt.Sprintf(ecrURLFormatString,
-			createdEnv.AccountID,
-			createdEnv.Region,
-			stackOutputs[EnvOutputECRKey])
 	}
 
 	return &createdEnv, nil

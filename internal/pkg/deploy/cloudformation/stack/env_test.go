@@ -112,7 +112,6 @@ func TestToEnv(t *testing.T) {
 				Prod:        mockDeployInput.Prod,
 				AccountID:   "902697171733",
 				Region:      "eu-west-3",
-				RegistryURL: "902697171733.dkr.ecr.eu-west-3.amazonaws.com/project/env",
 			},
 		},
 	}
