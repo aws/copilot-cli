@@ -119,10 +119,18 @@ func (opts *InitPipelineOpts) Validate() error {
 func (opts *InitPipelineOpts) Execute() error {
 	secretName := opts.createSecretName()
 	secretArn, err := opts.secretsmanager.CreateSecret(secretName, opts.GitHubAccessToken)
+
 	if err != nil {
-		return err
+		// TODO don't fail if secret exists
+		var existsErr *secretsmanager.ErrSecretAlreadyExists
+		if errors.As(err, &existsErr) {
+			// Do nothing if the secret already exists.
+			log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(opts.GitHubRepo))
+		} else {
+			return err
+		}
 	}
-	opts.secretArn = secretArn
+	opts.secretArn = secretArn // Maybe don't need?
 	opts.secretName = secretName
 
 	// write pipeline.yml file, populate with:
