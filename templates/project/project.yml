@@ -90,6 +90,7 @@ Resources:
                   - ecr:BatchCheckLayerAvailability
                   - ecr:GetRepositoryPolicy
                   - ecr:GetLifecyclePolicy
+                  - ecr:TagResource
                 Resource: "*"
   DNSDelegationRole:
     Type: AWS::IAM::Role

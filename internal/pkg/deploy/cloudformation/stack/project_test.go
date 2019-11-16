@@ -5,10 +5,12 @@ package stack
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
@@ -87,6 +89,8 @@ func TestDNSDelegationAccounts(t *testing.T) {
 }
 
 func TestProjResourceTemplate(t *testing.T) {
+	expectedTemplate, err := ioutil.ReadFile("testdata/rendered_project_cfn_template.yml")
+	require.NoError(t, err)
 	properlyEscapedTemplate := `AWSTemplateFormatVersion: '2010-09-09'
 Outputs:
   KMSKeyARN:
@@ -123,6 +127,15 @@ Outputs:
 				Version:  1,
 				Project:  "testproject"},
 			expectedOutput: properlyEscapedTemplate,
+		},
+		"render actual template": {
+			box:            templates.Box(),
+			expectedOutput: string(expectedTemplate),
+			given: &ProjectResourcesConfig{
+				Accounts: []string{"1234"},
+				Apps:     []string{"app-1"},
+				Version:  1,
+				Project:  "testproject"},
 		},
 	}
 

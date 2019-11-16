@@ -55,7 +55,7 @@ func TestPipelineStackName(t *testing.T) {
 }
 
 func TestPipelineTemplateRendering(t *testing.T) {
-	expectedTemplate, err := ioutil.ReadFile("../testdata/rendered_pipeline_cfn_template.yml")
+	expectedTemplate, err := ioutil.ReadFile("testdata/rendered_pipeline_cfn_template.yml")
 	require.NoError(t, err, "expected template can not be read")
 
 	pipeline := NewPipelineStackConfig(
@@ -100,16 +100,16 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		ArtifactBuckets: []deploy.ArtifactBucket{
 			{
 				BucketName: "chicken-us-east-1",
-				KeyArn:    fmt.Sprintf("arn:aws:kms:us-east-1:%s:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e", toolsAccountID),
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-east-1:%s:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e", toolsAccountID),
 			},
 			{
 				BucketName: "chicken-us-west-2",
-				KeyArn:    fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
 			},
 			// assume the pipeline is hosted in a region that does not contain any archer environment
 			{
 				BucketName: "chicken-us-west-1",
-				KeyArn:    fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
 			},
 		},
 	}
