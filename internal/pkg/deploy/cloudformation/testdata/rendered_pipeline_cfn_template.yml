@@ -45,12 +45,12 @@ Resources:
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
             Resource:
-              - chicken-us-east-1
-              - !Join ['', ['chicken-us-east-1', '/*']]
-              - chicken-us-west-2
-              - !Join ['', ['chicken-us-west-2', '/*']]
-              - chicken-us-west-1
-              - !Join ['', ['chicken-us-west-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
           - Effect: Allow
             Action:
               # TODO: scope this down if possible
@@ -98,8 +98,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codebuild.amazonaws.com
@@ -227,12 +226,12 @@ Resources:
               - s3:GetObject
               - s3:ListBucket
             Resource:
-              - chicken-us-east-1
-              - !Join ['', ['chicken-us-east-1', '/*']]
-              - chicken-us-west-2
-              - !Join ['', ['chicken-us-west-2', '/*']]
-              - chicken-us-west-1
-              - !Join ['', ['chicken-us-west-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
           -
             Effect: Allow
             Action:

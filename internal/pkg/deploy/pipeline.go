@@ -46,7 +46,7 @@ type CreatePipelineInput struct {
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
 // intermediate artifacts produced by the pipeline.
 type ArtifactBucket struct {
-	// The ARN of the S3 bucket.
+	// The name of the S3 bucket.
 	BucketName string
 
 	// The ARN of the KMS key used to en/decrypt artifacts stored in this bucket.
