@@ -20,8 +20,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codebuild.amazonaws.com
@@ -36,8 +35,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - s3:PutObject
               - s3:GetBucketPolicy
@@ -49,8 +47,7 @@ Resources:
             Resource:{{range .ArtifactBuckets}}
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
               - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               # TODO: scope this down if possible
               - kms:*
@@ -61,16 +58,14 @@ Resources:
             # backed by a (regional) S3 bucket.
             Resource:{{range .ArtifactBuckets}}
               - {{.KeyArn}}{{end}}
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
       Roles:
-        -
-          !Ref BuildProjectRole
+        - !Ref BuildProjectRole
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -97,14 +92,29 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codebuild.amazonaws.com
             Action:
               - sts:AssumeRole
-      Path: /{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
+      Path: /
+  IntegTestPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: IntegTestRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-IntegTestPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      Roles:
+        - !Ref IntegTestRole{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
   IntegTestProject{{logicalIDSafe $stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
