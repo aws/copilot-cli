@@ -10,11 +10,10 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 )
 
-// DeployPipeline sets up everything required for a pipeline with cross-region stages.
-// These resources include things that are regional, rather than scoped to a particular
-// environment, such as ECR Repos, CodePipeline KMS keys & S3 buckets.
-// We deploy pipeline resources through StackSets - that way we can have one
-// template that we update and all regional stacks are updated.
+// DeployPipeline sets up a CodePipeline for deploying applications.
+// Project-level regional resources (such as KMS keys for de/encrypting &
+// S3 buckets for storing pipeline artifacts) should be provisioned using
+// `AddPipelineResourcesToProject()` before calling this function.
 func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
 	pipelineConfig := stack.NewPipelineStackConfig(in)
 
