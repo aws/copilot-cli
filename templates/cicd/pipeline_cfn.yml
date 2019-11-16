@@ -67,6 +67,23 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - ecr:DescribeImageScanFindings
+              - ecr:GetLifecyclePolicyPreview
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListTagsForResource
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetLifecyclePolicy
+              - ecr:GetRepositoryPolicy
+              - ecr:PutImage
+            Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
+            Condition:
+              StringEquals:
+                - ecr:ResourceTag/ecs-project
+                - {{$.ProjectName}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
