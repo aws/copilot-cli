@@ -28,7 +28,7 @@ func init() {
 }
 
 func Test_Project_Infrastructure(t *testing.T) {
-	sess, err := testSession()
+	sess, err := testSession(nil)
 	require.NoError(t, err)
 	identity := identity.New(sess)
 	callerInfo, err := identity.Get()
@@ -353,7 +353,7 @@ func Test_Project_Infrastructure(t *testing.T) {
 // is failing to be spun up because you've reached some limits, try
 // switching your default region by running aws configure.
 func Test_Environment_Deployment_Integration(t *testing.T) {
-	sess, err := testSession()
+	sess, err := testSession(nil)
 	require.NoError(t, err)
 	deployer := cloudformation.New(sess)
 	cfClient := awsCF.New(sess)
@@ -362,7 +362,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	id, err := identity.Get()
 	require.NoError(t, err)
 
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.ARN}
+	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.RootUserARN}
 	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.Project, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
@@ -519,8 +519,19 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz"
 
-func testSession() (*session.Session, error) {
+func testSession(region *string) (*session.Session, error) {
+	if region == nil {
+		return session.NewSessionWithOptions(session.Options{
+			SharedConfigState: session.SharedConfigEnable,
+		})
+	}
+
+	// override with the provided region
 	return session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{
+			CredentialsChainVerboseErrors: aws.Bool(true),
+			Region:                        region,
+		},
 		SharedConfigState: session.SharedConfigEnable,
 	})
 }

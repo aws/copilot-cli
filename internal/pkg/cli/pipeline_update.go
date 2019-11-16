@@ -36,7 +36,6 @@ var errNoPipelineFile = errors.New("There was no pipeline manifest found in your
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
-	// Fields with matching flags.
 	PipelineFile string
 	// Deploy bool
 
@@ -57,14 +56,6 @@ func NewUpdatePipelineOpts() *UpdatePipelineOpts {
 	}
 }
 
-// func (opts *UpdatePipelineOpts) Ask() error {
-// 	if opts.PipelineFile() == "" {
-// 		return errNoPipelineFile
-// 	}
-
-// 	return nil
-// }
-
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *UpdatePipelineOpts) Validate() error {
 	if opts.PipelineFile == "" {
@@ -82,7 +73,7 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 	}
 
 	for _, stage := range manifestStages {
-		env, err := opts.envStore.GetEnvironment(opts.project.Name, stage.Name)
+		env, err := opts.envStore.GetEnvironment(opts.ProjectName(), stage.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -122,12 +113,12 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.project.Name)))
+	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
 	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
 	if err != nil {
 		return nil
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.project.Name)))
+	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.ProjectName())))
 
 	// read pipeline manifest
 	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
@@ -219,12 +210,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// if err := opts.Ask(); err != nil {
-			// 	return err
-			// }
-			// if err := opts.Validate(); err != nil {
-			// 	return err
-			// }
 			return opts.Execute()
 		},
 	}

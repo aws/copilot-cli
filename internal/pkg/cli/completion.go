@@ -48,7 +48,7 @@ func (opts *CompletionOpts) Execute() error {
 }
 
 // BuildCompletionCmd returns the command to output shell completion code for the specified shell (bash or zsh).
-func BuildCompletionCmd() *cobra.Command {
+func BuildCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
 	opts := &CompletionOpts{}
 	cmd := &cobra.Command{
 		Use:   "completion [shell]",
@@ -66,15 +66,22 @@ The code must be evaluated to provide interactive completion of commands.`,
   /code $ archer completion bash > /usr/local/etc/bash_completion.d
 
   Install bash completion on linux
-  /code $ source <(archer completion bash)`,
-		Args: cobra.ExactArgs(1),
+  /code $ source <(archer completion bash)
+  /code $ archer completion bash > archer.sh
+  /code $ sudo mv archer.sh /etc/bash_completion.d/archer`,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("requires a single shell argument (bash or zsh)")
+			}
+			return nil
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.Shell = args[0]
 			return opts.Validate()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.w = os.Stdout
-			opts.completer = cmd
+			opts.completer = rootCmd
 			return opts.Execute()
 		},
 	}
