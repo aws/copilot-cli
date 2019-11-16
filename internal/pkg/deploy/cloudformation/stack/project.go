@@ -97,8 +97,16 @@ func (c *ProjectStackConfig) ResourceTemplate(config *ProjectResourcesConfig) (s
 	sort.Strings(config.Accounts)
 	sort.Strings(config.Apps)
 
+	templateData := struct {
+		*ProjectResourcesConfig
+		AppTagKey string
+	}{
+		config,
+		appTagKey,
+	}
+
 	var buf bytes.Buffer
-	if err := template.Execute(&buf, config); err != nil {
+	if err := template.Execute(&buf, templateData); err != nil {
 		return "", err
 	}
 
