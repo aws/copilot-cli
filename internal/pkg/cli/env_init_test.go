@@ -160,7 +160,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -183,7 +183,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -202,7 +202,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -251,7 +251,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -292,7 +292,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -337,7 +337,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{ARN: "some arn"}, nil)
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
 			expectProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))

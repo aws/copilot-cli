@@ -27,6 +27,9 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for archer env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for archer app package
   BuildProjectPolicy:
     Type: AWS::IAM::Policy
     DependsOn: BuildProjectRole
@@ -45,8 +48,8 @@ Resources:
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
             Resource:{{range .ArtifactBuckets}}
-              - {{.BucketName}}
-              - !Join ['', ['{{.BucketName}}', '/*']]{{end}}
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
           - Effect: Allow
             Action:
               # TODO: scope this down if possible
@@ -64,6 +67,20 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - ecr:DescribeImageScanFindings
+              - ecr:GetLifecyclePolicyPreview
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListTagsForResource
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetLifecyclePolicy
+              - ecr:GetRepositoryPolicy
+              - ecr:PutImage
+            Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*
+            Condition: {StringEquals: {'ecr:ResourceTag/ecs-project': {{$.ProjectName}}}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -92,8 +109,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codebuild.amazonaws.com
@@ -143,8 +159,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codepipeline.amazonaws.com
@@ -158,8 +173,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - codepipeline:*
               - iam:ListRoles
@@ -182,33 +196,29 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
             Resource:{{range .ArtifactBuckets}}
               - {{.KeyArn}}{{end}}
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - s3:PutObject
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
             Resource:{{range .ArtifactBuckets}}
-              - {{.BucketName}}
-              - !Join ['', ['{{.BucketName}}', '/*']]{{end}}
-          -
-            Effect: Allow
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+          - Effect: Allow
             Action:
               - sts:AssumeRole
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}
       Roles:
-        -
-          !Ref PipelineRole
+        - !Ref PipelineRole
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -216,8 +226,7 @@ Resources:
       - PipelineRolePolicy
     Properties:
       ArtifactStores:{{range .ArtifactBuckets}}
-        -
-          Region: {{.Region}}
+        - Region: {{.Region}}
           ArtifactStore:
             Type: S3
             Location: {{.BucketName}}

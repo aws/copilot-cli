@@ -50,9 +50,9 @@ func TestGetCallerArn(t *testing.T) {
 				}, nil
 			},
 			wantIdentity: Caller{
-				Account: mockAccount,
-				ARN:     mockARN,
-				UserID:  mockUserID,
+				Account:     mockAccount,
+				RootUserARN: fmt.Sprintf("arn:aws:iam::%s:root", mockAccount),
+				UserID:      mockUserID,
 			},
 		},
 	}

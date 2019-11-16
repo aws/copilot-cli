@@ -97,7 +97,7 @@ func (opts *InitEnvOpts) Execute() error {
 		Project:                  opts.ProjectName(),
 		Prod:                     opts.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
-		ToolsAccountPrincipalARN: caller.ARN,
+		ToolsAccountPrincipalARN: caller.RootUserARN,
 	}
 	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
 	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
