@@ -85,11 +85,8 @@ Resources:
               - ecr:GetLifecyclePolicy
               - ecr:GetRepositoryPolicy
               - ecr:PutImage
-            Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*'
-            Condition:
-              StringEquals:
-                - ecr:ResourceTag/ecs-project
-                - chickenProject
+            Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*
+            Condition: {StringEquals: {'ecr:ResourceTag/ecs-project': chickenProject}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -189,8 +186,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codepipeline.amazonaws.com
@@ -204,8 +200,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - codepipeline:*
               - iam:ListRoles
@@ -228,8 +223,7 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - kms:Decrypt
               - kms:Encrypt
@@ -238,8 +232,7 @@ Resources:
               - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
               - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
               - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - s3:PutObject
               - s3:GetBucketPolicy
@@ -252,16 +245,14 @@ Resources:
               - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
               - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
               - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - sts:AssumeRole
             Resource:
               - arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
               - arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
       Roles:
-        -
-          !Ref PipelineRole
+        - !Ref PipelineRole
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -269,24 +260,21 @@ Resources:
       - PipelineRolePolicy
     Properties:
       ArtifactStores:
-        -
-          Region: us-east-1
+        - Region: us-east-1
           ArtifactStore:
             Type: S3
             Location: chicken-us-east-1
             EncryptionKey:
               Id: arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
               Type: KMS
-        -
-          Region: us-west-2
+        - Region: us-west-2
           ArtifactStore:
             Type: S3
             Location: chicken-us-west-2
             EncryptionKey:
               Id: arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
               Type: KMS
-        -
-          Region: us-west-1
+        - Region: us-west-1
           ArtifactStore:
             Type: S3
             Location: chicken-us-west-1
