@@ -17,8 +17,6 @@ Resources:
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
-      # StackName is <projectName>-<pipelineName>
-      RoleName: !Sub ${AWS::StackName}-CodeBuildRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -102,7 +100,6 @@ Resources:
   IntegTestRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-IntegTestRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -159,7 +156,6 @@ Resources:
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub ${AWS::StackName}-CodepipelineRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
