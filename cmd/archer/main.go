@@ -57,7 +57,7 @@ func buildRootCmd() *cobra.Command {
 
 	// "Settings" command group.
 	cmd.AddCommand(cli.BuildVersionCmd())
-	cmd.AddCommand(cli.BuildCompletionCmd())
+	cmd.AddCommand(cli.BuildCompletionCmd(cmd))
 
 	// "Release" command group.
 	cmd.AddCommand(cli.BuildPipelineCmd())
