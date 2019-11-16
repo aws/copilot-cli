@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -93,7 +94,7 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 		return fmt.Errorf("updating project to allow DNS delegation: %w", err)
 	}
 
-	return cf.client.WaitUntilStackUpdateComplete(&describeStack)
+	return cf.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &describeStack, cf.waiters...)
 }
 
 // GetProjectResourcesByRegion fetches all the regional resources for a particular region.

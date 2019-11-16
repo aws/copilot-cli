@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/gobuffalo/packd"
@@ -29,30 +31,26 @@ const (
 type mockCloudFormation struct {
 	cloudformationiface.CloudFormationAPI
 
-	t                                    *testing.T
-	mockCreateChangeSet                  func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
-	mockWaitUntilChangeSetCreateComplete func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
-	mockExecuteChangeSet                 func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
-	mockDescribeChangeSet                func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
-	mockWaitUntilStackCreateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
-	mockDescribeStacks                   func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
-	mockCreateStackSet                   func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
-	mockDescribeStackSet                 func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
-	mockUpdateStackSet                   func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
-	mockListStackInstances               func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
-	mockCreateStackInstances             func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
-	mockDescribeStackSetOperation        func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
-	mockDescribeStackEvents              func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
-	mockCreateStack                      func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
-	mockWaitUntilStackUpdateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+	t                                               *testing.T
+	mockCreateChangeSet                             func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
+	mockWaitUntilChangeSetCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
+	mockExecuteChangeSet                            func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
+	mockDescribeChangeSet                           func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
+	mockWaitUntilStackCreateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+	mockDescribeStacks                              func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+	mockCreateStackSet                              func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
+	mockDescribeStackSet                            func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
+	mockUpdateStackSet                              func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
+	mockListStackInstances                          func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
+	mockCreateStackInstances                        func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
+	mockDescribeStackSetOperation                   func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
+	mockDescribeStackEvents                         func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
+	mockCreateStack                                 func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
+	mockWaitUntilStackUpdateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
 	return cf.mockCreateChangeSet(cf.t, in)
-}
-
-func (cf mockCloudFormation) WaitUntilChangeSetCreateComplete(in *cloudformation.DescribeChangeSetInput) error {
-	return cf.mockWaitUntilChangeSetCreateComplete(cf.t, in)
 }
 
 func (cf mockCloudFormation) ExecuteChangeSet(in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
@@ -61,10 +59,6 @@ func (cf mockCloudFormation) ExecuteChangeSet(in *cloudformation.ExecuteChangeSe
 
 func (cf mockCloudFormation) DescribeChangeSet(in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
 	return cf.mockDescribeChangeSet(cf.t, in)
-}
-
-func (cf mockCloudFormation) WaitUntilStackCreateComplete(in *cloudformation.DescribeStacksInput) error {
-	return cf.mockWaitUntilStackCreateComplete(cf.t, in)
 }
 
 func (cf mockCloudFormation) DescribeStacks(in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
@@ -103,8 +97,16 @@ func (cf mockCloudFormation) CreateStack(in *cloudformation.CreateStackInput) (*
 	return cf.mockCreateStack(cf.t, in)
 }
 
-func (cf mockCloudFormation) WaitUntilStackUpdateComplete(in *cloudformation.DescribeStacksInput) error {
-	return cf.mockWaitUntilStackUpdateComplete(cf.t, in)
+func (cf mockCloudFormation) WaitUntilStackUpdateCompleteWithContext(context context.Context, in *cloudformation.DescribeStacksInput, opts ...request.WaiterOption) error {
+	return cf.mockWaitUntilStackUpdateCompleteWithContext(cf.t, in)
+}
+
+func (cf mockCloudFormation) WaitUntilChangeSetCreateCompleteWithContext(context context.Context, in *cloudformation.DescribeChangeSetInput, opts ...request.WaiterOption) error {
+	return cf.mockWaitUntilChangeSetCreateCompleteWithContext(cf.t, in)
+}
+
+func (cf mockCloudFormation) WaitUntilStackCreateCompleteWithContext(context context.Context, in *cloudformation.DescribeStacksInput, opts ...request.WaiterOption) error {
+	return cf.mockWaitUntilStackCreateCompleteWithContext(cf.t, in)
 }
 
 type mockStackConfiguration struct {
@@ -177,7 +179,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return errors.New("some AWS error")
 					},
 				},
@@ -196,7 +198,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -218,7 +220,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -243,7 +245,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -268,7 +270,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -300,7 +302,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -330,7 +332,7 @@ func TestDeploy(t *testing.T) {
 							StackId: aws.String(mockStackID),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						require.Equal(t, mockStackID, *in.StackName)
 						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
 						return nil
@@ -407,7 +409,7 @@ func getMockWaitStackCreateCFClient(t *testing.T, stackName string, shouldThrowE
 	return CloudFormation{
 		client: &mockCloudFormation{
 			t: t,
-			mockWaitUntilStackCreateComplete: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
 				require.Equal(t, stackName, *input.StackName)
 				if shouldThrowError {
 					return fmt.Errorf("some AWS error")

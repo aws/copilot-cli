@@ -20,13 +20,13 @@ func TestDeployApp(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	testCases := map[string]struct {
-		mockCreateStack                      func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
-		mockWaitUntilStackCreateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
-		mockCreateChangeSet                  func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
-		mockWaitUntilChangeSetCreateComplete func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
-		mockExecuteChangeSet                 func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
-		mockWaitUntilStackUpdateComplete     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
-		mockDescribeChangeSet                func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
+		mockCreateStack                                 func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
+		mockWaitUntilStackCreateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockCreateChangeSet                             func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
+		mockWaitUntilChangeSetCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
+		mockExecuteChangeSet                            func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
+		mockWaitUntilStackUpdateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockDescribeChangeSet                           func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
 
 		wantErr error
 	}{
@@ -40,7 +40,7 @@ func TestDeployApp(t *testing.T) {
 
 				return &cloudformation.CreateStackOutput{}, nil
 			},
-			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				t.Helper()
 
 				require.Equal(t, mockStackName, *in.StackName)
@@ -69,7 +69,7 @@ func TestDeployApp(t *testing.T) {
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
-			mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+			mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 				t.Helper()
 
 				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
@@ -85,7 +85,7 @@ func TestDeployApp(t *testing.T) {
 
 				return &cloudformation.ExecuteChangeSetOutput{}, nil
 			},
-			mockWaitUntilStackUpdateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackUpdateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				t.Helper()
 
 				require.Equal(t, mockStackName, *in.StackName)
@@ -114,7 +114,7 @@ func TestDeployApp(t *testing.T) {
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
-			mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+			mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 				t.Helper()
 
 				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
@@ -154,7 +154,7 @@ func TestDeployApp(t *testing.T) {
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
-			mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+			mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 				t.Helper()
 
 				require.Equal(t, mockChangeSetName, *in.ChangeSetName)
@@ -180,13 +180,13 @@ func TestDeployApp(t *testing.T) {
 				client: mockCloudFormation{
 					t: t,
 
-					mockCreateStack:                      tc.mockCreateStack,
-					mockWaitUntilStackCreateComplete:     tc.mockWaitUntilStackCreateComplete,
-					mockCreateChangeSet:                  tc.mockCreateChangeSet,
-					mockWaitUntilChangeSetCreateComplete: tc.mockWaitUntilChangeSetCreateComplete,
-					mockExecuteChangeSet:                 tc.mockExecuteChangeSet,
-					mockWaitUntilStackUpdateComplete:     tc.mockWaitUntilStackUpdateComplete,
-					mockDescribeChangeSet:                tc.mockDescribeChangeSet,
+					mockCreateStack: tc.mockCreateStack,
+					mockWaitUntilStackCreateCompleteWithContext:     tc.mockWaitUntilStackCreateCompleteWithContext,
+					mockCreateChangeSet:                             tc.mockCreateChangeSet,
+					mockWaitUntilChangeSetCreateCompleteWithContext: tc.mockWaitUntilChangeSetCreateCompleteWithContext,
+					mockExecuteChangeSet:                            tc.mockExecuteChangeSet,
+					mockWaitUntilStackUpdateCompleteWithContext:     tc.mockWaitUntilStackUpdateCompleteWithContext,
+					mockDescribeChangeSet:                           tc.mockDescribeChangeSet,
 				},
 			}
 

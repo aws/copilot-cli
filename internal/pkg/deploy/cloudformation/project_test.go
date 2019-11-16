@@ -1041,10 +1041,10 @@ func TestDelegateDNSPermissions(t *testing.T) {
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
-					mockWaitUntilStackUpdateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+					mockWaitUntilStackUpdateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 						return nil
 					},
 				}
@@ -1106,7 +1106,7 @@ func TestDelegateDNSPermissions(t *testing.T) {
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
 						}, nil
 					},
-					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return nil
 					},
 				}
@@ -1141,11 +1141,11 @@ func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudF
 				StackId: aws.String(stackName),
 			}, nil
 		},
-		mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+		mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 
 			return nil
 		},
-		mockWaitUntilStackCreateComplete: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
+		mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, input *cloudformation.DescribeStacksInput) error {
 			return nil
 		},
 		mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
