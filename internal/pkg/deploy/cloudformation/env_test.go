@@ -23,9 +23,9 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 	testCases := map[string]struct {
 		in *deploy.CreateEnvironmentInput
 
-		mockWaitUntilStackCreateComplete func(t *testing.T, in *cloudformation.DescribeStacksInput) error
-		mockDescribeStacks               func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
-		mockDescribeStackEvents          func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
+		mockWaitUntilStackCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+		mockDescribeStacks                          func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+		mockDescribeStackEvents                     func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
 
 		wantedEvents []deploy.ResourceEvent
 		wantedResult deploy.CreateEnvironmentResponse
@@ -36,7 +36,7 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 				Name:    "test",
 			},
 
-			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
 				return errors.New("wait until error")
 			},
@@ -75,7 +75,7 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 				Name:    "test",
 			},
 
-			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
 				return errors.New("wait until error")
 			},
@@ -96,7 +96,7 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 				Name:    "test",
 			},
 
-			mockWaitUntilStackCreateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+			mockWaitUntilStackCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				require.Equal(t, "phonetool-test", *in.StackName, "stack names should be equal to each other")
 				return nil
 			},
@@ -151,10 +151,10 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 			// GIVEN
 			cf := CloudFormation{
 				client: &mockCloudFormation{
-					t:                                t,
-					mockDescribeStackEvents:          tc.mockDescribeStackEvents,
-					mockDescribeStacks:               tc.mockDescribeStacks,
-					mockWaitUntilStackCreateComplete: tc.mockWaitUntilStackCreateComplete,
+					t:                       t,
+					mockDescribeStackEvents: tc.mockDescribeStackEvents,
+					mockDescribeStacks:      tc.mockDescribeStacks,
+					mockWaitUntilStackCreateCompleteWithContext: tc.mockWaitUntilStackCreateCompleteWithContext,
 				},
 				box: emptyEnvBox(),
 			}

@@ -4,9 +4,11 @@
 package cloudformation
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/google/uuid"
@@ -27,7 +29,8 @@ type changeSet struct {
 	statusReason    string
 	changes         []*cloudformation.Change
 
-	c cloudformationiface.CloudFormationAPI
+	c       cloudformationiface.CloudFormationAPI
+	waiters []request.WaiterOption
 }
 
 func (set *changeSet) String() string {
@@ -35,10 +38,12 @@ func (set *changeSet) String() string {
 }
 
 func (set *changeSet) waitForCreation() error {
-	if err := set.c.WaitUntilChangeSetCreateComplete(&cloudformation.DescribeChangeSetInput{
+	describeChangeSetInput := &cloudformation.DescribeChangeSetInput{
 		ChangeSetName: aws.String(set.name),
 		StackName:     aws.String(set.stackID),
-	}); err != nil {
+	}
+
+	if err := set.c.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), describeChangeSetInput, set.waiters...); err != nil {
 		return fmt.Errorf("failed to wait for changeSet creation %s: %w", set, err)
 	}
 	return nil

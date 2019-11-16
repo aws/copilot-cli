@@ -1,5 +1,4 @@
 // +build integration
-
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -408,7 +407,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			},
 			"CFNExecutionRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
-					fmt.Sprintf("%s-CRNExecutionRoleARN", envStackName),
+					fmt.Sprintf("%s-CFNExecutionRoleARN", envStackName),
 					*output.ExportName,
 					"Should export CRNExecutionRole ARN")
 

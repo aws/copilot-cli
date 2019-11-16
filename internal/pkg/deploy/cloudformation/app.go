@@ -4,6 +4,7 @@
 package cloudformation
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,9 +23,9 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 
 	// If CreateStack does not return an error we'll wait for StackCreateComplete status.
 	if err == nil {
-		err = cf.client.WaitUntilStackCreateComplete(&cloudformation.DescribeStacksInput{
+		err = cf.client.WaitUntilStackCreateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
 			StackName: aws.String(stackName),
-		})
+		}, cf.waiters...)
 
 		if err != nil {
 			return fmt.Errorf("wait for stack completion: %w", err)
@@ -62,7 +63,7 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 		StackName:     aws.String(stackName),
 	}
 
-	err = cf.client.WaitUntilChangeSetCreateComplete(describeChangeSetInput)
+	err = cf.client.WaitUntilChangeSetCreateCompleteWithContext(context.Background(), describeChangeSetInput, cf.waiters...)
 
 	// NOTE: If WaitUntilChangeSetCreateComplete returns an error it's possible that there
 	// are simply no changes between the previous and proposed Stack ChangeSets. We make a call to
@@ -90,9 +91,9 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 		return fmt.Errorf("execute change set: %w", err)
 	}
 
-	if err := cf.client.WaitUntilStackUpdateComplete(&cloudformation.DescribeStacksInput{
+	if err := cf.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
-	}); err != nil {
+	}, cf.waiters...); err != nil {
 		return fmt.Errorf("wait for stack update: %w", err)
 	}
 

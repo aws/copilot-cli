@@ -5,6 +5,7 @@
 package cloudformation
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -51,6 +53,7 @@ func (cf cfClientBuilder) Client(region string) cloudformationiface.CloudFormati
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	regionalClientProvider regionalClientProvider
+	waiters                []request.WaiterOption
 	client                 cloudformationiface.CloudFormationAPI
 	box                    packd.Box
 }
@@ -60,10 +63,19 @@ func New(sess *session.Session) CloudFormation {
 	cb := cfClientBuilder{
 		session: sess,
 	}
+
+	waiterOptions := []request.WaiterOption{
+		// Poll for CloudFormation updates every 3 seconds.
+		request.WithWaiterDelay(request.ConstantWaiterDelay(3 * time.Second)),
+		// Wait for at most 90 mins for any CloudFormation action.
+		request.WithWaiterMaxAttempts(1800),
+	}
+
 	return CloudFormation{
 		regionalClientProvider: cb,
 		client:                 cb.Client(*sess.Config.Region),
 		box:                    templates.Box(),
+		waiters:                waiterOptions,
 	}
 }
 
@@ -139,7 +151,7 @@ func (cf CloudFormation) waitForStackCreation(stackConfig stackConfiguration) (*
 		StackName: aws.String(stackConfig.StackName()),
 	}
 
-	if err := cf.client.WaitUntilStackCreateComplete(describeStackInput); err != nil {
+	if err := cf.client.WaitUntilStackCreateCompleteWithContext(context.Background(), describeStackInput, cf.waiters...); err != nil {
 		return nil, fmt.Errorf("failed to create stack %s: %w", stackConfig.StackName(), err)
 	}
 
@@ -221,6 +233,7 @@ func (cf CloudFormation) createChangeSet(in *cloudformation.CreateChangeSetInput
 		name:    aws.StringValue(out.Id),
 		stackID: aws.StringValue(out.StackId),
 		c:       cf.client,
+		waiters: cf.waiters,
 	}, nil
 }
 
