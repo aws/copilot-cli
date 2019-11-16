@@ -69,7 +69,12 @@ The code must be evaluated to provide interactive completion of commands.`,
   /code $ source <(archer completion bash)
   /code $ archer completion bash > archer.sh
   /code $ sudo mv archer.sh /etc/bash_completion.d/archer`,
-		Args: cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("requires a single shell argument (bash or zsh)")
+			}
+			return nil
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			opts.Shell = args[0]
 			return opts.Validate()
