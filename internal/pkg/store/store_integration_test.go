@@ -1,5 +1,4 @@
 // +build integration
-
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +19,7 @@ func init() {
 }
 
 func Test_SSM_Project_Integration(t *testing.T) {
-	s, _ := NewStore()
+	s, _ := store.New()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	t.Run("Create, Get and List Projects", func(t *testing.T) {
 		// Create our first project
@@ -28,7 +28,7 @@ func Test_SSM_Project_Integration(t *testing.T) {
 
 		// Can't overwrite an existing project
 		err = s.CreateProject(&projectToCreate)
-		require.EqualError(t, &ErrProjectAlreadyExists{ProjectName: projectToCreate.Name}, err.Error())
+		require.EqualError(t, &store.ErrProjectAlreadyExists{ProjectName: projectToCreate.Name}, err.Error())
 
 		// Fetch the project back from SSM
 		project, err := s.GetProject(projectToCreate.Name)
@@ -43,7 +43,7 @@ func Test_SSM_Project_Integration(t *testing.T) {
 }
 
 func Test_SSM_Environment_Integration(t *testing.T) {
-	s, _ := NewStore()
+	s, _ := store.New()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
 	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
@@ -67,7 +67,7 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 
 		// Make sure we can't add a duplicate environment
 		err = s.CreateEnvironment(&prodEnvironment)
-		require.EqualError(t, &ErrEnvironmentAlreadyExists{ProjectName: projectToCreate.Name, EnvironmentName: prodEnvironment.Name}, err.Error())
+		require.EqualError(t, &store.ErrEnvironmentAlreadyExists{ProjectName: projectToCreate.Name, EnvironmentName: prodEnvironment.Name}, err.Error())
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
@@ -93,7 +93,7 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 }
 
 func Test_SSM_Application_Integration(t *testing.T) {
-	s, _ := NewStore()
+	s, _ := store.New()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
 	apiApplication := archer.Application{Name: "api", Project: projectToCreate.Name, Type: "LBFargateService"}
 	feApplication := archer.Application{Name: "front-end", Project: projectToCreate.Name, Type: "LBFargateService"}
@@ -117,7 +117,7 @@ func Test_SSM_Application_Integration(t *testing.T) {
 
 		// Make sure we can't add a duplicate apps
 		err = s.CreateApplication(&apiApplication)
-		require.EqualError(t, &ErrApplicationAlreadyExists{ProjectName: projectToCreate.Name, ApplicationName: apiApplication.Name}, err.Error())
+		require.EqualError(t, &store.ErrApplicationAlreadyExists{ProjectName: projectToCreate.Name, ApplicationName: apiApplication.Name}, err.Error())
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
