@@ -20,8 +20,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - codebuild.amazonaws.com
@@ -36,8 +35,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - s3:PutObject
               - s3:GetBucketPolicy
@@ -53,8 +51,7 @@ Resources:
               - !Join ['', ['chicken-us-west-2', '/*']]
               - chicken-us-west-1
               - !Join ['', ['chicken-us-west-1', '/*']]
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               # TODO: scope this down if possible
               - kms:*
@@ -67,16 +64,14 @@ Resources:
               - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
               - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
               - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
-          -
-            Effect: Allow
+          - Effect: Allow
             Action:
               - logs:CreateLogGroup
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
       Roles:
-        -
-          !Ref BuildProjectRole
+        - !Ref BuildProjectRole
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -111,6 +106,22 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+  IntegTestPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: IntegTestRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-IntegTestPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+      Roles:
+        - !Ref IntegTestRole
   IntegTestProjecttestDASHchicken:
     Type: AWS::CodeBuild::Project
     Properties:
