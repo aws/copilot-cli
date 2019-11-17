@@ -424,7 +424,7 @@ func BuildPipelineInitCmd() *cobra.Command {
     --github-access-token file://myGitHubToken \
     --environments "stage,prod" \
     --deploy`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
 				return fmt.Errorf("couldn't get environments: %w", err)
@@ -445,9 +445,8 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.box = templates.Box()
 
 			return opts.Validate()
-		},
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -455,7 +454,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")

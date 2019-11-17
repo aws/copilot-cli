@@ -183,13 +183,13 @@ func BuildInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application.",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return err
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts.promptForShouldDeploy = !cmd.Flags().Changed("deploy")
 			return opts.Run()
-		},
+		}),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			if !opts.ShouldDeploy {
 				log.Info("\nNo problem, you can deploy your application later:\n")

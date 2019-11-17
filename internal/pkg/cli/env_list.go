@@ -81,10 +81,10 @@ func BuildEnvListCmd() *cobra.Command {
 		Example: `
   Lists all the environments for the test project
   /code $ archer env ls --project test`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return opts.Ask()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {
 				return err
@@ -92,7 +92,7 @@ func BuildEnvListCmd() *cobra.Command {
 			opts.manager = ssmStore
 			opts.projectGetter = ssmStore
 			return opts.Execute()
-		},
+		}),
 	}
 	return cmd
 }

@@ -198,10 +198,11 @@ A project is a collection of containerized applications (or micro-services) that
 		Example: `
   Create a new project named test
   /code $ archer project init test`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		Args: reservedArgs,
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return err
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
 				opts.ProjectName = args[0]
 			}
@@ -212,7 +213,7 @@ A project is a collection of containerized applications (or micro-services) that
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 		PostRun: func(cmd *cobra.Command, args []string) {
 			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ProjectDirectoryName), color.HighlightUserInput(opts.ProjectName))
 			log.Infoln()

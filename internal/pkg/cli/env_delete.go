@@ -4,7 +4,7 @@
 package cli
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/spf13/cobra"
 )
@@ -48,21 +48,16 @@ func BuildEnvDeleteCmd() *cobra.Command {
 
   Delete the "test" environment without prompting.
   /code $ archer env delete test prod --yes`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				fmt.Print(cmd.UsageString())
-				return nil
-			}
-			if args[0] == "help" {
-				fmt.Print(cmd.UsageString())
-				return nil
+				return errors.New("requires a single environment name as argument")
 			}
 			opts.Env = args[0]
 			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return nil
-		},
+		}),
 	}
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd

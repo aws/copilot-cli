@@ -300,7 +300,7 @@ This command is also run as part of "archer init".`,
 		Example: `
   Create a "frontend" web application.
   /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 
 			store, err := store.New()
@@ -325,8 +325,8 @@ This command is also run as part of "archer init".`,
 			opts.prog = termprogress.NewSpinner()
 			opts.GlobalOpts = NewGlobalOpts()
 			return opts.Validate()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			log.Warningln("It's best to run this command in the root of your workspace.")
 			if err := opts.Ask(); err != nil {
 				return err
@@ -335,7 +335,7 @@ This command is also run as part of "archer init".`,
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {

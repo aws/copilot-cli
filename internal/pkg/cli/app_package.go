@@ -298,7 +298,7 @@ func BuildAppPackageCmd() *cobra.Command {
   /code $ archer app package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ws, err := workspace.New()
 			if err != nil {
 				return fmt.Errorf("new workspace: %w", err)
@@ -317,8 +317,8 @@ func BuildAppPackageCmd() *cobra.Command {
 			}
 			opts.describer = cloudformation.New(sess)
 			return opts.Validate()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -326,7 +326,7 @@ func BuildAppPackageCmd() *cobra.Command {
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 	}
 	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
 	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, opts.AppName, appFlagDescription)

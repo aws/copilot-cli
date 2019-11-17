@@ -44,14 +44,14 @@ func BuildProjectListCommand() *cobra.Command {
 		Example: `
   List all the projects in your account and region
   /code $ archer project ls`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {
 				return err
 			}
 			opts.store = ssmStore
 			return opts.Execute()
-		},
+		}),
 	}
 	return cmd
 }
