@@ -11,6 +11,11 @@ type Project struct {
 	Version   string `json:"version"` // The version of the project layout in the underlying datastore (e.g. SSM).
 }
 
+// RequiresDNSDelegation returns true if we have to set up DNS Delegation resources
+func (p *Project) RequiresDNSDelegation() bool {
+	return p.Domain != ""
+}
+
 // ProjectRegionalResources represent project resources that are regional.
 type ProjectRegionalResources struct {
 	Region         string            // The region these resources are in.

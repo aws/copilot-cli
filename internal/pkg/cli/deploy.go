@@ -25,6 +25,7 @@ type projectDeployer interface {
 	DeployProject(in *deploy.CreateProjectInput) error
 	AddAppToProject(project *archer.Project, appName string) error
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
+	DelegateDNSPermissions(project *archer.Project, accountID string) error
 }
 
 type projectResourcesGetter interface {

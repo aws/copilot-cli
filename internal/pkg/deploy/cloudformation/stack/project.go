@@ -43,13 +43,15 @@ type ProjectStackConfig struct {
 }
 
 const (
-	projectTemplatePath           = "project/project.yml"
-	projectResourcesTemplatePath  = "project/cf.yml"
-	projectAdminRoleParamName     = "AdminRoleName"
-	projectExecutionRoleParamName = "ExecutionRoleName"
-	projectOutputKMSKey           = "KMSKeyARN"
-	projectOutputS3Bucket         = "PipelineBucket"
-	projectOutputECRRepoPrefix    = "ECRRepo"
+	projectTemplatePath            = "project/project.yml"
+	projectResourcesTemplatePath   = "project/cf.yml"
+	projectAdminRoleParamName      = "AdminRoleName"
+	projectExecutionRoleParamName  = "ExecutionRoleName"
+	projectOutputKMSKey            = "KMSKeyARN"
+	projectOutputS3Bucket          = "PipelineBucket"
+	projectOutputECRRepoPrefix     = "ECRRepo"
+	projectDNSDelegatedAccountsKey = "ProjectDNSDelegatedAccounts"
+	projectDomainNameKey           = "ProjectDomainName"
 )
 
 // ProjectConfigFrom takes a template file and extracts the metadata block,
@@ -114,6 +116,14 @@ func (c *ProjectStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(projectExecutionRoleParamName),
 			ParameterValue: aws.String(c.StackSetExecutionRoleName()),
 		},
+		{
+			ParameterKey:   aws.String(projectDNSDelegatedAccountsKey),
+			ParameterValue: aws.String(strings.Join(c.dnsDelegationAccounts(), ",")),
+		},
+		{
+			ParameterKey:   aws.String(projectDomainNameKey),
+			ParameterValue: aws.String(c.DomainName),
+		},
 	}
 }
 
@@ -159,6 +169,19 @@ func (c *ProjectStackConfig) StackSetExecutionRoleName() string {
 	return fmt.Sprintf("%s-executionrole", c.Project)
 }
 
+func (c *ProjectStackConfig) dnsDelegationAccounts() []string {
+	accounts := append(c.CreateProjectInput.DNSDelegationAccounts, c.CreateProjectInput.AccountID)
+	accountIDs := make(map[string]bool)
+	var uniqueAccountIDs []string
+	for _, entry := range accounts {
+		if _, value := accountIDs[entry]; !value {
+			accountIDs[entry] = true
+			uniqueAccountIDs = append(uniqueAccountIDs, entry)
+		}
+	}
+	return uniqueAccountIDs
+}
+
 // ToProjectRegionalResources takes a Project Resource Stack Instance stack, reads the output resources
 // and returns a modeled  ProjectRegionalResources.
 func ToProjectRegionalResources(stack *cloudformation.Stack) (*archer.ProjectRegionalResources, error) {
@@ -201,4 +224,17 @@ func ToProjectRegionalResources(stack *cloudformation.Stack) (*archer.ProjectReg
 	}
 
 	return &regionalResources, nil
+}
+
+// DNSDelegatedAccountsForStack looks through a stack's parameters for
+// the parameter which stores the comma seperated list of account IDs
+// which are permitted for DNS delegation.
+func DNSDelegatedAccountsForStack(stack *cloudformation.Stack) []string {
+	for _, parameter := range stack.Parameters {
+		if *parameter.ParameterKey == projectDNSDelegatedAccountsKey {
+			return strings.Split(*parameter.ParameterValue, ",")
+		}
+	}
+
+	return []string{}
 }

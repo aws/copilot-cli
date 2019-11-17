@@ -209,8 +209,9 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
 					DeployProject(&deploy.CreateProjectInput{
-						Project:   "project",
-						AccountID: "12345",
+						Project:    "project",
+						AccountID:  "12345",
+						DomainName: "amazon.com",
 					}).Return(nil)
 				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},

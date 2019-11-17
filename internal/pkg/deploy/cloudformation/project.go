@@ -65,6 +65,37 @@ func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 	return nil
 }
 
+// DelegateDNSPermissions grants the provided account ID the ability to write to this project's
+// DNS HostedZone. This allows us to perform cross account DNS delegation.
+func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, accountID string) error {
+	deployProject := deploy.CreateProjectInput{
+		Project:    project.Name,
+		AccountID:  project.AccountID,
+		DomainName: project.Domain,
+	}
+
+	projectConfig := stack.NewProjectStackConfig(&deployProject, cf.box)
+
+	describeStack := cloudformation.DescribeStacksInput{
+		StackName: aws.String(projectConfig.StackName()),
+	}
+	projectStack, err := cf.describeStack(&describeStack)
+
+	if err != nil {
+		return fmt.Errorf("getting existing project infrastructure stack: %w", err)
+	}
+
+	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(projectStack)
+	deployProject.DNSDelegationAccounts = append(dnsDelegatedAccounts, accountID)
+	updatedProjectConfig := stack.NewProjectStackConfig(&deployProject, cf.box)
+
+	if err := cf.update(updatedProjectConfig); err != nil {
+		return fmt.Errorf("updating project to allow DNS delegation: %w", err)
+	}
+
+	return cf.client.WaitUntilStackUpdateComplete(&describeStack)
+}
+
 // GetProjectResourcesByRegion fetches all the regional resources for a particular region.
 func (cf CloudFormation) GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
 	resources, err := cf.getResourcesForStackInstances(project, &region)

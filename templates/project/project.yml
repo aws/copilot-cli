@@ -7,6 +7,16 @@ Parameters:
     Type: String
   ExecutionRoleName:
     Type: String
+  ProjectDNSDelegatedAccounts:
+    Type: CommaDelimitedList
+    Default: ""
+  ProjectDomainName:
+    Type: String
+    Default: ""
+Conditions:
+  DelegateDNS:
+    !Not [!Equals [ !Ref ProjectDomainName, "" ]]
+
 Resources:
   AdministrationRole:
     Type: AWS::IAM::Role
@@ -81,6 +91,41 @@ Resources:
                   - ecr:GetRepositoryPolicy
                   - ecr:GetLifecyclePolicy
                 Resource: "*"
+  DNSDelegationRole:
+    Type: AWS::IAM::Role
+    Condition: DelegateDNS
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:  !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              AWS: !Split
+                - ','
+                - !Sub
+                    - 'arn:aws:iam::${inner}:root'
+                    - inner: !Join
+                      - ':root,arn:aws:iam::'
+                      - Ref: "ProjectDNSDelegatedAccounts"
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: DNSDelegationPolicy
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+              - Sid: HostedZoneChangeRecord
+                Effect: Allow
+                Action:
+                  - route53:*
+                Resource: "*"
+
 Outputs:
   ExecutionRoleARN:
     Description: ExecutionRole used by this project to set up ECR Repos, KMS Keys and S3 buckets

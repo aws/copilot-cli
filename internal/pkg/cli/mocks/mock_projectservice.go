@@ -6,6 +6,7 @@ package mocks
 
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -163,4 +164,122 @@ func (m *MockprojectService) CreateApplication(app *archer.Application) error {
 func (mr *MockprojectServiceMockRecorder) CreateApplication(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockprojectService)(nil).CreateApplication), app)
+}
+
+// MockecrService is a mock of ecrService interface
+type MockecrService struct {
+	ctrl     *gomock.Controller
+	recorder *MockecrServiceMockRecorder
+}
+
+// MockecrServiceMockRecorder is the mock recorder for MockecrService
+type MockecrServiceMockRecorder struct {
+	mock *MockecrService
+}
+
+// NewMockecrService creates a new mock instance
+func NewMockecrService(ctrl *gomock.Controller) *MockecrService {
+	mock := &MockecrService{ctrl: ctrl}
+	mock.recorder = &MockecrServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockecrService) EXPECT() *MockecrServiceMockRecorder {
+	return m.recorder
+}
+
+// GetRepository mocks base method
+func (m *MockecrService) GetRepository(name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRepository", name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRepository indicates an expected call of GetRepository
+func (mr *MockecrServiceMockRecorder) GetRepository(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepository", reflect.TypeOf((*MockecrService)(nil).GetRepository), name)
+}
+
+// GetECRAuth mocks base method
+func (m *MockecrService) GetECRAuth() (ecr.Auth, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetECRAuth")
+	ret0, _ := ret[0].(ecr.Auth)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetECRAuth indicates an expected call of GetECRAuth
+func (mr *MockecrServiceMockRecorder) GetECRAuth() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetECRAuth", reflect.TypeOf((*MockecrService)(nil).GetECRAuth))
+}
+
+// MockdockerService is a mock of dockerService interface
+type MockdockerService struct {
+	ctrl     *gomock.Controller
+	recorder *MockdockerServiceMockRecorder
+}
+
+// MockdockerServiceMockRecorder is the mock recorder for MockdockerService
+type MockdockerServiceMockRecorder struct {
+	mock *MockdockerService
+}
+
+// NewMockdockerService creates a new mock instance
+func NewMockdockerService(ctrl *gomock.Controller) *MockdockerService {
+	mock := &MockdockerService{ctrl: ctrl}
+	mock.recorder = &MockdockerServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdockerService) EXPECT() *MockdockerServiceMockRecorder {
+	return m.recorder
+}
+
+// Build mocks base method
+func (m *MockdockerService) Build(uri, tag, path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Build", uri, tag, path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Build indicates an expected call of Build
+func (mr *MockdockerServiceMockRecorder) Build(uri, tag, path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockdockerService)(nil).Build), uri, tag, path)
+}
+
+// Login mocks base method
+func (m *MockdockerService) Login(uri string, auth ecr.Auth) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login", uri, auth)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Login indicates an expected call of Login
+func (mr *MockdockerServiceMockRecorder) Login(uri, auth interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerService)(nil).Login), uri, auth)
+}
+
+// Push mocks base method
+func (m *MockdockerService) Push(uri, tag string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Push", uri, tag)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Push indicates an expected call of Push
+func (mr *MockdockerServiceMockRecorder) Push(uri, tag interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockdockerService)(nil).Push), uri, tag)
 }
