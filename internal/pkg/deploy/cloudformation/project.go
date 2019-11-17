@@ -27,7 +27,7 @@ func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 
 	// First deploy the project roles needed by StackSets. These roles
 	// allow the stack set to set up our regional stacks.
-	if err := cf.deploy(projectConfig); err == nil {
+	if err := cf.create(projectConfig); err == nil {
 		_, err := cf.waitForStackCreation(projectConfig)
 		if err != nil {
 			return err

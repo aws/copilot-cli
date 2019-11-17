@@ -132,9 +132,9 @@ func withParameters(params []*cloudformation.Parameter) createChangeSetOpt {
 	}
 }
 
-func withCreateChangeSetType() createChangeSetOpt {
+func withChangeSetType(csType string) createChangeSetOpt {
 	return func(in *cloudformation.CreateChangeSetInput) {
-		in.ChangeSetType = aws.String(cloudformation.ChangeSetTypeCreate)
+		in.ChangeSetType = aws.String(csType)
 	}
 }
 
