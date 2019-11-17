@@ -50,6 +50,42 @@ func TestProjTemplate(t *testing.T) {
 	}
 }
 
+func TestDNSDelegationAccounts(t *testing.T) {
+	testCases := map[string]struct {
+		given *deploy.CreateProjectInput
+		want  []string
+	}{
+		"should append project account": {
+			given: &deploy.CreateProjectInput{
+				AccountID: "1234",
+			},
+			want: []string{"1234"},
+		},
+		"should ignore duplicates": {
+			given: &deploy.CreateProjectInput{
+				AccountID:             "1234",
+				DNSDelegationAccounts: []string{"1234"},
+			},
+			want: []string{"1234"},
+		},
+		"should return a set": {
+			given: &deploy.CreateProjectInput{
+				AccountID:             "1234",
+				DNSDelegationAccounts: []string{"4567"},
+			},
+			want: []string{"1234", "4567"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			projStack := NewProjectStackConfig(tc.given, emptyProjectBox())
+			got := projStack.dnsDelegationAccounts()
+			require.ElementsMatch(t, tc.want, got)
+		})
+	}
+}
+
 func TestProjResourceTemplate(t *testing.T) {
 	properlyEscapedTemplate := `AWSTemplateFormatVersion: '2010-09-09'
 Outputs:
@@ -107,7 +143,7 @@ Outputs:
 }
 
 func TestProjectParameters(t *testing.T) {
-	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234", DomainName: "amazon.com"}, emptyProjectBox())
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(projectAdminRoleParamName),
@@ -116,6 +152,14 @@ func TestProjectParameters(t *testing.T) {
 		{
 			ParameterKey:   aws.String(projectExecutionRoleParamName),
 			ParameterValue: aws.String("testproject-executionrole"),
+		},
+		{
+			ParameterKey:   aws.String(projectDNSDelegatedAccountsKey),
+			ParameterValue: aws.String("1234"),
+		},
+		{
+			ParameterKey:   aws.String(projectDomainNameKey),
+			ParameterValue: aws.String("amazon.com"),
 		},
 	}
 	require.ElementsMatch(t, expectedParams, proj.Parameters())
@@ -186,6 +230,33 @@ func TestToRegionalResources(t *testing.T) {
 	}
 }
 
+func TestDNSDelegatedAccountsForStack(t *testing.T) {
+	testCases := map[string]struct {
+		given map[string]string
+		want  []string
+	}{
+		"should read from parameter and parse comma seperated list": {
+			given: map[string]string{
+				projectDNSDelegatedAccountsKey: "1234,5678",
+			},
+			want: []string{"1234", "5678"},
+		},
+		"should return empty when no field is found": {
+			given: map[string]string{
+				"not a real field": "ok",
+			},
+			want: []string{},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := DNSDelegatedAccountsForStack(mockProjectRolesStack("stack", tc.given))
+			require.ElementsMatch(t, tc.want, got)
+		})
+	}
+}
+
 func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloudformation.Stack {
 	outputList := []*cloudformation.Output{}
 	for key, val := range outputs {
@@ -198,6 +269,21 @@ func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloud
 	return &cloudformation.Stack{
 		StackId: aws.String(stackArn),
 		Outputs: outputList,
+	}
+}
+
+func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloudformation.Stack {
+	parameterList := []*cloudformation.Parameter{}
+	for key, val := range parameters {
+		parameterList = append(parameterList, &cloudformation.Parameter{
+			ParameterKey:   aws.String(key),
+			ParameterValue: aws.String(val),
+		})
+	}
+
+	return &cloudformation.Stack{
+		StackId:    aws.String(stackArn),
+		Parameters: parameterList,
 	}
 }
 

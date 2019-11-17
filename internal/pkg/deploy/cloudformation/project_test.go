@@ -1004,6 +1004,133 @@ func TestGetProjectResourcesByRegion(t *testing.T) {
 	}
 }
 
+func TestDelegateDNSPermissions(t *testing.T) {
+
+	testCases := map[string]struct {
+		project      *archer.Project
+		accountID    string
+		mockCFClient func() *mockCloudFormation
+		want         error
+	}{
+		"Calls Update Stack": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "project",
+				Domain:    "amazon.com",
+			},
+			mockCFClient: func() *mockCloudFormation {
+				return &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, len(in.Parameters), 4)
+						return &cloudformation.CreateChangeSetOutput{
+							StackId: aws.String("stackname"),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						stack := mockProjectRolesStack("stackname", map[string]string{
+							"ProjectDNSDelegatedAccounts": "1234",
+						})
+						return &cloudformation.DescribeStacksOutput{Stacks: []*cloudformation.Stack{stack}}, nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+					mockWaitUntilStackUpdateComplete: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+						return nil
+					},
+				}
+			},
+		},
+
+		"Returns error from Describe Stack": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "project",
+				Domain:    "amazon.com",
+			},
+			want: fmt.Errorf("getting existing project infrastructure stack: error"),
+			mockCFClient: func() *mockCloudFormation {
+				return &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, len(in.Parameters), 4)
+						return &cloudformation.CreateChangeSetOutput{
+							StackId: aws.String("stackname"),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return nil, fmt.Errorf("error")
+					},
+				}
+			},
+		},
+		"Returns error from Update Stack": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "project",
+				Domain:    "amazon.com",
+			},
+			want: fmt.Errorf("updating project to allow DNS delegation: failed to execute changeSet name=, stackID=stackname: error"),
+			mockCFClient: func() *mockCloudFormation {
+				return &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, len(in.Parameters), 4)
+						return &cloudformation.CreateChangeSetOutput{
+							StackId: aws.String("stackname"),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
+						return nil, fmt.Errorf("error")
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						stack := mockProjectRolesStack("stackname", map[string]string{
+							"ProjectDNSDelegatedAccounts": "1234",
+						})
+						return &cloudformation.DescribeStacksOutput{Stacks: []*cloudformation.Stack{stack}}, nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateComplete: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return nil
+					},
+				}
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			cf := CloudFormation{
+				client: tc.mockCFClient(),
+				box:    templates.Box(),
+			}
+			got := cf.DelegateDNSPermissions(tc.project, tc.accountID)
+
+			if tc.want != nil {
+				require.EqualError(t, tc.want, got.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
 // Useful for mocking a successfully deployed stack
 func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudFormation {
 	return &mockCloudFormation{
@@ -1068,6 +1195,21 @@ func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloud
 	return &cloudformation.Stack{
 		StackId: aws.String(stackArn),
 		Outputs: outputList,
+	}
+}
+
+func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloudformation.Stack {
+	parametersList := []*cloudformation.Parameter{}
+	for key, val := range parameters {
+		parametersList = append(parametersList, &cloudformation.Parameter{
+			ParameterKey:   aws.String(key),
+			ParameterValue: aws.String(val),
+		})
+	}
+
+	return &cloudformation.Stack{
+		StackId:    aws.String(stackArn),
+		Parameters: parametersList,
 	}
 }
 

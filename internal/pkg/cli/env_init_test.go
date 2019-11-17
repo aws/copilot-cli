@@ -373,6 +373,52 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 			},
 		},
+		"success with DNS Delegation (project has Domain and env and project are different)": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+
+			expectProjectGetter: func(m *mocks.MockProjectGetter) {
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
+				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
+				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
+				events := make(chan []deploy.ResourceEvent, 1)
+				responses := make(chan deploy.CreateEnvironmentResponse, 1)
+				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
+				responses <- deploy.CreateEnvironmentResponse{
+					Env: &archer.Environment{
+						Project:   "phonetool",
+						Name:      "test",
+						AccountID: "1234",
+						Region:    "mars-1",
+					},
+					Err: nil,
+				}
+				close(events)
+				close(responses)
+				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
+				m.EXPECT().CreateEnvironment(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
+				}).Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -409,6 +455,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				envDeployer:   mockDeployer,
 				projDeployer:  mockDeployer,
 				identity:      mockIdentity,
+				envIdentity:   mockIdentity,
 				prog:          mockProgress,
 				GlobalOpts:    &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -419,6 +466,122 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			// THEN
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
+	testCases := map[string]struct {
+		project        *archer.Project
+		expectDeployer func(m *climocks.Mockdeployer)
+		expectIdentity func(m *climocks.MockidentityService)
+		expectProgress func(m *climocks.Mockprogress)
+		wantedErr      string
+	}{
+		"should call DelegateDNSPermissions when project and env are in different accounts": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "crossaccountproject",
+				Domain:    "amazon.com",
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
+			},
+		},
+		"should skip updating when project and env are in same account": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "crossaccountproject",
+				Domain:    "amazon.com",
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{Account: "1234"}, nil)
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(gomock.Any()).Times(0)
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		"should return errors from identity": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "crossaccountproject",
+				Domain:    "amazon.com",
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{}, fmt.Errorf("error"))
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(gomock.Any()).Times(0)
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "getting environment account ID for DNS Delegation: error",
+		},
+		"should return errors from DelegateDNSPermissions": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "crossaccountproject",
+				Domain:    "amazon.com",
+			},
+			expectIdentity: func(m *climocks.MockidentityService) {
+				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
+			},
+			expectProgress: func(m *climocks.Mockprogress) {
+				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
+				m.EXPECT().Stop(log.Serrorf(fmtDNSDelegationFailed, "4567"))
+			},
+			expectDeployer: func(m *climocks.Mockdeployer) {
+				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+			},
+			wantedErr: "error",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDeployer := climocks.NewMockdeployer(ctrl)
+			mockIdentity := climocks.NewMockidentityService(ctrl)
+			mockProgress := climocks.NewMockprogress(ctrl)
+			if tc.expectDeployer != nil {
+				tc.expectDeployer(mockDeployer)
+			}
+			if tc.expectIdentity != nil {
+				tc.expectIdentity(mockIdentity)
+			}
+			if tc.expectProgress != nil {
+				tc.expectProgress(mockProgress)
+			}
+			opts := &InitEnvOpts{
+				envIdentity:  mockIdentity,
+				projDeployer: mockDeployer,
+				prog:         mockProgress,
+				GlobalOpts:   &GlobalOpts{projectName: tc.project.Name},
+			}
+
+			// WHEN
+			err := opts.delegateDNSFromProject(tc.project)
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
 			} else {
 				require.Nil(t, err)
 			}

@@ -23,6 +23,8 @@ import (
 const (
 	fmtDeployEnvStart          = "Proposing infrastructure changes for the %s environment."
 	fmtDeployEnvFailed         = "Failed to accept changes for the %s environment."
+	fmtDNSDelegationStart      = "Sharing DNS permissions for this project to account %s."
+	fmtDNSDelegationFailed     = "Failed to grant DNS permissions to account %s."
 	fmtStreamEnvStart          = "Creating the infrastructure for the %s environment."
 	fmtStreamEnvFailed         = "Failed to create the infrastructure for the %s environment."
 	fmtStreamEnvComplete       = "Created the infrastructure for the %s environment."
@@ -44,8 +46,8 @@ type InitEnvOpts struct {
 	envDeployer   deployer
 	projDeployer  deployer
 	identity      identityService
-
-	prog progress
+	envIdentity   identityService
+	prog          progress
 
 	*GlobalOpts // Embed global options.
 }
@@ -99,7 +101,15 @@ func (opts *InitEnvOpts) Execute() error {
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 	}
+
+	if project.RequiresDNSDelegation() {
+		if err := opts.delegateDNSFromProject(project); err != nil {
+			return fmt.Errorf("granting DNS permissions: %w", err)
+		}
+	}
+
 	opts.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(opts.EnvName)))
+
 	if err := opts.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
@@ -140,6 +150,26 @@ func (opts *InitEnvOpts) Execute() error {
 	}
 	log.Successf("Created environment %s in region %s under project %s.\n",
 		color.HighlightUserInput(resp.Env.Name), color.HighlightResource(resp.Env.Region), color.HighlightResource(resp.Env.Project))
+	return nil
+}
+
+func (opts *InitEnvOpts) delegateDNSFromProject(project *archer.Project) error {
+	envAccount, err := opts.envIdentity.Get()
+	if err != nil {
+		return fmt.Errorf("getting environment account ID for DNS Delegation: %w", err)
+	}
+
+	// By default, our DNS Delegation permits same account delegation.
+	if envAccount.Account == project.AccountID {
+		return nil
+	}
+
+	opts.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(envAccount.Account)))
+
+	if err := opts.projDeployer.DelegateDNSPermissions(project, envAccount.Account); err != nil {
+		opts.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(envAccount.Account)))
+		return err
+	}
 	return nil
 }
 
@@ -231,6 +261,7 @@ func BuildEnvInitCmd() *cobra.Command {
 			opts.envDeployer = cloudformation.New(profileSess)
 			opts.projDeployer = cloudformation.New(defaultSession)
 			opts.identity = identity.New(defaultSession)
+			opts.envIdentity = identity.New(profileSess)
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {

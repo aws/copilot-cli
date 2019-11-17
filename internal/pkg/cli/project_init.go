@@ -139,8 +139,9 @@ func (opts *InitProjectOpts) Execute() error {
 	}
 	opts.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(opts.ProjectName)))
 	err = opts.deployer.DeployProject(&deploy.CreateProjectInput{
-		Project:   opts.ProjectName,
-		AccountID: caller.Account,
+		Project:    opts.ProjectName,
+		AccountID:  caller.Account,
+		DomainName: opts.DomainName,
 	})
 	if err != nil {
 		opts.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(opts.ProjectName)))
