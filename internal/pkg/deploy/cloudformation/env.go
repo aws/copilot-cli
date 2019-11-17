@@ -16,7 +16,7 @@ import (
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	return cf.deploy(stack.NewEnvStackConfig(env, cf.box))
+	return cf.create(stack.NewEnvStackConfig(env, cf.box))
 }
 
 // StreamEnvironmentCreation streams resource update events while a deployment is taking place.

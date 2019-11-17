@@ -165,14 +165,21 @@ func (cf CloudFormation) describeStackWithClient(describeStackInput *cloudformat
 
 	return describeStackOutput.Stacks[0], nil
 }
+func (cf CloudFormation) create(stackConfig stackConfiguration) error {
+	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeCreate)
+}
 
-func (cf CloudFormation) deploy(stackConfig stackConfiguration) error {
+func (cf CloudFormation) update(stackConfig stackConfiguration) error {
+	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeUpdate)
+}
+
+func (cf CloudFormation) deploy(stackConfig stackConfiguration, createOrUpdate string) error {
 	template, err := stackConfig.Template()
 	if err != nil {
 		return fmt.Errorf("template creation: %w", err)
 	}
 
-	in, err := createChangeSetInput(stackConfig.StackName(), template, withCreateChangeSetType(), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
+	in, err := createChangeSetInput(stackConfig.StackName(), template, withChangeSetType(createOrUpdate), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
 	if err != nil {
 		return err
 	}

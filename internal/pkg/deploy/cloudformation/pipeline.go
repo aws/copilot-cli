@@ -17,5 +17,5 @@ import (
 func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
 	pipelineConfig := stack.NewPipelineStackConfig(in)
 
-	return cf.deploy(pipelineConfig)
+	return cf.create(pipelineConfig)
 }
