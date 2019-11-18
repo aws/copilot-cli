@@ -52,7 +52,7 @@ const (
 	projectOutputECRRepoPrefix     = "ECRRepo"
 	projectDNSDelegatedAccountsKey = "ProjectDNSDelegatedAccounts"
 	projectDomainNameKey           = "ProjectDomainName"
-	projectNameKey                 = "Project"
+	projectNameKey                 = "ProjectName"
 )
 
 // ProjectConfigFrom takes a template file and extracts the metadata block,
