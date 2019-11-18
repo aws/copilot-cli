@@ -1022,7 +1022,7 @@ func TestDelegateDNSPermissions(t *testing.T) {
 				return &mockCloudFormation{
 					t: t,
 					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
-						require.Equal(t, len(in.Parameters), 4)
+						require.Equal(t, 5, len(in.Parameters))
 						return &cloudformation.CreateChangeSetOutput{
 							StackId: aws.String("stackname"),
 						}, nil
@@ -1087,7 +1087,7 @@ func TestDelegateDNSPermissions(t *testing.T) {
 				return &mockCloudFormation{
 					t: t,
 					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
-						require.Equal(t, len(in.Parameters), 4)
+						require.Equal(t, 5, len(in.Parameters))
 						return &cloudformation.CreateChangeSetOutput{
 							StackId: aws.String("stackname"),
 						}, nil

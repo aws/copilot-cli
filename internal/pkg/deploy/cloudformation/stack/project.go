@@ -52,6 +52,7 @@ const (
 	projectOutputECRRepoPrefix     = "ECRRepo"
 	projectDNSDelegatedAccountsKey = "ProjectDNSDelegatedAccounts"
 	projectDomainNameKey           = "ProjectDomainName"
+	projectNameKey                 = "Project"
 )
 
 // ProjectConfigFrom takes a template file and extracts the metadata block,
@@ -131,6 +132,10 @@ func (c *ProjectStackConfig) Parameters() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(projectDomainNameKey),
 			ParameterValue: aws.String(c.DomainName),
+		},
+		{
+			ParameterKey:   aws.String(projectNameKey),
+			ParameterValue: aws.String(c.Project),
 		},
 	}
 }
