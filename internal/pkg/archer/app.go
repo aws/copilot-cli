@@ -15,6 +15,7 @@ type ApplicationStore interface {
 	ApplicationLister
 	ApplicationGetter
 	ApplicationCreator
+	ApplicationDeleter
 }
 
 // ApplicationLister fetches and returns a list of application from an underlying project management store
@@ -30,6 +31,11 @@ type ApplicationGetter interface {
 // ApplicationCreator creates an application in the underlying project management store
 type ApplicationCreator interface {
 	CreateApplication(app *Application) error
+}
+
+// ApplicationDeleter deletes an application from the underlying project management store.
+type ApplicationDeleter interface {
+	DeleteApplication(projectName, appName string) error
 }
 
 const (

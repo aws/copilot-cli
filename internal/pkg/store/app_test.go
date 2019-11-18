@@ -4,6 +4,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -306,6 +307,63 @@ func TestStore_CreateApplication(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
+		})
+	}
+}
+
+func TestDeleteApplication(t *testing.T) {
+	mockProjectName := "mockProjectName"
+	mockAppName := "mockAppName"
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		inProjectName   string
+		inAppName       string
+		mockDeleteParam func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+
+		want error
+	}{
+		"parameter is already deleted": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "Not found", nil)
+			},
+		},
+		"unexpected error": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				return nil, mockError
+			},
+			want: fmt.Errorf("delete application %s from project %s: %w", mockAppName, mockProjectName, mockError),
+		},
+		"successfully deleted param": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				wantedPath := fmt.Sprintf(fmtAppParamPath, mockProjectName, mockAppName)
+
+				require.Equal(t, wantedPath, *in.Name)
+
+				return nil, nil
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			s := &Store{
+				ssmClient: &mockSSM{
+					t: t,
+
+					mockDeleteParameter: test.mockDeleteParam,
+				},
+			}
+
+			got := s.DeleteApplication(test.inProjectName, test.inAppName)
+
+			require.Equal(t, test.want, got)
 		})
 	}
 }

@@ -18,9 +18,13 @@ import (
 type mockECR struct {
 	ecriface.ECRAPI
 
+	t *testing.T
+
 	mockGetAuthorizationToken func(*ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error)
 	mockCreateRepository      func(*ecr.CreateRepositoryInput) (*ecr.CreateRepositoryOutput, error)
 	mockDescribeRepositories  func(*ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error)
+	mockDescribeImages        func(*testing.T, *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error)
+	mockBatchDeleteImage      func(*testing.T, *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error)
 }
 
 func (m mockECR) GetAuthorizationToken(input *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
@@ -33,6 +37,14 @@ func (m mockECR) CreateRepository(input *ecr.CreateRepositoryInput) (*ecr.Create
 
 func (m mockECR) DescribeRepositories(input *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
 	return m.mockDescribeRepositories(input)
+}
+
+func (m mockECR) DescribeImages(input *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
+	return m.mockDescribeImages(m.t, input)
+}
+
+func (m mockECR) BatchDeleteImage(input *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
+	return m.mockBatchDeleteImage(m.t, input)
 }
 
 func TestGetECRAuth(t *testing.T) {
@@ -142,6 +154,125 @@ func TestGetRepository(t *testing.T) {
 
 			require.Equal(t, tc.wantURI, gotURI)
 			require.Equal(t, tc.wantErr, gotErr)
+		})
+	}
+}
+
+func TestListImages(t *testing.T) {
+	mockRepoName := "mockRepoName"
+	mockError := errors.New("mockError")
+	mockDigest := "mockDigest"
+
+	tests := map[string]struct {
+		mockDescribeImages func(*testing.T, *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error)
+
+		wantImages []Image
+		wantError  error
+	}{
+		"should wrap error returned by ECR DescribeImages": {
+			mockDescribeImages: func(t *testing.T, in *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
+				return nil, mockError
+			},
+			wantImages: nil,
+			wantError:  fmt.Errorf("ecr repo %s describe images: %w", mockRepoName, mockError),
+		},
+		"should return Image list": {
+			mockDescribeImages: func(t *testing.T, in *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockRepoName, *in.RepositoryName)
+
+				return &ecr.DescribeImagesOutput{
+					ImageDetails: []*ecr.ImageDetail{
+						&ecr.ImageDetail{
+							ImageDigest: aws.String(mockDigest),
+						},
+					},
+				}, nil
+			},
+			wantImages: []Image{Image{Digest: mockDigest}},
+			wantError:  nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			s := Service{
+				ecr: mockECR{
+					t: t,
+
+					mockDescribeImages: test.mockDescribeImages,
+				},
+			}
+
+			gotImages, gotError := s.ListImages(mockRepoName)
+
+			require.ElementsMatch(t, test.wantImages, gotImages)
+			require.Equal(t, test.wantError, gotError)
+		})
+	}
+}
+
+func TestDeleteImages(t *testing.T) {
+	mockRepoName := "mockRepoName"
+	mockError := errors.New("mockError")
+	mockDigest := "mockDigest"
+	mockImages := []Image{
+		Image{
+			Digest: mockDigest,
+		},
+	}
+
+	tests := map[string]struct {
+		images []Image
+
+		mockBatchDeleteImage func(*testing.T, *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error)
+
+		want error
+	}{
+		"should return an error if input Image list is empty": {
+			images: nil,
+			want:   nil,
+		},
+		"should wrap error return from BatchDeleteImage": {
+			images: mockImages,
+			mockBatchDeleteImage: func(t *testing.T, in *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
+				return nil, mockError
+			},
+			want: fmt.Errorf("ecr repo %s batch delete image: %w", mockRepoName, mockError),
+		},
+		"should return nil if call to BatchDeleteImage successful": {
+			images: mockImages,
+			mockBatchDeleteImage: func(t *testing.T, in *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
+				t.Helper()
+
+				require.Equal(t, mockRepoName, *in.RepositoryName)
+
+				var imageIdentifiers []*ecr.ImageIdentifier
+				for _, image := range mockImages {
+					imageIdentifiers = append(imageIdentifiers, image.imageIdentifier())
+				}
+				require.ElementsMatch(t, imageIdentifiers, in.ImageIds)
+
+				return &ecr.BatchDeleteImageOutput{}, nil
+			},
+			want: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			s := Service{
+				ecr: mockECR{
+					t: t,
+
+					mockBatchDeleteImage: test.mockBatchDeleteImage,
+				},
+			}
+
+			got := s.DeleteImages(test.images, mockRepoName)
+
+			require.Equal(t, test.want, got)
 		})
 	}
 }
