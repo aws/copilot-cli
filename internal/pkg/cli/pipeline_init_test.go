@@ -10,8 +10,10 @@ import (
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
+
 	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -172,6 +174,29 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
 			},
+			expectedSecretName:    "github-token-badgoose-goose",
+			expectManifestPath:    workspace.PipelineFileName,
+			expectedBuildspecPath: workspace.BuildspecFileName,
+			expectedError:         nil,
+		},
+		"does not return an error if secret already exists": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "https://github.com/badgoose/goose",
+			inProjectName:  "badgoose",
+
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
+			},
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
+				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
+			},
+			mockBox: func(m *packd.MemoryBox) {
+				m.AddString(buildspecTemplatePath, "hello")
+			},
+
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    workspace.PipelineFileName,
 			expectedBuildspecPath: workspace.BuildspecFileName,
