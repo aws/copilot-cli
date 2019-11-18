@@ -10,5 +10,10 @@
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
     "TaskCount": "{{.App.Count}}"
+  },
+  "Tags": {
+    "ecs-project": "{{.Env.Project}}",
+    "ecs-environment": "{{.Env.Name}}",
+    "ecs-application": "{{.App.Name}}"
   }
 }
