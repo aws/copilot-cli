@@ -469,6 +469,12 @@ Resources:
               "kms:Decrypt"
             ]
             Resource: "*"
+          - Sid: Tags
+            Effect: Allow
+            Action: [
+              "tag:GetResources"
+            ],
+            Resource: "*"
 
   # DNS Delegation Resources
   CertificateValidationFunction:
