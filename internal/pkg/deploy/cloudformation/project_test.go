@@ -37,6 +37,9 @@ func TestCreateProjectResources(t *testing.T) {
 					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
 						return nil, fmt.Errorf("error creating stack")
 					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{}, nil
+					},
 				}
 			},
 			want: fmt.Errorf("failed to create changeSet for stack testproject-infrastructure-roles: error creating stack"),
@@ -45,12 +48,18 @@ func TestCreateProjectResources(t *testing.T) {
 			mockCFClient: func() *mockCloudFormation {
 				return &mockCloudFormation{
 					t: t,
-					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
-						msg := fmt.Sprintf("Stack [%s-%s] already exists and cannot be created again with the changeSet [ecscli-%s]", mockProjectName, mockEnvironmentName, mockChangeSetID)
-						return nil, awserr.New("ValidationError", msg, nil)
-					},
 					mockCreateStackSet: func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error) {
 						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String("UPDATE_COMPLETE"),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:902697171733:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
 					},
 				}
 			},
@@ -1133,6 +1142,7 @@ func TestDelegateDNSPermissions(t *testing.T) {
 
 // Useful for mocking a successfully deployed stack
 func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudFormation {
+	times := 0
 	return &mockCloudFormation{
 		t: t,
 		mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -1157,6 +1167,11 @@ func getMockSuccessfulDeployCFClient(t *testing.T, stackName string) *mockCloudF
 			return nil, nil
 		},
 		mockDescribeStacks: func(t *testing.T, input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+			if times == 0 {
+				times = times + 1
+				return &cloudformation.DescribeStacksOutput{}, nil
+			}
+
 			return &cloudformation.DescribeStacksOutput{
 				Stacks: []*cloudformation.Stack{
 					&cloudformation.Stack{
@@ -1208,8 +1223,9 @@ func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloud
 	}
 
 	return &cloudformation.Stack{
-		StackId:    aws.String(stackArn),
-		Parameters: parametersList,
+		StackId:     aws.String(stackArn),
+		StackStatus: aws.String("UPDATE_COMPLETE"),
+		Parameters:  parametersList,
 	}
 }
 

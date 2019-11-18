@@ -412,7 +412,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					"Should export CRNExecutionRole ARN")
 
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-CFNExecutionRoleARN", envStackName)),
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-CFNExecutionRole", envStackName)),
 					"CRNExecutionRole ARN value should not be nil.")
 			},
 			"ClusterId": func(output *awsCF.Output) {
