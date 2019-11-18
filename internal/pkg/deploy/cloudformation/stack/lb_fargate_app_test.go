@@ -320,15 +320,15 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	// THEN
 	require.Equal(t, []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String("phonetool"),
 		},
 		{
-			Key:   aws.String(envTagKey),
+			Key:   aws.String(EnvTagKey),
 			Value: aws.String("test"),
 		},
 		{
-			Key:   aws.String(appTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String("frontend"),
 		},
 	}, tags)

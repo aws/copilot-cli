@@ -190,7 +190,7 @@ func TestProjectTags(t *testing.T) {
 	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(proj.Project),
 		},
 	}

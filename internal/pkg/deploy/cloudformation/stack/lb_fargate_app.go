@@ -148,15 +148,15 @@ func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
 func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
 	return []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(c.Env.Project),
 		},
 		{
-			Key:   aws.String(envTagKey),
+			Key:   aws.String(EnvTagKey),
 			Value: aws.String(c.Env.Name),
 		},
 		{
-			Key:   aws.String(appTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String(c.App.Name),
 		},
 	}

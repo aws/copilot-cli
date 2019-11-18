@@ -126,11 +126,11 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(e.Project),
 		},
 		{
-			Key:   aws.String(envTagKey),
+			Key:   aws.String(EnvTagKey),
 			Value: aws.String(e.Name),
 		},
 	}

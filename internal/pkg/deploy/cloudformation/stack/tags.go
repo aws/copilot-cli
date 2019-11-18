@@ -3,8 +3,9 @@
 
 package stack
 
+// Tag keys used while creating stacks.
 const (
-	projectTagKey = "ecs-project"
-	envTagKey     = "ecs-environment"
-	appTagKey     = "ecs-application"
+	ProjectTagKey = "ecs-project"
+	EnvTagKey     = "ecs-environment"
+	AppTagKey     = "ecs-application"
 )

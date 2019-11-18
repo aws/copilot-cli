@@ -105,7 +105,7 @@ func (c *ProjectStackConfig) ResourceTemplate(config *ProjectResourcesConfig) (s
 		AppTagKey string
 	}{
 		config,
-		appTagKey,
+		AppTagKey,
 	}
 
 	var buf bytes.Buffer
@@ -150,7 +150,7 @@ func (c *ProjectStackConfig) Parameters() []*cloudformation.Parameter {
 func (c *ProjectStackConfig) Tags() []*cloudformation.Tag {
 	return []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(c.Project),
 		},
 	}

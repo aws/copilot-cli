@@ -59,7 +59,7 @@ func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
 	return []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(p.ProjectName),
 		},
 	}

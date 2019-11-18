@@ -178,11 +178,11 @@ func TestEnvTags(t *testing.T) {
 	env := NewEnvStackConfig(deploymentInput, emptyEnvBox())
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(projectTagKey),
+			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(deploymentInput.Project),
 		},
 		{
-			Key:   aws.String(envTagKey),
+			Key:   aws.String(EnvTagKey),
 			Value: aws.String(deploymentInput.Name),
 		},
 	}
