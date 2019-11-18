@@ -13,23 +13,42 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 )
 
-// TODO: wrap the `os/exec` stuff in a `command` package to make mocking and testing easier on this package.
+type command struct {
+	cmd *exec.Cmd
+}
+
+func (c command) run() error {
+	return c.cmd.Run()
+}
+
+func (c command) standardInput(input string) {
+	c.cmd.Stdin = strings.NewReader(input)
+}
+
+type runnable interface {
+	run() error
+	standardInput(string)
+}
 
 // Service exists for mockability.
-type Service struct{}
+type Service struct {
+	createCommand func(name string, args ...string) runnable
+}
 
 // New returns a Service.
 func New() Service {
-	return Service{}
+	return Service{
+		createCommand: newCommand,
+	}
 }
 
 // Build will `os/exec` a `docker build` command with the input uri, tag, and Dockerfile image path.
 func (s Service) Build(uri, imageTag, path string) error {
-	imageName := fmt.Sprintf("%s:%s", uri, imageTag)
+	imageName := imageName(uri, imageTag)
 
-	cmd := newCommand("docker", "build", "-t", imageName, path)
+	cmd := s.createCommand("docker", "build", "-t", imageName, path)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.run(); err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
 
@@ -38,10 +57,10 @@ func (s Service) Build(uri, imageTag, path string) error {
 
 // Login will `os/exec` a `docker login` command against the Service repository URI with the input uri and auth data.
 func (s Service) Login(uri string, auth ecr.Auth) error {
-	cmd := newCommand("docker", "login", "-u", auth.Username, "--password-stdin", uri)
-	cmd.Stdin = strings.NewReader(auth.Password)
+	cmd := s.createCommand("docker", "login", "-u", auth.Username, "--password-stdin", uri)
+	cmd.standardInput(auth.Password)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.run(); err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)
 	}
 
@@ -50,11 +69,11 @@ func (s Service) Login(uri string, auth ecr.Auth) error {
 
 // Push will `os/exec` a `docker push` command against the Service repository URI with the input uri and image tag.
 func (s Service) Push(uri, imageTag string) error {
-	path := uri + ":" + imageTag
+	path := imageName(uri, imageTag)
 
-	cmd := newCommand("docker", "push", path)
+	cmd := s.createCommand("docker", "push", path)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.run(); err != nil {
 		// TODO: improve the error handling here.
 		// if you try to push an *existing* image that has Digest A and tag T then no error (also no image push).
 		// if you try to push an *existing* image that has Digest B and tag T (that belongs to another image Digest A) then docker spits out an unclear error.
@@ -66,11 +85,17 @@ func (s Service) Push(uri, imageTag string) error {
 	return nil
 }
 
-func newCommand(name string, args ...string) *exec.Cmd {
+func imageName(uri, tag string) string {
+	return fmt.Sprintf("%s:%s", uri, tag)
+}
+
+func newCommand(name string, args ...string) runnable {
 	cmd := exec.Command(name, args...)
 	// NOTE: Stdout and Stderr must both be set otherwise command output pipes to os.DevNull
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 
-	return cmd
+	return command{
+		cmd: cmd,
+	}
 }
