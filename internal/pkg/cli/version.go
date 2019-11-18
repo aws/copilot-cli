@@ -18,9 +18,10 @@ func BuildVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number.",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("version: %s, built for %s\n", version.Version, version.Platform)
-		},
+			return nil
+		}),
 		Annotations: map[string]string{
 			"group": group.Settings,
 		},

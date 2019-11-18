@@ -5,8 +5,11 @@
 package secretsmanager
 
 import (
+	"fmt"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 )
@@ -32,7 +35,7 @@ func NewStore() (*SecretsManager, error) {
 	}, nil
 }
 
-// CreateSecret creates a secret and returns secretn ARN
+// CreateSecret creates a secret and returns secret ARN
 // NOTE: Currently the default KMS key ("aws/secretsmanager") is used for
 // encrypting the secret.
 func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, error) {
@@ -41,9 +44,27 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 		SecretString: aws.String(secretString),
 		// TODO add Tags/Description?
 	})
+
 	if err != nil {
-		return "", err
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == secretsmanager.ErrCodeResourceExistsException {
+				// TODO update secret if value provided?
+				return "", &ErrSecretAlreadyExists{
+					secretName: secretName,
+					parentErr:  err,
+				}
+			}
+		}
 	}
 
 	return aws.StringValue(resp.ARN), nil
+}
+
+type ErrSecretAlreadyExists struct {
+	secretName string
+	parentErr  error
+}
+
+func (err *ErrSecretAlreadyExists) Error() string {
+	return fmt.Sprintf("secret %s already exists", err.secretName)
 }

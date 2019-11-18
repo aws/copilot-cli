@@ -178,7 +178,7 @@ func BuildPipelineUpdateCmd() *cobra.Command {
   Deploy an updated pipeline for the applications in your workspace:
   /code $ archer pipeline update`,
 
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("couldn't connect to project datastore: %w", err)
@@ -207,11 +207,10 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			opts.ws = ws
 
 			return opts.Validate()
-		},
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return opts.Execute()
-		},
+		}),
 	}
 	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
 	// cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployFlagDescription)

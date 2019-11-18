@@ -54,7 +54,6 @@ type InitPipelineOpts struct {
 	// Outputs stored on successful actions.
 	manifestPath  string
 	buildspecPath string
-	secretArn     string
 	secretName    string
 
 	// Caches environments
@@ -118,11 +117,15 @@ func (opts *InitPipelineOpts) Validate() error {
 // Execute writes the pipeline manifest file.
 func (opts *InitPipelineOpts) Execute() error {
 	secretName := opts.createSecretName()
-	secretArn, err := opts.secretsmanager.CreateSecret(secretName, opts.GitHubAccessToken)
+	_, err := opts.secretsmanager.CreateSecret(secretName, opts.GitHubAccessToken)
+
 	if err != nil {
-		return err
+		var existsErr *secretsmanager.ErrSecretAlreadyExists
+		if !errors.As(err, &existsErr) {
+			return err
+		}
+		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(opts.GitHubRepo))
 	}
-	opts.secretArn = secretArn
 	opts.secretName = secretName
 
 	// write pipeline.yml file, populate with:
@@ -421,7 +424,7 @@ func BuildPipelineInitCmd() *cobra.Command {
     --github-access-token file://myGitHubToken \
     --environments "stage,prod" \
     --deploy`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
 				return fmt.Errorf("couldn't get environments: %w", err)
@@ -442,9 +445,8 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.box = templates.Box()
 
 			return opts.Validate()
-		},
-
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -452,7 +454,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")

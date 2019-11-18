@@ -28,6 +28,7 @@ An environment represents a deployment stage.`,
 
 	cmd.AddCommand(BuildEnvInitCmd())
 	cmd.AddCommand(BuildEnvListCmd())
+	cmd.AddCommand(BuildEnvDeleteCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

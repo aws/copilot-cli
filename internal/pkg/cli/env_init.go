@@ -240,7 +240,8 @@ func BuildEnvInitCmd() *cobra.Command {
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ archer env init prod-iad --profile prod-admin --prod`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		Args: reservedArgs,
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				opts.EnvName = args[0]
 			}
@@ -263,8 +264,8 @@ func BuildEnvInitCmd() *cobra.Command {
 			opts.identity = identity.New(defaultSession)
 			opts.envIdentity = identity.New(profileSess)
 			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -272,7 +273,7 @@ func BuildEnvInitCmd() *cobra.Command {
 				return err
 			}
 			return opts.Execute()
-		},
+		}),
 	}
 	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "default", profileFlagDescription)
 	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)

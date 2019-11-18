@@ -41,24 +41,21 @@ func BuildAppDeployCommand() *cobra.Command {
 		Example: `
   Deploy an application named "frontend" to a "test" environment.
   /code $ archer app deploy --name frontend --env test`,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := input.init(); err != nil {
 				return err
 			}
-
 			if err := input.sourceInputs(); err != nil {
 				return err
 			}
-
 			return nil
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := input.deployApp(); err != nil {
 				return err
 			}
-
 			return nil
-		},
+		}),
 		// PostRunE: func(cmd *cobra.Command, args []string) error {
 		// TODO: recommended actions?
 		// },

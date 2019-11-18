@@ -75,15 +75,15 @@ The code must be evaluated to provide interactive completion of commands.`,
 			}
 			return nil
 		},
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts.Shell = args[0]
 			return opts.Validate()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts.w = os.Stdout
 			opts.completer = rootCmd
 			return opts.Execute()
-		},
+		}),
 	}
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
