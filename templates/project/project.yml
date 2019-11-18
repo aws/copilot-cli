@@ -13,6 +13,8 @@ Parameters:
   ProjectDomainName:
     Type: String
     Default: ""
+  ProjectName:
+    Type: String
 Conditions:
   DelegateDNS:
     !Not [!Equals [ !Ref ProjectDomainName, "" ]]
@@ -92,6 +94,7 @@ Resources:
                   - ecr:GetLifecyclePolicy
                   - ecr:TagResource
                 Resource: "*"
+
   DNSDelegationRole:
     Type: AWS::IAM::Role
     Condition: DelegateDNS
@@ -121,11 +124,37 @@ Resources:
         PolicyDocument:
           Version: "2012-10-17"
           Statement:
-              - Sid: HostedZoneChangeRecord
+              - Sid: HostedZoneReadRecords
                 Effect: Allow
                 Action:
-                  - route53:*
+                  - route53:Get*
+                  - route53:List*
                 Resource: "*"
+              - Sid: HostedZoneUpdate
+                Effect: Allow
+                Action:
+                  - route53:ChangeResourceRecordSets
+                Resource:
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${ProjectHostedZone}
+
+  ProjectHostedZone:
+    Type: AWS::Route53::HostedZone
+    Condition: DelegateDNS
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "Hosted zone for ecs-cli project ${ProjectName}: ${ProjectName}.${ProjectDomainName}"
+      Name: !Sub ${ProjectName}.${ProjectDomainName}
+
+  ProjectDomainDelegationRecordSet:
+    Type: AWS::Route53::RecordSet
+    Condition: DelegateDNS
+    Properties:
+      HostedZoneName: !Sub ${ProjectDomainName}.
+      Comment: !Sub "Record for ecs-cli domain delegation for project ${ProjectDomainName}"
+      Name: !Sub ${ProjectName}.${ProjectDomainName}.
+      Type: NS
+      TTL: '900'
+      ResourceRecords: !GetAtt ProjectHostedZone.NameServers
 
 Outputs:
   ExecutionRoleARN:

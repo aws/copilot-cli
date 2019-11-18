@@ -174,6 +174,10 @@ func TestProjectParameters(t *testing.T) {
 			ParameterKey:   aws.String(projectDomainNameKey),
 			ParameterValue: aws.String("amazon.com"),
 		},
+		{
+			ParameterKey:   aws.String(projectNameKey),
+			ParameterValue: aws.String("testproject"),
+		},
 	}
 	require.ElementsMatch(t, expectedParams, proj.Parameters())
 }
