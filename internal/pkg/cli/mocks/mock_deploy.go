@@ -5,11 +5,10 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	deploy "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockenvironmentDeployer is a mock of environmentDeployer interface
@@ -357,20 +356,6 @@ func (mr *MockdeployerMockRecorder) AddAppToProject(project, appName interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAppToProject", reflect.TypeOf((*Mockdeployer)(nil).AddAppToProject), project, appName)
 }
 
-// DelegateDNSPermissions mocks base method
-func (m *Mockdeployer) DelegateDNSPermissions(project *archer.Project, accountID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DelegateDNSPermissions", project, accountID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DelegateDNSPermissions indicates an expected call of DelegateDNSPermissions
-func (mr *MockdeployerMockRecorder) DelegateDNSPermissions(project, accountID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelegateDNSPermissions", reflect.TypeOf((*Mockdeployer)(nil).DelegateDNSPermissions), project, accountID)
-}
-
 // AddEnvToProject mocks base method
 func (m *Mockdeployer) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
 	m.ctrl.T.Helper()
@@ -383,6 +368,20 @@ func (m *Mockdeployer) AddEnvToProject(project *archer.Project, env *archer.Envi
 func (mr *MockdeployerMockRecorder) AddEnvToProject(project, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEnvToProject", reflect.TypeOf((*Mockdeployer)(nil).AddEnvToProject), project, env)
+}
+
+// DelegateDNSPermissions mocks base method
+func (m *Mockdeployer) DelegateDNSPermissions(project *archer.Project, accountID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DelegateDNSPermissions", project, accountID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DelegateDNSPermissions indicates an expected call of DelegateDNSPermissions
+func (mr *MockdeployerMockRecorder) DelegateDNSPermissions(project, accountID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelegateDNSPermissions", reflect.TypeOf((*Mockdeployer)(nil).DelegateDNSPermissions), project, accountID)
 }
 
 // DeployPipeline mocks base method
@@ -441,4 +440,69 @@ func (m *Mockdeployer) GetRegionalProjectResources(project *archer.Project) ([]*
 func (mr *MockdeployerMockRecorder) GetRegionalProjectResources(project interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*Mockdeployer)(nil).GetRegionalProjectResources), project)
+}
+
+// MockappDeployer is a mock of appDeployer interface
+type MockappDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockappDeployerMockRecorder
+}
+
+// MockappDeployerMockRecorder is the mock recorder for MockappDeployer
+type MockappDeployerMockRecorder struct {
+	mock *MockappDeployer
+}
+
+// NewMockappDeployer creates a new mock instance
+func NewMockappDeployer(ctrl *gomock.Controller) *MockappDeployer {
+	mock := &MockappDeployer{ctrl: ctrl}
+	mock.recorder = &MockappDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappDeployer) EXPECT() *MockappDeployerMockRecorder {
+	return m.recorder
+}
+
+// init mocks base method
+func (m *MockappDeployer) init() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "init")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// init indicates an expected call of init
+func (mr *MockappDeployerMockRecorder) init() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "init", reflect.TypeOf((*MockappDeployer)(nil).init))
+}
+
+// sourceInputs mocks base method
+func (m *MockappDeployer) sourceInputs() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "sourceInputs")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// sourceInputs indicates an expected call of sourceInputs
+func (mr *MockappDeployerMockRecorder) sourceInputs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "sourceInputs", reflect.TypeOf((*MockappDeployer)(nil).sourceInputs))
+}
+
+// deployApp mocks base method
+func (m *MockappDeployer) deployApp() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "deployApp")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// deployApp indicates an expected call of deployApp
+func (mr *MockappDeployerMockRecorder) deployApp() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "deployApp", reflect.TypeOf((*MockappDeployer)(nil).deployApp))
 }

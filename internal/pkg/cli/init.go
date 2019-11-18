@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -35,6 +36,7 @@ type InitOpts struct {
 	initProject actionCommand
 	initApp     actionCommand
 	initEnv     actionCommand
+	appDeployer appDeployer
 
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
@@ -94,10 +96,21 @@ func NewInitOpts() (*InitOpts, error) {
 		identity:      id,
 		GlobalOpts:    NewGlobalOpts(),
 	}
+
+	deployApp := &appDeployOpts{
+		env: defaultEnvironmentName,
+
+		spinner:       spin,
+		dockerService: docker.New(),
+
+		GlobalOpts: NewGlobalOpts(),
+	}
+
 	return &InitOpts{
 		initProject: initProject,
 		initApp:     initApp,
 		initEnv:     initEnv,
+		appDeployer: deployApp,
 
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
@@ -131,7 +144,12 @@ containerized applications (or micro-services) that operate together.`)
 	if err := opts.initApp.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
-	return opts.deploy()
+
+	if err := opts.deployEnv(); err != nil {
+		return err
+	}
+
+	return opts.deployApp()
 }
 
 func (opts *InitOpts) loadProject() error {
@@ -153,8 +171,8 @@ func (opts *InitOpts) loadApp() error {
 	return opts.initApp.Validate()
 }
 
-// deploy prompts the user to deploy a test environment if the project doesn't already have one.
-func (opts *InitOpts) deploy() error {
+// deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
+func (opts *InitOpts) deployEnv() error {
 	if opts.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
 		if err := opts.askShouldDeploy(); err != nil {
@@ -166,6 +184,18 @@ func (opts *InitOpts) deploy() error {
 		return nil
 	}
 	return opts.initEnv.Execute()
+}
+
+func (opts *InitOpts) deployApp() error {
+	if err := opts.appDeployer.init(); err != nil {
+		return err
+	}
+
+	if err := opts.appDeployer.sourceInputs(); err != nil {
+		return err
+	}
+
+	return opts.appDeployer.deployApp()
 }
 
 func (opts *InitOpts) askShouldDeploy() error {
