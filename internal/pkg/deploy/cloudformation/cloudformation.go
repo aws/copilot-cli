@@ -168,21 +168,96 @@ func (cf CloudFormation) describeStackWithClient(describeStackInput *cloudformat
 	client cloudformationiface.CloudFormationAPI) (*cloudformation.Stack, error) {
 	describeStackOutput, err := client.DescribeStacks(describeStackInput)
 	if err != nil {
+		if stackDoesNotExist(err) {
+			return nil, &ErrStackNotFound{stackName: *describeStackInput.StackName}
+		}
 		return nil, err
 	}
 
 	if len(describeStackOutput.Stacks) == 0 {
-		return nil, fmt.Errorf("failed to find a stack named %s", *describeStackInput.StackName)
+		return nil, &ErrStackNotFound{stackName: *describeStackInput.StackName}
 	}
 
 	return describeStackOutput.Stacks[0], nil
 }
+
+// create will only spin up a stack if none exists or if a stack exists
+// but requires cleanup (meaning we failed to created it before). With
+// stacks that are failed to be created, you have to delete them if you
+// want to update them. In this case, we'll delete the failed stack
+// and then try creating it again.
+// If a stack already exists in another state, we'll return an ErrStackAlreadyExists
+// error.
 func (cf CloudFormation) create(stackConfig stackConfiguration) error {
-	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeCreate)
+	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
+	existingStack, err := cf.describeStack(describeStackInput)
+	// Create the stack if it doesn't already exists.
+	if err != nil {
+
+		var stackNotFound *ErrStackNotFound
+		if !errors.As(err, &stackNotFound) {
+			return err
+		}
+		// If there's no existing stack, we can go ahead and create it.
+		return cf.deploy(stackConfig, cloudformation.ChangeSetTypeCreate)
+	}
+
+	// If the stack exists, but failed to create, we'll clean it up and
+	// then re-create it.
+	if StackStatus(*existingStack.StackStatus).RequiresCleanup() {
+		if err := cf.delete(stackConfig.StackName()); err != nil {
+			return fmt.Errorf("cleaning up a previous failed stack: %w", err)
+		}
+		return cf.deploy(stackConfig, cloudformation.ChangeSetTypeCreate)
+	}
+
+	if StackStatus(*existingStack.StackStatus).InProgress() {
+		return &ErrStackUpdateInProgress{
+			stackName:   stackConfig.StackName(),
+			stackStatus: aws.StringValue(existingStack.StackStatus),
+		}
+	}
+
+	// If the stack exists and has been successfully created - return
+	// a ErrStackAlreadyExists error.
+	return &ErrStackAlreadyExists{
+		stackName: stackConfig.StackName(),
+		parentErr: fmt.Errorf("with status: %s", *existingStack.StackStatus),
+	}
 }
 
+// update will update a given stack, so long as the stack already exists
+// and it isn't already deploying something. If there's already some action
+// happening on this stack, we'll return ErrStackUpdateInProgress.
 func (cf CloudFormation) update(stackConfig stackConfiguration) error {
+	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
+	existingStack, err := cf.describeStack(describeStackInput)
+	// If we can't find the stack to update, return an error.
+	if err != nil {
+		return err
+	}
+
+	// If the stack exists but is in progress, return an error.
+	if StackStatus(*existingStack.StackStatus).InProgress() {
+		return &ErrStackUpdateInProgress{
+			stackName:   stackConfig.StackName(),
+			stackStatus: aws.StringValue(existingStack.StackStatus),
+		}
+	}
+
 	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeUpdate)
+}
+
+func (cf CloudFormation) delete(stackName string) error {
+	if _, err := cf.client.DeleteStack(&cloudformation.DeleteStackInput{
+		StackName: aws.String(stackName),
+	}); err != nil {
+		return fmt.Errorf("deleting stack %s: %w", stackName, err)
+	}
+
+	return cf.client.WaitUntilStackDeleteCompleteWithContext(context.Background(),
+		&cloudformation.DescribeStacksInput{StackName: aws.String(stackName)},
+		cf.waiters...)
 }
 
 func (cf CloudFormation) deploy(stackConfig stackConfiguration, createOrUpdate string) error {
@@ -191,23 +266,17 @@ func (cf CloudFormation) deploy(stackConfig stackConfiguration, createOrUpdate s
 		return fmt.Errorf("template creation: %w", err)
 	}
 
-	in, err := createChangeSetInput(stackConfig.StackName(), template, withChangeSetType(createOrUpdate), withTags(stackConfig.Tags()), withParameters(stackConfig.Parameters()))
+	in, err := createChangeSetInput(stackConfig.StackName(),
+		template,
+		withChangeSetType(createOrUpdate),
+		withTags(stackConfig.Tags()),
+		withParameters(stackConfig.Parameters()))
+
 	if err != nil {
 		return err
 	}
 
-	if err := cf.deployChangeSet(in); err != nil {
-		if stackExists(err) {
-			// Explicitly return a StackAlreadyExists error for the caller to decide if they want to ignore the
-			// operation or fail the program.
-			return &ErrStackAlreadyExists{
-				stackName: stackConfig.StackName(),
-				parentErr: err,
-			}
-		}
-		return err
-	}
-	return nil
+	return cf.deployChangeSet(in)
 }
 
 func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput) error {
@@ -237,31 +306,21 @@ func (cf CloudFormation) createChangeSet(in *cloudformation.CreateChangeSetInput
 	}, nil
 }
 
-// stackExists returns true if the underlying error is a stack already exists error.
-func stackExists(err error) bool {
-	currentErr := err
-	for {
-		if currentErr == nil {
-			break
-		}
-		if aerr, ok := currentErr.(awserr.Error); ok {
-			switch aerr.Code() {
-			case "ValidationError":
-				// A ValidationError occurs if we tried to create the stack with a change set.
-				if strings.Contains(aerr.Message(), "already exists") {
-					return true
-				}
-			case cloudformation.ErrCodeAlreadyExistsException:
-				// An AlreadyExists error occurs if we tried to create the stack with the CreateStack API.
+// stackDoesNotExist returns true if the underlying error is a stack doesn't exist.
+func stackDoesNotExist(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "ValidationError":
+			// A ValidationError occurs if we describe a stack which doesn't exist.
+			if strings.Contains(aerr.Message(), "does not exist") {
 				return true
 			}
 		}
-		currentErr = errors.Unwrap(currentErr)
 	}
 	return false
 }
 
-// stackExists returns true if the underlying error is a stack already exists error.
+// stackSetExists returns true if the underlying error is a stack already exists error.
 func stackSetExists(err error) bool {
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {

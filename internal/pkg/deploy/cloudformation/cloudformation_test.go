@@ -33,11 +33,10 @@ type mockCloudFormation struct {
 
 	t                                               *testing.T
 	mockCreateChangeSet                             func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error)
-	mockWaitUntilChangeSetCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
 	mockExecuteChangeSet                            func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error)
 	mockDescribeChangeSet                           func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
-	mockWaitUntilStackCreateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 	mockDescribeStacks                              func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+	mockDeleteStack                                 func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
 	mockCreateStackSet                              func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
 	mockDescribeStackSet                            func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
 	mockUpdateStackSet                              func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
@@ -46,7 +45,10 @@ type mockCloudFormation struct {
 	mockDescribeStackSetOperation                   func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
 	mockDescribeStackEvents                         func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
 	mockCreateStack                                 func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
+	mockWaitUntilChangeSetCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
+	mockWaitUntilStackCreateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 	mockWaitUntilStackUpdateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+	mockWaitUntilStackDeleteCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 }
 
 func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
@@ -55,6 +57,10 @@ func (cf mockCloudFormation) CreateChangeSet(in *cloudformation.CreateChangeSetI
 
 func (cf mockCloudFormation) ExecuteChangeSet(in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
 	return cf.mockExecuteChangeSet(cf.t, in)
+}
+
+func (cf mockCloudFormation) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+	return cf.mockDeleteStack(cf.t, in)
 }
 
 func (cf mockCloudFormation) DescribeChangeSet(in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -109,6 +115,10 @@ func (cf mockCloudFormation) WaitUntilStackCreateCompleteWithContext(context con
 	return cf.mockWaitUntilStackCreateCompleteWithContext(cf.t, in)
 }
 
+func (cf mockCloudFormation) WaitUntilStackDeleteCompleteWithContext(context context.Context, in *cloudformation.DescribeStacksInput, opts ...request.WaiterOption) error {
+	return cf.mockWaitUntilStackDeleteCompleteWithContext(cf.t, in)
+}
+
 type mockStackConfiguration struct {
 	mockTemplate   func() (string, error)
 	mockParameters func() []*cloudformation.Parameter
@@ -132,6 +142,298 @@ func (sc mockStackConfiguration) StackName() string {
 	return sc.mockStackName()
 }
 
+func TestUpdate(t *testing.T) {
+	mockStackConfig := getMockStackConfiguration()
+	testCases := map[string]struct {
+		cf    CloudFormation
+		input stackConfiguration
+		want  error
+	}{
+		"should deploy when there is an existing stack": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						require.True(t, isValidChangeSetName(*in.ChangeSetName))
+						require.Equal(t, mockTemplate, *in.TemplateBody)
+						require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String("UPDATE_COMPLETE"),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  nil,
+		},
+		"should bubble up errors describing stack": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return nil, fmt.Errorf("error")
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("error"),
+		},
+		"should return ErrStackUpdateInProgress when the stack is already updating": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("stack mockStackID is currently being updated (status UPDATE_IN_PROGRESS) and cannot be deployed to"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.cf.update(tc.input)
+
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
+func TestCreate(t *testing.T) {
+	mockStackConfig := getMockStackConfiguration()
+	testCases := map[string]struct {
+		cf    CloudFormation
+		input stackConfiguration
+		want  error
+	}{
+		"should deploy when there is no existing stack": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						require.True(t, isValidChangeSetName(*in.ChangeSetName))
+						require.Equal(t, mockTemplate, *in.TemplateBody)
+						require.Equal(t, cloudformation.ChangeSetTypeCreate, *in.ChangeSetType)
+
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  nil,
+		},
+		"should delete a failed stack then deploy": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						require.True(t, isValidChangeSetName(*in.ChangeSetName))
+						require.Equal(t, mockTemplate, *in.TemplateBody)
+						require.Equal(t, cloudformation.ChangeSetTypeCreate, *in.ChangeSetType)
+
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String(cloudformation.StackStatusRollbackComplete),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+					mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						return nil, nil
+					},
+					mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+						return nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  nil,
+		},
+		"should bubble up errors describing stack": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return nil, fmt.Errorf("error")
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("error"),
+		},
+		"should bubble up errors deleting old stacks": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String(cloudformation.StackStatusRollbackComplete),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+					mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						return nil, fmt.Errorf("error")
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("cleaning up a previous failed stack: deleting stack mockStackID: error"),
+		},
+		"should return ErrStackAlreadyExists for stacks not in a failed to create state": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String("UPDATE_COMPLETE"),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("stack mockStackID already exists"),
+		},
+		"should return ErrStackUpdateInProgress when the stack is already updating": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						return &cloudformation.DescribeStacksOutput{
+							Stacks: []*cloudformation.Stack{
+								&cloudformation.Stack{
+									StackStatus: aws.String("UPDATE_IN_PROGRESS"),
+									StackId:     aws.String(fmt.Sprintf("arn:aws:cloudformation:eu-west-3:000000000:stack/%s", *in.StackName)),
+								},
+							},
+						}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  fmt.Errorf("stack mockStackID is currently being updated (status UPDATE_IN_PROGRESS) and cannot be deployed to"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.cf.create(tc.input)
+
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
 func TestDeploy(t *testing.T) {
 	mockStackConfig := getMockStackConfiguration()
 	testCases := map[string]struct {
@@ -151,22 +453,6 @@ func TestDeploy(t *testing.T) {
 				box: boxWithTemplateFile(),
 			},
 			want: fmt.Errorf("failed to create changeSet for stack %s: %s", mockStackConfig.StackName(), "some AWS error"),
-		},
-		"should return a ErrStackAlreadyExists if the stack already exists": {
-			cf: CloudFormation{
-				client: &mockCloudFormation{
-					t: t,
-					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
-						msg := fmt.Sprintf("Stack [%s-%s] already exists and cannot be created again with the changeSet [ecscli-%s]", mockProjectName, mockEnvironmentName, mockChangeSetID)
-						return nil, awserr.New("ValidationError", msg, nil)
-					},
-				},
-				box: boxWithTemplateFile(),
-			},
-			input: mockStackConfig,
-			want: &ErrStackAlreadyExists{
-				stackName: mockStackConfig.StackName(),
-			},
 		},
 		"should wrap error returned from WaitUntilChangeSetCreateComplete call": {
 			input: mockStackConfig,
@@ -401,6 +687,33 @@ func TestWaitForStackCreation(t *testing.T) {
 			} else {
 				require.NoError(t, got)
 			}
+		})
+	}
+}
+
+func TestStackDoesNotExistError(t *testing.T) {
+	testCases := map[string]struct {
+		input error
+		want  bool
+	}{
+		"does not exist error": {
+			input: awserr.New("ValidationError", "stack does not exist", nil),
+			want:  true,
+		},
+		"other validation error": {
+			input: awserr.New("ValidationError", "stack exploded", nil),
+			want:  false,
+		},
+		"non aws error": {
+			input: fmt.Errorf("different error"),
+			want:  false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := stackDoesNotExist(tc.input)
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

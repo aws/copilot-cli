@@ -23,6 +23,25 @@ func (err *ErrStackAlreadyExists) Unwrap() error {
 	return err.parentErr
 }
 
+// ErrStackNotFound occurs when we can't find a particular CloudFormation stack.
+type ErrStackNotFound struct {
+	stackName string
+}
+
+func (err *ErrStackNotFound) Error() string {
+	return fmt.Sprintf("failed to find a stack named %s", err.stackName)
+}
+
+// ErrStackUpdateInProgress occurs when we try to update a stack that's already being updated.
+type ErrStackUpdateInProgress struct {
+	stackName   string
+	stackStatus string
+}
+
+func (err *ErrStackUpdateInProgress) Error() string {
+	return fmt.Sprintf("stack %s is currently being updated (status %s) and cannot be deployed to", err.stackName, err.stackStatus)
+}
+
 // ErrNotExecutableChangeSet occurs when the change set cannot be executed.
 type ErrNotExecutableChangeSet struct {
 	set *changeSet
@@ -39,7 +58,7 @@ type ErrTemplateNotFound struct {
 }
 
 func (err *ErrTemplateNotFound) Error() string {
-	return fmt.Sprintf("failed to find the cloudformation template at %s", err.templateLocation)
+	return fmt.Sprintf("find the cloudformation template at %s", err.templateLocation)
 }
 
 // Is returns true if the target's template location and parent error are equal to this error's template location and parent error.
