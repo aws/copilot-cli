@@ -100,6 +100,7 @@ func (opts *InitEnvOpts) Execute() error {
 		Prod:                     opts.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
+		ProjectDNSName:           project.Domain,
 	}
 
 	if project.RequiresDNSDelegation() {

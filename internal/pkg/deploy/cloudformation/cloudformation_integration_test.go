@@ -380,7 +380,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployEnvironment(&environmentToDeploy))
-		// Make sure the environment was deployed succesfully
+		// Make sure the environment was deployed successfully
 
 		_, responses := deployer.StreamEnvironmentCreation(&environmentToDeploy)
 		resp := <-responses
@@ -479,6 +479,11 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"PublicLoadBalancerDNSName value should not be nil")
+			},
+			"PublicLoadBalancerHostedZone": func(output *awsCF.Output) {
+				require.NotNil(t,
+					output.OutputValue,
+					"PublicLoadBalancerHostedZone value should not be nil")
 			},
 			"HTTPListenerArn": func(output *awsCF.Output) {
 				require.Equal(t,

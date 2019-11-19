@@ -1,8 +1,10 @@
 package stack
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
+	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -22,15 +24,19 @@ type EnvStackConfig struct {
 
 const (
 	// EnvTemplatePath is the path where the cloudformation for the environment is written.
-	EnvTemplatePath = "environment/cf.yml"
+	EnvTemplatePath           = "environment/cf.yml"
+	acmValidationTemplatePath = "custom-resources/dns-cert-validator.js"
+	dnsDelegationTemplatePath = "custom-resources/dns-delegation.js"
 )
 
 // Parameter keys.
 const (
-	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
-	envParamProjectNameKey           = "ProjectName"
-	envParamEnvNameKey               = "EnvironmentName"
-	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
+	envParamIncludeLBKey                = "IncludePublicLoadBalancer"
+	envParamProjectNameKey              = "ProjectName"
+	envParamEnvNameKey                  = "EnvironmentName"
+	envParamToolsAccountPrincipalKey    = "ToolsAccountPrincipalARN"
+	envParamProjectDNSKey               = "ProjectDNSName"
+	envParamProjectDNSDelegationRoleKey = "ProjectDNSDelegationRole"
 )
 
 // Output keys.
@@ -49,11 +55,41 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput, box packd.Box) *Env
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
-	template, err := e.box.FindString(EnvTemplatePath)
+	environmentTemplate, err := e.box.FindString(EnvTemplatePath)
 	if err != nil {
 		return "", &ErrTemplateNotFound{templateLocation: EnvTemplatePath, parentErr: err}
 	}
-	return template, nil
+
+	acmValidator, err := e.box.FindString(acmValidationTemplatePath)
+	if err != nil {
+		return "", &ErrTemplateNotFound{templateLocation: acmValidationTemplatePath, parentErr: err}
+	}
+
+	dnsDelegator, err := e.box.FindString(dnsDelegationTemplatePath)
+	if err != nil {
+		return "", &ErrTemplateNotFound{templateLocation: dnsDelegationTemplatePath, parentErr: err}
+	}
+
+	templ, err := template.New("environmenttemplates").Parse(environmentTemplate)
+
+	if err != nil {
+		return "", err
+	}
+
+	templateData := struct {
+		DNSDelegationLambda string
+		ACMValidationLambda string
+	}{
+		dnsDelegator,
+		acmValidator,
+	}
+
+	var buf bytes.Buffer
+	if err := templ.Execute(&buf, templateData); err != nil {
+		return "", err
+	}
+
+	return string(buf.Bytes()), nil
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
@@ -75,6 +111,14 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
 			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
 		},
+		{
+			ParameterKey:   aws.String(envParamProjectDNSKey),
+			ParameterValue: aws.String(e.ProjectDNSName),
+		},
+		{
+			ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+			ParameterValue: aws.String(e.dnsDelegationRole()),
+		},
 	}
 }
 
@@ -90,6 +134,18 @@ func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 			Value: aws.String(e.Name),
 		},
 	}
+}
+
+func (e *EnvStackConfig) dnsDelegationRole() string {
+	if e.ToolsAccountPrincipalARN == "" || e.ProjectDNSName == "" {
+		return ""
+	}
+
+	projectRole, err := arn.Parse(e.ToolsAccountPrincipalARN)
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", projectRole.AccountID, dnsDelegationRoleName(e.Project))
 }
 
 // StackName returns the name of the CloudFormation stack (based on the project and env names).

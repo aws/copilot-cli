@@ -43,16 +43,18 @@ type ProjectStackConfig struct {
 }
 
 const (
-	projectTemplatePath            = "project/project.yml"
-	projectResourcesTemplatePath   = "project/cf.yml"
-	projectAdminRoleParamName      = "AdminRoleName"
-	projectExecutionRoleParamName  = "ExecutionRoleName"
-	projectOutputKMSKey            = "KMSKeyARN"
-	projectOutputS3Bucket          = "PipelineBucket"
-	projectOutputECRRepoPrefix     = "ECRRepo"
-	projectDNSDelegatedAccountsKey = "ProjectDNSDelegatedAccounts"
-	projectDomainNameKey           = "ProjectDomainName"
-	projectNameKey                 = "ProjectName"
+	projectTemplatePath               = "project/project.yml"
+	projectResourcesTemplatePath      = "project/cf.yml"
+	projectAdminRoleParamName         = "AdminRoleName"
+	projectExecutionRoleParamName     = "ExecutionRoleName"
+	projectDNSDelegationRoleParamName = "DNSDelegationRoleName"
+	projectOutputKMSKey               = "KMSKeyARN"
+	projectOutputS3Bucket             = "PipelineBucket"
+	projectOutputECRRepoPrefix        = "ECRRepo"
+	projectDNSDelegatedAccountsKey    = "ProjectDNSDelegatedAccounts"
+	projectDomainNameKey              = "ProjectDomainName"
+	projectNameKey                    = "ProjectName"
+	projectDNSDelegationRoleName      = "DNSDelegationRole"
 )
 
 // ProjectConfigFrom takes a template file and extracts the metadata block,
@@ -136,6 +138,10 @@ func (c *ProjectStackConfig) Parameters() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(projectNameKey),
 			ParameterValue: aws.String(c.Project),
+		},
+		{
+			ParameterKey:   aws.String(projectDNSDelegationRoleParamName),
+			ParameterValue: aws.String(dnsDelegationRoleName(c.Project)),
 		},
 	}
 }
@@ -250,4 +256,8 @@ func DNSDelegatedAccountsForStack(stack *cloudformation.Stack) []string {
 	}
 
 	return []string{}
+}
+
+func dnsDelegationRoleName(projectName string) string {
+	return fmt.Sprintf("%s-%s", projectName, projectDNSDelegationRoleName)
 }

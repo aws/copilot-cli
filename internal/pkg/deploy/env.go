@@ -16,6 +16,7 @@ type CreateEnvironmentInput struct {
 	Prod                     bool   // Whether or not this environment is a production environment.
 	PublicLoadBalancer       bool   // Whether or not this environment should contain a shared public load balancer between applications.
 	ToolsAccountPrincipalARN string // The Principal ARN of the tools account.
+	ProjectDNSName           string // The DNS name of this project, if it exists
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.

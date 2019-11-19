@@ -175,6 +175,10 @@ func TestProjectParameters(t *testing.T) {
 			ParameterValue: aws.String("amazon.com"),
 		},
 		{
+			ParameterKey:   aws.String(projectDNSDelegationRoleParamName),
+			ParameterValue: aws.String("testproject-DNSDelegationRole"),
+		},
+		{
 			ParameterKey:   aws.String(projectNameKey),
 			ParameterValue: aws.String("testproject"),
 		},
