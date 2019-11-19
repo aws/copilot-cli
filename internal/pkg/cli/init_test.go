@@ -12,6 +12,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockAppDeployer struct{}
+
+func (mad mockAppDeployer) init() error {
+	return nil
+}
+
+func (mad mockAppDeployer) sourceInputs() error {
+	return nil
+}
+
+func (mad mockAppDeployer) deployApp() error {
+	return nil
+}
+
 func TestInitOpts_Run(t *testing.T) {
 	testCases := map[string]struct {
 		inShouldDeploy          bool
@@ -89,6 +103,22 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
 		},
+		"app deploy happy path": {
+			inPromptForShouldDeploy: true,
+			inShouldDeploy:          true,
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+					Return(true, nil)
+				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -106,6 +136,7 @@ func TestInitOpts_Run(t *testing.T) {
 				initProject: climocks.NewMockactionCommand(ctrl),
 				initApp:     climocks.NewMockactionCommand(ctrl),
 				initEnv:     climocks.NewMockactionCommand(ctrl),
+				appDeployer: mockAppDeployer{},
 
 				prompt: climocks.NewMockprompter(ctrl),
 
