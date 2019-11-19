@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/spf13/cobra"
 
@@ -353,12 +354,16 @@ func (opts appDeployOpts) deployApp() error {
 			fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app), color.HighlightUserInput(opts.imageTag)),
 			color.HighlightUserInput(opts.targetEnvironment.Name)))
 
-	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName); err != nil {
+	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
+	tags := map[string]string{
+		stack.ProjectTagKey: opts.ProjectName(),
+		stack.EnvTagKey:     opts.targetEnvironment.Name,
+		stack.AppTagKey:     opts.app,
+	}
+	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName, tags); err != nil {
 		opts.spinner.Stop("Error!")
-
 		return err
 	}
-
 	opts.spinner.Stop("Done!")
 
 	log.Successf("Deployed %s to %s.\n",
@@ -390,8 +395,8 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	return buffer.String(), nil
 }
 
-func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName string) error {
-	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName); err != nil {
+func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName string, tags map[string]string) error {
+	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName, tags); err != nil {
 		return fmt.Errorf("deploy application: %w", err)
 	}
 

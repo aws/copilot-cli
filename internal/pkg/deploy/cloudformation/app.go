@@ -14,11 +14,20 @@ import (
 
 // DeployApp wraps the application deployment flow and handles orchestration of
 // creating a stack versus updating a stack.
-func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) error {
+func (cf CloudFormation) DeployApp(template, stackName, changeSetName string, tags map[string]string) error {
+	var cfnTags []*cloudformation.Tag
+	for k, v := range tags {
+		cfnTags = append(cfnTags, &cloudformation.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+
 	_, err := cf.client.CreateStack(&cloudformation.CreateStackInput{
 		StackName:    aws.String(stackName),
 		TemplateBody: aws.String(template),
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
+		Tags:         cfnTags,
 	})
 
 	// If CreateStack does not return an error we'll wait for StackCreateComplete status.
@@ -51,6 +60,7 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName string) er
 		TemplateBody:  aws.String(template),
 		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
 		ChangeSetType: aws.String(cloudformation.ChangeSetTypeUpdate),
+		Tags:          cfnTags,
 	})
 
 	if err != nil {

@@ -190,7 +190,7 @@ func TestDeployApp(t *testing.T) {
 				},
 			}
 
-			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName)
+			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName, nil)
 
 			require.Equal(t, tc.wantErr, gotErr)
 		})
