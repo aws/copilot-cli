@@ -99,3 +99,23 @@ func (s *Store) ListEnvironments(projectName string) ([]*archer.Environment, err
 	}
 	return environments, nil
 }
+
+// DeleteEnvironment removes an environment from SSM.
+// If the environment does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
+func (s *Store) DeleteEnvironment(projectName, environmentName string) error {
+	paramName := fmt.Sprintf(fmtEnvParamPath, projectName, environmentName)
+	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+		Name: aws.String(paramName),
+	})
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil
+			}
+		}
+		return fmt.Errorf("delete environment %s from project %s: %w", environmentName, projectName, err)
+	}
+	return nil
+}

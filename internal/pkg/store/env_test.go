@@ -4,6 +4,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -306,6 +307,63 @@ func TestStore_CreateEnvironment(t *testing.T) {
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func TestStore_DeleteEnvironment(t *testing.T) {
+	testCases := map[string]struct {
+		inProjectName   string
+		inEnvName       string
+		mockDeleteParam func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+
+		wantedError error
+	}{
+		"parameter is already deleted": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "Not found", nil)
+			},
+		},
+		"unexpected error": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				return nil, errors.New("some error")
+			},
+			wantedError: errors.New("delete environment test from project phonetool: some error"),
+		},
+		"successfully deleted param": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				wantedPath := fmt.Sprintf(fmtEnvParamPath, "phonetool", "test")
+				require.Equal(t, wantedPath, *in.Name)
+				return nil, nil
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                   t,
+					mockDeleteParameter: tc.mockDeleteParam,
+				},
+			}
+
+			// WHEN
+			err := store.DeleteEnvironment(tc.inProjectName, tc.inEnvName)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
 			}
 		})
 	}

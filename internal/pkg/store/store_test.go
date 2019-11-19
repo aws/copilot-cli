@@ -19,6 +19,7 @@ type mockSSM struct {
 	mockPutParameter        func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
 	mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 	mockGetParameter        func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+	mockDeleteParameter     func(t *testing.T, param *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
 }
 
 func (m *mockSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
@@ -31,6 +32,10 @@ func (m *mockSSM) GetParametersByPath(in *ssm.GetParametersByPathInput) (*ssm.Ge
 
 func (m *mockSSM) GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 	return m.mockGetParameter(m.t, in)
+}
+
+func (m *mockSSM) DeleteParameter(in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+	return m.mockDeleteParameter(m.t, in)
 }
 
 type mockIdentityService struct {
