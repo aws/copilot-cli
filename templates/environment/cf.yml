@@ -263,6 +263,8 @@ Resources:
 
   CloudformationExecutionRole:
     Type: AWS::IAM::Role
+    # This role should not be deleted while CloudFormation tries to delete the stack itself.
+    DeletionPolicy: Retain
     Properties:
       RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
       AssumeRolePolicyDocument:
@@ -299,6 +301,8 @@ Resources:
   EnvironmentManagerRole:
     Type: AWS::IAM::Role
     DependsOn: CloudformationExecutionRole
+    # This role should not be deleted while CloudFormation tries to delete the stack itself.
+    DeletionPolicy: Retain
     Properties:
       RoleName: !Sub ${AWS::StackName}-EnvManagerRole
       AssumeRolePolicyDocument:
@@ -473,8 +477,25 @@ Resources:
             Effect: Allow
             Action: [
               "tag:GetResources"
-            ],
+            ]
             Resource: "*"
+          - Sid: DeleteRoles
+            Effect: Allow
+            Action: [
+              "iam:DeleteRole",
+              "iam:ListRolePolicies",
+              "iam:DeleteRolePolicy"
+            ]
+            Resource:
+              - !GetAtt CloudformationExecutionRole.Arn
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-EnvManagerRole"
+          - Sid: DeleteEnvStack
+            Effect: Allow
+            Action:
+              - 'cloudformation:DescribeStacks'
+              - 'cloudformation:DeleteStack'
+            Resource:
+              - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
 
   # DNS Delegation Resources
   CertificateValidationFunction:
@@ -578,7 +599,6 @@ Resources:
       Region: !Ref AWS::Region
       SubjectAlternativeNames:
       - !Sub "*.${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
-
 Outputs:
   VpcId:
     Value: !Ref VPC
