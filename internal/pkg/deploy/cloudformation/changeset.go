@@ -103,6 +103,16 @@ func (set *changeSet) execute() error {
 	return nil
 }
 
+func (set *changeSet) delete() error {
+	if _, err := set.c.DeleteChangeSet(&cloudformation.DeleteChangeSetInput{
+		ChangeSetName: aws.String(set.name),
+		StackName:     aws.String(set.stackID),
+	}); err != nil {
+		return fmt.Errorf("failed to delete changeSet %s: %w", set, err)
+	}
+	return nil
+}
+
 // createChangeSetOpt is a functional option to add additional settings to a CreateChangeSetInput.
 type createChangeSetOpt func(in *cloudformation.CreateChangeSetInput)
 

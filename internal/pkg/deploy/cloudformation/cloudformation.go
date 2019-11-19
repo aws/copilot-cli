@@ -285,6 +285,21 @@ func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput
 		return err
 	}
 	if err := set.waitForCreation(); err != nil {
+		// NOTE: If WaitUntilChangeSetCreateComplete returns an error it's possible that there
+		// are simply no changes between the previous and proposed Stack ChangeSets. We make a call to
+		// DescribeChangeSet to see if that is indeed the case and handle it gracefully.
+		if err := set.describe(); err != nil {
+			return fmt.Errorf("describing failed change set: %w", err)
+		}
+
+		// The change set was empty - so we clean it up and don't return an error.
+		// We have to clean up the changeSet because there's a limit on the number
+		// of failed changesets a customer can have on a particular stack.
+		if len(set.changes) == 0 {
+			set.delete()
+			return nil
+		}
+
 		return err
 	}
 	if err := set.execute(); err != nil {
