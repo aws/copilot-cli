@@ -69,6 +69,10 @@ Resources:
             Resource: arn:aws:logs:*:*:*
           - Effect: Allow
             Action:
+              - ecr:GetAuthorizationToken
+            Resource: '*'
+          - Effect: Allow
+            Action:
               - ecr:DescribeImageScanFindings
               - ecr:GetLifecyclePolicyPreview
               - ecr:GetDownloadUrlForLayer
@@ -79,7 +83,10 @@ Resources:
               - ecr:GetLifecyclePolicy
               - ecr:GetRepositoryPolicy
               - ecr:PutImage
-            Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/*
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+            Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/ecs-project': {{$.ProjectName}}}}
       Roles:
         - !Ref BuildProjectRole
