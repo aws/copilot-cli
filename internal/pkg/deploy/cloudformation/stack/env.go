@@ -41,7 +41,8 @@ const (
 
 // Output keys.
 const (
-	envOutputManagerRoleKey = "EnvironmentManagerRoleARN"
+	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -175,4 +176,18 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 	}
 
 	return &createdEnv, nil
+}
+
+// EnvStack is the cloudformation stack created for an environment.
+type EnvStack struct {
+	*cloudformation.Stack
+}
+
+// ExecutionRoleARN returns the execution role ARN from the stack.
+func (s *EnvStack) ExecutionRoleARN() string {
+	outputs := make(map[string]string)
+	for _, output := range s.Outputs {
+		outputs[*output.OutputKey] = *output.OutputValue
+	}
+	return outputs[envOutputCFNExecutionRoleARN]
 }

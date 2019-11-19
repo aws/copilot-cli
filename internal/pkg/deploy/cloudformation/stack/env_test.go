@@ -233,6 +233,26 @@ func TestToEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvStack_ExecutionRoleARN(t *testing.T) {
+	// GIVEN
+	rawStack := &cloudformation.Stack{
+		Outputs: []*cloudformation.Output{
+			{
+				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
+				OutputValue: aws.String("1234"),
+			},
+		},
+	}
+	envStack := &EnvStack{Stack: rawStack}
+
+	// WHEN
+	got := envStack.ExecutionRoleARN()
+
+	// THEN
+	require.Equal(t, "1234", got)
+}
+
 func mockEnvironmentStack(stackArn, managerRoleARN string) *cloudformation.Stack {
 	return &cloudformation.Stack{
 		StackId: aws.String(stackArn),
