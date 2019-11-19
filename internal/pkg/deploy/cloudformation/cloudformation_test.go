@@ -37,6 +37,7 @@ type mockCloudFormation struct {
 	mockDescribeChangeSet                           func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error)
 	mockDescribeStacks                              func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 	mockDeleteStack                                 func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
+	mockDeleteChangeSet                             func(t *testing.T, in *cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error)
 	mockCreateStackSet                              func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
 	mockDescribeStackSet                            func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
 	mockUpdateStackSet                              func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
@@ -61,6 +62,10 @@ func (cf mockCloudFormation) ExecuteChangeSet(in *cloudformation.ExecuteChangeSe
 
 func (cf mockCloudFormation) DeleteStack(in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
 	return cf.mockDeleteStack(cf.t, in)
+}
+
+func (cf mockCloudFormation) DeleteChangeSet(in *cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error) {
+	return cf.mockDeleteChangeSet(cf.t, in)
 }
 
 func (cf mockCloudFormation) DescribeChangeSet(in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
@@ -468,6 +473,15 @@ func TestDeploy(t *testing.T) {
 					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
 						return errors.New("some AWS error")
 					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
+							StatusReason:    aws.String(noUpdatesReason),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
+						}, nil
+					},
 				},
 				box: boxWithTemplateFile(),
 			},
@@ -513,6 +527,9 @@ func TestDeploy(t *testing.T) {
 						return &cloudformation.DescribeChangeSetOutput{
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
 							StatusReason:    aws.String(noChangesReason),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
 						}, nil
 					},
 				},
@@ -538,6 +555,9 @@ func TestDeploy(t *testing.T) {
 						return &cloudformation.DescribeChangeSetOutput{
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
 							StatusReason:    aws.String(noUpdatesReason),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
 						}, nil
 					},
 				},
@@ -563,6 +583,9 @@ func TestDeploy(t *testing.T) {
 						return &cloudformation.DescribeChangeSetOutput{
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
 							StatusReason:    aws.String("some other reason"),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
 						}, nil
 					},
 				},
@@ -594,6 +617,9 @@ func TestDeploy(t *testing.T) {
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
 						return &cloudformation.DescribeChangeSetOutput{
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
 						}, nil
 					},
 					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
@@ -603,6 +629,42 @@ func TestDeploy(t *testing.T) {
 				box: boxWithTemplateFile(),
 			},
 			want: fmt.Errorf("failed to execute changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
+		},
+		"should gracefully skip deploys when there are no changes and clean up failed changeset": {
+			cf: CloudFormation{
+				client: &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, mockStackConfig.StackName(), *in.StackName)
+						require.True(t, isValidChangeSetName(*in.ChangeSetName))
+						require.Equal(t, mockTemplate, *in.TemplateBody)
+
+						return &cloudformation.CreateChangeSetOutput{
+							Id:      aws.String(mockChangeSetID),
+							StackId: aws.String(mockStackID),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return fmt.Errorf("No changes")
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusUnavailable),
+							Changes:         []*cloudformation.Change{},
+						}, nil
+					},
+					mockDeleteChangeSet: func(t *testing.T, in *cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error) {
+						require.Equal(t, mockStackID, *in.StackName)
+						require.Equal(t, mockChangeSetID, *in.ChangeSetName)
+						return &cloudformation.DeleteChangeSetOutput{}, nil
+					},
+				},
+				box: boxWithTemplateFile(),
+			},
+			input: mockStackConfig,
+			want:  nil,
 		},
 		"should deploy": {
 			cf: CloudFormation{
@@ -626,6 +688,9 @@ func TestDeploy(t *testing.T) {
 					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
 						return &cloudformation.DescribeChangeSetOutput{
 							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+							Changes: []*cloudformation.Change{
+								&cloudformation.Change{},
+							},
 						}, nil
 					},
 					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (output *cloudformation.ExecuteChangeSetOutput, e error) {
