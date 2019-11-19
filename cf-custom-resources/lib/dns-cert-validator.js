@@ -154,11 +154,8 @@ const deleteCertificate = async function (arn, region, hostedZoneId) {
             inUseByResources = Certificate.InUseBy || [];
             dnsValidationRecord = Certificate.DomainValidationOptions || [];
             if (inUseByResources.length) {
-                // Exponential backoff with jitter based on 200ms base
-                // component of backoff fixed to ensure minimum total wait time on
-                // slow targets.
-                const base = Math.pow(2, attempt);
-                await sleep(random() * base * 50 + base * 150);
+                // Deleting resources can be quite slow - so just sleep 30 seconds between checks.
+                await sleep(30000);
             } else {
                 break
             }
