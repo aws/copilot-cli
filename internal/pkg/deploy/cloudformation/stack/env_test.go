@@ -27,7 +27,7 @@ func TestEnvTemplate(t *testing.T) {
 			want: fmt.Errorf("failed to find the cloudformation template at %s", EnvTemplatePath),
 		},
 		"should return template body when present": {
-			box:            envBoxWithTemplateFile(),
+			box:            envBoxWithAllTemplateFiles(),
 			expectedOutput: mockTemplate,
 		},
 	}
@@ -49,26 +49,128 @@ func TestEnvTemplate(t *testing.T) {
 
 func TestEnvParameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
-	env := NewEnvStackConfig(deploymentInput, emptyEnvBox())
-	expectedParams := []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(envParamIncludeLBKey),
-			ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
+	deploymentInputWithDNS := mockDeployEnvironmentInput()
+	deploymentInputWithDNS.ProjectDNSName = "ecs.aws"
+	testCases := map[string]struct {
+		input *deploy.CreateEnvironmentInput
+		want  []*cloudformation.Parameter
+	}{
+		"without DNS": {
+			input: deploymentInput,
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamIncludeLBKey),
+					ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectNameKey),
+					ParameterValue: aws.String(deploymentInput.Project),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String(deploymentInput.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectDNSKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+			},
 		},
-		{
-			ParameterKey:   aws.String(envParamProjectNameKey),
-			ParameterValue: aws.String(deploymentInput.Project),
-		},
-		{
-			ParameterKey:   aws.String(envParamEnvNameKey),
-			ParameterValue: aws.String(deploymentInput.Name),
-		},
-		{
-			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-			ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
+		"with DNS": {
+			input: deploymentInputWithDNS,
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamIncludeLBKey),
+					ParameterValue: aws.String(strconv.FormatBool(deploymentInputWithDNS.PublicLoadBalancer)),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectNameKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.Project),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.ToolsAccountPrincipalARN),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectDNSKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.ProjectDNSName),
+				},
+				{
+					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterValue: aws.String("arn:aws:iam::000000000:role/project-DNSDelegationRole"),
+				},
+			},
 		},
 	}
-	require.ElementsMatch(t, expectedParams, env.Parameters())
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			env := NewEnvStackConfig(tc.input, emptyEnvBox())
+			require.ElementsMatch(t, tc.want, env.Parameters())
+		})
+	}
+}
+
+func TestEnvDNSDelegationRole(t *testing.T) {
+	testCases := map[string]struct {
+		input *EnvStackConfig
+		want  string
+	}{
+		"without tools account ARN": {
+			want: "",
+			input: &EnvStackConfig{
+				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+					ToolsAccountPrincipalARN: "",
+					ProjectDNSName:           "ecs.aws",
+				},
+			},
+		},
+		"without DNS": {
+			want: "",
+			input: &EnvStackConfig{
+				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
+					ProjectDNSName:           "",
+				},
+			},
+		},
+		"with invalid tools principal": {
+			want: "",
+			input: &EnvStackConfig{
+				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+					ToolsAccountPrincipalARN: "0000000",
+					ProjectDNSName:           "ecs.aws",
+				},
+			},
+		},
+		"with dns and tools principal": {
+			want: "arn:aws:iam::0000000:role/-DNSDelegationRole",
+			input: &EnvStackConfig{
+				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
+					ProjectDNSName:           "ecs.aws",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.want, tc.input.dnsDelegationRole())
+		})
+	}
 }
 
 func TestEnvTags(t *testing.T) {
@@ -149,7 +251,7 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		Project:                  "project",
 		Prod:                     true,
 		PublicLoadBalancer:       true,
-		ToolsAccountPrincipalARN: "mockToolsAccountPrincipalARN",
+		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
 	}
 }
 
@@ -157,10 +259,12 @@ func emptyEnvBox() packd.Box {
 	return packd.NewMemoryBox()
 }
 
-func envBoxWithTemplateFile() packd.Box {
+func envBoxWithAllTemplateFiles() packd.Box {
 	box := packd.NewMemoryBox()
 
 	box.AddString(EnvTemplatePath, mockTemplate)
+	box.AddString(acmValidationTemplatePath, "customresources")
+	box.AddString(dnsDelegationTemplatePath, "customresources")
 
 	return box
 }

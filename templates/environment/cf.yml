@@ -38,9 +38,23 @@ Parameters:
   ToolsAccountPrincipalARN:
     Type: String
 
+  ProjectDNSName:
+    Type: String
+    Default: ""
+
+  ProjectDNSDelegationRole:
+    Type: String
+    Default: ""
+
 Conditions:
   CreatePublicLoadBalancer:
     Fn::Equals: [ !Ref IncludePublicLoadBalancer, true ]
+  DelegateDNS:
+    !Not [!Equals [ !Ref ProjectDNSName, "" ]]
+  ExportHTTPSListener: !And
+    - !Condition DelegateDNS
+    - !Condition CreatePublicLoadBalancer
+
 
 Resources:
   VPC:
@@ -192,6 +206,11 @@ Resources:
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
       VpcId: !Ref VPC
 
   PublicLoadBalancer:
@@ -227,7 +246,21 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
-  
+
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: HTTPSCert
+    Condition: DelegateDNS
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref HTTPSCert
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+
   CloudformationExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -250,13 +283,13 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-            - 
+            -
               Effect: Allow
               NotAction:
                 - 'organizations:*'
                 - 'account:*'
               Resource: '*'
-            - 
+            -
               Effect: Allow
               Action:
                 - 'organizations:DescribeOrganization'
@@ -437,6 +470,109 @@ Resources:
             ]
             Resource: "*"
 
+  # DNS Delegation Resources
+  CertificateValidationFunction:
+    Type: AWS::Lambda::Function
+    Condition: DelegateDNS
+    Properties:
+      Code:
+        ZipFile: |
+          {{.ACMValidationLambda}}
+      Handler: "index.certificateRequestHandler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt 'CustomResourceRole.Arn'
+      Runtime: nodejs10.x
+
+  DNSDelegationFunction:
+    Type: AWS::Lambda::Function
+    Condition: DelegateDNS
+    Properties:
+      Code:
+        ZipFile: |
+          {{.DNSDelegationLambda}}
+      Handler: "index.domainDelegationHandler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt 'CustomResourceRole.Arn'
+      Runtime: nodejs10.x
+
+  EnvironmentHostedZone:
+    Type: "AWS::Route53::HostedZone"
+    Condition: DelegateDNS
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
+      Name: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Condition: DelegateDNS
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "acm:ListCertificates"
+                  - "acm:RequestCertificate"
+                  - "acm:DescribeCertificate"
+                  - "acm:GetCertificate"
+                  - "acm:DeleteCertificate"
+                  - "acm:AddTagsToCertificate"
+                  - "route53:ListHostedZonesByName"
+                  - "sts:AssumeRole"
+                  - "logs:*"
+                  - "route53:ChangeResourceRecordSets"
+                  - "route53:ListResourceRecordSets"
+                  - "route53:Get*"
+                  - "route53:Describe*"
+                Resource:
+                  - "*"
+  # Adds records for this environment's hostedzone
+  # into the project's hostedzone. This lets this
+  # environment own the DNS of the it's subdomain.
+  DelegateDNSAction:
+    Condition: DelegateDNS
+    Type: Custom::DNSDelegationFunction
+    DependsOn:
+    - DNSDelegationFunction
+    - EnvironmentHostedZone
+    Properties:
+      ServiceToken: !GetAtt DNSDelegationFunction.Arn
+      DomainName: !Sub ${ProjectName}.${ProjectDNSName}
+      SubdomainName: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+      NameServers: !GetAtt EnvironmentHostedZone.NameServers
+      RootDNSRole: !Ref ProjectDNSDelegationRole
+
+  HTTPSCert:
+    Condition: DelegateDNS
+    Type: Custom::CertificateValidationFunction
+    DependsOn:
+    - CertificateValidationFunction
+    - EnvironmentHostedZone
+    - DelegateDNSAction
+    Properties:
+      ServiceToken: !GetAtt CertificateValidationFunction.Arn
+      DomainName: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+      HostedZoneId: !Ref EnvironmentHostedZone
+      Region: !Ref AWS::Region
+      SubjectAlternativeNames:
+      - !Sub "*.${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
+
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -458,6 +594,8 @@ Outputs:
   PublicLoadBalancerDNSName:
     Condition: CreatePublicLoadBalancer
     Value: !GetAtt PublicLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicLoadBalancerDNS
 
   PublicLoadBalancerArn:
     Condition: CreatePublicLoadBalancer
@@ -471,11 +609,23 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PublicLoadBalancerSecurityGroupId
 
+  PublicLoadBalancerHostedZone:
+    Condition: CreatePublicLoadBalancer
+    Value: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}-CanonicalHostedZoneID
+
   HTTPListenerArn:
     Condition: CreatePublicLoadBalancer
     Value: !Ref HTTPListener
     Export:
       Name: !Sub ${AWS::StackName}-HTTPListenerArn
+
+  HTTPSListenerArn:
+    Condition: ExportHTTPSListener
+    Value: !Ref HTTPSListener
+    Export:
+      Name: !Sub ${AWS::StackName}-HTTPSListenerArn
 
   DefaultHTTPTargetGroupArn:
     Condition: CreatePublicLoadBalancer
@@ -493,8 +643,23 @@ Outputs:
     Description: The role to be assumed by the ecs-cli to manage environments.
     Export:
       Name: !Sub ${AWS::StackName}-EnvironmentManagerRoleARN
+
   CFNExecutionRoleARN:
     Value: !GetAtt CloudformationExecutionRole.Arn
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
+
+  EnvironmentHostedZone:
+    Condition: DelegateDNS
+    Value: !Ref EnvironmentHostedZone
+    Description: The HostedZone for this environment's private DNS.
+    Export:
+      Name: !Sub ${AWS::StackName}-HostedZone
+
+  EnvironmentSubdomain:
+    Condition: DelegateDNS
+    Value: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+    Description: The domain name of this environment.
+    Export:
+      Name: !Sub ${AWS::StackName}-SubDomain

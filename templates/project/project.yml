@@ -7,6 +7,9 @@ Parameters:
     Type: String
   ExecutionRoleName:
     Type: String
+  DNSDelegationRoleName:
+    Type: String
+    Default: ""
   ProjectDNSDelegatedAccounts:
     Type: CommaDelimitedList
     Default: ""
@@ -99,6 +102,7 @@ Resources:
     Type: AWS::IAM::Role
     Condition: DelegateDNS
     Properties:
+      RoleName: !Ref DNSDelegationRoleName
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
