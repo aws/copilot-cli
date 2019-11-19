@@ -174,6 +174,95 @@ func TestStreamEnvironmentCreation(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_DeleteEnvironment(t *testing.T) {
+	const (
+		testProject = "phonetool"
+		testEnv     = "test"
+	)
+	testCases := map[string]struct {
+		mockDescribeStacks                          func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+		mockDeleteStack                             func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
+		mockWaitUntilStackDeleteCompleteWithContext func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+
+		wantedError error
+	}{
+		"stack does not exist": {
+			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				return nil, errors.New("some error")
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				return nil, nil
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
+			},
+			wantedError: errors.New("some error"),
+		},
+		"delete stack fails": {
+			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				return &cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							StackId: aws.String("1234"),
+						},
+					}}, nil
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				return nil, errors.New("some error")
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
+			},
+			wantedError: errors.New("deleting stack 1234: some error"),
+		},
+		"deletes stack successfully": {
+			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+				return &cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							StackId: aws.String("1234"),
+							Outputs: []*cloudformation.Output{
+								{
+									OutputKey:   aws.String("CFNExecutionRoleARN"),
+									OutputValue: aws.String("5678"),
+								},
+							},
+						},
+					}}, nil
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				require.Equal(t, "5678", *in.RoleARN)
+				require.Equal(t, "1234", *in.StackName)
+				return nil, nil
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			cf := CloudFormation{
+				client: &mockCloudFormation{
+					t:                  t,
+					mockDescribeStacks: tc.mockDescribeStacks,
+					mockDeleteStack:    tc.mockDeleteStack,
+					mockWaitUntilStackDeleteCompleteWithContext: tc.mockWaitUntilStackDeleteCompleteWithContext,
+				},
+			}
+
+			err := cf.DeleteEnvironment(testProject, testEnv)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
+
 func emptyEnvBox() packd.Box {
 	return packd.NewMemoryBox()
 }

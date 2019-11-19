@@ -22,12 +22,6 @@ import (
 	"github.com/gobuffalo/packd"
 )
 
-const (
-	projectTagKey = "ecs-project"
-	envTagKey     = "ecs-environment"
-	appTagKey     = "ecs-application"
-)
-
 type stackConfiguration interface {
 	StackName() string
 	Template() (string, error)
@@ -248,13 +242,17 @@ func (cf CloudFormation) update(stackConfig stackConfiguration) error {
 	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeUpdate)
 }
 
-func (cf CloudFormation) delete(stackName string) error {
-	if _, err := cf.client.DeleteStack(&cloudformation.DeleteStackInput{
+func (cf CloudFormation) delete(stackName string, opts ...func(*cloudformation.DeleteStackInput)) error {
+	in := &cloudformation.DeleteStackInput{
 		StackName: aws.String(stackName),
-	}); err != nil {
-		return fmt.Errorf("deleting stack %s: %w", stackName, err)
+	}
+	for _, opt := range opts {
+		opt(in)
 	}
 
+	if _, err := cf.client.DeleteStack(in); err != nil {
+		return fmt.Errorf("deleting stack %s: %w", stackName, err)
+	}
 	return cf.client.WaitUntilStackDeleteCompleteWithContext(context.Background(),
 		&cloudformation.DescribeStacksInput{StackName: aws.String(stackName)},
 		cf.waiters...)
@@ -345,4 +343,10 @@ func stackSetExists(err error) bool {
 		}
 	}
 	return false
+}
+
+func withDeleteRoleARN(roleARN string) func(in *cloudformation.DeleteStackInput) {
+	return func(in *cloudformation.DeleteStackInput) {
+		in.RoleARN = aws.String(roleARN)
+	}
 }

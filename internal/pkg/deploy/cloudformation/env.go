@@ -7,6 +7,8 @@ package cloudformation
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
@@ -31,6 +33,23 @@ func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironment
 	go cf.streamResourceEvents(done, events, stack.StackName())
 	go cf.streamEnvironmentResponse(done, resp, stack)
 	return events, resp
+}
+
+// DeleteEnvironment deletes the CloudFormation stack of an environment.
+func (cf CloudFormation) DeleteEnvironment(projectName, envName string) error {
+	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+		Project: projectName,
+		Name:    envName,
+	}, cf.box)
+
+	out, err := cf.describeStack(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(conf.StackName()),
+	})
+	if err != nil {
+		return err
+	}
+	envStack := &stack.EnvStack{Stack: out}
+	return cf.delete(*out.StackId, withDeleteRoleARN(envStack.ExecutionRoleARN()))
 }
 
 // streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
