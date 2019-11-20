@@ -4,9 +4,11 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -16,6 +18,8 @@ import (
 
 // ListEnvOpts contains the fields to collect for listing an environment.
 type ListEnvOpts struct {
+	ShouldOutputJSON bool
+
 	manager       archer.EnvironmentLister
 	projectGetter archer.ProjectGetter
 
@@ -57,16 +61,43 @@ func (opts *ListEnvOpts) Execute() error {
 		return err
 	}
 
+	var out string
+	if opts.ShouldOutputJSON {
+		data, err := opts.jsonOutput(envs)
+		if err != nil {
+			return err
+		}
+		out = data
+	} else {
+		out = opts.humanOutput(envs)
+	}
+	fmt.Fprintf(opts.w, out)
+
+	return nil
+}
+
+func (opts *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
+	b := &strings.Builder{}
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
 		if env.Prod {
-			fmt.Fprintf(opts.w, "%s (prod)\n", prodColor(env.Name))
+			fmt.Fprintf(b, "%s (prod)\n", prodColor(env.Name))
 		} else {
-			fmt.Fprintln(opts.w, env.Name)
+			fmt.Fprintln(b, env.Name)
 		}
 	}
+	return b.String()
+}
 
-	return nil
+func (opts *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
+	type serializedEnvs struct {
+		Environments []*archer.Environment `json:"environments"`
+	}
+	b, err := json.Marshal(serializedEnvs{Environments: envs})
+	if err != nil {
+		return "", fmt.Errorf("marshal environments: %w", err)
+	}
+	return fmt.Sprintf("%s\n", b), nil
 }
 
 // BuildEnvListCmd builds the command for listing environments in a project.
@@ -94,5 +125,6 @@ func BuildEnvListCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
+	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	return cmd
 }

@@ -13,6 +13,7 @@ const (
 	appTypeFlag = "app-type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
+	jsonFlag    = "json"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -52,6 +53,7 @@ const (
 	appTypeFlagDescription = "Type of application to create."
 	profileFlagDescription = "Name of the profile."
 	yesFlagDescription     = "Skips confirmation prompt."
+	jsonFlagDescription    = "Output in JSON format."
 
 	dockerFileFlagDescription        = "Path to the Dockerfile."
 	imageTagFlagDescription          = `Optional. The application's image tag.`
