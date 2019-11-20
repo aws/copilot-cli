@@ -17,6 +17,7 @@ func TestDeployApp(t *testing.T) {
 	mockTemplate := "mockTemplate"
 	mockStackName := "mockStackName"
 	mockChangeSetName := "mockChangeSetName"
+	mockExecutionRole := "mockExecutionRole"
 	mockError := errors.New("mockError")
 
 	testCases := map[string]struct {
@@ -37,6 +38,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockStackName, *in.StackName)
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return &cloudformation.CreateStackOutput{}, nil
 			},
@@ -55,6 +57,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockStackName, *in.StackName)
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return nil, awserr.New(cloudformation.ErrCodeAlreadyExistsException, "", nil)
 			},
@@ -66,6 +69,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
 				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
@@ -100,6 +104,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockStackName, *in.StackName)
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return nil, awserr.New(cloudformation.ErrCodeAlreadyExistsException, "", nil)
 			},
@@ -111,6 +116,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
 				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
@@ -140,6 +146,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockStackName, *in.StackName)
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return nil, awserr.New(cloudformation.ErrCodeAlreadyExistsException, "", nil)
 			},
@@ -151,6 +158,7 @@ func TestDeployApp(t *testing.T) {
 				require.Equal(t, mockTemplate, *in.TemplateBody)
 				require.Equal(t, cloudformation.CapabilityCapabilityIam, *in.Capabilities[0])
 				require.Equal(t, cloudformation.ChangeSetTypeUpdate, *in.ChangeSetType)
+				require.Equal(t, mockExecutionRole, *in.RoleARN)
 
 				return &cloudformation.CreateChangeSetOutput{}, nil
 			},
@@ -190,7 +198,7 @@ func TestDeployApp(t *testing.T) {
 				},
 			}
 
-			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName, nil)
+			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName, mockExecutionRole, nil)
 
 			require.Equal(t, tc.wantErr, gotErr)
 		})

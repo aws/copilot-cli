@@ -9,7 +9,8 @@
     "RulePath": "{{.App.Path}}",
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
-    "TaskCount": "{{.App.Count}}"
+    "TaskCount": "{{.App.Count}}",
+    "HTTPSEnabled": "{{.HTTPSEnabled}}"
   },
   "Tags": {
     "ecs-project": "{{.Env.Project}}",

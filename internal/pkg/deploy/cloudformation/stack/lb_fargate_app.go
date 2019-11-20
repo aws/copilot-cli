@@ -24,6 +24,7 @@ const (
 
 const (
 	lbFargateParamProjectNameKey    = "ProjectName"
+	lbFargatePramHTTPSKey           = "HTTPSEnabled"
 	lbFargateParamEnvNameKey        = "EnvName"
 	lbFargateParamAppNameKey        = "AppName"
 	lbFargateParamContainerImageKey = "ContainerImage"
@@ -39,14 +40,26 @@ const (
 // load balanced Fargate application.
 type LBFargateStackConfig struct {
 	*deploy.CreateLBFargateAppInput
-
-	box packd.Box
+	httpsEnabled bool
+	box          packd.Box
 }
 
 // NewLBFargateStack creates a new LBFargateStackConfig from a load-balanced AWS Fargate application.
 func NewLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig {
 	return &LBFargateStackConfig{
 		CreateLBFargateAppInput: in,
+		httpsEnabled:            false,
+		box:                     templates.Box(),
+	}
+}
+
+// NewHTTPSLBFargateStack creates a new LBFargateStackConfig from a load-balanced AWS Fargate application. It
+// creates an HTTPS listener and assumes that the environment it's being deployed into has an HTTPS configured
+// listener.
+func NewHTTPSLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig {
+	return &LBFargateStackConfig{
+		CreateLBFargateAppInput: in,
+		httpsEnabled:            true,
 		box:                     templates.Box(),
 	}
 }
@@ -123,6 +136,10 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(lbFargateTaskCountKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Count)),
 		},
+		{
+			ParameterKey:   aws.String(lbFargatePramHTTPSKey),
+			ParameterValue: aws.String(strconv.FormatBool(c.httpsEnabled)),
+		},
 	}
 }
 
@@ -169,6 +186,7 @@ type lbFargateTemplateParams struct {
 	// Additional fields needed to render the CloudFormation stack.
 	Priority int // Listener's rule priority https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html#listener-rules
 
+	HTTPSEnabled string
 	// Field types to override.
 	Image struct {
 		URL  string
@@ -186,7 +204,8 @@ func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
 			},
 			Env: c.Env,
 		},
-		Priority: 1, // TODO assign a unique path priority given a path.
+		HTTPSEnabled: strconv.FormatBool(c.httpsEnabled),
+		Priority:     1, // TODO assign a unique path priority given a path.
 		Image: struct {
 			URL  string
 			Port int
