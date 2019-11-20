@@ -32,7 +32,7 @@ const (
 	fmtUpdatePipelineComplete = "Successfully updated pipeline: %s"
 )
 
-var errNoPipelineFile = errors.New("There was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline.")
+var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline")
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
