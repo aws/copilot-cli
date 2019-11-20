@@ -325,9 +325,9 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
+                ChangeSetName: {{$.ProjectName}}-{{$stage.Name}}-{{$app}}
                 ActionMode: CREATE_UPDATE
-                StackName: {{$.ProjectName}}-{{$app}}-{{$stage.Name}}
+                StackName: {{$.ProjectName}}-{{$stage.Name}}-{{$app}}
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/{{$stage.AppTemplatePath $app}}
                 TemplateConfiguration: BuildOutput::infrastructure/{{$stage.AppTemplateConfigurationPath $app}}

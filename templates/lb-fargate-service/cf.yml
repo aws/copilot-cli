@@ -33,6 +33,16 @@ Parameters:
   TaskCount:
     Type: Number
     Default: {{.App.Count}}
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
+    Default: '{{.HTTPSEnabled}}'
+Conditions:
+  HTTPLoadBalancer:
+    !Not
+      - !Condition HTTPSLoadBalancer
+  HTTPSLoadBalancer:
+    !Equals [!Ref HTTPSEnabled, true]
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -117,8 +127,6 @@ Resources:
               !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerSecurityGroupId"
   Service:
     Type: AWS::ECS::Service
-    DependsOn:
-      - ListenerRule
     Properties:
       Cluster:
         Fn::ImportValue:
@@ -150,7 +158,6 @@ Resources:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
-
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -167,9 +174,33 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-VpcId"
-
-  ListenerRule:
+  LoadBalancerDNSAlias:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: HTTPSLoadBalancer
+    Properties:
+      HostedZoneId:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-HostedZone"
+      Comment: !Sub "LoadBalancer alias for app ${AppName}"
+      RecordSets:
+      - Name:
+          !Join
+            - '.'
+            - - !Ref AppName
+              - Fn::ImportValue:
+                  !Sub "${ProjectName}-${EnvName}-SubDomain"
+              - ""
+        Type: A
+        AliasTarget:
+          HostedZoneId:
+            Fn::ImportValue:
+              !Sub "${ProjectName}-${EnvName}-CanonicalHostedZoneID"
+          DNSName:
+            Fn::ImportValue:
+              !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS"
+  HTTPListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPLoadBalancer
     Properties:
       Actions:
         - TargetGroupArn: !Ref TargetGroup
@@ -182,4 +213,24 @@ Resources:
       ListenerArn:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+      Priority: !Ref RulePriority
+  HTTPSListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPSLoadBalancer
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: 'host-header'
+          HostHeaderConfig:
+            Values:
+              - Fn::Join:
+                - '.'
+                - - !Ref AppName
+                  - Fn::ImportValue:
+                      !Sub "${ProjectName}-${EnvName}-SubDomain"
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
       Priority: !Ref RulePriority

@@ -123,7 +123,6 @@ func (opts *appDeployOpts) init() error {
 		return fmt.Errorf("intialize workspace service: %w", err)
 	}
 	opts.workspaceService = workspaceService
-
 	return nil
 }
 
@@ -276,11 +275,16 @@ func (opts *appDeployOpts) configureClients() error {
 		return fmt.Errorf("create ECR session with region %s: %w", opts.targetEnvironment.Region, err)
 	}
 
+	envSession, err := session.FromRole(opts.targetEnvironment.ManagerRoleARN, opts.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("assuming environment manager role: %w", err)
+	}
+
 	// ECR client against tools account profile AND target environment region
 	opts.ecrService = ecr.New(defaultSessEnvRegion)
 
-	// app deploy CF client against tools account profile AND target environment region
-	opts.appDeployCfClient = cloudformation.New(defaultSessEnvRegion)
+	// app deploy CF client against env account profile AND target environment region
+	opts.appDeployCfClient = cloudformation.New(envSession)
 
 	// app package CF client against tools account
 	appPackageCfSess, err := session.Default()
@@ -346,7 +350,8 @@ func (opts appDeployOpts) deployApp() error {
 
 	template, err := opts.getAppDeployTemplate()
 
-	stackName := fmt.Sprintf("%s-%s", opts.app, opts.targetEnvironment.Name)
+	// TODO move stack
+	stackName := fmt.Sprintf("%s-%s-%s", opts.ProjectName(), opts.targetEnvironment.Name, opts.app)
 	changeSetName := fmt.Sprintf("%s-%s", stackName, opts.imageTag)
 
 	opts.spinner.Start(
@@ -360,7 +365,7 @@ func (opts appDeployOpts) deployApp() error {
 		stack.EnvTagKey:     opts.targetEnvironment.Name,
 		stack.AppTagKey:     opts.app,
 	}
-	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName, tags); err != nil {
+	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName, opts.targetEnvironment.ExecutionRoleARN, tags); err != nil {
 		opts.spinner.Stop("Error!")
 		return err
 	}
@@ -395,8 +400,8 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	return buffer.String(), nil
 }
 
-func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName string, tags map[string]string) error {
-	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName, tags); err != nil {
+func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string) error {
+	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName, cfExecutionRole, tags); err != nil {
 		return fmt.Errorf("deploy application: %w", err)
 	}
 

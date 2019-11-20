@@ -530,6 +530,46 @@ count: 1`), nil)
 				}, nil)
 			},
 		},
+		"print CFN template with HTTPS": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			inAppName:     "frontend",
+			inTagName:     "latest",
+
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					AccountID: "1111",
+					Region:    "us-west-2",
+				}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name:      "phonetool",
+					AccountID: "1234",
+					Domain:    "ecs.aws",
+				}, nil)
+			},
+			expectWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().AppManifestFileName("frontend").Return("frontend-app.yml")
+				m.EXPECT().ReadFile("frontend-app.yml").Return([]byte(`name: frontend
+type: Load Balanced Web App
+image:
+  build: frontend/Dockerfile
+  port: 80
+http:
+  path: '*'
+cpu: 256
+memory: 512
+count: 1`), nil)
+			},
+			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
+					RepositoryURLs: map[string]string{
+						"frontend": "some url",
+					},
+				}, nil)
+			},
+		},
 		"with output directory": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",

@@ -198,12 +198,21 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
-		appStack := stack.NewLBFargateStack(&deploy.CreateLBFargateAppInput{
+		createLBAppInput := &deploy.CreateLBFargateAppInput{
 			App:          mft.(*manifest.LBFargateManifest),
 			Env:          env,
 			ImageRepoURL: repoURL,
 			ImageTag:     opts.Tag,
-		})
+		}
+		var appStack *stack.LBFargateStackConfig
+		// If the project supports DNS Delegation, we'll also
+		// make sure the app supports HTTPS
+		if proj.RequiresDNSDelegation() {
+			appStack = stack.NewHTTPSLBFargateStack(createLBAppInput)
+		} else {
+			appStack = stack.NewLBFargateStack(createLBAppInput)
+		}
+
 		tpl, err := appStack.Template()
 		if err != nil {
 			return nil, err

@@ -372,9 +372,9 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-frontend-test-chicken
+                ChangeSetName: chickenProject-test-chicken-frontend
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-frontend-test-chicken
+                StackName: chickenProject-test-chicken-frontend
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/frontend.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/frontend-test-chicken.params.json
@@ -398,9 +398,9 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-backend-test-chicken
+                ChangeSetName: chickenProject-test-chicken-backend
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-backend-test-chicken
+                StackName: chickenProject-test-chicken-backend
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/backend.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/backend-test-chicken.params.json
@@ -444,9 +444,9 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-frontend-prod-can-fly
+                ChangeSetName: chickenProject-prod-can-fly-frontend
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-frontend-prod-can-fly
+                StackName: chickenProject-prod-can-fly-frontend
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/frontend.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/frontend-prod-can-fly.params.json
@@ -470,9 +470,9 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: chickenProject-backend-prod-can-fly
+                ChangeSetName: chickenProject-prod-can-fly-backend
                 ActionMode: CREATE_UPDATE
-                StackName: chickenProject-backend-prod-can-fly
+                StackName: chickenProject-prod-can-fly-backend
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/backend.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/backend-prod-can-fly.params.json

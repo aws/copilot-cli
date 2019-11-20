@@ -148,74 +148,96 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 }
 
 func TestLBFargateStackConfig_Parameters(t *testing.T) {
-	// GIVEN
-	conf := &LBFargateStackConfig{
-		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
-			Env: &archer.Environment{
-				Project:   "phonetool",
-				Name:      "test",
-				Region:    "us-west-2",
-				AccountID: "12345",
-				Prod:      false,
-			},
-			ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-			ImageTag:     "manual-bf3678c",
+	testCases := map[string]struct {
+		httpsEnabled bool
+		expectedHTTP string
+	}{
+		"HTTPS Enabled": {
+			httpsEnabled: true,
+			expectedHTTP: "true",
+		},
+		"HTTPS Not Enabled": {
+			httpsEnabled: false,
+			expectedHTTP: "false",
 		},
 	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
 
-	// WHEN
-	params := conf.Parameters()
+			// GIVEN
+			conf := &LBFargateStackConfig{
+				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					Env: &archer.Environment{
+						Project:   "phonetool",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "12345",
+						Prod:      false,
+					},
+					ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+					ImageTag:     "manual-bf3678c",
+				},
+				httpsEnabled: tc.httpsEnabled,
+			}
 
-	// THEN
-	require.Equal(t, []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(lbFargateParamProjectNameKey),
-			ParameterValue: aws.String("phonetool"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateParamEnvNameKey),
-			ParameterValue: aws.String("test"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateParamAppNameKey),
-			ParameterValue: aws.String("frontend"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateParamContainerImageKey),
-			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateParamContainerPortKey),
-			ParameterValue: aws.String("80"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateRulePriorityKey),
-			ParameterValue: aws.String("1"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateRulePathKey),
-			ParameterValue: aws.String("*"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateTaskCPUKey),
-			ParameterValue: aws.String("256"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateTaskMemoryKey),
-			ParameterValue: aws.String("512"),
-		},
-		{
-			ParameterKey:   aws.String(lbFargateTaskCountKey),
-			ParameterValue: aws.String("1"),
-		},
-	}, params)
+			// WHEN
+			params := conf.Parameters()
 
+			// THEN
+			require.Equal(t, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(lbFargateParamProjectNameKey),
+					ParameterValue: aws.String("phonetool"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateParamEnvNameKey),
+					ParameterValue: aws.String("test"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateParamAppNameKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateParamContainerImageKey),
+					ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateParamContainerPortKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateRulePriorityKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateRulePathKey),
+					ParameterValue: aws.String("*"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateTaskCPUKey),
+					ParameterValue: aws.String("256"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateTaskMemoryKey),
+					ParameterValue: aws.String("512"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargateTaskCountKey),
+					ParameterValue: aws.String("1"),
+				},
+				{
+					ParameterKey:   aws.String(lbFargatePramHTTPSKey),
+					ParameterValue: aws.String(tc.expectedHTTP),
+				},
+			}, params)
+		})
+	}
 }
 
 func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 	testCases := map[string]struct {
-		in *deploy.CreateLBFargateAppInput
+		in *LBFargateStackConfig
 
 		mockBox func(box *packd.MemoryBox)
 
@@ -223,8 +245,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		wantedError  error
 	}{
 		"unavailable template": {
-			mockBox: func(box *packd.MemoryBox) {}, // empty box where template does not exist
-
+			mockBox:      func(box *packd.MemoryBox) {}, // empty box where template does not exist
+			in:           &LBFargateStackConfig{},
 			wantedParams: "",
 			wantedError: &ErrTemplateNotFound{
 				templateLocation: lbFargateAppParamsPath,
@@ -232,18 +254,22 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 			},
 		},
 		"render params template": {
-			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
-				Env: &archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					Region:    "us-west-2",
-					AccountID: "12345",
-					Prod:      false,
+			in: &LBFargateStackConfig{
+				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					Env: &archer.Environment{
+						Project:   "phonetool",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "12345",
+						Prod:      false,
+					},
+					ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+					ImageTag:     "manual-bf3678c",
 				},
-				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-				ImageTag:     "manual-bf3678c",
+				httpsEnabled: false,
 			},
+
 			mockBox: func(box *packd.MemoryBox) {
 				box.AddString(lbFargateAppParamsPath, `{
   "Parameters" : {
@@ -256,7 +282,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "RulePath": "{{.App.Path}}",
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
-    "TaskCount": "{{.App.Count}}"
+    "TaskCount": "{{.App.Count}}",
+    "HTTPSEnabled": "{{.HTTPSEnabled}}"
   }
 }`)
 			},
@@ -271,7 +298,57 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "RulePath": "*",
     "TaskCPU": "256",
     "TaskMemory": "512",
-    "TaskCount": "1"
+    "TaskCount": "1",
+    "HTTPSEnabled": "false"
+  }
+}`,
+		},
+		"render params template for https": {
+			in: &LBFargateStackConfig{
+				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					Env: &archer.Environment{
+						Project:   "phonetool",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "12345",
+						Prod:      false,
+					},
+					ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+					ImageTag:     "manual-bf3678c",
+				},
+				httpsEnabled: true,
+			},
+			mockBox: func(box *packd.MemoryBox) {
+				box.AddString(lbFargateAppParamsPath, `{
+  "Parameters" : {
+    "ProjectName" : "{{.Env.Project}}",
+    "EnvName": "{{.Env.Name}}",
+    "AppName": "{{.App.Name}}",
+    "ContainerImage": "{{.Image.URL}}",
+    "ContainerPort": "{{.Image.Port}}",
+    "RulePriority": "{{.Priority}}",
+    "RulePath": "{{.App.Path}}",
+    "TaskCPU": "{{.App.CPU}}",
+    "TaskMemory": "{{.App.Memory}}",
+    "TaskCount": "{{.App.Count}}",
+    "HTTPSEnabled": "{{.HTTPSEnabled}}"
+  }
+}`)
+			},
+			wantedParams: `{
+  "Parameters" : {
+    "ProjectName" : "phonetool",
+    "EnvName": "test",
+    "AppName": "frontend",
+    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
+    "ContainerPort": "80",
+    "RulePriority": "1",
+    "RulePath": "*",
+    "TaskCPU": "256",
+    "TaskMemory": "512",
+    "TaskCount": "1",
+    "HTTPSEnabled": "true"
   }
 }`,
 		},
@@ -282,14 +359,10 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 			// GIVEN
 			box := packd.NewMemoryBox()
 			tc.mockBox(box)
-
-			conf := &LBFargateStackConfig{
-				CreateLBFargateAppInput: tc.in,
-				box:                     box,
-			}
+			tc.in.box = box
 
 			// WHEN
-			params, err := conf.SerializedParameters()
+			params, err := tc.in.SerializedParameters()
 
 			// THEN
 			require.True(t, errors.Is(err, tc.wantedError), "expected: %v, got: %v", tc.wantedError, err)
