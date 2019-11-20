@@ -49,6 +49,7 @@ type InitOpts struct {
 	prompt prompter
 }
 
+// NewInitOpts initiates the fields to bootstrap a new application.
 func NewInitOpts() (*InitOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -121,6 +122,7 @@ func NewInitOpts() (*InitOpts, error) {
 	}, nil
 }
 
+// Run executes the bootstrap of a new application.
 func (opts *InitOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 

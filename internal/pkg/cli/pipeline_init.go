@@ -62,6 +62,7 @@ type InitPipelineOpts struct {
 	*GlobalOpts
 }
 
+// NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
 		GlobalOpts: NewGlobalOpts(),

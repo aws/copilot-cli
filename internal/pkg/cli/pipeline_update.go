@@ -49,6 +49,7 @@ type UpdatePipelineOpts struct {
 	*GlobalOpts
 }
 
+// NewUpdatePipelineOpts returns a new UpdatePipelineOpts struct.
 func NewUpdatePipelineOpts() *UpdatePipelineOpts {
 	return &UpdatePipelineOpts{
 		GlobalOpts: NewGlobalOpts(),
@@ -111,6 +112,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
+// Execute destroys the old pipeline and creates a new one.
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
