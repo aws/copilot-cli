@@ -4,8 +4,8 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -23,10 +23,34 @@ func TestEnvList_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		listOpts    ListEnvOpts
-		mocking     func()
-		expectedErr error
+		listOpts        ListEnvOpts
+		mocking         func()
+		expectedErr     error
+		expectedContent string
 	}{
+		"with json envs": {
+			listOpts: ListEnvOpts{
+				ShouldOutputJSON: true,
+				manager:          mockEnvStore,
+				projectGetter:    mockProjectStore,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
+			},
+			mocking: func() {
+				mockProjectStore.EXPECT().
+					GetProject(gomock.Eq("coolproject")).
+					Return(&archer.Project{}, nil)
+				mockEnvStore.
+					EXPECT().
+					ListEnvironments(gomock.Eq("coolproject")).
+					Return([]*archer.Environment{
+						{Name: "test"},
+						{Name: "test2"},
+					}, nil)
+			},
+			expectedContent: `{"environments":[{"project":"","name":"test","region":"","accountID":"","prod":false,"registryURL":"","managerRoleARN":""},{"project":"","name":"test2","region":"","accountID":"","prod":false,"registryURL":"","managerRoleARN":""}]}` + "\n",
+		},
 		"with envs": {
 			listOpts: ListEnvOpts{
 				manager:       mockEnvStore,
@@ -43,11 +67,11 @@ func TestEnvList_Execute(t *testing.T) {
 					EXPECT().
 					ListEnvironments(gomock.Eq("coolproject")).
 					Return([]*archer.Environment{
-						&archer.Environment{Name: "test"},
-						&archer.Environment{Name: "test2"},
+						{Name: "test"},
+						{Name: "test2"},
 					}, nil)
-
 			},
+			expectedContent: "test\ntest2\n",
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
@@ -105,23 +129,25 @@ func TestEnvList_Execute(t *testing.T) {
 					EXPECT().
 					ListEnvironments(gomock.Eq("coolproject")).
 					Return([]*archer.Environment{
-						&archer.Environment{Name: "test"},
-						&archer.Environment{Name: "test2", Prod: true},
+						{Name: "test"},
+						{Name: "test2", Prod: true},
 					}, nil)
-
 			},
+			expectedContent: "test\ntest2 (prod)\n",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			b := &bytes.Buffer{}
 			tc.mocking()
-			tc.listOpts.w = ioutil.Discard
-
+			tc.listOpts.w = b
 			err := tc.listOpts.Execute()
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, tc.expectedErr, err.Error())
+			} else {
+				require.Equal(t, tc.expectedContent, b.String())
 			}
 		})
 	}
