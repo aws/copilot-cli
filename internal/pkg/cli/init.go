@@ -228,7 +228,7 @@ func BuildInitCmd() *cobra.Command {
 			if !opts.ShouldDeploy {
 				log.Info("\nNo problem, you can deploy your application later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
-					color.HighlightCode(fmt.Sprintf("archer env init --name %s --project %s", defaultEnvironmentName, *opts.projectName)))
+					color.HighlightCode(fmt.Sprintf("archer env init %s --project %s", defaultEnvironmentName, *opts.projectName)))
 				for _, followup := range opts.initApp.RecommendedActions() {
 					log.Infof("- %s\n", followup)
 				}
