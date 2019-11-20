@@ -7,6 +7,6 @@ package log
 
 // Log message prefixes.
 const (
-	successPrefix = "✔ Success!"
-	errorPrefix   = "✘ Error!"
+	successPrefix = "✔"
+	errorPrefix   = "✘"
 )

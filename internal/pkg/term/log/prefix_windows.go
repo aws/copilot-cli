@@ -4,6 +4,6 @@
 package log
 
 const (
-	successPrefix = "√ Success!"
-	errorPrefix   = "X Error!"
+	successPrefix = "√"
+	errorPrefix   = "X"
 )
