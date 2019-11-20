@@ -41,9 +41,8 @@ Resources:
           - Effect: Allow
             Action:
               - s3:PutObject
-              - s3:GetBucketPolicy
               - s3:GetObject
-              - s3:ListBucket
+              - s3:GetObjectVersion
             # TODO: This might not be necessary. We may only need the bucket
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
@@ -141,6 +140,28 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
+            Resource:{{range .ArtifactBuckets}}
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
+              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+          - Effect: Allow
+            Action:
+              # TODO: scope this down if possible
+              - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
+            Resource:{{range .ArtifactBuckets}}
+              - {{.KeyArn}}{{end}}
       Roles:
         - !Ref IntegTestRole{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
   IntegTestProject{{logicalIDSafe $stage.Name}}:

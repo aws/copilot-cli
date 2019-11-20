@@ -41,9 +41,8 @@ Resources:
           - Effect: Allow
             Action:
               - s3:PutObject
-              - s3:GetBucketPolicy
               - s3:GetObject
-              - s3:ListBucket
+              - s3:GetObjectVersion
             # TODO: This might not be necessary. We may only need the bucket
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
@@ -147,6 +146,34 @@ Resources:
               - logs:CreateLogStream
               - logs:PutLogEvents
             Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
+          - Effect: Allow
+            Action:
+              # TODO: scope this down if possible
+              - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
+            Resource:
+              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
       Roles:
         - !Ref IntegTestRole
   IntegTestProjecttestDASHchicken:
