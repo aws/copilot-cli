@@ -55,7 +55,6 @@ Conditions:
     - !Condition DelegateDNS
     - !Condition CreatePublicLoadBalancer
 
-
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -106,30 +105,6 @@ Resources:
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: false
 
-  NatGateway1EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NatGateway2EIP:
-    Type: AWS::EC2::EIP
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      Domain: vpc
-
-  NATGateway1:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway1EIP.AllocationId
-      SubnetId: !Ref PublicSubnet1
-
-  NATGateway2:
-    Type: AWS::EC2::NatGateway
-    Properties:
-      AllocationId: !GetAtt NatGateway2EIP.AllocationId
-      SubnetId: !Ref PublicSubnet2
-
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -155,41 +130,6 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
 
-  PrivateRouteTable1:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  DefaultPrivateRoute1:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway1
-
-  PrivateSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable1
-      SubnetId: !Ref PrivateSubnet1
-
-  PrivateRouteTable2:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-
-  DefaultPrivateRoute2:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NATGateway2
-
-  PrivateSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PrivateRouteTable2
-      SubnetId: !Ref PrivateSubnet2
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -198,8 +138,7 @@ Resources:
     Condition: CreatePublicLoadBalancer
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Automatically created Security Group for ELB
-      # TODO: https
+      GroupDescription: Access to the public facing load balancer
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -222,6 +161,9 @@ Resources:
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
       Type: application
 
+
+  # Assign a dummy target group that with no real services as targets, so that we can create
+  # the listeners for the services.
   DefaultHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -614,8 +556,6 @@ Outputs:
     Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
-
-  # TODO: Export individual subnets?
 
   PublicLoadBalancerDNSName:
     Condition: CreatePublicLoadBalancer

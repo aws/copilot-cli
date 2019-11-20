@@ -16,7 +16,7 @@ type progress interface {
 }
 
 // envProgressOrder is the order in which we want to progress text to appear on the terminal.
-var envProgressOrder = []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textNATGateway, textRouteTables, textECSCluster, textALB}
+var envProgressOrder = []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables, textECSCluster, textALB}
 
 // Row descriptions displayed while deploying an environment.
 const (
@@ -24,7 +24,6 @@ const (
 	textInternetGateway termprogress.Text = "  - Internet gateway to connect the network to the internet"
 	textPublicSubnets   termprogress.Text = "  - Public subnets for internet facing services "
 	textPrivateSubnets  termprogress.Text = "  - Private subnets for services that can't be reached from the internet"
-	textNATGateway      termprogress.Text = "  - NAT gateway for private services to send requests to the internet"
 	textRouteTables     termprogress.Text = "  - Routing tables for services to talk with each other"
 	textECSCluster      termprogress.Text = "- ECS Cluster to hold your services "
 	textALB             termprogress.Text = "- Application load balancer to distribute traffic "

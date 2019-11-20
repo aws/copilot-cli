@@ -191,10 +191,6 @@ func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resou
 			return event.Type == "AWS::EC2::Subnet" &&
 				strings.HasPrefix(event.LogicalName, "Private")
 		},
-		textNATGateway: func(event deploy.Resource) bool {
-			return event.Type == "AWS::EC2::EIP" ||
-				event.Type == "AWS::EC2::NatGateway"
-		},
 		textRouteTables: func(event deploy.Resource) bool {
 			return strings.Contains(event.LogicalName, "Route")
 		},
@@ -211,8 +207,7 @@ func (opts *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resou
 		textInternetGateway: 2,
 		textPublicSubnets:   2,
 		textPrivateSubnets:  2,
-		textNATGateway:      4,
-		textRouteTables:     10,
+		textRouteTables:     4,
 		textECSCluster:      1,
 		textALB:             4,
 	}
