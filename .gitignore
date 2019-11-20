@@ -4,3 +4,4 @@ coverage.out
 .vscode/*
 *.swp
 node_modules/
+.DS_Store
