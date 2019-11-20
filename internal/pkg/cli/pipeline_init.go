@@ -24,6 +24,7 @@ import (
 
 const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
 )
@@ -72,7 +73,7 @@ func NewInitPipelineOpts() *InitPipelineOpts {
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
 	if len(opts.Environments) == 0 {
-		if err := opts.selectEnvironments(true); err != nil {
+		if err := opts.selectEnvironments(true, true); err != nil {
 			return err
 		}
 	}
@@ -238,22 +239,40 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 	return path, nil
 }
 
-func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
+func (opts *InitPipelineOpts) selectEnvironments(addMore bool, firstPrompt bool) error {
 	if addMore == false {
 		return nil
 	}
 
-	addEnv, err := opts.prompt.Confirm(
-		pipelineAddEnvPrompt,
-		"Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
-	)
+	// return when there is no more available environment to add.
+	envs := opts.listAvailableEnvironments()
+	if len(envs) == 0 {
+		return nil
+	}
 
-	if err != nil {
-		return fmt.Errorf("failed to confirm adding an environment: %w", err)
+	var addMoreEnv bool
+	if firstPrompt {
+		addEnv, err := opts.prompt.Confirm(
+			pipelineAddEnvPrompt,
+			"Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
+		)
+		if err != nil {
+			return fmt.Errorf("failed to confirm adding an environment: %w", err)
+		}
+		addMoreEnv = addEnv
+	} else {
+		addEnv, err := opts.prompt.Confirm(
+			pipelineAddMoreEnvPrompt,
+			"Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
+		)
+		if err != nil {
+			return fmt.Errorf("failed to confirm adding an environment: %w", err)
+		}
+		addMoreEnv = addEnv
 	}
 
 	var selectMoreEnvs bool
-	if addEnv {
+	if addMoreEnv {
 		selectMore, err := opts.selectEnvironment()
 		if err != nil {
 			return err
@@ -261,7 +280,7 @@ func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
 		selectMoreEnvs = selectMore
 	}
 
-	return opts.selectEnvironments(selectMoreEnvs)
+	return opts.selectEnvironments(selectMoreEnvs, false)
 }
 
 func (opts *InitPipelineOpts) listAvailableEnvironments() []string {
