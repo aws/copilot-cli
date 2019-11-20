@@ -7,13 +7,14 @@ package archer
 // Environment represents the configuration of a particular environment in a project. It includes
 // the environment's account and region, name, as well as the project it belongs to.
 type Environment struct {
-	Project        string `json:"project"`        // Name of the project this environment belongs to.
-	Name           string `json:"name"`           // Name of the environment, must be unique within a project.
-	Region         string `json:"region"`         // Name of the region this environment is stored in.
-	AccountID      string `json:"accountID"`      // Account ID of the account this environment is stored in.
-	Prod           bool   `json:"prod"`           // Whether or not this environment is a production environment.
-	RegistryURL    string `json:"registryURL"`    // URL For ECR Registry for this environment.
-	ManagerRoleARN string `json:"managerRoleARN"` // ARN for the manager role assumed to manipulate the environment and its applications.
+	Project          string `json:"project"`          // Name of the project this environment belongs to.
+	Name             string `json:"name"`             // Name of the environment, must be unique within a project.
+	Region           string `json:"region"`           // Name of the region this environment is stored in.
+	AccountID        string `json:"accountID"`        // Account ID of the account this environment is stored in.
+	Prod             bool   `json:"prod"`             // Whether or not this environment is a production environment.
+	RegistryURL      string `json:"registryURL"`      // URL For ECR Registry for this environment.
+	ExecutionRoleARN string `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
+	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its applications.
 }
 
 // EnvironmentStore can List, Create, Get, and Delete environments in an underlying project management store.

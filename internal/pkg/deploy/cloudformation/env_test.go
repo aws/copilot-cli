@@ -203,7 +203,7 @@ func TestCloudFormation_DeleteEnvironment(t *testing.T) {
 				return &cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
 						{
-							StackId: aws.String("1234"),
+							StackId: aws.String("arn:aws:cloudformation:us-west-1:1111:stack/phonetool-test"),
 						},
 					}}, nil
 			},
@@ -213,14 +213,14 @@ func TestCloudFormation_DeleteEnvironment(t *testing.T) {
 			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
 				return nil
 			},
-			wantedError: errors.New("deleting stack 1234: some error"),
+			wantedError: errors.New("deleting stack arn:aws:cloudformation:us-west-1:1111:stack/phonetool-test: some error"),
 		},
 		"deletes stack successfully": {
 			mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
 				return &cloudformation.DescribeStacksOutput{
 					Stacks: []*cloudformation.Stack{
 						{
-							StackId: aws.String("1234"),
+							StackId: aws.String("arn:aws:cloudformation:us-west-1:1111:stack/phonetool-test"),
 							Outputs: []*cloudformation.Output{
 								{
 									OutputKey:   aws.String("CFNExecutionRoleARN"),
@@ -232,7 +232,7 @@ func TestCloudFormation_DeleteEnvironment(t *testing.T) {
 			},
 			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
 				require.Equal(t, "5678", *in.RoleARN)
-				require.Equal(t, "1234", *in.StackName)
+				require.Equal(t, "arn:aws:cloudformation:us-west-1:1111:stack/phonetool-test", *in.StackName)
 				return nil, nil
 			},
 			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {

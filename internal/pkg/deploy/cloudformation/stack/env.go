@@ -166,28 +166,14 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 	for _, output := range stack.Outputs {
 		stackOutputs[*output.OutputKey] = *output.OutputValue
 	}
-	createdEnv := archer.Environment{
-		Name:           e.Name,
-		Project:        e.Project,
-		Prod:           e.Prod,
-		Region:         stackARN.Region,
-		AccountID:      stackARN.AccountID,
-		ManagerRoleARN: stackOutputs[envOutputManagerRoleKey],
-	}
 
-	return &createdEnv, nil
-}
-
-// EnvStack is the cloudformation stack created for an environment.
-type EnvStack struct {
-	*cloudformation.Stack
-}
-
-// ExecutionRoleARN returns the execution role ARN from the stack.
-func (s *EnvStack) ExecutionRoleARN() string {
-	outputs := make(map[string]string)
-	for _, output := range s.Outputs {
-		outputs[*output.OutputKey] = *output.OutputValue
-	}
-	return outputs[envOutputCFNExecutionRoleARN]
+	return &archer.Environment{
+		Name:             e.Name,
+		Project:          e.Project,
+		Prod:             e.Prod,
+		Region:           stackARN.Region,
+		AccountID:        stackARN.AccountID,
+		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
+		ExecutionRoleARN: stackOutputs[envOutputCFNExecutionRoleARN],
+	}, nil
 }

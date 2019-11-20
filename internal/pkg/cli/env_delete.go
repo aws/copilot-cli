@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -74,6 +75,7 @@ func (opts *DeleteEnvOpts) Validate() error {
 	}
 
 	// Look up applications by searching for cloudformation stacks in the environment's region.
+	// TODO We should move this to a package like "describe" similar to the existing "store" pkg.
 	stacks, err := opts.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
@@ -124,7 +126,7 @@ func (opts *DeleteEnvOpts) Execute() error {
 	}
 	isStackDeleted := opts.deleteStack()
 	areRolesDeleted := opts.deleteRoles()
-	if isStackDeleted && areRolesDeleted {
+	if isStackDeleted && areRolesDeleted { // TODO Add a --force flag that attempts to remove from SSM regardless.
 		// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
 		opts.deleteFromStore()
 	}
@@ -173,9 +175,15 @@ func (opts *DeleteEnvOpts) deleteStack() bool {
 // deleteRoles returns true if the the execution role and manager role were deleted successfully. Otherwise, returns false.
 func (opts *DeleteEnvOpts) deleteRoles() bool {
 	// We must delete the EnvManagerRole last since as it's the assumed role for deletions.
-	roleNames := []string{
-		fmt.Sprintf("%s-%s-%s", opts.env.Project, opts.env.Name, "CFNExecutionRole"),
-		fmt.Sprintf("%s-%s-%s", opts.env.Project, opts.env.Name, "EnvManagerRole"),
+	var roleNames []string
+	roleARNs := []string{opts.env.ExecutionRoleARN, opts.env.ManagerRoleARN}
+	for _, roleARN := range roleARNs {
+		parsedARN, err := arn.Parse(roleARN)
+		if err != nil {
+			log.Infof("Failed to parse the role arn %s: %v\n", roleARN, err)
+			return false
+		}
+		roleNames = append(roleNames, strings.TrimPrefix(parsedARN.Resource, "role/"))
 	}
 
 	for _, roleName := range roleNames {

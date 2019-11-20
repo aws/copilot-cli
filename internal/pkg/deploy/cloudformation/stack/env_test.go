@@ -204,17 +204,21 @@ func TestToEnv(t *testing.T) {
 	}{
 		"should return error if Stack ID is invalid": {
 			want:      fmt.Errorf("couldn't extract region and account from stack ID : arn: invalid prefix"),
-			mockStack: mockEnvironmentStack("", ""),
+			mockStack: mockEnvironmentStack("", "", ""),
 		},
 		"should return a well formed environment": {
-			mockStack: mockEnvironmentStack("arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env", "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole"),
+			mockStack: mockEnvironmentStack(
+				"arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env",
+				"arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
+				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),
 			expectedEnv: archer.Environment{
-				Name:           mockDeployInput.Name,
-				Project:        mockDeployInput.Project,
-				Prod:           mockDeployInput.Prod,
-				AccountID:      "902697171733",
-				Region:         "eu-west-3",
-				ManagerRoleARN: "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
+				Name:             mockDeployInput.Name,
+				Project:          mockDeployInput.Project,
+				Prod:             mockDeployInput.Prod,
+				AccountID:        "902697171733",
+				Region:           "eu-west-3",
+				ManagerRoleARN:   "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
+				ExecutionRoleARN: "arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole",
 			},
 		},
 	}
@@ -234,32 +238,17 @@ func TestToEnv(t *testing.T) {
 	}
 }
 
-func TestEnvStack_ExecutionRoleARN(t *testing.T) {
-	// GIVEN
-	rawStack := &cloudformation.Stack{
-		Outputs: []*cloudformation.Output{
-			{
-				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
-				OutputValue: aws.String("1234"),
-			},
-		},
-	}
-	envStack := &EnvStack{Stack: rawStack}
-
-	// WHEN
-	got := envStack.ExecutionRoleARN()
-
-	// THEN
-	require.Equal(t, "1234", got)
-}
-
-func mockEnvironmentStack(stackArn, managerRoleARN string) *cloudformation.Stack {
+func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cloudformation.Stack {
 	return &cloudformation.Stack{
 		StackId: aws.String(stackArn),
 		Outputs: []*cloudformation.Output{
 			{
 				OutputKey:   aws.String(envOutputManagerRoleKey),
 				OutputValue: aws.String(managerRoleARN),
+			},
+			{
+				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
+				OutputValue: aws.String(executionRoleARN),
 			},
 		},
 	}

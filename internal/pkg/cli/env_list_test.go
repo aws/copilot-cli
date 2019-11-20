@@ -49,7 +49,7 @@ func TestEnvList_Execute(t *testing.T) {
 						{Name: "test2"},
 					}, nil)
 			},
-			expectedContent: `{"environments":[{"project":"","name":"test","region":"","accountID":"","prod":false,"registryURL":"","managerRoleARN":""},{"project":"","name":"test2","region":"","accountID":"","prod":false,"registryURL":"","managerRoleARN":""}]}` + "\n",
+			expectedContent: `{"environments":[{"project":"","name":"test","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""},{"project":"","name":"test2","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""}]}` + "\n",
 		},
 		"with envs": {
 			listOpts: ListEnvOpts{

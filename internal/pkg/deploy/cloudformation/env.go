@@ -48,8 +48,11 @@ func (cf CloudFormation) DeleteEnvironment(projectName, envName string) error {
 	if err != nil {
 		return err
 	}
-	envStack := &stack.EnvStack{Stack: out}
-	return cf.delete(*out.StackId, withDeleteRoleARN(envStack.ExecutionRoleARN()))
+	env, err := conf.ToEnv(out)
+	if err != nil {
+		return err
+	}
+	return cf.delete(*out.StackId, withDeleteRoleARN(env.ExecutionRoleARN))
 }
 
 // streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.

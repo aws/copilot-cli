@@ -133,9 +133,12 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 
 func TestDeleteEnvOpts_Execute(t *testing.T) {
 	const (
-		testProject        = "phonetool"
-		testEnv            = "test"
-		testManagerRoleARN = "arn:aws:iam::1111:role/phonetool-test-EnvManagerRole"
+		testProject           = "phonetool"
+		testEnv               = "test"
+		testExecutionRoleName = "phonetool-test-CFNExecutionRole"
+		testManagerRoleName   = "phonetool-test-EnvManagerRole"
+		testExecutionRoleARN  = "arn:aws:iam::1111:role/" + testExecutionRoleName
+		testManagerRoleARN    = "arn:aws:iam::1111:role/" + testManagerRoleName
 	)
 	testError := errors.New("some error")
 
@@ -189,26 +192,28 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockIAM: func(ctrl *gomock.Controller) *climocks.MockIAMAPI {
 				svc := climocks.NewMockIAMAPI(ctrl)
 
-				executionRole := aws.String(fmt.Sprintf("%s-%s-%s", testProject, testEnv, "CFNExecutionRole"))
-				managerRole := aws.String(fmt.Sprintf("%s-%s-%s", testProject, testEnv, "EnvManagerRole"))
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: executionRole}).Return(&iam.ListRolePoliciesOutput{
-					PolicyNames: []*string{aws.String("policy1")},
-				}, nil)
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: managerRole}).Return(&iam.ListRolePoliciesOutput{
-					PolicyNames: []*string{aws.String("policy2")},
-				}, nil)
+				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: aws.String(testExecutionRoleName)}).
+					Return(&iam.ListRolePoliciesOutput{
+						PolicyNames: []*string{aws.String("policy1")},
+					}, nil)
+				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: aws.String(testManagerRoleName)}).
+					Return(&iam.ListRolePoliciesOutput{
+						PolicyNames: []*string{aws.String("policy2")},
+					}, nil)
 
 				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
 					PolicyName: aws.String("policy1"),
-					RoleName:   executionRole,
+					RoleName:   aws.String(testExecutionRoleName),
 				}).Return(nil, nil)
 				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
 					PolicyName: aws.String("policy2"),
-					RoleName:   managerRole,
+					RoleName:   aws.String(testManagerRoleName),
 				}).Return(nil, nil)
 
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: executionRole}).Return(nil, nil)
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: managerRole}).Return(nil, nil)
+				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: aws.String(testExecutionRoleName)}).
+					Return(nil, nil)
+				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: aws.String(testManagerRoleName)}).
+					Return(nil, nil)
 				return svc
 			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
@@ -303,9 +308,10 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				deployClient:     tc.mockDeploy(ctrl),
 				prog:             tc.mockProg(ctrl),
 				env: &archer.Environment{
-					Project:        testProject,
-					Name:           testEnv,
-					ManagerRoleARN: testManagerRoleARN,
+					Project:          testProject,
+					Name:             testEnv,
+					ExecutionRoleARN: testExecutionRoleARN,
+					ManagerRoleARN:   testManagerRoleARN,
 				},
 				GlobalOpts: &GlobalOpts{
 					projectName: testProject,
