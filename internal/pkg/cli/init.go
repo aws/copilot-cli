@@ -190,6 +190,10 @@ func (opts *InitOpts) deployApp() error {
 	if !opts.ShouldDeploy {
 		return nil
 	}
+	if deployOpts, ok := opts.appDeployer.(*appDeployOpts); ok {
+		// Set the application's name to the deploy sub-command.
+		deployOpts.app = *opts.appName
+	}
 
 	if err := opts.appDeployer.init(); err != nil {
 		return err
