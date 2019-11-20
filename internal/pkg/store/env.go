@@ -6,7 +6,6 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,13 +26,12 @@ func (s *Store) CreateEnvironment(environment *archer.Environment) error {
 		return fmt.Errorf("serializing environment %s: %w", environment.Name, err)
 	}
 
-	paramOutput, err := s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(environmentPath),
 		Description: aws.String(fmt.Sprintf("The %s deployment stage", environment.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
-
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -45,10 +43,7 @@ func (s *Store) CreateEnvironment(environment *archer.Environment) error {
 		}
 		return fmt.Errorf("create environment %s in project %s: %w", environment.Name, environment.Project, err)
 	}
-
-	log.Printf("Created environment with version %v", *paramOutput.Version)
 	return nil
-
 }
 
 // GetEnvironment gets an environment belonging to a particular project by name. If no environment is found

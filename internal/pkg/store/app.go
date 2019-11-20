@@ -6,7 +6,6 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,13 +26,12 @@ func (s *Store) CreateApplication(app *archer.Application) error {
 		return fmt.Errorf("serializing application %s: %w", app.Name, err)
 	}
 
-	paramOutput, err := s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(applicationPath),
 		Description: aws.String(fmt.Sprintf("ECS-CLI v2 Application %s", app.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
-
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -45,10 +43,7 @@ func (s *Store) CreateApplication(app *archer.Application) error {
 		}
 		return fmt.Errorf("create application %s in project %s: %w", app.Name, app.Project, err)
 	}
-
-	log.Printf("Created Application with version %v", *paramOutput.Version)
 	return nil
-
 }
 
 // GetApplication gets an application belonging to a particular project by name. If no app is found
