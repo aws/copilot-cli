@@ -119,6 +119,21 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
 		},
+		"should not deploy the app if shouldDeploy is false": {
+			inPromptForShouldDeploy: true,
+			inShouldDeploy:          false,
+			expect: func(opts *InitOpts) {
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
+				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+					Return(false, nil)
+			},
+		},
 	}
 
 	for name, tc := range testCases {

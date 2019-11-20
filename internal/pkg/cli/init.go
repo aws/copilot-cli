@@ -187,6 +187,10 @@ func (opts *InitOpts) deployEnv() error {
 }
 
 func (opts *InitOpts) deployApp() error {
+	if !opts.ShouldDeploy {
+		return nil
+	}
+
 	if err := opts.appDeployer.init(); err != nil {
 		return err
 	}
