@@ -12,6 +12,7 @@ import (
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
+	DeleteEnvironment(projName, envName string) error
 }
 
 type pipelineDeployer interface {

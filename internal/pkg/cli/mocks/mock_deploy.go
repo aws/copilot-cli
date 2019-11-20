@@ -63,6 +63,20 @@ func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*MockenvironmentDeployer)(nil).StreamEnvironmentCreation), env)
 }
 
+// DeleteEnvironment mocks base method
+func (m *MockenvironmentDeployer) DeleteEnvironment(projName, envName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", projName, envName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), projName, envName)
+}
+
 // MockpipelineDeployer is a mock of pipelineDeployer interface
 type MockpipelineDeployer struct {
 	ctrl     *gomock.Controller
@@ -326,6 +340,20 @@ func (m *Mockdeployer) StreamEnvironmentCreation(env *deploy.CreateEnvironmentIn
 func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEnvironmentCreation", reflect.TypeOf((*Mockdeployer)(nil).StreamEnvironmentCreation), env)
+}
+
+// DeleteEnvironment mocks base method
+func (m *Mockdeployer) DeleteEnvironment(projName, envName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", projName, envName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockdeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), projName, envName)
 }
 
 // DeployProject mocks base method

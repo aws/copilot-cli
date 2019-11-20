@@ -77,6 +77,20 @@ func (mr *MockEnvironmentStoreMockRecorder) CreateEnvironment(env interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentStore)(nil).CreateEnvironment), env)
 }
 
+// DeleteEnvironment mocks base method
+func (m *MockEnvironmentStore) DeleteEnvironment(projectName, environmentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", projectName, environmentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockEnvironmentStoreMockRecorder) DeleteEnvironment(projectName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockEnvironmentStore)(nil).DeleteEnvironment), projectName, environmentName)
+}
+
 // MockEnvironmentLister is a mock of EnvironmentLister interface
 type MockEnvironmentLister struct {
 	ctrl     *gomock.Controller
@@ -188,4 +202,41 @@ func (m *MockEnvironmentCreator) CreateEnvironment(env *archer.Environment) erro
 func (mr *MockEnvironmentCreatorMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockEnvironmentCreator)(nil).CreateEnvironment), env)
+}
+
+// MockEnvironmentDeleter is a mock of EnvironmentDeleter interface
+type MockEnvironmentDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockEnvironmentDeleterMockRecorder
+}
+
+// MockEnvironmentDeleterMockRecorder is the mock recorder for MockEnvironmentDeleter
+type MockEnvironmentDeleterMockRecorder struct {
+	mock *MockEnvironmentDeleter
+}
+
+// NewMockEnvironmentDeleter creates a new mock instance
+func NewMockEnvironmentDeleter(ctrl *gomock.Controller) *MockEnvironmentDeleter {
+	mock := &MockEnvironmentDeleter{ctrl: ctrl}
+	mock.recorder = &MockEnvironmentDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockEnvironmentDeleter) EXPECT() *MockEnvironmentDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteEnvironment mocks base method
+func (m *MockEnvironmentDeleter) DeleteEnvironment(projectName, environmentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", projectName, environmentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockEnvironmentDeleterMockRecorder) DeleteEnvironment(projectName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockEnvironmentDeleter)(nil).DeleteEnvironment), projectName, environmentName)
 }

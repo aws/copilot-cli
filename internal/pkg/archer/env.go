@@ -16,24 +16,30 @@ type Environment struct {
 	ManagerRoleARN string `json:"managerRoleARN"` // ARN for the manager role assumed to manipulate the environment and its applications.
 }
 
-// EnvironmentStore can List, Create and Get environments in an underlying project management store
+// EnvironmentStore can List, Create, Get, and Delete environments in an underlying project management store.
 type EnvironmentStore interface {
 	EnvironmentLister
 	EnvironmentGetter
 	EnvironmentCreator
+	EnvironmentDeleter
 }
 
-// EnvironmentLister fetches and returns a list of environments from an underlying project management store
+// EnvironmentLister fetches and returns a list of environments from an underlying project management store.
 type EnvironmentLister interface {
 	ListEnvironments(projectName string) ([]*Environment, error)
 }
 
-// EnvironmentGetter fetches and returns an environment from an underlying project management store
+// EnvironmentGetter fetches and returns an environment from an underlying project management store.
 type EnvironmentGetter interface {
 	GetEnvironment(projectName string, environmentName string) (*Environment, error)
 }
 
-// EnvironmentCreator creates an environment in the underlying project management store
+// EnvironmentCreator creates an environment in the underlying project management store.
 type EnvironmentCreator interface {
 	CreateEnvironment(env *Environment) error
+}
+
+// EnvironmentDeleter deletes an environment from the underlying project management store.
+type EnvironmentDeleter interface {
+	DeleteEnvironment(projectName, environmentName string) error
 }

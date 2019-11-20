@@ -122,6 +122,20 @@ func (mr *MockprojectServiceMockRecorder) CreateEnvironment(env interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockprojectService)(nil).CreateEnvironment), env)
 }
 
+// DeleteEnvironment mocks base method
+func (m *MockprojectService) DeleteEnvironment(projectName, environmentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", projectName, environmentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockprojectServiceMockRecorder) DeleteEnvironment(projectName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockprojectService)(nil).DeleteEnvironment), projectName, environmentName)
+}
+
 // ListApplications mocks base method
 func (m *MockprojectService) ListApplications(projectName string) ([]*archer.Application, error) {
 	m.ctrl.T.Helper()

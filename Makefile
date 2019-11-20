@@ -127,3 +127,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/app_deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_projectservice.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface ResourceGroupsTaggingAPIAPI
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
