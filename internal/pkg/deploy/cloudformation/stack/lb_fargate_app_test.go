@@ -76,12 +76,22 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		wantedTemplate string
 		wantedError    error
 	}{
-		"unavailable template": {
-			mockBox: func(box *packd.MemoryBox) {}, // empty box where template does not exist
-
+		"unavailable app template": {
+			mockBox: func(box *packd.MemoryBox) {
+				box.AddString(lbFargateAppRulePriorityGeneratorPath, "javascript")
+			},
 			wantedTemplate: "",
 			wantedError: &ErrTemplateNotFound{
 				templateLocation: lbFargateAppTemplatePath,
+				parentErr:        os.ErrNotExist,
+			},
+		},
+		"unavailable custom resource template": {
+			mockBox: func(box *packd.MemoryBox) {},
+
+			wantedTemplate: "",
+			wantedError: &ErrTemplateNotFound{
+				templateLocation: lbFargateAppRulePriorityGeneratorPath,
 				parentErr:        os.ErrNotExist,
 			},
 		},
@@ -99,6 +109,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 				ImageTag:     "manual-bf3678c",
 			},
 			mockBox: func(box *packd.MemoryBox) {
+				box.AddString(lbFargateAppRulePriorityGeneratorPath, "javascript")
 				box.AddString(lbFargateAppTemplatePath, `Parameters:
   ProjectName: {{.Env.Project}}
   EnvName: {{.Env.Name}}

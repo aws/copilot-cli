@@ -48,6 +48,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', [/ecs/, !Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
+
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
@@ -64,8 +65,15 @@ Resources:
         - Name: !Ref AppName
           Image: !Ref ContainerImage
           PortMappings:
-            - ContainerPort: !Ref ContainerPort {{if .App.Variables}}
-          Environment:{{range $name, $value := .App.Variables}}
+            - ContainerPort: !Ref ContainerPort
+          # We pipe certain environment variables directly into the task definition.
+          # This lets customers have access to, for example, their LB endpoint - which they'd
+          # have no way of otherwise determining.
+          Environment:
+          - Name: ECS_ENV_LB_DNS
+            Value:
+              Fn::ImportValue:
+                !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}{{if .App.Secrets}}
           Secrets:{{range $name, $valueFrom := .App.Secrets}}
@@ -77,6 +85,7 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: ecs
+
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -102,6 +111,7 @@ Resources:
                   - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -121,6 +131,7 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-VpcId"
+
   ContainerSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -130,6 +141,7 @@ Resources:
       SourceSecurityGroupId:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerSecurityGroupId"
+
   ContainerSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -140,6 +152,7 @@ Resources:
 
   Service:
     Type: AWS::ECS::Service
+    DependsOn: WaitUntilListenerRuleIsCreated
     Properties:
       Cluster:
         Fn::ImportValue:
@@ -172,6 +185,7 @@ Resources:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
+
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -188,6 +202,7 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-VpcId"
+
   LoadBalancerDNSAlias:
     Type: AWS::Route53::RecordSetGroup
     Condition: HTTPSLoadBalancer
@@ -212,22 +227,54 @@ Resources:
           DNSName:
             Fn::ImportValue:
               !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS"
-  HTTPListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPLoadBalancer
+
+  RulePriorityFunction:
+    Type: AWS::Lambda::Function
     Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-            - !Ref RulePath
+      Code:
+        ZipFile: |
+          {{.RulePriorityLambda}}
+      Handler: "index.nextAvailableRulePriorityHandler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt 'CustomResourceRole.Arn'
+      Runtime: nodejs10.x
+
+  CustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:DescribeRules
+              Resource: "*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  HTTPSRulePriorityAction:
+    Condition: HTTPSLoadBalancer
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
-      Priority: !Ref RulePriority
+          !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
+
   HTTPSListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Condition: HTTPSLoadBalancer
@@ -247,4 +294,60 @@ Resources:
       ListenerArn:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
-      Priority: !Ref RulePriority
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
+
+  HTTPRulePriorityAction:
+    Condition: HTTPLoadBalancer
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+
+  HTTPListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HTTPLoadBalancer
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: 'path-pattern'
+          PathPatternConfig:
+            Values:
+            - !Ref RulePath
+      ListenerArn:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+      Priority: !GetAtt HTTPRulePriorityAction.Priority
+
+  # Force a conditional dependency from the ECS service on the listener rules.
+  # Our service depends on our HTTP/S listener to be set up before it can
+  # be created. But, since our environment is either HTTPS or not, we
+  # have a conditional dependency (we have to wait for the HTTPS listener
+  # to be created or the HTTP listener to be created). In order to have a
+  # conditional dependency, we use the WaitHandle resource as a way to force
+  # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
+  # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
+  # the HTTPWaitHandle, which depends on the HTTPListenerRule.
+
+  HTTPSWaitHandle:
+    Condition: HTTPSLoadBalancer
+    DependsOn: HTTPSListenerRule
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  HTTPWaitHandle:
+    Condition: HTTPLoadBalancer
+    DependsOn: HTTPListenerRule
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  # We don't actually need to wait for the condition to
+  # be completed, that's why we set a count of 0. The timeout
+  # is a required field, but useless, so we set it to one.
+  WaitUntilListenerRuleIsCreated:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
+      Timeout: "1"
+      Count: 0
