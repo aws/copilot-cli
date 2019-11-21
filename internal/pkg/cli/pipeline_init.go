@@ -25,6 +25,8 @@ import (
 const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
 	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
 )
@@ -240,37 +242,26 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 }
 
 func (opts *InitPipelineOpts) selectEnvironments() error {
-	var addEnv bool
-	envs := opts.listAvailableEnvironments()
-	addEnv, err := opts.prompt.Confirm(
-		pipelineAddEnvPrompt,
-		"Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
-	)
-	if err != nil {
-		return fmt.Errorf("failed to confirm adding an environment: %w", err)
-	}
-	if addEnv {
-		err := opts.selectEnvironment()
+	for {
+		promptMsg := pipelineAddEnvPrompt
+		promptHelpMsg := pipelineAddEnvHelpPrompt
+		if len(opts.Environments) > 0 {
+			promptMsg = pipelineAddMoreEnvPrompt
+			promptHelpMsg = pipelineAddMoreEnvHelpPrompt
+		}
+		addEnv, err := opts.prompt.Confirm(promptMsg, promptHelpMsg)
 		if err != nil {
+			return fmt.Errorf("confirm adding an environment: %w", err)
+		}
+		if !addEnv {
+			break
+		}
+		if err := opts.selectEnvironment(); err != nil {
 			return err
 		}
-	}
-	for len(envs) != 0 && addEnv {
-		addMoreEnv, err := opts.prompt.Confirm(
-			pipelineAddMoreEnvPrompt,
-			"Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
-		)
-		if err != nil {
-			return fmt.Errorf("failed to confirm adding an environment: %w", err)
+		if len(opts.listAvailableEnvironments()) == 0 {
+			break
 		}
-		addEnv = addMoreEnv
-		if addEnv {
-			err := opts.selectEnvironment()
-			if err != nil {
-				return err
-			}
-		}
-		envs = opts.listAvailableEnvironments()
 	}
 
 	return nil
