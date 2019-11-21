@@ -19,7 +19,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const githubRepo = "https://github.com/badGoose/chaOS"
+const githubRepoURL = "https://github.com/badGoose/chaOS.git"
+const githubRepoName = "https://github.com/badGoose/chaOS"
 const githubToken = "hunter2"
 
 func TestInitPipelineOpts_Ask(t *testing.T) {
@@ -48,11 +49,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubRepoPrompt), gomock.Any(), gomock.Any()).Return(githubRepo, nil).Times(1)
+				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubRepoPrompt), gomock.Any(), gomock.Any()).Return(githubRepoURL, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: https://github.com/badGoose/chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
-			expectedGitHubRepo:        githubRepo,
+			expectedGitHubRepo:        githubRepoName,
 			expectedGitHubAccessToken: githubToken,
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             nil,
