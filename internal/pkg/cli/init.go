@@ -122,7 +122,7 @@ func NewInitOpts() (*InitOpts, error) {
 	}, nil
 }
 
-// Run executes the bootstrap of a new application.
+// Run executes "project init", "env init", "app init" and "app deploy".
 func (opts *InitOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your workspace.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 

@@ -112,7 +112,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
-// Execute destroys the old pipeline and creates a new one.
+// Execute create a new pipeline or update the current pipeline if it already exists.
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
