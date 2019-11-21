@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -333,6 +334,12 @@ func (opts *InitPipelineOpts) selectGitHubRepo() error {
 		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`),
 		validateGitHubRepo,
 	)
+
+	// Remove ".git" at the end of the Github repo URL.
+	repoNameSplit := strings.Split(repo, ".")
+	if repoNameSplit[len(repoNameSplit)-1] == "git" {
+		repo = strings.Join(repoNameSplit[:len(repoNameSplit)-1], ".")
+	}
 
 	if err != nil {
 		return fmt.Errorf("failed to get GitHub repository: %w", err)
