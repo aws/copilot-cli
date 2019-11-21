@@ -32,7 +32,7 @@ const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 )
 
-var errNoEnvsInProject = errors.New("There were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment.")
+var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -62,6 +62,7 @@ type InitPipelineOpts struct {
 	*GlobalOpts
 }
 
+// NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
 		GlobalOpts: NewGlobalOpts(),

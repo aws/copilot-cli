@@ -32,7 +32,7 @@ const (
 	fmtUpdatePipelineComplete = "Successfully updated pipeline: %s"
 )
 
-var errNoPipelineFile = errors.New("There was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline.")
+var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline")
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
@@ -49,6 +49,7 @@ type UpdatePipelineOpts struct {
 	*GlobalOpts
 }
 
+// NewUpdatePipelineOpts returns a new UpdatePipelineOpts struct.
 func NewUpdatePipelineOpts() *UpdatePipelineOpts {
 	return &UpdatePipelineOpts{
 		GlobalOpts: NewGlobalOpts(),
@@ -111,6 +112,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
+// Execute create a new pipeline or update the current pipeline if it already exists.
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
