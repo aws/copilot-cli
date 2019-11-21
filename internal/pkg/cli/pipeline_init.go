@@ -24,6 +24,9 @@ import (
 
 const (
 	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
 	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
 )
@@ -72,7 +75,7 @@ func NewInitPipelineOpts() *InitPipelineOpts {
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
 	if len(opts.Environments) == 0 {
-		if err := opts.selectEnvironments(true); err != nil {
+		if err := opts.selectEnvironments(); err != nil {
 			return err
 		}
 	}
@@ -238,30 +241,30 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 	return path, nil
 }
 
-func (opts *InitPipelineOpts) selectEnvironments(addMore bool) error {
-	if addMore == false {
-		return nil
-	}
-
-	addEnv, err := opts.prompt.Confirm(
-		pipelineAddEnvPrompt,
-		"Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially.",
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to confirm adding an environment: %w", err)
-	}
-
-	var selectMoreEnvs bool
-	if addEnv {
-		selectMore, err := opts.selectEnvironment()
+func (opts *InitPipelineOpts) selectEnvironments() error {
+	for {
+		promptMsg := pipelineAddEnvPrompt
+		promptHelpMsg := pipelineAddEnvHelpPrompt
+		if len(opts.Environments) > 0 {
+			promptMsg = pipelineAddMoreEnvPrompt
+			promptHelpMsg = pipelineAddMoreEnvHelpPrompt
+		}
+		addEnv, err := opts.prompt.Confirm(promptMsg, promptHelpMsg)
 		if err != nil {
+			return fmt.Errorf("confirm adding an environment: %w", err)
+		}
+		if !addEnv {
+			break
+		}
+		if err := opts.selectEnvironment(); err != nil {
 			return err
 		}
-		selectMoreEnvs = selectMore
+		if len(opts.listAvailableEnvironments()) == 0 {
+			break
+		}
 	}
 
-	return opts.selectEnvironments(selectMoreEnvs)
+	return nil
 }
 
 func (opts *InitPipelineOpts) listAvailableEnvironments() []string {
@@ -286,14 +289,12 @@ func (opts *InitPipelineOpts) envCanBeAdded(selectedEnv string) bool {
 	return true
 }
 
-func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
-	selectMoreEnvs := false
-
+func (opts *InitPipelineOpts) selectEnvironment() error {
 	envs := opts.listAvailableEnvironments()
 
 	if len(envs) == 0 && len(opts.Environments) != 0 {
 		log.Infoln("There are no more environments to add.")
-		return selectMoreEnvs, nil
+		return nil
 	}
 
 	env, err := opts.prompt.SelectOne(
@@ -303,13 +304,12 @@ func (opts *InitPipelineOpts) selectEnvironment() (bool, error) {
 	)
 
 	if err != nil {
-		return selectMoreEnvs, fmt.Errorf("failed to add environment: %w", err)
+		return fmt.Errorf("failed to add environment: %w", err)
 	}
 
 	opts.Environments = append(opts.Environments, env)
-	selectMoreEnvs = true
 
-	return selectMoreEnvs, nil
+	return nil
 }
 
 // relPath returns the full path relative to the current working directory.
