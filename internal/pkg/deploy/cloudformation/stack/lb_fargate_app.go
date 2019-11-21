@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	lbFargateAppTemplatePath = "lb-fargate-service/cf.yml"
-	lbFargateAppParamsPath   = "lb-fargate-service/params.json"
+	lbFargateAppTemplatePath              = "lb-fargate-service/cf.yml"
+	lbFargateAppParamsPath                = "lb-fargate-service/params.json"
+	lbFargateAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
 const (
@@ -77,16 +78,32 @@ func (c *LBFargateStackConfig) StackName() string {
 
 // Template returns the CloudFormation template for the application parametrized for the environment.
 func (c *LBFargateStackConfig) Template() (string, error) {
+
+	rulePriority, err := c.box.FindString(lbFargateAppRulePriorityGeneratorPath)
+	if err != nil {
+		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppRulePriorityGeneratorPath, parentErr: err}
+	}
+
 	content, err := c.box.FindString(lbFargateAppTemplatePath)
 	if err != nil {
 		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppTemplatePath, parentErr: err}
 	}
+
 	tpl, err := template.New("template").Parse(content)
 	if err != nil {
 		return "", fmt.Errorf("parse CloudFormation template for %s: %w", c.App.Type, err)
 	}
+
+	templateData := struct {
+		RulePriorityLambda string
+		*lbFargateTemplateParams
+	}{
+		RulePriorityLambda:      rulePriority,
+		lbFargateTemplateParams: c.toTemplateParams(),
+	}
+
 	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, c.toTemplateParams()); err != nil {
+	if err := tpl.Execute(&buf, templateData); err != nil {
 		return "", fmt.Errorf("execute CloudFormation template for %s: %w", c.App.Type, err)
 	}
 	return buf.String(), nil

@@ -130,7 +130,6 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
 
-
   Cluster:
     Type: AWS::ECS::Cluster
 
@@ -205,6 +204,7 @@ Resources:
 
   CloudformationExecutionRole:
     Type: AWS::IAM::Role
+    DependsOn: VPC
     # This role should not be deleted while CloudFormation tries to delete the stack itself.
     DeletionPolicy: Retain
     Properties:
