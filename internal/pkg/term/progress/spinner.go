@@ -6,11 +6,11 @@ package progress
 import (
 	"fmt"
 	"io"
-	"os"
 	"text/tabwriter"
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/cursor"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/briandowns/spinner"
 )
 
@@ -59,7 +59,7 @@ type Spinner struct {
 // NewSpinner returns a spinner that outputs to stderr.
 func NewSpinner() *Spinner {
 	s := spinner.New(charset, 125*time.Millisecond, spinner.WithHiddenCursor(true))
-	s.Writer = os.Stderr
+	s.Writer = log.DiagnosticWriter
 	return &Spinner{
 		spin:         s,
 		cur:          cursor.New(),
