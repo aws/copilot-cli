@@ -7,4 +7,5 @@ package archer
 type Manifest interface {
 	Marshal() ([]byte, error)
 	DockerfilePath() string
+	AppName() string
 }

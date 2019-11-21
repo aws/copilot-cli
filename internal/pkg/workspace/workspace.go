@@ -21,9 +21,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"	
 )
 
 const (
@@ -131,21 +133,24 @@ func (ws *Workspace) writeSummary(projectName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
-// AppNames returns the name of all the local applications. For now it
-// extracts the application name from the file name of the corresponding
-// application manifest.
-func (ws *Workspace) AppNames() ([]string, error) {
-	manifests, err := ws.ListManifestFiles()
+// Apps returns all the applications in the workspace
+func (ws *Workspace) Apps() ([]archer.Manifest, error) {
+	manifestFiles, err := ws.ListManifestFiles()
 	if err != nil {
 		return nil, err
 	}
-	var apps []string
-	for _, manifest := range manifests {
-		appFile := filepath.Base(manifest)
-		// TODO: #242 Extract the names of applications from app manifests
-		// instead of from file names.
-		appName := appFile[0 : len(appFile)-len(appManifestFileSuffix)]
-		apps = append(apps, appName)
+	apps := make([]archer.Manifest, 0, len(manifestFiles))
+	for _, file := range manifestFiles {
+		manifestBytes, err := ws.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+		
+		mf, err := manifest.UnmarshalApp(manifestBytes)
+		if err != nil {
+			return nil, err
+		}
+		apps = append(apps, mf)
 	}
 	return apps, nil
 }
