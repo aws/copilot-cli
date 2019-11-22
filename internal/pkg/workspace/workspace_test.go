@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -71,26 +72,48 @@ func TestListManifests(t *testing.T) {
 	}
 }
 
-func TestAppNames(t *testing.T) {
+func genApps(names ...string) []archer.Manifest {
+	result := make([]archer.Manifest, 0, len(names))
+	for _, name := range names {
+		result = append(result, &manifest.LBFargateManifest{
+			AppManifest: manifest.AppManifest{
+				Name: name,
+				Type: manifest.LoadBalancedWebApplication,
+			},
+		})
+	}
+	return result
+}
+
+func renderManifest(name string) string {
+	const template = `
+name: %s
+# The "architecture" of the application you're running.
+type: Load Balanced Web App
+`
+	return fmt.Sprintf(template, name)
+}
+
+func TestApps(t *testing.T) {
 	testCases := map[string]struct {
-		expectedApps   []string
+		expectedApps   []archer.Manifest
 		workingDir     string
 		expectedError  error
 		mockFileSystem func(appFS afero.Fs)
 	}{
 		"multiple local app manifests": {
-			expectedApps: []string{"frontend", "backend"},
+			expectedApps: genApps("frontend", "backend"),
 			workingDir:   "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)
-				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte(renderManifest("frontend")), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte(renderManifest("backend")), 0644)
 				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
 			},
 		},
 
 		"no existing app manifest": {
-			expectedApps: []string{},
+			expectedApps: []archer.Manifest{},
 			workingDir:   "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)
@@ -117,7 +140,7 @@ func TestAppNames(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: appFS},
 			}
 
-			apps, err := ws.AppNames()
+			apps, err := ws.Apps()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.expectedApps, apps)

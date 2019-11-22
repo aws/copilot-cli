@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 )
 
@@ -23,35 +24,42 @@ func TestSourceProjectApplications(t *testing.T) {
 
 	mockWorkspaceService := mocks.NewMockWorkspace(ctrl)
 
-	mockProjectName := "mockProjectName"
+	const (
+		mockProjectName = "mockProjectName"
+		mockAppName     = "mockApp"
+	)
+
 	mockError := errors.New("error")
-	mockAppNames := []string{
-		mockProjectName,
-	}
 
 	testCases := map[string]struct {
 		setupMocks func()
 
-		wantErr      error
-		wantAppNames []string
+		wantErr  error
+		wantApps []string
 	}{
 		"should wrap error returned from ListApplications": {
 			setupMocks: func() {
-				mockWorkspaceService.EXPECT().AppNames().Times(1).Return([]string{}, mockError)
+				mockWorkspaceService.EXPECT().Apps().Times(1).Return(nil, mockError)
 			},
-			wantErr: fmt.Errorf("get app names: %w", mockError),
+			wantErr: fmt.Errorf("get apps: %w", mockError),
 		},
 		"should return error given no apps returned": {
 			setupMocks: func() {
-				mockWorkspaceService.EXPECT().AppNames().Times(1).Return([]string{}, nil)
+				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{}, nil)
 			},
 			wantErr: errors.New("no applications found"),
 		},
 		"should set opts projectApplications field": {
 			setupMocks: func() {
-				mockWorkspaceService.EXPECT().AppNames().Times(1).Return(mockAppNames, nil)
+				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: mockAppName,
+						},
+					},
+				}, nil)
 			},
-			wantAppNames: mockAppNames,
+			wantApps: []string{mockAppName},
 		},
 	}
 
@@ -69,7 +77,7 @@ func TestSourceProjectApplications(t *testing.T) {
 			gotErr := opts.sourceProjectApplications()
 
 			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantAppNames, opts.localProjectAppNames)
+			require.Equal(t, tc.wantApps, opts.localProjectAppNames)
 		})
 	}
 }

@@ -155,9 +155,13 @@ func (opts *PackageAppOpts) Execute() error {
 }
 
 func (opts *PackageAppOpts) listAppNames() ([]string, error) {
-	names, err := opts.ws.AppNames()
+	apps, err := opts.ws.Apps()
 	if err != nil {
 		return nil, fmt.Errorf("list applications in workspace: %w", err)
+	}
+	names := make([]string, 0, len(apps))
+	for _, app := range apps {
+		names = append(names, app.AppName())
 	}
 	return names, nil
 }

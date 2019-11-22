@@ -25,6 +25,11 @@ type AppManifest struct {
 	Type string `yaml:"type"` // must be one of the supported manifest types.
 }
 
+// AppName returns the name of the application
+func (a *AppManifest) AppName() string {
+	return a.Name
+}
+
 // AppImage represents the application's container image.
 type AppImage struct {
 	Build string `yaml:"build"` // Path to the Dockerfile.
