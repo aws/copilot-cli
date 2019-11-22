@@ -21,8 +21,10 @@ func Default() (*session.Session, error) {
 		},
 		SharedConfigState: session.SharedConfigEnable,
 	})
+	if err != nil {
+		return nil, err
+	}
 	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
-
 	return sess, err
 }
 
@@ -31,8 +33,10 @@ func DefaultWithRegion(region string) (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
+	if err != nil {
+		return nil, err
+	}
 	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
-
 	return sess, err
 }
 
@@ -45,8 +49,10 @@ func FromProfile(name string) (*session.Session, error) {
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           name,
 	})
+	if err != nil {
+		return nil, err
+	}
 	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
-
 	return sess, err
 }
 
@@ -64,7 +70,9 @@ func FromRole(roleARN string, region string) (*session.Session, error) {
 		Credentials:                   creds,
 		Region:                        &region,
 	})
+	if err != nil {
+		return nil, err
+	}
 	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
-
 	return sess, err
 }

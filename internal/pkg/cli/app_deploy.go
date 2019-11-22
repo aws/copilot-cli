@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -355,9 +356,12 @@ func (opts appDeployOpts) deployApp() error {
 
 	template, err := opts.getAppDeployTemplate()
 
-	// TODO move stack
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return fmt.Errorf("failed to generate random id for changeSet: %w", err)
+	}
 	stackName := fmt.Sprintf("%s-%s-%s", opts.ProjectName(), opts.targetEnvironment.Name, opts.app)
-	changeSetName := fmt.Sprintf("%s-%s", stackName, opts.imageTag)
+	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
 
 	opts.spinner.Start(
 		fmt.Sprintf("Deploying %s to %s.",

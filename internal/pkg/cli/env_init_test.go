@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
@@ -27,10 +28,12 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 	mockPrompter := climocks.NewMockprompter(ctrl)
 
-	mockEnv := "mockEnv"
+	mockEnv := "test"
+	mockProfile := "default"
 
 	testCases := map[string]struct {
 		inputEnv     string
+		inputProfile string
 		inputProject string
 
 		setupMocks func()
@@ -40,11 +43,20 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				gomock.InOrder(
 					mockPrompter.EXPECT().
 						Get(
-							gomock.Eq("What is your environment's name?"),
-							gomock.Eq("A unique identifier for an environment (e.g. dev, test, prod)"),
+							gomock.Eq(envInitNamePrompt),
+							gomock.Eq(envInitNameHelpPrompt),
 							gomock.Any()).
 						Return(mockEnv, nil).
-						Times(1))
+						Times(1),
+					mockPrompter.EXPECT().
+						Get(
+							gomock.Eq(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv)),
+							gomock.Eq(envInitProfileHelpPrompt),
+							gomock.Any(),
+							gomock.Any()).
+						Return(mockProfile, nil).
+						Times(1),
+				)
 			},
 		},
 	}
@@ -53,7 +65,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			addEnv := &InitEnvOpts{
-				EnvName: tc.inputEnv,
+				EnvName:    tc.inputEnv,
+				EnvProfile: tc.inputProfile,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
 					projectName: tc.inputProject,
@@ -74,22 +87,32 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inEnvName     string
+		inProfileName string
 		inProjectName string
 
 		wantedErr string
 	}{
 		"valid environment creation": {
 			inEnvName:     "test-pdx",
+			inProfileName: "default",
 			inProjectName: "phonetool",
 		},
 		"invalid environment name": {
 			inEnvName:     "123env",
+			inProfileName: "default",
 			inProjectName: "phonetool",
 
 			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
+		"empty profile name": {
+			inEnvName:     "test-pdx",
+			inProjectName: "phonetool",
+
+			wantedErr: fmt.Sprintf("profile name cannot be empty, please provide a value with %s", color.HighlightCode(profileFlag)),
+		},
 		"new workspace": {
 			inEnvName:     "test-pdx",
+			inProfileName: "default",
 			inProjectName: "",
 
 			wantedErr: "no project found, run `project init` first please",
@@ -101,6 +124,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &InitEnvOpts{
 				EnvName:    tc.inEnvName,
+				EnvProfile: tc.inProfileName,
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 

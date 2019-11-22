@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	fmtAddPipelineResourcesFailed   = "Failed to add pipeline resources to your project: %s"
 	fmtAddPipelineResourcesStart    = "Adding pipeline resources to your project: %s"
 	fmtAddPipelineResourcesComplete = "Successfully added pipeline resources to your project: %s"
 
@@ -123,17 +124,20 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
 	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
 	if err != nil {
-		return nil
+		opts.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(opts.ProjectName())))
+		return fmt.Errorf("add pipeline resources to project %s in %s: %w", opts.ProjectName(), opts.region, err)
 	}
 	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.ProjectName())))
 
 	// read pipeline manifest
 	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
 	if err != nil {
-		return nil
+		return fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
 	}
 	pipeline, err := manifest.UnmarshalPipeline(data)
-	// TODO nil check source?
+	if err != nil {
+		return fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
+	}
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
 		Properties:   pipeline.Source.Properties,
@@ -142,13 +146,13 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	// convert environments to deployment stages
 	stages, err := opts.convertStages(pipeline.Stages)
 	if err != nil {
-		return nil
+		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
 	// get cross-regional resources
 	artifactBuckets, err := opts.getArtifactBuckets()
 	if err != nil {
-		return nil
+		return fmt.Errorf("get cross-regional resources: %w", err)
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{

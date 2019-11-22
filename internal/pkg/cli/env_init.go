@@ -17,7 +17,16 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/cobra"
+)
+
+const (
+	envInitNamePrompt     = "What is your environment's name?"
+	envInitNameHelpPrompt = "A unique identifier for an environment (e.g. dev, test, prod)."
+
+	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
+	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
 )
 
 const (
@@ -49,31 +58,39 @@ type InitEnvOpts struct {
 	envIdentity   identityService
 	prog          progress
 
-	*GlobalOpts // Embed global options.
+	*GlobalOpts
 }
 
 // Ask asks for fields that are required but not passed in.
 func (opts *InitEnvOpts) Ask() error {
 	if opts.EnvName == "" {
-		envName, err := opts.prompt.Get(
-			"What is your environment's name?",
-			"A unique identifier for an environment (e.g. dev, test, prod)",
-			validateEnvironmentName,
-		)
+		envName, err := opts.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
 		if err != nil {
-			return fmt.Errorf("failed to get environment name: %w", err)
+			return fmt.Errorf("prompt to get environment name: %w", err)
 		}
 		opts.EnvName = envName
+	}
+	if opts.EnvProfile == "" {
+		profile, err := opts.prompt.Get(
+			fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(opts.EnvName)),
+			envInitProfileHelpPrompt,
+			nil, // no validation needed
+			prompt.WithDefaultInput("default"))
+		if err != nil {
+			return fmt.Errorf("prompt to get the profile name: %w", err)
+		}
+		opts.EnvProfile = profile
 	}
 	return nil
 }
 
 // Validate returns an error if the values passed by the user are invalid.
 func (opts *InitEnvOpts) Validate() error {
-	if opts.EnvName != "" {
-		if err := validateEnvironmentName(opts.EnvName); err != nil {
-			return err
-		}
+	if err := validateEnvironmentName(opts.EnvName); err != nil {
+		return err
+	}
+	if opts.EnvProfile == "" {
+		return fmt.Errorf("profile name cannot be empty, please provide a value with %s", color.HighlightCode(profileFlag))
 	}
 	if opts.ProjectName() == "" {
 		return errors.New("no project found, run `project init` first please")
@@ -222,25 +239,28 @@ func (opts *InitEnvOpts) RecommendedActions() []string {
 // BuildEnvInitCmd builds the command for adding an environment.
 func BuildEnvInitCmd() *cobra.Command {
 	opts := InitEnvOpts{
-		EnvProfile: "default",
-		prog:       termprogress.NewSpinner(),
-		GlobalOpts: NewGlobalOpts(),
+		IsProduction: false,
+		prog:         termprogress.NewSpinner(),
+		GlobalOpts:   NewGlobalOpts(),
 	}
 
 	cmd := &cobra.Command{
-		Use:   "init [name]",
+		Use:   "init",
 		Short: "Creates a new environment in your project.",
 		Example: `
   Creates a test environment in your "default" AWS profile.
-  /code $ archer env init test
+  /code $ archer env init --name test --profile default
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ archer env init prod-iad --profile prod-admin --prod`,
-		Args: reservedArgs,
+  /code $ archer env init --name prod-iad --profile prod-admin --prod`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if len(args) > 0 {
-				opts.EnvName = args[0]
+			if err := opts.Ask(); err != nil {
+				return err
 			}
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+
 			store, err := store.New()
 			if err != nil {
 				return err
@@ -262,17 +282,11 @@ func BuildEnvInitCmd() *cobra.Command {
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "default", profileFlagDescription)
-	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
-
+	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, opts.IsProduction, prodEnvFlagDescription)
 	return cmd
 }
