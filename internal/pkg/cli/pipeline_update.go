@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	fmtAddPipelineResourcesFailed   = "Failed to add pipeline resources to your project: %s"
 	fmtAddPipelineResourcesStart    = "Adding pipeline resources to your project: %s"
 	fmtAddPipelineResourcesComplete = "Successfully added pipeline resources to your project: %s"
 
@@ -123,7 +124,8 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
 	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
 	if err != nil {
-		return fmt.Errorf("add pipeline resources to project %s: %w", opts.ProjectName(), err)
+		opts.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(opts.ProjectName())))
+		return fmt.Errorf("add pipeline resources to project %s in %s: %w", opts.ProjectName(), opts.region, err)
 	}
 	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.ProjectName())))
 
