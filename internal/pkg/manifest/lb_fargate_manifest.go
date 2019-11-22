@@ -105,11 +105,6 @@ func (m LBFargateManifest) DockerfilePath() string {
 	return m.Image.Build
 }
 
-// AppName returns the name of the application
-func (m LBFargateManifest) AppName() string {
-	return m.Name
-}
-
 // EnvConf returns the application configuration with environment overrides.
 // If the environment passed in does not have any overrides then we return the default values.
 func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
