@@ -18,30 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	projectName  = "badgoose"
-	region       = "us-west-2"
-	accountID    = "123456789012"
-	pipelineFile = "pipeline.yml"
-	content      = `
-name: pipepiper
-version: 1
-
-source:
-  provider: GitHub
-  properties:
-    repository: aws/somethingCool
-    access_token_secret: "github-token-badgoose-backend"
-    branch: master
-
-stages:
-    -
-      name: chicken
-    -
-      name: wings
-`
-)
-
 func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 	testCases := map[string]struct {
 		stages        []manifest.PipelineStage
@@ -59,7 +35,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					Name: "test",
 				},
 			},
-			inProjectName: projectName,
+			inProjectName: "badgoose",
 			mockWorkspace: func(m *archermocks.MockWorkspace) {
 				m.EXPECT().Apps().Return([]archer.Manifest{
 					&manifest.LBFargateManifest{
@@ -76,9 +52,9 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				mockEnv := &archer.Environment{
 					Name:      "test",
-					Project:   projectName,
-					Region:    region,
-					AccountID: accountID,
+					Project:   "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
 					Prod:      false,
 				}
 
@@ -89,8 +65,8 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 				{
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
 						Name:      "test",
-						Region:    region,
-						AccountID: accountID,
+						Region:    "us-west-2",
+						AccountID: "123456789012",
 						Prod:      false,
 					},
 					LocalApplications: []string{"frontend", "backend"},
@@ -188,6 +164,30 @@ func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 }
 
 func TestUpdatePipelineOpts_Execute(t *testing.T) {
+	const (
+		projectName  = "badgoose"
+		region       = "us-west-2"
+		accountID    = "123456789012"
+		pipelineFile = "pipeline.yml"
+		content      = `
+name: pipepiper
+version: 1
+
+source:
+  provider: GitHub
+  properties:
+    repository: aws/somethingCool
+    access_token_secret: "github-token-badgoose-backend"
+    branch: master
+
+stages:
+    -
+      name: chicken
+    -
+      name: wings
+`
+	)
+
 	project := archer.Project{
 		AccountID: accountID,
 		Name:      projectName,
