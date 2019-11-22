@@ -74,7 +74,7 @@ func (opts *InitEnvOpts) Ask() error {
 		profile, err := opts.prompt.Get(
 			fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(opts.EnvName)),
 			envInitProfileHelpPrompt,
-			validateEnvironmentName,
+			nil, // no validation needed
 			prompt.WithDefaultInput("default"))
 		if err != nil {
 			return fmt.Errorf("prompt to get the profile name: %w", err)

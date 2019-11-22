@@ -205,8 +205,6 @@ Resources:
   CloudformationExecutionRole:
     Type: AWS::IAM::Role
     DependsOn: VPC
-    # This role should not be deleted while CloudFormation tries to delete the stack itself.
-    DeletionPolicy: Retain
     Properties:
       RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
       AssumeRolePolicyDocument:
@@ -243,8 +241,6 @@ Resources:
   EnvironmentManagerRole:
     Type: AWS::IAM::Role
     DependsOn: CloudformationExecutionRole
-    # This role should not be deleted while CloudFormation tries to delete the stack itself.
-    DeletionPolicy: Retain
     Properties:
       RoleName: !Sub ${AWS::StackName}-EnvManagerRole
       AssumeRolePolicyDocument:

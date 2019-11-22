@@ -11,13 +11,83 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDeleteEnvOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		inEnvName    string
+		inEnvProfile string
+
+		mockPrompt func(ctrl *gomock.Controller) *climocks.Mockprompter
+
+		wantedEnvName    string
+		wantedEnvProfile string
+		wantedError      error
+	}{
+		"prompts for all required flags": {
+			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
+				p := climocks.NewMockprompter(ctrl)
+				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
+				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
+					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("default", nil)
+				return p
+			},
+			wantedEnvName:    "test",
+			wantedEnvProfile: "default",
+		},
+		"wraps error from prompting for env name": {
+			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
+				p := climocks.NewMockprompter(ctrl)
+				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("", errors.New("some error"))
+				return p
+			},
+			wantedError: errors.New("prompt to get environment name: some error"),
+		},
+		"wraps error from prompting from profile": {
+			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
+				p := climocks.NewMockprompter(ctrl)
+				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
+				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
+					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				return p
+			},
+			wantedError: errors.New("prompt to get the profile name: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			opts := DeleteEnvOpts{
+				EnvName:    tc.inEnvName,
+				EnvProfile: tc.inEnvProfile,
+				GlobalOpts: &GlobalOpts{
+					prompt: tc.mockPrompt(ctrl),
+				},
+			}
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedError == nil {
+				require.Equal(t, tc.wantedEnvName, opts.EnvName)
+				require.Equal(t, tc.wantedEnvProfile, opts.EnvProfile)
+				require.Nil(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}
 
 func TestDeleteEnvOpts_Validate(t *testing.T) {
 	const (
@@ -133,12 +203,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 
 func TestDeleteEnvOpts_Execute(t *testing.T) {
 	const (
-		testProject           = "phonetool"
-		testEnv               = "test"
-		testExecutionRoleName = "phonetool-test-CFNExecutionRole"
-		testManagerRoleName   = "phonetool-test-EnvManagerRole"
-		testExecutionRoleARN  = "arn:aws:iam::1111:role/" + testExecutionRoleName
-		testManagerRoleARN    = "arn:aws:iam::1111:role/" + testManagerRoleName
+		testProject = "phonetool"
+		testEnv     = "test"
 	)
 	testError := errors.New("some error")
 
@@ -147,7 +213,6 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 		mockPrompt   func(ctrl *gomock.Controller) *climocks.Mockprompter
 		mockProg     func(ctrl *gomock.Controller) *climocks.Mockprogress
 		mockDeploy   func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer
-		mockIAM      func(ctrl *gomock.Controller) *climocks.MockIAMAPI
 		mockStore    func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
 
 		wantedError error
@@ -164,16 +229,13 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {
 				return climocks.NewMockenvironmentDeployer(ctrl)
 			},
-			mockIAM: func(ctrl *gomock.Controller) *climocks.MockIAMAPI {
-				return climocks.NewMockIAMAPI(ctrl)
-			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
 				return mocks.NewMockEnvironmentStore(ctrl)
 			},
 
 			wantedError: errors.New("prompt for environment deletion: some error"),
 		},
-		"error from delete stack but roles succeed": {
+		"error from delete stack": {
 			inSkipPrompt: true,
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				return climocks.NewMockprompter(ctrl)
@@ -189,38 +251,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				deploy.EXPECT().DeleteEnvironment(testProject, testEnv).Return(testError)
 				return deploy
 			},
-			mockIAM: func(ctrl *gomock.Controller) *climocks.MockIAMAPI {
-				svc := climocks.NewMockIAMAPI(ctrl)
-
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: aws.String(testExecutionRoleName)}).
-					Return(&iam.ListRolePoliciesOutput{
-						PolicyNames: []*string{aws.String("policy1")},
-					}, nil)
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: aws.String(testManagerRoleName)}).
-					Return(&iam.ListRolePoliciesOutput{
-						PolicyNames: []*string{aws.String("policy2")},
-					}, nil)
-
-				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
-					PolicyName: aws.String("policy1"),
-					RoleName:   aws.String(testExecutionRoleName),
-				}).Return(nil, nil)
-				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
-					PolicyName: aws.String("policy2"),
-					RoleName:   aws.String(testManagerRoleName),
-				}).Return(nil, nil)
-
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: aws.String(testExecutionRoleName)}).
-					Return(nil, nil)
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: aws.String(testManagerRoleName)}).
-					Return(nil, nil)
-				return svc
-			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
 				return mocks.NewMockEnvironmentStore(ctrl)
 			},
 		},
-		"error from roles but delete stack succeeds": {
+		"deletes from store if stack deletion succeeds": {
 			inSkipPrompt: true,
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				return climocks.NewMockprompter(ctrl)
@@ -235,57 +270,6 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				deploy := climocks.NewMockenvironmentDeployer(ctrl)
 				deploy.EXPECT().DeleteEnvironment(testProject, testEnv).Return(nil)
 				return deploy
-			},
-			mockIAM: func(ctrl *gomock.Controller) *climocks.MockIAMAPI {
-				svc := climocks.NewMockIAMAPI(ctrl)
-				executionRole := aws.String(fmt.Sprintf("%s-%s-%s", testProject, testEnv, "CFNExecutionRole"))
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: executionRole}).Return(nil, testError)
-				return svc
-			},
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
-				return mocks.NewMockEnvironmentStore(ctrl)
-			},
-		},
-		"deletes from store if stack and roles succeed": {
-			inSkipPrompt: true,
-			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
-				return climocks.NewMockprompter(ctrl)
-			},
-			mockProg: func(ctrl *gomock.Controller) *climocks.Mockprogress {
-				prog := climocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testProject))
-				prog.EXPECT().Stop(fmt.Sprintf(fmtDeleteEnvComplete, testEnv, testProject))
-				return prog
-			},
-			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {
-				deploy := climocks.NewMockenvironmentDeployer(ctrl)
-				deploy.EXPECT().DeleteEnvironment(testProject, testEnv).Return(nil)
-				return deploy
-			},
-			mockIAM: func(ctrl *gomock.Controller) *climocks.MockIAMAPI {
-				svc := climocks.NewMockIAMAPI(ctrl)
-
-				executionRole := aws.String(fmt.Sprintf("%s-%s-%s", testProject, testEnv, "CFNExecutionRole"))
-				managerRole := aws.String(fmt.Sprintf("%s-%s-%s", testProject, testEnv, "EnvManagerRole"))
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: executionRole}).Return(&iam.ListRolePoliciesOutput{
-					PolicyNames: []*string{aws.String("policy1")},
-				}, nil)
-				svc.EXPECT().ListRolePolicies(&iam.ListRolePoliciesInput{RoleName: managerRole}).Return(&iam.ListRolePoliciesOutput{
-					PolicyNames: []*string{aws.String("policy2")},
-				}, nil)
-
-				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
-					PolicyName: aws.String("policy1"),
-					RoleName:   executionRole,
-				}).Return(nil, nil)
-				svc.EXPECT().DeleteRolePolicy(&iam.DeleteRolePolicyInput{
-					PolicyName: aws.String("policy2"),
-					RoleName:   managerRole,
-				}).Return(nil, nil)
-
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: executionRole}).Return(nil, nil)
-				svc.EXPECT().DeleteRole(&iam.DeleteRoleInput{RoleName: managerRole}).Return(nil, nil)
-				return svc
 			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
 				store := mocks.NewMockEnvironmentStore(ctrl)
@@ -304,14 +288,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				EnvName:          testEnv,
 				SkipConfirmation: tc.inSkipPrompt,
 				storeClient:      tc.mockStore(ctrl),
-				iamClient:        tc.mockIAM(ctrl),
 				deployClient:     tc.mockDeploy(ctrl),
 				prog:             tc.mockProg(ctrl),
 				env: &archer.Environment{
-					Project:          testProject,
-					Name:             testEnv,
-					ExecutionRoleARN: testExecutionRoleARN,
-					ManagerRoleARN:   testManagerRoleARN,
+					Project: testProject,
+					Name:    testEnv,
 				},
 				GlobalOpts: &GlobalOpts{
 					projectName: testProject,

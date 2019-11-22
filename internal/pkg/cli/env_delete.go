@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -13,19 +12,24 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/spf13/cobra"
 )
 
 const (
-	fmtDeleteEnvPrompt = "Delete environment %s from project %s?"
+	envDeleteNamePrompt     = "What is your environment's name?"
+	envDeleteNameHelpPrompt = "The unique identifier for an existing environment."
+
+	fmtEnvDeleteProfilePrompt  = "Which named profile should we use to delete %s?"
+	envDeleteProfileHelpPrompt = "This is usually the same AWS CLI named profile used to create the environment."
+
+	fmtDeleteEnvPrompt = "Are you sure you want to delete environment %s from project %s?"
 )
 
 const (
@@ -36,14 +40,14 @@ const (
 
 // DeleteEnvOpts holds the fields needed to delete an environment.
 type DeleteEnvOpts struct {
-	// Arguments and flags.
+	// Required flags.
 	EnvName          string
+	EnvProfile       string
 	SkipConfirmation bool
 
 	// Interfaces for dependencies.
 	storeClient  archer.EnvironmentStore
 	rgClient     resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
-	iamClient    iamiface.IAMAPI
 	deployClient environmentDeployer
 	prog         progress
 
@@ -53,8 +57,26 @@ type DeleteEnvOpts struct {
 	*GlobalOpts
 }
 
-// Ask is a no-op for this command.
+// Ask prompts for fields that are required but not passed in.
 func (opts *DeleteEnvOpts) Ask() error {
+	if opts.EnvName == "" {
+		envName, err := opts.prompt.Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, validateEnvironmentName)
+		if err != nil {
+			return fmt.Errorf("prompt to get environment name: %w", err)
+		}
+		opts.EnvName = envName
+	}
+	if opts.EnvProfile == "" {
+		profile, err := opts.prompt.Get(
+			fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(opts.EnvName)),
+			envDeleteProfileHelpPrompt,
+			nil, // no validation needed
+			prompt.WithDefaultInput("default"))
+		if err != nil {
+			return fmt.Errorf("prompt to get the profile name: %w", err)
+		}
+		opts.EnvProfile = profile
+	}
 	return nil
 }
 
@@ -66,13 +88,6 @@ func (opts *DeleteEnvOpts) Validate() error {
 		return fmt.Errorf("get environment %s metadata in project %s: %w", opts.EnvName, opts.ProjectName(), err)
 	}
 	opts.env = env
-
-	if opts.rgClient == nil {
-		// Tests mock the client.
-		if err := opts.initClientsFromRole(opts.env.ManagerRoleARN, opts.env.Region); err != nil {
-			return err
-		}
-	}
 
 	// Look up applications by searching for cloudformation stacks in the environment's region.
 	// TODO We should move this to a package like "describe" similar to the existing "store" pkg.
@@ -120,13 +135,12 @@ func (opts *DeleteEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-
 	if !shouldDelete {
 		return nil
 	}
+
 	isStackDeleted := opts.deleteStack()
-	areRolesDeleted := opts.deleteRoles()
-	if isStackDeleted && areRolesDeleted { // TODO Add a --force flag that attempts to remove from SSM regardless.
+	if isStackDeleted { // TODO Add a --force flag that attempts to remove from SSM regardless.
 		// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
 		opts.deleteFromStore()
 	}
@@ -135,17 +149,6 @@ func (opts *DeleteEnvOpts) Execute() error {
 
 // RecommendedActions is a no-op for this command.
 func (opts *DeleteEnvOpts) RecommendedActions() []string {
-	return nil
-}
-
-func (opts *DeleteEnvOpts) initClientsFromRole(roleARN, region string) error {
-	sess, err := session.FromRole(roleARN, region)
-	if err != nil {
-		return fmt.Errorf("get session from role %s and region %s: %w", roleARN, region, err)
-	}
-	opts.rgClient = resourcegroupstaggingapi.New(sess)
-	opts.iamClient = iam.New(sess)
-	opts.deployClient = cloudformation.New(sess)
 	return nil
 }
 
@@ -172,49 +175,6 @@ func (opts *DeleteEnvOpts) deleteStack() bool {
 	return true
 }
 
-// deleteRoles returns true if the the execution role and manager role were deleted successfully. Otherwise, returns false.
-func (opts *DeleteEnvOpts) deleteRoles() bool {
-	// We must delete the EnvManagerRole last since as it's the assumed role for deletions.
-	var roleNames []string
-	roleARNs := []string{opts.env.ExecutionRoleARN, opts.env.ManagerRoleARN}
-	for _, roleARN := range roleARNs {
-		parsedARN, err := arn.Parse(roleARN)
-		if err != nil {
-			log.Infof("Failed to parse the role arn %s: %v\n", roleARN, err)
-			return false
-		}
-		roleNames = append(roleNames, strings.TrimPrefix(parsedARN.Resource, "role/"))
-	}
-
-	for _, roleName := range roleNames {
-		// We need to delete the policies attached to the role first.
-		policies, err := opts.iamClient.ListRolePolicies(&iam.ListRolePoliciesInput{
-			RoleName: aws.String(roleName),
-		})
-		if err != nil {
-			log.Infof("Failed to list policies for role %s: %v\n", roleName, err)
-			return false
-		}
-		for _, policy := range policies.PolicyNames {
-			if _, err := opts.iamClient.DeleteRolePolicy(&iam.DeleteRolePolicyInput{
-				PolicyName: policy,
-				RoleName:   aws.String(roleName),
-			}); err != nil {
-				log.Infof("Failed to delete policy %s from role %s: %v\n", *policy, roleName, err)
-				return false
-			}
-		}
-
-		if _, err := opts.iamClient.DeleteRole(&iam.DeleteRoleInput{
-			RoleName: aws.String(roleName),
-		}); err != nil {
-			log.Infof("Failed to delete role %s: %v\n", roleName, err)
-			return false
-		}
-	}
-	return true
-}
-
 func (opts *DeleteEnvOpts) deleteFromStore() {
 	if err := opts.storeClient.DeleteEnvironment(opts.env.Project, opts.env.Name); err != nil {
 		log.Infof("Failed to remove environment %s from project %s store: %w\n", opts.env.Name, opts.env.Project, err)
@@ -223,40 +183,42 @@ func (opts *DeleteEnvOpts) deleteFromStore() {
 
 // BuildEnvDeleteCmd builds the command to delete environment(s).
 func BuildEnvDeleteCmd() *cobra.Command {
-	opts := &DeleteEnvOpts{}
+	opts := &DeleteEnvOpts{
+		prog:       termprogress.NewSpinner(),
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
-		Use:   "delete [name]",
+		Use:   "delete",
 		Short: "Deletes an environment from your project.",
 		Example: `
   Delete the "test" environment.
-  /code $ archer env delete test
+  /code $ archer env delete --name test --profile default
 
   Delete the "test" environment without prompting.
-  /code $ archer env delete test prod --yes`,
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("requires a single environment name as argument")
-			}
-			return nil
-		},
+  /code $ archer env delete --name test --profile default --yes`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts.EnvName = args[0]
-			opts.GlobalOpts = NewGlobalOpts()
+			if err := opts.Ask(); err != nil {
+				return err
+			}
 			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 			}
 			opts.storeClient = store
-			opts.prog = termprogress.NewSpinner()
-			return nil
+			profileSess, err := session.FromProfile(opts.EnvProfile)
+			if err != nil {
+				return fmt.Errorf("cannot create session from profile %s: %w", opts.EnvProfile, err)
+			}
+			opts.rgClient = resourcegroupstaggingapi.New(profileSess)
+			opts.deployClient = cloudformation.New(profileSess)
+			return opts.Validate()
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Validate(); err != nil {
-				return err
-			}
 			return opts.Execute()
 		}),
 	}
+	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
