@@ -98,7 +98,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 
-				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt).
 					Return(true, nil)
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
@@ -114,7 +114,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 
-				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt).
 					Return(true, nil)
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
@@ -130,7 +130,7 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 
-				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm("Would you like to deploy a staging environment?", gomock.Any()).
+				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt).
 					Return(false, nil)
 			},
 		},

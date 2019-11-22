@@ -26,6 +26,11 @@ import (
 
 const defaultEnvironmentName = "test"
 
+const (
+	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
+	initShouldDeployHelpPrompt = "An environment with your application deployed to it. This will allow you to test your application before placing it in production."
+)
+
 // InitOpts holds the fields to bootstrap a new application.
 type InitOpts struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
@@ -124,7 +129,7 @@ func NewInitOpts() (*InitOpts, error) {
 
 // Run executes "project init", "env init", "app init" and "app deploy".
 func (opts *InitOpts) Run() error {
-	log.Warningln("It's best to run this command in the root of your workspace.")
+	log.Warningln("It's best to run this command in the root of your Git repository.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
 to help you get set up with a project on ECS. A project is a collection of 
 containerized applications (or micro-services) that operate together.`)
@@ -209,7 +214,7 @@ func (opts *InitOpts) deployApp() error {
 }
 
 func (opts *InitOpts) askShouldDeploy() error {
-	v, err := opts.prompt.Confirm("Would you like to deploy a staging environment?", "A \"test\" environment with your application deployed to it. This will allow you to test your application before placing it in production.")
+	v, err := opts.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}
