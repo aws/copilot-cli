@@ -68,9 +68,14 @@ func (opts *UpdatePipelineOpts) Validate() error {
 
 func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	apps, err := opts.ws.AppNames()
+	apps, err := opts.ws.Apps()
 	if err != nil {
 		return nil, err
+	}
+	// TODO: Will fast follow with another PR to actually support #443
+	appNames := make([]string, 0, len(apps))
+	for _, app := range apps {
+		appNames = append(appNames, app.AppName())
 	}
 
 	for _, stage := range manifestStages {
@@ -80,7 +85,7 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 		}
 
 		pipelineStage := deploy.PipelineStage{
-			LocalApplications: apps,
+			LocalApplications: appNames,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
 				Name:      stage.Name,
 				Region:    env.Region,

@@ -34,7 +34,17 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			},
 			inProjectName: "badgoose",
 			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().AppNames().Return([]string{"frontend, backend"}, nil).Times(1)
+				m.EXPECT().Apps().Return([]archer.Manifest{
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "frontend",
+						},
+					},
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "backend",
+						},
+					}}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				mockEnv := &archer.Environment{
@@ -56,7 +66,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						AccountID: "123456789012",
 						Prod:      false,
 					},
-					LocalApplications: []string{"frontend, backend"},
+					LocalApplications: []string{"frontend", "backend"},
 				},
 			},
 			expectedError: nil,

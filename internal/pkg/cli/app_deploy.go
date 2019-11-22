@@ -167,18 +167,23 @@ func (opts *appDeployOpts) sourceProjectData() error {
 }
 
 func (opts *appDeployOpts) sourceProjectApplications() error {
-	appNames, err := opts.workspaceService.AppNames()
+	apps, err := opts.workspaceService.Apps()
 
 	if err != nil {
-		return fmt.Errorf("get app names: %w", err)
+		return fmt.Errorf("get apps: %w", err)
 	}
 
-	if len(appNames) == 0 {
+	if len(apps) == 0 {
 		// TODO: recommend follow up command - app init?
 		return errors.New("no applications found")
 	}
 
-	opts.localProjectAppNames = appNames
+	names := make([]string, 0, len(apps))
+	for _, app := range apps {
+		names = append(names, app.AppName())
+	}
+
+	opts.localProjectAppNames = names
 
 	return nil
 }
