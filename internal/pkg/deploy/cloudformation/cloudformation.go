@@ -220,9 +220,9 @@ func (cf CloudFormation) create(stackConfig stackConfiguration) error {
 	}
 }
 
-// update will update a given stack, so long as the stack already exists
-// and it isn't already deploying something. If there's already some action
-// happening on this stack, we'll return ErrStackUpdateInProgress.
+// update will update a given stack, so long as the stack already exists and it isn't already deploying something.
+// If there's already some action happening on this stack, it returns an ErrStackUpdateInProgress.
+// If there are no changes in the stack, it returns an errChangeSetEmpty.
 func (cf CloudFormation) update(stackConfig stackConfiguration) error {
 	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
 	existingStack, err := cf.describeStack(describeStackInput)
@@ -238,7 +238,6 @@ func (cf CloudFormation) update(stackConfig stackConfiguration) error {
 			stackStatus: aws.StringValue(existingStack.StackStatus),
 		}
 	}
-
 	return cf.deploy(stackConfig, cloudformation.ChangeSetTypeUpdate)
 }
 
@@ -295,7 +294,7 @@ func (cf CloudFormation) deployChangeSet(in *cloudformation.CreateChangeSetInput
 		// of failed changesets a customer can have on a particular stack.
 		if len(set.changes) == 0 {
 			set.delete()
-			return nil
+			return errChangeSetEmpty
 		}
 
 		return err

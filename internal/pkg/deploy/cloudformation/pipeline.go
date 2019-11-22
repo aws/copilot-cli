@@ -30,6 +30,7 @@ func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 
 	// If the stack already exists - we update it
@@ -39,6 +40,10 @@ func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
 	}
 
 	if err := cf.update(pipelineConfig); err != nil {
+		if err == errChangeSetEmpty {
+			// If there are no updates, then exit successfully.
+			return nil
+		}
 		return fmt.Errorf("updating pipeline: %w", err)
 	}
 
