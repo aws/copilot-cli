@@ -27,17 +27,28 @@ func New() Prompt {
 }
 
 // Get prompts the user for free-form text input.
-func (p Prompt) Get(message, help string, validator ValidatorFunc) (string, error) {
+func (p Prompt) Get(message, help string, validator ValidatorFunc, opts ...GetOption) (string, error) {
 	prompt := &survey.Input{
 		Message: message,
 		Help:    help,
 	}
+	for _, opt := range opts {
+		opt(prompt)
+	}
 
 	var result string
-
 	err := p(prompt, &result, stdio(), validators(validator), icons())
-
 	return result, err
+}
+
+// GetOption is a functional option to modify the Get prompt.
+type GetOption func(*survey.Input)
+
+// WithDefaultInput sets a default message for the input.
+func WithDefaultInput(s string) GetOption {
+	return func(input *survey.Input) {
+		input.Default = s
+	}
 }
 
 // GetSecret prompts the user for sensitive input. Wraps survey.Password
