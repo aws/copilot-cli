@@ -689,7 +689,6 @@ func TestRemoveAppFromProject(t *testing.T) {
 	}{
 		"should remove input app from the stack set": {
 			app: "test",
-			// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
 			mockDescribeStackSet: func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
 				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
 					Apps:    []string{"test", "firsttest"},
@@ -707,7 +706,7 @@ func TestRemoveAppFromProject(t *testing.T) {
 				configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
 				require.NoError(t, err)
 				require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Apps)
-				require.Empty(t, configToDeploy.Accounts, "There should be no new apps to deploy")
+				require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
 				require.Equal(t, 2, configToDeploy.Version)
 
 				return &cloudformation.UpdateStackSetOutput{

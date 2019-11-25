@@ -239,18 +239,18 @@ func (opts deleteAppOpts) deleteStacks() error {
 }
 
 func (opts deleteAppOpts) emptyECRRepos() error {
-	var regions []string
+	var uniqueRegions []string
 	for _, env := range opts.projectEnvironments {
-		if !contains(env.Region, regions) {
-			regions = append(regions, env.Region)
+		if !contains(env.Region, uniqueRegions) {
+			uniqueRegions = append(uniqueRegions, env.Region)
 		}
 	}
 
 	// TODO: centralized ECR repo name
 	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
 
-	for _, uniqueRegions := range regions {
-		sess, err := session.DefaultWithRegion(uniqueRegions)
+	for _, region := range uniqueRegions {
+		sess, err := session.DefaultWithRegion(region)
 		if err != nil {
 			return err
 		}
@@ -292,7 +292,11 @@ func (opts deleteAppOpts) removeAppProjectResources() error {
 }
 
 func (opts deleteAppOpts) deleteSSMParam() error {
-	return opts.projectService.DeleteApplication(opts.projectName, opts.app)
+	if err := opts.projectService.DeleteApplication(opts.projectName, opts.app); err != nil {
+		return fmt.Errorf("remove app %s from project %s: %w", opts.app, opts.projectName, err)
+	}
+
+	return nil
 }
 
 func (opts deleteAppOpts) deleteWorkspaceFile() error {

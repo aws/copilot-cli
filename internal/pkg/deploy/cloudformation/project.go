@@ -215,12 +215,11 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 	}, cf.box)
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
-		return fmt.Errorf("adding %s app resources to project %s: %w", appName, project.Name, err)
+		return fmt.Errorf("get previous project %s config: %w", project.Name, err)
 	}
 
-	// We'll generate a new list of Accounts to add to our project
-	// infrastructure by appending the environment's account if it
-	// doesn't already exist.
+	// We'll generate a new list of Accounts to remove the account associated
+	// with the input app to be removed.
 	var appList []string
 	shouldRemoveApp := false
 	for _, app := range previouslyDeployedConfig.Apps {
