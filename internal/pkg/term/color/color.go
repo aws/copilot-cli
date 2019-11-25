@@ -16,12 +16,11 @@ import (
 // Refer to https://en.wikipedia.org/wiki/ANSI_escape_code to validate if colors would
 // be visible on white or black screen backgrounds.
 var (
-	Grey          = color.New(color.FgWhite)
-	Red           = color.New(color.FgHiRed)
-	Cyan          = color.New(color.FgCyan)
-	BoldUnderline = color.New(color.Bold, color.Underline)
-	Magenta       = color.New(color.FgMagenta)
-	Blue          = color.New(color.FgBlue)
+	Grey       = color.New(color.FgWhite)
+	Red        = color.New(color.FgHiRed)
+	Cyan       = color.New(color.FgCyan)
+	HiCyan     = color.New(color.FgHiCyan)
+	BoldItalic = color.New(color.Bold).Add(color.Italic)
 )
 
 const colorEnvVar = "COLOR"
@@ -50,6 +49,11 @@ func DisableColorBasedOnEnvVar() {
 	}
 }
 
+// Emphasize colors the string to denote that it as important, and returns it.
+func Emphasize(s string) string {
+	return BoldItalic.Sprint(s)
+}
+
 // HighlightUserInput colors the string to denote it as an input from standard input, and returns it.
 func HighlightUserInput(s string) string {
 	return Cyan.Sprint(s)
@@ -57,10 +61,10 @@ func HighlightUserInput(s string) string {
 
 // HighlightResource colors the string to denote it as a resource created by the CLI, and returns it.
 func HighlightResource(s string) string {
-	return BoldUnderline.Sprint(s)
+	return HiCyan.Sprint(s)
 }
 
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
 func HighlightCode(s string) string {
-	return Magenta.Sprintf("`%s`", s)
+	return HiCyan.Sprintf("`%s`", s)
 }

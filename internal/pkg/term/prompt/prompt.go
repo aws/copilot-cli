@@ -12,6 +12,51 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 )
 
+func init() {
+	survey.ConfirmQuestionTemplate = `
+{{ if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- color "default"}}{{ .Message }} {{color "reset"}}
+{{- if .Answer}}
+  {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
+{{- else }}
+  {{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}
+  {{- color "cyan"}}{{if .Default}}(Y/n) {{else}}(y/N) {{end}}{{color "reset"}}
+{{- end}}`
+
+	survey.SelectQuestionTemplate = `
+{{ if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- color "default"}}{{ .Message }}{{ .FilterMessage }}{{color "reset"}}
+{{- if .ShowAnswer}}{{color "cyan"}} {{.Answer}}{{color "reset"}}{{"\n"}}
+{{- else}}
+  {{- "  "}}{{- color "white"}}[Use arrows to move, type to filter{{- if and .Help (not .ShowHelp)}}, {{ .Config.HelpInput }} for more help{{end}}]{{color "reset"}}
+  {{- "\n"}}
+  {{- range $ix, $choice := .PageEntries}}
+    {{- if eq $ix $.SelectedIndex }}{{color "cyan+b" }}{{ $.Config.Icons.SelectFocus.Text }} {{else}}{{color "default"}}  {{end}}
+    {{- $choice.Value}}
+    {{- color "reset"}}{{"\n"}}
+  {{- end}}
+{{- end}}`
+
+	survey.InputQuestionTemplate = `
+{{ if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- color "default"}}{{ .Message }} {{color "reset"}}
+{{- if .ShowAnswer}}
+  {{- color "cyan"}}{{.Answer}}{{color "reset"}}{{"\n"}}
+{{- else }}
+  {{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ print .Config.HelpInput }} for help]{{color "reset"}} {{end}}
+  {{- if .Default}}{{color "cyan"}}({{.Default}}) {{color "reset"}}{{end}}
+{{- end}}`
+
+	survey.PasswordQuestionTemplate = `
+{{ if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }} {{ .Help }}{{color "reset"}}{{"\n"}}{{end}}
+{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }} {{color "reset"}}
+{{- color "default"}}{{ .Message }} {{color "reset"}}
+{{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}`
+}
+
 // ErrEmptyOptions indicates the input options list was empty.
 var ErrEmptyOptions = errors.New("list of provided options is empty")
 
@@ -117,8 +162,8 @@ func stdio() survey.AskOpt {
 
 func icons() survey.AskOpt {
 	return survey.WithIcons(func(icons *survey.IconSet) {
-		icons.Question.Format = "cyan"
-		icons.Help.Format = "white"
+		icons.Question.Format = "cyan+b"
+		icons.Help.Format = "default+ih:default"
 	})
 }
 

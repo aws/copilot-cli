@@ -12,6 +12,7 @@ import (
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
@@ -42,7 +43,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtAppInitAppTypePrompt, color.Emphasize("infrastructure pattern"))), appInitAppTypeHelpPrompt, gomock.Eq(manifest.AppTypes)).
 					Return(wantedAppType, nil)
 			},
 			wantedErr: nil,
@@ -54,7 +55,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.AppTypes)).
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("failed to get type selection: some error"),
@@ -66,7 +67,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq("What do you want to call this Load Balanced Web App?"), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(fmtAppInitAppNamePrompt, color.Emphasize("name"), wantedAppType)), gomock.Any(), gomock.Any()).
 					Return(wantedAppName, nil)
 			},
 			wantedErr: nil,
@@ -78,7 +79,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq("What do you want to call this Load Balanced Web App?"), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("failed to get application name: some error"),
@@ -97,7 +98,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which Dockerfile would you like to use for frontend app?"), gomock.Any(), gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(wantedAppName))), appInitDockerfileHelpPrompt, gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",
@@ -132,7 +133,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which Dockerfile would you like to use for frontend app?"), gomock.Any(), gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(wantedAppName))), gomock.Any(), gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",

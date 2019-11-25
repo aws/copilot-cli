@@ -72,12 +72,12 @@ func (opts *InitProjectOpts) Ask() error {
 	summary, err := opts.ws.Summary()
 	if err == nil {
 		msg := fmt.Sprintf(
-			"Looks like you are using a workspace that's registered to project %s. We'll use that as your project.",
-			color.HighlightUserInput(summary.ProjectName))
+			"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project.",
+			color.HighlightResource(summary.ProjectName))
 		if opts.ProjectName != "" && opts.ProjectName != summary.ProjectName {
 			msg = fmt.Sprintf(
-				"Looks like you are using a workspace that's registered to project %s. We'll use that as your project instead of %s.",
-				color.HighlightUserInput(summary.ProjectName),
+				"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project instead of %s.",
+				color.HighlightResource(summary.ProjectName),
 				color.HighlightUserInput(opts.ProjectName))
 		}
 		log.Infoln(msg)
@@ -97,7 +97,8 @@ func (opts *InitProjectOpts) Ask() error {
 	}
 
 	log.Infoln("Looks like you have some projects already.")
-	useExistingProject, err := opts.prompt.Confirm("Would you like to use one of your existing projects?", "", prompt.WithTrueDefault())
+	useExistingProject, err := opts.prompt.Confirm(
+		"Would you like to use one of your existing projects?", "", prompt.WithTrueDefault())
 	if err != nil {
 		return fmt.Errorf("prompt to confirm using existing project: %w", err)
 	}
@@ -160,7 +161,7 @@ func (opts *InitProjectOpts) RecommendedActions() []string {
 
 func (opts *InitProjectOpts) askNewProjectName() error {
 	projectName, err := opts.prompt.Get(
-		"What would you like to call your project?",
+		fmt.Sprintf("What would you like to %s your project?", color.Emphasize("name")),
 		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 		validateProjectName)
 	if err != nil {
@@ -176,7 +177,7 @@ func (opts *InitProjectOpts) askSelectExistingProjectName(existingProjects []*ar
 		projectNames = append(projectNames, p.Name)
 	}
 	projectName, err := opts.prompt.SelectOne(
-		"Which one do you want to add a new application to?",
+		fmt.Sprintf("Which %s do you want to add a new application to?", color.Emphasize("existing project")),
 		"Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery.",
 		projectNames)
 	if err != nil {

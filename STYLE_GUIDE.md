@@ -66,8 +66,9 @@ but by providing sane defaults we reduce the cognitive load to accomplish a task
 Prompt the user for any required flag that the user did not provide a value for. Prompting is a human-friendly way of showing options:
 ![prompt](https://user-images.githubusercontent.com/879348/65549185-e4394380-ded1-11e9-9fce-f1b19cd4f27f.png)
 
-Don’t prompt the user if a flag value was provided to enable scripting.
-Prompts should be written to `stderr`.
+Don’t prompt the user if a flag value was provided to enable scripting.  
+Prompts should be written to `stderr`.  
+Highlight the important words in a prompt by bolding and italicizing the words. 
 
 ### Deleting and modifying production resources
 Any command that deletes or acts on a production resource should prompt the user to make sure they want to proceed with the action. 
@@ -100,17 +101,13 @@ won't be able to move above 24 lines and you'll have truncated progress events.
 ### Colors
 We use [colors](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors) to set highlights — catching the user’s eye with important information. 
 We do not use color as the primary means of communication. Running without color support should not meaningfully degrade the UX. 
-For continuous data, we use gradients, and for categorical data we use distinctive colors.
-
-The gradients in order of lowest to highest emphasis are: _plain_, _bright_, _bold bright_, _bold underlined bright_. An example of continuous data can be found in the help menu of the CLI while listing which sub-category a command belongs to.  
-![gradient](https://user-images.githubusercontent.com/879348/65549210-ef8c6f00-ded1-11e9-865d-b30ef7b94223.png) 
+For categorical data we use distinctive colors.
 
 Common categorical data are debug, info, warning, success, failure messages. 
 We respectively use _white_, default, _yellow_, _bright green_ and _bright red_ for these messages.  
 For highlighting user input, use _cyan_.  
-For highlighting created resources, use _bold underlined_.  
-For highlighting follow-up commands, use _magenta_.  
-![colors](https://user-images.githubusercontent.com/879348/68536239-80919b00-0304-11ea-9393-d6f0ff1f6d68.png)
+For highlighting created resources, use _bring cyan_.  
+For highlighting follow-up commands, use _bring cyan_ and wrap the text with the back quote character (`).  
 
 ### Data
 Commands that perform “read” operations should write their results to `stdout`. 

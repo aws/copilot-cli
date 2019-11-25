@@ -23,6 +23,19 @@ import (
 )
 
 const (
+	fmtAppInitAppTypePrompt  = "Which type of %s best represents your application?"
+	appInitAppTypeHelpPrompt = `Your application's architecture. Most applications need additional AWS resources to run.
+To help setup the infrastructure resources, select what "kind" or "type" of application you want to build.`
+
+	fmtAppInitAppNamePrompt     = "What do you want to %s this %s?"
+	fmtAppInitAppNameHelpPrompt = `The name will uniquely identify this application within your %s project.
+Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`
+
+	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s app?"
+	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
+)
+
+const (
 	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
@@ -161,9 +174,8 @@ func (opts *InitAppOpts) createAppInProject(projectName string) error {
 
 func (opts *InitAppOpts) askAppType() error {
 	t, err := opts.prompt.SelectOne(
-		"Which type of infrastructure pattern best represents your application?",
-		`Your application's architecture. Most applications need additional AWS resources to run.
-To help setup the infrastructure resources, select what "kind" or "type" of application you want to build.`,
+		fmt.Sprintf(fmtAppInitAppTypePrompt, color.Emphasize("infrastructure pattern")),
+		appInitAppTypeHelpPrompt,
 		manifest.AppTypes)
 
 	if err != nil {
@@ -175,9 +187,8 @@ To help setup the infrastructure resources, select what "kind" or "type" of appl
 
 func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
-		fmt.Sprintf("What do you want to call this %s?", opts.AppType),
-		fmt.Sprintf(`The name will uniquely identify this application within your %s project.
-Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`, opts.ProjectName()),
+		fmt.Sprintf(fmtAppInitAppNamePrompt, color.Emphasize("name"), color.HighlightUserInput(opts.AppType)),
+		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
@@ -196,8 +207,8 @@ func (opts *InitAppOpts) askDockerfile() error {
 	}
 
 	sel, err := opts.prompt.SelectOne(
-		fmt.Sprintf("Which Dockerfile would you like to use for %s app?", opts.AppName),
-		"Dockerfile to use for building your application's container image.",
+		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(opts.AppName)),
+		appInitDockerfileHelpPrompt,
 		dockerfiles,
 	)
 	if err != nil {
