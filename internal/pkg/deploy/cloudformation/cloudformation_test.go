@@ -635,7 +635,7 @@ func TestDeploy(t *testing.T) {
 			},
 			want: fmt.Errorf("failed to execute changeSet %s: %s", fmt.Sprintf("name=%s, stackID=%s", mockChangeSetID, mockStackID), "some AWS error"),
 		},
-		"should gracefully skip deploys when there are no changes and clean up failed changeset": {
+		"should clean up failed changeset and return errChangeSetEmpty when there are no changes": {
 			cf: CloudFormation{
 				client: &mockCloudFormation{
 					t: t,
@@ -669,7 +669,7 @@ func TestDeploy(t *testing.T) {
 				box: boxWithTemplateFile(),
 			},
 			input: mockStackConfig,
-			want:  nil,
+			want:  errChangeSetEmpty,
 		},
 		"should deploy": {
 			cf: CloudFormation{

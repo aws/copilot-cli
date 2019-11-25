@@ -96,3 +96,6 @@ func (err *ErrStackSetOutOfDate) Is(target error) bool {
 	}
 	return err.projectName == t.projectName
 }
+
+// errChangeSetEmpty occurs when the change set  does not contain any new or updated resources.
+var errChangeSetEmpty = errors.New("change set has no changes")
