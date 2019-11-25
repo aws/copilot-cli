@@ -180,7 +180,6 @@ func (opts *deleteAppOpts) sourceProjectEnvironments() error {
 	}
 
 	if len(envs) == 0 {
-		// TODO: recommend follow up command - env init?
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
 			color.HighlightCode("archer env init"))
