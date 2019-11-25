@@ -25,7 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"	
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
 const (
@@ -145,7 +145,7 @@ func (ws *Workspace) Apps() ([]archer.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		mf, err := manifest.UnmarshalApp(manifestBytes)
 		if err != nil {
 			return nil, err
@@ -270,4 +270,26 @@ func (ws *Workspace) WriteFile(blob []byte, filename string) (string, error) {
 // TODO extend this to pipeline manifest filenames too
 func (ws *Workspace) AppManifestFileName(appName string) string {
 	return fmt.Sprintf(fmtAppManifestFileName, appName)
+}
+
+// DeleteFile takes in a file name under the project directory (e.g. frontend-app.yml) and deletes it.
+func (ws *Workspace) DeleteFile(fileName string) error {
+	manifestDirPath, err := ws.manifestDirectoryPath()
+	if err != nil {
+		return err
+	}
+
+	manifestFileName := ws.AppManifestFileName(fileName)
+	manifestPath := filepath.Join(manifestDirPath, manifestFileName)
+	manifestFileExists, err := ws.fsUtils.Exists(manifestPath)
+
+	if err != nil {
+		return err
+	}
+
+	if !manifestFileExists {
+		return &ErrManifestNotFound{ManifestName: manifestFileName}
+	}
+
+	return ws.fsUtils.Remove(manifestPath)
 }

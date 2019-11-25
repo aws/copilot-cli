@@ -6,8 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
@@ -298,14 +296,9 @@ func (opts deleteAppOpts) deleteSSMParam() error {
 }
 
 func (opts deleteAppOpts) deleteWorkspaceFile() error {
-	// TODO: move to a workspace method? workspace.DeleteApp(name string)?
-	filePath := filepath.Join("ecs-project", fmt.Sprintf("%s-app.yml", opts.app))
-
-	if err := os.Remove(filePath); err != nil {
-		return err
+	if err := opts.workspaceService.DeleteFile(opts.app); err != nil {
+		return fmt.Errorf("delete app file %s: %w", opts.app, err)
 	}
-
-	log.Infoln("deleted file:", filePath)
 
 	return nil
 }
