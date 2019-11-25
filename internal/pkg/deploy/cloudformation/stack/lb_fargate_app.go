@@ -30,7 +30,6 @@ const (
 	lbFargateParamAppNameKey        = "AppName"
 	lbFargateParamContainerImageKey = "ContainerImage"
 	lbFargateParamContainerPortKey  = "ContainerPort"
-	lbFargateRulePriorityKey        = "RulePriority"
 	lbFargateRulePathKey            = "RulePath"
 	lbFargateTaskCPUKey             = "TaskCPU"
 	lbFargateTaskMemoryKey          = "TaskMemory"
@@ -134,10 +133,6 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterValue: aws.String(strconv.Itoa(templateParams.Image.Port)),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateRulePriorityKey),
-			ParameterValue: aws.String(strconv.Itoa(templateParams.Priority)),
-		},
-		{
 			ParameterKey:   aws.String(lbFargateRulePathKey),
 			ParameterValue: aws.String(templateParams.App.Path),
 		},
@@ -200,9 +195,6 @@ func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
 type lbFargateTemplateParams struct {
 	*deploy.CreateLBFargateAppInput
 
-	// Additional fields needed to render the CloudFormation stack.
-	Priority int // Listener's rule priority https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html#listener-rules
-
 	HTTPSEnabled string
 	// Field types to override.
 	Image struct {
@@ -222,7 +214,6 @@ func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
 			Env: c.Env,
 		},
 		HTTPSEnabled: strconv.FormatBool(c.httpsEnabled),
-		Priority:     1, // TODO assign a unique path priority given a path.
 		Image: struct {
 			URL  string
 			Port int

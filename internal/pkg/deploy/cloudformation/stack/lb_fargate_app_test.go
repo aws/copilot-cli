@@ -116,7 +116,6 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
   AppName: {{.App.Name}}
   ContainerImage: {{.Image.URL}}
   ContainerPort: {{.Image.Port}}
-  RulePriority: {{.Priority}}
   RulePath: '{{.App.Path}}'
   TaskCPU: '{{.App.CPU}}'
   TaskMemory: '{{.App.Memory}}'
@@ -129,7 +128,6 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
   AppName: frontend
   ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c
   ContainerPort: 80
-  RulePriority: 1
   RulePath: '*'
   TaskCPU: '256'
   TaskMemory: '512'
@@ -218,10 +216,6 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateRulePriorityKey),
-					ParameterValue: aws.String("1"),
-				},
-				{
 					ParameterKey:   aws.String(lbFargateRulePathKey),
 					ParameterValue: aws.String("*"),
 				},
@@ -289,7 +283,6 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "{{.App.Name}}",
     "ContainerImage": "{{.Image.URL}}",
     "ContainerPort": "{{.Image.Port}}",
-    "RulePriority": "{{.Priority}}",
     "RulePath": "{{.App.Path}}",
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
@@ -305,7 +298,6 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "frontend",
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
-    "RulePriority": "1",
     "RulePath": "*",
     "TaskCPU": "256",
     "TaskMemory": "512",
@@ -338,7 +330,6 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "{{.App.Name}}",
     "ContainerImage": "{{.Image.URL}}",
     "ContainerPort": "{{.Image.Port}}",
-    "RulePriority": "{{.Priority}}",
     "RulePath": "{{.App.Path}}",
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
@@ -354,7 +345,6 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "frontend",
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
-    "RulePriority": "1",
     "RulePath": "*",
     "TaskCPU": "256",
     "TaskMemory": "512",
