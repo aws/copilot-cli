@@ -86,8 +86,7 @@ type deleteAppOpts struct {
 	spinner          progress
 	prompter         prompter
 
-	localProjectAppNames []string
-	projectEnvironments  []*archer.Environment
+	projectEnvironments []*archer.Environment
 }
 
 func (opts deleteAppOpts) confirmDelete() error {
@@ -151,23 +150,26 @@ func (opts *deleteAppOpts) sourceProjectData() error {
 }
 
 func (opts *deleteAppOpts) sourceWorkspaceApplications() error {
-	apps, err := opts.workspaceService.Apps()
+	localApps, err := opts.workspaceService.Apps()
 
 	if err != nil {
 		return fmt.Errorf("get app names: %w", err)
 	}
 
-	if len(apps) == 0 {
+	if len(localApps) == 0 {
 		// TODO: recommend follow up command - app init?
 		return errors.New("no applications found")
 	}
 
-	var appNames []string
-	for _, app := range apps {
-		appNames = append(appNames, app.AppName())
+	exists := false
+	for _, app := range localApps {
+		if opts.app == app.AppName() {
+			exists = true
+		}
 	}
-
-	opts.localProjectAppNames = appNames
+	if !exists {
+		return fmt.Errorf("input app %s not found", opts.app)
+	}
 
 	return nil
 }
