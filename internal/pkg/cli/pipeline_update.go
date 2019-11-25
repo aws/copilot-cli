@@ -28,16 +28,24 @@ const (
 	fmtAddPipelineResourcesStart    = "Adding pipeline resources to your project: %s"
 	fmtAddPipelineResourcesComplete = "Successfully added pipeline resources to your project: %s"
 
+	fmtCreatePipelineFailed   = "Failed to create a new pipeline: %s."
+	fmtCreatePipelineStart    = "Creating a new pipeline: %s"
+	fmtCreatePipelineComplete = "Successfully created a new pipeline: %s"
+
 	fmtUpdatePipelineFailed   = "Failed to accept changes for pipeline: %s."
 	fmtUpdatePipelineStart    = "Proposing infrastructure changes for the pipeline: %s"
 	fmtUpdatePipelineComplete = "Successfully updated pipeline: %s"
+
+	fmtUpdateEnvPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
 var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `archer pipeline init` to create an pipeline")
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
-	PipelineFile string
+	PipelineFile     string
+	PipelineName     string
+	SkipConfirmation bool
 	// Deploy bool
 
 	pipelineDeployer pipelineDeployer
@@ -118,6 +126,51 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
+func (opts *UpdatePipelineOpts) shouldUpdate() (bool, error) {
+	if opts.SkipConfirmation {
+		return true, nil
+	}
+
+	shouldUpdate, err := opts.prompt.Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, opts.PipelineName), "")
+	if err != nil {
+		return false, fmt.Errorf("prompt for pipeline update: %w", err)
+	}
+	return shouldUpdate, nil
+}
+
+func (opts *UpdatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
+	exist, err := opts.pipelineDeployer.PipelineExist(in)
+	if err != nil {
+		return fmt.Errorf("check if pipeline exists: %w", err)
+	}
+	if !exist {
+		opts.prog.Start(fmt.Sprintf(fmtCreatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
+		err := opts.pipelineDeployer.CreatePipeline(in)
+		var alreadyExists *cloudformation.ErrStackAlreadyExists
+		if err == nil || errors.As(err, &alreadyExists) {
+			opts.prog.Stop(log.Ssuccessf(fmtCreatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+			return nil
+		}
+		opts.prog.Stop(log.Serrorf(fmtCreatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+		return fmt.Errorf("create pipeline: %w", err)
+	}
+
+	// If the stack already exists - we update it
+	shouldUpdate, err := opts.shouldUpdate()
+	if err != nil {
+		return err
+	}
+	if shouldUpdate {
+		opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
+		if err := opts.pipelineDeployer.UpdatePipeline(in); err != nil {
+			opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+			return fmt.Errorf("update pipeline: %w", err)
+		}
+		opts.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+	}
+	return nil
+}
+
 // Execute create a new pipeline or update the current pipeline if it already exists.
 func (opts *UpdatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
@@ -138,6 +191,7 @@ func (opts *UpdatePipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
 	}
+	opts.PipelineName = pipeline.Name
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
 		Properties:   pipeline.Source.Properties,
@@ -163,17 +217,9 @@ func (opts *UpdatePipelineOpts) Execute() error {
 		ArtifactBuckets: artifactBuckets,
 	}
 
-	// deploy pipeline
-	opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineFile)))
-
-	if err := opts.pipelineDeployer.DeployPipeline(deployPipelineInput); err != nil {
-		// TODO if pipeline already exists, still update?
-		opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineFile)))
-		return fmt.Errorf("deploy pipeline: %w", err)
+	if err := opts.deployPipeline(deployPipelineInput); err != nil {
+		return err
 	}
-	// TODO stream events
-
-	opts.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(opts.PipelineFile))) // change to pipeline name?
 
 	return nil
 }
@@ -224,6 +270,7 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
+	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	// cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployFlagDescription)
 
 	return cmd

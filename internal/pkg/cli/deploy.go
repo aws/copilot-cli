@@ -16,7 +16,9 @@ type environmentDeployer interface {
 }
 
 type pipelineDeployer interface {
-	DeployPipeline(env *deploy.CreatePipelineInput) error
+	CreatePipeline(env *deploy.CreatePipelineInput) error
+	UpdatePipeline(env *deploy.CreatePipelineInput) error
+	PipelineExist(env *deploy.CreatePipelineInput) (bool, error)
 	AddPipelineResourcesToProject(project *archer.Project, region string) error
 	projectResourcesGetter
 	// TODO: Add StreamPipelineCreation method

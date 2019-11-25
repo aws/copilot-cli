@@ -100,18 +100,47 @@ func (m *MockpipelineDeployer) EXPECT() *MockpipelineDeployerMockRecorder {
 	return m.recorder
 }
 
-// DeployPipeline mocks base method
-func (m *MockpipelineDeployer) DeployPipeline(env *deploy.CreatePipelineInput) error {
+// CreatePipeline mocks base method
+func (m *MockpipelineDeployer) CreatePipeline(env *deploy.CreatePipelineInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployPipeline", env)
+	ret := m.ctrl.Call(m, "CreatePipeline", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployPipeline indicates an expected call of DeployPipeline
-func (mr *MockpipelineDeployerMockRecorder) DeployPipeline(env interface{}) *gomock.Call {
+// CreatePipeline indicates an expected call of CreatePipeline
+func (mr *MockpipelineDeployerMockRecorder) CreatePipeline(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployPipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).DeployPipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).CreatePipeline), env)
+}
+
+// UpdatePipeline mocks base method
+func (m *MockpipelineDeployer) UpdatePipeline(env *deploy.CreatePipelineInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePipeline", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePipeline indicates an expected call of UpdatePipeline
+func (mr *MockpipelineDeployerMockRecorder) UpdatePipeline(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*MockpipelineDeployer)(nil).UpdatePipeline), env)
+}
+
+// PipelineExist mocks base method
+func (m *MockpipelineDeployer) PipelineExist(env *deploy.CreatePipelineInput) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PipelineExist", env)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PipelineExist indicates an expected call of PipelineExist
+func (mr *MockpipelineDeployerMockRecorder) PipelineExist(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineExist", reflect.TypeOf((*MockpipelineDeployer)(nil).PipelineExist), env)
 }
 
 // AddPipelineResourcesToProject mocks base method
@@ -412,18 +441,47 @@ func (mr *MockdeployerMockRecorder) DelegateDNSPermissions(project, accountID in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelegateDNSPermissions", reflect.TypeOf((*Mockdeployer)(nil).DelegateDNSPermissions), project, accountID)
 }
 
-// DeployPipeline mocks base method
-func (m *Mockdeployer) DeployPipeline(env *deploy.CreatePipelineInput) error {
+// CreatePipeline mocks base method
+func (m *Mockdeployer) CreatePipeline(env *deploy.CreatePipelineInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployPipeline", env)
+	ret := m.ctrl.Call(m, "CreatePipeline", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployPipeline indicates an expected call of DeployPipeline
-func (mr *MockdeployerMockRecorder) DeployPipeline(env interface{}) *gomock.Call {
+// CreatePipeline indicates an expected call of CreatePipeline
+func (mr *MockdeployerMockRecorder) CreatePipeline(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployPipeline", reflect.TypeOf((*Mockdeployer)(nil).DeployPipeline), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePipeline", reflect.TypeOf((*Mockdeployer)(nil).CreatePipeline), env)
+}
+
+// UpdatePipeline mocks base method
+func (m *Mockdeployer) UpdatePipeline(env *deploy.CreatePipelineInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePipeline", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePipeline indicates an expected call of UpdatePipeline
+func (mr *MockdeployerMockRecorder) UpdatePipeline(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePipeline", reflect.TypeOf((*Mockdeployer)(nil).UpdatePipeline), env)
+}
+
+// PipelineExist mocks base method
+func (m *Mockdeployer) PipelineExist(env *deploy.CreatePipelineInput) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PipelineExist", env)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PipelineExist indicates an expected call of PipelineExist
+func (mr *MockdeployerMockRecorder) PipelineExist(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PipelineExist", reflect.TypeOf((*Mockdeployer)(nil).PipelineExist), env)
 }
 
 // AddPipelineResourcesToProject mocks base method

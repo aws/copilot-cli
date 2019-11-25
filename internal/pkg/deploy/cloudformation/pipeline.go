@@ -16,11 +16,23 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-// DeployPipeline sets up a CodePipeline for deploying applications.
-// Project-level regional resources (such as KMS keys for de/encrypting &
-// S3 buckets for storing pipeline artifacts) should be provisioned using
-// `AddPipelineResourcesToProject()` before calling this function.
-func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
+// PipelineExist checks if the pipeline with the provided config exists.
+func (cf CloudFormation) PipelineExist(in *deploy.CreatePipelineInput) (bool, error) {
+	stackConfig := stack.NewPipelineStackConfig(in)
+	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
+	_, err := cf.describeStack(describeStackInput)
+	if err != nil {
+		var stackNotFound *ErrStackNotFound
+		if !errors.As(err, &stackNotFound) {
+			return false, err
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+// CreatePipeline sets up a new CodePipeline for deploying applications.
+func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	pipelineConfig := stack.NewPipelineStackConfig(in)
 
 	// First attempt to create the pipeline stack
@@ -32,13 +44,12 @@ func (cf CloudFormation) DeployPipeline(in *deploy.CreatePipelineInput) error {
 		}
 		return nil
 	}
+	return err
+}
 
-	// If the stack already exists - we update it
-	var alreadyExists *ErrStackAlreadyExists
-	if !errors.As(err, &alreadyExists) {
-		return err
-	}
-
+// UpdatePipeline updates an existing CodePipeline for deploying applications.
+func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
+	pipelineConfig := stack.NewPipelineStackConfig(in)
 	if err := cf.update(pipelineConfig); err != nil {
 		if err == errChangeSetEmpty {
 			// If there are no updates, then exit successfully.
