@@ -5,16 +5,152 @@
 package ecr
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 )
 
 const (
 	urlFmtString      = "%s.dkr.ecr.%s.amazonaws.com/%s"
 	arnResourcePrefix = "repository/"
 )
+
+// Service wraps an AWS ECR client.
+type Service struct {
+	ecr ecriface.ECRAPI
+}
+
+// New returns a Service configured against the input session.
+func New(s *session.Session) Service {
+	return Service{
+		ecr: ecr.New(s),
+	}
+}
+
+// Auth represent basic authentication credentials.
+type Auth struct {
+	Username string
+	Password string
+}
+
+// GetECRAuth returns the basic authentication credentials needed to push images.
+func (s Service) GetECRAuth() (Auth, error) {
+	response, err := s.ecr.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
+
+	if err != nil {
+		return Auth{}, fmt.Errorf("get ECR auth: %w", err)
+	}
+
+	authToken, err := base64.StdEncoding.DecodeString(*response.AuthorizationData[0].AuthorizationToken)
+
+	if err != nil {
+		return Auth{}, fmt.Errorf("decode auth token: %w", err)
+	}
+
+	tokenStrings := strings.Split(string(authToken), ":")
+
+	return Auth{
+		Username: tokenStrings[0],
+		Password: tokenStrings[1],
+	}, nil
+}
+
+// GetRepository returns the ECR repository URI.
+func (s Service) GetRepository(name string) (string, error) {
+	result, err := s.ecr.DescribeRepositories(&ecr.DescribeRepositoriesInput{
+		RepositoryNames: aws.StringSlice([]string{name}),
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("repository %s not found: %w", name, err)
+	}
+
+	foundRepositories := result.Repositories
+
+	if len(foundRepositories) <= 0 {
+		return "", errors.New("no repositories found")
+	}
+
+	repo := result.Repositories[0]
+
+	return *repo.RepositoryUri, nil
+}
+
+// Image houses metadata for ECR repository images.
+type Image struct {
+	Digest string
+}
+
+func (i Image) imageIdentifier() *ecr.ImageIdentifier {
+	return &ecr.ImageIdentifier{
+		ImageDigest: aws.String(i.Digest),
+	}
+}
+
+// ListImages calls the ECR DescribeImages API and returns a list of
+// Image metadata for images in the input ECR repository name.
+func (s Service) ListImages(repoName string) ([]Image, error) {
+	// TODO: handle paginated responses
+	resp, err := s.ecr.DescribeImages(&ecr.DescribeImagesInput{
+		RepositoryName: aws.String(repoName),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("ecr repo %s describe images: %w", repoName, err)
+	}
+
+	var images []Image
+	for _, imageDetails := range resp.ImageDetails {
+		images = append(images, Image{
+			Digest: *imageDetails.ImageDigest,
+		})
+	}
+
+	return images, nil
+}
+
+// DeleteImages calls the ECR BatchDeleteImage API with the input image list and repository name.
+func (s Service) DeleteImages(images []Image, repoName string) error {
+	if len(images) == 0 {
+		return nil
+	}
+
+	var imageIdentifiers []*ecr.ImageIdentifier
+	for _, image := range images {
+		imageIdentifiers = append(imageIdentifiers, image.imageIdentifier())
+	}
+
+	// TODO: handle response ecr.ImageFailures
+	_, err := s.ecr.BatchDeleteImage(&ecr.BatchDeleteImageInput{
+		RepositoryName: aws.String(repoName),
+		ImageIds:       imageIdentifiers,
+	})
+
+	if err != nil {
+		return fmt.Errorf("ecr repo %s batch delete image: %w", repoName, err)
+	}
+
+	return nil
+}
+
+// ClearRepository orchestrates a ListImages call followed by a DeleteImages
+// call to delete all images from the input ECR repository name.
+func (s Service) ClearRepository(repoName string) error {
+	images, err := s.ListImages(repoName)
+
+	if err != nil {
+		return err
+	}
+
+	return s.DeleteImages(images, repoName)
+}
 
 // URIFromARN converts an ECR Repo ARN to a Repository URI
 func URIFromARN(repositoryARN string) (string, error) {

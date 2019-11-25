@@ -6,7 +6,7 @@ package mocks
 
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
+	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
