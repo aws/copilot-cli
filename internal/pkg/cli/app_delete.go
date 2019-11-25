@@ -139,7 +139,7 @@ func (opts *deleteAppOpts) sourceInputs() error {
 }
 
 func (opts *deleteAppOpts) sourceProjectData() error {
-	if err := opts.sourceProjectApplications(); err != nil {
+	if err := opts.sourceWorkspaceApplications(); err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func (opts *deleteAppOpts) sourceProjectData() error {
 	return nil
 }
 
-func (opts *deleteAppOpts) sourceProjectApplications() error {
+func (opts *deleteAppOpts) sourceWorkspaceApplications() error {
 	apps, err := opts.workspaceService.Apps()
 
 	if err != nil {
