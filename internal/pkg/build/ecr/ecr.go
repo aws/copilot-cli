@@ -134,9 +134,9 @@ func (s Service) DeleteImages(images []Image, repoName string) error {
 	return nil
 }
 
-// EmptyRepository orchestrates a ListImages call followed by a DeleteImages
+// ClearRepository orchestrates a ListImages call followed by a DeleteImages
 // call to delete all images from the input ECR repository name.
-func (s Service) EmptyRepository(repoName string) error {
+func (s Service) ClearRepository(repoName string) error {
 	images, err := s.ListImages(repoName)
 
 	if err != nil {

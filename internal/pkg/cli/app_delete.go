@@ -226,6 +226,7 @@ func (opts deleteAppOpts) deleteStacks() error {
 
 		stackName := fmt.Sprintf("%s-%s-%s", opts.projectName, env.Name, opts.app)
 
+		// TODO: check if the stack exists first
 		opts.spinner.Start(fmt.Sprintf("deleting app %s from env %s", opts.app, env.Name))
 		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
 			opts.spinner.Stop(log.Serrorf("deleting app %s from env %s", opts.app, env.Name))
@@ -257,7 +258,7 @@ func (opts deleteAppOpts) emptyECRRepos() error {
 
 		ecrService := ecr.New(sess)
 
-		if err := ecrService.EmptyRepository(repoName); err != nil {
+		if err := ecrService.ClearRepository(repoName); err != nil {
 
 			return err
 		}
