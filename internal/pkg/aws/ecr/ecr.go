@@ -69,7 +69,7 @@ func (s Service) GetRepository(name string) (string, error) {
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("repository %s not found: %w", name, err)
+		return "", fmt.Errorf("ecr describe repository %s: %w", name, err)
 	}
 
 	foundRepositories := result.Repositories
@@ -149,6 +149,7 @@ func (s Service) ClearRepository(repoName string) error {
 		return err
 	}
 
+	// TODO: add retry handling in case images are added to a repository after a call to ListImages
 	return s.DeleteImages(images, repoName)
 }
 

@@ -116,7 +116,7 @@ func TestGetRepository(t *testing.T) {
 			mockDescribeRepositories: func(*ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
 				return nil, mockError
 			},
-			wantErr: fmt.Errorf("repository %s not found: %w", mockRepoName, mockError),
+			wantErr: fmt.Errorf("ecr describe repository %s: %w", mockRepoName, mockError),
 		},
 		"should return error given no repositories returned in list": {
 			mockDescribeRepositories: func(input *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
