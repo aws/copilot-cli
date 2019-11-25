@@ -250,8 +250,8 @@ func (opts deleteAppOpts) emptyECRRepos() error {
 	// TODO: centralized ECR repo name
 	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
 
-	for _, region := range regions {
-		sess, err := session.DefaultWithRegion(region)
+	for _, uniqueRegions := range regions {
+		sess, err := session.DefaultWithRegion(uniqueRegions)
 		if err != nil {
 			return err
 		}
