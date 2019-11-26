@@ -18,9 +18,6 @@ Parameters:
   ContainerPort:
     Type: Number
     Default: {{.Image.Port}}
-  RulePriority:
-    Type: Number
-    Default: {{.Priority}} # This number must be unique between rules.
   RulePath:
     Type: String
     Default: '{{.App.Path}}'
