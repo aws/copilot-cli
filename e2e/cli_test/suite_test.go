@@ -26,7 +26,7 @@ var update = flag.Bool("update", false, "update .golden files")
 
 var _ = BeforeSuite(func() {
 	var err error
-	cliPath, err = filepath.Abs("../../bin/local/archer")
+	cliPath, err = filepath.Abs("../../bin/local/ecs-preview")
 	Expect(err).To(BeNil())
 
 	// ensure the CLI is available to e2e tests

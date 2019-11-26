@@ -80,7 +80,7 @@ func (opts *PackageAppOpts) Ask() error {
 			return err
 		}
 		if len(names) == 0 {
-			return errors.New("there are no applications in the workspace, run `archer init` first")
+			return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
 		}
 		app, err := opts.prompt.SelectOne(appPackageAppNamePrompt, "", names)
 		if err != nil {
@@ -305,10 +305,10 @@ func BuildAppPackageCmd() *cobra.Command {
 		Long:  `Prints the CloudFormation template used to deploy an application to an environment.`,
 		Example: `
   Print the CloudFormation template for the "frontend" application parametrized for the "test" environment.
-  /code $ archer app package -n frontend -e test
+  /code $ ecs-preview app package -n frontend -e test
 
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ archer app package -n frontend -e test --output-dir ./infrastructure
+  /code $ ecs-preview app package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {

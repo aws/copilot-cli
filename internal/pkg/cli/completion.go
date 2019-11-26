@@ -57,18 +57,18 @@ func BuildCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
 The code must be evaluated to provide interactive completion of commands.`,
 		Example: `
   Install zsh completion
-  /code $ source <(archer completion zsh)
-  /code $ archer completion zsh > "${fpath[1]}/_archer" # to autoload on startup
+  /code $ source <(ecs-preview completion zsh)
+  /code $ ecs-preview completion zsh > "${fpath[1]}/_ecs-preview" # to autoload on startup
 
   Install bash completion on macOS using homebrew
   /code $ brew install bash-completion   # if running 3.2
   /code $ brew install bash-completion@2 # if running Bash 4.1+
-  /code $ archer completion bash > /usr/local/etc/bash_completion.d
+  /code $ ecs-preview completion bash > /usr/local/etc/bash_completion.d
 
   Install bash completion on linux
-  /code $ source <(archer completion bash)
-  /code $ archer completion bash > archer.sh
-  /code $ sudo mv archer.sh /etc/bash_completion.d/archer`,
+  /code $ source <(ecs-preview completion bash)
+  /code $ ecs-preview completion bash > ecs-preview.sh
+  /code $ sudo mv ecs-preview.sh /etc/bash_completion.d/ecs-preview`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("requires a single shell argument (bash or zsh)")

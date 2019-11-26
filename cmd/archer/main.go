@@ -29,11 +29,11 @@ func main() {
 
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "archer",
+		Use:   "ecs-preview",
 		Short: "Launch and manage applications on Amazon ECS and AWS Fargate.",
 		Example: `
   Display the help menu for the init command
-  /code $ archer init --help`,
+  /code $ ecs-preview init --help`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// If we don't set a Run() function the help menu doesn't show up.
 			// See https://github.com/spf13/cobra/issues/790
@@ -44,7 +44,7 @@ func buildRootCmd() *cobra.Command {
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
 	cmd.Version = version.Version
-	cmd.SetVersionTemplate("Archer version: {{.Version}}\n")
+	cmd.SetVersionTemplate("ecs-preview version: {{.Version}}\n")
 
 	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.
 	// "Getting Started" command group.

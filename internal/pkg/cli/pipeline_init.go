@@ -36,7 +36,7 @@ const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
 )
 
-var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `archer env init` to create a new environment")
+var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -165,7 +165,7 @@ func (opts *InitPipelineOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update the %s phase of your buildspec to unit test your applications before pushing the images.", color.HighlightResource("build")),
 		fmt.Sprint("Update your pipeline manifest to add additional stages."),
-		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("archer pipeline update")),
+		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("ecs-preview pipeline update")),
 	}
 }
 
@@ -427,7 +427,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications.`,
 		Example: `
   Create a pipeline for the applications in your workspace:
-  /code $ archer pipeline init \
+  /code $ ecs-preview pipeline init \
     --github-repo "gitHubUserName/myFrontendApp" \
     --github-access-token file://myGitHubToken \
     --environments "stage,prod" \

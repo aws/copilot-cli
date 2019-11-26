@@ -2,7 +2,7 @@ Command for working with environments.
 An environment represents a deployment stage.
 
 Usage
-  archer env [command]
+  ecs-preview env [command]
 
 Available Commands
   add         Deploy a new environment to your project

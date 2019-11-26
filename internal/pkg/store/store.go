@@ -31,6 +31,7 @@ import (
 // current schema Version for Projects
 const schemaVersion = "1.0"
 
+// TODO: remove `archer` from path values?
 // schema formats supported in current schemaVersion. NOTE: May change to map in the future.
 const (
 	rootProjectPath  = "/archer/"

@@ -1,6 +1,7 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+BINARY_NAME=ecs-preview
 PACKAGES=./internal...
 SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
 BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
@@ -16,16 +17,16 @@ build: packr-build compile-local packr-clean
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
 compile-local:
-	PLATFORM=local DESTINATION=./bin/local/archer ./scripts/build_binary.sh
+	PLATFORM=local DESTINATION=./bin/local/${BINARY_NAME} ./scripts/build_binary.sh
 
 compile-windows:
-	PLATFORM=Windows CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/archer.exe ./scripts/build_binary.sh
+	PLATFORM=Windows CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/${BINARY_NAME}.exe ./scripts/build_binary.sh
 
 compile-linux:
-	PLATFORM=Linux CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/archer-amd64 ./scripts/build_binary.sh
+	PLATFORM=Linux CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/${BINARY_NAME}-amd64 ./scripts/build_binary.sh
 
 compile-darwin:
-	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/archer ./scripts/build_binary.sh
+	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/${BINARY_NAME} ./scripts/build_binary.sh
 
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\

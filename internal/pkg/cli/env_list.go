@@ -111,7 +111,7 @@ func BuildEnvListCmd() *cobra.Command {
 		Short: "Lists all the environments in a project",
 		Example: `
   Lists all the environments for the test project
-  /code $ archer env ls --project test`,
+  /code $ ecs-preview env ls --project test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return opts.Ask()
 		}),

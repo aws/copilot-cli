@@ -58,7 +58,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedErrorS: "there are no applications in the workspace, run `archer init` first",
+			wantedErrorS: "there are no applications in the workspace, run `ecs-preview init` first",
 		},
 		"wrap list envs error": {
 			inAppName: "frontend",
