@@ -119,105 +119,6 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
-  IntegTestRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codebuild.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-  IntegTestPolicy:
-    Type: AWS::IAM::Policy
-    DependsOn: IntegTestRole
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-IntegTestPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-              - s3:PutObject
-              - s3:GetObject
-              - s3:GetObjectVersion
-            # TODO: This might not be necessary. We may only need the bucket
-            # that is in the same region as the pipeline.
-            # Loop through all the artifact buckets created in the stackset
-            Resource:
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
-              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
-          - Effect: Allow
-            Action:
-              # TODO: scope this down if possible
-              - kms:*
-            # TODO: This might not be necessary. We may only need the KMS key
-            # that is in the same region as the pipeline.
-            # Loop through all the KMS keys used to en/decrypt artifacts
-            # across (cross-regional) pipeline stages, with each stage
-            # backed by a (regional) S3 bucket.
-            Resource:
-              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
-              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
-              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
-      Roles:
-        - !Ref IntegTestRole
-  IntegTestProjecttestDASHchicken:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub ${AWS::StackName}-IntegTest-test-chicken
-      Description: !Sub Integration tests for ${AWS::StackName}-test-chicken
-      ServiceRole: !GetAtt IntegTestRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
-        EnvironmentVariables:
-          - Name: PIPELINE_STAGE
-            Type: PLAINTEXT
-            Value: test-chicken
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: ecs-project/buildspec_integ.yml
-      TimeoutInMinutes: 480
-  IntegTestProjectprodDASHcanDASHfly:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub ${AWS::StackName}-IntegTest-prod-can-fly
-      Description: !Sub Integration tests for ${AWS::StackName}-prod-can-fly
-      ServiceRole: !GetAtt IntegTestRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
-        EnvironmentVariables:
-          - Name: PIPELINE_STAGE
-            Type: PLAINTEXT
-            Value: prod-can-fly
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: ecs-project/buildspec_integ.yml
-      TimeoutInMinutes: 480
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -415,17 +316,6 @@ Resources:
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
-            - Name: Approve-test-chicken
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref IntegTestProjecttestDASHchicken
-              RunOrder: 3
-              InputArtifacts:
-                - Name: SCCheckoutArtifact
         - Name: DeployTo-prod-can-fly
           Actions:
             - Name: ApprovePromotionTo-prod-can-fly
@@ -487,14 +377,3 @@ Resources:
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
               RoleArn: arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
-            - Name: Approve-prod-can-fly
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref IntegTestProjectprodDASHcanDASHfly
-              RunOrder: 3
-              InputArtifacts:
-                - Name: SCCheckoutArtifact
