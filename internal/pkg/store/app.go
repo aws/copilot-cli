@@ -94,3 +94,23 @@ func (s *Store) ListApplications(projectName string) ([]*archer.Application, err
 	}
 	return applications, nil
 }
+
+// DeleteApplication removes an application from SSM.
+// If the application does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
+func (s *Store) DeleteApplication(projectName, appName string) error {
+	paramName := fmt.Sprintf(fmtAppParamPath, projectName, appName)
+	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+		Name: aws.String(paramName),
+	})
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ssm.ErrCodeParameterNotFound:
+				return nil
+			}
+		}
+		return fmt.Errorf("delete application %s from project %s: %w", appName, projectName, err)
+	}
+	return nil
+}

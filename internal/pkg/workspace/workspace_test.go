@@ -485,3 +485,63 @@ func TestCreate(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteFile(t *testing.T) {
+	tests := map[string]struct {
+		workingDir     string
+		manifestFile   string
+		want           error
+		mockFileSystem func(appFS afero.Fs)
+	}{
+		"should delete the file if it exists": {
+			manifestFile: "frontend",
+			workingDir:   "test/",
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+			},
+		},
+		"should return an ErrManifestNotFound if file to delete doesn't exist": {
+			manifestFile: "traveling-salesman",
+			want:         fmt.Errorf("manifest file traveling-salesman-app.yml does not exists"),
+			workingDir:   "test/",
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
+			},
+		},
+		"should return an error if manifest directory cannot be found": {
+			manifestFile: "frontend",
+			want:         fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
+			workingDir:   "/",
+			mockFileSystem: func(appFS afero.Fs) {
+				appFS.MkdirAll("test/ecs-project", 0755)
+				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
+				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			appFS := afero.NewMemMapFs()
+			test.mockFileSystem(appFS)
+
+			ws := Workspace{
+				workingDir: test.workingDir,
+				fsUtils:    &afero.Afero{Fs: appFS},
+			}
+
+			got := ws.DeleteFile(test.manifestFile)
+
+			if test.want != nil {
+				require.Equal(t, test.want.Error(), got.Error())
+			}
+		})
+	}
+}

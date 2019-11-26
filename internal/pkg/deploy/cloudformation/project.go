@@ -207,6 +207,46 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string
 	return nil
 }
 
+// RemoveAppFromProject attempts to remove App specific resources (ECR repositories) from the Project resource stack.
+func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName string) error {
+	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+		Project:   project.Name,
+		AccountID: project.AccountID,
+	}, cf.box)
+	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
+	if err != nil {
+		return fmt.Errorf("get previous project %s config: %w", project.Name, err)
+	}
+
+	// We'll generate a new list of Accounts to remove the account associated
+	// with the input app to be removed.
+	var appList []string
+	shouldRemoveApp := false
+	for _, app := range previouslyDeployedConfig.Apps {
+		if app == appName {
+			shouldRemoveApp = true
+			continue
+		}
+		appList = append(appList, app)
+	}
+
+	if !shouldRemoveApp {
+		return nil
+	}
+
+	newDeploymentConfig := stack.ProjectResourcesConfig{
+		Version:  previouslyDeployedConfig.Version + 1,
+		Apps:     appList,
+		Accounts: previouslyDeployedConfig.Accounts,
+		Project:  projectConfig.Project,
+	}
+	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
+		return fmt.Errorf("removing %s app resources from project: %w", appName, err)
+	}
+
+	return nil
+}
+
 // AddEnvToProject takes a new environment and updates the Project configuration
 // with new Account IDs in resource policies (KMS Keys and ECR Repos) - and
 // sets up a new stack instance if the environment is in a new region.
@@ -319,7 +359,6 @@ func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackCo
 	}
 
 	return cf.waitForStackSetOperation(projectConfig.StackSetName(), *output.OperationId)
-
 }
 
 // addNewStackInstances takes an environment and determines if we need to create a new
