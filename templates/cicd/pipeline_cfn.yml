@@ -113,78 +113,6 @@ Resources:
         Type: CODEPIPELINE
         BuildSpec: ecs-project/buildspec.yml
       TimeoutInMinutes: 60
-  IntegTestRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codebuild.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-  IntegTestPolicy:
-    Type: AWS::IAM::Policy
-    DependsOn: IntegTestRole
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-IntegTestPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-              - s3:PutObject
-              - s3:GetObject
-              - s3:GetObjectVersion
-            # TODO: This might not be necessary. We may only need the bucket
-            # that is in the same region as the pipeline.
-            # Loop through all the artifact buckets created in the stackset
-            Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
-          - Effect: Allow
-            Action:
-              # TODO: scope this down if possible
-              - kms:*
-            # TODO: This might not be necessary. We may only need the KMS key
-            # that is in the same region as the pipeline.
-            # Loop through all the KMS keys used to en/decrypt artifacts
-            # across (cross-regional) pipeline stages, with each stage
-            # backed by a (regional) S3 bucket.
-            Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
-      Roles:
-        - !Ref IntegTestRole{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}
-  IntegTestProject{{logicalIDSafe $stage.Name}}:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub ${AWS::StackName}-IntegTest-{{$stage.Name}}
-      Description: !Sub Integration tests for ${AWS::StackName}-{{$stage.Name}}
-      ServiceRole: !GetAtt IntegTestRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
-        EnvironmentVariables:
-          - Name: PIPELINE_STAGE
-            Type: PLAINTEXT
-            Value: {{$stage.Name}}
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: ecs-project/buildspec_integ.yml
-      TimeoutInMinutes: 480{{end}}{{end}}
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -341,15 +269,4 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}
-            - Name: Approve-{{$stage.Name}}
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref IntegTestProject{{logicalIDSafe $stage.Name}}
-              RunOrder: 3
-              InputArtifacts:
-                - Name: SCCheckoutArtifact{{end}}{{end}}
+              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{end}}{{end}}
