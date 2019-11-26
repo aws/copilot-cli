@@ -7,7 +7,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"

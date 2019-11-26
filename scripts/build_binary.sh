@@ -13,4 +13,4 @@ echo "Building binary to ${DESTINATION}"
 # Injects last tagged version and/or git hash into the build to populate version info
 GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=$CGO_ENABLED go build -ldflags \
 	"-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Platform=$PLATFORM -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=$GIT_TAGGED_VERSION" \
-       	-o ${DESTINATION} ./cmd/archer
+       	-o ${DESTINATION} ./cmd/ecs-preview
