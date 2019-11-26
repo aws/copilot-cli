@@ -13,20 +13,19 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 const (
-	environmentListProjectNamePrompt = "Which project's environments would you like to list?"
-	environmentListProjectNameHelper = "A project groups all of your environments together."
+	applicationListProjectNamePrompt = "Which project's applications would you like to list?"
+	applicationListProjectNameHelper = "A project groups all of your applications together."
 )
 
-// ListEnvOpts contains the fields to collect for listing an environment.
-type ListEnvOpts struct {
+// ListAppOpts contains the fields to collect for listing an application.
+type ListAppOpts struct {
 	ShouldOutputJSON bool
 
-	manager       archer.EnvironmentLister
+	manager       archer.ApplicationLister
 	projectGetter archer.ProjectGetter
 	projectLister archer.ProjectLister
 
@@ -35,7 +34,7 @@ type ListEnvOpts struct {
 	*GlobalOpts
 }
 
-func (opts *ListEnvOpts) selectProject() (string, error) {
+func (opts *ListAppOpts) selectProject() (string, error) {
 	projs, err := opts.projectLister.ListProjects()
 	if err != nil {
 		return "", err
@@ -49,15 +48,15 @@ func (opts *ListEnvOpts) selectProject() (string, error) {
 		return "", nil
 	}
 	proj, err := opts.prompt.SelectOne(
-		environmentListProjectNamePrompt,
-		environmentListProjectNameHelper,
+		applicationListProjectNamePrompt,
+		applicationListProjectNameHelper,
 		projStrs,
 	)
 	return proj, err
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *ListEnvOpts) Ask() error {
+func (opts *ListAppOpts) Ask() error {
 	if opts.ProjectName() != "" {
 		return nil
 	}
@@ -70,69 +69,64 @@ func (opts *ListEnvOpts) Ask() error {
 	return nil
 }
 
-// Execute lists the environments through the prompt.
-func (opts *ListEnvOpts) Execute() error {
-	// Ensure the project actually exists before we try to list its environments.
+// Execute lists the applications through the prompt.
+func (opts *ListAppOpts) Execute() error {
+	// Ensure the project actually exists before we try to list its applications.
 	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
 		return err
 	}
 
-	envs, err := opts.manager.ListEnvironments(opts.ProjectName())
+	apps, err := opts.manager.ListApplications(opts.ProjectName())
 	if err != nil {
 		return err
 	}
 
 	var out string
 	if opts.ShouldOutputJSON {
-		data, err := opts.jsonOutput(envs)
+		data, err := opts.jsonOutput(apps)
 		if err != nil {
 			return err
 		}
 		out = data
 	} else {
-		out = opts.humanOutput(envs)
+		out = opts.humanOutput(apps)
 	}
 	fmt.Fprintf(opts.w, out)
 
 	return nil
 }
 
-func (opts *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
+func (opts *ListAppOpts) humanOutput(apps []*archer.Application) string {
 	b := &strings.Builder{}
-	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
-	for _, env := range envs {
-		if env.Prod {
-			fmt.Fprintf(b, "%s (prod)\n", prodColor(env.Name))
-		} else {
-			fmt.Fprintln(b, env.Name)
-		}
+	for _, app := range apps {
+		fmt.Fprintf(b, "%s: %s\n", app.Type, app.Name)
 	}
 	return b.String()
 }
 
-func (opts *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
-	type serializedEnvs struct {
-		Environments []*archer.Environment `json:"environments"`
+func (opts *ListAppOpts) jsonOutput(apps []*archer.Application) (string, error) {
+	type serializedApps struct {
+		Applications []*archer.Application `json:"applications"`
 	}
-	b, err := json.Marshal(serializedEnvs{Environments: envs})
+	b, err := json.Marshal(serializedApps{Applications: apps})
 	if err != nil {
-		return "", fmt.Errorf("marshal environments: %w", err)
+		return "", fmt.Errorf("marshal applications: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// BuildEnvListCmd builds the command for listing environments in a project.
-func BuildEnvListCmd() *cobra.Command {
-	opts := ListEnvOpts{
+// BuildAppListCmd builds the command for listing applications in a project.
+func BuildAppListCmd() *cobra.Command {
+	opts := ListAppOpts{
 		w:          os.Stdout,
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the environments in a project",
+		Short: "Lists all the applications in a project",
 		Example: `
-  Lists all the environments for the test project
-  /code $ archer env ls --project test`,
+  Lists all the applications for the test project
+  /code $ archer app ls --project test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {
