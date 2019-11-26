@@ -155,7 +155,6 @@ func (opts *deleteAppOpts) sourceWorkspaceApplications() error {
 	}
 
 	if len(localApps) == 0 {
-		// TODO: recommend follow up command - app init?
 		return errors.New("no applications found")
 	}
 
