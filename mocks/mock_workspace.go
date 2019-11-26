@@ -92,6 +92,20 @@ func (mr *MockWorkspaceMockRecorder) AppManifestFileName(appName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppManifestFileName", reflect.TypeOf((*MockWorkspace)(nil).AppManifestFileName), appName)
 }
 
+// DeleteFile mocks base method
+func (m *MockWorkspace) DeleteFile(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFile", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFile indicates an expected call of DeleteFile
+func (mr *MockWorkspaceMockRecorder) DeleteFile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockWorkspace)(nil).DeleteFile), name)
+}
+
 // Create mocks base method
 func (m *MockWorkspace) Create(projectName string) error {
 	m.ctrl.T.Helper()
@@ -216,6 +230,20 @@ func (m *MockManifestIO) AppManifestFileName(appName string) string {
 func (mr *MockManifestIOMockRecorder) AppManifestFileName(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppManifestFileName", reflect.TypeOf((*MockManifestIO)(nil).AppManifestFileName), appName)
+}
+
+// DeleteFile mocks base method
+func (m *MockManifestIO) DeleteFile(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFile", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFile indicates an expected call of DeleteFile
+func (mr *MockManifestIOMockRecorder) DeleteFile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockManifestIO)(nil).DeleteFile), name)
 }
 
 // MockWorkspaceFileReadWriter is a mock of WorkspaceFileReadWriter interface

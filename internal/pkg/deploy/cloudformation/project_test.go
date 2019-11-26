@@ -672,6 +672,77 @@ func TestAddAppToProject(t *testing.T) {
 	}
 }
 
+func TestRemoveAppFromProject(t *testing.T) {
+	mockProject := &archer.Project{
+		Name:      "testproject",
+		AccountID: "1234",
+	}
+
+	tests := map[string]struct {
+		app string
+
+		mockDescribeStackSet          func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
+		mockUpdateStackSet            func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
+		mockDescribeStackSetOperation func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
+
+		want error
+	}{
+		"should remove input app from the stack set": {
+			app: "test",
+			mockDescribeStackSet: func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error) {
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
+					Apps:    []string{"test", "firsttest"},
+					Version: 1,
+				}})
+				require.NoError(t, err)
+				return &cloudformation.DescribeStackSetOutput{
+					StackSet: &cloudformation.StackSet{
+						TemplateBody: aws.String(string(body)),
+					},
+				}, nil
+			},
+			mockUpdateStackSet: func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error) {
+				require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
+				configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
+				require.NoError(t, err)
+				require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Apps)
+				require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
+				require.Equal(t, 2, configToDeploy.Version)
+
+				return &cloudformation.UpdateStackSetOutput{
+					OperationId: aws.String("2"),
+				}, nil
+			},
+			mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+				return &cloudformation.DescribeStackSetOperationOutput{
+					StackSetOperation: &cloudformation.StackSetOperation{
+						Status: aws.String(cloudformation.StackSetOperationStatusSucceeded),
+					},
+				}, nil
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cf := CloudFormation{
+				client: mockCloudFormation{
+					t: t,
+
+					mockDescribeStackSet:          test.mockDescribeStackSet,
+					mockUpdateStackSet:            test.mockUpdateStackSet,
+					mockDescribeStackSetOperation: test.mockDescribeStackSetOperation,
+				},
+				box: templates.Box(),
+			}
+
+			got := cf.RemoveAppFromProject(mockProject, test.app)
+
+			require.Equal(t, test.want, got)
+		})
+	}
+}
+
 func TestWaitForStackSetOperation(t *testing.T) {
 	waitingForOperation := true
 	testCases := map[string]struct {

@@ -49,6 +49,7 @@ type mockCloudFormation struct {
 	mockWaitUntilChangeSetCreateCompleteWithContext func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error
 	mockWaitUntilStackCreateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 	mockWaitUntilStackUpdateCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
+	mockWaitUntilStackDeleteComplete                func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 	mockWaitUntilStackDeleteCompleteWithContext     func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 }
 
@@ -118,6 +119,10 @@ func (cf mockCloudFormation) WaitUntilChangeSetCreateCompleteWithContext(context
 
 func (cf mockCloudFormation) WaitUntilStackCreateCompleteWithContext(context context.Context, in *cloudformation.DescribeStacksInput, opts ...request.WaiterOption) error {
 	return cf.mockWaitUntilStackCreateCompleteWithContext(cf.t, in)
+}
+
+func (cf mockCloudFormation) WaitUntilStackDeleteComplete(in *cloudformation.DescribeStacksInput) error {
+	return cf.mockWaitUntilStackDeleteComplete(cf.t, in)
 }
 
 func (cf mockCloudFormation) WaitUntilStackDeleteCompleteWithContext(context context.Context, in *cloudformation.DescribeStacksInput, opts ...request.WaiterOption) error {

@@ -22,6 +22,7 @@ type ManifestIO interface {
 	WorkspaceFileReadWriter
 	ListManifestFiles() ([]string, error)
 	AppManifestFileName(appName string) string
+	DeleteFile(name string) error
 }
 
 // WorkspaceFileReadWriter is the interface to read and write files to the project directory in the workspace.

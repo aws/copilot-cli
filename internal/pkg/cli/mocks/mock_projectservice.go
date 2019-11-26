@@ -6,7 +6,7 @@ package mocks
 
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/ecr"
+	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -178,6 +178,20 @@ func (m *MockprojectService) CreateApplication(app *archer.Application) error {
 func (mr *MockprojectServiceMockRecorder) CreateApplication(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockprojectService)(nil).CreateApplication), app)
+}
+
+// DeleteApplication mocks base method
+func (m *MockprojectService) DeleteApplication(projectName, appName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApplication", projectName, appName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApplication indicates an expected call of DeleteApplication
+func (mr *MockprojectServiceMockRecorder) DeleteApplication(projectName, appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApplication", reflect.TypeOf((*MockprojectService)(nil).DeleteApplication), projectName, appName)
 }
 
 // MockecrService is a mock of ecrService interface

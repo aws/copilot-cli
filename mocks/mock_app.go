@@ -77,6 +77,20 @@ func (mr *MockApplicationStoreMockRecorder) CreateApplication(app interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockApplicationStore)(nil).CreateApplication), app)
 }
 
+// DeleteApplication mocks base method
+func (m *MockApplicationStore) DeleteApplication(projectName, appName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApplication", projectName, appName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApplication indicates an expected call of DeleteApplication
+func (mr *MockApplicationStoreMockRecorder) DeleteApplication(projectName, appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApplication", reflect.TypeOf((*MockApplicationStore)(nil).DeleteApplication), projectName, appName)
+}
+
 // MockApplicationLister is a mock of ApplicationLister interface
 type MockApplicationLister struct {
 	ctrl     *gomock.Controller
@@ -188,4 +202,41 @@ func (m *MockApplicationCreator) CreateApplication(app *archer.Application) erro
 func (mr *MockApplicationCreatorMockRecorder) CreateApplication(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockApplicationCreator)(nil).CreateApplication), app)
+}
+
+// MockApplicationDeleter is a mock of ApplicationDeleter interface
+type MockApplicationDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockApplicationDeleterMockRecorder
+}
+
+// MockApplicationDeleterMockRecorder is the mock recorder for MockApplicationDeleter
+type MockApplicationDeleterMockRecorder struct {
+	mock *MockApplicationDeleter
+}
+
+// NewMockApplicationDeleter creates a new mock instance
+func NewMockApplicationDeleter(ctrl *gomock.Controller) *MockApplicationDeleter {
+	mock := &MockApplicationDeleter{ctrl: ctrl}
+	mock.recorder = &MockApplicationDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockApplicationDeleter) EXPECT() *MockApplicationDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteApplication mocks base method
+func (m *MockApplicationDeleter) DeleteApplication(projectName, appName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApplication", projectName, appName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApplication indicates an expected call of DeleteApplication
+func (mr *MockApplicationDeleterMockRecorder) DeleteApplication(projectName, appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApplication", reflect.TypeOf((*MockApplicationDeleter)(nil).DeleteApplication), projectName, appName)
 }
