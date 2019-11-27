@@ -154,7 +154,7 @@ func (opts *InitProjectOpts) Execute() error {
 // RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
 func (opts *InitProjectOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("archer init")),
+		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("ecs-preview init")),
 	}
 }
 
@@ -197,7 +197,7 @@ func BuildProjectInitCommand() *cobra.Command {
 A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `
   Create a new project named test
-  /code $ archer project init test`,
+  /code $ ecs-preview project init test`,
 		Args: reservedArgs,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return err

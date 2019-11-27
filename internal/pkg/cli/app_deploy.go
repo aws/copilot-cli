@@ -41,7 +41,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		Long:  `Deploy an application to an environment.`,
 		Example: `
   Deploy an application named "frontend" to a "test" environment.
-  /code $ archer app deploy --name frontend --env test`,
+  /code $ ecs-preview app deploy --name frontend --env test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := input.init(); err != nil {
 				return err
@@ -199,7 +199,7 @@ func (opts *appDeployOpts) sourceProjectEnvironments() error {
 		// TODO: recommend follow up command - env init?
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("archer env init"))
+			color.HighlightCode("ecs-preview env init"))
 
 		return errors.New("no environments found")
 	}

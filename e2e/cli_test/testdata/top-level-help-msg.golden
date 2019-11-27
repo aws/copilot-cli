@@ -12,8 +12,8 @@ Commands
     completion  Output shell completion code
 
 Flags
-  -h, --help   help for archer
+  -h, --help   help for ecs-preview
 
 Examples
   Display the help menu for the init command
-  $ archer init --help
+  $ ecs-preview init --help

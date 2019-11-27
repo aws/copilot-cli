@@ -31,7 +31,7 @@ var cliPath string
 
 var _ = BeforeSuite(func() {
 	var err error
-	cliPath, err = filepath.Abs("../../../bin/local/archer")
+	cliPath, err = filepath.Abs("../../../bin/local/ecs-preview")
 	Expect(err).To(BeNil())
 
 	// ensure the CLI is available for e2e tests

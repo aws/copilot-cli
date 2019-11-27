@@ -284,7 +284,7 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("archer app deploy --name %s --env %s", opts.AppName, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", opts.AppName, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
@@ -296,10 +296,10 @@ func BuildAppInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new application in a project.",
 		Long: `Creates a new application in a project.
-This command is also run as part of "archer init".`,
+This command is also run as part of "ecs-preview init".`,
 		Example: `
   Create a "frontend" web application.
-  /code $ archer app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
 

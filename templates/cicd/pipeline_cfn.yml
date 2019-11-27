@@ -28,8 +28,8 @@ Resources:
               - sts:AssumeRole
       Path: /
       ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for archer env ls
-        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for archer app package
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for app package
   BuildProjectPolicy:
     Type: AWS::IAM::Policy
     DependsOn: BuildProjectRole
