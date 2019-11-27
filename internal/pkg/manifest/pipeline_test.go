@@ -112,13 +112,10 @@ source:
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
 stages:
-    -
-      # The name of the environment to deploy to.
+    - # The name of the environment to deploy to.
       name: chicken
-    -
-      # The name of the environment to deploy to.
+    - # The name of the environment to deploy to.
       name: wings
-
 `
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
