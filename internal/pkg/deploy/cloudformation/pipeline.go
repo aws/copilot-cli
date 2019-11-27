@@ -16,8 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-// PipelineExist checks if the pipeline with the provided config exists.
-func (cf CloudFormation) PipelineExist(in *deploy.CreatePipelineInput) (bool, error) {
+// PipelineExists checks if the pipeline with the provided config exists.
+func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, error) {
 	stackConfig := stack.NewPipelineStackConfig(in)
 	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
 	_, err := cf.describeStack(describeStackInput)

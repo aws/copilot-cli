@@ -263,7 +263,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(false, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
@@ -296,7 +296,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(true, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -331,7 +331,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(true, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil).Times(0)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -360,7 +360,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(true, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, pipelineName), "").Return(false, errors.New("some error"))
@@ -493,7 +493,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(false, errors.New("some error"))
+				m.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error"))
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("check if pipeline exists: some error"),
@@ -525,7 +525,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(false, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
@@ -558,7 +558,7 @@ stages:
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExist(gomock.Any()).Return(true, nil)
+				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {

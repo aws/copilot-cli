@@ -139,20 +139,21 @@ func (opts *UpdatePipelineOpts) shouldUpdate() (bool, error) {
 }
 
 func (opts *UpdatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
-	exist, err := opts.pipelineDeployer.PipelineExist(in)
+	exist, err := opts.pipelineDeployer.PipelineExists(in)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
 	}
 	if !exist {
 		opts.prog.Start(fmt.Sprintf(fmtCreatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
-		err := opts.pipelineDeployer.CreatePipeline(in)
-		var alreadyExists *cloudformation.ErrStackAlreadyExists
-		if err == nil || errors.As(err, &alreadyExists) {
-			opts.prog.Stop(log.Ssuccessf(fmtCreatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
-			return nil
+		if err := opts.pipelineDeployer.CreatePipeline(in); err != nil {
+			var alreadyExists *cloudformation.ErrStackAlreadyExists
+			if !errors.As(err, &alreadyExists) {
+				opts.prog.Stop(log.Serrorf(fmtCreatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+				return fmt.Errorf("create pipeline: %w", err)
+			}
 		}
-		opts.prog.Stop(log.Serrorf(fmtCreatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
-		return fmt.Errorf("create pipeline: %w", err)
+		opts.prog.Stop(log.Ssuccessf(fmtCreatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+		return nil
 	}
 
 	// If the stack already exists - we update it
@@ -160,14 +161,15 @@ func (opts *UpdatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) e
 	if err != nil {
 		return err
 	}
-	if shouldUpdate {
-		opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
-		if err := opts.pipelineDeployer.UpdatePipeline(in); err != nil {
-			opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
-			return fmt.Errorf("update pipeline: %w", err)
-		}
-		opts.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+	if !shouldUpdate {
+		return nil
 	}
+	opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
+	if err := opts.pipelineDeployer.UpdatePipeline(in); err != nil {
+		opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+		return fmt.Errorf("update pipeline: %w", err)
+	}
+	opts.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
 	return nil
 }
 
