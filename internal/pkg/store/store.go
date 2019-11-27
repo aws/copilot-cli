@@ -31,15 +31,14 @@ import (
 // current schema Version for Projects
 const schemaVersion = "1.0"
 
-// TODO: remove `archer` from path values?
 // schema formats supported in current schemaVersion. NOTE: May change to map in the future.
 const (
-	rootProjectPath  = "/archer/"
-	fmtProjectPath   = "/archer/%s"
-	rootEnvParamPath = "/archer/%s/environments/"
-	fmtEnvParamPath  = "/archer/%s/environments/%s" // path for an environment in a project
-	rootAppParamPath = "/archer/%s/applications/"
-	fmtAppParamPath  = "/archer/%s/applications/%s" // path for an application in a project
+	rootProjectPath  = "/ecs-cli-v2/"
+	fmtProjectPath   = "/ecs-cli-v2/%s"
+	rootEnvParamPath = "/ecs-cli-v2/%s/environments/"
+	fmtEnvParamPath  = "/ecs-cli-v2/%s/environments/%s" // path for an environment in a project
+	rootAppParamPath = "/ecs-cli-v2/%s/applications/"
+	fmtAppParamPath  = "/ecs-cli-v2/%s/applications/%s" // path for an application in a project
 )
 
 type identityService interface {

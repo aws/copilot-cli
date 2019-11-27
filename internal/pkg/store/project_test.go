@@ -40,11 +40,11 @@ func TestStore_ListProjects(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String("/archer/chicken"),
+							Name:  aws.String("/ecs-cli-v2/chicken"),
 							Value: aws.String(testProjectString),
 						},
 						{
-							Name:  aws.String("/archer/cow"),
+							Name:  aws.String("/ecs-cli-v2/cow"),
 							Value: aws.String(cowProjectString),
 						},
 					},
@@ -60,7 +60,7 @@ func TestStore_ListProjects(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String("/archer/chicken"),
+							Name:  aws.String("/ecs-cli-v2/chicken"),
 							Value: aws.String("oops"),
 						},
 					},
@@ -88,7 +88,7 @@ func TestStore_ListProjects(t *testing.T) {
 					return &ssm.GetParametersByPathOutput{
 						Parameters: []*ssm.Parameter{
 							{
-								Name:  aws.String("/archer/chicken"),
+								Name:  aws.String("/ecs-cli-v2/chicken"),
 								Value: aws.String(testProjectString),
 							},
 						},
@@ -98,7 +98,7 @@ func TestStore_ListProjects(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String("/archer/cow"),
+							Name:  aws.String("/ecs-cli-v2/cow"),
 							Value: aws.String(cowProjectString),
 						},
 					},
