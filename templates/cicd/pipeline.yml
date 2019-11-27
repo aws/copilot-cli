@@ -19,7 +19,6 @@ source:
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
 stages:{{range .Stages}}
-    -
-      # The name of the environment to deploy to.
+    - # The name of the environment to deploy to.
       name: {{.Name}}{{end}}
 {{end}}
