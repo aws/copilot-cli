@@ -16,6 +16,14 @@ build: packr-build compile-local packr-clean
 .PHONY: release
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
+.PHONY: release-docker
+release-docker:
+	docker build -t aws/amazon-ecs-cli-v2 . &&\
+	docker create -ti --name amazon-ecs-cli-v2-builder aws/amazon-ecs-cli-v2 &&\
+	docker cp amazon-ecs-cli-v2-builder:/aws-amazon-ecs-cli-v2/bin/local/ . &&\
+	docker rm -f amazon-ecs-cli-v2-builder
+	@echo "Built binaries under ./local/"
+
 compile-local:
 	PLATFORM=local DESTINATION=./bin/local/${BINARY_NAME} ./scripts/build_binary.sh
 
