@@ -10,28 +10,30 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestEnvList_Execute(t *testing.T) {
+func TestAppList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+	mockAppStore := mocks.NewMockApplicationStore(ctrl)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockWorkspace := mocks.NewMockWorkspace(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		listOpts        ListEnvOpts
+		listOpts        ListAppOpts
 		mocking         func()
 		expectedErr     error
 		expectedContent string
 	}{
-		"with json envs": {
-			listOpts: ListEnvOpts{
+		"with json outputs": {
+			listOpts: ListAppOpts{
 				ShouldOutputJSON: true,
-				manager:          mockEnvStore,
+				appLister:        mockAppStore,
 				projectGetter:    mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -41,19 +43,19 @@ func TestEnvList_Execute(t *testing.T) {
 				mockProjectStore.EXPECT().
 					GetProject(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
-				mockEnvStore.
+				mockAppStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("coolproject")).
-					Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "test2"},
+					ListApplications(gomock.Eq("coolproject")).
+					Return([]*archer.Application{
+						{Name: "my-app"},
+						{Name: "lb-app"},
 					}, nil)
 			},
-			expectedContent: `{"environments":[{"project":"","name":"test","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""},{"project":"","name":"test2","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""}]}` + "\n",
+			expectedContent: `{"applications":[{"project":"","name":"my-app","type":""},{"project":"","name":"lb-app","type":""}]}` + "\n",
 		},
-		"with envs": {
-			listOpts: ListEnvOpts{
-				manager:       mockEnvStore,
+		"with human outputs": {
+			listOpts: ListAppOpts{
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -63,20 +65,20 @@ func TestEnvList_Execute(t *testing.T) {
 				mockProjectStore.EXPECT().
 					GetProject(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
-				mockEnvStore.
+				mockAppStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("coolproject")).
-					Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "test2"},
+					ListApplications(gomock.Eq("coolproject")).
+					Return([]*archer.Application{
+						{Name: "my-app", Type: "Load Balanced Web App"},
+						{Name: "lb-app", Type: "Load Balanced Web App"},
 					}, nil)
 			},
-			expectedContent: "test\ntest2\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\nlb-app              Load Balanced Web App\n",
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
-			listOpts: ListEnvOpts{
-				manager:       mockEnvStore,
+			listOpts: ListAppOpts{
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -87,16 +89,16 @@ func TestEnvList_Execute(t *testing.T) {
 					GetProject(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 
-				mockEnvStore.
+				mockAppStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("coolproject")).
+					ListApplications(gomock.Eq("coolproject")).
 					Times(0)
 			},
 		},
 		"with failed call to list": {
 			expectedErr: mockError,
-			listOpts: ListEnvOpts{
-				manager:       mockEnvStore,
+			listOpts: ListAppOpts{
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -107,16 +109,19 @@ func TestEnvList_Execute(t *testing.T) {
 					GetProject(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 
-				mockEnvStore.
+				mockAppStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("coolproject")).
+					ListApplications(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 			},
 		},
-		"with production envs": {
-			listOpts: ListEnvOpts{
-				manager:       mockEnvStore,
-				projectGetter: mockProjectStore,
+		"with local flag enabled": {
+			expectedErr: nil,
+			listOpts: ListAppOpts{
+				appLister:           mockAppStore,
+				projectGetter:       mockProjectStore,
+				ws:                  mockWorkspace,
+				ShouldShowLocalApps: true,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
 				},
@@ -125,15 +130,23 @@ func TestEnvList_Execute(t *testing.T) {
 				mockProjectStore.EXPECT().
 					GetProject(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
-				mockEnvStore.
+				mockAppStore.
 					EXPECT().
-					ListEnvironments(gomock.Eq("coolproject")).
-					Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "test2", Prod: true},
+					ListApplications(gomock.Eq("coolproject")).
+					Return([]*archer.Application{
+						{Name: "my-app", Type: "Load Balanced Web App"},
+						{Name: "lb-app", Type: "Load Balanced Web App"},
 					}, nil)
+				mockWorkspace.EXPECT().Apps().
+					Return([]archer.Manifest{
+						&manifest.LBFargateManifest{
+							AppManifest: manifest.AppManifest{
+								Name: "my-app",
+								Type: "Load Balanced Web App",
+							},
+						}}, nil).Times(1)
 			},
-			expectedContent: "test\ntest2 (prod)\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\n",
 		},
 	}
 
@@ -153,7 +166,7 @@ func TestEnvList_Execute(t *testing.T) {
 	}
 }
 
-func TestEnvList_Ask(t *testing.T) {
+func TestAppList_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject string
 
@@ -170,11 +183,11 @@ func TestEnvList_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(environmentListProjectNamePrompt, environmentListProjectNameHelper, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(applicationListProjectNamePrompt, applicationListProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 			},
 			wantedProject: "my-project",
 		},
-		"with env flags set": {
+		"with project flags set": {
 			mockProjectLister: func(m *mocks.MockProjectLister) {},
 			mockPrompt:        func(m *climocks.Mockprompter) {},
 			inputProject:      "my-project",
@@ -192,7 +205,7 @@ func TestEnvList_Ask(t *testing.T) {
 			tc.mockProjectLister(mockProjectLister)
 			tc.mockPrompt(mockPrompter)
 
-			listEnvs := &ListEnvOpts{
+			listApps := &ListAppOpts{
 				projectLister: mockProjectLister,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
@@ -200,10 +213,10 @@ func TestEnvList_Ask(t *testing.T) {
 				},
 			}
 
-			err := listEnvs.Ask()
+			err := listApps.Ask()
 
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedProject, listEnvs.ProjectName(), "expected project names to match")
+			require.Equal(t, tc.wantedProject, listApps.ProjectName(), "expected project names to match")
 		})
 	}
 }
