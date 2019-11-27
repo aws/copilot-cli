@@ -42,10 +42,10 @@ func BuildAppDeleteCmd() *cobra.Command {
 		Short: "Deletes an application from your project.",
 		Example: `
   Delete the "test" application.
-  /code $ archer app delete test
+  /code $ ecs-preview app delete test
 
   Delete the "test" application without prompting.
-  /code $ archer app delete test --yes`,
+  /code $ ecs-preview app delete test --yes`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("requires a single application name as argument")
@@ -181,7 +181,7 @@ func (opts *deleteAppOpts) sourceProjectEnvironments() error {
 	if len(envs) == 0 {
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("archer env init"))
+			color.HighlightCode("ecs-preview env init"))
 
 		return errors.New("no environments found")
 	}

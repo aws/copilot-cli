@@ -199,7 +199,7 @@ func (opts *appDeployOpts) sourceProjectEnvironments() error {
 		// TODO: recommend follow up command - env init?
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("archer env init"))
+			color.HighlightCode("ecs-preview env init"))
 
 		return errors.New("no environments found")
 	}
