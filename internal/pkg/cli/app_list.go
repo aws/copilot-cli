@@ -176,7 +176,7 @@ func BuildAppListCmd() *cobra.Command {
 		Short: "Lists all the applications in a project",
 		Example: `
   Lists all the applications for the test project
-  /code $ archer app ls --project test`,
+  /code $ ecs-preview app ls --project test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {
