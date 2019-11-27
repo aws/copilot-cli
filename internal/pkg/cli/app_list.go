@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -23,13 +24,16 @@ const (
 
 // ListAppOpts contains the fields to collect for listing an application.
 type ListAppOpts struct {
-	ShouldOutputJSON bool
+	ShouldOutputJSON    bool
+	ShouldShowLocalApps bool
 
+	applications  []*archer.Application
 	manager       archer.ApplicationLister
 	projectGetter archer.ProjectGetter
 	projectLister archer.ProjectLister
 
-	w io.Writer
+	ws archer.Workspace
+	w  io.Writer
 
 	*GlobalOpts
 }
@@ -53,6 +57,18 @@ func (opts *ListAppOpts) selectProject() (string, error) {
 		projStrs,
 	)
 	return proj, err
+}
+
+func (opts *ListAppOpts) localAppsFilter(appNames []string) {
+	var localApps []*archer.Application
+	for _, appName := range appNames {
+		for _, app := range opts.applications {
+			if appName == app.Name {
+				localApps = append(localApps, app)
+			}
+		}
+	}
+	opts.applications = localApps
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -80,35 +96,48 @@ func (opts *ListAppOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	opts.applications = apps
+
+	if opts.ShouldShowLocalApps {
+		localAppManifests, err := opts.ws.Apps()
+		if err != nil {
+			return fmt.Errorf("failed to get local app manifests: %w", err)
+		}
+		var localAppNames []string
+		for _, appManifest := range localAppManifests {
+			localAppNames = append(localAppNames, appManifest.AppName())
+		}
+		opts.localAppsFilter(localAppNames)
+	}
 
 	var out string
 	if opts.ShouldOutputJSON {
-		data, err := opts.jsonOutput(apps)
+		data, err := opts.jsonOutput()
 		if err != nil {
 			return err
 		}
 		out = data
 	} else {
-		out = opts.humanOutput(apps)
+		out = opts.humanOutput()
 	}
 	fmt.Fprintf(opts.w, out)
 
 	return nil
 }
 
-func (opts *ListAppOpts) humanOutput(apps []*archer.Application) string {
+func (opts *ListAppOpts) humanOutput() string {
 	b := &strings.Builder{}
-	for _, app := range apps {
+	for _, app := range opts.applications {
 		fmt.Fprintf(b, "%s: %s\n", app.Type, app.Name)
 	}
 	return b.String()
 }
 
-func (opts *ListAppOpts) jsonOutput(apps []*archer.Application) (string, error) {
+func (opts *ListAppOpts) jsonOutput() (string, error) {
 	type serializedApps struct {
 		Applications []*archer.Application `json:"applications"`
 	}
-	b, err := json.Marshal(serializedApps{Applications: apps})
+	b, err := json.Marshal(serializedApps{Applications: opts.applications})
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
 	}
@@ -136,6 +165,11 @@ func BuildAppListCmd() *cobra.Command {
 			return opts.Ask()
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			ws, err := workspace.New()
+			if err != nil {
+				return err
+			}
+			opts.ws = ws
 			ssmStore, err := store.New()
 			if err != nil {
 				return err
@@ -146,5 +180,6 @@ func BuildAppListCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&opts.ShouldShowLocalApps, appLocalFlag, false, appLocalFlagDescription)
 	return cmd
 }

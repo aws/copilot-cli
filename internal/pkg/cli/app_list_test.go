@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,7 @@ func TestAppList_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockAppStore := mocks.NewMockApplicationStore(ctrl)
 	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockWorkspace := mocks.NewMockWorkspace(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -112,6 +114,39 @@ func TestAppList_Execute(t *testing.T) {
 					ListApplications(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 			},
+		},
+		"with local flag enabled": {
+			expectedErr: nil,
+			listOpts: ListAppOpts{
+				manager:             mockAppStore,
+				projectGetter:       mockProjectStore,
+				ws:                  mockWorkspace,
+				ShouldShowLocalApps: true,
+				GlobalOpts: &GlobalOpts{
+					projectName: "coolproject",
+				},
+			},
+			mocking: func() {
+				mockProjectStore.EXPECT().
+					GetProject(gomock.Eq("coolproject")).
+					Return(&archer.Project{}, nil)
+				mockAppStore.
+					EXPECT().
+					ListApplications(gomock.Eq("coolproject")).
+					Return([]*archer.Application{
+						{Name: "my-app", Type: "Load Balanced Web App"},
+						{Name: "lb-app", Type: "Load Balanced Web App"},
+					}, nil)
+				mockWorkspace.EXPECT().Apps().
+					Return([]archer.Manifest{
+						&manifest.LBFargateManifest{
+							AppManifest: manifest.AppManifest{
+								Name: "my-app",
+								Type: "Load Balanced Web App",
+							},
+						}}, nil).Times(1)
+			},
+			expectedContent: "Load Balanced Web App: my-app\n",
 		},
 	}
 

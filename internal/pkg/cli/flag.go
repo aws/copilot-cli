@@ -27,6 +27,7 @@ const (
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
+	appLocalFlag          = "local"
 )
 
 // Short flag names.
@@ -68,4 +69,5 @@ const (
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
 	deployFlagDescription            = "Trigger a deployment of your application(s) to any new stage in your pipeline."
+	appLocalFlagDescription          = "Only show applications in the current directory."
 )
