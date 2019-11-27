@@ -1,0 +1,12 @@
+# Buildspec that runs the integration tests against each app in each
+# pipeline stage
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+    commands:
+      - echo $PIPELINE_STAGE
+  build:
+    commands:
+      - echo "Please add your integration tests" && exit 1

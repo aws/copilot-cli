@@ -80,6 +80,11 @@ func genApps(names ...string) []archer.Manifest {
 				Name: name,
 				Type: manifest.LoadBalancedWebApplication,
 			},
+			Image: manifest.ImageWithPort{
+				AppImage: manifest.AppImage{
+					Build: name,
+				},
+			},
 		})
 	}
 	return result
@@ -90,8 +95,10 @@ func renderManifest(name string) string {
 name: %s
 # The "architecture" of the application you're running.
 type: Load Balanced Web App
+image:
+    build: %s 
 `
-	return fmt.Sprintf(template, name)
+	return fmt.Sprintf(template, name, name)
 }
 
 func TestApps(t *testing.T) {

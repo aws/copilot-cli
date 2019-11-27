@@ -19,6 +19,8 @@ source:
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
 stages:{{range .Stages}}
-    - # The name of the environment to deploy to.
-      name: {{.Name}}{{end}}
-{{end}}
+  - # The name of the environment to deploy to.
+    name: {{.Name}}
+    apps:{{range $appName, $appConfig := .Apps}}
+      {{$appName}}:{{range $field, $value := $appConfig.Properties}}
+        {{$field}}: {{$value}}{{end}}{{end}}{{end}}{{end}}
