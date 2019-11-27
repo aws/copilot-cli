@@ -141,8 +141,8 @@ func (opts *ListAppOpts) Execute() error {
 func (opts *ListAppOpts) humanOutput() {
 	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
-	nameLengthMax := 0
-	typeLengthMax := 0
+	nameLengthMax := len("Name")
+	typeLengthMax := len("Type")
 	for _, app := range opts.applications {
 		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(app.Name))))
 		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(app.Type))))
