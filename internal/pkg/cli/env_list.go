@@ -12,8 +12,14 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+)
+
+const (
+	environmentListProjectNamePrompt = "Which project's environments would you like to list?"
+	environmentListProjectNameHelper = "A project groups all of your environments together."
 )
 
 // ListEnvOpts contains the fields to collect for listing an environment.
@@ -22,10 +28,32 @@ type ListEnvOpts struct {
 
 	manager       archer.EnvironmentLister
 	projectGetter archer.ProjectGetter
+	projectLister archer.ProjectLister
 
 	w io.Writer
 
 	*GlobalOpts
+}
+
+func (opts *ListEnvOpts) selectProject() (string, error) {
+	projs, err := opts.projectLister.ListProjects()
+	if err != nil {
+		return "", err
+	}
+	var projStrs []string
+	for _, projStr := range projs {
+		projStrs = append(projStrs, projStr.Name)
+	}
+	if len(projStrs) == 0 {
+		log.Infoln("There are no projects to select.")
+		return "", nil
+	}
+	proj, err := opts.prompt.SelectOne(
+		environmentListProjectNamePrompt,
+		environmentListProjectNameHelper,
+		projStrs,
+	)
+	return proj, err
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -33,17 +61,10 @@ func (opts *ListEnvOpts) Ask() error {
 	if opts.ProjectName() != "" {
 		return nil
 	}
-
-	// TODO: Make this a SelectOne prompt based on existing projects?
-	projectName, err := opts.prompt.Get(
-		"Which project's environments would you like to list?",
-		"A project groups all of your environments together.",
-		validateProjectName)
-
+	projectName, err := opts.selectProject()
 	if err != nil {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
-
 	opts.projectName = projectName
 
 	return nil
@@ -113,6 +134,11 @@ func BuildEnvListCmd() *cobra.Command {
   Lists all the environments for the test project
   /code $ ecs-preview env ls --project test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			ssmStore, err := store.New()
+			if err != nil {
+				return err
+			}
+			opts.projectLister = ssmStore
 			return opts.Ask()
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
