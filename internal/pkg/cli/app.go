@@ -9,7 +9,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var errNoProjectInWorkspace = errors.New("could not find a project attached to this workspace, please run `project init` first")
@@ -25,10 +24,6 @@ An application represents an Amazon ECS service or task.`,
 			bindProjectName()
 		},
 	}
-
-	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
-	viper.BindPFlag(projectFlag, cmd.PersistentFlags().Lookup(projectFlag))
 
 	cmd.AddCommand(BuildAppInitCmd())
 	cmd.AddCommand(BuildAppListCmd())

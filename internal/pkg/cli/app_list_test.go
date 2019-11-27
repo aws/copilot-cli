@@ -33,7 +33,7 @@ func TestAppList_Execute(t *testing.T) {
 		"with json outputs": {
 			listOpts: ListAppOpts{
 				ShouldOutputJSON: true,
-				manager:          mockAppStore,
+				appLister:        mockAppStore,
 				projectGetter:    mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -55,7 +55,7 @@ func TestAppList_Execute(t *testing.T) {
 		},
 		"with human outputs": {
 			listOpts: ListAppOpts{
-				manager:       mockAppStore,
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -73,12 +73,12 @@ func TestAppList_Execute(t *testing.T) {
 						{Name: "lb-app", Type: "Load Balanced Web App"},
 					}, nil)
 			},
-			expectedContent: "Load Balanced Web App: my-app\nLoad Balanced Web App: lb-app\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\nlb-app              Load Balanced Web App\n",
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
 			listOpts: ListAppOpts{
-				manager:       mockAppStore,
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -98,7 +98,7 @@ func TestAppList_Execute(t *testing.T) {
 		"with failed call to list": {
 			expectedErr: mockError,
 			listOpts: ListAppOpts{
-				manager:       mockAppStore,
+				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
 					projectName: "coolproject",
@@ -118,7 +118,7 @@ func TestAppList_Execute(t *testing.T) {
 		"with local flag enabled": {
 			expectedErr: nil,
 			listOpts: ListAppOpts{
-				manager:             mockAppStore,
+				appLister:           mockAppStore,
 				projectGetter:       mockProjectStore,
 				ws:                  mockWorkspace,
 				ShouldShowLocalApps: true,
@@ -146,7 +146,7 @@ func TestAppList_Execute(t *testing.T) {
 							},
 						}}, nil).Times(1)
 			},
-			expectedContent: "Load Balanced Web App: my-app\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\n",
 		},
 	}
 
@@ -183,7 +183,7 @@ func TestAppList_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationListProjectNamePrompt, applicationListProjectNameHelper, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(applicationListProjectNamePrompt, applicationListProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 			},
 			wantedProject: "my-project",
 		},

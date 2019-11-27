@@ -7,19 +7,29 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (
-	applicationListProjectNamePrompt = "Which project's applications would you like to list?"
-	applicationListProjectNameHelper = "A project groups all of your applications together."
+	applicationListProjectNamePrompt     = "Which project's applications would you like to list?"
+	applicationListProjectNameHelpPrompt = "A project groups all of your applications together."
+
+	// Display settings.
+	minCellWidth           = 20  // minimum number of characters in a table's cell.
+	tabWidth               = 4   // number of characters in between columns.
+	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
+	paddingChar            = ' ' // character in between columns.
+	noAdditionalFormatting = 0
 )
 
 // ListAppOpts contains the fields to collect for listing an application.
@@ -28,7 +38,7 @@ type ListAppOpts struct {
 	ShouldShowLocalApps bool
 
 	applications  []*archer.Application
-	manager       archer.ApplicationLister
+	appLister     archer.ApplicationLister
 	projectGetter archer.ProjectGetter
 	projectLister archer.ProjectLister
 
@@ -43,32 +53,35 @@ func (opts *ListAppOpts) selectProject() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var projStrs []string
-	for _, projStr := range projs {
-		projStrs = append(projStrs, projStr.Name)
+	var projNames []string
+	for _, proj := range projs {
+		projNames = append(projNames, proj.Name)
 	}
-	if len(projStrs) == 0 {
+	if len(projNames) == 0 {
 		log.Infoln("There are no projects to select.")
 		return "", nil
 	}
 	proj, err := opts.prompt.SelectOne(
 		applicationListProjectNamePrompt,
-		applicationListProjectNameHelper,
-		projStrs,
+		applicationListProjectNameHelpPrompt,
+		projNames,
 	)
 	return proj, err
 }
 
 func (opts *ListAppOpts) localAppsFilter(appNames []string) {
-	var localApps []*archer.Application
-	for _, appName := range appNames {
-		for _, app := range opts.applications {
-			if appName == app.Name {
-				localApps = append(localApps, app)
-			}
-		}
+	var filtered []*archer.Application
+	isLocal := make(map[string]bool)
+	for _, name := range appNames {
+		isLocal[name] = true
 	}
-	opts.applications = localApps
+	for _, app := range opts.applications {
+		if _, ok := isLocal[app.Name]; !ok {
+			continue
+		}
+		filtered = append(filtered, app)
+	}
+	opts.applications = filtered
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -92,7 +105,7 @@ func (opts *ListAppOpts) Execute() error {
 		return err
 	}
 
-	apps, err := opts.manager.ListApplications(opts.ProjectName())
+	apps, err := opts.appLister.ListApplications(opts.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -117,20 +130,28 @@ func (opts *ListAppOpts) Execute() error {
 			return err
 		}
 		out = data
+		fmt.Fprintf(opts.w, out)
 	} else {
-		out = opts.humanOutput()
+		opts.humanOutput()
 	}
-	fmt.Fprintf(opts.w, out)
 
 	return nil
 }
 
-func (opts *ListAppOpts) humanOutput() string {
-	b := &strings.Builder{}
+func (opts *ListAppOpts) humanOutput() {
+	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
+	nameLengthMax := 0
+	typeLengthMax := 0
 	for _, app := range opts.applications {
-		fmt.Fprintf(b, "%s: %s\n", app.Type, app.Name)
+		nameLengthMax = int(math.Max(float64(nameLengthMax), float64(len(app.Name))))
+		typeLengthMax = int(math.Max(float64(typeLengthMax), float64(len(app.Type))))
 	}
-	return b.String()
+	fmt.Fprintf(writer, "%s\t%s\n", strings.Repeat("-", nameLengthMax), strings.Repeat("-", typeLengthMax))
+	for _, app := range opts.applications {
+		fmt.Fprintf(writer, "%s\t%s\n", app.Name, app.Type)
+	}
+	writer.Flush()
 }
 
 func (opts *ListAppOpts) jsonOutput() (string, error) {
@@ -174,11 +195,14 @@ func BuildAppListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			opts.manager = ssmStore
+			opts.appLister = ssmStore
 			opts.projectGetter = ssmStore
 			return opts.Execute()
 		}),
 	}
+	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
+	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	viper.BindPFlag(projectFlag, cmd.PersistentFlags().Lookup(projectFlag))
 	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&opts.ShouldShowLocalApps, appLocalFlag, false, appLocalFlagDescription)
 	return cmd
