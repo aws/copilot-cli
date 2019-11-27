@@ -192,10 +192,10 @@ func BuildEnvDeleteCmd() *cobra.Command {
 		Short: "Deletes an environment from your project.",
 		Example: `
   Delete the "test" environment.
-  /code $ archer env delete --name test --profile default
+  /code $ ecs-preview env delete --name test --profile default
 
   Delete the "test" environment without prompting.
-  /code $ archer env delete --name test --profile default --yes`,
+  /code $ ecs-preview env delete --name test --profile default --yes`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err

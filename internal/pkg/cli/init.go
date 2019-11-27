@@ -1,13 +1,13 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package cli contains the archer subcommands.
+// Package cli contains the ecs-preview subcommands.
 package cli
 
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/archer/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
@@ -239,7 +239,7 @@ func BuildInitCmd() *cobra.Command {
 			if !opts.ShouldDeploy {
 				log.Info("\nNo problem, you can deploy your application later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
-					color.HighlightCode(fmt.Sprintf("archer env init --name %s --profile default --project %s", defaultEnvironmentName, *opts.projectName)))
+					color.HighlightCode(fmt.Sprintf("ecs-preview env init --name %s --profile default --project %s", defaultEnvironmentName, *opts.projectName)))
 				for _, followup := range opts.initApp.RecommendedActions() {
 					log.Infof("- %s\n", followup)
 				}

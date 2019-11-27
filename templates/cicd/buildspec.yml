@@ -23,7 +23,7 @@ phases:
       - make release
       - echo "Built artifacts:"
       - ls -lah ./bin/local
-      - cp ./bin/local/archer-amd64 ../archer
+      - cp ./bin/local/ecs-preview-amd64 ../ecs-preview
       - cd ../
   build:
     commands:
@@ -37,14 +37,14 @@ phases:
       - manifests=$(find ./ecs-project -name '*-app.yml')
       # Remove forward slashes and the trailing -app.yml to get the names
       - apps=$(find ./ecs-project -name '*-app.yml' | sed -e 's!.*/!!' -e 's/-app.yml//')
-      - envs=$(./archer env ls --json | jq '.environments[].name' | sed 's/"//g')
+      - envs=$(./ecs-preview env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
       - >
         for env in $envs; do
           for app in $apps; do
-          ./archer app package -n $app -e $env --output-dir './infrastructure' --tag $tag;
+          ./ecs-preview app package -n $app -e $env --output-dir './infrastructure' --tag $tag;
           done;
         done;
       - ls -lah ./infrastructure

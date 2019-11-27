@@ -19,26 +19,26 @@ phases:
     finally:
       - echo "Built artifacts:"
       - ls -lah ./bin/local
-      - ./bin/local/archer-amd64 --version
+      - ./bin/local/ecs-preview-amd64 --version
   post_build:
     commands:
-      - VERSION=`./bin/local/archer-amd64 --version`
+      - VERSION=`./bin/local/ecs-preview-amd64 --version`
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
       - echo "Creating latest and version-tagged artifacts..."
-      - mv ./bin/local/archer.exe ./bin/local/archer-windows-$VERSION.exe
-      - mv ./bin/local/archer ./bin/local/archer-darwin-$VERSION
-      - mv ./bin/local/archer-amd64 ./bin/local/archer-linux-$VERSION
+      - mv ./bin/local/ecs-preview.exe ./bin/local/ecs-preview-windows-$VERSION.exe
+      - mv ./bin/local/ecs-preview ./bin/local/ecs-preview-darwin-$VERSION
+      - mv ./bin/local/ecs-preview-amd64 ./bin/local/ecs-preview-linux-$VERSION
       - echo "Creating manifest file..."
       - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
-      - echo ./bin/local/archer-windows-$VERSION.exe >> $MANIFESTFILE
-      - echo ./bin/local/archer-darwin-$VERSION >> $MANIFESTFILE
-      - echo ./bin/local/archer-linux-$VERSION >> $MANIFESTFILE
+      - echo ./bin/local/ecs-preview-windows-$VERSION.exe >> $MANIFESTFILE
+      - echo ./bin/local/ecs-preview-darwin-$VERSION >> $MANIFESTFILE
+      - echo ./bin/local/ecs-preview-linux-$VERSION >> $MANIFESTFILE
     finally:
       - echo "Built artifacts:"
       - ls -lah ./bin/local
-      - ./bin/local/archer-linux-$VERSION --version
+      - ./bin/local/ecs-preview-linux-$VERSION --version
 artifacts:
   files:
     - '**/*'
