@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -359,7 +360,7 @@ func (opts appDeployOpts) deployApp() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate random id for changeSet: %w", err)
 	}
-	stackName := fmt.Sprintf("%s-%s-%s", opts.ProjectName(), opts.targetEnvironment.Name, opts.app)
+	stackName := stack.NameForApp(opts.ProjectName(), opts.targetEnvironment.Name, opts.app)
 	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
 
 	opts.spinner.Start(
@@ -377,11 +378,17 @@ func (opts appDeployOpts) deployApp() error {
 		opts.spinner.Stop("Error!")
 		return err
 	}
-	opts.spinner.Stop("Done!")
+	opts.spinner.Stop("")
 
-	log.Successf("Deployed %s to %s.\n",
-		fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app), color.HighlightUserInput(opts.imageTag)),
-		color.HighlightUserInput(opts.targetEnvironment.Name))
+	identifier, err := describe.NewAppIdentifier(opts.ProjectName(), opts.app)
+	if err != nil {
+		return fmt.Errorf("create identifier for application %s in project %s: %w", opts.app, opts.ProjectName(), err)
+	}
+	uri, err = identifier.URI(opts.targetEnvironment.Name)
+	if err != nil {
+		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", opts.env, err)
+	}
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.app), uri)
 
 	return nil
 }

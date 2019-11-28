@@ -30,14 +30,14 @@ func TestLBFargateStackConfig_StackName(t *testing.T) {
 			inEnvName:     "test",
 			inProjectName: "phonetool",
 
-			wantedStackName: "phonetool-test-frontend-app",
+			wantedStackName: "phonetool-test-frontend",
 		},
 		"longer than 128 characters": {
 			inAppName:     "whatisthishorriblylongapplicationnamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaaaaa",
 			inEnvName:     "test",
 			inProjectName: "phonetool",
 
-			wantedStackName: "ol-test-whatisthishorriblylongapplicationnamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaaaaa-app",
+			wantedStackName: "phonetool-test-whatisthishorriblylongapplicationnamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaa",
 		},
 	}
 
@@ -196,43 +196,43 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 			// THEN
 			require.Equal(t, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(lbFargateParamProjectNameKey),
+					ParameterKey:   aws.String(LBFargateParamProjectNameKey),
 					ParameterValue: aws.String("phonetool"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateParamEnvNameKey),
+					ParameterKey:   aws.String(LBFargateParamEnvNameKey),
 					ParameterValue: aws.String("test"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateParamAppNameKey),
+					ParameterKey:   aws.String(LBFargateParamAppNameKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateParamContainerImageKey),
+					ParameterKey:   aws.String(LBFargateParamContainerImageKey),
 					ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateParamContainerPortKey),
+					ParameterKey:   aws.String(LBFargateParamContainerPortKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateRulePathKey),
+					ParameterKey:   aws.String(LBFargateRulePathKey),
 					ParameterValue: aws.String("*"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateTaskCPUKey),
+					ParameterKey:   aws.String(LBFargateTaskCPUKey),
 					ParameterValue: aws.String("256"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateTaskMemoryKey),
+					ParameterKey:   aws.String(LBFargateTaskMemoryKey),
 					ParameterValue: aws.String("512"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargateTaskCountKey),
+					ParameterKey:   aws.String(LBFargateTaskCountKey),
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(lbFargatePramHTTPSKey),
+					ParameterKey:   aws.String(LBFargateParamHTTPSKey),
 					ParameterValue: aws.String(tc.expectedHTTP),
 				},
 			}, params)

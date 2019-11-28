@@ -243,11 +243,11 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 		StackId: aws.String(stackArn),
 		Outputs: []*cloudformation.Output{
 			{
-				OutputKey:   aws.String(envOutputManagerRoleKey),
+				OutputKey:   aws.String(EnvOutputManagerRoleKey),
 				OutputValue: aws.String(managerRoleARN),
 			},
 			{
-				OutputKey:   aws.String(envOutputCFNExecutionRoleARN),
+				OutputKey:   aws.String(EnvOutputCFNExecutionRoleARN),
 				OutputValue: aws.String(executionRoleARN),
 			},
 		},

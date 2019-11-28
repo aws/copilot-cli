@@ -23,17 +23,18 @@ const (
 	lbFargateAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
+// Parameter logical IDs for a load balanced Fargate service.
 const (
-	lbFargateParamProjectNameKey    = "ProjectName"
-	lbFargatePramHTTPSKey           = "HTTPSEnabled"
-	lbFargateParamEnvNameKey        = "EnvName"
-	lbFargateParamAppNameKey        = "AppName"
-	lbFargateParamContainerImageKey = "ContainerImage"
-	lbFargateParamContainerPortKey  = "ContainerPort"
-	lbFargateRulePathKey            = "RulePath"
-	lbFargateTaskCPUKey             = "TaskCPU"
-	lbFargateTaskMemoryKey          = "TaskMemory"
-	lbFargateTaskCountKey           = "TaskCount"
+	LBFargateParamProjectNameKey    = "ProjectName"
+	LBFargateParamHTTPSKey          = "HTTPSEnabled"
+	LBFargateParamEnvNameKey        = "EnvName"
+	LBFargateParamAppNameKey        = "AppName"
+	LBFargateParamContainerImageKey = "ContainerImage"
+	LBFargateParamContainerPortKey  = "ContainerPort"
+	LBFargateRulePathKey            = "RulePath"
+	LBFargateTaskCPUKey             = "TaskCPU"
+	LBFargateTaskMemoryKey          = "TaskMemory"
+	LBFargateTaskCountKey           = "TaskCount"
 )
 
 // LBFargateStackConfig represents the configuration needed to create a CloudFormation stack from a
@@ -66,13 +67,7 @@ func NewHTTPSLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackC
 
 // StackName returns the name of the stack.
 func (c *LBFargateStackConfig) StackName() string {
-	const maxLen = 128 // stack name limit constrained by CFN https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-using-console-create-stack-parameters.html
-	stackName := fmt.Sprintf("%s-%s-%s-app", c.Env.Project, c.Env.Name, c.App.Name)
-
-	if len(stackName) > maxLen {
-		return stackName[len(stackName)-maxLen:]
-	}
-	return stackName
+	return NameForApp(c.Env.Project, c.Env.Name, c.App.Name)
 }
 
 // Template returns the CloudFormation template for the application parametrized for the environment.
@@ -113,43 +108,43 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 	templateParams := c.toTemplateParams()
 	return []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(lbFargateParamProjectNameKey),
+			ParameterKey:   aws.String(LBFargateParamProjectNameKey),
 			ParameterValue: aws.String(templateParams.Env.Project),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateParamEnvNameKey),
+			ParameterKey:   aws.String(LBFargateParamEnvNameKey),
 			ParameterValue: aws.String(templateParams.Env.Name),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateParamAppNameKey),
+			ParameterKey:   aws.String(LBFargateParamAppNameKey),
 			ParameterValue: aws.String(templateParams.App.Name),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateParamContainerImageKey),
+			ParameterKey:   aws.String(LBFargateParamContainerImageKey),
 			ParameterValue: aws.String(templateParams.Image.URL),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateParamContainerPortKey),
+			ParameterKey:   aws.String(LBFargateParamContainerPortKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.Image.Port)),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateRulePathKey),
+			ParameterKey:   aws.String(LBFargateRulePathKey),
 			ParameterValue: aws.String(templateParams.App.Path),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateTaskCPUKey),
+			ParameterKey:   aws.String(LBFargateTaskCPUKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.CPU)),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateTaskMemoryKey),
+			ParameterKey:   aws.String(LBFargateTaskMemoryKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Memory)),
 		},
 		{
-			ParameterKey:   aws.String(lbFargateTaskCountKey),
+			ParameterKey:   aws.String(LBFargateTaskCountKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Count)),
 		},
 		{
-			ParameterKey:   aws.String(lbFargatePramHTTPSKey),
+			ParameterKey:   aws.String(LBFargateParamHTTPSKey),
 			ParameterValue: aws.String(strconv.FormatBool(c.httpsEnabled)),
 		},
 	}
