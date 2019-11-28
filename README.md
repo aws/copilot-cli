@@ -1,5 +1,7 @@
 # Amazon ECS CLI v2
 
+[![Join the chat at https://gitter.im/aws/amazon-ecs-cli-v2](https://badges.gitter.im/aws/amazon-ecs-cli-v2.svg)](https://gitter.im/aws/amazon-ecs-cli-v2?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 >⚠️ Before you get started please note that this feature is in preview and the intention is to ensure it meets your requirements and give us any feedback on your use case. Please do not run production workloads till we announce the general availability of this feature. Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms: https://aws.amazon.com/service-terms/ . 
 
 The ECS CLI is a tool for developers to create, release and manage production ready containerized applications on ECS.
@@ -16,6 +18,8 @@ Use the ECS CLI to:
 * Set up production-ready, battle tested ECS Clusters, Services and infrastructure
 * Set up CI/CD Pipelines for all of the micro-services that make up your Project
 * Monitor and debug your applications
+
+![ecs-cli help](https://user-images.githubusercontent.com/828419/69765586-5c69f280-1129-11ea-9427-623d15975940.png)
 
 ## 🌟 Tenets (unless you know better ones)
 * **Create modern applications by default.**
