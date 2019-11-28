@@ -78,7 +78,6 @@ Resources:
     Properties:
       VersioningConfiguration:
         Status: Enabled
-    DeletionPolicy: Retain
 
 
   ECRRepoappDASH1:
