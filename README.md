@@ -17,6 +17,8 @@ Use the ECS CLI to:
 * Set up CI/CD Pipelines for all of the micro-services that make up your Project
 * Monitor and debug your applications
 
+![ecs-cli help](https://user-images.githubusercontent.com/828419/69765586-5c69f280-1129-11ea-9427-623d15975940.png)
+
 ## 🌟 Tenets (unless you know better ones)
 * **Create modern applications by default.**
 Applications created with the ECS CLI use the best practices of modern applications by default: they are serverless,
