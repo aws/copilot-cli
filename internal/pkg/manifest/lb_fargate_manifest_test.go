@@ -14,7 +14,7 @@ func TestLoadBalancedFargateManifest_Marshal(t *testing.T) {
 	// GIVEN
 	wantedContent := `# The manifest for the "frontend" application.
 # Read the full specification for the "Load Balanced Web App" type at:
-#   https://github.com/aws/amazon-ecs-cli-v2/docs/manifests/load-balanced-web-app.
+#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-app
 
 # Your application name will be used in naming your resources like log groups, services, etc.
 name: frontend
