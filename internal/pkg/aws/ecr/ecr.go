@@ -111,10 +111,7 @@ func (s Service) ListImages(repoName string) ([]Image, error) {
 			Digest: *imageDetails.ImageDigest,
 		})
 	}
-	for {
-		if resp.NextToken == nil {
-			break
-		}
+	for resp.NextToken != nil {
 		resp, err = s.ecr.DescribeImages(&ecr.DescribeImagesInput{
 			RepositoryName: aws.String(repoName),
 			NextToken:      resp.NextToken,
@@ -137,15 +134,16 @@ func (s Service) DeleteImages(images []Image, repoName string) error {
 		return nil
 	}
 
-	var imageIdentifiers [][]*ecr.ImageIdentifier
-	for ind, image := range images {
-		if ind%batchDeleteLimit == 0 {
-			imageIdentifiers = append(imageIdentifiers, make([]*ecr.ImageIdentifier, 0))
-		}
-		imageIdentifiers[ind/batchDeleteLimit] = append(imageIdentifiers[ind/batchDeleteLimit], image.imageIdentifier())
+	var imageIdentifiers []*ecr.ImageIdentifier
+	for _, image := range images {
+		imageIdentifiers = append(imageIdentifiers, image.imageIdentifier())
 	}
-
-	for _, identifiers := range imageIdentifiers {
+	var imageIdentifiersBatch [][]*ecr.ImageIdentifier
+	for batchDeleteLimit < len(imageIdentifiers) {
+		imageIdentifiers, imageIdentifiersBatch = imageIdentifiers[batchDeleteLimit:], append(imageIdentifiersBatch, imageIdentifiers[0:batchDeleteLimit])
+	}
+	imageIdentifiersBatch = append(imageIdentifiersBatch, imageIdentifiers)
+	for _, identifiers := range imageIdentifiersBatch {
 		resp, err := s.ecr.BatchDeleteImage(&ecr.BatchDeleteImageInput{
 			RepositoryName: aws.String(repoName),
 			ImageIds:       identifiers,
