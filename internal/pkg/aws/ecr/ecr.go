@@ -100,21 +100,25 @@ func (i Image) imageIdentifier() *ecr.ImageIdentifier {
 // Image metadata for images in the input ECR repository name.
 func (s Service) ListImages(repoName string) ([]Image, error) {
 	var images []Image
-	nextTokenExist := false
-	var resp *ecr.DescribeImagesOutput
-	var err error
+	resp, err := s.ecr.DescribeImages(&ecr.DescribeImagesInput{
+		RepositoryName: aws.String(repoName),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ecr repo %s describe images: %w", repoName, err)
+	}
+	for _, imageDetails := range resp.ImageDetails {
+		images = append(images, Image{
+			Digest: *imageDetails.ImageDigest,
+		})
+	}
 	for {
-		if nextTokenExist {
-			resp, err = s.ecr.DescribeImages(&ecr.DescribeImagesInput{
-				RepositoryName: aws.String(repoName),
-				NextToken:      resp.NextToken,
-			})
-		} else {
-			resp, err = s.ecr.DescribeImages(&ecr.DescribeImagesInput{
-				RepositoryName: aws.String(repoName),
-			})
-			nextTokenExist = true
+		if resp.NextToken == nil {
+			break
 		}
+		resp, err = s.ecr.DescribeImages(&ecr.DescribeImagesInput{
+			RepositoryName: aws.String(repoName),
+			NextToken:      resp.NextToken,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("ecr repo %s describe images: %w", repoName, err)
 		}
@@ -122,9 +126,6 @@ func (s Service) ListImages(repoName string) ([]Image, error) {
 			images = append(images, Image{
 				Digest: *imageDetails.ImageDigest,
 			})
-		}
-		if resp.NextToken == nil {
-			break
 		}
 	}
 	return images, nil
