@@ -1,0 +1,263 @@
+# Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with
+# the License. A copy of the License is located at
+#     http://aws.amazon.com/apache2.0/
+# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+# CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
+# limitations under the License.
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline for the chickenProject
+Parameters:
+  # TODO: #273 make this source-provider-agnostic
+  GitHubAccessTokenSecretId:
+    Description: The secretId of the GitHub Personal Access token stored in the Secrets Manager
+    Type: String
+    Default: testGitHubSecret
+Resources:
+  BuildProjectRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for app package
+  BuildProjectPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: BuildProjectRole
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodeBuildPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:GetObjectVersion
+            # TODO: This might not be necessary. We may only need the bucket
+            # that is in the same region as the pipeline.
+            # Loop through all the artifact buckets created in the stackset
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
+          - Effect: Allow
+            Action:
+              # TODO: scope this down if possible
+              - kms:*
+            # TODO: This might not be necessary. We may only need the KMS key
+            # that is in the same region as the pipeline.
+            # Loop through all the KMS keys used to en/decrypt artifacts
+            # across (cross-regional) pipeline stages, with each stage
+            # backed by a (regional) S3 bucket.
+            Resource:
+              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ecr:DescribeImageScanFindings
+              - ecr:GetLifecyclePolicyPreview
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:DescribeImages
+              - ecr:ListTagsForResource
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetLifecyclePolicy
+              - ecr:GetRepositoryPolicy
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+            Resource: '*'
+            Condition: {StringEquals: {'ecr:ResourceTag/ecs-project': chickenProject}}
+      Roles:
+        - !Ref BuildProjectRole
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AWS::StackName}-BuildProject
+      Description: !Sub Build for ${AWS::StackName}
+      # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
+      # created in the same region as this pipeline.
+      EncryptionKey: !ImportValue chickenProject-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Cache:
+        Modes:
+          - LOCAL_DOCKER_LAYER_CACHE
+        Type: LOCAL
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: ecs-project/buildspec.yml
+      TimeoutInMinutes: 60
+  PipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+  PipelineRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodepipelinePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - codepipeline:*
+              - iam:ListRoles
+              - cloudformation:Describe*
+              - cloudFormation:List*
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              - s3:ListAllMyBuckets
+              - s3:GetBucketLocation
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource:
+              - arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              - arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              - arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetBucketPolicy
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-east-1', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-2', '/*']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1']]
+              - !Join ['', ['arn:aws:s3:::', 'chicken-us-west-1', '/*']]
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Resource:
+              - arn:aws:iam::109876543210:role/chickenProject-test-chicken-EnvManagerRole
+              - arn:aws:iam::109876543210:role/chickenProject-prod-can-fly-EnvManagerRole
+      Roles:
+        - !Ref PipelineRole
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - PipelineRole
+      - PipelineRolePolicy
+    Properties:
+      ArtifactStores:
+        - Region: us-east-1
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-east-1
+            EncryptionKey:
+              Id: arn:aws:kms:us-east-1:012345678910:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e
+              Type: KMS
+        - Region: us-west-2
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-west-2
+            EncryptionKey:
+              Id: arn:aws:kms:us-west-2:012345678910:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc
+              Type: KMS
+        - Region: us-west-1
+          ArtifactStore:
+            Type: S3
+            Location: chicken-us-west-1
+            EncryptionKey:
+              Id: arn:aws:kms:us-west-1:012345678910:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1
+              Type: KMS
+      RoleArn: !GetAtt PipelineRole.Arn
+      Name: !Ref AWS::StackName
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceCodeFor-chickenProject
+              ActionTypeId:
+                Category: Source
+                # TODO: #273 For CodeCommit, this needs to be AWS. Let's do that later
+                Owner: ThirdParty
+                Version: 1
+                Provider: GitHub
+              Configuration:
+                # TODO: #273 For now this set of configurations is GitHub-specific,
+                # change it to be more generic
+                Owner: hencrice
+                Repo: amazon-ecs-cli-v2
+                Branch: master
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
+                # Use the *entire* SecretString with version AWSCURRENT
+                OAuthToken: !Sub
+                    - '{{resolve:secretsmanager:${SecretId}}}'
+                    - { SecretId: !Ref GitHubAccessTokenSecretId }
+              OutputArtifacts:
+                - Name: SCCheckoutArtifact
+              RunOrder: 1
+        - Name: Build
+          Actions:
+          - Name: Build
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref BuildProject
+            RunOrder: 1
+            InputArtifacts:
+              - Name: SCCheckoutArtifact
+            OutputArtifacts:
+              - Name: BuildOutput
