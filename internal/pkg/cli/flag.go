@@ -23,6 +23,7 @@ const (
 	deployFlag            = "deploy"
 	githubRepoFlag        = "github-repo"
 	githubAccessTokenFlag = "github-access-token"
+	githubBranchFlag      = "github-branch"
 	enableCDFlag          = "enable-cd"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
@@ -42,6 +43,7 @@ const (
 	dockerFileFlagShort        = "d"
 	githubRepoFlagShort        = "r"
 	githubAccessTokenFlagShort = "t"
+	githubBranchFlagShort      = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
 )
@@ -63,6 +65,7 @@ const (
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
 	githubRepoFlagDescription        = "GitHub repository for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
+	githubBranchFlagDescription      = "Branch name of your Github repository"
 	deployPipelineFlagDescription    = "Deploys the pipeline."
 	enableCDFlagDescription          = "Enables automatic deployment to production environment."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
