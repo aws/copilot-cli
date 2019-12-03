@@ -66,6 +66,13 @@ func BuildAppDeleteCmd() *cobra.Command {
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return opts.deleteApp()
 		}),
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
+		},
 	}
 
 	cmd.Flags().BoolVar(&opts.skipConfirmation, yesFlag, false, yesFlagDescription)
@@ -304,4 +311,13 @@ func (opts deleteAppOpts) deleteWorkspaceFile() error {
 	}
 
 	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (opts *deleteAppOpts) RecommendedActions() []string {
+	// TODO: Add recommendation to do `pipeline delete` when it is available
+	return []string{
+		fmt.Sprintf("Run %s to update the corresponding pipeline if exists.",
+			color.HighlightCode(fmt.Sprintf("ecs-preview pipeline update"))),
+	}
 }
