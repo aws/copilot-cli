@@ -317,7 +317,7 @@ func (opts deleteAppOpts) deleteWorkspaceFile() error {
 func (opts *deleteAppOpts) RecommendedActions() []string {
 	// TODO: Add recommendation to do `pipeline delete` when it is available
 	return []string{
-		fmt.Sprintf("Run %s to update the corresponding pipeline if exists.",
+		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
 			color.HighlightCode(fmt.Sprintf("ecs-preview pipeline update"))),
 	}
 }
