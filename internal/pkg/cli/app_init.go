@@ -291,7 +291,9 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &InitAppOpts{}
+	opts := &InitAppOpts{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new application in a project.",
@@ -323,7 +325,6 @@ This command is also run as part of "ecs-preview init".`,
 			opts.projDeployer = cloudformation.New(sess)
 
 			opts.prog = termprogress.NewSpinner()
-			opts.GlobalOpts = NewGlobalOpts()
 			return opts.Validate()
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {

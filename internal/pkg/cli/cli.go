@@ -15,11 +15,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-func init() {
-	// Store the local project's name in viper.
-	bindProjectName()
-}
-
 // GlobalOpts holds fields that are used across multiple commands.
 type GlobalOpts struct {
 	projectName string
@@ -28,6 +23,8 @@ type GlobalOpts struct {
 
 // NewGlobalOpts returns a GlobalOpts with the project name retrieved from viper.
 func NewGlobalOpts() *GlobalOpts {
+	bindProjectName()
+
 	return &GlobalOpts{
 		projectName: viper.GetString(projectFlag),
 		prompt:      prompt.New(),
