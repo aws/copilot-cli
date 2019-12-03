@@ -66,6 +66,18 @@ func TestPipelineTemplateRendering(t *testing.T) {
 	require.Equal(t, string(expectedTemplate), string(tmpl), "the rendered template differs from the expected")
 }
 
+func TestPipelineTemplateRenderingWithNoApplication(t *testing.T) {
+	expectedTemplate, err := ioutil.ReadFile("testdata/rendered_pipeline_with_no_application_cfn_template.yml")
+	require.NoError(t, err, "expected template can not be read")
+
+	pipeline := NewPipelineStackConfig(
+		mockCreatePipelineInputWithNoApplication(),
+	)
+	tmpl, err := pipeline.Template()
+	require.NoError(t, err, "template serialization failed")
+	require.Equal(t, string(expectedTemplate), string(tmpl), "the rendered template differs from the expected")
+}
+
 func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEnvironment {
 	return &deploy.AssociatedEnvironment{
 		Name:      envName,
@@ -95,6 +107,44 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			{
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
 				LocalApplications:     []string{"frontend", "backend"},
+			},
+		},
+		ArtifactBuckets: []deploy.ArtifactBucket{
+			{
+				BucketName: "chicken-us-east-1",
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-east-1:%s:key/30131d3f-c30f-4d49-beaa-cf4bfc07f34e", toolsAccountID),
+			},
+			{
+				BucketName: "chicken-us-west-2",
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
+			},
+			// assume the pipeline is hosted in a region that does not contain any archer environment
+			{
+				BucketName: "chicken-us-west-1",
+				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
+			},
+		},
+	}
+}
+
+func mockCreatePipelineInputWithNoApplication() *deploy.CreatePipelineInput {
+	return &deploy.CreatePipelineInput{
+		ProjectName: projectName,
+		Name:        pipelineName,
+		Source: &deploy.Source{
+			ProviderName: "GitHub",
+			Properties: map[string]interface{}{
+				"repository":          "hencrice/amazon-ecs-cli-v2",
+				"branch":              "master",
+				"access_token_secret": "testGitHubSecret",
+			},
+		},
+		Stages: []deploy.PipelineStage{
+			{
+				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
+			},
+			{
+				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
 			},
 		},
 		ArtifactBuckets: []deploy.ArtifactBucket{
