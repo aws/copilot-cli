@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
@@ -24,12 +25,13 @@ import (
 )
 
 const (
-	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineAddEnvPrompt            = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt        = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt        = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt    = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt         = "Which environment would you like to add to your pipeline?"
+	pipelineEnterGitHubRepoPrompt   = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineEnterGitHubBranchPrompt = "What is the branch name of your GitHub repository?"
 )
 
 const (
@@ -45,6 +47,7 @@ type InitPipelineOpts struct {
 	Environments      []string
 	GitHubRepo        string
 	GitHubAccessToken string
+	GitHubBranch      string
 	EnableCD          bool
 	Deploy            bool
 	PipelineFilename  string
@@ -95,14 +98,11 @@ func (opts *InitPipelineOpts) Ask() error {
 		}
 	}
 
-	// if err := opts.askEnableCD(); err != nil {
-	// 	return err
-	// }
-
-	// TODO ask this after pipeline.yml is written
-	// if err := opts.askDeploy(); err != nil {
-	// 	return err
-	// }
+	if opts.GitHubBranch == "" {
+		if err := opts.getGitHubBranch(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -210,7 +210,7 @@ func (opts *InitPipelineOpts) getRepoName() string {
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
 		OwnerAndRepository:    opts.GitHubRepo,
-		Branch:                "master", // todo - fix
+		Branch:                opts.GitHubBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
 
@@ -290,7 +290,7 @@ func (opts *InitPipelineOpts) selectEnvironments() error {
 			break
 		}
 		if err := opts.selectEnvironment(); err != nil {
-			return err
+			return fmt.Errorf("failed to add environment: %w", err)
 		}
 		if len(opts.listAvailableEnvironments()) == 0 {
 			break
@@ -337,7 +337,7 @@ func (opts *InitPipelineOpts) selectEnvironment() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to add environment: %w", err)
+		return err
 	}
 
 	opts.Environments = append(opts.Environments, env)
@@ -397,32 +397,17 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
-func (opts *InitPipelineOpts) askEnableCD() error {
-	enable, err := opts.prompt.Confirm(
-		"Would you like to automatically enable deploying to production?",
-		"Enables the transition to your production environment automatically through your pipeline.",
-	)
+// TODO: nice to have a remote GitHub repo's branch list to offer a select menu.
+func (opts *InitPipelineOpts) getGitHubBranch() error {
+	branch, err := opts.prompt.Get(pipelineEnterGitHubBranchPrompt,
+		"Name of the branch that you wish to use in your GitHub repository. By default the branch name is \"master\".",
+		nil, prompt.WithDefaultInput("master"))
 
 	if err != nil {
-		return fmt.Errorf("failed to confirm enabling CD: %w", err)
+		return fmt.Errorf("failed to get GitHub branch name: %w", err)
 	}
 
-	opts.EnableCD = enable
-
-	return nil
-}
-
-func (opts *InitPipelineOpts) askDeploy() error {
-	deploy, err := opts.prompt.Confirm(
-		"Would you like to deploy your pipeline?",
-		"Deploys your pipeline through CloudFormation.",
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to confirm deploying pipeline: %w", err)
-	}
-
-	opts.Deploy = deploy
+	opts.GitHubBranch = branch
 
 	return nil
 }
@@ -506,6 +491,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
 	cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployPipelineFlagDescription)
 	cmd.Flags().BoolVar(&opts.EnableCD, enableCDFlag, false, enableCDFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
