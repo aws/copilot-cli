@@ -28,6 +28,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	errNoLocalManifestsFound = errors.New("no manifest files found")
+)
+
 // BuildAppDeployCommand builds the `app deploy` subcommand.
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
@@ -426,10 +430,10 @@ func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetN
 func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 	manifestFileNames, err := opts.workspaceService.ListManifestFiles()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("list local manifest files: %w", err)
 	}
 	if len(manifestFileNames) == 0 {
-		return "", errors.New("no manifest files found")
+		return "", errNoLocalManifestsFound
 	}
 
 	var targetManifestFile string
@@ -440,18 +444,18 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 		}
 	}
 	if targetManifestFile == "" {
-		return "", errors.New("couldn't match manifest file name")
+		return "", fmt.Errorf("couldn't find local manifest %s", opts.app)
 	}
 
 	manifestBytes, err := opts.workspaceService.ReadFile(targetManifestFile)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read manifest file %s: %w", targetManifestFile, err)
 	}
 
 	mf, err := manifest.UnmarshalApp(manifestBytes)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unmarshal app manifest: %w", err)
 	}
 
-	return mf.DockerfilePath(), nil
+	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
 }
