@@ -5,11 +5,9 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -171,45 +169,6 @@ func TestValidateGitHubRepo(t *testing.T) {
 			got := validateGitHubRepo(tc.input)
 
 			require.True(t, errors.Is(got, tc.err))
-		})
-	}
-}
-
-func TestValidateDockerfiles(t *testing.T) {
-	wantedDockerfiles := []string{"./Dockerfile", "backend/Dockerfile", "frontend/Dockerfile"}
-	testCases := map[string]struct {
-		mockFileSystem func(mockFS afero.Fs)
-		err            error
-	}{
-		"find Dockerfiles": {
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			err: nil,
-		},
-		"no Dockerfiles": {
-			mockFileSystem: func(mockFS afero.Fs) {},
-			err:            fmt.Errorf("no Dockerfiles found within the current working directory or a sub-directory level below"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
-			tc.mockFileSystem(fs)
-			got, err := validateDockerfiles(fs)
-
-			if tc.err != nil {
-				require.EqualError(t, err, tc.err.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, wantedDockerfiles, got)
-			}
 		})
 	}
 }

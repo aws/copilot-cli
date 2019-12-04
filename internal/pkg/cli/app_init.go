@@ -191,7 +191,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := validateDockerfiles(opts.fs)
+	dockerfiles, err := listDockerfiles(opts.fs)
 	if err != nil {
 		return fmt.Errorf("failed to find Dockerfile: %w", err)
 	}

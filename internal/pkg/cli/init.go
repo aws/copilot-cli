@@ -230,7 +230,7 @@ func BuildInitCmd() *cobra.Command {
 		Short: "Create a new ECS application.",
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if *opts.dockerfilePath == "" {
-				_, err = validateDockerfiles(&afero.Afero{Fs: afero.NewOsFs()})
+				_, err = listDockerfiles(&afero.Afero{Fs: afero.NewOsFs()})
 				if err != nil {
 					fmt.Errorf("fail to find Dockerfiles: %w", err)
 				}
