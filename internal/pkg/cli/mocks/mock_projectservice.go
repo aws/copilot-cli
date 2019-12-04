@@ -7,6 +7,7 @@ package mocks
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -310,4 +311,47 @@ func (m *MockdockerService) Push(uri, tag string) error {
 func (mr *MockdockerServiceMockRecorder) Push(uri, tag interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockdockerService)(nil).Push), uri, tag)
+}
+
+// MockcommandService is a mock of commandService interface
+type MockcommandService struct {
+	ctrl     *gomock.Controller
+	recorder *MockcommandServiceMockRecorder
+}
+
+// MockcommandServiceMockRecorder is the mock recorder for MockcommandService
+type MockcommandServiceMockRecorder struct {
+	mock *MockcommandService
+}
+
+// NewMockcommandService creates a new mock instance
+func NewMockcommandService(ctrl *gomock.Controller) *MockcommandService {
+	mock := &MockcommandService{ctrl: ctrl}
+	mock.recorder = &MockcommandServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcommandService) EXPECT() *MockcommandServiceMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method
+func (m *MockcommandService) Run(name string, args []string, options ...command.Option) ([]byte, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name, args}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Run", varargs...)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Run indicates an expected call of Run
+func (mr *MockcommandServiceMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name, args}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockcommandService)(nil).Run), varargs...)
 }

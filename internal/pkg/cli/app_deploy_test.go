@@ -438,3 +438,83 @@ image:
 		})
 	}
 }
+
+func TestSourceImageTag(t *testing.T) {
+	var mockCommandService *climocks.MockcommandService
+	var mockPrompter *climocks.Mockprompter
+
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		inputImageTag string
+
+		setupMocks func(controller *gomock.Controller)
+
+		wantErr      error
+		wantImageTag string
+	}{
+		"should return nil if input image tag is not empty": {
+			inputImageTag: "anythingreally",
+			setupMocks:    func(controller *gomock.Controller) {},
+			wantErr:       nil,
+			wantImageTag:  "anythingreally",
+		},
+		"should trim output from git describe result": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockCommandService = climocks.NewMockcommandService(controller)
+
+				mockCommandService.EXPECT().Run("git", []string{"describe", "--always"}).Times(1).Return([]byte("abcdef\n"), nil)
+			},
+			wantErr:      nil,
+			wantImageTag: "abcdef",
+		},
+		"should wrap error from prompting": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockCommandService = climocks.NewMockcommandService(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockCommandService.EXPECT().Run("git", []string{"describe", "--always"}).Times(1).Return(nil, mockError),
+					mockPrompter.EXPECT().Get("Input an image tag value:", "", nil).Times(1).Return("", mockError),
+				)
+			},
+			wantErr:      fmt.Errorf("prompt for image tag: %w", mockError),
+			wantImageTag: "",
+		},
+		"should set opts imageTag to user input value": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockCommandService = climocks.NewMockcommandService(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockCommandService.EXPECT().Run("git", []string{"describe", "--always"}).Times(1).Return(nil, mockError),
+					mockPrompter.EXPECT().Get("Input an image tag value:", "", nil).Times(1).Return("youwotm8", nil),
+				)
+			},
+			wantErr:      nil,
+			wantImageTag: "youwotm8",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			test.setupMocks(ctrl)
+			opts := &appDeployOpts{
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompter,
+				},
+				imageTag:       test.inputImageTag,
+				commandService: mockCommandService,
+			}
+
+			got := opts.sourceImageTag()
+
+			require.Equal(t, test.wantErr, got)
+			require.Equal(t, test.wantImageTag, opts.imageTag)
+		})
+	}
+}
