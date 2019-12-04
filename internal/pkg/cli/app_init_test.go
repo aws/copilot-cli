@@ -116,7 +116,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: fmt.Errorf("failed to find Dockerfile: no Dockerfiles found within the current working directory or a sub-directory level below"),
+			wantedErr: fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
 		},
 		"returns an error if fail to select Dockerfile": {
 			inAppType:        wantedAppType,
@@ -198,18 +198,28 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			inAppName: "1234",
 			wantedErr: fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
 		},
-		"invalid dockerfile path": {
-			inDockerfilePath: "./hello/Dockerfile",
-			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
+		"invalid dockerfile directory path": {
+			inDockerfilePath: "./hello",
+			wantedErr:        errors.New("read directory: open hello: file does not exist"),
 		},
 		"invalid project name": {
 			inProjectName: "",
 			wantedErr:     errNoProjectInWorkspace,
 		},
+		"valid dockerfile directory with no dockerfile": {
+			inAppName:        "frontend",
+			inAppType:        "Load Balanced Web App",
+			inDockerfilePath: "./hello",
+			inProjectName:    "phonetool",
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("hello", 0755)
+			},
+			wantedErr: errors.New("no Dockerfiles found within ./hello or a sub-directory level below"),
+		},
 		"valid flags": {
 			inAppName:        "frontend",
 			inAppType:        "Load Balanced Web App",
-			inDockerfilePath: "./hello/Dockerfile",
+			inDockerfilePath: "./hello",
 			inProjectName:    "phonetool",
 
 			mockFileSystem: func(mockFS afero.Fs) {

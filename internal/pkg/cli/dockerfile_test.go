@@ -30,7 +30,7 @@ func TestValidateDockerfiles(t *testing.T) {
 		},
 		"no Dockerfiles": {
 			mockFileSystem: func(mockFS afero.Fs) {},
-			err:            fmt.Errorf("no Dockerfiles found within the current working directory or a sub-directory level below"),
+			err:            fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
 		},
 	}
 
@@ -38,7 +38,7 @@ func TestValidateDockerfiles(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
 			tc.mockFileSystem(fs)
-			got, err := listDockerfiles(fs)
+			got, err := listDockerfiles(fs, ".")
 
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
