@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -192,9 +191,9 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := opts.listDockerfileSelections()
+	dockerfiles, err := validateDockerfiles(opts.fs)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to find Dockerfile: %w", err)
 	}
 
 	sel, err := opts.prompt.SelectOne(
@@ -210,58 +209,6 @@ func (opts *InitAppOpts) askDockerfile() error {
 	opts.DockerfilePath = strings.TrimSuffix(sel, "/Dockerfile")
 
 	return nil
-}
-
-// listDockerfileDirs returns the list of directories containing Dockerfiles within
-// the current working directory and a sub-directory level below.
-// If an error occurs while reading directories, returns the error.
-func (opts *InitAppOpts) listDockerfileDirs() ([]string, error) {
-	wdFiles, err := afero.ReadDir(opts.fs, ".")
-	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err)
-	}
-	var directories []string
-
-	for _, wdFile := range wdFiles {
-		// Add current directory if a Dockerfile exists, otherwise continue.
-		if !wdFile.IsDir() {
-			if wdFile.Name() == "Dockerfile" {
-				directories = append(directories, filepath.Dir(wdFile.Name()))
-			}
-			continue
-		}
-
-		// Add sub-directories containing a Dockerfile one level below current directory.
-		subFiles, err := afero.ReadDir(opts.fs, wdFile.Name())
-		if err != nil {
-			return nil, fmt.Errorf("read directory: %w", err)
-		}
-		for _, f := range subFiles {
-			// NOTE: ignore directories in sub-directories.
-			if f.IsDir() {
-				continue
-			}
-
-			if f.Name() == "Dockerfile" {
-				directories = append(directories, wdFile.Name())
-			}
-		}
-	}
-	sort.Strings(directories)
-	return directories, nil
-}
-
-func (opts *InitAppOpts) listDockerfileSelections() ([]string, error) {
-	dockerfileDirs, err := opts.listDockerfileDirs()
-	if err != nil {
-		return nil, err
-	}
-	var dockerfiles []string
-	for _, dir := range dockerfileDirs {
-		file := dir + "/Dockerfile"
-		dockerfiles = append(dockerfiles, file)
-	}
-	return dockerfiles, nil
 }
 
 func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
