@@ -12,6 +12,10 @@ import (
 const (
 	// LoadBalancedWebApplication is a web application with a load balancer and Fargate as compute.
 	LoadBalancedWebApplication = "Load Balanced Web App"
+
+	// IntegTestBuildspecFileName is the name of the CodeBuild build
+	// specification for any integration test actions in the archer pipeline
+	IntegTestBuildspecFileName = "buildspec_integ.yml"
 )
 
 // AppTypes are the supported manifest types.

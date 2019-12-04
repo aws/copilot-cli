@@ -21,6 +21,19 @@ type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
 }
 
+// NeedsIntegrationTests indicates whether the pipeline created contains
+// any integration tests
+func (p *pipelineStackConfig) NeedsIntegrationTests() bool {
+	for _, stage := range p.Stages {
+		for _, app := range stage.LocalApplications {
+			if app.IntegTestBuildspecPath != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
 	return &pipelineStackConfig{
 		CreatePipelineInput: in,

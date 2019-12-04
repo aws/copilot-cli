@@ -8,6 +8,7 @@ package cloudformation_test
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -182,7 +183,15 @@ func TestPipelineCreation(t *testing.T) {
 						AccountID: project.AccountID,
 						Prod:      true,
 					},
-					LocalApplications: []string{"frontend", "backend"},
+					LocalApplications: []deploy.AppInStage{
+						{
+							Name:                   "frontend",
+							IntegTestBuildspecPath: filepath.Join("frontend", manifest.IntegTestBuildspecFileName),
+						},
+						{
+							Name: "backend",
+						},
+					},
 				},
 			},
 			ArtifactBuckets: artifactBuckets,

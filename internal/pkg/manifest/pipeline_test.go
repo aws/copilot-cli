@@ -6,10 +6,13 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -38,14 +41,37 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
+func genApps(names ...string) []archer.Manifest {
+	result := make([]archer.Manifest, 0, len(names))
+	for _, name := range names {
+		result = append(result, &LBFargateManifest{
+			AppManifest: AppManifest{
+				Name: name,
+				Type: LoadBalancedWebApplication,
+			},
+			Image: ImageWithPort{
+				AppImage: AppImage{
+					Build: name,
+				},
+			},
+		})
+	}
+	return result
+}
+
 func TestCreatePipeline(t *testing.T) {
 	const pipelineName = "pipepiper"
+	const (
+		app01 = "app01"
+		app02 = "app02"
+	)
 
 	testCases := map[string]struct {
 		beforeEach     func() error
 		provider       Provider
 		expectedErr    error
 		inputStages    []string
+		inputApps      []archer.Manifest
 		expectedStages []PipelineStage
 	}{
 		"errors out when no stage provided": {
@@ -60,7 +86,7 @@ func TestCreatePipeline(t *testing.T) {
 			expectedErr: fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 				pipelineName),
 		},
-		"happy case with non-default stages": {
+		"errors out when no app provided": {
 			provider: func() Provider {
 				p, err := NewProvider(&GitHubProperties{
 					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
@@ -69,14 +95,51 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages:    []string{"chicken", "wings"},
-			expectedStages: []PipelineStage{{"chicken"}, {"wings"}},
+			inputStages: []string{"chicken", "wings"},
+			expectedErr: fmt.Errorf("a pipeline %s can not be created without any app to deploy",
+				pipelineName),
+		},
+		"happy case": {
+			provider: func() Provider {
+				p, err := NewProvider(&GitHubProperties{
+					OwnerAndRepository: "aws/amazon-ecs-cli-v2",
+					Branch:             "master",
+				})
+				require.NoError(t, err, "failed to create provider")
+				return p
+			}(),
+			inputStages: []string{"chicken", "wings"},
+			inputApps:   genApps(app01, app02),
+			expectedStages: []PipelineStage{
+				{
+					Name: "chicken",
+					Apps: map[string]App{
+						app01: App{
+							IntegTestBuildspecPath: filepath.Join(app01, IntegTestBuildspecFileName),
+						},
+						app02: App{
+							IntegTestBuildspecPath: filepath.Join(app02, IntegTestBuildspecFileName),
+						},
+					},
+				},
+				{
+					Name: "wings",
+					Apps: map[string]App{
+						app01: App{
+							IntegTestBuildspecPath: filepath.Join(app01, IntegTestBuildspecFileName),
+						},
+						app02: App{
+							IntegTestBuildspecPath: filepath.Join(app02, IntegTestBuildspecFileName),
+						},
+					},
+				},
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages)
+			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages, tc.inputApps)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
@@ -89,6 +152,10 @@ func TestCreatePipeline(t *testing.T) {
 
 func TestPipelineManifestMarshal(t *testing.T) {
 	const pipelineName = "pipepiper"
+	const (
+		app01 = "app01"
+		app02 = "app02"
+	)
 	wantedContent := `# This YAML file defines the relationship and deployment ordering of your environments.
 
 # The name of the pipeline
@@ -112,11 +179,20 @@ source:
 # The deployment section defines the order the pipeline will deploy
 # to your environments.
 stages:
-    - # The name of the environment to deploy to.
-      name: chicken
-    - # The name of the environment to deploy to.
-      name: wings
-`
+  - # The name of the environment to deploy to.
+    name: chicken
+    apps:
+      app01:
+        integrationTestBuildspec: app01/buildspec_integ.yml
+      app02:
+        integrationTestBuildspec: app02/buildspec_integ.yml
+  - # The name of the environment to deploy to.
+    name: wings
+    apps:
+      app01:
+        integrationTestBuildspec: app01/buildspec_integ.yml
+      app02:
+        integrationTestBuildspec: app02/buildspec_integ.yml`
 	// reset the global map before each test case is run
 	provider, err := NewProvider(&GitHubProperties{
 		OwnerAndRepository:    "aws/amazon-ecs-cli-v2",
@@ -125,7 +201,8 @@ stages:
 	})
 	require.NoError(t, err)
 
-	m, err := CreatePipeline(pipelineName, provider, []string{"chicken", "wings"})
+	m, err := CreatePipeline(pipelineName, provider,
+		[]string{"chicken", "wings"}, genApps(app01, app02))
 	require.NoError(t, err)
 
 	b, err := m.Marshal()
@@ -134,6 +211,10 @@ stages:
 }
 
 func TestUnmarshalPipeline(t *testing.T) {
+	const (
+		app01 = "app01"
+		app02 = "app02"
+	)
 	testCases := map[string]struct {
 		inContent        string
 		expectedManifest *PipelineManifest
@@ -151,10 +232,18 @@ source:
     branch: master
 
 stages:
-    -
-      name: test
-    -
-      name: prod
+  - name: chicken
+    apps:
+      app01:
+        integrationTestBuildspec: app01/buildspec_integ.yml
+      app02:
+        integrationTestBuildspec: app02/buildspec_integ.yml
+  - name: wings
+    apps:
+      app01:
+        integrationTestBuildspec: app01/buildspec_integ.yml
+      app02:
+        integrationTestBuildspec: app02/buildspec_integ.yml
 `,
 			expectedErr: &ErrInvalidPipelineManifestVersion{
 				PipelineSchemaMajorVersion(-1),
@@ -177,10 +266,14 @@ source:
     branch: master
 
 stages:
-    -
-      name: chicken
-    -
-      name: wings
+  - name: chicken
+    apps:
+      app01:
+        integrationTestBuildspec: app01/buildspec_integ.yml
+  - name: wings
+    apps:
+      app02:
+        integrationTestBuildspec: app02/buildspec_integ.yml
 `,
 			expectedManifest: &PipelineManifest{
 				Name:    "pipepiper",
@@ -194,8 +287,23 @@ stages:
 					},
 				},
 				Stages: []PipelineStage{
-					PipelineStage{"chicken"},
-					PipelineStage{"wings"}},
+					{
+						Name: "chicken",
+						Apps: map[string]App{
+							app01: App{
+								IntegTestBuildspecPath: filepath.Join(app01, IntegTestBuildspecFileName),
+							},
+						},
+					},
+					{
+						Name: "wings",
+						Apps: map[string]App{
+							app02: App{
+								IntegTestBuildspecPath: filepath.Join(app02, IntegTestBuildspecFileName),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
