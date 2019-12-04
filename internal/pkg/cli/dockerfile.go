@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	dockerfileName = "Dockerfile"
+)
+
 // listDockerfiles returns the list of Dockerfiles within the current
 // working directory and a sub-directory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
@@ -24,7 +28,7 @@ func listDockerfiles(fs afero.Fs) ([]string, error) {
 	for _, wdFile := range wdFiles {
 		// Add current directory if a Dockerfile exists, otherwise continue.
 		if !wdFile.IsDir() {
-			if wdFile.Name() == "Dockerfile" {
+			if wdFile.Name() == dockerfileName {
 				directories = append(directories, filepath.Dir(wdFile.Name()))
 			}
 			continue
@@ -41,7 +45,7 @@ func listDockerfiles(fs afero.Fs) ([]string, error) {
 				continue
 			}
 
-			if f.Name() == "Dockerfile" {
+			if f.Name() == dockerfileName {
 				directories = append(directories, wdFile.Name())
 			}
 		}
@@ -50,9 +54,9 @@ func listDockerfiles(fs afero.Fs) ([]string, error) {
 		return nil, fmt.Errorf("no Dockerfiles found within the current working directory or a sub-directory level below")
 	}
 	sort.Strings(directories)
-	var dockerfiles []string
+	dockerfiles := make([]string, 0, len(directories))
 	for _, dir := range directories {
-		file := dir + "/Dockerfile"
+		file := dir + "/" + dockerfileName
 		dockerfiles = append(dockerfiles, file)
 	}
 	return dockerfiles, nil
