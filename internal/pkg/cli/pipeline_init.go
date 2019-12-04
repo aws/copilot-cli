@@ -35,7 +35,8 @@ const (
 )
 
 const (
-	buildspecTemplatePath = "cicd/buildspec.yml"
+	buildspecTemplatePath          = "cicd/buildspec.yml"
+	integTestBuildspecTemplatePath = "cicd/" + manifest.IntegTestBuildspecFileName
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
@@ -54,14 +55,15 @@ type InitPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	workspace      archer.ManifestIO
+	workspace      archer.Workspace
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 
 	// Outputs stored on successful actions.
-	manifestPath  string
-	buildspecPath string
-	secretName    string
+	manifestPath            string
+	buildspecPath           string
+	integTestBuildspecPaths []string
+	secretName              string
 
 	// Caches environments
 	projectEnvs []string
@@ -133,12 +135,16 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.secretName = secretName
 
+	apps, err := opts.workspace.Apps()
+	if err != nil {
+		return fmt.Errorf("could not retrieve apps in this workspace: %w", err)
+	}
+
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
-
-	manifestPath, err := opts.createPipelineManifest()
+	manifestPath, err := opts.createPipelineManifest(apps)
 	if err != nil {
 		return err
 	}
@@ -149,9 +155,15 @@ func (opts *InitPipelineOpts) Execute() error {
 		return err
 	}
 	opts.buildspecPath = buildspecPath
+	integTestBuildspecPaths, err := opts.createIntegTestBuildspecPerApp(apps)
+	if err != nil {
+		return err
+	}
+	opts.integTestBuildspecPaths = integTestBuildspecPaths
 
 	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(relPath(opts.manifestPath)))
 	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(relPath(opts.buildspecPath)))
+	log.Successf("Wrote the buildspecs for each of the app in the pipeline: '%s'\n", color.HighlightResource(fmt.Sprintf("%v", opts.integTestBuildspecPaths)))
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
@@ -205,7 +217,7 @@ func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error
 	return manifest.NewProvider(config)
 }
 
-func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
+func (opts *InitPipelineOpts) createPipelineManifest(apps []archer.Manifest) (string, error) {
 	// TODO change this to flag
 	pipelineName := opts.createPipelineName()
 	provider, err := opts.createPipelineProvider()
@@ -213,7 +225,8 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 		return "", fmt.Errorf("could not create pipeline: %w", err)
 	}
 
-	manifest, err := manifest.CreatePipeline(pipelineName, provider, opts.Environments)
+	manifest, err := manifest.CreatePipeline(
+		pipelineName, provider, opts.Environments, apps)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
@@ -240,6 +253,25 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
 	}
 	return path, nil
+}
+
+// write the sample integration test buildspec to each app's folder
+func (opts *InitPipelineOpts) createIntegTestBuildspecPerApp(apps []archer.Manifest) ([]string, error) {
+	content, err := opts.box.FindString(integTestBuildspecTemplatePath)
+	if err != nil {
+		return nil, fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, err)
+	}
+
+	paths := make([]string, 0, len(apps))
+	for _, app := range apps {
+		path, err := opts.workspace.WriteFile([]byte(content), app.IntegTestBuildspecPath())
+		if err != nil {
+			return nil, fmt.Errorf("write integration test buildspec %s to app %s: %w",
+				app.IntegTestBuildspecPath(), app.AppName(), err)
+		}
+		paths = append(paths, path)
+	}
+	return paths, nil
 }
 
 func (opts *InitPipelineOpts) selectEnvironments() error {
