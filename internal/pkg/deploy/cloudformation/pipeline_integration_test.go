@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	awsCF "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -32,8 +34,11 @@ func TestPipelineCreation(t *testing.T) {
 	projectCallerInfo, err := projectId.Get()
 	require.NoError(t, err)
 	projectDeployer := cloudformation.New(projectSess)
+	sm := secretsmanager.New(projectSess)
+	secretId := "testGitHubSecret" + randStringBytes(10)
 
 	t.Run("creates a cross-region pipeline in a region with no environment", func(t *testing.T) {
+		createMockSecret(t, sm, secretId)
 		projCfClient := awsCF.New(projectSess)
 
 		const pipelineName = "pipepiper"
@@ -121,6 +126,8 @@ func TestPipelineCreation(t *testing.T) {
 				StackName: aws.String(envStackName),
 			})
 			require.NoError(t, err)
+
+			deleteMockSecretImmediately(t, sm, secretId)
 		}()
 
 		// Given both the project stack and env we are deploying to do not
@@ -196,11 +203,41 @@ func TestPipelineCreation(t *testing.T) {
 			},
 			ArtifactBuckets: artifactBuckets,
 		}
-		require.NoError(t, projectDeployer.DeployPipeline(pipelineInput))
+		require.NoError(t, projectDeployer.CreatePipeline(pipelineInput))
 
 		// Ensure that the new stack exists
 		assertStackExists(t, projCfClient, pipelineStackName)
 	})
+}
+
+func createMockSecret(t *testing.T, sm secretsmanageriface.SecretsManagerAPI, secretId string) {
+	_, err := sm.GetSecretValue(&secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretId),
+	})
+	if err != nil {
+		if awsErr, ok := err.(awserr.Error); ok {
+			switch awsErr.Code() {
+			case secretsmanager.ErrCodeResourceNotFoundException:
+				_, err = sm.CreateSecret(&secretsmanager.CreateSecretInput{
+					Name:         aws.String(secretId),
+					SecretString: aws.String("dontCare"),
+				})
+				require.NoError(t, err, "CreateSecret should not return an error")
+				return
+			default:
+				require.Fail(t, "GetSecretValue failed: %w", awsErr)
+			}
+		}
+		require.Fail(t, "GetSecretValue failed: %w", err)
+	}
+}
+
+func deleteMockSecretImmediately(t *testing.T, sm secretsmanageriface.SecretsManagerAPI, secretId string) {
+	_, err := sm.DeleteSecret(&secretsmanager.DeleteSecretInput{
+		SecretId:                   aws.String(secretId),
+		ForceDeleteWithoutRecovery: aws.Bool(true),
+	})
+	require.NoError(t, err, "DeleteSecret should not return an error")
 }
 
 func assertStackDoesNotExist(t *testing.T, cfClient *awsCF.CloudFormation, stackName string) {
