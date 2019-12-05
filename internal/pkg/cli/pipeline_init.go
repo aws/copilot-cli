@@ -48,10 +48,7 @@ type InitPipelineOpts struct {
 	GitHubRepo        string
 	GitHubAccessToken string
 	GitHubBranch      string
-	EnableCD          bool
-	Deploy            bool
 	PipelineFilename  string
-	// TODO add git branch
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
@@ -475,9 +472,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
-				return err
-			}
 			return opts.Execute()
 		}),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
@@ -492,8 +486,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
-	cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployPipelineFlagDescription)
-	cmd.Flags().BoolVar(&opts.EnableCD, enableCDFlag, false, enableCDFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd
