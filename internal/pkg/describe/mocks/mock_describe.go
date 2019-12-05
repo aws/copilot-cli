@@ -5,63 +5,47 @@
 package mocks
 
 import (
-	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
 
-// MockenvAppGetter is a mock of envAppGetter interface
-type MockenvAppGetter struct {
+// MockResourceIdentifier is a mock of ResourceIdentifier interface
+type MockResourceIdentifier struct {
 	ctrl     *gomock.Controller
-	recorder *MockenvAppGetterMockRecorder
+	recorder *MockResourceIdentifierMockRecorder
 }
 
-// MockenvAppGetterMockRecorder is the mock recorder for MockenvAppGetter
-type MockenvAppGetterMockRecorder struct {
-	mock *MockenvAppGetter
+// MockResourceIdentifierMockRecorder is the mock recorder for MockResourceIdentifier
+type MockResourceIdentifierMockRecorder struct {
+	mock *MockResourceIdentifier
 }
 
-// NewMockenvAppGetter creates a new mock instance
-func NewMockenvAppGetter(ctrl *gomock.Controller) *MockenvAppGetter {
-	mock := &MockenvAppGetter{ctrl: ctrl}
-	mock.recorder = &MockenvAppGetterMockRecorder{mock}
+// NewMockResourceIdentifier creates a new mock instance
+func NewMockResourceIdentifier(ctrl *gomock.Controller) *MockResourceIdentifier {
+	mock := &MockResourceIdentifier{ctrl: ctrl}
+	mock.recorder = &MockResourceIdentifierMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockenvAppGetter) EXPECT() *MockenvAppGetterMockRecorder {
+func (m *MockResourceIdentifier) EXPECT() *MockResourceIdentifierMockRecorder {
 	return m.recorder
 }
 
-// GetEnvironment mocks base method
-func (m *MockenvAppGetter) GetEnvironment(projectName, environmentName string) (*archer.Environment, error) {
+// URI mocks base method
+func (m *MockResourceIdentifier) URI(envName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEnvironment", projectName, environmentName)
-	ret0, _ := ret[0].(*archer.Environment)
+	ret := m.ctrl.Call(m, "URI", envName)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetEnvironment indicates an expected call of GetEnvironment
-func (mr *MockenvAppGetterMockRecorder) GetEnvironment(projectName, environmentName interface{}) *gomock.Call {
+// URI indicates an expected call of URI
+func (mr *MockResourceIdentifierMockRecorder) URI(envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvAppGetter)(nil).GetEnvironment), projectName, environmentName)
-}
-
-// GetApplication mocks base method
-func (m *MockenvAppGetter) GetApplication(projectName, applicationName string) (*archer.Application, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetApplication", projectName, applicationName)
-	ret0, _ := ret[0].(*archer.Application)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetApplication indicates an expected call of GetApplication
-func (mr *MockenvAppGetterMockRecorder) GetApplication(projectName, applicationName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockenvAppGetter)(nil).GetApplication), projectName, applicationName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockResourceIdentifier)(nil).URI), envName)
 }
 
 // MockstackDescriber is a mock of stackDescriber interface
