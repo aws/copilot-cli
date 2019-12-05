@@ -28,6 +28,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	inputImageTagPrompt = "Input an image tag value:"
+)
+
 var (
 	errNoLocalManifestsFound = errors.New("no manifest files found")
 )
@@ -119,7 +123,7 @@ type dockerService interface {
 }
 
 type commandService interface {
-	Run(name string, args []string, options ...command.Option) ([]byte, error)
+	Run(name string, args []string, options ...command.Option) error
 }
 
 func (opts *appDeployOpts) init() error {
@@ -317,18 +321,19 @@ func (opts *appDeployOpts) sourceImageTag() error {
 		return nil
 	}
 
-	bytes, err := opts.commandService.Run("git", []string{"describe", "--always"})
+	var buf bytes.Buffer
+	err := opts.commandService.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
 
 	if err == nil {
 		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
-		opts.imageTag = strings.TrimSpace(string(bytes))
+		opts.imageTag = strings.TrimSpace(buf.String())
 
 		return nil
 	}
 
 	log.Warningln("Failed to default tag, are you in a git repository?")
 
-	tag, err := opts.prompt.Get("Input an image tag value:", "", nil /*no validation*/)
+	tag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}

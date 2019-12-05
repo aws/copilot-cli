@@ -4,6 +4,7 @@
 package command
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,16 +18,21 @@ func New() Service {
 
 type Option func(cmd *exec.Cmd)
 
-func WithStandardInput(input string) Option {
+func Stdin(input string) Option {
 	return func(c *exec.Cmd) {
 		c.Stdin = strings.NewReader(input)
 	}
 }
 
-func (s Service) Run(name string, args []string, options ...Option) ([]byte, error) {
+func Stdout(writer io.Writer) Option {
+	return func(c *exec.Cmd) {
+		c.Stdout = writer
+	}
+}
+
+func (s Service) Run(name string, args []string, options ...Option) error {
 	cmd := exec.Command(name, args...)
 
-	// NOTE: Stdout and Stderr must both be set otherwise command output pipes to os.DevNull
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 
@@ -34,5 +40,5 @@ func (s Service) Run(name string, args []string, options ...Option) ([]byte, err
 		opt(cmd)
 	}
 
-	return cmd.Output()
+	return cmd.Run()
 }

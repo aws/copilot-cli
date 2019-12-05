@@ -337,16 +337,15 @@ func (m *MockcommandService) EXPECT() *MockcommandServiceMockRecorder {
 }
 
 // Run mocks base method
-func (m *MockcommandService) Run(name string, args []string, options ...command.Option) ([]byte, error) {
+func (m *MockcommandService) Run(name string, args []string, options ...command.Option) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, args}
 	for _, a := range options {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Run", varargs...)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Run indicates an expected call of Run
