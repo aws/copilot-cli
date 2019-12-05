@@ -10,26 +10,33 @@ import (
 	"strings"
 )
 
+// Service exists for mockability.
 type Service struct{}
 
+// New returns a Service.
 func New() Service {
 	return Service{}
 }
 
+// Option is the function signature for customizing the internal *exec.Cmd.
 type Option func(cmd *exec.Cmd)
 
+// Stdin sets the internal *exec.Cmd's Stdin field.
 func Stdin(input string) Option {
 	return func(c *exec.Cmd) {
 		c.Stdin = strings.NewReader(input)
 	}
 }
 
+// Stdout sets the internal *exec.Cmd's Stdout field.
 func Stdout(writer io.Writer) Option {
 	return func(c *exec.Cmd) {
 		c.Stdout = writer
 	}
 }
 
+// Run runs the input command with input args with Stdout and Stderr defaulted to os.Stderr.
+// Input options will override these defaults.
 func (s Service) Run(name string, args []string, options ...Option) error {
 	cmd := exec.Command(name, args...)
 
