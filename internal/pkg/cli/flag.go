@@ -24,7 +24,6 @@ const (
 	githubRepoFlag        = "github-repo"
 	githubAccessTokenFlag = "github-access-token"
 	githubBranchFlag      = "github-branch"
-	enableCDFlag          = "enable-cd"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
@@ -67,10 +66,8 @@ const (
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	githubBranchFlagDescription      = "Branch name of your Github repository"
 	deployPipelineFlagDescription    = "Deploys the pipeline."
-	enableCDFlagDescription          = "Enables automatic deployment to production environment."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
-	deployFlagDescription            = "Trigger a deployment of your application(s) to any new stage in your pipeline."
 	appLocalFlagDescription          = "Only show applications in the current directory."
 )
