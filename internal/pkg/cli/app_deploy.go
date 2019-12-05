@@ -118,7 +118,7 @@ type ecrService interface {
 
 type dockerService interface {
 	Build(uri, tag, path string) error
-	Login(uri string, auth ecr.Auth) error
+	Login(uri, username, password string) error
 	Push(uri, tag string) error
 }
 
@@ -366,7 +366,7 @@ func (opts appDeployOpts) deployApp() error {
 		return fmt.Errorf("get ECR auth data: %w", err)
 	}
 
-	opts.dockerService.Login(uri, auth)
+	opts.dockerService.Login(uri, auth.Username, auth.Password)
 
 	if err != nil {
 		return err

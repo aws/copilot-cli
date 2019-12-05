@@ -286,17 +286,17 @@ func (mr *MockdockerServiceMockRecorder) Build(uri, tag, path interface{}) *gomo
 }
 
 // Login mocks base method
-func (m *MockdockerService) Login(uri string, auth ecr.Auth) error {
+func (m *MockdockerService) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", uri, auth)
+	ret := m.ctrl.Call(m, "Login", uri, username, password)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Login indicates an expected call of Login
-func (mr *MockdockerServiceMockRecorder) Login(uri, auth interface{}) *gomock.Call {
+func (mr *MockdockerServiceMockRecorder) Login(uri, username, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerService)(nil).Login), uri, auth)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerService)(nil).Login), uri, username, password)
 }
 
 // Push mocks base method

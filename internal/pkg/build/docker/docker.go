@@ -6,7 +6,6 @@ package docker
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 )
@@ -41,10 +40,10 @@ func (s Service) Build(uri, imageTag, path string) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (s Service) Login(uri string, auth ecr.Auth) error {
+func (s Service) Login(uri, username, password string) error {
 	err := s.commandService.Run("docker",
-		[]string{"login", "-u", auth.Username, "--password-stdin", uri},
-		command.Stdin(auth.Password))
+		[]string{"login", "-u", username, "--password-stdin", uri},
+		command.Stdin(password))
 
 	if err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)

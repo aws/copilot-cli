@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -67,11 +66,6 @@ func TestLogin(t *testing.T) {
 	mockUsername := "mockUsername"
 	mockPassword := "mockPassword"
 
-	mockAuth := ecr.Auth{
-		Username: mockUsername,
-		Password: mockPassword,
-	}
-
 	var mockCommandService *mocks.MockcommandService
 
 	tests := map[string]struct {
@@ -105,7 +99,7 @@ func TestLogin(t *testing.T) {
 				commandService: mockCommandService,
 			}
 
-			got := s.Login(mockURI, mockAuth)
+			got := s.Login(mockURI, mockUsername, mockPassword)
 
 			require.Equal(t, test.want, got)
 		})
