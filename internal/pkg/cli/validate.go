@@ -85,14 +85,3 @@ func isCorrectFormat(s string) bool {
 	}
 	return valid
 }
-
-func validateGitHubRepo(val interface{}) error {
-	repo, ok := val.(string)
-	if !ok {
-		return errValueNotAString
-	}
-	if !githubRepoExp.MatchString(repo) {
-		return fmt.Errorf("GitHub repository name %v is invalid. %w", val, errInvalidGitHubRepo)
-	}
-	return nil
-}
