@@ -602,29 +602,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockFileSystem: func(mockFS afero.Fs) {},
 			expectedError:  fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
 		},
-		"returns an error if can't write integration test buildspec": {
-			inEnvironments: []string{"test"},
-			inGitHubOwner:  githubOwner,
-			inGitHubToken:  githubToken,
-			inGitHubRepo:   githubRepo,
-			inGitHubBranch: githubBranch,
-			inProjectName:  projectName,
-
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
-				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
-			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-				m.EXPECT().WriteFile(gomock.Any(), mockApps[0].IntegTestBuildspecPath()).Return("", errors.New("error writing integ test spec"))
-			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
-			},
-			expectedError: fmt.Errorf("write integration test buildspec %s to app %s: error writing integ test spec", mockApps[0].IntegTestBuildspecPath(), mockApps[0].AppName()),
-		},
 		"returns an error when retrieving local apps": {
 			inEnvironments: []string{"test"},
 			inGitHubOwner:  githubOwner,
