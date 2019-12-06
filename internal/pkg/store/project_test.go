@@ -269,6 +269,23 @@ func TestStore_CreateProject(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
+		"with no existing project with subdomain": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "valid.phonetool.com"},
+
+			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DomainName)
+				return &route53domains.GetDomainDetailOutput{}, nil
+			},
+			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"valid.phonetool.com","version":"%s"}`, schemaVersion), *param.Value)
+
+				return &ssm.PutParameterOutput{
+					Version: aws.Int64(1),
+				}, nil
+			},
+			wantedErr: nil,
+		},
 		"with an unexpected domain name error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
 			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {

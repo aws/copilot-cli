@@ -6,6 +6,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -25,7 +26,7 @@ func (s *Store) CreateProject(project *archer.Project) error {
 	}
 
 	if project.Domain != "" {
-		in := &route53domains.GetDomainDetailInput{DomainName: aws.String(project.Domain)}
+		in := &route53domains.GetDomainDetailInput{DomainName: aws.String(getDomainName(project.Domain))}
 		if _, err := s.domainsClient.GetDomainDetail(in); err != nil {
 			return fmt.Errorf("get domain details for %s: %w", project.Domain, err)
 		}
@@ -97,4 +98,13 @@ func (s *Store) ListProjects() ([]*archer.Project, error) {
 		projects = append(projects, &project)
 	}
 	return projects, nil
+}
+
+// when domain format is "subdomain.domain.tld".
+func getDomainName(s string) string {
+	domain := strings.Split(s, ".")
+	if len(domain) == 3 {
+		return strings.Join(domain[1:3], ".")
+	}
+	return s
 }
