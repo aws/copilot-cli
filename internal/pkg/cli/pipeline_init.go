@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -64,6 +65,7 @@ type InitPipelineOpts struct {
 
 	// Caches environments
 	projectEnvs []string
+	fsUtils     *afero.Afero
 
 	*GlobalOpts
 }
@@ -71,6 +73,7 @@ type InitPipelineOpts struct {
 // NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
+		fsUtils:    &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts: NewGlobalOpts(),
 	}
 }
@@ -261,12 +264,12 @@ func (opts *InitPipelineOpts) createIntegTestBuildspecPerApp(apps []archer.Manif
 
 	paths := make([]string, 0, len(apps))
 	for _, app := range apps {
-		path, err := opts.workspace.WriteFile([]byte(content), app.IntegTestBuildspecPath())
+		err := opts.fsUtils.WriteFile(app.IntegTestBuildspecPath(), []byte(content), 0644)
 		if err != nil {
 			return nil, fmt.Errorf("write integration test buildspec %s to app %s: %w",
 				app.IntegTestBuildspecPath(), app.AppName(), err)
 		}
-		paths = append(paths, path)
+		paths = append(paths, app.IntegTestBuildspecPath())
 	}
 	return paths, nil
 }
