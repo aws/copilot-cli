@@ -18,8 +18,8 @@ const (
 // listDockerfiles returns the list of Dockerfiles within the current
 // working directory and a sub-directory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
-func listDockerfiles(fs afero.Fs) ([]string, error) {
-	wdFiles, err := afero.ReadDir(fs, ".")
+func listDockerfiles(fs afero.Fs, dir string) ([]string, error) {
+	wdFiles, err := afero.ReadDir(fs, dir)
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
@@ -51,7 +51,7 @@ func listDockerfiles(fs afero.Fs) ([]string, error) {
 		}
 	}
 	if len(directories) == 0 {
-		return nil, fmt.Errorf("no Dockerfiles found within the current working directory or a sub-directory level below")
+		return nil, fmt.Errorf("no Dockerfiles found within %s or a sub-directory level below", dir)
 	}
 	sort.Strings(directories)
 	dockerfiles := make([]string, 0, len(directories))
