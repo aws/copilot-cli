@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -289,6 +291,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
 		mockManifestWriter func(m *archermocks.MockWorkspace)
 		mockBox            func(box *packd.MemoryBox)
+		mockFileSystem     func(mockFS afero.Fs)
 
 		expectedSecretName              string
 		expectManifestPath              string
@@ -296,7 +299,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		expectedIntegTestBuildspecPaths []string
 		expectedError                   error
 	}{
-		"creates secret and writes manifests": {
+		"creates secret and writes manifest and buildspecs": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
@@ -310,17 +313,15 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().Apps().Return(mockApps, nil)
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-
-				for _, app := range mockApps {
-					m.EXPECT().WriteFile(
-						[]byte(expectedIntegTestBuildSpecTemplate),
-						app.IntegTestBuildspecPath(),
-					).Return(app.IntegTestBuildspecPath(), nil)
-				}
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
 				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {
+				for _, app := range mockApps {
+					mockFS.MkdirAll(filepath.Dir(app.IntegTestBuildspecPath()), 0755)
+				}
 			},
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    workspace.PipelineFileName,
@@ -349,17 +350,15 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().Apps().Return(mockApps, nil)
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-
-				for _, app := range mockApps {
-					m.EXPECT().WriteFile(
-						[]byte(expectedIntegTestBuildSpecTemplate),
-						app.IntegTestBuildspecPath(),
-					).Return(app.IntegTestBuildspecPath(), nil)
-				}
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
 				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {
+				for _, app := range mockApps {
+					mockFS.MkdirAll(filepath.Dir(app.IntegTestBuildspecPath()), 0755)
+				}
 			},
 
 			expectedSecretName:    "github-token-badgoose-goose",
@@ -392,7 +391,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
 			},
-			expectedError: fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
+			mockFileSystem: func(mockFS afero.Fs) {},
+			expectedError:  fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
 		},
 		"returns an error if integ test buildspec template does not exist": {
 			inEnvironments: []string{"test"},
@@ -407,15 +407,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().Apps().Return(mockApps, nil)
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-				for _, app := range mockApps {
-					m.EXPECT().WriteFile(gomock.Any(), app.IntegTestBuildspecPath()).Times(0)
-				}
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
 				// intentionally miss out the integration test template here
 			},
-			expectedError: fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, os.ErrNotExist),
+			mockFileSystem: func(mockFS afero.Fs) {},
+			expectedError:  fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, os.ErrNotExist),
 		},
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
@@ -436,28 +434,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.AddString(buildspecTemplatePath, "hello")
 				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
 			},
-			expectedError: fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
-		},
-		"returns an error if can't write integration test buildspec": {
-			inEnvironments: []string{"test"},
-			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inProjectName:  "badgoose",
-
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
-				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
-			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-				m.EXPECT().WriteFile(gomock.Any(), mockApps[0].IntegTestBuildspecPath()).Return("", errors.New("error writing integ test spec"))
-			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
-			},
-			expectedError: fmt.Errorf("write integration test buildspec %s to app %s: error writing integ test spec", mockApps[0].IntegTestBuildspecPath(), mockApps[0].AppName()),
+			mockFileSystem: func(mockFS afero.Fs) {},
+			expectedError:  fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
 		},
 		"returns an error when retrieving local apps": {
 			inEnvironments: []string{"test"},
@@ -474,7 +452,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
 			},
-			expectedError: errors.New("could not retrieve apps in this workspace: some error"),
+			mockFileSystem: func(mockFS afero.Fs) {},
+			expectedError:  errors.New("could not retrieve apps in this workspace: some error"),
 		},
 	}
 
@@ -491,6 +470,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockManifestWriter(mockWriter)
 			tc.mockBox(mockBox)
+			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
+			tc.mockFileSystem(memFs)
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
@@ -500,6 +481,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				secretsmanager:    mockSecretsManager,
 				workspace:         mockWriter,
 				box:               mockBox,
+				fsUtils:           memFs,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
