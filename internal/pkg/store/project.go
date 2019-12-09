@@ -6,12 +6,11 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/route53domains"
+	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
@@ -26,9 +25,13 @@ func (s *Store) CreateProject(project *archer.Project) error {
 	}
 
 	if project.Domain != "" {
-		in := &route53domains.GetDomainDetailInput{DomainName: aws.String(getDomainName(project.Domain))}
-		if _, err := s.domainsClient.GetDomainDetail(in); err != nil {
-			return fmt.Errorf("get domain details for %s: %w", project.Domain, err)
+		in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(project.Domain)}
+		resp, err := s.hostedZoneClient.ListHostedZonesByName(in)
+		if err != nil {
+			return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
+		}
+		if !hostedZoneExist(resp.HostedZones, project.Domain) {
+			return fmt.Errorf("no hosted zone found for %s", project.Domain)
 		}
 	}
 
@@ -100,11 +103,11 @@ func (s *Store) ListProjects() ([]*archer.Project, error) {
 	return projects, nil
 }
 
-// when domain format is "subdomain.domain.tld".
-func getDomainName(s string) string {
-	domain := strings.Split(s, ".")
-	if len(domain) == 3 {
-		return strings.Join(domain[1:3], ".")
+func hostedZoneExist(hostedZones []*route53.HostedZone, domain string) bool {
+	for _, hostedZone := range hostedZones {
+		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
+			return true
+		}
 	}
-	return s
+	return false
 }

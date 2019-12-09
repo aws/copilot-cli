@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/route53domains"
+	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/stretchr/testify/require"
 )
@@ -248,16 +248,22 @@ func TestStore_CreateProject(t *testing.T) {
 	testCases := map[string]struct {
 		inProject *archer.Project
 
-		mockGetDomainDetails func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error)
-		mockPutParameter     func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
-		wantedErr            error
+		mockListHostedZonesByName func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
+		mockPutParameter          func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+		wantedErr                 error
 	}{
 		"with no existing project": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
 
-			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DomainName)
-				return &route53domains.GetDomainDetailOutput{}, nil
+			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DNSName)
+				return &route53.ListHostedZonesByNameOutput{
+					HostedZones: []*route53.HostedZone{
+						&route53.HostedZone{
+							Name: aws.String("phonetool.com."),
+						},
+					},
+				}, nil
 			},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
@@ -269,16 +275,22 @@ func TestStore_CreateProject(t *testing.T) {
 			},
 			wantedErr: nil,
 		},
-		"with no existing project with subdomain": {
-			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "valid.phonetool.com"},
+		"DNS with subdomain": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "valid.phonetool.com."},
 
-			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DomainName)
-				return &route53domains.GetDomainDetailOutput{}, nil
+			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+				require.Equal(t, "valid.phonetool.com.", *in.DNSName)
+				return &route53.ListHostedZonesByNameOutput{
+					HostedZones: []*route53.HostedZone{
+						&route53.HostedZone{
+							Name: aws.String("valid.phonetool.com."),
+						},
+					},
+				}, nil
 			},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
-				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"valid.phonetool.com","version":"%s"}`, schemaVersion), *param.Value)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"valid.phonetool.com.","version":"%s"}`, schemaVersion), *param.Value)
 
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
@@ -288,11 +300,25 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with an unexpected domain name error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockGetDomainDetails: func(t *testing.T, in *route53domains.GetDomainDetailInput) (*route53domains.GetDomainDetailOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DomainName)
+			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DNSName)
 				return nil, errors.New("some error")
 			},
-			wantedErr: errors.New("get domain details for phonetool.com: some error"),
+			wantedErr: errors.New("list hosted zone for phonetool.com: some error"),
+		},
+		"with no domain name found error": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
+			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+				require.Equal(t, "phonetool.com", *in.DNSName)
+				return &route53.ListHostedZonesByNameOutput{
+					HostedZones: []*route53.HostedZone{
+						&route53.HostedZone{
+							Name: aws.String("examples.com."),
+						},
+					},
+				}, nil
+			},
+			wantedErr: errors.New("no hosted zone found for phonetool.com"),
 		},
 		"with existing project": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234"},
@@ -320,9 +346,9 @@ func TestStore_CreateProject(t *testing.T) {
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
-				domainsClient: &mockRoute53Domains{
-					t:                    t,
-					mockGetDomainDetails: tc.mockGetDomainDetails,
+				hostedZoneClient: &mockRoute53{
+					t:                         t,
+					mockListHostedZonesByName: tc.mockListHostedZonesByName,
 				},
 			}
 
@@ -332,6 +358,8 @@ func TestStore_CreateProject(t *testing.T) {
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Nil(t, err)
 			}
 		})
 	}
