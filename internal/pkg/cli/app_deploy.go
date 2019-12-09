@@ -39,10 +39,10 @@ var (
 // BuildAppDeployCommand builds the `app deploy` subcommand.
 func BuildAppDeployCommand() *cobra.Command {
 	input := &appDeployOpts{
-		GlobalOpts:     NewGlobalOpts(),
-		spinner:        termprogress.NewSpinner(),
-		dockerService:  docker.New(),
-		commandService: command.New(),
+		GlobalOpts:    NewGlobalOpts(),
+		spinner:       termprogress.NewSpinner(),
+		dockerService: docker.New(),
+		runner:        command.New(),
 	}
 
 	cmd := &cobra.Command{
@@ -89,7 +89,7 @@ type appDeployOpts struct {
 	workspaceService   archer.Workspace
 	ecrService         ecrService
 	dockerService      dockerService
-	commandService     commandService
+	runner             runner
 	appPackageCfClient projectResourcesGetter
 	appDeployCfClient  cloudformation.CloudFormation
 
@@ -122,7 +122,7 @@ type dockerService interface {
 	Push(uri, tag string) error
 }
 
-type commandService interface {
+type runner interface {
 	Run(name string, args []string, options ...command.Option) error
 }
 
@@ -322,7 +322,7 @@ func (opts *appDeployOpts) sourceImageTag() error {
 	}
 
 	var buf bytes.Buffer
-	err := opts.commandService.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
+	err := opts.runner.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
 
 	if err == nil {
 		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.

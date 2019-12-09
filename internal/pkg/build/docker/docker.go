@@ -10,19 +10,19 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 )
 
-// Service wraps a commandService.
+// Service wraps a runner.
 type Service struct {
-	commandService commandService
+	runner runner
 }
 
-type commandService interface {
+type runner interface {
 	Run(name string, args []string, options ...command.Option) error
 }
 
 // New returns a Service.
 func New() Service {
 	return Service{
-		commandService: command.New(),
+		runner: command.New(),
 	}
 }
 
@@ -30,7 +30,7 @@ func New() Service {
 func (s Service) Build(uri, imageTag, path string) error {
 	imageName := imageName(uri, imageTag)
 
-	err := s.commandService.Run("docker", []string{"build", "-t", imageName, path})
+	err := s.runner.Run("docker", []string{"build", "-t", imageName, path})
 
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
@@ -41,7 +41,7 @@ func (s Service) Build(uri, imageTag, path string) error {
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
 func (s Service) Login(uri, username, password string) error {
-	err := s.commandService.Run("docker",
+	err := s.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		command.Stdin(password))
 
@@ -56,7 +56,7 @@ func (s Service) Login(uri, username, password string) error {
 func (s Service) Push(uri, imageTag string) error {
 	path := imageName(uri, imageTag)
 
-	err := s.commandService.Run("docker", []string{"push", path})
+	err := s.runner.Run("docker", []string{"push", path})
 
 	if err != nil {
 		// TODO: improve the error handling here.

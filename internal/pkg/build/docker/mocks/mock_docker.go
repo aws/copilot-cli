@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockcommandService is a mock of commandService interface
-type MockcommandService struct {
+// Mockrunner is a mock of runner interface
+type Mockrunner struct {
 	ctrl     *gomock.Controller
-	recorder *MockcommandServiceMockRecorder
+	recorder *MockrunnerMockRecorder
 }
 
-// MockcommandServiceMockRecorder is the mock recorder for MockcommandService
-type MockcommandServiceMockRecorder struct {
-	mock *MockcommandService
+// MockrunnerMockRecorder is the mock recorder for Mockrunner
+type MockrunnerMockRecorder struct {
+	mock *Mockrunner
 }
 
-// NewMockcommandService creates a new mock instance
-func NewMockcommandService(ctrl *gomock.Controller) *MockcommandService {
-	mock := &MockcommandService{ctrl: ctrl}
-	mock.recorder = &MockcommandServiceMockRecorder{mock}
+// NewMockrunner creates a new mock instance
+func NewMockrunner(ctrl *gomock.Controller) *Mockrunner {
+	mock := &Mockrunner{ctrl: ctrl}
+	mock.recorder = &MockrunnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcommandService) EXPECT() *MockcommandServiceMockRecorder {
+func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
 	return m.recorder
 }
 
 // Run mocks base method
-func (m *MockcommandService) Run(name string, args []string, options ...command.Option) error {
+func (m *Mockrunner) Run(name string, args []string, options ...command.Option) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, args}
 	for _, a := range options {
@@ -46,8 +46,8 @@ func (m *MockcommandService) Run(name string, args []string, options ...command.
 }
 
 // Run indicates an expected call of Run
-func (mr *MockcommandServiceMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
+func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, args}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockcommandService)(nil).Run), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
 }

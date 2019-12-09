@@ -20,7 +20,7 @@ func TestBuild(t *testing.T) {
 	mockImageTag := "mockImageTag"
 	mockPath := "mockPath"
 
-	var mockCommandService *mocks.MockcommandService
+	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
@@ -29,17 +29,17 @@ func TestBuild(t *testing.T) {
 	}{
 		"wrap error returned from Run()": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(mockError)
 			},
 			want: fmt.Errorf("building image: %w", mockError),
 		},
 		"happy path": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(nil)
 			},
 		},
 	}
@@ -49,7 +49,7 @@ func TestBuild(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
 			s := Service{
-				commandService: mockCommandService,
+				runner: mockRunner,
 			}
 
 			got := s.Build(mockURI, mockImageTag, mockPath)
@@ -66,7 +66,7 @@ func TestLogin(t *testing.T) {
 	mockUsername := "mockUsername"
 	mockPassword := "mockPassword"
 
-	var mockCommandService *mocks.MockcommandService
+	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
@@ -75,17 +75,17 @@ func TestLogin(t *testing.T) {
 	}{
 		"wrap error returned from Run()": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(mockError)
 			},
 			want: fmt.Errorf("authenticate to ECR: %w", mockError),
 		},
 		"happy path": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(nil)
 			},
 			want: nil,
 		},
@@ -96,7 +96,7 @@ func TestLogin(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
 			s := Service{
-				commandService: mockCommandService,
+				runner: mockRunner,
 			}
 
 			got := s.Login(mockURI, mockUsername, mockPassword)
@@ -112,7 +112,7 @@ func TestPush(t *testing.T) {
 	mockURI := "mockURI"
 	mockImageTag := "mockImageTag"
 
-	var mockCommandService *mocks.MockcommandService
+	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
 		setupMocks func(controller *gomock.Controller)
@@ -121,17 +121,17 @@ func TestPush(t *testing.T) {
 	}{
 		"wrap error returned from Run()": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(mockError)
 			},
 			want: fmt.Errorf("docker push: %w", mockError),
 		},
 		"happy path": {
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = mocks.NewMockcommandService(controller)
+				mockRunner = mocks.NewMockrunner(controller)
 
-				mockCommandService.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(nil)
 			},
 			want: nil,
 		},
@@ -142,7 +142,7 @@ func TestPush(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
 			s := Service{
-				commandService: mockCommandService,
+				runner: mockRunner,
 			}
 
 			got := s.Push(mockURI, mockImageTag)

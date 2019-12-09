@@ -107,9 +107,9 @@ func NewInitOpts() (*InitOpts, error) {
 	deployApp := &appDeployOpts{
 		env: defaultEnvironmentName,
 
-		spinner:        spin,
-		dockerService:  docker.New(),
-		commandService: command.New(),
+		spinner:       spin,
+		dockerService: docker.New(),
+		runner:        command.New(),
 
 		GlobalOpts: NewGlobalOpts(),
 	}

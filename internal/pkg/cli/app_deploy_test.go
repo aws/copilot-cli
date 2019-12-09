@@ -440,7 +440,7 @@ image:
 }
 
 func TestSourceImageTag(t *testing.T) {
-	var mockCommandService *climocks.MockcommandService
+	var mockRunner *climocks.Mockrunner
 	var mockPrompter *climocks.Mockprompter
 
 	mockError := errors.New("mockError")
@@ -462,11 +462,11 @@ func TestSourceImageTag(t *testing.T) {
 		"should wrap error from prompting": {
 			inputImageTag: "",
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = climocks.NewMockcommandService(controller)
+				mockRunner = climocks.NewMockrunner(controller)
 				mockPrompter = climocks.NewMockprompter(controller)
 
 				gomock.InOrder(
-					mockCommandService.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
 					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("", mockError),
 				)
 			},
@@ -476,11 +476,11 @@ func TestSourceImageTag(t *testing.T) {
 		"should set opts imageTag to user input value": {
 			inputImageTag: "",
 			setupMocks: func(controller *gomock.Controller) {
-				mockCommandService = climocks.NewMockcommandService(controller)
+				mockRunner = climocks.NewMockrunner(controller)
 				mockPrompter = climocks.NewMockprompter(controller)
 
 				gomock.InOrder(
-					mockCommandService.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
 					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("youwotm8", nil),
 				)
 			},
@@ -497,8 +497,8 @@ func TestSourceImageTag(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompter,
 				},
-				imageTag:       test.inputImageTag,
-				commandService: mockCommandService,
+				imageTag: test.inputImageTag,
+				runner:   mockRunner,
 			}
 
 			got := opts.sourceImageTag()

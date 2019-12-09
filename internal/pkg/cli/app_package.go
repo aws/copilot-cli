@@ -41,13 +41,13 @@ type PackageAppOpts struct {
 	OutputDir string
 
 	// Interfaces to interact with dependencies.
-	ws             archer.Workspace
-	store          projectService
-	describer      projectResourcesGetter
-	stackWriter    io.Writer
-	paramsWriter   io.Writer
-	fs             afero.Fs
-	commandService commandService
+	ws           archer.Workspace
+	store        projectService
+	describer    projectResourcesGetter
+	stackWriter  io.Writer
+	paramsWriter io.Writer
+	fs           afero.Fs
+	runner       runner
 
 	*GlobalOpts // Embed global options.
 }
@@ -57,15 +57,15 @@ type PackageAppOpts struct {
 // If an error occurred while running git, we leave the image tag empty "".
 func NewPackageAppOpts() *PackageAppOpts {
 	opts := &PackageAppOpts{
-		commandService: command.New(),
-		stackWriter:    os.Stdout,
-		paramsWriter:   ioutil.Discard,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		GlobalOpts:     NewGlobalOpts(),
+		runner:       command.New(),
+		stackWriter:  os.Stdout,
+		paramsWriter: ioutil.Discard,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		GlobalOpts:   NewGlobalOpts(),
 	}
 
 	var buf bytes.Buffer
-	if err := opts.commandService.Run("git", []string{"rev-parse", "--short", "HEAD"}, command.Stdout(&buf)); err != nil {
+	if err := opts.runner.Run("git", []string{"rev-parse", "--short", "HEAD"}, command.Stdout(&buf)); err != nil {
 		return opts
 	}
 
