@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 // Service exists for mockability.
@@ -22,9 +21,9 @@ func New() Service {
 type Option func(cmd *exec.Cmd)
 
 // Stdin sets the internal *exec.Cmd's Stdin field.
-func Stdin(input string) Option {
+func Stdin(r io.Reader) Option {
 	return func(c *exec.Cmd) {
-		c.Stdin = strings.NewReader(input)
+		c.Stdin = r
 	}
 }
 

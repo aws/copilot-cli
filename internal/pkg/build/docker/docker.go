@@ -5,6 +5,7 @@ package docker
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -43,7 +44,7 @@ func (s Service) Build(uri, imageTag, path string) error {
 func (s Service) Login(uri, username, password string) error {
 	err := s.runner.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
-		command.Stdin(password))
+		command.Stdin(strings.NewReader(password)))
 
 	if err != nil {
 		return fmt.Errorf("authenticate to ECR: %w", err)
