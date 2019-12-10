@@ -1,3 +1,6 @@
+// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package docker
 
 import (
@@ -5,24 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker/mocks"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
-
-type mockRunnable struct {
-	t *testing.T
-
-	mockRun           func() error
-	mockStandardInput func(t *testing.T, input string)
-}
-
-func (mr mockRunnable) run() error {
-	return mr.mockRun()
-}
-
-func (mr mockRunnable) standardInput(input string) {
-	mr.mockStandardInput(mr.t, input)
-}
 
 func TestBuild(t *testing.T) {
 	mockError := errors.New("mockError")
@@ -31,43 +20,36 @@ func TestBuild(t *testing.T) {
 	mockImageTag := "mockImageTag"
 	mockPath := "mockPath"
 
-	tests := map[string]struct {
-		commandName string
-		args        []string
+	var mockRunner *mocks.Mockrunner
 
-		mockRun func() error
+	tests := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
 
 		want error
 	}{
 		"wrap error returned from Run()": {
-			commandName: "docker",
-			args:        []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath},
-			mockRun: func() error {
-				return mockError
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(mockError)
 			},
 			want: fmt.Errorf("building image: %w", mockError),
 		},
 		"happy path": {
-			commandName: "docker",
-			args:        []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath},
-			mockRun: func() error {
-				return nil
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(nil)
 			},
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			test.setupMocks(controller)
 			s := Service{
-				createCommand: func(name string, args ...string) runnable {
-					require.Equal(t, test.commandName, name)
-					require.ElementsMatch(t, test.args, args)
-
-					return mockRunnable{
-						t:       t,
-						mockRun: test.mockRun,
-					}
-				},
+				runner: mockRunner,
 			}
 
 			got := s.Build(mockURI, mockImageTag, mockPath)
@@ -84,63 +66,40 @@ func TestLogin(t *testing.T) {
 	mockUsername := "mockUsername"
 	mockPassword := "mockPassword"
 
-	mockAuth := ecr.Auth{
-		Username: mockUsername,
-		Password: mockPassword,
-	}
+	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
-		commandName string
-		args        []string
-
-		mockStandardInput func(t *testing.T, input string)
-		mockRun           func() error
+		setupMocks func(controller *gomock.Controller)
 
 		want error
 	}{
 		"wrap error returned from Run()": {
-			commandName: "docker",
-			args:        []string{"login", "-u", mockUsername, "--password-stdin", mockURI},
-			mockStandardInput: func(t *testing.T, input string) {
-				t.Helper()
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
 
-				require.Equal(t, mockPassword, input)
-			},
-			mockRun: func() error {
-				return mockError
+				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(mockError)
 			},
 			want: fmt.Errorf("authenticate to ECR: %w", mockError),
 		},
 		"happy path": {
-			commandName: "docker",
-			args:        []string{"login", "-u", mockUsername, "--password-stdin", mockURI},
-			mockStandardInput: func(t *testing.T, input string) {
-				t.Helper()
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
 
-				require.Equal(t, mockPassword, input)
+				mockRunner.EXPECT().Run("docker", []string{"login", "-u", mockUsername, "--password-stdin", mockURI}, gomock.Any()).Return(nil)
 			},
-			mockRun: func() error {
-				return nil
-			},
+			want: nil,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			test.setupMocks(controller)
 			s := Service{
-				createCommand: func(name string, args ...string) runnable {
-					require.Equal(t, test.commandName, name)
-					require.ElementsMatch(t, test.args, args)
-
-					return mockRunnable{
-						t:                 t,
-						mockRun:           test.mockRun,
-						mockStandardInput: test.mockStandardInput,
-					}
-				},
+				runner: mockRunner,
 			}
 
-			got := s.Login(mockURI, mockAuth)
+			got := s.Login(mockURI, mockUsername, mockPassword)
 
 			require.Equal(t, test.want, got)
 		})
@@ -153,43 +112,37 @@ func TestPush(t *testing.T) {
 	mockURI := "mockURI"
 	mockImageTag := "mockImageTag"
 
-	tests := map[string]struct {
-		commandName string
-		args        []string
+	var mockRunner *mocks.Mockrunner
 
-		mockRun func() error
+	tests := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
 
 		want error
 	}{
 		"wrap error returned from Run()": {
-			commandName: "docker",
-			args:        []string{"push", imageName(mockURI, mockImageTag)},
-			mockRun: func() error {
-				return mockError
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(mockError)
 			},
 			want: fmt.Errorf("docker push: %w", mockError),
 		},
 		"happy path": {
-			commandName: "docker",
-			args:        []string{"push", imageName(mockURI, mockImageTag)},
-			mockRun: func() error {
-				return nil
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(nil)
 			},
+			want: nil,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			test.setupMocks(controller)
 			s := Service{
-				createCommand: func(name string, args ...string) runnable {
-					require.Equal(t, test.commandName, name)
-					require.ElementsMatch(t, test.args, args)
-
-					return mockRunnable{
-						t:       t,
-						mockRun: test.mockRun,
-					}
-				},
+				runner: mockRunner,
 			}
 
 			got := s.Push(mockURI, mockImageTag)

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os/exec"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -21,11 +20,16 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+)
+
+const (
+	inputImageTagPrompt = "Input an image tag value:"
 )
 
 var (
@@ -38,6 +42,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		GlobalOpts:    NewGlobalOpts(),
 		spinner:       termprogress.NewSpinner(),
 		dockerService: docker.New(),
+		runner:        command.New(),
 	}
 
 	cmd := &cobra.Command{
@@ -84,6 +89,7 @@ type appDeployOpts struct {
 	workspaceService   archer.Workspace
 	ecrService         ecrService
 	dockerService      dockerService
+	runner             runner
 	appPackageCfClient projectResourcesGetter
 	appDeployCfClient  cloudformation.CloudFormation
 
@@ -112,8 +118,12 @@ type ecrService interface {
 
 type dockerService interface {
 	Build(uri, tag, path string) error
-	Login(uri string, auth ecr.Auth) error
+	Login(uri, username, password string) error
 	Push(uri, tag string) error
+}
+
+type runner interface {
+	Run(name string, args []string, options ...command.Option) error
 }
 
 func (opts *appDeployOpts) init() error {
@@ -311,16 +321,24 @@ func (opts *appDeployOpts) sourceImageTag() error {
 		return nil
 	}
 
-	cmd := exec.Command("git", "describe", "--always")
+	var buf bytes.Buffer
+	err := opts.runner.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
 
-	bytes, err := cmd.Output()
+	if err == nil {
+		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
+		opts.imageTag = strings.TrimSpace(buf.String())
 
-	if err != nil {
-		return fmt.Errorf("defaulting tag: %w", err)
+		return nil
 	}
 
-	// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
-	opts.imageTag = strings.TrimSpace(string(bytes))
+	log.Warningln("Failed to default tag, are you in a git repository?")
+
+	tag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
+	if err != nil {
+		return fmt.Errorf("prompt for image tag: %w", err)
+	}
+
+	opts.imageTag = tag
 
 	return nil
 }
@@ -348,7 +366,7 @@ func (opts appDeployOpts) deployApp() error {
 		return fmt.Errorf("get ECR auth data: %w", err)
 	}
 
-	opts.dockerService.Login(uri, auth)
+	opts.dockerService.Login(uri, auth.Username, auth.Password)
 
 	if err != nil {
 		return err

@@ -438,3 +438,73 @@ image:
 		})
 	}
 }
+
+func TestSourceImageTag(t *testing.T) {
+	var mockRunner *climocks.Mockrunner
+	var mockPrompter *climocks.Mockprompter
+
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		inputImageTag string
+
+		setupMocks func(controller *gomock.Controller)
+
+		wantErr      error
+		wantImageTag string
+	}{
+		"should return nil if input image tag is not empty": {
+			inputImageTag: "anythingreally",
+			setupMocks:    func(controller *gomock.Controller) {},
+			wantErr:       nil,
+			wantImageTag:  "anythingreally",
+		},
+		"should wrap error from prompting": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = climocks.NewMockrunner(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("", mockError),
+				)
+			},
+			wantErr:      fmt.Errorf("prompt for image tag: %w", mockError),
+			wantImageTag: "",
+		},
+		"should set opts imageTag to user input value": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = climocks.NewMockrunner(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("youwotm8", nil),
+				)
+			},
+			wantErr:      nil,
+			wantImageTag: "youwotm8",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			test.setupMocks(ctrl)
+			opts := &appDeployOpts{
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompter,
+				},
+				imageTag: test.inputImageTag,
+				runner:   mockRunner,
+			}
+
+			got := opts.sourceImageTag()
+
+			require.Equal(t, test.wantErr, got)
+			require.Equal(t, test.wantImageTag, opts.imageTag)
+		})
+	}
+}

@@ -7,6 +7,7 @@ package mocks
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -285,17 +286,17 @@ func (mr *MockdockerServiceMockRecorder) Build(uri, tag, path interface{}) *gomo
 }
 
 // Login mocks base method
-func (m *MockdockerService) Login(uri string, auth ecr.Auth) error {
+func (m *MockdockerService) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", uri, auth)
+	ret := m.ctrl.Call(m, "Login", uri, username, password)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Login indicates an expected call of Login
-func (mr *MockdockerServiceMockRecorder) Login(uri, auth interface{}) *gomock.Call {
+func (mr *MockdockerServiceMockRecorder) Login(uri, username, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerService)(nil).Login), uri, auth)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockdockerService)(nil).Login), uri, username, password)
 }
 
 // Push mocks base method
@@ -310,4 +311,46 @@ func (m *MockdockerService) Push(uri, tag string) error {
 func (mr *MockdockerServiceMockRecorder) Push(uri, tag interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockdockerService)(nil).Push), uri, tag)
+}
+
+// Mockrunner is a mock of runner interface
+type Mockrunner struct {
+	ctrl     *gomock.Controller
+	recorder *MockrunnerMockRecorder
+}
+
+// MockrunnerMockRecorder is the mock recorder for Mockrunner
+type MockrunnerMockRecorder struct {
+	mock *Mockrunner
+}
+
+// NewMockrunner creates a new mock instance
+func NewMockrunner(ctrl *gomock.Controller) *Mockrunner {
+	mock := &Mockrunner{ctrl: ctrl}
+	mock.recorder = &MockrunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method
+func (m *Mockrunner) Run(name string, args []string, options ...command.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name, args}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Run", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run
+func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name, args}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
 }

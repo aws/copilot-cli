@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -108,6 +109,7 @@ func NewInitOpts() (*InitOpts, error) {
 
 		spinner:       spin,
 		dockerService: docker.New(),
+		runner:        command.New(),
 
 		GlobalOpts: NewGlobalOpts(),
 	}
