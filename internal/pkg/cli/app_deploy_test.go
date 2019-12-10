@@ -343,3 +343,168 @@ func TestDeployApp(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAppDockerfilePath(t *testing.T) {
+	var mockWorkspace *mocks.MockWorkspace
+
+	mockError := errors.New("mockError")
+	mockManifestList := []string{
+		"appA",
+		"appB",
+	}
+	mockManifest := []byte(`name: appA
+type: 'Load Balanced Web App'
+image:
+  build: appA/Dockerfile
+`)
+
+	tests := map[string]struct {
+		inputApp   string
+		setupMocks func(controller *gomock.Controller)
+
+		wantPath string
+		wantErr  error
+	}{
+		"should wrap error returned from workspaceService ListManifestFiles()": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockWorkspace = mocks.NewMockWorkspace(controller)
+
+				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(nil, mockError)
+			},
+			wantPath: "",
+			wantErr:  fmt.Errorf("list local manifest files: %w", mockError),
+		},
+		"should return error if list of manifest files returned from workspaceService is empty": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockWorkspace = mocks.NewMockWorkspace(controller)
+
+				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return([]string{}, nil)
+			},
+			wantPath: "",
+			wantErr:  errNoLocalManifestsFound,
+		},
+		"should return error if unable to match input app with local manifests": {
+			inputApp: "appC",
+			setupMocks: func(controller *gomock.Controller) {
+				mockWorkspace = mocks.NewMockWorkspace(controller)
+
+				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil)
+			},
+			wantPath: "",
+			wantErr:  fmt.Errorf("couldn't find local manifest %s", "appC"),
+		},
+		"should return error if workspaceService ReadFile returns error": {
+			inputApp: "appA",
+			setupMocks: func(controller *gomock.Controller) {
+				mockWorkspace = mocks.NewMockWorkspace(controller)
+
+				gomock.InOrder(
+					mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil),
+					mockWorkspace.EXPECT().ReadFile("appA").Times(1).Return(nil, mockError),
+				)
+			},
+			wantPath: "",
+			wantErr:  fmt.Errorf("read manifest file %s: %w", "appA", mockError),
+		},
+		"should trim the manifest DockerfilePath if it contains /Dockerfile": {
+			inputApp: "appA",
+			setupMocks: func(controller *gomock.Controller) {
+				mockWorkspace = mocks.NewMockWorkspace(controller)
+
+				gomock.InOrder(
+					mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil),
+					mockWorkspace.EXPECT().ReadFile("appA").Times(1).Return(mockManifest, nil),
+				)
+			},
+			wantPath: "appA",
+			wantErr:  nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			test.setupMocks(ctrl)
+			opts := appDeployOpts{
+				app:              test.inputApp,
+				workspaceService: mockWorkspace,
+			}
+
+			gotPath, gotErr := opts.getAppDockerfilePath()
+
+			require.Equal(t, test.wantPath, gotPath)
+			require.Equal(t, test.wantErr, gotErr)
+		})
+	}
+}
+
+func TestSourceImageTag(t *testing.T) {
+	var mockRunner *climocks.Mockrunner
+	var mockPrompter *climocks.Mockprompter
+
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		inputImageTag string
+
+		setupMocks func(controller *gomock.Controller)
+
+		wantErr      error
+		wantImageTag string
+	}{
+		"should return nil if input image tag is not empty": {
+			inputImageTag: "anythingreally",
+			setupMocks:    func(controller *gomock.Controller) {},
+			wantErr:       nil,
+			wantImageTag:  "anythingreally",
+		},
+		"should wrap error from prompting": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = climocks.NewMockrunner(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("", mockError),
+				)
+			},
+			wantErr:      fmt.Errorf("prompt for image tag: %w", mockError),
+			wantImageTag: "",
+		},
+		"should set opts imageTag to user input value": {
+			inputImageTag: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = climocks.NewMockrunner(controller)
+				mockPrompter = climocks.NewMockprompter(controller)
+
+				gomock.InOrder(
+					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
+					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("youwotm8", nil),
+				)
+			},
+			wantErr:      nil,
+			wantImageTag: "youwotm8",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			test.setupMocks(ctrl)
+			opts := &appDeployOpts{
+				GlobalOpts: &GlobalOpts{
+					prompt: mockPrompter,
+				},
+				imageTag: test.inputImageTag,
+				runner:   mockRunner,
+			}
+
+			got := opts.sourceImageTag()
+
+			require.Equal(t, test.wantErr, got)
+			require.Equal(t, test.wantImageTag, opts.imageTag)
+		})
+	}
+}

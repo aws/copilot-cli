@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -84,7 +83,7 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if opts.DockerfilePath != "" {
-		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
+		if _, err := listDockerfiles(opts.fs, opts.DockerfilePath); err != nil {
 			return err
 		}
 	}
@@ -192,7 +191,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := opts.listDockerfileSelections()
+	dockerfiles, err := listDockerfiles(opts.fs, ".")
 	if err != nil {
 		return err
 	}
@@ -210,58 +209,6 @@ func (opts *InitAppOpts) askDockerfile() error {
 	opts.DockerfilePath = strings.TrimSuffix(sel, "/Dockerfile")
 
 	return nil
-}
-
-// listDockerfileDirs returns the list of directories containing Dockerfiles within
-// the current working directory and a sub-directory level below.
-// If an error occurs while reading directories, returns the error.
-func (opts *InitAppOpts) listDockerfileDirs() ([]string, error) {
-	wdFiles, err := afero.ReadDir(opts.fs, ".")
-	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err)
-	}
-	var directories []string
-
-	for _, wdFile := range wdFiles {
-		// Add current directory if a Dockerfile exists, otherwise continue.
-		if !wdFile.IsDir() {
-			if wdFile.Name() == "Dockerfile" {
-				directories = append(directories, filepath.Dir(wdFile.Name()))
-			}
-			continue
-		}
-
-		// Add sub-directories containing a Dockerfile one level below current directory.
-		subFiles, err := afero.ReadDir(opts.fs, wdFile.Name())
-		if err != nil {
-			return nil, fmt.Errorf("read directory: %w", err)
-		}
-		for _, f := range subFiles {
-			// NOTE: ignore directories in sub-directories.
-			if f.IsDir() {
-				continue
-			}
-
-			if f.Name() == "Dockerfile" {
-				directories = append(directories, wdFile.Name())
-			}
-		}
-	}
-	sort.Strings(directories)
-	return directories, nil
-}
-
-func (opts *InitAppOpts) listDockerfileSelections() ([]string, error) {
-	dockerfileDirs, err := opts.listDockerfileDirs()
-	if err != nil {
-		return nil, err
-	}
-	var dockerfiles []string
-	for _, dir := range dockerfileDirs {
-		file := dir + "/Dockerfile"
-		dockerfiles = append(dockerfiles, file)
-	}
-	return dockerfiles, nil
 }
 
 func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
@@ -291,7 +238,9 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &InitAppOpts{}
+	opts := &InitAppOpts{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new application in a project.",
@@ -323,7 +272,6 @@ This command is also run as part of "ecs-preview init".`,
 			opts.projDeployer = cloudformation.New(sess)
 
 			opts.prog = termprogress.NewSpinner()
-			opts.GlobalOpts = NewGlobalOpts()
 			return opts.Validate()
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {

@@ -16,24 +16,28 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 const (
-	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineAddEnvPrompt            = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt        = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt        = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt    = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt         = "Which environment would you like to add to your pipeline?"
+	pipelineEnterGitHubRepoPrompt   = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineEnterGitHubBranchPrompt = "What is the branch name of your GitHub repository?"
 )
 
 const (
-	buildspecTemplatePath = "cicd/buildspec.yml"
+	buildspecTemplatePath          = "cicd/buildspec.yml"
+	integTestBuildspecTemplatePath = "cicd/" + manifest.IntegTestBuildspecFileName
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
@@ -44,24 +48,24 @@ type InitPipelineOpts struct {
 	Environments      []string
 	GitHubRepo        string
 	GitHubAccessToken string
-	EnableCD          bool
-	Deploy            bool
+	GitHubBranch      string
 	PipelineFilename  string
-	// TODO add git branch
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	workspace      archer.ManifestIO
+	workspace      archer.Workspace
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 
 	// Outputs stored on successful actions.
-	manifestPath  string
-	buildspecPath string
-	secretName    string
+	manifestPath            string
+	buildspecPath           string
+	integTestBuildspecPaths []string
+	secretName              string
 
 	// Caches environments
 	projectEnvs []string
+	fsUtils     *afero.Afero
 
 	*GlobalOpts
 }
@@ -69,6 +73,7 @@ type InitPipelineOpts struct {
 // NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
+		fsUtils:    &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts: NewGlobalOpts(),
 	}
 }
@@ -93,14 +98,11 @@ func (opts *InitPipelineOpts) Ask() error {
 		}
 	}
 
-	// if err := opts.askEnableCD(); err != nil {
-	// 	return err
-	// }
-
-	// TODO ask this after pipeline.yml is written
-	// if err := opts.askDeploy(); err != nil {
-	// 	return err
-	// }
+	if opts.GitHubBranch == "" {
+		if err := opts.getGitHubBranch(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -133,12 +135,16 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.secretName = secretName
 
+	apps, err := opts.workspace.Apps()
+	if err != nil {
+		return fmt.Errorf("could not retrieve apps in this workspace: %w", err)
+	}
+
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
-
-	manifestPath, err := opts.createPipelineManifest()
+	manifestPath, err := opts.createPipelineManifest(apps)
 	if err != nil {
 		return err
 	}
@@ -149,9 +155,15 @@ func (opts *InitPipelineOpts) Execute() error {
 		return err
 	}
 	opts.buildspecPath = buildspecPath
+	integTestBuildspecPaths, err := opts.createIntegTestBuildspecPerApp(apps)
+	if err != nil {
+		return err
+	}
+	opts.integTestBuildspecPaths = integTestBuildspecPaths
 
 	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(relPath(opts.manifestPath)))
 	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(relPath(opts.buildspecPath)))
+	log.Successf("Wrote the buildspecs for each of the app in the pipeline: '%s'\n", color.HighlightResource(fmt.Sprintf("%v", opts.integTestBuildspecPaths)))
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
@@ -198,14 +210,14 @@ func (opts *InitPipelineOpts) getRepoName() string {
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
 		OwnerAndRepository:    opts.GitHubRepo,
-		Branch:                "master", // todo - fix
+		Branch:                opts.GitHubBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
 
 	return manifest.NewProvider(config)
 }
 
-func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
+func (opts *InitPipelineOpts) createPipelineManifest(apps []archer.Manifest) (string, error) {
 	// TODO change this to flag
 	pipelineName := opts.createPipelineName()
 	provider, err := opts.createPipelineProvider()
@@ -213,7 +225,8 @@ func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 		return "", fmt.Errorf("could not create pipeline: %w", err)
 	}
 
-	manifest, err := manifest.CreatePipeline(pipelineName, provider, opts.Environments)
+	manifest, err := manifest.CreatePipeline(
+		pipelineName, provider, opts.Environments, apps)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
@@ -242,6 +255,25 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 	return path, nil
 }
 
+// write the sample integration test buildspec to each app's folder
+func (opts *InitPipelineOpts) createIntegTestBuildspecPerApp(apps []archer.Manifest) ([]string, error) {
+	content, err := opts.box.FindString(integTestBuildspecTemplatePath)
+	if err != nil {
+		return nil, fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, err)
+	}
+
+	paths := make([]string, 0, len(apps))
+	for _, app := range apps {
+		err := opts.fsUtils.WriteFile(app.IntegTestBuildspecPath(), []byte(content), 0644)
+		if err != nil {
+			return nil, fmt.Errorf("write integration test buildspec %s to app %s: %w",
+				app.IntegTestBuildspecPath(), app.AppName(), err)
+		}
+		paths = append(paths, app.IntegTestBuildspecPath())
+	}
+	return paths, nil
+}
+
 func (opts *InitPipelineOpts) selectEnvironments() error {
 	for {
 		promptMsg := pipelineAddEnvPrompt
@@ -258,7 +290,7 @@ func (opts *InitPipelineOpts) selectEnvironments() error {
 			break
 		}
 		if err := opts.selectEnvironment(); err != nil {
-			return err
+			return fmt.Errorf("failed to add environment: %w", err)
 		}
 		if len(opts.listAvailableEnvironments()) == 0 {
 			break
@@ -305,7 +337,7 @@ func (opts *InitPipelineOpts) selectEnvironment() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to add environment: %w", err)
+		return err
 	}
 
 	opts.Environments = append(opts.Environments, env)
@@ -365,32 +397,17 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
-func (opts *InitPipelineOpts) askEnableCD() error {
-	enable, err := opts.prompt.Confirm(
-		"Would you like to automatically enable deploying to production?",
-		"Enables the transition to your production environment automatically through your pipeline.",
-	)
+// TODO: nice to have a remote GitHub repo's branch list to offer a select menu.
+func (opts *InitPipelineOpts) getGitHubBranch() error {
+	branch, err := opts.prompt.Get(pipelineEnterGitHubBranchPrompt,
+		"Name of the branch that you wish to use in your GitHub repository. By default the branch name is \"master\".",
+		nil, prompt.WithDefaultInput("master"))
 
 	if err != nil {
-		return fmt.Errorf("failed to confirm enabling CD: %w", err)
+		return fmt.Errorf("failed to get GitHub branch name: %w", err)
 	}
 
-	opts.EnableCD = enable
-
-	return nil
-}
-
-func (opts *InitPipelineOpts) askDeploy() error {
-	deploy, err := opts.prompt.Confirm(
-		"Would you like to deploy your pipeline?",
-		"Deploys your pipeline through CloudFormation.",
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to confirm deploying pipeline: %w", err)
-	}
-
-	opts.Deploy = deploy
+	opts.GitHubBranch = branch
 
 	return nil
 }
@@ -458,9 +475,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
-				return err
-			}
 			return opts.Execute()
 		}),
 		PostRunE: func(cmd *cobra.Command, args []string) error {
@@ -474,8 +488,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
-	cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployPipelineFlagDescription)
-	cmd.Flags().BoolVar(&opts.EnableCD, enableCDFlag, false, enableCDFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
@@ -61,15 +62,15 @@ func TestWebAppDescriber_URI(t *testing.T) {
 		testAppPath        = "*"
 	)
 	testCases := map[string]struct {
-		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvAppGetter
+		mockStore           func(ctrl *gomock.Controller) *climocks.MockprojectService
 		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
 
 		wantedURI   *webAppURI
 		wantedError error
 	}{
 		"environment does not exist in store": {
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvAppGetter {
-				m := mocks.NewMockenvAppGetter(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
+				m := climocks.NewMockprojectService(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(nil, errors.New("some error"))
 				return m
 			},
@@ -79,8 +80,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"cfn error": {
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvAppGetter {
-				m := mocks.NewMockenvAppGetter(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
+				m := climocks.NewMockprojectService(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -98,8 +99,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("describe stack %s: %s", stack.NameForEnv(testProject, testEnv), "some error"),
 		},
 		"stack does not exist": {
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvAppGetter {
-				m := mocks.NewMockenvAppGetter(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
+				m := climocks.NewMockprojectService(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -119,8 +120,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("stack %s not found", stack.NameForEnv(testProject, testEnv)),
 		},
 		"https web application": {
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvAppGetter {
-				m := mocks.NewMockenvAppGetter(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
+				m := climocks.NewMockprojectService(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -172,8 +173,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			},
 		},
 		"http web application": {
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvAppGetter {
-				m := mocks.NewMockenvAppGetter(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
+				m := climocks.NewMockprojectService(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,

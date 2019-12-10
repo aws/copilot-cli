@@ -23,7 +23,7 @@ const (
 	deployFlag            = "deploy"
 	githubRepoFlag        = "github-repo"
 	githubAccessTokenFlag = "github-access-token"
-	enableCDFlag          = "enable-cd"
+	githubBranchFlag      = "github-branch"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
@@ -42,6 +42,7 @@ const (
 	dockerFileFlagShort        = "d"
 	githubRepoFlagShort        = "r"
 	githubAccessTokenFlagShort = "t"
+	githubBranchFlagShort      = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
 )
@@ -56,18 +57,17 @@ const (
 	yesFlagDescription     = "Skips confirmation prompt."
 	jsonFlagDescription    = "Output in JSON format."
 
-	dockerFileFlagDescription        = "Path to the Dockerfile."
+	dockerFileFlagDescription        = "Path to the directory with Dockerfile."
 	imageTagFlagDescription          = `Optional. The application's image tag.`
 	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription           = "If the environment contains production services."
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
 	githubRepoFlagDescription        = "GitHub repository for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
+	githubBranchFlagDescription      = "Branch name of your Github repository"
 	deployPipelineFlagDescription    = "Deploys the pipeline."
-	enableCDFlagDescription          = "Enables automatic deployment to production environment."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
-	deployFlagDescription            = "Trigger a deployment of your application(s) to any new stage in your pipeline."
 	appLocalFlagDescription          = "Only show applications in the current directory."
 )

@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: Apache-2.0
 
 package manifest
@@ -12,6 +11,7 @@ import (
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
@@ -94,22 +94,54 @@ type Source struct {
 	Properties   map[string]interface{} `yaml:"properties"`
 }
 
+// App defines configurations related to how an app should be deployed, verified
+// in the pipeline
+type App struct {
+	IntegTestBuildspecPath string `structs:"integrationTestBuildspec" yaml:"integrationTestBuildspec"`
+}
+
+// Properties return the configurations as a map
+func (a App) Properties() map[string]interface{} {
+	return structs.Map(a)
+}
+
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name string `yaml:"name`
+	Name string         `yaml:"name`
+	Apps map[string]App `yaml:"apps"`
 }
 
 // CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, stageNames []string) (*PipelineManifest, error) {
+func CreatePipeline(
+	pipelineName string,
+	provider Provider,
+	stageNames []string,
+	apps []archer.Manifest) (*PipelineManifest, error) {
+
 	// TODO: #221 Do more validations
 	if len(stageNames) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
 	}
 
+	if len(apps) == 0 {
+		return nil, fmt.Errorf("a pipeline %s can not be created without any app to deploy",
+			pipelineName)
+	}
+
+	appsInPipeline := make(map[string]App)
+	for _, app := range apps {
+		appsInPipeline[app.AppName()] = App{
+			IntegTestBuildspecPath: app.IntegTestBuildspecPath(),
+		}
+	}
+
 	stages := make([]PipelineStage, 0, len(stageNames))
 	for _, name := range stageNames {
-		stages = append(stages, PipelineStage{Name: name})
+		stages = append(stages, PipelineStage{
+			Name: name,
+			Apps: appsInPipeline,
+		})
 	}
 
 	return &PipelineManifest{

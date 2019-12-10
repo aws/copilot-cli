@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"bytes"
+	"path/filepath"
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/templates"
@@ -103,6 +104,11 @@ func (m *LBFargateManifest) Marshal() ([]byte, error) {
 // DockerfilePath returns the image build path.
 func (m LBFargateManifest) DockerfilePath() string {
 	return m.Image.Build
+}
+
+// IntegTestBuildspecPath returns the path to the
+func (m LBFargateManifest) IntegTestBuildspecPath() string {
+	return filepath.Join(m.Image.Build, IntegTestBuildspecFileName)
 }
 
 // EnvConf returns the application configuration with environment overrides.

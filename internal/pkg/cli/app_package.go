@@ -4,12 +4,12 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -46,6 +47,7 @@ type PackageAppOpts struct {
 	stackWriter  io.Writer
 	paramsWriter io.Writer
 	fs           afero.Fs
+	runner       runner
 
 	*GlobalOpts // Embed global options.
 }
@@ -54,22 +56,22 @@ type PackageAppOpts struct {
 // The CloudFormation template is written to stdout and the parameters are discarded by default.
 // If an error occurred while running git, we leave the image tag empty "".
 func NewPackageAppOpts() *PackageAppOpts {
-	commitID, err := exec.Command("git", "rev-parse", "--short", "HEAD").CombinedOutput()
-	if err != nil {
-		return &PackageAppOpts{
-			stackWriter:  os.Stdout,
-			paramsWriter: ioutil.Discard,
-			fs:           &afero.Afero{Fs: afero.NewOsFs()},
-			GlobalOpts:   NewGlobalOpts(),
-		}
-	}
-	return &PackageAppOpts{
-		Tag:          fmt.Sprintf("manual-%s", strings.TrimSpace(string(commitID))),
+	opts := &PackageAppOpts{
+		runner:       command.New(),
 		stackWriter:  os.Stdout,
 		paramsWriter: ioutil.Discard,
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts:   NewGlobalOpts(),
 	}
+
+	var buf bytes.Buffer
+	if err := opts.runner.Run("git", []string{"rev-parse", "--short", "HEAD"}, command.Stdout(&buf)); err != nil {
+		return opts
+	}
+
+	opts.Tag = fmt.Sprintf("manual-%s", strings.TrimSpace(buf.String()))
+
+	return opts
 }
 
 // Ask prompts the user for any missing required fields.

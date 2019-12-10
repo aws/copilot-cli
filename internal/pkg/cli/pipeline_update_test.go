@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -33,6 +34,19 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			stages: []manifest.PipelineStage{
 				{
 					Name: "test",
+					Apps: map[string]manifest.App{
+						"frontend": manifest.App{
+							IntegTestBuildspecPath: filepath.Join("frontend", manifest.IntegTestBuildspecFileName),
+						},
+					},
+				},
+				{
+					Name: "gamma",
+					Apps: map[string]manifest.App{
+						"backend": manifest.App{
+							IntegTestBuildspecPath: filepath.Join("backend", manifest.IntegTestBuildspecFileName),
+						},
+					},
 				},
 			},
 			inProjectName: "badgoose",
@@ -42,23 +56,38 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						AppManifest: manifest.AppManifest{
 							Name: "frontend",
 						},
+						Image: manifest.ImageWithPort{
+							AppImage: manifest.AppImage{
+								Build: "frontend",
+							},
+						},
 					},
 					&manifest.LBFargateManifest{
 						AppManifest: manifest.AppManifest{
 							Name: "backend",
 						},
+						Image: manifest.ImageWithPort{
+							AppImage: manifest.AppImage{
+								Build: "backend",
+							},
+						},
 					}}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
-				mockEnv := &archer.Environment{
+				m.EXPECT().GetEnvironment("badgoose", "test").Return(&archer.Environment{
 					Name:      "test",
 					Project:   "badgoose",
 					Region:    "us-west-2",
 					AccountID: "123456789012",
 					Prod:      false,
-				}
-
-				m.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1)
+				}, nil)
+				m.EXPECT().GetEnvironment("badgoose", "gamma").Return(&archer.Environment{
+					Name:      "gamma",
+					Project:   "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      false,
+				}, nil).Times(1)
 			},
 
 			expectedStages: []deploy.PipelineStage{
@@ -69,7 +98,32 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						AccountID: "123456789012",
 						Prod:      false,
 					},
-					LocalApplications: []string{"frontend", "backend"},
+					LocalApplications: []deploy.AppInStage{
+						{
+							Name:                   "frontend",
+							IntegTestBuildspecPath: filepath.Join("frontend", manifest.IntegTestBuildspecFileName),
+						},
+						{
+							Name: "backend",
+						},
+					},
+				},
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "gamma",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+						Prod:      false,
+					},
+					LocalApplications: []deploy.AppInStage{
+						{
+							Name: "frontend",
+						},
+						{
+							Name:                   "backend",
+							IntegTestBuildspecPath: filepath.Join("backend", manifest.IntegTestBuildspecFileName),
+						},
+					},
 				},
 			},
 			expectedError: nil,

@@ -103,36 +103,36 @@ func TestValidateEnvironmentName(t *testing.T) {
 
 func TestIsCorrectFormat(t *testing.T) {
 	testCases := map[string]struct {
-		input string
+		input   string
 		isLegit bool
 	}{
 		"numbers only input": {
-			input: "1234",
-			isLegit:  false,
+			input:   "1234",
+			isLegit: false,
 		},
 		"lower-case alphabetic input only": {
-			input: "badgoose",
-			isLegit:  true,
+			input:   "badgoose",
+			isLegit: true,
 		},
 		"alphanumeric string input": {
-			input: "abc123",
-			isLegit:  true,
+			input:   "abc123",
+			isLegit: true,
 		},
 		"contains hyphen": {
-			input: "bad-goose",
-			isLegit:  true,
+			input:   "bad-goose",
+			isLegit: true,
 		},
 		"non-alphanumeric string input": {
-			input: "bad-goose!",
-			isLegit:  false,
+			input:   "bad-goose!",
+			isLegit: false,
 		},
 		"starts with non-letter": {
-			input: "1bad-goose",
-			isLegit:  false,
+			input:   "1bad-goose",
+			isLegit: false,
 		},
 		"contains capital letter": {
-			input: "badGoose",
-			isLegit:  false,
+			input:   "badGoose",
+			isLegit: false,
 		},
 	}
 
@@ -148,19 +148,19 @@ func TestIsCorrectFormat(t *testing.T) {
 func TestValidateGitHubRepo(t *testing.T) {
 	testCases := map[string]struct {
 		input string
-		err error
+		err   error
 	}{
 		"full url": {
 			input: "https://github.com/badgoose/chaos",
-			err:  nil,
+			err:   nil,
 		},
 		"owner and repo only": {
 			input: "badgoose/chaos",
-			err:  nil,
+			err:   nil,
 		},
 		"invalid repo": {
 			input: "THEGOOSE",
-			err: errInvalidGitHubRepo,
+			err:   errInvalidGitHubRepo,
 		},
 	}
 
@@ -172,4 +172,3 @@ func TestValidateGitHubRepo(t *testing.T) {
 		})
 	}
 }
-
