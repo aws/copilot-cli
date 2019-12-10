@@ -10,10 +10,12 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	awsmock "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -244,26 +246,64 @@ func TestStore_GetProject(t *testing.T) {
 	}
 }
 
+func genHostedZones() []*route53.HostedZone {
+	hostedZone := make([]*route53.HostedZone, 100)
+	for i := 0; i < 100; i++ {
+		hostedZone[i] = &route53.HostedZone{
+			Name: aws.String("example.com."),
+		}
+	}
+	return hostedZone
+}
+
 func TestStore_CreateProject(t *testing.T) {
+	hostedZonesBatch := genHostedZones()
 	testCases := map[string]struct {
 		inProject *archer.Project
 
-		mockListHostedZonesByName func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
-		mockPutParameter          func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
-		wantedErr                 error
+		mockRoute53      func(m *awsmock.MockRoute53API)
+		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+		wantedErr        error
 	}{
-		"with no existing project": {
+		"with paginated list hosted zones result": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
 
-			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DNSName)
-				return &route53.ListHostedZonesByNameOutput{
+			mockRoute53: func(m *awsmock.MockRoute53API) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
+					HostedZones:      hostedZonesBatch,
+					IsTruncated:      aws.Bool(true),
+					NextDNSName:      aws.String("nextDNS"),
+					NextHostedZoneId: aws.String("nextID"),
+				}, nil).Times(1)
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("nextDNS"), HostedZoneId: aws.String("nextID")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
 							Name: aws.String("phonetool.com."),
 						},
 					},
+				}, nil).Times(1)
+			},
+
+			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","version":"%s"}`, schemaVersion), *param.Value)
+
+				return &ssm.PutParameterOutput{
+					Version: aws.Int64(1),
 				}, nil
+			},
+			wantedErr: nil,
+		},
+		"with no existing project": {
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
+			mockRoute53: func(m *awsmock.MockRoute53API) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
+					HostedZones: []*route53.HostedZone{
+						&route53.HostedZone{
+							Name: aws.String("phonetool.com."),
+						},
+					},
+				}, nil).Times(1)
 			},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
@@ -278,16 +318,16 @@ func TestStore_CreateProject(t *testing.T) {
 		"DNS with subdomain": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "valid.phonetool.com."},
 
-			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
-				require.Equal(t, "valid.phonetool.com.", *in.DNSName)
-				return &route53.ListHostedZonesByNameOutput{
+			mockRoute53: func(m *awsmock.MockRoute53API) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("valid.phonetool.com.")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
 							Name: aws.String("valid.phonetool.com."),
 						},
 					},
-				}, nil
+				}, nil).Times(1)
 			},
+
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
 				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"valid.phonetool.com.","version":"%s"}`, schemaVersion), *param.Value)
@@ -300,28 +340,27 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with an unexpected domain name error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DNSName)
-				return nil, errors.New("some error")
+			mockRoute53: func(m *awsmock.MockRoute53API) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(nil, errors.New("some error")).Times(1)
 			},
 			wantedErr: errors.New("list hosted zone for phonetool.com: some error"),
 		},
 		"with no domain name found error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockListHostedZonesByName: func(t *testing.T, in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
-				require.Equal(t, "phonetool.com", *in.DNSName)
-				return &route53.ListHostedZonesByNameOutput{
+			mockRoute53: func(m *awsmock.MockRoute53API) {
+				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
 							Name: aws.String("examples.com."),
 						},
 					},
-				}, nil
+				}, nil).Times(1)
 			},
 			wantedErr: errors.New("no hosted zone found for phonetool.com"),
 		},
 		"with existing project": {
-			inProject: &archer.Project{Name: "phonetool", AccountID: "1234"},
+			inProject:   &archer.Project{Name: "phonetool", AccountID: "1234"},
+			mockRoute53: func(m *awsmock.MockRoute53API) {},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
@@ -330,7 +369,8 @@ func TestStore_CreateProject(t *testing.T) {
 			},
 		},
 		"with SSM error": {
-			inProject: &archer.Project{Name: "phonetool", AccountID: "1234"},
+			inProject:   &archer.Project{Name: "phonetool", AccountID: "1234"},
+			mockRoute53: func(m *awsmock.MockRoute53API) {},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, fmt.Errorf("broken")
 			},
@@ -341,15 +381,17 @@ func TestStore_CreateProject(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRoute53 := awsmock.NewMockRoute53API(ctrl)
+			tc.mockRoute53(mockRoute53)
 			store := &Store{
 				ssmClient: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 				},
-				hostedZoneClient: &mockRoute53{
-					t:                         t,
-					mockListHostedZonesByName: tc.mockListHostedZonesByName,
-				},
+				route53Svc: mockRoute53,
 			}
 
 			// WHEN

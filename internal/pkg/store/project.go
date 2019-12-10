@@ -6,6 +6,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -25,12 +26,28 @@ func (s *Store) CreateProject(project *archer.Project) error {
 	}
 
 	if project.Domain != "" {
+		domainExist := false
 		in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(project.Domain)}
-		resp, err := s.hostedZoneClient.ListHostedZonesByName(in)
+		resp, err := s.route53Svc.ListHostedZonesByName(in)
 		if err != nil {
 			return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
 		}
-		if !hostedZoneExist(resp.HostedZones, project.Domain) {
+		if hostedZoneExists(resp.HostedZones, project.Domain) {
+			domainExist = true
+		} else {
+			for aws.BoolValue(resp.IsTruncated) {
+				in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
+				resp, err = s.route53Svc.ListHostedZonesByName(in)
+				if err != nil {
+					return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
+				}
+				if hostedZoneExists(resp.HostedZones, project.Domain) {
+					domainExist = true
+					break
+				}
+			}
+		}
+		if !domainExist {
 			return fmt.Errorf("no hosted zone found for %s", project.Domain)
 		}
 	}
@@ -103,9 +120,9 @@ func (s *Store) ListProjects() ([]*archer.Project, error) {
 	return projects, nil
 }
 
-func hostedZoneExist(hostedZones []*route53.HostedZone, domain string) bool {
+func hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
 	for _, hostedZone := range hostedZones {
-		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
+		if domain == aws.StringValue(hostedZone.Name) || strings.HasPrefix(domain+".", aws.StringValue(hostedZone.Name)) {
 			return true
 		}
 	}
