@@ -446,8 +446,7 @@ func BuildPipelineInitCmd() *cobra.Command {
     --environments "stage,prod" \
     --deploy`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			err := opts.Validate()
-			if err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
 
@@ -473,7 +472,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.secretsmanager = secretsmanager
 			opts.box = templates.Box()
 
-			return err
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
