@@ -6,12 +6,12 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/route53"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/route53"
+	route53API "github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
@@ -27,24 +27,23 @@ func (s *Store) CreateProject(project *archer.Project) error {
 
 	if project.Domain != "" {
 		domainExist := false
-		in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(project.Domain)}
+		in := &route53API.ListHostedZonesByNameInput{DNSName: aws.String(project.Domain)}
 		resp, err := s.route53Svc.ListHostedZonesByName(in)
 		if err != nil {
 			return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
 		}
-		if hostedZoneExists(resp.HostedZones, project.Domain) {
-			domainExist = true
-		} else {
-			for aws.BoolValue(resp.IsTruncated) {
-				in = &route53.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
-				resp, err = s.route53Svc.ListHostedZonesByName(in)
-				if err != nil {
-					return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
-				}
-				if hostedZoneExists(resp.HostedZones, project.Domain) {
-					domainExist = true
-					break
-				}
+		for {
+			if route53.HostedZoneExists(resp.HostedZones, project.Domain) {
+				domainExist = true
+				break
+			}
+			if !aws.BoolValue(resp.IsTruncated) {
+				break
+			}
+			in = &route53API.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
+			resp, err = s.route53Svc.ListHostedZonesByName(in)
+			if err != nil {
+				return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
 			}
 		}
 		if !domainExist {
@@ -118,13 +117,4 @@ func (s *Store) ListProjects() ([]*archer.Project, error) {
 		projects = append(projects, &project)
 	}
 	return projects, nil
-}
-
-func hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
-	for _, hostedZone := range hostedZones {
-		if domain == aws.StringValue(hostedZone.Name) || strings.HasPrefix(domain+".", aws.StringValue(hostedZone.Name)) {
-			return true
-		}
-	}
-	return false
 }

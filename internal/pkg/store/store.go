@@ -48,7 +48,7 @@ type identityService interface {
 // Store is in charge of fetching and creating projects, environment and pipeline configuration in SSM.
 type Store struct {
 	idClient      identityService
-	route53Svc    route53.Route53API
+	route53Svc    route53.Lister
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }
