@@ -4,7 +4,7 @@
 package cli
 
 import (
-	"context"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -18,7 +18,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/gobuffalo/packd"
-	"github.com/google/go-github/github"
 
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -26,36 +25,23 @@ import (
 )
 
 func TestInitPipelineOpts_Ask(t *testing.T) {
-	ctx := context.Background()
 	githubOwner := "badGoose"
 	githubRepoName := "chaOS"
 	githubBadRepoName := "chaOA"
-	githubRepos := []*github.Repository{
-		&github.Repository{
-			Name: &githubRepoName,
-		},
-		&github.Repository{
-			Name: &githubBadRepoName,
-		},
-	}
 	githubToken := "hunter2"
-	githubBranch := "dev"
-	githubBadBranch := "master"
 	testCases := map[string]struct {
 		inEnvironments      []string
 		inGitHubOwner       string
 		inGitHubRepo        string
 		inGitHubAccessToken string
-		inGitHubBranch      string
 		inProjectEnvs       []string
 
-		mockPrompt     func(m *climocks.Mockprompter)
-		mockRepository func(m *climocks.Mockrepository)
+		mockPrompt func(m *climocks.Mockprompter)
+		buffer     bytes.Buffer
 
 		expectedGitHubOwner       string
 		expectedGitHubRepo        string
 		expectedGitHubAccessToken string
-		expectedGitHubBranch      string
 		expectedEnvironments      []string
 		expectedError             error
 	}{
@@ -64,20 +50,9 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(githubRepos, &github.Response{}, nil).Times(1)
-				m.EXPECT().ListBranches(ctx, githubOwner, githubRepoName, gomock.Any()).Return([]*github.Branch{
-					&github.Branch{
-						Name: &githubBranch,
-					},
-					&github.Branch{
-						Name: &githubBadBranch,
-					},
-				}, &github.Response{}, nil)
-			},
+			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+			origin	git@github.com:badGoose/chaOA.git (push)`),
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -85,16 +60,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubBranchPrompt, gomock.Any(), []string{githubBranch, githubBadBranch}).Return(githubBranch, nil).Times(1)
 			},
 
 			expectedGitHubOwner:       githubOwner,
 			expectedGitHubRepo:        githubRepoName,
 			expectedGitHubAccessToken: githubToken,
-			expectedGitHubBranch:      githubBranch,
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             nil,
 		},
@@ -103,10 +76,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
@@ -115,7 +85,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubOwner:       githubOwner,
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("confirm adding an environment: some error"),
 		},
@@ -124,10 +93,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -137,18 +103,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubOwner:       "",
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("failed to add environment: some error"),
+			expectedError:             fmt.Errorf("add environment: some error"),
 		},
 		"returns error if fail to get GitHub owner name": {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			mockRepository: func(m *climocks.Mockrepository) {},
+			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+			origin	git@github.com:badGoose/chaOA.git (push)`),
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -156,53 +121,23 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return("", errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       "",
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("fail to get GitHub owner name: some error"),
-		},
-		"returns error if fail to list GitHub repos": {
-			inEnvironments:      []string{},
-			inGitHubRepo:        "",
-			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
-			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(nil, nil, errors.New("some error")).Times(1)
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
-
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
-			},
-
-			expectedGitHubOwner:       "",
-			expectedGitHubRepo:        "",
-			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
-			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("fail to list repositories of %s: some error", githubOwner),
+			expectedError:             fmt.Errorf("get GitHub owner name: some error"),
 		},
 		"returns error if fail to get GitHub repos": {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(githubRepos, &github.Response{}, nil).Times(1)
-			},
+			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+			origin	git@github.com:badGoose/chaOA.git (push)`),
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -210,27 +145,24 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return("", errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       "",
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("failed to get GitHub repository: some error"),
+			expectedError:             fmt.Errorf("get GitHub repository: some error"),
 		},
 		"returns error if fail to get GitHub access token": {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(githubRepos, &github.Response{}, nil).Times(1)
-			},
+			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+			origin	git@github.com:badGoose/chaOA.git (push)`),
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -238,7 +170,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
@@ -246,77 +178,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubOwner:       "",
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("failed to get GitHub access token: some error"),
-		},
-		"returns error if fail to list branches": {
-			inEnvironments:      []string{},
-			inGitHubRepo:        "",
-			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
-			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(githubRepos, &github.Response{}, nil).Times(1)
-				m.EXPECT().ListBranches(ctx, githubOwner, githubRepoName, gomock.Any()).Return(nil, nil, errors.New("some error"))
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
-
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
-				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
-			},
-
-			expectedGitHubOwner:       "",
-			expectedGitHubRepo:        "",
-			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
-			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("failed to list branches for %s: Problem in getting repository information some error", githubRepoName),
-		},
-		"returns error if fail to get branches": {
-			inEnvironments:      []string{},
-			inGitHubRepo:        "",
-			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
-			inProjectEnvs:       []string{"test", "prod"},
-
-			mockRepository: func(m *climocks.Mockrepository) {
-				m.EXPECT().List(ctx, githubOwner, gomock.Any()).Return(githubRepos, &github.Response{}, nil).Times(1)
-				m.EXPECT().ListBranches(ctx, githubOwner, githubRepoName, gomock.Any()).Return([]*github.Branch{
-					&github.Branch{
-						Name: &githubBranch,
-					},
-					&github.Branch{
-						Name: &githubBadBranch,
-					},
-				}, &github.Response{}, nil)
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
-
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubOwnerPrompt), gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
-				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubBranchPrompt, gomock.Any(), []string{githubBranch, githubBadBranch}).Return("", errors.New("some error")).Times(1)
-			},
-
-			expectedGitHubOwner:       "",
-			expectedGitHubRepo:        "",
-			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
-			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("failed to get GitHub branch name: some error"),
+			expectedError:             fmt.Errorf("get GitHub access token: some error"),
 		},
 	}
 
@@ -327,19 +190,15 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
-			mockRepo := climocks.NewMockrepository(ctrl)
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
 				GitHubOwner:       tc.inGitHubOwner,
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubAccessToken,
-				GitHubBranch:      tc.inGitHubBranch,
-
-				repo:    mockRepo,
-				context: context.Background(),
 
 				projectEnvs: tc.inProjectEnvs,
+				buffer:      tc.buffer,
 
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompt,
@@ -347,7 +206,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			}
 
 			tc.mockPrompt(mockPrompt)
-			tc.mockRepository(mockRepo)
 
 			// WHEN
 			err := opts.Ask()
@@ -360,7 +218,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.Equal(t, tc.expectedGitHubOwner, opts.GitHubOwner)
 				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
-				require.Equal(t, tc.expectedGitHubBranch, opts.GitHubBranch)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
 			}
 		})
@@ -705,16 +562,18 @@ func TestInitPipelineOpts_createSecretName(t *testing.T) {
 
 func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inGitHubRepo  string
-		inProjectName string
+		inGitHubRepo   string
+		inProjectName  string
+		inProjectOwner string
 
 		expected string
 	}{
 		"matches repo name": {
-			inGitHubRepo:  "goose",
-			inProjectName: "badgoose",
+			inGitHubRepo:   "goose",
+			inProjectName:  "badgoose",
+			inProjectOwner: "david",
 
-			expected: "pipeline-badgoose-goose",
+			expected: "pipeline-badgoose-david-goose",
 		},
 	}
 
@@ -722,8 +581,9 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			opts := &InitPipelineOpts{
-				GitHubRepo: tc.inGitHubRepo,
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				GitHubRepo:  tc.inGitHubRepo,
+				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
+				GitHubOwner: tc.inProjectOwner,
 			}
 
 			// WHEN

@@ -4,22 +4,23 @@
 package cli
 
 import (
-	"context"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
-	"github.com/google/go-github/github"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -31,8 +32,8 @@ const (
 	pipelineAddEnvHelpPrompt             = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineAddMoreEnvHelpPrompt         = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineSelectEnvPrompt              = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubOwnerPrompt       = "What is your GitHub owner name for your application?"
-	pipelineEnterGitHubOwnerHelpPrompt   = "Owner name of the GitHub repository that linked to your workspace. Pushing to this repository will trigger your pipeline build stage."
+	pipelineSelectGitHubOwnerPrompt      = "Which GitHub owner would you like to use for your application?"
+	pipelineSelectGitHubOwnerHelpPrompt  = `Owner name of the GitHub repository that linked to your workspace. Pushing to this repository will trigger your pipeline build stage. For example, the owner of https://github.com/aws/amazon-ecs-cli-v2/ is "aws".`
 	pipelineSelectGitHubRepoPrompt       = "Which GitHub repository would you like to use for your application?"
 	pipelineSelectGitHubRepoHelpPrompt   = "The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage."
 	pipelineSelectGitHubBranchPrompt     = "Which branch would you like to use?"
@@ -43,6 +44,7 @@ const (
 	buildspecTemplatePath          = "cicd/buildspec.yml"
 	integTestBuildspecTemplatePath = "cicd/" + manifest.IntegTestBuildspecFileName
 	githubURL                      = "github.com/"
+	masterBranch                   = "master"
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
@@ -62,8 +64,7 @@ type InitPipelineOpts struct {
 	workspace      archer.Workspace
 	secretsmanager archer.SecretsManager
 	box            packd.Box
-	repo           repository
-	context        context.Context
+	runner         runner
 
 	// Outputs stored on successful actions.
 	manifestPath            string
@@ -74,6 +75,7 @@ type InitPipelineOpts struct {
 	// Caches environments
 	projectEnvs []string
 	fsUtils     *afero.Afero
+	buffer      bytes.Buffer
 
 	*GlobalOpts
 }
@@ -81,6 +83,7 @@ type InitPipelineOpts struct {
 // NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
+		runner:     command.New(),
 		fsUtils:    &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts: NewGlobalOpts(),
 	}
@@ -95,7 +98,7 @@ func (opts *InitPipelineOpts) Ask() error {
 	}
 
 	if opts.GitHubOwner == "" {
-		if err := opts.getGitHubOwner(); err != nil {
+		if err := opts.selectGitHubOwner(); err != nil {
 			return err
 		}
 	}
@@ -113,9 +116,7 @@ func (opts *InitPipelineOpts) Ask() error {
 	}
 
 	if opts.GitHubBranch == "" {
-		if err := opts.getGitHubBranch(); err != nil {
-			return err
-		}
+		opts.GitHubBranch = masterBranch
 	}
 
 	return nil
@@ -200,7 +201,7 @@ func (opts *InitPipelineOpts) createSecretName() string {
 }
 
 func (opts *InitPipelineOpts) createPipelineName() string {
-	return fmt.Sprintf("pipeline-%s-%s", opts.projectName, opts.GitHubRepo)
+	return fmt.Sprintf("pipeline-%s-%s-%s", opts.projectName, opts.GitHubOwner, opts.GitHubRepo)
 }
 
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
@@ -286,7 +287,7 @@ func (opts *InitPipelineOpts) selectEnvironments() error {
 			break
 		}
 		if err := opts.selectEnvironment(); err != nil {
-			return fmt.Errorf("failed to add environment: %w", err)
+			return fmt.Errorf("add environment: %w", err)
 		}
 		if len(opts.listAvailableEnvironments()) == 0 {
 			break
@@ -355,43 +356,49 @@ func relPath(fullPath string) string {
 	return relPath
 }
 
-func (opts *InitPipelineOpts) getGitHubOwner() error {
-	owner, err := opts.prompt.Get(
-		pipelineEnterGitHubOwnerPrompt,
-		pipelineEnterGitHubOwnerHelpPrompt,
-		nil,
+func (opts *InitPipelineOpts) selectGitHubOwner() error {
+	owners, _ := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+	owner, err := opts.prompt.SelectOne(
+		pipelineSelectGitHubOwnerPrompt,
+		pipelineSelectGitHubOwnerHelpPrompt,
+		owners,
 	)
 	if err != nil {
-		return fmt.Errorf("fail to get GitHub owner name: %w", err)
+		return fmt.Errorf("get GitHub owner name: %w", err)
 	}
 	opts.GitHubOwner = owner
+
 	return nil
 }
 
-func (opts *InitPipelineOpts) listGitHubRepo() ([]string, error) {
-	repos, _, err := opts.repo.List(opts.context, opts.GitHubOwner, &github.RepositoryListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("fail to list repositories of %s: %w", opts.GitHubOwner, err)
+func parseGitRemoteResult(s string) ([]string, []string) {
+	var owners, repos []string
+	ownerSet := make(map[string]bool)
+	repoSet := make(map[string]bool)
+	items := strings.Split(s, "\n")
+	for _, item := range items {
+		paths := strings.Split(strings.TrimSuffix(strings.Split(strings.Split(item, ":")[1], " ")[0], ".git"), "/")
+		ownerSet[paths[0]] = true
+		repoSet[paths[1]] = true
 	}
-	repoNames := make([]string, 0, len(repos))
-	for _, repo := range repos {
-		repoNames = append(repoNames, repo.GetName())
+	for owner := range ownerSet {
+		owners = append(owners, owner)
 	}
-	return repoNames, nil
+	for repo := range repoSet {
+		repos = append(repos, repo)
+	}
+	return owners, repos
 }
 
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
-	repos, err := opts.listGitHubRepo()
-	if err != nil {
-		return err
-	}
+	_, repos := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
 	repo, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubRepoPrompt,
 		pipelineSelectGitHubRepoHelpPrompt,
 		repos,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub repository: %w", err)
+		return fmt.Errorf("get GitHub repository: %w", err)
 	}
 	opts.GitHubRepo = repo
 
@@ -405,7 +412,7 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub access token: %w", err)
+		return fmt.Errorf("get GitHub access token: %w", err)
 	}
 
 	opts.GitHubAccessToken = token
@@ -413,32 +420,32 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
-func (opts *InitPipelineOpts) getGitHubBranch() error {
-	branches, err := opts.listGitHubBranches()
-	if err != nil {
-		return fmt.Errorf("failed to list branches for %s: %w", opts.GitHubRepo, err)
-	}
-	branch, err := opts.prompt.SelectOne(pipelineSelectGitHubBranchPrompt, pipelineSelectGitHubBranchHelpPrompt, branches)
-	if err != nil {
-		return fmt.Errorf("failed to get GitHub branch name: %w", err)
-	}
+// func (opts *InitPipelineOpts) getGitHubBranch() error {
+// 	branches, err := opts.listGitHubBranches()
+// 	if err != nil {
+// 		return fmt.Errorf("list branches for %s: %w", opts.GitHubRepo, err)
+// 	}
+// 	branch, err := opts.prompt.SelectOne(pipelineSelectGitHubBranchPrompt, pipelineSelectGitHubBranchHelpPrompt, branches)
+// 	if err != nil {
+// 		return fmt.Errorf("get GitHub branch name: %w", err)
+// 	}
 
-	opts.GitHubBranch = branch
+// 	opts.GitHubBranch = branch
 
-	return nil
-}
+// 	return nil
+// }
 
-func (opts *InitPipelineOpts) listGitHubBranches() ([]string, error) {
-	branches, _, err := opts.repo.ListBranches(opts.context, opts.GitHubOwner, opts.GitHubRepo, &github.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("Problem in getting repository information %w", err)
-	}
-	branchNames := make([]string, 0, len(branches))
-	for _, branch := range branches {
-		branchNames = append(branchNames, branch.GetName())
-	}
-	return branchNames, nil
-}
+// func (opts *InitPipelineOpts) listGitHubBranches() ([]string, error) {
+// 	branches, _, err := opts.repo.ListBranches(opts.context, opts.GitHubOwner, opts.GitHubRepo, &github.ListOptions{})
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Problem in getting repository information %w", err)
+// 	}
+// 	branchNames := make([]string, 0, len(branches))
+// 	for _, branch := range branches {
+// 		branchNames = append(branchNames, branch.GetName())
+// 	}
+// 	return branchNames, nil
+// }
 
 func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
 	store, err := store.New()
@@ -473,11 +480,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the applications in your workspace:
 	/code $ ecs-preview pipeline init \
-		--github-owner "gitHubUserName"\
-    --github-repo "myFrontendApp" \
-    --github-access-token file://myGitHubToken \
-    --environments "stage,prod" \
-    --deploy`,
+	  /code  --github-owner "gitHubUserName" \
+	  /code  --github-repo "myFrontendApp" \
+	  /code  --github-access-token file://myGitHubToken \
+	  /code  --environments "stage,prod" \
+	  /code  --deploy`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
@@ -498,8 +505,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.secretsmanager = secretsmanager
 			opts.box = templates.Box()
 
-			opts.context = context.Background()
-			opts.repo = github.NewClient(nil).Repositories
+			// TODO: move all these PreRun setups in a method so that we can test them.
+			err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+			if err != nil {
+				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+			}
 
 			return opts.Validate()
 		}),

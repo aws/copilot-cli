@@ -64,10 +64,10 @@ const (
 	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription           = "If the environment contains production services."
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
-	githubOwnerFlagDescription       = "GitHub repository owner name for your application (must be provided together with --github-repo)."
-	githubRepoFlagDescription        = "GitHub repository name for your application (must be provided together with --github-owner)."
+	githubOwnerFlagDescription       = "GitHub repository owner name must be provided with --github-repo."
+	githubRepoFlagDescription        = "GitHub repository name must be provided with --github-owner."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
-	githubBranchFlagDescription      = "Branch name of your Github repository"
+	githubBranchFlagDescription      = "GitHub repository branch name."
 	deployPipelineFlagDescription    = "Deploys the pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
