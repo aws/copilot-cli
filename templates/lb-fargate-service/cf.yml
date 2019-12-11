@@ -125,13 +125,21 @@ Resources:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: 'DenyIAMActions'
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: 'Deny'
                 Action: 'iam:*'
                 Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                    'iam:ResourceTag/ecs-environment': !Sub '${EnvName}'
         - PolicyName: 'AllowPrefixedResources'
           PolicyDocument:
             Version: '2012-10-17'
@@ -169,7 +177,21 @@ Resources:
                   StringEquals:
                     'secretsmanager:ResourceTag/ecs-project': !Sub '${ProjectName}'
                     'secretsmanager:ResourceTag/ecs-environment': !Sub '${EnvName}'
-
+        - PolicyName: 'CloudWatchMetricsAndDashboard'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'cloudwatch:GetDashboard'
+                  - 'cloudwatch:ListDashboards'
+                  - 'cloudwatch:PutDashboard'
+                  - 'cloudwatch:ListMetrics'
+                Resource: '*'
 
   ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
