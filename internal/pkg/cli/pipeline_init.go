@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -375,11 +376,14 @@ func parseGitRemoteResult(s string) ([]string, []string) {
 	var owners, repos []string
 	ownerSet := make(map[string]bool)
 	repoSet := make(map[string]bool)
+	reOwner := regexp.MustCompile(`\:.*\/`)
+	reRepo := regexp.MustCompile(`\/.*\.git`)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		paths := strings.Split(strings.TrimSuffix(strings.Split(strings.Split(item, ":")[1], " ")[0], ".git"), "/")
-		ownerSet[paths[0]] = true
-		repoSet[paths[1]] = true
+		owner := strings.TrimSuffix(strings.TrimPrefix(reOwner.FindString(item), ":"), "/")
+		repo := strings.TrimSuffix(strings.TrimPrefix(reRepo.FindString(item), "/"), ".git")
+		ownerSet[owner] = true
+		repoSet[repo] = true
 	}
 	for owner := range ownerSet {
 		owners = append(owners, owner)
@@ -419,33 +423,6 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 
 	return nil
 }
-
-// func (opts *InitPipelineOpts) getGitHubBranch() error {
-// 	branches, err := opts.listGitHubBranches()
-// 	if err != nil {
-// 		return fmt.Errorf("list branches for %s: %w", opts.GitHubRepo, err)
-// 	}
-// 	branch, err := opts.prompt.SelectOne(pipelineSelectGitHubBranchPrompt, pipelineSelectGitHubBranchHelpPrompt, branches)
-// 	if err != nil {
-// 		return fmt.Errorf("get GitHub branch name: %w", err)
-// 	}
-
-// 	opts.GitHubBranch = branch
-
-// 	return nil
-// }
-
-// func (opts *InitPipelineOpts) listGitHubBranches() ([]string, error) {
-// 	branches, _, err := opts.repo.ListBranches(opts.context, opts.GitHubOwner, opts.GitHubRepo, &github.ListOptions{})
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Problem in getting repository information %w", err)
-// 	}
-// 	branchNames := make([]string, 0, len(branches))
-// 	for _, branch := range branches {
-// 		branchNames = append(branchNames, branch.GetName())
-// 	}
-// 	return branchNames, nil
-// }
 
 func (opts *InitPipelineOpts) getEnvNames() ([]string, error) {
 	store, err := store.New()
