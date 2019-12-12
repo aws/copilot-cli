@@ -358,7 +358,12 @@ func relPath(fullPath string) string {
 }
 
 func (opts *InitPipelineOpts) selectGitHubOwner() error {
+	err := opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+	if err != nil {
+		return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+	}
 	owners, _ := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+	opts.buffer.Reset()
 	owner, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubOwnerPrompt,
 		pipelineSelectGitHubOwnerHelpPrompt,
@@ -395,7 +400,12 @@ func parseGitRemoteResult(s string) ([]string, []string) {
 }
 
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
+	err := opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+	if err != nil {
+		return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+	}
 	_, repos := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+	opts.buffer.Reset()
 	repo, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubRepoPrompt,
 		pipelineSelectGitHubRepoHelpPrompt,
@@ -483,10 +493,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.box = templates.Box()
 
 			// TODO: move all these PreRun setups in a method so that we can test them.
-			err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
-			if err != nil {
-				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
-			}
 
 			return opts.Validate()
 		}),

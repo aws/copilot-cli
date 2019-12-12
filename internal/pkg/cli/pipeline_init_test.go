@@ -37,7 +37,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inProjectEnvs       []string
 
 		mockPrompt func(m *climocks.Mockprompter)
-		buffer     bytes.Buffer
+		mockRunner func(m *climocks.Mockrunner, opts *InitPipelineOpts)
 
 		expectedGitHubOwner       string
 		expectedGitHubRepo        string
@@ -51,8 +51,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
-			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-			origin	git@github.com:badGoose/chaOA.git (push)`),
+
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
+				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
+					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+					origin	git@github.com:badGoose/chaOA.git (push)`)
+				}).Times(2)
+			},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -78,6 +83,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
 
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {},
+
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
 			},
@@ -95,6 +102,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
 
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {},
+
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("", errors.New("some error")).Times(1)
@@ -106,14 +115,44 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("add environment: some error"),
 		},
-		"returns error if fail to get GitHub owner name": {
+		"returns error if fail to retrieve GitHub remote info": {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-			origin	git@github.com:badGoose/chaOA.git (push)`),
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
+				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
+					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+					origin	git@github.com:badGoose/chaOA.git (push)`)
+				}).Return(fmt.Errorf("some error")).Times(1)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
+			},
+
+			expectedGitHubOwner:       "",
+			expectedGitHubRepo:        "",
+			expectedGitHubAccessToken: "",
+			expectedEnvironments:      []string{},
+			expectedError:             fmt.Errorf("get remote repository info: some error, run `git remote add` first please"),
+		},
+		"returns error if fail to select GitHub owner name": {
+			inEnvironments:      []string{},
+			inGitHubRepo:        "",
+			inGitHubAccessToken: "",
+			inProjectEnvs:       []string{"test", "prod"},
+
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
+				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
+					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+					origin	git@github.com:badGoose/chaOA.git (push)`)
+				}).Times(1)
+			},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -136,8 +175,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-			origin	git@github.com:badGoose/chaOA.git (push)`),
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
+				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
+					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+					origin	git@github.com:badGoose/chaOA.git (push)`)
+				}).Times(2)
+			},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -161,8 +204,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubAccessToken: "",
 			inProjectEnvs:       []string{"test", "prod"},
 
-			buffer: *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-			origin	git@github.com:badGoose/chaOA.git (push)`),
+			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
+				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
+					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
+					origin	git@github.com:badGoose/chaOA.git (push)`)
+				}).Times(2)
+			},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
@@ -190,6 +237,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockRunner := climocks.NewMockrunner(ctrl)
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
@@ -198,7 +246,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				GitHubAccessToken: tc.inGitHubAccessToken,
 
 				projectEnvs: tc.inProjectEnvs,
-				buffer:      tc.buffer,
+				runner:      mockRunner,
 
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompt,
@@ -206,6 +254,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			}
 
 			tc.mockPrompt(mockPrompt)
+			tc.mockRunner(mockRunner, opts)
 
 			// WHEN
 			err := opts.Ask()
