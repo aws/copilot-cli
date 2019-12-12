@@ -67,7 +67,13 @@ Resources:
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
           Environment:
-          - Name: ECS_ENV_LB_DNS
+          - Name: ECS_CLI_PROJECT_NAME
+            Value: !Sub '${ProjectName}'
+          - Name: ECS_CLI_ENVIRONMENT_NAME
+            Value: !Sub '${EnvName}'
+          - Name: ECS_CLI_APP_NAME
+            Value: !Sub '${AppName}'
+          - Name: ECS_CLI_LB_DNS
             Value:
               Fn::ImportValue:
                 !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
@@ -118,8 +124,74 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/PowerUserAccess'
+      Policies:
+        - PolicyName: 'DenyIAMExceptTaggedRoles'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Deny'
+                Action: 'iam:*'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action: 'sts:AssumeRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
+                Condition:
+                  StringEquals:
+                    'iam:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                    'iam:ResourceTag/ecs-environment': !Sub '${EnvName}'
+        - PolicyName: 'AllowPrefixedResources'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: '*'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:redshift:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+
+                  - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:kinesis:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+                  - !Sub 'arn:aws:kinesisanalytics:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+        - PolicyName: 'AllowTaggedResources' # See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: '*'
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'aws:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                    'aws:ResourceTag/ecs-environment': !Sub '${EnvName}'
+              - Effect: 'Allow'
+                Action: '*'
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    'secretsmanager:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                    'secretsmanager:ResourceTag/ecs-environment': !Sub '${EnvName}'
+        - PolicyName: 'CloudWatchMetricsAndDashboard'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'cloudwatch:PutMetricData'
+                Resource: '*'
+              - Effect: 'Allow'
+                Action:
+                  - 'cloudwatch:GetDashboard'
+                  - 'cloudwatch:ListDashboards'
+                  - 'cloudwatch:PutDashboard'
+                  - 'cloudwatch:ListMetrics'
+                Resource: '*'
 
   ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
