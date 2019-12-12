@@ -83,8 +83,11 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if opts.DockerfilePath != "" {
-		if _, err := listDockerfiles(opts.fs, opts.DockerfilePath); err != nil {
+		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
 			return err
+		}
+		if !strings.HasSuffix(opts.DockerfilePath, "/Dockerfile") {
+			return fmt.Errorf("a valid Dockerfile path is required")
 		}
 	}
 	if opts.ProjectName() == "" {
