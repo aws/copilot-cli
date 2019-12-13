@@ -73,8 +73,10 @@ type InitPipelineOpts struct {
 	integTestBuildspecPaths []string
 	secretName              string
 
-	// Caches environments
+	// Caches variables
 	projectEnvs []string
+	owners      []string
+	repos       []string
 	fsUtils     *afero.Afero
 	buffer      bytes.Buffer
 
@@ -354,16 +356,10 @@ func relPath(fullPath string) string {
 }
 
 func (opts *InitPipelineOpts) selectGitHubOwner() error {
-	err := opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
-	if err != nil {
-		return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
-	}
-	owners, _ := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
-	opts.buffer.Reset()
 	owner, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubOwnerPrompt,
 		pipelineSelectGitHubOwnerHelpPrompt,
-		owners,
+		opts.owners,
 	)
 	if err != nil {
 		return fmt.Errorf("get GitHub owner name: %w", err)
@@ -396,16 +392,10 @@ func parseGitRemoteResult(s string) ([]string, []string) {
 }
 
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
-	err := opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
-	if err != nil {
-		return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
-	}
-	_, repos := parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
-	opts.buffer.Reset()
 	repo, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubRepoPrompt,
 		pipelineSelectGitHubRepoHelpPrompt,
-		repos,
+		opts.repos,
 	)
 	if err != nil {
 		return fmt.Errorf("get GitHub repository: %w", err)
@@ -473,6 +463,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 				return err
 			}
 
+			// TODO: move these logic to a method
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
 				return fmt.Errorf("couldn't get environments: %w", err)
@@ -494,6 +485,13 @@ func BuildPipelineInitCmd() *cobra.Command {
 			}
 			opts.secretsmanager = secretsmanager
 			opts.box = templates.Box()
+
+			err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+			if err != nil {
+				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+			}
+			opts.owners, opts.repos = parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+			opts.buffer.Reset()
 
 			return nil
 		}),
