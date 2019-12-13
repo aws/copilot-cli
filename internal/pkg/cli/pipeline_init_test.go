@@ -27,7 +27,6 @@ import (
 func TestInitPipelineOpts_Ask(t *testing.T) {
 	githubOwner := "badGoose"
 	githubRepoName := "chaOS"
-	githubBadRepoName := "chaOA"
 	githubToken := "hunter2"
 	testCases := map[string]struct {
 		inEnvironments      []string
@@ -55,7 +54,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
 				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
 					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-					origin	git@github.com:badGoose/chaOA.git (push)`)
+					origin	git@github.com:badGoose/chaOS.git (push)`)
 				}).Times(2)
 			},
 
@@ -66,7 +65,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return(githubRepoName, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
@@ -124,7 +123,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
 				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
 					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-					origin	git@github.com:badGoose/chaOA.git (push)`)
+					origin	git@github.com:badGoose/chaOS.git (push)`)
 				}).Return(fmt.Errorf("some error")).Times(1)
 			},
 
@@ -150,7 +149,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
 				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
 					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-					origin	git@github.com:badGoose/chaOA.git (push)`)
+					origin	git@github.com:badGoose/chaOS.git (push)`)
 				}).Times(1)
 			},
 
@@ -178,7 +177,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
 				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
 					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-					origin	git@github.com:badGoose/chaOA.git (push)`)
+					origin	git@github.com:badGoose/chaOS.git (push)`)
 				}).Times(2)
 			},
 
@@ -189,7 +188,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return("", errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       "",
@@ -207,7 +206,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockRunner: func(m *climocks.Mockrunner, opts *InitPipelineOpts) {
 				m.EXPECT().Run("git", []string{"remote", "-v"}, gomock.Any()).Do(func(x, y interface{}, z interface{}) {
 					opts.buffer = *bytes.NewBufferString(`origin	git@github.com:badGoose/chaOS.git (fetch)
-					origin	git@github.com:badGoose/chaOA.git (push)`)
+					origin	git@github.com:badGoose/chaOS.git (push)`)
 				}).Times(2)
 			},
 
@@ -218,7 +217,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
-				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName, githubBadRepoName}).Return(githubRepoName, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return(githubRepoName, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
 
