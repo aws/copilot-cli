@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"testing"
 
+	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/mocks"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,22 +34,24 @@ func TestGetCallerArn(t *testing.T) {
 	testCases := map[string]struct {
 		mockGetCallerIdentityFunc func(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
 
+		mockSTSAPI func(m *awsmocks.MockSTSAPI)
+
 		wantIdentity Caller
 		wantErr      error
 	}{
 		"should return wrapped error given error from STS GetCallerIdentity": {
-			mockGetCallerIdentityFunc: func(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-				return nil, mockError
+			mockSTSAPI: func(m *awsmocks.MockSTSAPI) {
+				m.EXPECT().GetCallerIdentity(&sts.GetCallerIdentityInput{}).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("get caller identity: %w", mockError),
 		},
 		"should return Identity": {
-			mockGetCallerIdentityFunc: func(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
-				return &sts.GetCallerIdentityOutput{
+			mockSTSAPI: func(m *awsmocks.MockSTSAPI) {
+				m.EXPECT().GetCallerIdentity(&sts.GetCallerIdentityInput{}).Return(&sts.GetCallerIdentityOutput{
 					Account: &mockAccount,
 					Arn:     &mockARN,
 					UserId:  &mockUserID,
-				}, nil
+				}, nil)
 			},
 			wantIdentity: Caller{
 				Account:     mockAccount,
@@ -59,10 +63,15 @@ func TestGetCallerArn(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSTSAPI := awsmocks.NewMockSTSAPI(ctrl)
+			tc.mockSTSAPI(mockSTSAPI)
+
 			service := Service{
-				mockSts{
-					mockGetCallerIdentityFunc: tc.mockGetCallerIdentityFunc,
-				},
+				sts: mockSTSAPI,
 			}
 
 			gotIdentity, gotErr := service.Get()

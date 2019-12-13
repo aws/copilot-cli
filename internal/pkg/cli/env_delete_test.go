@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -111,7 +112,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 		inProjectName string
 		inEnv         string
 		mockStore     func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
-		mockRG        func(ctrl *gomock.Controller) *climocks.MockresourceGetter
+		mockRG        func(ctrl *gomock.Controller) *awsmocks.MockResourceGroupsTaggingAPI
 
 		wantedError error
 	}{
@@ -123,7 +124,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, errors.New("some error"))
 				return envStore
 			},
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+			mockRG: func(ctrl *gomock.Controller) *awsmocks.MockResourceGroupsTaggingAPI {
 				return nil
 			},
 			wantedError: errors.New("get environment test metadata in project phonetool: some error"),
@@ -132,8 +133,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
-				rg := climocks.NewMockresourceGetter(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *awsmocks.MockResourceGroupsTaggingAPI {
+				rg := awsmocks.NewMockResourceGroupsTaggingAPI(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
 				return rg
 			},
@@ -143,8 +144,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
-				rg := climocks.NewMockresourceGetter(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *awsmocks.MockResourceGroupsTaggingAPI {
+				rg := awsmocks.NewMockResourceGroupsTaggingAPI(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
 						{
@@ -169,8 +170,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
-				rg := climocks.NewMockresourceGetter(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *awsmocks.MockResourceGroupsTaggingAPI {
+				rg := awsmocks.NewMockResourceGroupsTaggingAPI(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 				return rg

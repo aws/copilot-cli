@@ -9,11 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 )
 
-// Lister interface wraps up list actions for route53 client.
-type Lister interface {
-	ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
-}
-
 // HostedZoneExists checks if certain domain exists in any of the hosted zones.
 func HostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
 	for _, hostedZone := range hostedZones {

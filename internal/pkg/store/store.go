@@ -14,7 +14,7 @@ import (
 	"log"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/route53"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/iface"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
 	route53API "github.com/aws/aws-sdk-go/service/route53"
@@ -48,7 +48,7 @@ type identityService interface {
 // Store is in charge of fetching and creating projects, environment and pipeline configuration in SSM.
 type Store struct {
 	idClient      identityService
-	route53Svc    route53.Lister
+	route53Svc    iface.Route53API
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }

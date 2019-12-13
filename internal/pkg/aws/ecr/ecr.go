@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/iface"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 
 // Service wraps an AWS ECR client.
 type Service struct {
-	ecr ecriface.ECRAPI
+	ecr iface.ECRAPI
 }
 
 // New returns a Service configured against the input session.

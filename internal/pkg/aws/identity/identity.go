@@ -7,14 +7,14 @@ package identity
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/iface"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
 // Service wraps the internal sts client.
 type Service struct {
-	sts stsiface.STSAPI
+	sts iface.STSAPI
 }
 
 // New returns a Service configured with the input session.

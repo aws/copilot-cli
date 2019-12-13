@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/iface"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -37,10 +38,6 @@ const (
 	fmtDeleteEnvComplete = "Deleted environment %s from project %s."
 )
 
-type resourceGetter interface {
-	GetResources(*resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
-}
-
 // DeleteEnvOpts holds the fields needed to delete an environment.
 type DeleteEnvOpts struct {
 	// Required flags.
@@ -50,7 +47,7 @@ type DeleteEnvOpts struct {
 
 	// Interfaces for dependencies.
 	storeClient  archer.EnvironmentStore
-	rgClient     resourceGetter
+	rgClient     iface.ResourceGroupsTaggingAPI
 	deployClient environmentDeployer
 	prog         progress
 

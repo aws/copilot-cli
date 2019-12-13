@@ -261,14 +261,14 @@ func TestStore_CreateProject(t *testing.T) {
 	testCases := map[string]struct {
 		inProject *archer.Project
 
-		mockRoute53      func(m *awsmock.MockLister)
+		mockRoute53      func(m *awsmock.MockRoute53API)
 		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
 		wantedErr        error
 	}{
 		"with paginated list hosted zones result": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
 
-			mockRoute53: func(m *awsmock.MockLister) {
+			mockRoute53: func(m *awsmock.MockRoute53API) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones:      hostedZonesBatch,
 					IsTruncated:      aws.Bool(true),
@@ -296,7 +296,7 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with no existing project": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockRoute53: func(m *awsmock.MockLister) {
+			mockRoute53: func(m *awsmock.MockRoute53API) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
@@ -318,7 +318,7 @@ func TestStore_CreateProject(t *testing.T) {
 		"DNS with subdomain": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "valid.phonetool.com."},
 
-			mockRoute53: func(m *awsmock.MockLister) {
+			mockRoute53: func(m *awsmock.MockRoute53API) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("valid.phonetool.com.")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
@@ -340,14 +340,14 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with an unexpected domain name error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockRoute53: func(m *awsmock.MockLister) {
+			mockRoute53: func(m *awsmock.MockRoute53API) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(nil, errors.New("some error")).Times(1)
 			},
 			wantedErr: errors.New("list hosted zone for phonetool.com: some error"),
 		},
 		"with no domain name found error": {
 			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
-			mockRoute53: func(m *awsmock.MockLister) {
+			mockRoute53: func(m *awsmock.MockRoute53API) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{DNSName: aws.String("phonetool.com")}).Return(&route53.ListHostedZonesByNameOutput{
 					HostedZones: []*route53.HostedZone{
 						&route53.HostedZone{
@@ -360,7 +360,7 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with existing project": {
 			inProject:   &archer.Project{Name: "phonetool", AccountID: "1234"},
-			mockRoute53: func(m *awsmock.MockLister) {},
+			mockRoute53: func(m *awsmock.MockRoute53API) {},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
@@ -370,7 +370,7 @@ func TestStore_CreateProject(t *testing.T) {
 		},
 		"with SSM error": {
 			inProject:   &archer.Project{Name: "phonetool", AccountID: "1234"},
-			mockRoute53: func(m *awsmock.MockLister) {},
+			mockRoute53: func(m *awsmock.MockRoute53API) {},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, fmt.Errorf("broken")
 			},
@@ -384,7 +384,7 @@ func TestStore_CreateProject(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRoute53 := awsmock.NewMockLister(ctrl)
+			mockRoute53 := awsmock.NewMockRoute53API(ctrl)
 			tc.mockRoute53(mockRoute53)
 			store := &Store{
 				ssmClient: &mockSSM{
