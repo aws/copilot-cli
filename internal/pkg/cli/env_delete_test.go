@@ -111,7 +111,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 		inProjectName string
 		inEnv         string
 		mockStore     func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
-		mockRG        func(ctrl *gomock.Controller) *climocks.MockResourceGroupsTaggingAPIAPI
+		mockRG        func(ctrl *gomock.Controller) *climocks.MockresourceGetter
 
 		wantedError error
 	}{
@@ -123,7 +123,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, errors.New("some error"))
 				return envStore
 			},
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockResourceGroupsTaggingAPIAPI {
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
 				return nil
 			},
 			wantedError: errors.New("get environment test metadata in project phonetool: some error"),
@@ -132,8 +132,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockResourceGroupsTaggingAPIAPI {
-				rg := climocks.NewMockResourceGroupsTaggingAPIAPI(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
 				return rg
 			},
@@ -143,8 +143,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockResourceGroupsTaggingAPIAPI {
-				rg := climocks.NewMockResourceGroupsTaggingAPIAPI(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{
 						{
@@ -169,8 +169,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inProjectName: testProjName,
 			inEnv:         testEnvName,
 			mockStore:     storeWithEnv,
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockResourceGroupsTaggingAPIAPI {
-				rg := climocks.NewMockResourceGroupsTaggingAPIAPI(ctrl)
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 				return rg
