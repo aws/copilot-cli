@@ -11,7 +11,10 @@ COVERAGE=coverage.out
 DESTINATION=./bin/local/${BINARY_NAME}
 VERSION=$(shell git describe --always --tags)
 
-LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}
+BINARY_S3_BUCKET_PATH=https://amazon-ecs-cli-v2.s3.amazonaws.com
+
+LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}\
+-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
 # RELEASE_BUILD_LINKER_FLAGS disables DWARF and symbol table generation to reduce binary size
 RELEASE_BUILD_LINKER_FLAGS=-s -w
 
