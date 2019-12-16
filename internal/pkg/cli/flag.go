@@ -57,7 +57,7 @@ const (
 	yesFlagDescription     = "Skips confirmation prompt."
 	jsonFlagDescription    = "Output in JSON format."
 
-	dockerFileFlagDescription        = "Path to the directory with Dockerfile."
+	dockerFileFlagDescription        = "Path to the Dockerfile."
 	imageTagFlagDescription          = `Optional. The application's image tag.`
 	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription           = "If the environment contains production services."

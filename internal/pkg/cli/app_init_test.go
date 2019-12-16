@@ -206,7 +206,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			inProjectName: "",
 			wantedErr:     errNoProjectInWorkspace,
 		},
-		"valid dockerfile path but not Dockerfile": {
+		"invalid dockerfile path with a directory path": {
 			inAppName:        "frontend",
 			inAppType:        "Load Balanced Web App",
 			inDockerfilePath: "./hello",
@@ -214,7 +214,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 			},
-			wantedErr: errors.New("a valid Dockerfile path is required"),
+			wantedErr: errors.New("dockerfile path expected, got ./hello"),
 		},
 		"valid flags": {
 			inAppName:        "frontend",

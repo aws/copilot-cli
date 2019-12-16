@@ -83,11 +83,12 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if opts.DockerfilePath != "" {
-		if !strings.HasSuffix(opts.DockerfilePath, "/Dockerfile") {
-			return fmt.Errorf("a valid Dockerfile path is required")
-		}
-		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
+		isDir, err := afero.IsDir(opts.fs, opts.DockerfilePath)
+		if err != nil {
 			return err
+		}
+		if isDir {
+			return fmt.Errorf("dockerfile path expected, got %s", opts.DockerfilePath)
 		}
 	}
 	if opts.ProjectName() == "" {
