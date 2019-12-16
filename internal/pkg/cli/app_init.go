@@ -88,7 +88,7 @@ func (opts *InitAppOpts) Validate() error {
 			return err
 		}
 		if isDir {
-			return fmt.Errorf("dockerfile path expected, got %s", opts.DockerfilePath)
+			return fmt.Errorf("dockerfile path is a directory %s, please provide a path to file", opts.DockerfilePath)
 		}
 	}
 	if opts.ProjectName() == "" {

@@ -214,7 +214,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 			},
-			wantedErr: errors.New("dockerfile path expected, got ./hello"),
+			wantedErr: errors.New("dockerfile path is a directory ./hello, please provide a path to file"),
 		},
 		"valid flags": {
 			inAppName:        "frontend",
