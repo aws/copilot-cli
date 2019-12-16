@@ -34,8 +34,10 @@ const (
 	pipelineAddMoreEnvHelpPrompt         = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineSelectEnvPrompt              = "Which environment would you like to add to your pipeline?"
 	pipelineSelectGitHubOwnerPrompt      = "Which GitHub owner would you like to use for your application?"
+	pipelineGetGitHubOwnerPrompt         = "Cannot parse the result for `git remote -v`. What GitHub owner would you like to use for your application?"
 	pipelineSelectGitHubOwnerHelpPrompt  = `Owner name of the GitHub repository that linked to your workspace. Pushing to this repository will trigger your pipeline build stage. For example, the owner of https://github.com/aws/amazon-ecs-cli-v2/ is "aws".`
 	pipelineSelectGitHubRepoPrompt       = "Which GitHub repository would you like to use for your application?"
+	pipelineGetGitHubRepoPrompt          = "Cannot parse the result for `git remote -v`. What GitHub repo would you like to use for your application?"
 	pipelineSelectGitHubRepoHelpPrompt   = "The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage."
 	pipelineSelectGitHubBranchPrompt     = "Which branch would you like to use?"
 	pipelineSelectGitHubBranchHelpPrompt = "Name of the branch that you wish to use in your GitHub repository."
@@ -49,6 +51,8 @@ const (
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
+var errUnableParseOwner = errors.New("unable to parse github owner name")
+var errUnableParseRepo = errors.New("unable to parse github repo name")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -102,13 +106,25 @@ func (opts *InitPipelineOpts) Ask() error {
 
 	if opts.GitHubOwner == "" {
 		if err := opts.selectGitHubOwner(); err != nil {
-			return err
+			if err == errUnableParseOwner {
+				if err := opts.getGitHubOwner(); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 	}
 
 	if opts.GitHubRepo == "" {
 		if err := opts.selectGitHubRepo(); err != nil {
-			return err
+			if err == errUnableParseRepo {
+				if err := opts.getGitHubRepo(); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -355,7 +371,25 @@ func relPath(fullPath string) string {
 	return relPath
 }
 
+func (opts *InitPipelineOpts) getGitHubOwner() error {
+	owner, err := opts.prompt.Get(
+		pipelineGetGitHubOwnerPrompt,
+		pipelineSelectGitHubOwnerHelpPrompt, basicNameValidation,
+	)
+	if err != nil {
+		return fmt.Errorf("get GitHub owner name: %w", err)
+	}
+	opts.GitHubOwner = owner
+
+	return nil
+}
+
 func (opts *InitPipelineOpts) selectGitHubOwner() error {
+	for _, owner := range opts.owners {
+		if err := basicNameValidation(owner); err != nil {
+			return errUnableParseOwner
+		}
+	}
 	owner, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubOwnerPrompt,
 		pipelineSelectGitHubOwnerHelpPrompt,
@@ -393,7 +427,25 @@ func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, []string
 	return owners, repos
 }
 
+func (opts *InitPipelineOpts) getGitHubRepo() error {
+	repo, err := opts.prompt.Get(
+		pipelineGetGitHubRepoPrompt,
+		pipelineSelectGitHubRepoHelpPrompt, basicNameValidation,
+	)
+	if err != nil {
+		return fmt.Errorf("get GitHub repository: %w", err)
+	}
+	opts.GitHubRepo = repo
+
+	return nil
+}
+
 func (opts *InitPipelineOpts) selectGitHubRepo() error {
+	for _, repo := range opts.repos {
+		if err := basicNameValidation(repo); err != nil {
+			return errUnableParseRepo
+		}
+	}
 	repo, err := opts.prompt.SelectOne(
 		pipelineSelectGitHubRepoPrompt,
 		pipelineSelectGitHubRepoHelpPrompt,

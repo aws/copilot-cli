@@ -24,8 +24,10 @@ import (
 )
 
 func TestInitPipelineOpts_Ask(t *testing.T) {
-	githubOwner := "badGoose"
-	githubRepoName := "chaOS"
+	githubOwner := "bad-goose"
+	githubBadOwner := "//github.com/badGoose"
+	githubRepoName := "cha-os"
+	githubBadRepoName := "/github.com/bad-goose/cha-os"
 	githubToken := "hunter2"
 	testCases := map[string]struct {
 		inEnvironments      []string
@@ -61,7 +63,33 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return(githubRepoName, nil).Times(1)
-				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
+				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: cha-os"), gomock.Any()).Return(githubToken, nil).Times(1)
+			},
+
+			expectedGitHubOwner:       githubOwner,
+			expectedGitHubRepo:        githubRepoName,
+			expectedGitHubAccessToken: githubToken,
+			expectedEnvironments:      []string{"test", "prod"},
+			expectedError:             nil,
+		},
+		"prompts for all input with bad owner and repo name": {
+			inEnvironments:      []string{},
+			inGitHubOwner:       "",
+			inGitHubRepo:        "",
+			inGitHubAccessToken: "",
+			inProjectEnvs:       []string{"test", "prod"},
+			inOwners:            []string{githubBadOwner},
+			inRepos:             []string{githubBadRepoName},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
+
+				m.EXPECT().Get(pipelineGetGitHubOwnerPrompt, gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
+				m.EXPECT().Get(pipelineGetGitHubRepoPrompt, gomock.Any(), gomock.Any()).Return(githubRepoName, nil).Times(1)
+				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: cha-os"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
 			expectedGitHubOwner:       githubOwner,
@@ -132,7 +160,30 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("get GitHub owner name: some error"),
 		},
-		"returns error if fail to get GitHub repos": {
+		"returns error if fail to get GitHub owner name": {
+			inEnvironments:      []string{},
+			inGitHubRepo:        "",
+			inGitHubAccessToken: "",
+			inProjectEnvs:       []string{"test", "prod"},
+			inOwners:            []string{githubBadOwner},
+			inRepos:             []string{githubBadRepoName},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
+
+				m.EXPECT().Get(pipelineGetGitHubOwnerPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+			},
+
+			expectedGitHubOwner:       "",
+			expectedGitHubRepo:        "",
+			expectedGitHubAccessToken: "",
+			expectedEnvironments:      []string{},
+			expectedError:             fmt.Errorf("get GitHub owner name: some error"),
+		},
+		"returns error if fail to select GitHub repos": {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
@@ -148,6 +199,30 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return("", errors.New("some error")).Times(1)
+			},
+
+			expectedGitHubOwner:       "",
+			expectedGitHubRepo:        "",
+			expectedGitHubAccessToken: "",
+			expectedEnvironments:      []string{},
+			expectedError:             fmt.Errorf("get GitHub repository: some error"),
+		},
+		"returns error if fail to get GitHub repos": {
+			inEnvironments:      []string{},
+			inGitHubRepo:        "",
+			inGitHubAccessToken: "",
+			inProjectEnvs:       []string{"test", "prod"},
+			inOwners:            []string{githubBadOwner},
+			inRepos:             []string{githubBadRepoName},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
+				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
+
+				m.EXPECT().Get(pipelineGetGitHubOwnerPrompt, gomock.Any(), gomock.Any()).Return(githubOwner, nil).Times(1)
+				m.EXPECT().Get(pipelineGetGitHubRepoPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       "",
@@ -172,7 +247,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 				m.EXPECT().SelectOne(pipelineSelectGitHubOwnerPrompt, gomock.Any(), []string{githubOwner}).Return(githubOwner, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectGitHubRepoPrompt, gomock.Any(), []string{githubRepoName}).Return(githubRepoName, nil).Times(1)
-				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: chaOS"), gomock.Any()).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: cha-os"), gomock.Any()).Return("", errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       "",
