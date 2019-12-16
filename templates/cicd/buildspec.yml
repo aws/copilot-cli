@@ -4,8 +4,6 @@ phases:
   install:
     runtime-versions:
       docker: 18
-      golang: 1.13
-      nodejs: 10
       ruby: 2.6
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
