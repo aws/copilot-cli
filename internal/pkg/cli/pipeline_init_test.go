@@ -221,13 +221,6 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 		expectedError error
 	}{
-		"errors if no environments initialized": {
-			inProjectEnvs: []string{},
-			inProjectName: "badgoose",
-
-			expectedError: errNoEnvsInProject,
-		},
-
 		"invalid project name": {
 			inProjectName: "",
 			expectedError: errNoProjectInWorkspace,

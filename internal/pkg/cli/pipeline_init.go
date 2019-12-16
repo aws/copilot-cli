@@ -114,10 +114,6 @@ func (opts *InitPipelineOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 
-	if len(opts.projectEnvs) == 0 {
-		return errNoEnvsInProject
-	}
-
 	return nil
 }
 
@@ -450,9 +446,16 @@ func BuildPipelineInitCmd() *cobra.Command {
     --environments "stage,prod" \
     --deploy`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
 				return fmt.Errorf("couldn't get environments: %w", err)
+			}
+			if len(projectEnvs) == 0 {
+				return errNoEnvsInProject
 			}
 			opts.projectEnvs = projectEnvs
 
@@ -469,7 +472,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.secretsmanager = secretsmanager
 			opts.box = templates.Box()
 
-			return opts.Validate()
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {

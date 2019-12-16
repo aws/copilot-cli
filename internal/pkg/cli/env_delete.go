@@ -18,7 +18,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
-	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +37,10 @@ const (
 	fmtDeleteEnvComplete = "Deleted environment %s from project %s."
 )
 
+type resourceGetter interface {
+	GetResources(*resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
+}
+
 // DeleteEnvOpts holds the fields needed to delete an environment.
 type DeleteEnvOpts struct {
 	// Required flags.
@@ -47,7 +50,7 @@ type DeleteEnvOpts struct {
 
 	// Interfaces for dependencies.
 	storeClient  archer.EnvironmentStore
-	rgClient     resourcegroupstaggingapiiface.ResourceGroupsTaggingAPIAPI
+	rgClient     resourceGetter
 	deployClient environmentDeployer
 	prog         progress
 
