@@ -403,18 +403,28 @@ func (opts *InitPipelineOpts) selectGitHubOwner() error {
 	return nil
 }
 
+// examples:
+// efekarakus	git@github.com:efekarakus/grit.git (fetch)
+// efekarakus	https://github.com/karakuse/grit.git (fetch)
+// origin	https://github.com/koke/grit (fetch)
+// koke      git://github.com/koke/grit.git (push)
+func (opts *InitPipelineOpts) parseOwnerRepoName(s string, pattern string, prefix string, suffix string) string {
+	regexPattern := regexp.MustCompile(pattern)
+	regexResult := regexPattern.FindString(s)
+	resultWithoutSuffixAndPrefix := strings.TrimSuffix(strings.TrimPrefix(regexResult, prefix), suffix)
+	return resultWithoutSuffixAndPrefix
+}
+
 func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, []string) {
 	var owners, repos []string
 	ownerSet := make(map[string]bool)
 	repoSet := make(map[string]bool)
-	reOwner := regexp.MustCompile(`\:.*\/`)
-	reRepo := regexp.MustCompile(`\/.*\.git`)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		owner := strings.Split(strings.TrimSuffix(strings.TrimPrefix(reOwner.FindString(item), ":"), string(os.PathSeparator)), string(os.PathSeparator))
-		ownerName := owner[len(owner)-1]
-		repo := strings.Split(strings.TrimSuffix(strings.TrimPrefix(reRepo.FindString(item), string(os.PathSeparator)), ".git"), string(os.PathSeparator))
-		repoName := repo[len(repo)-1]
+		owner := strings.Split(opts.parseOwnerRepoName(item, `\:.*\/`, ":", string(os.PathSeparator)), string(os.PathSeparator))
+		ownerName := strings.TrimSpace(owner[len(owner)-1])
+		repo := strings.Split(opts.parseOwnerRepoName(item, `\/.*(\.git)? `, string(os.PathSeparator), ".git "), string(os.PathSeparator))
+		repoName := strings.TrimSpace(repo[len(repo)-1])
 		ownerSet[ownerName] = true
 		repoSet[repoName] = true
 	}

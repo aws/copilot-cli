@@ -663,3 +663,36 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 		})
 	}
 }
+
+func TestInitPipelineOpts_parseGitRemoteResult(t *testing.T) {
+	testCases := map[string]struct {
+		inRemoteResult string
+
+		expectedOwners []string
+		expectedRepos  []string
+	}{
+		"matches format": {
+			inRemoteResult: `efekarakus	git@github.com:efekarakus/grit.git (fetch)
+efekarakus	https://github.com/karakuse/cli.git (fetch)
+origin	https://github.com/koke/grit (fetch)
+koke	git://github.com/koke/grit.git (push)`,
+
+			expectedOwners: []string{"efekarakus", "karakuse", "koke"},
+			expectedRepos:  []string{"grit", "cli"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitPipelineOpts{}
+
+			// WHEN
+			owners, repos := opts.parseGitRemoteResult(tc.inRemoteResult)
+
+			// THEN
+			require.ElementsMatch(t, tc.expectedOwners, owners)
+			require.ElementsMatch(t, tc.expectedRepos, repos)
+		})
+	}
+}
