@@ -199,14 +199,14 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			wantedErr: fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
 		},
 		"invalid dockerfile directory path": {
-			inDockerfilePath: "./hello",
-			wantedErr:        errors.New("read directory: open hello: file does not exist"),
+			inDockerfilePath: "./hello/Dockerfile",
+			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
 		},
 		"invalid project name": {
 			inProjectName: "",
 			wantedErr:     errNoProjectInWorkspace,
 		},
-		"valid dockerfile directory with no dockerfile": {
+		"invalid dockerfile path with a directory path": {
 			inAppName:        "frontend",
 			inAppType:        "Load Balanced Web App",
 			inDockerfilePath: "./hello",
@@ -214,12 +214,12 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello", 0755)
 			},
-			wantedErr: errors.New("no Dockerfiles found within ./hello or a sub-directory level below"),
+			wantedErr: errors.New("dockerfile path is a directory ./hello, please provide a path to file"),
 		},
 		"valid flags": {
 			inAppName:        "frontend",
 			inAppType:        "Load Balanced Web App",
-			inDockerfilePath: "./hello",
+			inDockerfilePath: "./hello/Dockerfile",
 			inProjectName:    "phonetool",
 
 			mockFileSystem: func(mockFS afero.Fs) {

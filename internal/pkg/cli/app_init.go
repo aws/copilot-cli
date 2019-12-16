@@ -83,8 +83,12 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if opts.DockerfilePath != "" {
-		if _, err := listDockerfiles(opts.fs, opts.DockerfilePath); err != nil {
+		isDir, err := afero.IsDir(opts.fs, opts.DockerfilePath)
+		if err != nil {
 			return err
+		}
+		if isDir {
+			return fmt.Errorf("dockerfile path is a directory %s, please provide a path to file", opts.DockerfilePath)
 		}
 	}
 	if opts.ProjectName() == "" {
