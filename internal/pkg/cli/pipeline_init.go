@@ -369,7 +369,7 @@ func (opts *InitPipelineOpts) selectGitHubOwner() error {
 	return nil
 }
 
-func parseGitRemoteResult(s string) ([]string, []string) {
+func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, []string) {
 	var owners, repos []string
 	ownerSet := make(map[string]bool)
 	repoSet := make(map[string]bool)
@@ -377,10 +377,12 @@ func parseGitRemoteResult(s string) ([]string, []string) {
 	reRepo := regexp.MustCompile(`\/.*\.git`)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		owner := strings.TrimSuffix(strings.TrimPrefix(reOwner.FindString(item), ":"), "/")
-		repo := strings.TrimSuffix(strings.TrimPrefix(reRepo.FindString(item), "/"), ".git")
-		ownerSet[owner] = true
-		repoSet[repo] = true
+		owner := strings.Split(strings.TrimSuffix(strings.TrimPrefix(reOwner.FindString(item), ":"), string(os.PathSeparator)), string(os.PathSeparator))
+		ownerName := owner[len(owner)-1]
+		repo := strings.Split(strings.TrimSuffix(strings.TrimPrefix(reRepo.FindString(item), string(os.PathSeparator)), ".git"), string(os.PathSeparator))
+		repoName := repo[len(repo)-1]
+		ownerSet[ownerName] = true
+		repoSet[repoName] = true
 	}
 	for owner := range ownerSet {
 		owners = append(owners, owner)
@@ -490,7 +492,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
 			}
-			opts.owners, opts.repos = parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+			opts.owners, opts.repos = opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
 			opts.buffer.Reset()
 
 			return nil
