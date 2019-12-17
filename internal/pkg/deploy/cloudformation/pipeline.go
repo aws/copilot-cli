@@ -19,7 +19,10 @@ import (
 // PipelineExists checks if the pipeline with the provided config exists.
 func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, error) {
 	stackConfig := stack.NewPipelineStackConfig(in)
-	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
+	// TODO refactor to use cf.describeStack?
+	describeStackInput := &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackConfig.StackName()),
+	}
 	_, err := cf.describeStack(describeStackInput)
 	if err != nil {
 		var stackNotFound *ErrStackNotFound
@@ -62,4 +65,16 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 		&cloudformation.DescribeStacksInput{
 			StackName: aws.String(pipelineConfig.StackName()),
 		}, cf.waiters...)
+}
+
+func (cf CloudFormation) DeletePipeline(stackName string) error {
+	// Check if the stack exists
+	out, err := cf.describeStack(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		return err
+	}
+
+	return cf.delete(*out.StackId)
 }

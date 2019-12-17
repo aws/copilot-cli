@@ -34,6 +34,7 @@ const (
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	localAppFlag          = "local"
+	deleteSecretFlag      = "delete-secret"
 )
 
 // Short flag names.
@@ -83,4 +84,5 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	resourcesFlagDescription         = "Optional. Show the resources of your application."
 	localAppFlagDescription          = "Only show applications in the current directory."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
+	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 )
