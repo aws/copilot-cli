@@ -22,12 +22,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	fmtAppInitAppTypePrompt  = "Which type of %s best represents your application?"
+var (
+	appInitAppTypePrompt     = "Which type of " + color.Emphasize("infrastructure pattern") + " best represents your application?"
 	appInitAppTypeHelpPrompt = `Your application's architecture. Most applications need additional AWS resources to run.
 To help setup the infrastructure resources, select what "kind" or "type" of application you want to build.`
 
-	fmtAppInitAppNamePrompt     = "What do you want to %s this %s?"
+	fmtAppInitAppNamePrompt     = "What do you want to " + color.Emphasize("name") + " this %s?"
 	fmtAppInitAppNameHelpPrompt = `The name will uniquely identify this application within your %s project.
 Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`
 
@@ -173,11 +173,7 @@ func (opts *InitAppOpts) createAppInProject(projectName string) error {
 }
 
 func (opts *InitAppOpts) askAppType() error {
-	t, err := opts.prompt.SelectOne(
-		fmt.Sprintf(fmtAppInitAppTypePrompt, color.Emphasize("infrastructure pattern")),
-		appInitAppTypeHelpPrompt,
-		manifest.AppTypes)
-
+	t, err := opts.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
 	}
@@ -187,7 +183,7 @@ func (opts *InitAppOpts) askAppType() error {
 
 func (opts *InitAppOpts) askAppName() error {
 	name, err := opts.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppNamePrompt, color.Emphasize("name"), color.HighlightUserInput(opts.AppType)),
+		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(opts.AppType)),
 		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
 		validateApplicationName)
 	if err != nil {
