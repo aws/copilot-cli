@@ -33,12 +33,8 @@ const (
 	pipelineAddEnvHelpPrompt             = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineAddMoreEnvHelpPrompt         = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
 	pipelineSelectEnvPrompt              = "Which environment would you like to add to your pipeline?"
-	pipelineSelectGitHubOwnerPrompt      = "Which GitHub owner would you like to use for your application?"
-	pipelineGetGitHubOwnerPrompt         = "Cannot parse the result for `git remote -v`. What GitHub owner would you like to use for your application?"
-	pipelineSelectGitHubOwnerHelpPrompt  = `Owner name of the GitHub repository that linked to your workspace. Pushing to this repository will trigger your pipeline build stage. For example, the owner of https://github.com/aws/amazon-ecs-cli-v2/ is "aws".`
-	pipelineSelectGitHubRepoPrompt       = "Which GitHub repository would you like to use for your application?"
-	pipelineGetGitHubRepoPrompt          = "Cannot parse the result for `git remote -v`. What GitHub repo would you like to use for your application?"
-	pipelineSelectGitHubRepoHelpPrompt   = "The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage."
+	pipelineSelectGitHubURLPrompt        = "Which GitHub repository would you like to use for your application?"
+	pipelineSelectGitHubURLHelpPrompt    = `The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
 	pipelineSelectGitHubBranchPrompt     = "Which branch would you like to use?"
 	pipelineSelectGitHubBranchHelpPrompt = "Name of the branch that you wish to use in your GitHub repository."
 )
@@ -60,6 +56,7 @@ type InitPipelineOpts struct {
 	Environments      []string
 	GitHubOwner       string
 	GitHubRepo        string
+	GitHubURL         string
 	GitHubAccessToken string
 	GitHubBranch      string
 	PipelineFilename  string
@@ -79,8 +76,7 @@ type InitPipelineOpts struct {
 
 	// Caches variables
 	projectEnvs []string
-	owners      []string
-	repos       []string
+	repoURLs    []string
 	fsUtils     *afero.Afero
 	buffer      bytes.Buffer
 
@@ -98,38 +94,24 @@ func NewInitPipelineOpts() *InitPipelineOpts {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
+	var err error
 	if len(opts.Environments) == 0 {
-		if err := opts.selectEnvironments(); err != nil {
+		if err = opts.selectEnvironments(); err != nil {
 			return err
 		}
 	}
 
-	if opts.GitHubOwner == "" {
-		if err := opts.selectGitHubOwner(); err != nil {
-			if err == errUnableParseOwner {
-				if err := opts.getGitHubOwner(); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
+	if opts.GitHubURL == "" {
+		if err = opts.selectGitHubURL(); err != nil {
+			return err
 		}
 	}
-
-	if opts.GitHubRepo == "" {
-		if err := opts.selectGitHubRepo(); err != nil {
-			if err == errUnableParseRepo {
-				if err := opts.getGitHubRepo(); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
+	if opts.GitHubOwner, opts.GitHubRepo, err = opts.parseOwnerRepoName(opts.GitHubURL); err != nil {
+		return err
 	}
 
 	if opts.GitHubAccessToken == "" {
-		if err := opts.getGitHubAccessToken(); err != nil {
+		if err = opts.getGitHubAccessToken(); err != nil {
 			return err
 		}
 	}
@@ -371,36 +353,34 @@ func relPath(fullPath string) string {
 	return relPath
 }
 
-func (opts *InitPipelineOpts) getGitHubOwner() error {
-	owner, err := opts.prompt.Get(
-		pipelineGetGitHubOwnerPrompt,
-		pipelineSelectGitHubOwnerHelpPrompt, basicNameValidation,
+func (opts *InitPipelineOpts) selectGitHubURL() error {
+	url, err := opts.prompt.SelectOne(
+		pipelineSelectGitHubURLPrompt,
+		pipelineSelectGitHubURLHelpPrompt,
+		opts.repoURLs,
 	)
 	if err != nil {
-		return fmt.Errorf("get GitHub owner name: %w", err)
+		return fmt.Errorf("select GitHub URL: %w", err)
 	}
-	opts.GitHubOwner = owner
+	opts.GitHubURL = url
 
 	return nil
 }
 
-func (opts *InitPipelineOpts) selectGitHubOwner() error {
-	for _, owner := range opts.owners {
-		if err := basicNameValidation(owner); err != nil {
-			return errUnableParseOwner
-		}
+func (opts *InitPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
+	parsedURL := strings.TrimPrefix(url, opts.regexZeroLengthAssertion(url, `.*(github.com)(:|\/)`, "", ""))
+	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
+	if len(ownerRepo) != 2 {
+		return "", "", fmt.Errorf(`unable to parse the owner and repository for "%s", please pass in your repository URL with -u`, url)
 	}
-	owner, err := opts.prompt.SelectOne(
-		pipelineSelectGitHubOwnerPrompt,
-		pipelineSelectGitHubOwnerHelpPrompt,
-		opts.owners,
-	)
-	if err != nil {
-		return fmt.Errorf("get GitHub owner name: %w", err)
-	}
-	opts.GitHubOwner = owner
+	return ownerRepo[0], ownerRepo[1], nil
+}
 
-	return nil
+func (opts *InitPipelineOpts) regexZeroLengthAssertion(s string, pattern string, prefix string, suffix string) string {
+	regexPattern := regexp.MustCompile(pattern)
+	regexResult := regexPattern.FindString(s)
+	resultWithoutSuffixAndPrefix := strings.TrimSuffix(strings.TrimPrefix(regexResult, prefix), suffix)
+	return resultWithoutSuffixAndPrefix
 }
 
 // examples:
@@ -408,65 +388,21 @@ func (opts *InitPipelineOpts) selectGitHubOwner() error {
 // efekarakus	https://github.com/karakuse/grit.git (fetch)
 // origin	https://github.com/koke/grit (fetch)
 // koke      git://github.com/koke/grit.git (push)
-func (opts *InitPipelineOpts) parseOwnerRepoName(s string, pattern string, prefix string, suffix string) string {
-	regexPattern := regexp.MustCompile(pattern)
-	regexResult := regexPattern.FindString(s)
-	resultWithoutSuffixAndPrefix := strings.TrimSuffix(strings.TrimPrefix(regexResult, prefix), suffix)
-	return resultWithoutSuffixAndPrefix
-}
-
-func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, []string) {
-	var owners, repos []string
-	ownerSet := make(map[string]bool)
-	repoSet := make(map[string]bool)
+func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
+	var urls []string
+	urlSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		owner := strings.Split(opts.parseOwnerRepoName(item, `\:.*\/`, ":", string(os.PathSeparator)), string(os.PathSeparator))
-		ownerName := strings.TrimSpace(owner[len(owner)-1])
-		repo := strings.Split(opts.parseOwnerRepoName(item, `\/.*(\.git)? `, string(os.PathSeparator), ".git "), string(os.PathSeparator))
-		repoName := strings.TrimSpace(repo[len(repo)-1])
-		ownerSet[ownerName] = true
-		repoSet[repoName] = true
-	}
-	for owner := range ownerSet {
-		owners = append(owners, owner)
-	}
-	for repo := range repoSet {
-		repos = append(repos, repo)
-	}
-	return owners, repos
-}
-
-func (opts *InitPipelineOpts) getGitHubRepo() error {
-	repo, err := opts.prompt.Get(
-		pipelineGetGitHubRepoPrompt,
-		pipelineSelectGitHubRepoHelpPrompt, basicNameValidation,
-	)
-	if err != nil {
-		return fmt.Errorf("get GitHub repository: %w", err)
-	}
-	opts.GitHubRepo = repo
-
-	return nil
-}
-
-func (opts *InitPipelineOpts) selectGitHubRepo() error {
-	for _, repo := range opts.repos {
-		if err := basicNameValidation(repo); err != nil {
-			return errUnableParseRepo
+		url := strings.TrimSpace(opts.regexZeroLengthAssertion(item, `\s(http|git).* `, "\r", ".git "))
+		if url == "" {
+			return nil, fmt.Errorf(`unable to parse "%s" to get the URL for your repository, please pass in your repository URL with -u`, item)
 		}
+		urlSet[url] = true
 	}
-	repo, err := opts.prompt.SelectOne(
-		pipelineSelectGitHubRepoPrompt,
-		pipelineSelectGitHubRepoHelpPrompt,
-		opts.repos,
-	)
-	if err != nil {
-		return fmt.Errorf("get GitHub repository: %w", err)
+	for url := range urlSet {
+		urls = append(urls, url)
 	}
-	opts.GitHubRepo = repo
-
-	return nil
+	return urls, nil
 }
 
 func (opts *InitPipelineOpts) getGitHubAccessToken() error {
@@ -554,7 +490,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
 			}
-			opts.owners, opts.repos = opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+			urls, err := opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+			if err != nil {
+				return err
+			}
+			opts.repoURLs = urls
 			opts.buffer.Reset()
 
 			return nil
@@ -574,8 +514,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.GitHubOwner, githubOwnerFlag, githubOwnerFlagShort, "", githubOwnerFlagDescription)
-	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
