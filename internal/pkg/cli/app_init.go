@@ -118,7 +118,7 @@ func (opts *InitAppOpts) Execute() error {
 	opts.manifestPath = manifestPath
 
 	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at '%s'\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
+	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 

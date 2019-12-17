@@ -162,8 +162,11 @@ func stdio() survey.AskOpt {
 
 func icons() survey.AskOpt {
 	return survey.WithIcons(func(icons *survey.IconSet) {
+		// The question mark "?" icon to denote a prompt will be colored in bold cyan.
 		icons.Question.Format = "cyan+b"
-		icons.Help.Format = "default+ih:default"
+		// Help text shown when user presses "?" will have the inverse color "i" and be surrounded by a background box ":default" of default text color.
+		// For example, if your terminal background is white with black text, the help text will have a black background with white text.
+		icons.Help.Format = "default+i:default"
 	})
 }
 
