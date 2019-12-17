@@ -26,13 +26,13 @@ import (
 )
 
 const (
-	pipelineAddEnvPrompt            = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt        = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt        = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt    = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt         = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt   = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
-	pipelineEnterGitHubBranchPrompt = "What is the branch name of your GitHub repository?"
+	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
+	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineEnterGitBranchPrompt  = "Which git branch would you like to use?"
 )
 
 const (
@@ -48,7 +48,7 @@ type InitPipelineOpts struct {
 	Environments      []string
 	GitHubRepo        string
 	GitHubAccessToken string
-	GitHubBranch      string
+	GitBranch         string
 	PipelineFilename  string
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
@@ -98,8 +98,8 @@ func (opts *InitPipelineOpts) Ask() error {
 		}
 	}
 
-	if opts.GitHubBranch == "" {
-		if err := opts.getGitHubBranch(); err != nil {
+	if opts.GitBranch == "" {
+		if err := opts.getGitBranch(); err != nil {
 			return err
 		}
 	}
@@ -206,7 +206,7 @@ func (opts *InitPipelineOpts) getRepoName() string {
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
 		OwnerAndRepository:    opts.GitHubRepo,
-		Branch:                opts.GitHubBranch,
+		Branch:                opts.GitBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
 
@@ -394,16 +394,16 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 }
 
 // TODO: nice to have a remote GitHub repo's branch list to offer a select menu.
-func (opts *InitPipelineOpts) getGitHubBranch() error {
-	branch, err := opts.prompt.Get(pipelineEnterGitHubBranchPrompt,
-		"Name of the branch that you wish to use in your GitHub repository. By default the branch name is \"master\".",
+func (opts *InitPipelineOpts) getGitBranch() error {
+	branch, err := opts.prompt.Get(pipelineEnterGitBranchPrompt,
+		"Name of the branch that you wish to use to trigger your pipeline builds. By default the branch name is \"master\".",
 		nil, prompt.WithDefaultInput("master"))
 
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub branch name: %w", err)
+		return fmt.Errorf("failed to get git branch name: %w", err)
 	}
 
-	opts.GitHubBranch = branch
+	opts.GitBranch = branch
 
 	return nil
 }
@@ -491,7 +491,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
-	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd

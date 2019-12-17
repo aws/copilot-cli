@@ -23,7 +23,7 @@ const (
 	deployFlag            = "deploy"
 	githubRepoFlag        = "github-repo"
 	githubAccessTokenFlag = "github-access-token"
-	githubBranchFlag      = "github-branch"
+	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
@@ -42,7 +42,7 @@ const (
 	dockerFileFlagShort        = "d"
 	githubRepoFlagShort        = "r"
 	githubAccessTokenFlagShort = "t"
-	githubBranchFlagShort      = "b"
+	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
 )
@@ -64,7 +64,7 @@ const (
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
 	githubRepoFlagDescription        = "GitHub repository for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
-	githubBranchFlagDescription      = "Branch name of your Github repository"
+	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	deployPipelineFlagDescription    = "Deploys the pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
