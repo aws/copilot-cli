@@ -107,7 +107,7 @@ Common categorical data are debug, info, warning, success, failure messages.
 We respectively use _white_, default, _yellow_, _bright green_ and _bright red_ for these messages.  
 For highlighting user input, use _cyan_.  
 For highlighting created resources, use _bring cyan_.  
-For highlighting follow-up commands, use _bring cyan_ and wrap the text with the back quote character (`).  
+For highlighting follow-up commands, use _bring cyan_ and wrap the text with the back quote character (\`).  
 
 ### Data
 Commands that perform “read” operations should write their results to `stdout`. 
