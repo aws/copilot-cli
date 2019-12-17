@@ -23,7 +23,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 	const (
 		wantedAppType        = manifest.LoadBalancedWebApplication
 		wantedAppName        = "frontend"
-		wantedDockerfilePath = "frontend"
+		wantedDockerfilePath = "frontend/Dockerfile"
 	)
 	testCases := map[string]struct {
 		inAppType        string
@@ -205,16 +205,6 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		"invalid project name": {
 			inProjectName: "",
 			wantedErr:     errNoProjectInWorkspace,
-		},
-		"invalid dockerfile path with a directory path": {
-			inAppName:        "frontend",
-			inAppType:        "Load Balanced Web App",
-			inDockerfilePath: "./hello",
-			inProjectName:    "phonetool",
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("hello", 0755)
-			},
-			wantedErr: errors.New("dockerfile path is a directory ./hello, please provide a path to file"),
 		},
 		"valid flags": {
 			inAppName:        "frontend",
