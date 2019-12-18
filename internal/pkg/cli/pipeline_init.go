@@ -28,13 +28,15 @@ import (
 )
 
 const (
-	pipelineAddEnvPrompt                 = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt             = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt             = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt         = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt              = "Which environment would you like to add to your pipeline?"
-	pipelineSelectGitHubURLPrompt        = "Which GitHub repository would you like to use for your application?"
-	pipelineSelectGitHubURLHelpPrompt    = `The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+	pipelineAddEnvPrompt              = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt          = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt          = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt      = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt           = "Which environment would you like to add to your pipeline?"
+	pipelineSelectGitHubURLPrompt     = "Which GitHub repository would you like to use for your application?"
+	pipelineSelectGitHubURLHelpPrompt = `The GitHub repository linked to your workspace.
+Pushing to this repository will trigger your pipeline build stage.
+Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
 	pipelineSelectGitHubBranchPrompt     = "Which branch would you like to use?"
 	pipelineSelectGitHubBranchHelpPrompt = "Name of the branch that you wish to use in your GitHub repository."
 )
@@ -42,7 +44,7 @@ const (
 const (
 	buildspecTemplatePath          = "cicd/buildspec.yml"
 	integTestBuildspecTemplatePath = "cicd/" + manifest.IntegTestBuildspecFileName
-	githubURL                      = "github.com/"
+	githubURL                      = "github.com"
 	masterBranch                   = "master"
 )
 
@@ -203,7 +205,7 @@ func (opts *InitPipelineOpts) createPipelineName() string {
 
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
-		OwnerAndRepository:    "https://" + githubURL + opts.GitHubOwner + "/" + opts.GitHubRepo,
+		OwnerAndRepository:    "https://" + githubURL + "/" + opts.GitHubOwner + "/" + opts.GitHubRepo,
 		Branch:                opts.GitHubBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
@@ -368,19 +370,13 @@ func (opts *InitPipelineOpts) selectGitHubURL() error {
 }
 
 func (opts *InitPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
-	parsedURL := strings.TrimPrefix(url, opts.regexZeroLengthAssertion(url, `.*(github.com)(:|\/)`, "", ""))
+	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
+	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
 	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
 	if len(ownerRepo) != 2 {
-		return "", "", fmt.Errorf(`unable to parse the owner and repository for "%s", please pass in your repository URL with -u`, url)
+		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
 	}
 	return ownerRepo[0], ownerRepo[1], nil
-}
-
-func (opts *InitPipelineOpts) regexZeroLengthAssertion(s string, pattern string, prefix string, suffix string) string {
-	regexPattern := regexp.MustCompile(pattern)
-	regexResult := regexPattern.FindString(s)
-	resultWithoutSuffixAndPrefix := strings.TrimSuffix(strings.TrimPrefix(regexResult, prefix), suffix)
-	return resultWithoutSuffixAndPrefix
 }
 
 // examples:
@@ -393,10 +389,11 @@ func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 	urlSet := make(map[string]bool)
 	items := strings.Split(s, "\n")
 	for _, item := range items {
-		url := strings.TrimSpace(opts.regexZeroLengthAssertion(item, `\s(http|git).* `, "\r", ".git "))
-		if url == "" {
-			return nil, fmt.Errorf(`unable to parse "%s" to get the URL for your repository, please pass in your repository URL with -u`, item)
+		if !strings.Contains(item, githubURL) {
+			continue
 		}
+		cols := strings.Split(item, "\t")
+		url := strings.TrimSpace(strings.TrimSuffix(strings.Split(cols[1], " ")[0], ".git"))
 		urlSet[url] = true
 	}
 	for url := range urlSet {
@@ -453,8 +450,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 		Example: `
   Create a pipeline for the applications in your workspace:
 	/code $ ecs-preview pipeline init \
-	  /code  --github-owner "gitHubUserName" \
-	  /code  --github-repo "myFrontendApp" \
+	  /code  --github-url https://github.com/gitHubUserName/myFrontendApp.git \
 	  /code  --github-access-token file://myGitHubToken \
 	  /code  --environments "stage,prod" \
 	  /code  --deploy`,

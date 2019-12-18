@@ -147,7 +147,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf(`unable to parse the owner and repository for "reallybadGoose//notEvenAURL", please pass in your repository URL with -u`),
+			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoose//notEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
 		},
 		"returns error if fail to get GitHub access token": {
 			inEnvironments:      []string{},
@@ -587,19 +587,19 @@ func TestInitPipelineOpts_parseGitRemoteResult(t *testing.T) {
 		expectedError error
 	}{
 		"matched format": {
-			inRemoteResult: `efekarakus git@github.com:efekarakus/grit.git (fetch)
-efekarakus	https://github.com/karakuse/cli.git (fetch)
+			inRemoteResult: `badgoose	git@github.com:badgoose/grit.git (fetch)
+badgoose	https://github.com/badgoose/cli.git (fetch)
 origin	https://github.com/koke/grit (fetch)
 koke	git://github.com/koke/grit.git (push)`,
 
-			expectedURLs:  []string{"git@github.com:efekarakus/grit", "https://github.com/karakuse/cli", "https://github.com/koke/grit", "git://github.com/koke/grit"},
+			expectedURLs:  []string{"git@github.com:badgoose/grit", "https://github.com/badgoose/cli", "https://github.com/koke/grit", "git://github.com/koke/grit"},
 			expectedError: nil,
 		},
-		"unmatched format": {
-			inRemoteResult: `efekarakus verybad@github.whatever`,
+		"don't add to URL list if it is not a github URL": {
+			inRemoteResult: `badgoose	verybad@gitlab.com/whatever (fetch)`,
 
-			expectedURLs:  []string{""},
-			expectedError: fmt.Errorf(`unable to parse "efekarakus verybad@github.whatever" to get the URL for your repository, please pass in your repository URL with -u`),
+			expectedURLs:  []string{},
+			expectedError: nil,
 		},
 	}
 
@@ -610,7 +610,6 @@ koke	git://github.com/koke/grit.git (push)`,
 
 			// WHEN
 			urls, err := opts.parseGitRemoteResult(tc.inRemoteResult)
-
 			// THEN
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
