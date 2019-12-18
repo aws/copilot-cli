@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"html/template"
+	"text/template"
 	"os"
 	"path/filepath"
 	"regexp"
