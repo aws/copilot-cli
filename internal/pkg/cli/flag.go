@@ -21,7 +21,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
-	githubRepoFlag        = "github-repo"
+	githubURLFlag         = "github-url"
 	githubAccessTokenFlag = "github-access-token"
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
@@ -40,7 +40,7 @@ const (
 	appTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
-	githubRepoFlagShort        = "r"
+	githubURLFlagShort         = "u"
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
@@ -62,7 +62,7 @@ const (
 	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription           = "If the environment contains production services."
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
-	githubRepoFlagDescription        = "GitHub repository for your application."
+	githubURLFlagDescription         = "GitHub repository URL for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	deployPipelineFlagDescription    = "Deploys the pipeline."

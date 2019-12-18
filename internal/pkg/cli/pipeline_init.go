@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -17,8 +18,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
@@ -29,17 +30,23 @@ import (
 )
 
 const (
-	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
-	pipelineEnterGitBranchPrompt  = "Which git branch would you like to use?"
+	pipelineAddEnvPrompt              = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt          = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt          = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt      = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt           = "Which environment would you like to add to your pipeline?"
+	pipelineSelectGitHubURLPrompt     = "Which GitHub repository would you like to use for your application?"
+	pipelineSelectGitHubURLHelpPrompt = `The GitHub repository linked to your workspace.
+Pushing to this repository will trigger your pipeline build stage.
+Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
+	pipelineSelectGitBranchPrompt     = "Which git branch would you like to use?"
+	pipelineSelectGitBranchHelpPrompt = "Name of the git branch that you wish to use."
 )
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
+	githubURL             = "github.com"
+	masterBranch          = "master"
 )
 
 var (
@@ -53,7 +60,9 @@ var errNoEnvsInProject = errors.New("there were no more environments found that 
 type InitPipelineOpts struct {
 	// Fields with matching flags.
 	Environments      []string
+	GitHubOwner       string
 	GitHubRepo        string
+	GitHubURL         string
 	GitHubAccessToken string
 	GitBranch         string
 	PipelineFilename  string
@@ -63,15 +72,18 @@ type InitPipelineOpts struct {
 	workspace      archer.ManifestIO
 	secretsmanager archer.SecretsManager
 	box            packd.Box
+	runner         runner
 
 	// Outputs stored on successful actions.
 	manifestPath  string
 	buildspecPath string
 	secretName    string
 
-	// Caches environments
+	// Caches variables
 	projectEnvs []string
+	repoURLs    []string
 	fsUtils     *afero.Afero
+	buffer      bytes.Buffer
 
 	*GlobalOpts
 }
@@ -79,6 +91,7 @@ type InitPipelineOpts struct {
 // NewInitPipelineOpts returns a new InitPipelineOpts struct.
 func NewInitPipelineOpts() *InitPipelineOpts {
 	return &InitPipelineOpts{
+		runner:     command.New(),
 		fsUtils:    &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts: NewGlobalOpts(),
 	}
@@ -86,28 +99,30 @@ func NewInitPipelineOpts() *InitPipelineOpts {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitPipelineOpts) Ask() error {
+	var err error
 	if len(opts.Environments) == 0 {
-		if err := opts.selectEnvironments(); err != nil {
+		if err = opts.selectEnvironments(); err != nil {
 			return err
 		}
 	}
 
-	if opts.GitHubRepo == "" {
-		if err := opts.selectGitHubRepo(); err != nil {
+	if opts.GitHubURL == "" {
+		if err = opts.selectGitHubURL(); err != nil {
 			return err
 		}
+	}
+	if opts.GitHubOwner, opts.GitHubRepo, err = opts.parseOwnerRepoName(opts.GitHubURL); err != nil {
+		return err
 	}
 
 	if opts.GitHubAccessToken == "" {
-		if err := opts.getGitHubAccessToken(); err != nil {
+		if err = opts.getGitHubAccessToken(); err != nil {
 			return err
 		}
 	}
 
 	if opts.GitBranch == "" {
-		if err := opts.getGitBranch(); err != nil {
-			return err
-		}
+		opts.GitBranch = masterBranch
 	}
 
 	return nil
@@ -115,7 +130,7 @@ func (opts *InitPipelineOpts) Ask() error {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *InitPipelineOpts) Validate() error {
-	// TODO
+	// TODO add validation for flags
 	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
@@ -174,34 +189,16 @@ func (opts *InitPipelineOpts) RecommendedActions() []string {
 }
 
 func (opts *InitPipelineOpts) createSecretName() string {
-	repoName := opts.getRepoName()
-	return fmt.Sprintf("github-token-%s-%s", opts.projectName, repoName)
+	return fmt.Sprintf("github-token-%s-%s", opts.projectName, opts.GitHubRepo)
 }
 
 func (opts *InitPipelineOpts) createPipelineName() string {
-	repoName := opts.getRepoName()
-	return fmt.Sprintf("pipeline-%s-%s", opts.projectName, repoName)
-}
-
-func (opts *InitPipelineOpts) getRepoName() string {
-	match := githubRepoExp.FindStringSubmatch(opts.GitHubRepo)
-	if len(match) == 0 {
-		return ""
-	}
-
-	matches := make(map[string]string)
-	for i, name := range githubRepoExp.SubexpNames() {
-		if i != 0 && name != "" {
-			matches[name] = match[i]
-		}
-	}
-
-	return matches["repo"]
+	return fmt.Sprintf("pipeline-%s-%s-%s", opts.projectName, opts.GitHubOwner, opts.GitHubRepo)
 }
 
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
-		OwnerAndRepository:    opts.GitHubRepo,
+		OwnerAndRepository:    "https://" + githubURL + "/" + opts.GitHubOwner + "/" + opts.GitHubRepo,
 		Branch:                opts.GitBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
@@ -276,7 +273,7 @@ func (opts *InitPipelineOpts) selectEnvironments() error {
 			break
 		}
 		if err := opts.selectEnvironment(); err != nil {
-			return fmt.Errorf("failed to add environment: %w", err)
+			return fmt.Errorf("add environment: %w", err)
 		}
 		if len(opts.listAvailableEnvironments()) == 0 {
 			break
@@ -345,27 +342,51 @@ func relPath(fullPath string) string {
 	return relPath
 }
 
-// TODO: Nice-to-have: have an opts.listRemoteRepos() method that execs out to `git remote -v` and parse repo name to offer select menu
-func (opts *InitPipelineOpts) selectGitHubRepo() error {
-	repo, err := opts.prompt.Get(
-		pipelineEnterGitHubRepoPrompt,
-		fmt.Sprintf(`The GitHub repository linked to your workspace. Pushing to this repository will trigger your pipeline build stage. Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`),
-		validateGitHubRepo,
+func (opts *InitPipelineOpts) selectGitHubURL() error {
+	url, err := opts.prompt.SelectOne(
+		pipelineSelectGitHubURLPrompt,
+		pipelineSelectGitHubURLHelpPrompt,
+		opts.repoURLs,
 	)
-
-	// Remove ".git" at the end of the Github repo URL.
-	repoNameSplit := strings.Split(repo, ".")
-	if repoNameSplit[len(repoNameSplit)-1] == "git" {
-		repo = strings.Join(repoNameSplit[:len(repoNameSplit)-1], ".")
-	}
-
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub repository: %w", err)
+		return fmt.Errorf("select GitHub URL: %w", err)
 	}
-
-	opts.GitHubRepo = repo
+	opts.GitHubURL = url
 
 	return nil
+}
+
+func (opts *InitPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
+	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
+	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
+	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
+	if len(ownerRepo) != 2 {
+		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
+	}
+	return ownerRepo[0], ownerRepo[1], nil
+}
+
+// examples:
+// efekarakus	git@github.com:efekarakus/grit.git (fetch)
+// efekarakus	https://github.com/karakuse/grit.git (fetch)
+// origin	    https://github.com/koke/grit (fetch)
+// koke       git://github.com/koke/grit.git (push)
+func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
+	var urls []string
+	urlSet := make(map[string]bool)
+	items := strings.Split(s, "\n")
+	for _, item := range items {
+		if !strings.Contains(item, githubURL) {
+			continue
+		}
+		cols := strings.Split(item, "\t")
+		url := strings.TrimSpace(strings.TrimSuffix(strings.Split(cols[1], " ")[0], ".git"))
+		urlSet[url] = true
+	}
+	for url := range urlSet {
+		urls = append(urls, url)
+	}
+	return urls, nil
 }
 
 func (opts *InitPipelineOpts) getGitHubAccessToken() error {
@@ -375,25 +396,10 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub access token: %w", err)
+		return fmt.Errorf("get GitHub access token: %w", err)
 	}
 
 	opts.GitHubAccessToken = token
-
-	return nil
-}
-
-// TODO: nice to have a remote GitHub repo's branch list to offer a select menu.
-func (opts *InitPipelineOpts) getGitBranch() error {
-	branch, err := opts.prompt.Get(pipelineEnterGitBranchPrompt,
-		"Name of the branch that you wish to use to trigger your pipeline builds. By default the branch name is \"master\".",
-		nil, prompt.WithDefaultInput("master"))
-
-	if err != nil {
-		return fmt.Errorf("failed to get git branch name: %w", err)
-	}
-
-	opts.GitBranch = branch
 
 	return nil
 }
@@ -430,16 +436,17 @@ func BuildPipelineInitCmd() *cobra.Command {
 		Long:  `Creates a pipeline for the applications in your workspace, using the environments associated with the applications.`,
 		Example: `
   Create a pipeline for the applications in your workspace:
-  /code $ ecs-preview pipeline init \
-    --github-repo "gitHubUserName/myFrontendApp" \
-    --github-access-token file://myGitHubToken \
-    --environments "stage,prod" \
-    --deploy`,
+	/code $ ecs-preview pipeline init \
+	  /code  --github-url https://github.com/gitHubUserName/myFrontendApp.git \
+	  /code  --github-access-token file://myGitHubToken \
+	  /code  --environments "stage,prod" \
+	  /code  --deploy`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
 
+			// TODO: move these logic to a method
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
 				return fmt.Errorf("couldn't get environments: %w", err)
@@ -462,6 +469,17 @@ func BuildPipelineInitCmd() *cobra.Command {
 			opts.secretsmanager = secretsmanager
 			opts.box = templates.Box()
 
+			err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+			if err != nil {
+				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+			}
+			urls, err := opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+			if err != nil {
+				return err
+			}
+			opts.repoURLs = urls
+			opts.buffer.Reset()
+
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
@@ -479,7 +497,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
