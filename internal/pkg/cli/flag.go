@@ -23,7 +23,7 @@ const (
 	deployFlag            = "deploy"
 	githubRepoFlag        = "github-repo"
 	githubAccessTokenFlag = "github-access-token"
-	githubBranchFlag      = "github-branch"
+	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
@@ -42,7 +42,7 @@ const (
 	dockerFileFlagShort        = "d"
 	githubRepoFlagShort        = "r"
 	githubAccessTokenFlagShort = "t"
-	githubBranchFlagShort      = "b"
+	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
 )
@@ -57,14 +57,14 @@ const (
 	yesFlagDescription     = "Skips confirmation prompt."
 	jsonFlagDescription    = "Output in JSON format."
 
-	dockerFileFlagDescription        = "Path to the directory with Dockerfile."
+	dockerFileFlagDescription        = "Path to the Dockerfile."
 	imageTagFlagDescription          = `Optional. The application's image tag.`
 	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription           = "If the environment contains production services."
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
 	githubRepoFlagDescription        = "GitHub repository for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
-	githubBranchFlagDescription      = "Branch name of your Github repository"
+	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	deployPipelineFlagDescription    = "Deploys the pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."

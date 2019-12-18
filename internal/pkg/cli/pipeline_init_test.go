@@ -7,12 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
@@ -33,14 +30,14 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inEnvironments      []string
 		inGitHubRepo        string
 		inGitHubAccessToken string
-		inGitHubBranch      string
+		inGitBranch         string
 		inProjectEnvs       []string
 
 		mockPrompt func(m *climocks.Mockprompter)
 
 		expectedGitHubRepo        string
 		expectedGitHubAccessToken string
-		expectedGitHubBranch      string
+		expectedGitBranch         string
 		expectedEnvironments      []string
 		expectedError             error
 	}{
@@ -48,7 +45,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -58,13 +55,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
 				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubRepoPrompt), gomock.Any(), gomock.Any()).Return(githubRepoURL, nil).Times(1)
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubBranchPrompt), gomock.Any(), gomock.Any(), gomock.Any()).Return(githubBranch, nil).Times(1)
+				m.EXPECT().Get(gomock.Eq(pipelineEnterGitBranchPrompt), gomock.Any(), gomock.Any(), gomock.Any()).Return(githubBranch, nil).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: https://github.com/badGoose/chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
 			expectedGitHubRepo:        githubRepoName,
 			expectedGitHubAccessToken: githubToken,
-			expectedGitHubBranch:      githubBranch,
+			expectedGitBranch:         githubBranch,
 			expectedEnvironments:      []string{"test", "prod"},
 			expectedError:             nil,
 		},
@@ -72,7 +69,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -81,7 +78,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
+			expectedGitBranch:         "",
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("confirm adding an environment: some error"),
 		},
@@ -89,7 +86,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -99,7 +96,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
+			expectedGitBranch:         "",
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("failed to add environment: some error"),
 		},
@@ -107,7 +104,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -121,7 +118,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
+			expectedGitBranch:         "",
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("failed to get GitHub repository: some error"),
 		},
@@ -129,7 +126,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -144,7 +141,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			expectedGitHubRepo:        githubRepoName,
 			expectedGitHubAccessToken: "",
-			expectedGitHubBranch:      "",
+			expectedGitBranch:         "",
 			expectedEnvironments:      []string{},
 			expectedError:             fmt.Errorf("failed to get GitHub access token: some error"),
 		},
@@ -152,7 +149,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inGitHubBranch:      "",
+			inGitBranch:         "",
 			inProjectEnvs:       []string{"test", "prod"},
 
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -162,15 +159,15 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
 				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubRepoPrompt), gomock.Any(), gomock.Any()).Return(githubRepoURL, nil).Times(1)
-				m.EXPECT().Get(gomock.Eq(pipelineEnterGitHubBranchPrompt), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().Get(gomock.Eq(pipelineEnterGitBranchPrompt), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error")).Times(1)
 				m.EXPECT().GetSecret(gomock.Eq("Please enter your GitHub Personal Access Token for your repository: https://github.com/badGoose/chaOS"), gomock.Any()).Return(githubToken, nil).Times(1)
 			},
 
 			expectedGitHubRepo:        githubRepoName,
 			expectedGitHubAccessToken: githubToken,
-			expectedGitHubBranch:      "",
+			expectedGitBranch:         "",
 			expectedEnvironments:      []string{"test", "prod"},
-			expectedError:             fmt.Errorf("failed to get GitHub branch name: some error"),
+			expectedError:             fmt.Errorf("failed to get git branch name: some error"),
 		},
 	}
 
@@ -186,7 +183,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				Environments:      tc.inEnvironments,
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubAccessToken,
-				GitHubBranch:      tc.inGitHubBranch,
+				GitBranch:         tc.inGitBranch,
 
 				projectEnvs: tc.inProjectEnvs,
 
@@ -207,7 +204,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
-				require.Equal(t, tc.expectedGitHubBranch, opts.GitHubBranch)
+				require.Equal(t, tc.expectedGitBranch, opts.GitBranch)
 				require.ElementsMatch(t, tc.expectedEnvironments, opts.Environments)
 			}
 		})
@@ -252,201 +249,105 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 	}
 }
 
-func genApps(names ...string) []archer.Manifest {
-	result := make([]archer.Manifest, 0, len(names))
-	for _, name := range names {
-		result = append(result, &manifest.LBFargateManifest{
-			AppManifest: manifest.AppManifest{
-				Name: name,
-				Type: manifest.LoadBalancedWebApplication,
-			},
-			Image: manifest.ImageWithPort{
-				AppImage: manifest.AppImage{
-					Build: name,
-				},
-			},
-		})
-	}
-	return result
-}
-
 func TestInitPipelineOpts_Execute(t *testing.T) {
-	const expectedIntegTestBuildSpecTemplate = "integrationTests"
-	mockApps := genApps("app01", "app02")
-
 	testCases := map[string]struct {
 		inEnvironments []string
 		inGitHubToken  string
 		inGitHubRepo   string
-		inGitHubBranch string
+		inGitBranch    string
 		inProjectName  string
 
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
-		mockManifestWriter func(m *archermocks.MockWorkspace)
+		mockManifestWriter func(m *archermocks.MockManifestIO)
 		mockBox            func(box *packd.MemoryBox)
 		mockFileSystem     func(mockFS afero.Fs)
 
-		expectedSecretName              string
-		expectManifestPath              string
-		expectedBuildspecPath           string
-		expectedIntegTestBuildspecPaths []string
-		expectedError                   error
+		expectedSecretName    string
+		expectManifestPath    string
+		expectedBuildspecPath string
+		expectedError         error
 	}{
 		"creates secret and writes manifest and buildspecs": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitHubBranch: githubBranch,
+			inGitBranch:    githubBranch,
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
-			},
-			mockFileSystem: func(mockFS afero.Fs) {
-				for _, app := range mockApps {
-					mockFS.MkdirAll(filepath.Dir(app.IntegTestBuildspecPath()), 0755)
-				}
 			},
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    workspace.PipelineFileName,
 			expectedBuildspecPath: workspace.BuildspecFileName,
-			expectedIntegTestBuildspecPaths: func() []string {
-				expectedPaths := make([]string, 0, len(mockApps))
-				for _, app := range mockApps {
-					expectedPaths = append(expectedPaths, app.IntegTestBuildspecPath())
-				}
-				return expectedPaths
-			}(),
-			expectedError: nil,
+			expectedError:         nil,
 		},
 		"does not return an error if secret already exists": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitHubBranch: githubBranch,
+			inGitBranch:    githubBranch,
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
 			},
-			mockFileSystem: func(mockFS afero.Fs) {
-				for _, app := range mockApps {
-					mockFS.MkdirAll(filepath.Dir(app.IntegTestBuildspecPath()), 0755)
-				}
-			},
-
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    workspace.PipelineFileName,
 			expectedBuildspecPath: workspace.BuildspecFileName,
-			expectedIntegTestBuildspecPaths: func() []string {
-				expectedPaths := make([]string, 0, len(mockApps))
-				for _, app := range mockApps {
-					expectedPaths = append(expectedPaths, app.IntegTestBuildspecPath())
-				}
-				return expectedPaths
-			}(),
-			expectedError: nil,
+			expectedError:         nil,
 		},
 		"returns an error if buildspec template does not exist": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitHubBranch: githubBranch,
+			inGitBranch:    githubBranch,
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Times(0)
 			},
 			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
 			},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			expectedError:  fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
-		},
-		"returns an error if integ test buildspec template does not exist": {
-			inEnvironments: []string{"test"},
-			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inProjectName:  "badgoose",
-
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
-				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
-			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
-			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
-				// intentionally miss out the integration test template here
-			},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			expectedError:  fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, os.ErrNotExist),
+			expectedError: fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
 		},
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitHubBranch: githubBranch,
+			inGitBranch:    githubBranch,
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(mockApps, nil)
+			mockManifestWriter: func(m *archermocks.MockManifestIO) {
 				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Return("", errors.New("some error"))
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
-				m.AddString(integTestBuildspecTemplatePath, expectedIntegTestBuildSpecTemplate)
 			},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			expectedError:  fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
-		},
-		"returns an error when retrieving local apps": {
-			inEnvironments: []string{"test"},
-			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inProjectName:  "badgoose",
-
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
-				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
-			},
-			mockManifestWriter: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
-			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
-			},
-			mockFileSystem: func(mockFS afero.Fs) {},
-			expectedError:  errors.New("could not retrieve apps in this workspace: some error"),
+			expectedError: fmt.Errorf("write file %s to workspace: some error", workspace.BuildspecFileName),
 		},
 	}
 
@@ -457,20 +358,19 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
-			mockWriter := archermocks.NewMockWorkspace(ctrl)
+			mockWriter := archermocks.NewMockManifestIO(ctrl)
 			mockBox := packd.NewMemoryBox()
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockManifestWriter(mockWriter)
 			tc.mockBox(mockBox)
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
-			tc.mockFileSystem(memFs)
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubToken,
-				GitHubBranch:      tc.inGitHubBranch,
+				GitBranch:         tc.inGitBranch,
 				secretsmanager:    mockSecretsManager,
 				workspace:         mockWriter,
 				box:               mockBox,
@@ -490,7 +390,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.Equal(t, tc.expectedSecretName, opts.secretName)
 				require.Equal(t, tc.expectManifestPath, opts.manifestPath)
 				require.Equal(t, tc.expectedBuildspecPath, opts.buildspecPath)
-				require.Equal(t, tc.expectedIntegTestBuildspecPaths, opts.integTestBuildspecPaths)
 			}
 		})
 	}

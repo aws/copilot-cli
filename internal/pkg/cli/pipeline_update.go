@@ -76,10 +76,15 @@ func (opts *UpdatePipelineOpts) Validate() error {
 }
 
 func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
-	stages := make([]deploy.PipelineStage, 0, len(manifestStages))
-	allLocalApps, err := opts.ws.Apps()
+	var stages []deploy.PipelineStage
+	apps, err := opts.ws.Apps()
 	if err != nil {
 		return nil, err
+	}
+	// TODO: Will fast follow with another PR to actually support #443
+	appNames := make([]string, 0, len(apps))
+	for _, app := range apps {
+		appNames = append(appNames, app.AppName())
 	}
 
 	for _, stage := range manifestStages {
@@ -88,21 +93,8 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 			return nil, err
 		}
 
-		// customers may not want integration test for each single app, so
-		// we will provision an integration test action only if
-		// an integration test buildspec is provided for a specific app in a
-		// specific stage in the pipeline
-		appsToDeploy := make([]deploy.AppInStage, 0, len(allLocalApps))
-		for _, app := range allLocalApps {
-			appConfig := stage.Apps[app.AppName()]
-			appsToDeploy = append(appsToDeploy, deploy.AppInStage{
-				Name:                   app.AppName(),
-				IntegTestBuildspecPath: appConfig.IntegTestBuildspecPath,
-			})
-		}
-
 		pipelineStage := deploy.PipelineStage{
-			LocalApplications: appsToDeploy,
+			LocalApplications: appNames,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
 				Name:      stage.Name,
 				Region:    env.Region,

@@ -29,18 +29,17 @@ import (
 )
 
 const (
-	pipelineAddEnvPrompt            = "Would you like to add an environment to your pipeline?"
-	pipelineAddMoreEnvPrompt        = "Would you like to add another environment to your pipeline?"
-	pipelineAddEnvHelpPrompt        = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineAddMoreEnvHelpPrompt    = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
-	pipelineSelectEnvPrompt         = "Which environment would you like to add to your pipeline?"
-	pipelineEnterGitHubRepoPrompt   = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
-	pipelineEnterGitHubBranchPrompt = "What is the branch name of your GitHub repository?"
+	pipelineAddEnvPrompt          = "Would you like to add an environment to your pipeline?"
+	pipelineAddMoreEnvPrompt      = "Would you like to add another environment to your pipeline?"
+	pipelineAddEnvHelpPrompt      = "Adds an environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineAddMoreEnvHelpPrompt  = "Adds another environment that corresponds to a deployment stage in your pipeline. Environments are added sequentially."
+	pipelineSelectEnvPrompt       = "Which environment would you like to add to your pipeline?"
+	pipelineEnterGitHubRepoPrompt = "What is your application's GitHub repository?" // TODO allow just <user>/<repo>?
+	pipelineEnterGitBranchPrompt  = "Which git branch would you like to use?"
 )
 
 const (
-	buildspecTemplatePath          = "cicd/buildspec.yml"
-	integTestBuildspecTemplatePath = "cicd/" + manifest.IntegTestBuildspecFileName
+	buildspecTemplatePath = "cicd/buildspec.yml"
 )
 
 var (
@@ -56,20 +55,19 @@ type InitPipelineOpts struct {
 	Environments      []string
 	GitHubRepo        string
 	GitHubAccessToken string
-	GitHubBranch      string
+	GitBranch         string
 	PipelineFilename  string
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 
 	// Interfaces to interact with dependencies.
-	workspace      archer.Workspace
+	workspace      archer.ManifestIO
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 
 	// Outputs stored on successful actions.
-	manifestPath            string
-	buildspecPath           string
-	integTestBuildspecPaths []string
-	secretName              string
+	manifestPath  string
+	buildspecPath string
+	secretName    string
 
 	// Caches environments
 	projectEnvs []string
@@ -106,8 +104,8 @@ func (opts *InitPipelineOpts) Ask() error {
 		}
 	}
 
-	if opts.GitHubBranch == "" {
-		if err := opts.getGitHubBranch(); err != nil {
+	if opts.GitBranch == "" {
+		if err := opts.getGitBranch(); err != nil {
 			return err
 		}
 	}
@@ -139,16 +137,12 @@ func (opts *InitPipelineOpts) Execute() error {
 	}
 	opts.secretName = secretName
 
-	apps, err := opts.workspace.Apps()
-	if err != nil {
-		return fmt.Errorf("could not retrieve apps in this workspace: %w", err)
-	}
-
 	// write pipeline.yml file, populate with:
 	//   - github repo as source
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
-	manifestPath, err := opts.createPipelineManifest(apps)
+
+	manifestPath, err := opts.createPipelineManifest()
 	if err != nil {
 		return err
 	}
@@ -159,15 +153,9 @@ func (opts *InitPipelineOpts) Execute() error {
 		return err
 	}
 	opts.buildspecPath = buildspecPath
-	integTestBuildspecPaths, err := opts.createIntegTestBuildspecPerApp(apps)
-	if err != nil {
-		return err
-	}
-	opts.integTestBuildspecPaths = integTestBuildspecPaths
 
 	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(opts.GitHubRepo), color.HighlightResource(relPath(opts.manifestPath)))
 	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(relPath(opts.buildspecPath)))
-	log.Successf("Wrote the buildspecs for each of the app in the pipeline: '%s'\n", color.HighlightResource(fmt.Sprintf("%v", opts.integTestBuildspecPaths)))
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
@@ -214,14 +202,14 @@ func (opts *InitPipelineOpts) getRepoName() string {
 func (opts *InitPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	config := &manifest.GitHubProperties{
 		OwnerAndRepository:    opts.GitHubRepo,
-		Branch:                opts.GitHubBranch,
+		Branch:                opts.GitBranch,
 		GithubSecretIdKeyName: opts.secretName,
 	}
 
 	return manifest.NewProvider(config)
 }
 
-func (opts *InitPipelineOpts) createPipelineManifest(apps []archer.Manifest) (string, error) {
+func (opts *InitPipelineOpts) createPipelineManifest() (string, error) {
 	// TODO change this to flag
 	pipelineName := opts.createPipelineName()
 	provider, err := opts.createPipelineProvider()
@@ -229,8 +217,7 @@ func (opts *InitPipelineOpts) createPipelineManifest(apps []archer.Manifest) (st
 		return "", fmt.Errorf("could not create pipeline: %w", err)
 	}
 
-	manifest, err := manifest.CreatePipeline(
-		pipelineName, provider, opts.Environments, apps)
+	manifest, err := manifest.CreatePipeline(pipelineName, provider, opts.Environments)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
@@ -271,25 +258,6 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
 	}
 	return path, nil
-}
-
-// write the sample integration test buildspec to each app's folder
-func (opts *InitPipelineOpts) createIntegTestBuildspecPerApp(apps []archer.Manifest) ([]string, error) {
-	content, err := opts.box.FindString(integTestBuildspecTemplatePath)
-	if err != nil {
-		return nil, fmt.Errorf("find integration test template for %s: %w", integTestBuildspecTemplatePath, err)
-	}
-
-	paths := make([]string, 0, len(apps))
-	for _, app := range apps {
-		err := opts.fsUtils.WriteFile(app.IntegTestBuildspecPath(), []byte(content), 0644)
-		if err != nil {
-			return nil, fmt.Errorf("write integration test buildspec %s to app %s: %w",
-				app.IntegTestBuildspecPath(), app.AppName(), err)
-		}
-		paths = append(paths, app.IntegTestBuildspecPath())
-	}
-	return paths, nil
 }
 
 func (opts *InitPipelineOpts) selectEnvironments() error {
@@ -416,16 +384,16 @@ func (opts *InitPipelineOpts) getGitHubAccessToken() error {
 }
 
 // TODO: nice to have a remote GitHub repo's branch list to offer a select menu.
-func (opts *InitPipelineOpts) getGitHubBranch() error {
-	branch, err := opts.prompt.Get(pipelineEnterGitHubBranchPrompt,
-		"Name of the branch that you wish to use in your GitHub repository. By default the branch name is \"master\".",
+func (opts *InitPipelineOpts) getGitBranch() error {
+	branch, err := opts.prompt.Get(pipelineEnterGitBranchPrompt,
+		"Name of the branch that you wish to use to trigger your pipeline builds. By default the branch name is \"master\".",
 		nil, prompt.WithDefaultInput("master"))
 
 	if err != nil {
-		return fmt.Errorf("failed to get GitHub branch name: %w", err)
+		return fmt.Errorf("failed to get git branch name: %w", err)
 	}
 
-	opts.GitHubBranch = branch
+	opts.GitBranch = branch
 
 	return nil
 }
@@ -513,7 +481,7 @@ func BuildPipelineInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.GitHubRepo, githubRepoFlag, githubRepoFlagShort, "", githubRepoFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
-	cmd.Flags().StringVarP(&opts.GitHubBranch, githubBranchFlag, githubBranchFlagShort, "", githubBranchFlagDescription)
+	cmd.Flags().StringVarP(&opts.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd
