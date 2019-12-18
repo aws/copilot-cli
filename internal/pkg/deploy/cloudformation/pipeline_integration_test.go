@@ -178,7 +178,7 @@ func TestPipelineCreation(t *testing.T) {
 				Properties: map[string]interface{}{
 					"repository":                   "chicken/wings",
 					"branch":                       "master",
-					manifest.GithubSecretIdKeyName: "testGitHubSecret",
+					manifest.GithubSecretIdKeyName: secretId,
 				},
 			},
 			Stages: []deploy.PipelineStage{
