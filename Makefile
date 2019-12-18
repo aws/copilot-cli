@@ -11,7 +11,7 @@ COVERAGE=coverage.out
 DESTINATION=./bin/local/${BINARY_NAME}
 VERSION=$(shell git describe --always --tags)
 
-BINARY_S3_BUCKET_PATH=https://amazon-ecs-cli-v2.s3.amazonaws.com
+BINARY_S3_BUCKET_PATH=https://ecs-cli-v2-release.s3.amazonaws.com
 
 LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}\
 -X github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
