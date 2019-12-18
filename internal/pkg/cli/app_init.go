@@ -31,7 +31,7 @@ To help setup the infrastructure resources, select what "kind" or "type" of appl
 	fmtAppInitAppNameHelpPrompt = `The name will uniquely identify this application within your %s project.
 Deployed resources (such as your service, logs) will contain this app's name and be tagged with it.`
 
-	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s app?"
+	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 )
 
