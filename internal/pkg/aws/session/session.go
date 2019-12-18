@@ -6,12 +6,29 @@ package session
 
 import (
 	"fmt"
+	"runtime"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/handlers"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
+
+const userAgentHeader = "User-Agent"
+
+// userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.
+func userAgentHandler() request.NamedHandler {
+	return request.NamedHandler{
+		Name: "UserAgentHandler",
+		Fn: func(r *request.Request) {
+			userAgent := r.HTTPRequest.Header.Get(userAgentHeader)
+			r.HTTPRequest.Header.Set(userAgentHeader,
+				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
+		},
+	}
+}
 
 // Default returns a session configured against the "default" AWS profile.
 func Default() (*session.Session, error) {
@@ -24,7 +41,7 @@ func Default() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, err
 }
 
@@ -36,7 +53,7 @@ func DefaultWithRegion(region string) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, err
 }
 
@@ -52,7 +69,7 @@ func FromProfile(name string) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, err
 }
 
@@ -73,6 +90,6 @@ func FromRole(roleARN string, region string) (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess.Handlers.Build.PushBackNamed(handlers.UserAgentHandler())
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, err
 }

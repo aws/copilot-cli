@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -83,7 +82,7 @@ func (opts *InitAppOpts) Validate() error {
 		}
 	}
 	if opts.DockerfilePath != "" {
-		if _, err := listDockerfiles(opts.fs, opts.DockerfilePath); err != nil {
+		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
 			return err
 		}
 	}
@@ -205,8 +204,7 @@ func (opts *InitAppOpts) askDockerfile() error {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
 	}
 
-	// NOTE: Trim "/Dockerfile" from the selected option for storing in the app manifest.
-	opts.DockerfilePath = strings.TrimSuffix(sel, "/Dockerfile")
+	opts.DockerfilePath = sel
 
 	return nil
 }

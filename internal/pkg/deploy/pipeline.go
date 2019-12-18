@@ -159,14 +159,7 @@ func (s *Source) Owner() (string, error) {
 // is deloying to and the containerized applications that will be deployed.
 type PipelineStage struct {
 	*AssociatedEnvironment
-	LocalApplications []AppInStage
-}
-
-// AppInStage represents configurations for an app in a pipeline stage
-type AppInStage struct {
-	Name string
-	// the path to the integration test buildspec for this action
-	IntegTestBuildspecPath string
+	LocalApplications []string
 }
 
 // AppTemplatePath returns the full path to the application CFN template

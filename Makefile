@@ -8,6 +8,16 @@ BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
 GOBIN=${PWD}/bin/tools
 COVERAGE=coverage.out
 
+DESTINATION=./bin/local/${BINARY_NAME}
+VERSION=$(shell git describe --always --tags)
+
+BINARY_S3_BUCKET_PATH=https://amazon-ecs-cli-v2.s3.amazonaws.com
+
+LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}\
+-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
+# RELEASE_BUILD_LINKER_FLAGS disables DWARF and symbol table generation to reduce binary size
+RELEASE_BUILD_LINKER_FLAGS=-s -w
+
 all: build
 
 .PHONY: build
@@ -25,16 +35,16 @@ release-docker:
 	@echo "Built binaries under ./local/"
 
 compile-local:
-	PLATFORM=local DESTINATION=./bin/local/${BINARY_NAME} ./scripts/build_binary.sh
+	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/ecs-preview
 
 compile-windows:
-	PLATFORM=Windows CGO_ENABLED=0 GOOS=windows GOARCH=386 DESTINATION=./bin/local/${BINARY_NAME}.exe ./scripts/build_binary.sh
+	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/ecs-preview
 
 compile-linux:
-	PLATFORM=Linux CGO_ENABLED=0 GOOS=linux GOARCH=amd64 DESTINATION=./bin/local/${BINARY_NAME}-amd64 ./scripts/build_binary.sh
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-amd64 ./cmd/ecs-preview
 
 compile-darwin:
-	PLATFORM=Darwin CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 DESTINATION=./bin/local/${BINARY_NAME} ./scripts/build_binary.sh
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/ecs-preview
 
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
@@ -87,7 +97,7 @@ run-integ-test:
 	# Also adding count=1 so the test results aren't cached.
 	# This command also targets files with the build integration tag
 	# and runs tests which end in Integration.
-	go test -v -count=1 -timeout 30m -tags=integration ${PACKAGES}
+	go test -v -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
 .PHONY: e2e-test
 e2e-test: build
@@ -122,6 +132,7 @@ tools:
 .PHONY: gen-mocks
 gen-mocks: tools
 	# TODO: make this more extensible?
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
 	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./mocks/mock_app.go
 	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
 	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
@@ -136,7 +147,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/app_deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_projectservice.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_deploy.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi/resourcegroupstaggingapiiface ResourceGroupsTaggingAPIAPI
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
 	${GOBIN}/mockgen -source=./internal/pkg/describe/describe.go -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/mocks/mock_ecr.go github.com/aws/aws-sdk-go/service/ecr/ecriface ECRAPI

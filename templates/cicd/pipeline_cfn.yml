@@ -112,82 +112,7 @@ Resources:
       Source:
         Type: CODEPIPELINE
         BuildSpec: ecs-project/buildspec.yml
-      TimeoutInMinutes: 60{{if $.NeedsIntegrationTests}}
-  IntegTestRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - codebuild.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-  IntegTestPolicy:
-    Type: AWS::IAM::Policy
-    DependsOn: IntegTestRole
-    Properties:
-      PolicyName: !Sub ${AWS::StackName}-IntegTestPolicy
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-          - Effect: Allow
-            Action:
-              - s3:PutObject
-              - s3:GetObject
-              - s3:GetObjectVersion
-            # TODO: This might not be necessary. We may only need the bucket
-            # that is in the same region as the pipeline.
-            # Loop through all the artifact buckets created in the stackset
-            Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
-          - Effect: Allow
-            Action:
-              # TODO: scope this down if possible
-              - kms:*
-            # TODO: This might not be necessary. We may only need the KMS key
-            # that is in the same region as the pipeline.
-            # Loop through all the KMS keys used to en/decrypt artifacts
-            # across (cross-regional) pipeline stages, with each stage
-            # backed by a (regional) S3 bucket.
-            Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
-      Roles:
-        - !Ref IntegTestRole{{end}}{{$stageLength := len .Stages}}{{if gt $stageLength 0}}{{range $stage := .Stages}}{{$appLength := len $stage.LocalApplications}}{{if gt $appLength 0}}{{range $app := $stage.LocalApplications}}{{if $app.IntegTestBuildspecPath}}
-  IntegTestProject{{logicalIDSafe $app.Name}}{{logicalIDSafe $stage.Name}}:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: Approve-{{$app.Name}}-{{$stage.Name}}
-      Description: Integration tests for {{$app.Name}}-{{$stage.Name}}
-      ServiceRole: !GetAtt IntegTestRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        Type: LINUX_CONTAINER
-        ComputeType: BUILD_GENERAL1_SMALL
-        PrivilegedMode: true
-        Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
-        EnvironmentVariables:
-          - Name: PIPELINE_STAGE
-            Type: PLAINTEXT
-            Value: {{$stage.Name}}
-          - Name: APP_NAME
-            Type: PLAINTEXT
-            Value: {{$app.Name}}
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: {{$app.IntegTestBuildspecPath}}
-      TimeoutInMinutes: 480{{end}}{{end}}{{end}}{{end}}{{end}}
+      TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -308,7 +233,8 @@ Resources:
             InputArtifacts:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
-              - Name: BuildOutput{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$appNum := len $stage.LocalApplications}}{{if gt $appNum 0}}
+              - Name: BuildOutput
+{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$appNum := len $stage.LocalApplications}}{{if gt $appNum 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:{{if $stage.Prod}}
             - Name: ApprovePromotionTo-{{$stage.Name}}
@@ -318,7 +244,7 @@ Resources:
                 Provider: Manual
                 Version: 1
               RunOrder: 1{{end}}{{range $app := $stage.LocalApplications}}
-            - Name: CreateOrUpdate-{{$app.Name}}-{{$stage.Name}}
+            - Name: CreateOrUpdate-{{$app}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
                 Category: Deploy
@@ -327,12 +253,12 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: {{$.ProjectName}}-{{$stage.Name}}-{{$app.Name}}
+                ChangeSetName: {{$.ProjectName}}-{{$stage.Name}}-{{$app}}
                 ActionMode: CREATE_UPDATE
-                StackName: {{$.ProjectName}}-{{$stage.Name}}-{{$app.Name}}
+                StackName: {{$.ProjectName}}-{{$stage.Name}}-{{$app}}
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::infrastructure/{{$stage.AppTemplatePath $app.Name}}
-                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.AppTemplateConfigurationPath $app.Name}}
+                TemplatePath: BuildOutput::infrastructure/{{$stage.AppTemplatePath $app}}
+                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.AppTemplateConfigurationPath $app}}
                 # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
@@ -343,15 +269,4 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{if $app.IntegTestBuildspecPath}}
-            - Name: Approve-{{$app.Name}}-{{$stage.Name}}
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref IntegTestProject{{logicalIDSafe $app.Name}}{{logicalIDSafe $stage.Name}}
-              RunOrder: 3
-              InputArtifacts:
-                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}{{end}}
+              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.ProjectName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{end}}{{end}}{{end}}

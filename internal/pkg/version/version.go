@@ -5,4 +5,3 @@
 package version
 
 var Version string
-var Platform string

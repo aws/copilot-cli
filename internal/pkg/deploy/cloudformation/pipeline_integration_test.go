@@ -8,7 +8,6 @@ package cloudformation_test
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -179,7 +178,7 @@ func TestPipelineCreation(t *testing.T) {
 				Properties: map[string]interface{}{
 					"repository":                   "chicken/wings",
 					"branch":                       "master",
-					manifest.GithubSecretIdKeyName: "testGitHubSecret",
+					manifest.GithubSecretIdKeyName: secretId,
 				},
 			},
 			Stages: []deploy.PipelineStage{
@@ -190,15 +189,7 @@ func TestPipelineCreation(t *testing.T) {
 						AccountID: project.AccountID,
 						Prod:      true,
 					},
-					LocalApplications: []deploy.AppInStage{
-						{
-							Name:                   "frontend",
-							IntegTestBuildspecPath: filepath.Join("frontend", manifest.IntegTestBuildspecFileName),
-						},
-						{
-							Name: "backend",
-						},
-					},
+					LocalApplications: []string{"frontend", "backend"},
 				},
 			},
 			ArtifactBuckets: artifactBuckets,

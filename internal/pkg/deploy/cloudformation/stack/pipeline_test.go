@@ -6,7 +6,6 @@ package stack
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
 const (
@@ -103,30 +101,12 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		},
 		Stages: []deploy.PipelineStage{
 			{
-				// in this stage, only frontend-app has integration test
 				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
-				LocalApplications: []deploy.AppInStage{
-					{
-						Name:                   "frontend-app",
-						IntegTestBuildspecPath: filepath.Join("frontend-app", manifest.IntegTestBuildspecFileName),
-					},
-					{
-						Name: "backend-app",
-					},
-				},
+				LocalApplications:     []string{"frontend", "backend"},
 			},
 			{
-				// in this stage, only backend-app has integration test
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
-				LocalApplications: []deploy.AppInStage{
-					{
-						Name: "frontend-app",
-					},
-					{
-						Name:                   "backend-app",
-						IntegTestBuildspecPath: filepath.Join("backend-app", manifest.IntegTestBuildspecFileName),
-					},
-				},
+				LocalApplications:     []string{"frontend", "backend"},
 			},
 		},
 		ArtifactBuckets: []deploy.ArtifactBucket{

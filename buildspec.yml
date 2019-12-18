@@ -26,19 +26,21 @@ phases:
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
       - echo "Creating latest and version-tagged artifacts..."
-      - mv ./bin/local/ecs-preview.exe ./bin/local/ecs-preview-windows-$VERSION.exe
-      - mv ./bin/local/ecs-preview ./bin/local/ecs-preview-darwin-$VERSION
-      - mv ./bin/local/ecs-preview-amd64 ./bin/local/ecs-preview-linux-$VERSION
+      - ARTIFACT_DIRECTORY=aws/amazon-ecs-cli-v2
+      - mkdir -p $ARTIFACT_DIRECTORY
+      - mv ./bin/local/ecs-preview.exe $ARTIFACT_DIRECTORY/ecs-preview-windows-$VERSION.exe
+      - mv ./bin/local/ecs-preview $ARTIFACT_DIRECTORY/ecs-preview-darwin-$VERSION
+      - mv ./bin/local/ecs-preview-amd64 $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION
       - echo "Creating manifest file..."
       - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
-      - echo ./bin/local/ecs-preview-windows-$VERSION.exe >> $MANIFESTFILE
-      - echo ./bin/local/ecs-preview-darwin-$VERSION >> $MANIFESTFILE
-      - echo ./bin/local/ecs-preview-linux-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/ecs-preview-windows-$VERSION.exe >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/ecs-preview-darwin-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION >> $MANIFESTFILE
     finally:
       - echo "Built artifacts:"
-      - ls -lah ./bin/local
-      - ./bin/local/ecs-preview-linux-$VERSION --version
+      - ls -lah $ARTIFACT_DIRECTORY
+      - $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION --version
 artifacts:
   files:
     - '**/*'
