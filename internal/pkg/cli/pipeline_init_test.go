@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/gobuffalo/packd"
-
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"

@@ -55,8 +55,6 @@ var (
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
-var errUnableParseOwner = errors.New("unable to parse github owner name")
-var errUnableParseRepo = errors.New("unable to parse github repo name")
 
 // InitPipelineOpts holds the configuration needed to create a new pipeilne
 type InitPipelineOpts struct {
@@ -371,8 +369,8 @@ func (opts *InitPipelineOpts) parseOwnerRepoName(url string) (string, string, er
 // examples:
 // efekarakus	git@github.com:efekarakus/grit.git (fetch)
 // efekarakus	https://github.com/karakuse/grit.git (fetch)
-// origin	https://github.com/koke/grit (fetch)
-// koke      git://github.com/koke/grit.git (push)
+// origin	    https://github.com/koke/grit (fetch)
+// koke       git://github.com/koke/grit.git (push)
 func (opts *InitPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 	var urls []string
 	urlSet := make(map[string]bool)
