@@ -4,27 +4,14 @@ phases:
   install:
     runtime-versions:
       docker: 18
-      golang: 1.13
-      nodejs: 10
       ruby: 2.6
     commands:
-      # Download the CLI.
-      - export GOMOD=$CODEBUILD_SRC_DIR/go.mod:GOMOD
-      - export GOPATH="/go"
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
-      # TODO download a validated version of the CLI instead of latest from master.
-      - git clone https://github.com/aws/amazon-ecs-cli-v2
-  pre_build:
-    commands:
-      # Build the CLI.
-      - cd ./amazon-ecs-cli-v2
-      - make tools
-      - make release
-      - echo "Built artifacts:"
-      - ls -lah ./bin/local
-      - cp ./bin/local/ecs-preview-amd64 ../ecs-preview
-      - cd ../
+      # Download the ecs-cli-v2 linux binary.
+      - wget {{.BinaryS3BucketPath}}/ecs-preview-linux-{{.Version}}
+      - mv ./ecs-preview-linux-{{.Version}} ./ecs-preview
+      - chmod +x ./ecs-preview
   build:
     commands:
       - echo "Run your tests"

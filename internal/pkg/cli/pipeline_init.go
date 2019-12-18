@@ -4,8 +4,10 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +19,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
@@ -37,6 +40,11 @@ const (
 
 const (
 	buildspecTemplatePath = "cicd/buildspec.yml"
+)
+
+var (
+	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
+	binaryS3BucketPath string
 )
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
@@ -231,7 +239,21 @@ func (opts *InitPipelineOpts) createBuildspec() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("find template for %s: %w", buildspecTemplatePath, err)
 	}
-	path, err := opts.workspace.WriteFile([]byte(content), workspace.BuildspecFileName)
+
+	tmpl, err := template.New("cicd-buildspec").Parse(content)
+	if err != nil {
+		return "", err
+	}
+	buf := bytes.Buffer{}
+	type cicdBuildspecTemplate struct {
+		BinaryS3BucketPath string
+		Version            string
+	}
+	if err := tmpl.Execute(&buf, cicdBuildspecTemplate{BinaryS3BucketPath: binaryS3BucketPath, Version: version.Version}); err != nil {
+		return "", err
+	}
+
+	path, err := opts.workspace.WriteFile(buf.Bytes(), workspace.BuildspecFileName)
 	if err != nil {
 		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
 	}
