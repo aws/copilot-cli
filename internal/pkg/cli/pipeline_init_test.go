@@ -254,7 +254,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inEnvironments []string
 		inGitHubToken  string
-		inGitHubOwner  string
 		inGitHubRepo   string
 		inGitBranch    string
 		inProjectName  string
@@ -272,8 +271,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		"creates secret and writes manifest and buildspecs": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitBranch:    githubBranch,
+			inGitHubRepo:   "goose",
+			inGitBranch:    "dev",
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
@@ -294,8 +293,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		"does not return an error if secret already exists": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitBranch:    githubBranch,
+			inGitHubRepo:   "goose",
+			inGitBranch:    "dev",
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
@@ -317,8 +316,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		"returns an error if buildspec template does not exist": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitBranch:    githubBranch,
+			inGitHubRepo:   "goose",
+			inGitBranch:    "dev",
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
@@ -335,8 +334,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
-			inGitHubRepo:   "https://github.com/badgoose/goose",
-			inGitBranch:    githubBranch,
+			inGitHubRepo:   "goose",
+			inGitBranch:    "dev",
 			inProjectName:  "badgoose",
 
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
@@ -370,7 +369,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			opts := &InitPipelineOpts{
 				Environments:      tc.inEnvironments,
-				GitHubOwner:       tc.inGitHubOwner,
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubToken,
 				GitBranch:         tc.inGitBranch,

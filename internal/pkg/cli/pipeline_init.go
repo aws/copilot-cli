@@ -20,7 +20,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
@@ -45,9 +44,9 @@ Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or
 )
 
 const (
-	buildspecTemplatePath          = "cicd/buildspec.yml"
-	githubURL                      = "github.com"
-	masterBranch                   = "master"
+	buildspecTemplatePath = "cicd/buildspec.yml"
+	githubURL             = "github.com"
+	masterBranch          = "master"
 )
 
 var (
