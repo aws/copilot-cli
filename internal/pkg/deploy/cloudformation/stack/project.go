@@ -6,7 +6,7 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	"text/template"
 	"sort"
 	"strings"
 
