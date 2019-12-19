@@ -82,14 +82,14 @@ func NewInitOpts() (*InitOpts, error) {
 		deployer:     deployer,
 		prog:         spin,
 	}
-	initApp := &InitAppOpts{
+	initApp := &initAppOpts{
+		GlobalOpts:     NewGlobalOpts(),
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 		manifestWriter: ws,
 		appStore:       ssm,
 		projGetter:     ssm,
 		projDeployer:   deployer,
 		prog:           spin,
-		GlobalOpts:     NewGlobalOpts(),
 	}
 	initEnv := &InitEnvOpts{
 		EnvName:       defaultEnvironmentName,

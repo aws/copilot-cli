@@ -10,16 +10,13 @@ import (
 	"path/filepath"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -41,12 +38,13 @@ const (
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
 
-// InitAppOpts holds the configuration needed to create a new application.
-type InitAppOpts struct {
-	// Fields with matching flags.
+// initAppOpts holds the configuration needed to create a new application.
+type initAppOpts struct {
 	AppType        string
 	AppName        string
 	DockerfilePath string
+
+	*GlobalOpts
 
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
@@ -58,86 +56,78 @@ type InitAppOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
-
-	*GlobalOpts
-}
-
-// Ask prompts for fields that are required but not passed in.
-func (opts *InitAppOpts) Ask() error {
-	if opts.AppType == "" {
-		if err := opts.askAppType(); err != nil {
-			return err
-		}
-	}
-	if opts.AppName == "" {
-		if err := opts.askAppName(); err != nil {
-			return err
-		}
-	}
-	if opts.DockerfilePath == "" {
-		if err := opts.askDockerfile(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *InitAppOpts) Validate() error {
-	if opts.AppType != "" {
-		if err := validateApplicationType(opts.AppType); err != nil {
+func (o *initAppOpts) Validate() error {
+	if o.AppType != "" {
+		if err := validateApplicationType(o.AppType); err != nil {
 			return err
 		}
 	}
-	if opts.AppName != "" {
-		if err := validateApplicationName(opts.AppName); err != nil {
+	if o.AppName != "" {
+		if err := validateApplicationName(o.AppName); err != nil {
 			return err
 		}
 	}
-	if opts.DockerfilePath != "" {
-		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
+	if o.DockerfilePath != "" {
+		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
 			return err
 		}
 	}
-	if opts.ProjectName() == "" {
+	if o.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
 	return nil
 }
 
+// Ask prompts for fields that are required but not passed in.
+func (o *initAppOpts) Ask() error {
+	if err := o.askAppType(); err != nil {
+		return err
+	}
+	if err := o.askAppName(); err != nil {
+		return err
+	}
+	if err := o.askDockerfile(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Execute writes the application's manifest file and stores the application in SSM.
-func (opts *InitAppOpts) Execute() error {
-	if err := opts.ensureNoExistingApp(opts.ProjectName(), opts.AppName); err != nil {
+func (o *initAppOpts) Execute() error {
+	if err := o.ensureNoExistingApp(o.ProjectName(), o.AppName); err != nil {
 		return err
 	}
 
-	manifestPath, err := opts.createManifest()
+	manifestPath, err := o.createManifest()
 	if err != nil {
 		return err
 	}
-	opts.manifestPath = manifestPath
+	o.manifestPath = manifestPath
 
 	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
+	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(o.manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
-	proj, err := opts.projGetter.GetProject(opts.ProjectName())
+	proj, err := o.projGetter.GetProject(o.ProjectName())
 	if err != nil {
-		return fmt.Errorf("get project %s: %w", opts.ProjectName(), err)
+		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
-	opts.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, opts.AppName))
-	if err := opts.projDeployer.AddAppToProject(proj, opts.AppName); err != nil {
-		opts.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, opts.AppName))
-		return fmt.Errorf("add app %s to project %s: %w", opts.AppName, opts.ProjectName(), err)
+	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
+	if err := o.projDeployer.AddAppToProject(proj, o.AppName); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
+		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, opts.AppName))
+	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	return opts.createAppInProject(opts.ProjectName())
+	return o.createAppInProject(o.ProjectName())
 }
 
-func (opts *InitAppOpts) createManifest() (string, error) {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
+func (o *initAppOpts) createManifest() (string, error) {
+	manifest, err := manifest.CreateApp(o.AppName, o.AppType, o.DockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
@@ -145,10 +135,10 @@ func (opts *InitAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	filename := opts.manifestWriter.AppManifestFileName(opts.AppName)
-	manifestPath, err := opts.manifestWriter.WriteFile(manifestBytes, filename)
+	filename := o.manifestWriter.AppManifestFileName(o.AppName)
+	manifestPath, err := o.manifestWriter.WriteFile(manifestBytes, filename)
 	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
+		return "", fmt.Errorf("write manifest for app %s: %w", o.AppName, err)
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {
@@ -161,63 +151,75 @@ func (opts *InitAppOpts) createManifest() (string, error) {
 	return relPath, nil
 }
 
-func (opts *InitAppOpts) createAppInProject(projectName string) error {
-	if err := opts.appStore.CreateApplication(&archer.Application{
+func (o *initAppOpts) createAppInProject(projectName string) error {
+	if err := o.appStore.CreateApplication(&archer.Application{
 		Project: projectName,
-		Name:    opts.AppName,
-		Type:    opts.AppType,
+		Name:    o.AppName,
+		Type:    o.AppType,
 	}); err != nil {
-		return fmt.Errorf("saving application %s: %w", opts.AppName, err)
+		return fmt.Errorf("saving application %s: %w", o.AppName, err)
 	}
 	return nil
 }
 
-func (opts *InitAppOpts) askAppType() error {
-	t, err := opts.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
+func (o *initAppOpts) askAppType() error {
+	if o.AppType != "" {
+		return nil
+	}
+
+	t, err := o.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
 	}
-	opts.AppType = t
+	o.AppType = t
+	viper.Set(appTypeFlag, o.AppType)
 	return nil
 }
 
-func (opts *InitAppOpts) askAppName() error {
-	name, err := opts.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(opts.AppType)),
-		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
+func (o *initAppOpts) askAppName() error {
+	if o.AppName != "" {
+		return nil
+	}
+
+	name, err := o.prompt.Get(
+		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(o.AppType)),
+		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, o.ProjectName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
 	}
-	opts.AppName = name
+	o.AppName = name
+	viper.Set(nameFlag, o.AppName)
 	return nil
 }
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
-func (opts *InitAppOpts) askDockerfile() error {
+func (o *initAppOpts) askDockerfile() error {
+	if o.DockerfilePath != "" {
+		return nil
+	}
+
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := listDockerfiles(opts.fs, ".")
+	dockerfiles, err := listDockerfiles(o.fs, ".")
 	if err != nil {
 		return err
 	}
-
-	sel, err := opts.prompt.SelectOne(
-		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(opts.AppName)),
+	sel, err := o.prompt.SelectOne(
+		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(o.AppName)),
 		appInitDockerfileHelpPrompt,
 		dockerfiles,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
 	}
-
-	opts.DockerfilePath = sel
-
+	o.DockerfilePath = sel
+	viper.Set(dockerFileFlag, o.DockerfilePath)
 	return nil
 }
 
-func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
-	_, err := opts.appStore.GetApplication(projectName, opts.AppName)
+func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
+	_, err := o.appStore.GetApplication(projectName, o.AppName)
 	// If the app doesn't exist - that's perfect, return no error.
 	var existsErr *store.ErrNoSuchApplication
 	if errors.As(err, &existsErr) {
@@ -232,20 +234,18 @@ func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error 
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (opts *InitAppOpts) RecommendedActions() []string {
+func (o *initAppOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", opts.AppName, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", o.AppName, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &InitAppOpts{
-		GlobalOpts: NewGlobalOpts(),
-	}
+	f := &optsFactory{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new application in a project.",
@@ -254,51 +254,36 @@ This command is also run as part of "ecs-preview init".`,
 		Example: `
   Create a "frontend" web application.
   /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
-
-			store, err := store.New()
+		RunE: runCmdE(func(_ *cobra.Command, _ []string) error {
+			opts, err := f.CreateInitAppOpts()
 			if err != nil {
-				return fmt.Errorf("couldn't connect to project datastore: %w", err)
+				return fmt.Errorf("initialize depedencies: %w", err)
 			}
-			opts.appStore = store
-			opts.projGetter = store
-
-			ws, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("workspace cannot be created: %w", err)
-			}
-			opts.manifestWriter = ws
-
-			sess, err := session.Default()
-			if err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
-			opts.projDeployer = cloudformation.New(sess)
-
-			opts.prog = termprogress.NewSpinner()
-			return opts.Validate()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			log.Warningln("It's best to run this command in the root of your workspace.")
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
+			if err := opts.Execute(); err != nil {
 				return err
 			}
-			return opts.Execute()
-		}),
-		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil
-		},
+		}),
 	}
-	cmd.Flags().StringVarP(&opts.AppType, appTypeFlag, appTypeFlagShort, "" /* default */, appTypeFlagDescription)
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
-	cmd.Flags().StringVarP(&opts.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "" /* default */, dockerFileFlagDescription)
+	cmd.Flags().StringP(appTypeFlag, appTypeFlagShort, "" /* default */, appTypeFlagDescription)
+	viper.BindPFlag(appTypeFlag, cmd.Flags().Lookup(appTypeFlag))
+
+	cmd.Flags().StringP(nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
+	viper.BindPFlag(nameFlag, cmd.Flags().Lookup(nameFlag))
+
+	cmd.Flags().StringP(dockerFileFlag, dockerFileFlagShort, "" /* default */, dockerFileFlagDescription)
+	viper.BindPFlag(dockerFileFlag, cmd.Flags().Lookup(dockerFileFlag))
+
 	return cmd
 }

@@ -151,30 +151,30 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
-			opts := &InitAppOpts{
+			cmd := &initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
 
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompt,
 				},
+				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
-			tc.mockFileSystem(opts.fs)
+			tc.mockFileSystem(cmd.fs)
 			tc.mockPrompt(mockPrompt)
 
 			// WHEN
-			err := opts.Ask()
+			err := cmd.Ask()
 
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, wantedAppType, opts.AppType)
-				require.Equal(t, wantedAppName, opts.AppName)
-				require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
+				require.Equal(t, wantedAppType, cmd.AppType)
+				require.Equal(t, wantedAppName, cmd.AppName)
+				require.Equal(t, wantedDockerfilePath, cmd.DockerfilePath)
 			}
 		})
 	}
@@ -223,12 +223,12 @@ func TestAppInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := InitAppOpts{
+			opts := initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
-				fs:             &afero.Afero{Fs: afero.NewMemMapFs()},
 				GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+				fs:             &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
 			if tc.mockFileSystem != nil {
 				tc.mockFileSystem(opts.fs)
@@ -435,17 +435,16 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockProjGetter := mocks.NewMockProjectGetter(ctrl)
 			mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
 			mockProg := climocks.NewMockprogress(ctrl)
-			opts := InitAppOpts{
+			opts := initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
+				GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
 				manifestWriter: mockWriter,
 				appStore:       mockAppStore,
 				projGetter:     mockProjGetter,
 				projDeployer:   mockProjDeployer,
 				prog:           mockProg,
-
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 			tc.mockManifestWriter(mockWriter)
 			tc.mockAppStore(mockAppStore)
