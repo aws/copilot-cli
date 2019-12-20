@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
@@ -41,7 +40,7 @@ func TestWebAppURI_String(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			uri := &webAppURI{
+			uri := &WebAppURI{
 				DNSName: tc.dnsName,
 				Path:    tc.path,
 			}
@@ -62,15 +61,15 @@ func TestWebAppDescriber_URI(t *testing.T) {
 		testAppPath        = "*"
 	)
 	testCases := map[string]struct {
-		mockStore           func(ctrl *gomock.Controller) *climocks.MockprojectService
+		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvGetter
 		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
 
-		wantedURI   *webAppURI
+		wantedURI   *WebAppURI
 		wantedError error
 	}{
 		"environment does not exist in store": {
-			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
-				m := climocks.NewMockprojectService(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(nil, errors.New("some error"))
 				return m
 			},
@@ -80,8 +79,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"cfn error": {
-			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
-				m := climocks.NewMockprojectService(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -99,8 +98,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("describe stack %s: %s", stack.NameForEnv(testProject, testEnv), "some error"),
 		},
 		"stack does not exist": {
-			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
-				m := climocks.NewMockprojectService(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -120,8 +119,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			wantedError: fmt.Errorf("stack %s not found", stack.NameForEnv(testProject, testEnv)),
 		},
 		"https web application": {
-			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
-				m := climocks.NewMockprojectService(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -168,13 +167,13 @@ func TestWebAppDescriber_URI(t *testing.T) {
 				return describers
 			},
 
-			wantedURI: &webAppURI{
+			wantedURI: &WebAppURI{
 				DNSName: testApp + "." + testEnvSubdomain,
 			},
 		},
 		"http web application": {
-			mockStore: func(ctrl *gomock.Controller) *climocks.MockprojectService {
-				m := climocks.NewMockprojectService(ctrl)
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
 				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
 					Project:        testProject,
 					Name:           testEnv,
@@ -217,7 +216,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 				return describers
 			},
 
-			wantedURI: &webAppURI{
+			wantedURI: &WebAppURI{
 				DNSName: testEnvLBDNSName,
 				Path:    testAppPath,
 			},
@@ -230,7 +229,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			d := &webAppDescriber{
+			d := &WebAppDescriber{
 				app: &archer.Application{
 					Project: testProject,
 					Name:    testApp,
@@ -247,7 +246,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedURI.String(), actual)
+				require.Equal(t, tc.wantedURI, actual)
 			}
 		})
 	}

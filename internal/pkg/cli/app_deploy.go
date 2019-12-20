@@ -177,15 +177,15 @@ func (opts *appDeployOpts) Execute() error {
 	}
 	opts.spinner.Stop("")
 
-	identifier, err := describe.NewAppIdentifier(opts.ProjectName(), opts.AppName)
+	identifier, err := describe.NewWebAppDescriber(opts.ProjectName(), opts.AppName)
 	if err != nil {
 		return fmt.Errorf("create identifier for application %s in project %s: %w", opts.AppName, opts.ProjectName(), err)
 	}
-	uri, err = identifier.URI(opts.targetEnvironment.Name)
+	loadBalancerURI, err := identifier.URI(opts.targetEnvironment.Name)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", opts.EnvName, err)
 	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.AppName), uri)
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.AppName), loadBalancerURI.String())
 	return nil
 }
 

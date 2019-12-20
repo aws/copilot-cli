@@ -7,6 +7,7 @@ package mocks
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
@@ -615,4 +616,155 @@ func (m *MocksessionProvider) FromRole(roleARN, region string) (*session.Session
 func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
+}
+
+// MockresourceIdentifier is a mock of resourceIdentifier interface
+type MockresourceIdentifier struct {
+	ctrl     *gomock.Controller
+	recorder *MockresourceIdentifierMockRecorder
+}
+
+// MockresourceIdentifierMockRecorder is the mock recorder for MockresourceIdentifier
+type MockresourceIdentifierMockRecorder struct {
+	mock *MockresourceIdentifier
+}
+
+// NewMockresourceIdentifier creates a new mock instance
+func NewMockresourceIdentifier(ctrl *gomock.Controller) *MockresourceIdentifier {
+	mock := &MockresourceIdentifier{ctrl: ctrl}
+	mock.recorder = &MockresourceIdentifierMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockresourceIdentifier) EXPECT() *MockresourceIdentifierMockRecorder {
+	return m.recorder
+}
+
+// URI mocks base method
+func (m *MockresourceIdentifier) URI(envName string) (*describe.WebAppURI, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "URI", envName)
+	ret0, _ := ret[0].(*describe.WebAppURI)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// URI indicates an expected call of URI
+func (mr *MockresourceIdentifierMockRecorder) URI(envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockresourceIdentifier)(nil).URI), envName)
+}
+
+// MockstoreReader is a mock of storeReader interface
+type MockstoreReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockstoreReaderMockRecorder
+}
+
+// MockstoreReaderMockRecorder is the mock recorder for MockstoreReader
+type MockstoreReaderMockRecorder struct {
+	mock *MockstoreReader
+}
+
+// NewMockstoreReader creates a new mock instance
+func NewMockstoreReader(ctrl *gomock.Controller) *MockstoreReader {
+	mock := &MockstoreReader{ctrl: ctrl}
+	mock.recorder = &MockstoreReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockstoreReader) EXPECT() *MockstoreReaderMockRecorder {
+	return m.recorder
+}
+
+// ListProjects mocks base method
+func (m *MockstoreReader) ListProjects() ([]*archer.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListProjects")
+	ret0, _ := ret[0].([]*archer.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListProjects indicates an expected call of ListProjects
+func (mr *MockstoreReaderMockRecorder) ListProjects() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjects", reflect.TypeOf((*MockstoreReader)(nil).ListProjects))
+}
+
+// GetProject mocks base method
+func (m *MockstoreReader) GetProject(projectName string) (*archer.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProject", projectName)
+	ret0, _ := ret[0].(*archer.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProject indicates an expected call of GetProject
+func (mr *MockstoreReaderMockRecorder) GetProject(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockstoreReader)(nil).GetProject), projectName)
+}
+
+// ListEnvironments mocks base method
+func (m *MockstoreReader) ListEnvironments(projectName string) ([]*archer.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments", projectName)
+	ret0, _ := ret[0].([]*archer.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments
+func (mr *MockstoreReaderMockRecorder) ListEnvironments(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockstoreReader)(nil).ListEnvironments), projectName)
+}
+
+// GetEnvironment mocks base method
+func (m *MockstoreReader) GetEnvironment(projectName, environmentName string) (*archer.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", projectName, environmentName)
+	ret0, _ := ret[0].(*archer.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockstoreReaderMockRecorder) GetEnvironment(projectName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockstoreReader)(nil).GetEnvironment), projectName, environmentName)
+}
+
+// ListApplications mocks base method
+func (m *MockstoreReader) ListApplications(projectName string) ([]*archer.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApplications", projectName)
+	ret0, _ := ret[0].([]*archer.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApplications indicates an expected call of ListApplications
+func (mr *MockstoreReaderMockRecorder) ListApplications(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockstoreReader)(nil).ListApplications), projectName)
+}
+
+// GetApplication mocks base method
+func (m *MockstoreReader) GetApplication(projectName, applicationName string) (*archer.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetApplication", projectName, applicationName)
+	ret0, _ := ret[0].(*archer.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetApplication indicates an expected call of GetApplication
+func (mr *MockstoreReaderMockRecorder) GetApplication(projectName, applicationName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockstoreReader)(nil).GetApplication), projectName, applicationName)
 }
