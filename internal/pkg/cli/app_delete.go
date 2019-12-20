@@ -32,9 +32,10 @@ var (
 // BuildAppDeleteCmd builds the command to delete application(s).
 func BuildAppDeleteCmd() *cobra.Command {
 	opts := &deleteAppOpts{
-		GlobalOpts: NewGlobalOpts(),
-		spinner:    termprogress.NewSpinner(),
-		prompter:   prompt.New(),
+		GlobalOpts:  NewGlobalOpts(),
+		spinner:     termprogress.NewSpinner(),
+		prompter:    prompt.New(),
+		sessFactory: &session.Factory{},
 	}
 
 	cmd := &cobra.Command{
@@ -88,6 +89,7 @@ type deleteAppOpts struct {
 
 	projectService   projectService
 	workspaceService archer.Workspace
+	sessFactory      sessionProvider
 	spinner          progress
 	prompter         prompter
 
@@ -222,7 +224,7 @@ func (opts deleteAppOpts) deleteApp() error {
 
 func (opts deleteAppOpts) deleteStacks() error {
 	for _, env := range opts.projectEnvironments {
-		sess, err := session.FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := opts.sessFactory.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
@@ -256,7 +258,7 @@ func (opts deleteAppOpts) emptyECRRepos() error {
 	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
 
 	for _, region := range uniqueRegions {
-		sess, err := session.DefaultWithRegion(region)
+		sess, err := opts.sessFactory.DefaultWithRegion(region)
 		if err != nil {
 			return err
 		}
@@ -278,7 +280,7 @@ func (opts deleteAppOpts) removeAppProjectResources() error {
 		return err
 	}
 
-	sess, err := session.Default()
+	sess, err := opts.sessFactory.Default()
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -108,4 +109,22 @@ func runCmdE(f func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Co
 		}
 		return f(cmd, args)
 	}
+}
+
+type defaultSessionProvider interface {
+	Default() (*session.Session, error)
+}
+
+type regionalSessionProvider interface {
+	DefaultWithRegion(region string) (*session.Session, error)
+}
+
+type sessionFromRoleProvider interface {
+	FromRole(roleARN string, region string) (*session.Session, error)
+}
+
+type sessionProvider interface {
+	defaultSessionProvider
+	regionalSessionProvider
+	sessionFromRoleProvider
 }

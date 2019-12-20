@@ -30,8 +30,11 @@ func userAgentHandler() request.NamedHandler {
 	}
 }
 
+// Factory holds methods to create sessions.
+type Factory struct{}
+
 // Default returns a session configured against the "default" AWS profile.
-func Default() (*session.Session, error) {
+func (f *Factory) Default() (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			CredentialsChainVerboseErrors: aws.Bool(true),
@@ -46,7 +49,7 @@ func Default() (*session.Session, error) {
 }
 
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
-func DefaultWithRegion(region string) (*session.Session, error) {
+func (f *Factory) DefaultWithRegion(region string) (*session.Session, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String(region),
 	})
@@ -58,7 +61,7 @@ func DefaultWithRegion(region string) (*session.Session, error) {
 }
 
 // FromProfile returns a session configured against the input profile name.
-func FromProfile(name string) (*session.Session, error) {
+func (f *Factory) FromProfile(name string) (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			CredentialsChainVerboseErrors: aws.Bool(true),
@@ -74,8 +77,8 @@ func FromProfile(name string) (*session.Session, error) {
 }
 
 // FromRole returns a session configured against the input role and region.
-func FromRole(roleARN string, region string) (*session.Session, error) {
-	defaultSession, err := Default()
+func (f *Factory) FromRole(roleARN string, region string) (*session.Session, error) {
+	defaultSession, err := f.Default()
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating default session: %w", err)

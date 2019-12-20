@@ -65,7 +65,8 @@ func NewInitOpts() (*InitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sess, err := session.Default()
+	f := &session.Factory{}
+	sess, err := f.Default()
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +111,7 @@ func NewInitOpts() (*InitOpts, error) {
 		spinner:       spin,
 		dockerService: docker.New(),
 		runner:        command.New(),
+		sessFactory:   f,
 
 		GlobalOpts: NewGlobalOpts(),
 	}

@@ -55,7 +55,8 @@ type Store struct {
 
 // New returns a Store allowing you to query or create Projects or Environments.
 func New() (*Store, error) {
-	sess, err := session.Default()
+	f := &session.Factory{}
+	sess, err := f.Default()
 
 	if err != nil {
 		return nil, err

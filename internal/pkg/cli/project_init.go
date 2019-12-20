@@ -42,7 +42,8 @@ type InitProjectOpts struct {
 
 // NewInitProjectOpts returns a new InitProjectOpts.
 func NewInitProjectOpts() (*InitProjectOpts, error) {
-	defaultSession, err := session.Default()
+	f := &session.Factory{}
+	defaultSession, err := f.Default()
 	if err != nil {
 		return nil, err
 	}

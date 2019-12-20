@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
@@ -37,4 +38,8 @@ func NewAppIdentifier(project, app string) (ResourceIdentifier, error) {
 
 type stackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+}
+
+type sessionFromRoleProvider interface {
+	FromRole(roleARN string, region string) (*session.Session, error)
 }
