@@ -208,8 +208,8 @@ func BuildEnvDeleteCmd() *cobra.Command {
 				return fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 			}
 			opts.storeClient = store
-			f := &session.Provider{}
-			profileSess, err := f.FromProfile(opts.EnvProfile)
+			p := session.NewProvider()
+			profileSess, err := p.FromProfile(opts.EnvProfile)
 			if err != nil {
 				return fmt.Errorf("cannot create session from profile %s: %w", opts.EnvProfile, err)
 			}

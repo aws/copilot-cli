@@ -23,8 +23,8 @@ type SecretsManager struct {
 
 // NewSecretsManager returns a SecretsManager configured with the input session.
 func NewStore() (*SecretsManager, error) {
-	f := &session.Provider{}
-	sess, err := f.Default()
+	p := session.NewProvider()
+	sess, err := p.Default()
 
 	if err != nil {
 		return nil, err

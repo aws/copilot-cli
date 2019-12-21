@@ -43,7 +43,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		spinner:       termprogress.NewSpinner(),
 		dockerService: docker.New(),
 		runner:        command.New(),
-		sessFactory:   &session.Provider{},
+		sessProvider:  session.NewProvider(),
 	}
 
 	cmd := &cobra.Command{
@@ -93,7 +93,7 @@ type appDeployOpts struct {
 	runner             runner
 	appPackageCfClient projectResourcesGetter
 	appDeployCfClient  cloudformation.CloudFormation
-	sessFactory        sessionProvider
+	sessProvider       sessionProvider
 
 	spinner progress
 
@@ -292,12 +292,12 @@ func (opts *appDeployOpts) sourceTargetEnv() error {
 }
 
 func (opts *appDeployOpts) configureClients() error {
-	defaultSessEnvRegion, err := opts.sessFactory.DefaultWithRegion(opts.targetEnvironment.Region)
+	defaultSessEnvRegion, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
 	if err != nil {
 		return fmt.Errorf("create ECR session with region %s: %w", opts.targetEnvironment.Region, err)
 	}
 
-	envSession, err := opts.sessFactory.FromRole(opts.targetEnvironment.ManagerRoleARN, opts.targetEnvironment.Region)
+	envSession, err := opts.sessProvider.FromRole(opts.targetEnvironment.ManagerRoleARN, opts.targetEnvironment.Region)
 	if err != nil {
 		return fmt.Errorf("assuming environment manager role: %w", err)
 	}
@@ -309,7 +309,7 @@ func (opts *appDeployOpts) configureClients() error {
 	opts.appDeployCfClient = cloudformation.New(envSession)
 
 	// app package CF client against tools account
-	appPackageCfSess, err := opts.sessFactory.Default()
+	appPackageCfSess, err := opts.sessProvider.Default()
 	if err != nil {
 		return fmt.Errorf("create app package CF session: %w", err)
 	}

@@ -250,8 +250,8 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			}
 			opts.project = project
 
-			f := &session.Provider{}
-			defaultSession, err := f.Default()
+			p := session.NewProvider()
+			defaultSession, err := p.Default()
 			if err != nil {
 				return err
 			}

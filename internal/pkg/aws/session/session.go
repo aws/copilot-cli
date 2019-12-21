@@ -30,11 +30,23 @@ func userAgentHandler() request.NamedHandler {
 	}
 }
 
-// Provider holds methods to create sessions.
-type Provider struct{}
+// Provider provides methods to create sessions.
+// Once a session is created, it's cached locally so that the same session is not re-created.
+type Provider struct {
+	defaultSess *session.Session
+}
+
+// NewProvider initializes a new session Provider with empty caches.
+func NewProvider() *Provider {
+	return &Provider{}
+}
 
 // Default returns a session configured against the "default" AWS profile.
 func (p *Provider) Default() (*session.Session, error) {
+	if p.defaultSess != nil {
+		return p.defaultSess, nil
+	}
+
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{
 			CredentialsChainVerboseErrors: aws.Bool(true),
@@ -45,7 +57,8 @@ func (p *Provider) Default() (*session.Session, error) {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	return sess, err
+	p.defaultSess = sess
+	return sess, nil
 }
 
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
@@ -57,7 +70,7 @@ func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	return sess, err
+	return sess, nil
 }
 
 // FromProfile returns a session configured against the input profile name.
@@ -73,13 +86,12 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	return sess, err
+	return sess, nil
 }
 
 // FromRole returns a session configured against the input role and region.
 func (p *Provider) FromRole(roleARN string, region string) (*session.Session, error) {
 	defaultSession, err := p.Default()
-
 	if err != nil {
 		return nil, fmt.Errorf("error creating default session: %w", err)
 	}
@@ -94,5 +106,5 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
-	return sess, err
+	return sess, nil
 }

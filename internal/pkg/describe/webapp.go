@@ -33,7 +33,7 @@ type webAppDescriber struct {
 
 	store           archer.EnvironmentGetter
 	stackDescribers map[string]stackDescriber
-	sessFactory     sessionFromRoleProvider
+	sessProvider    sessionFromRoleProvider
 }
 
 func newWebAppDescriber(app *archer.Application, store archer.EnvironmentGetter) *webAppDescriber {
@@ -41,7 +41,7 @@ func newWebAppDescriber(app *archer.Application, store archer.EnvironmentGetter)
 		app:             app,
 		store:           store,
 		stackDescribers: make(map[string]stackDescriber),
-		sessFactory:     &session.Provider{},
+		sessProvider:    session.NewProvider(),
 	}
 }
 
@@ -118,7 +118,7 @@ func (d *webAppDescriber) stack(roleARN, region, stackName string) (*cloudformat
 
 func (d *webAppDescriber) stackDescriber(roleARN, region string) (stackDescriber, error) {
 	if _, ok := d.stackDescribers[roleARN]; !ok {
-		sess, err := d.sessFactory.FromRole(roleARN, region)
+		sess, err := d.sessProvider.FromRole(roleARN, region)
 		if err != nil {
 			return nil, fmt.Errorf("session for role %s and region %s: %w", roleARN, region, err)
 		}
