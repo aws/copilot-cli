@@ -326,7 +326,7 @@ func BuildAppPackageCmd() *cobra.Command {
 			}
 			opts.store = store
 
-			f := &session.Factory{}
+			f := &session.Provider{}
 			sess, err := f.Default()
 			if err != nil {
 				return fmt.Errorf("error retrieving default session: %w", err)

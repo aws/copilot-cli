@@ -270,7 +270,7 @@ This command is also run as part of "ecs-preview init".`,
 			}
 			opts.manifestWriter = ws
 
-			f := &session.Factory{}
+			f := &session.Provider{}
 			sess, err := f.Default()
 			if err != nil {
 				return err

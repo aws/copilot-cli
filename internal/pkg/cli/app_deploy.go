@@ -43,7 +43,7 @@ func BuildAppDeployCommand() *cobra.Command {
 		spinner:       termprogress.NewSpinner(),
 		dockerService: docker.New(),
 		runner:        command.New(),
-		sessFactory:   &session.Factory{},
+		sessFactory:   &session.Provider{},
 	}
 
 	cmd := &cobra.Command{

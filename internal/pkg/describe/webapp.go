@@ -41,7 +41,7 @@ func newWebAppDescriber(app *archer.Application, store archer.EnvironmentGetter)
 		app:             app,
 		store:           store,
 		stackDescribers: make(map[string]stackDescriber),
-		sessFactory:     &session.Factory{},
+		sessFactory:     &session.Provider{},
 	}
 }
 

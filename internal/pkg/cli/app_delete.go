@@ -272,7 +272,7 @@ func BuildAppDeleteCmd() *cobra.Command {
 		GlobalOpts:  NewGlobalOpts(),
 		spinner:     termprogress.NewSpinner(),
 		prompter:    prompt.New(),
-		sessFactory: &session.Factory{},
+		sessFactory: &session.Provider{},
 	}
 
 	cmd := &cobra.Command{

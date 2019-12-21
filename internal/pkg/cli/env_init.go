@@ -265,7 +265,7 @@ func BuildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			f := &session.Factory{}
+			f := &session.Provider{}
 			profileSess, err := f.FromProfile(opts.EnvProfile)
 			if err != nil {
 				return err

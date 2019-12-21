@@ -65,7 +65,7 @@ func NewInitOpts() (*InitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	f := &session.Factory{}
+	f := &session.Provider{}
 	sess, err := f.Default()
 	if err != nil {
 		return nil, err
