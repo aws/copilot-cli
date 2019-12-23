@@ -116,7 +116,7 @@ func (opts deleteAppOpts) Execute() error {
 		return err
 	}
 
-	log.Ssuccessf("removed app %s from project %s\n", opts.AppName, opts.projectName)
+	log.Successf("removed app %s from project %s\n", opts.AppName, opts.projectName)
 	return nil
 }
 
