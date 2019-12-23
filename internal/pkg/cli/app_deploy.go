@@ -36,50 +36,6 @@ var (
 	errNoLocalManifestsFound = errors.New("no manifest files found")
 )
 
-// BuildAppDeployCommand builds the `app deploy` subcommand.
-func BuildAppDeployCommand() *cobra.Command {
-	input := &appDeployOpts{
-		GlobalOpts:    NewGlobalOpts(),
-		spinner:       termprogress.NewSpinner(),
-		dockerService: docker.New(),
-		runner:        command.New(),
-		sessProvider:  session.NewProvider(),
-	}
-
-	cmd := &cobra.Command{
-		Use:   "deploy",
-		Short: "Deploy an application to an environment.",
-		Long:  `Deploy an application to an environment.`,
-		Example: `
-  Deploy an application named "frontend" to a "test" environment.
-  /code $ ecs-preview app deploy --name frontend --env test`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := input.init(); err != nil {
-				return err
-			}
-			if err := input.sourceInputs(); err != nil {
-				return err
-			}
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := input.deployApp(); err != nil {
-				return err
-			}
-			return nil
-		}),
-		// PostRunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: recommended actions?
-		// },
-	}
-
-	cmd.Flags().StringVarP(&input.app, nameFlag, nameFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&input.env, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&input.imageTag, imageTagFlag, "", imageTagFlagDescription)
-
-	return cmd
-}
-
 type appDeployOpts struct {
 	*GlobalOpts
 	app      string
@@ -478,4 +434,48 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 	}
 
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
+}
+
+// BuildAppDeployCommand builds the `app deploy` subcommand.
+func BuildAppDeployCommand() *cobra.Command {
+	input := &appDeployOpts{
+		GlobalOpts:    NewGlobalOpts(),
+		spinner:       termprogress.NewSpinner(),
+		dockerService: docker.New(),
+		runner:        command.New(),
+		sessProvider:  session.NewProvider(),
+	}
+
+	cmd := &cobra.Command{
+		Use:   "deploy",
+		Short: "Deploy an application to an environment.",
+		Long:  `Deploy an application to an environment.`,
+		Example: `
+  Deploy an application named "frontend" to a "test" environment.
+  /code $ ecs-preview app deploy --name frontend --env test`,
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := input.init(); err != nil {
+				return err
+			}
+			if err := input.sourceInputs(); err != nil {
+				return err
+			}
+			return nil
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := input.deployApp(); err != nil {
+				return err
+			}
+			return nil
+		}),
+		// PostRunE: func(cmd *cobra.Command, args []string) error {
+		// TODO: recommended actions?
+		// },
+	}
+
+	cmd.Flags().StringVarP(&input.app, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&input.env, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&input.imageTag, imageTagFlag, "", imageTagFlagDescription)
+
+	return cmd
 }
