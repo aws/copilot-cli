@@ -436,8 +436,8 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
 }
 
-// BuildAppDeployCommand builds the `app deploy` subcommand.
-func BuildAppDeployCommand() *cobra.Command {
+// BuildAppDeployCmd builds the `app deploy` subcommand.
+func BuildAppDeployCmd() *cobra.Command {
 	input := &appDeployOpts{
 		GlobalOpts:    NewGlobalOpts(),
 		spinner:       termprogress.NewSpinner(),
