@@ -29,58 +29,6 @@ var (
 	errAppDeleteCancelled = errors.New("app delete cancelled - no changes made")
 )
 
-// BuildAppDeleteCmd builds the command to delete application(s).
-func BuildAppDeleteCmd() *cobra.Command {
-	opts := &deleteAppOpts{
-		GlobalOpts:  NewGlobalOpts(),
-		spinner:     termprogress.NewSpinner(),
-		prompter:    prompt.New(),
-		sessFactory: &session.Factory{},
-	}
-
-	cmd := &cobra.Command{
-		Use:   "delete [name]",
-		Short: "Deletes an application from your project.",
-		Example: `
-  Delete the "test" application.
-  /code $ ecs-preview app delete test
-
-  Delete the "test" application without prompting.
-  /code $ ecs-preview app delete test --yes`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("requires a single application name as argument")
-			}
-
-			opts.app = args[0]
-
-			if err := opts.init(); err != nil {
-				return err
-			}
-
-			if err := opts.sourceInputs(); err != nil {
-				return err
-			}
-
-			return opts.confirmDelete()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			return opts.deleteApp()
-		}),
-		PostRunE: func(cmd *cobra.Command, args []string) error {
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
-		},
-	}
-
-	cmd.Flags().BoolVar(&opts.skipConfirmation, yesFlag, false, yesFlagDescription)
-
-	return cmd
-}
-
 type deleteAppOpts struct {
 	*GlobalOpts
 	app              string
@@ -322,4 +270,56 @@ func (opts *deleteAppOpts) RecommendedActions() []string {
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
 			color.HighlightCode(fmt.Sprintf("ecs-preview pipeline update"))),
 	}
+}
+
+// BuildAppDeleteCmd builds the command to delete application(s).
+func BuildAppDeleteCmd() *cobra.Command {
+	opts := &deleteAppOpts{
+		GlobalOpts:  NewGlobalOpts(),
+		spinner:     termprogress.NewSpinner(),
+		prompter:    prompt.New(),
+		sessFactory: &session.Factory{},
+	}
+
+	cmd := &cobra.Command{
+		Use:   "delete [name]",
+		Short: "Deletes an application from your project.",
+		Example: `
+  Delete the "test" application.
+  /code $ ecs-preview app delete test
+
+  Delete the "test" application without prompting.
+  /code $ ecs-preview app delete test --yes`,
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("requires a single application name as argument")
+			}
+
+			opts.app = args[0]
+
+			if err := opts.init(); err != nil {
+				return err
+			}
+
+			if err := opts.sourceInputs(); err != nil {
+				return err
+			}
+
+			return opts.confirmDelete()
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			return opts.deleteApp()
+		}),
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&opts.skipConfirmation, yesFlag, false, yesFlagDescription)
+
+	return cmd
 }
