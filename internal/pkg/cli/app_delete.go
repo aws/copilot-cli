@@ -30,38 +30,20 @@ var (
 )
 
 type deleteAppOpts struct {
+	// Flags or arguments that are user inputs.
 	*GlobalOpts
-	app              string
-	env              string
-	skipConfirmation bool
+	SkipConfirmation bool
+	AppName          string
 
+	// Interfaces to dependencies.
 	projectService   projectService
 	workspaceService archer.Workspace
 	sessFactory      sessionProvider
 	spinner          progress
 	prompter         prompter
 
+	// Internal state.
 	projectEnvironments []*archer.Environment
-}
-
-func (opts deleteAppOpts) confirmDelete() error {
-	if opts.skipConfirmation {
-		return nil
-	}
-
-	deleteConfirmed, err := opts.prompter.Confirm(
-		fmt.Sprintf(appDeleteConfirmPrompt, opts.app, opts.projectName),
-		appDeleteConfirmHelp)
-
-	if err != nil {
-		return fmt.Errorf("app delete confirmation prompt: %w", err)
-	}
-
-	if !deleteConfirmed {
-		return errAppDeleteCancelled
-	}
-
-	return nil
 }
 
 func (opts *deleteAppOpts) init() error {
@@ -80,31 +62,65 @@ func (opts *deleteAppOpts) init() error {
 	return nil
 }
 
-func (opts *deleteAppOpts) sourceInputs() error {
+// Validate returns an error if the user inputs are invalid.
+func (opts *deleteAppOpts) Validate() error {
 	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
-
-	if err := opts.sourceProjectData(); err != nil {
+	if err := opts.validateAppName(); err != nil {
 		return err
+	}
+	return nil
+}
+
+// Ask prompts the user for any required flags.
+func (opts deleteAppOpts) Ask() error {
+	if opts.SkipConfirmation {
+		return nil
+	}
+
+	deleteConfirmed, err := opts.prompter.Confirm(
+		fmt.Sprintf(appDeleteConfirmPrompt, opts.AppName, opts.projectName),
+		appDeleteConfirmHelp)
+
+	if err != nil {
+		return fmt.Errorf("app delete confirmation prompt: %w", err)
+	}
+
+	if !deleteConfirmed {
+		return errAppDeleteCancelled
 	}
 
 	return nil
 }
 
-func (opts *deleteAppOpts) sourceProjectData() error {
-	if err := opts.sourceWorkspaceApplications(); err != nil {
-		return err
-	}
-
+// Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
+func (opts deleteAppOpts) Execute() error {
 	if err := opts.sourceProjectEnvironments(); err != nil {
 		return err
 	}
 
+	if err := opts.deleteStacks(); err != nil {
+		return err
+	}
+	if err := opts.emptyECRRepos(); err != nil {
+		return err
+	}
+	if err := opts.removeAppProjectResources(); err != nil {
+		return err
+	}
+	if err := opts.deleteSSMParam(); err != nil {
+		return err
+	}
+	if err := opts.deleteWorkspaceFile(); err != nil {
+		return err
+	}
+
+	log.Ssuccessf("removed app %s from project %s\n", opts.AppName, opts.projectName)
 	return nil
 }
 
-func (opts *deleteAppOpts) sourceWorkspaceApplications() error {
+func (opts *deleteAppOpts) validateAppName() error {
 	localApps, err := opts.workspaceService.Apps()
 
 	if err != nil {
@@ -117,12 +133,12 @@ func (opts *deleteAppOpts) sourceWorkspaceApplications() error {
 
 	exists := false
 	for _, app := range localApps {
-		if opts.app == app.AppName() {
+		if opts.AppName == app.AppName() {
 			exists = true
 		}
 	}
 	if !exists {
-		return fmt.Errorf("input app %s not found", opts.app)
+		return fmt.Errorf("input app %s not found", opts.AppName)
 	}
 
 	return nil
@@ -148,28 +164,6 @@ func (opts *deleteAppOpts) sourceProjectEnvironments() error {
 	return nil
 }
 
-func (opts deleteAppOpts) deleteApp() error {
-	if err := opts.deleteStacks(); err != nil {
-		return err
-	}
-	if err := opts.emptyECRRepos(); err != nil {
-		return err
-	}
-	if err := opts.removeAppProjectResources(); err != nil {
-		return err
-	}
-	if err := opts.deleteSSMParam(); err != nil {
-		return err
-	}
-	if err := opts.deleteWorkspaceFile(); err != nil {
-		return err
-	}
-
-	log.Ssuccessf("removed app %s from project %s\n", opts.app, opts.projectName)
-
-	return nil
-}
-
 func (opts deleteAppOpts) deleteStacks() error {
 	for _, env := range opts.projectEnvironments {
 		sess, err := opts.sessFactory.FromRole(env.ManagerRoleARN, env.Region)
@@ -179,16 +173,16 @@ func (opts deleteAppOpts) deleteStacks() error {
 
 		cfClient := cloudformation.New(sess)
 
-		stackName := fmt.Sprintf("%s-%s-%s", opts.projectName, env.Name, opts.app)
+		stackName := fmt.Sprintf("%s-%s-%s", opts.projectName, env.Name, opts.AppName)
 
 		// TODO: check if the stack exists first
-		opts.spinner.Start(fmt.Sprintf("deleting app %s from env %s", opts.app, env.Name))
+		opts.spinner.Start(fmt.Sprintf("deleting app %s from env %s", opts.AppName, env.Name))
 		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
-			opts.spinner.Stop(log.Serrorf("deleting app %s from env %s", opts.app, env.Name))
+			opts.spinner.Stop(log.Serrorf("deleting app %s from env %s", opts.AppName, env.Name))
 
 			return err
 		}
-		opts.spinner.Stop(log.Ssuccessf("deleted app %s from env %s", opts.app, env.Name))
+		opts.spinner.Stop(log.Ssuccessf("deleted app %s from env %s", opts.AppName, env.Name))
 	}
 
 	return nil
@@ -203,7 +197,7 @@ func (opts deleteAppOpts) emptyECRRepos() error {
 	}
 
 	// TODO: centralized ECR repo name
-	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
+	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.AppName)
 
 	for _, region := range uniqueRegions {
 		sess, err := opts.sessFactory.DefaultWithRegion(region)
@@ -236,28 +230,28 @@ func (opts deleteAppOpts) removeAppProjectResources() error {
 	// TODO: make this opts.toolsAccountCfClient...
 	cfClient := cloudformation.New(sess)
 
-	opts.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", opts.app, opts.projectName))
-	if err := cfClient.RemoveAppFromProject(proj, opts.app); err != nil {
-		opts.spinner.Stop(log.Serrorf("removing app %s resources from project %s", opts.app, opts.projectName))
+	opts.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", opts.AppName, opts.projectName))
+	if err := cfClient.RemoveAppFromProject(proj, opts.AppName); err != nil {
+		opts.spinner.Stop(log.Serrorf("removing app %s resources from project %s", opts.AppName, opts.projectName))
 
 		return err
 	}
-	opts.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", opts.app, opts.projectName))
+	opts.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", opts.AppName, opts.projectName))
 
 	return nil
 }
 
 func (opts deleteAppOpts) deleteSSMParam() error {
-	if err := opts.projectService.DeleteApplication(opts.projectName, opts.app); err != nil {
-		return fmt.Errorf("remove app %s from project %s: %w", opts.app, opts.projectName, err)
+	if err := opts.projectService.DeleteApplication(opts.projectName, opts.AppName); err != nil {
+		return fmt.Errorf("remove app %s from project %s: %w", opts.AppName, opts.projectName, err)
 	}
 
 	return nil
 }
 
 func (opts deleteAppOpts) deleteWorkspaceFile() error {
-	if err := opts.workspaceService.DeleteFile(opts.app); err != nil {
-		return fmt.Errorf("delete app file %s: %w", opts.app, err)
+	if err := opts.workspaceService.DeleteFile(opts.AppName); err != nil {
+		return fmt.Errorf("delete app file %s: %w", opts.AppName, err)
 	}
 
 	return nil
@@ -290,36 +284,35 @@ func BuildAppDeleteCmd() *cobra.Command {
 
   Delete the "test" application without prompting.
   /code $ ecs-preview app delete test --yes`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("requires a single application name as argument")
 			}
-
-			opts.app = args[0]
+			opts.AppName = args[0]
 
 			if err := opts.init(); err != nil {
 				return err
 			}
 
-			if err := opts.sourceInputs(); err != nil {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
+				return err
+			}
+			if err := opts.Execute(); err != nil {
 				return err
 			}
 
-			return opts.confirmDelete()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			return opts.deleteApp()
-		}),
-		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil
-		},
+		}),
 	}
 
-	cmd.Flags().BoolVar(&opts.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd
 }

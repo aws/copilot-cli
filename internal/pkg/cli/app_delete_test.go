@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfirmDelete(t *testing.T) {
+func TestDeleteAppOpts_Ask(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -77,33 +77,19 @@ func TestConfirmDelete(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					projectName: mockProjectName,
 				},
-				app:              mockAppName,
-				skipConfirmation: test.skipConfirmation,
+				AppName:          mockAppName,
+				SkipConfirmation: test.skipConfirmation,
 				prompter:         mockPrompter,
 			}
 
-			got := opts.confirmDelete()
+			got := opts.Ask()
 
 			require.Equal(t, test.want, got)
 		})
 	}
 }
 
-func TestSourceInputs(t *testing.T) {
-	t.Run("should return errNoProjectInWorkspace", func(t *testing.T) {
-		opts := deleteAppOpts{
-			GlobalOpts: &GlobalOpts{
-				projectName: "",
-			},
-		}
-
-		got := opts.sourceInputs()
-
-		require.Equal(t, errNoProjectInWorkspace, got)
-	})
-}
-
-func TestSourceWorkspaceApplications(t *testing.T) {
+func TestDeleteAppOpts_Validate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -111,17 +97,24 @@ func TestSourceWorkspaceApplications(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	tests := map[string]struct {
-		setupMocks func()
+		inProjectName string
+		setupMocks    func()
 
 		want error
 	}{
+		"should return errNoProjectInWorkspace": {
+			setupMocks: func() {},
+			want:       errNoProjectInWorkspace,
+		},
 		"should wrap error returned from workspaceService Apps() call": {
+			inProjectName: "phonetool",
 			setupMocks: func() {
 				mockWorkspaceService.EXPECT().Apps().Times(1).Return(nil, mockError)
 			},
 			want: fmt.Errorf("get app names: %w", mockError),
 		},
 		"should return error if call to Apps() returns empty list": {
+			inProjectName: "phonetool",
 			setupMocks: func() {
 				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{}, nil)
 			},
@@ -133,17 +126,20 @@ func TestSourceWorkspaceApplications(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			test.setupMocks()
 			opts := deleteAppOpts{
+				GlobalOpts: &GlobalOpts{
+					projectName: test.inProjectName,
+				},
 				workspaceService: mockWorkspaceService,
 			}
 
-			got := opts.sourceWorkspaceApplications()
+			got := opts.Validate()
 
 			require.Equal(t, test.want, got)
 		})
 	}
 }
 
-func TestAppDeleteSourceProjectEnvironments(t *testing.T) {
+func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
