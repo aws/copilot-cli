@@ -63,27 +63,6 @@ func (opts appDeployOpts) String() string {
 	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", opts.ProjectName(), opts.app, opts.env, opts.imageTag)
 }
 
-type projectService interface {
-	archer.ProjectStore
-	archer.EnvironmentStore
-	archer.ApplicationStore
-}
-
-type ecrService interface {
-	GetRepository(name string) (string, error)
-	GetECRAuth() (ecr.Auth, error)
-}
-
-type dockerService interface {
-	Build(uri, tag, path string) error
-	Login(uri, username, password string) error
-	Push(uri, tag string) error
-}
-
-type runner interface {
-	Run(name string, args []string, options ...command.Option) error
-}
-
 func (opts *appDeployOpts) init() error {
 	projectService, err := store.New()
 	if err != nil {

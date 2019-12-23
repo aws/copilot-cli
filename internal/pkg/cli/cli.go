@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -109,6 +112,27 @@ func runCmdE(f func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Co
 		}
 		return f(cmd, args)
 	}
+}
+
+type projectService interface {
+	archer.ProjectStore
+	archer.EnvironmentStore
+	archer.ApplicationStore
+}
+
+type ecrService interface {
+	GetRepository(name string) (string, error)
+	GetECRAuth() (ecr.Auth, error)
+}
+
+type dockerService interface {
+	Build(uri, tag, path string) error
+	Login(uri, username, password string) error
+	Push(uri, tag string) error
+}
+
+type runner interface {
+	Run(name string, args []string, options ...command.Option) error
 }
 
 type defaultSessionProvider interface {

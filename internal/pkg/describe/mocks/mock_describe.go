@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -84,4 +85,42 @@ func (m *MockstackDescriber) DescribeStacks(input *cloudformation.DescribeStacks
 func (mr *MockstackDescriberMockRecorder) DescribeStacks(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*MockstackDescriber)(nil).DescribeStacks), input)
+}
+
+// MocksessionFromRoleProvider is a mock of sessionFromRoleProvider interface
+type MocksessionFromRoleProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MocksessionFromRoleProviderMockRecorder
+}
+
+// MocksessionFromRoleProviderMockRecorder is the mock recorder for MocksessionFromRoleProvider
+type MocksessionFromRoleProviderMockRecorder struct {
+	mock *MocksessionFromRoleProvider
+}
+
+// NewMocksessionFromRoleProvider creates a new mock instance
+func NewMocksessionFromRoleProvider(ctrl *gomock.Controller) *MocksessionFromRoleProvider {
+	mock := &MocksessionFromRoleProvider{ctrl: ctrl}
+	mock.recorder = &MocksessionFromRoleProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksessionFromRoleProvider) EXPECT() *MocksessionFromRoleProviderMockRecorder {
+	return m.recorder
+}
+
+// FromRole mocks base method
+func (m *MocksessionFromRoleProvider) FromRole(roleARN, region string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromRole", roleARN, region)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromRole indicates an expected call of FromRole
+func (mr *MocksessionFromRoleProviderMockRecorder) FromRole(roleARN, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionFromRoleProvider)(nil).FromRole), roleARN, region)
 }
