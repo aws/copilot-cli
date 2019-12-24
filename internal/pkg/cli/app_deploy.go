@@ -38,9 +38,9 @@ var (
 
 type appDeployOpts struct {
 	*GlobalOpts
-	app      string
-	env      string
-	imageTag string
+	AppName  string
+	EnvName  string
+	ImageTag string
 
 	projectService     projectService
 	workspaceService   archer.Workspace
@@ -53,14 +53,11 @@ type appDeployOpts struct {
 
 	spinner progress
 
-	localProjectAppNames []string
-	projectEnvironments  []*archer.Environment
-
 	targetEnvironment *archer.Environment
 }
 
-func (opts appDeployOpts) String() string {
-	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", opts.ProjectName(), opts.app, opts.env, opts.imageTag)
+func (opts *appDeployOpts) String() string {
+	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", opts.ProjectName(), opts.AppName, opts.EnvName, opts.ImageTag)
 }
 
 func (opts *appDeployOpts) init() error {
@@ -78,210 +75,51 @@ func (opts *appDeployOpts) init() error {
 	return nil
 }
 
-func (opts *appDeployOpts) sourceInputs() error {
+// Validate returns an error if the user inputs are invalid.
+func (opts *appDeployOpts) Validate() error {
 	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
+	if opts.AppName != "" {
+		if err := opts.validateAppName(); err != nil {
+			return err
+		}
+	}
+	if opts.EnvName != "" {
+		if err := opts.validateEnvName(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	if err := opts.sourceProjectData(); err != nil {
+// Ask prompts the user for any required fields that are not provided.
+func (opts *appDeployOpts) Ask() error {
+	if err := opts.askAppName(); err != nil {
 		return err
 	}
-
-	if err := opts.sourceAppName(); err != nil {
+	if err := opts.askEnvName(); err != nil {
 		return err
 	}
-
-	if err := opts.sourceTargetEnv(); err != nil {
+	if err := opts.askImageTag(); err != nil {
 		return err
 	}
+	return nil
+}
+
+// Execute builds and pushes the container image for the application,
+func (opts *appDeployOpts) Execute() error {
+	env, err := opts.targetEnv()
+	if err != nil {
+		return err
+	}
+	opts.targetEnvironment = env
 
 	if err := opts.configureClients(); err != nil {
 		return err
 	}
 
-	if err := opts.sourceImageTag(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (opts *appDeployOpts) sourceProjectData() error {
-	if err := opts.sourceProjectApplications(); err != nil {
-		return err
-	}
-
-	if err := opts.sourceProjectEnvironments(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (opts *appDeployOpts) sourceProjectApplications() error {
-	apps, err := opts.workspaceService.Apps()
-
-	if err != nil {
-		return fmt.Errorf("get apps: %w", err)
-	}
-
-	if len(apps) == 0 {
-		// TODO: recommend follow up command - app init?
-		return errors.New("no applications found")
-	}
-
-	names := make([]string, 0, len(apps))
-	for _, app := range apps {
-		names = append(names, app.AppName())
-	}
-
-	opts.localProjectAppNames = names
-
-	return nil
-}
-
-func (opts *appDeployOpts) sourceProjectEnvironments() error {
-	envs, err := opts.projectService.ListEnvironments(opts.ProjectName())
-
-	if err != nil {
-		return fmt.Errorf("get environments: %w", err)
-	}
-
-	if len(envs) == 0 {
-		// TODO: recommend follow up command - env init?
-		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
-			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("ecs-preview env init"))
-
-		return errors.New("no environments found")
-	}
-
-	opts.projectEnvironments = envs
-
-	return nil
-}
-
-func (opts *appDeployOpts) sourceAppName() error {
-	if opts.app == "" {
-		if len(opts.localProjectAppNames) == 1 {
-			opts.app = opts.localProjectAppNames[0]
-
-			// NOTE: defaulting the app name, tell the user
-			log.Infof("Only found one app, defaulting to: %s\n", color.HighlightUserInput(opts.app))
-
-			return nil
-		}
-
-		selectedAppName, err := opts.prompt.SelectOne("Select an application", "", opts.localProjectAppNames)
-
-		if err != nil {
-			return fmt.Errorf("select app name: %w", err)
-		}
-
-		opts.app = selectedAppName
-	}
-
-	for _, appName := range opts.localProjectAppNames {
-		if opts.app == appName {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("invalid app name: %s", opts.app)
-}
-
-func (opts *appDeployOpts) sourceTargetEnv() error {
-	if opts.env == "" {
-		if len(opts.projectEnvironments) == 1 {
-			opts.targetEnvironment = opts.projectEnvironments[0]
-
-			// NOTE: defaulting the env name, tell the user.
-			log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(opts.targetEnvironment.Name))
-
-			return nil
-		}
-
-		var envNames []string
-		for _, env := range opts.projectEnvironments {
-			envNames = append(envNames, env.Name)
-		}
-
-		selectedEnvName, err := opts.prompt.SelectOne("Select an environment", "", envNames)
-
-		if err != nil {
-			return fmt.Errorf("select env name: %w", err)
-		}
-
-		opts.env = selectedEnvName
-	}
-
-	for _, env := range opts.projectEnvironments {
-		if opts.env == env.Name {
-			opts.targetEnvironment = env
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("invalid env name: %s", opts.env)
-}
-
-func (opts *appDeployOpts) configureClients() error {
-	defaultSessEnvRegion, err := opts.sessProvider.DefaultWithRegion(opts.targetEnvironment.Region)
-	if err != nil {
-		return fmt.Errorf("create ECR session with region %s: %w", opts.targetEnvironment.Region, err)
-	}
-
-	envSession, err := opts.sessProvider.FromRole(opts.targetEnvironment.ManagerRoleARN, opts.targetEnvironment.Region)
-	if err != nil {
-		return fmt.Errorf("assuming environment manager role: %w", err)
-	}
-
-	// ECR client against tools account profile AND target environment region
-	opts.ecrService = ecr.New(defaultSessEnvRegion)
-
-	// app deploy CF client against env account profile AND target environment region
-	opts.appDeployCfClient = cloudformation.New(envSession)
-
-	// app package CF client against tools account
-	appPackageCfSess, err := opts.sessProvider.Default()
-	if err != nil {
-		return fmt.Errorf("create app package CF session: %w", err)
-	}
-	opts.appPackageCfClient = cloudformation.New(appPackageCfSess)
-
-	return nil
-}
-
-func (opts *appDeployOpts) sourceImageTag() error {
-	if opts.imageTag != "" {
-		return nil
-	}
-
-	var buf bytes.Buffer
-	err := opts.runner.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
-
-	if err == nil {
-		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
-		opts.imageTag = strings.TrimSpace(buf.String())
-
-		return nil
-	}
-
-	log.Warningln("Failed to default tag, are you in a git repository?")
-
-	tag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
-	if err != nil {
-		return fmt.Errorf("prompt for image tag: %w", err)
-	}
-
-	opts.imageTag = tag
-
-	return nil
-}
-
-func (opts appDeployOpts) deployApp() error {
-	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.app)
+	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.AppName)
 
 	uri, err := opts.ecrService.GetRepository(repoName)
 	if err != nil {
@@ -293,8 +131,8 @@ func (opts appDeployOpts) deployApp() error {
 		return err
 	}
 
-	if err := opts.dockerService.Build(uri, opts.imageTag, appDockerfilePath); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", appDockerfilePath, opts.imageTag, err)
+	if err := opts.dockerService.Build(uri, opts.ImageTag, appDockerfilePath); err != nil {
+		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", appDockerfilePath, opts.ImageTag, err)
 	}
 
 	auth, err := opts.ecrService.GetECRAuth()
@@ -309,7 +147,7 @@ func (opts appDeployOpts) deployApp() error {
 		return err
 	}
 
-	if err = opts.dockerService.Push(uri, opts.imageTag); err != nil {
+	if err = opts.dockerService.Push(uri, opts.ImageTag); err != nil {
 		return err
 	}
 
@@ -319,19 +157,19 @@ func (opts appDeployOpts) deployApp() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate random id for changeSet: %w", err)
 	}
-	stackName := stack.NameForApp(opts.ProjectName(), opts.targetEnvironment.Name, opts.app)
+	stackName := stack.NameForApp(opts.ProjectName(), opts.targetEnvironment.Name, opts.AppName)
 	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
 
 	opts.spinner.Start(
 		fmt.Sprintf("Deploying %s to %s.",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.app), color.HighlightUserInput(opts.imageTag)),
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(opts.AppName), color.HighlightUserInput(opts.ImageTag)),
 			color.HighlightUserInput(opts.targetEnvironment.Name)))
 
 	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
 	tags := map[string]string{
 		stack.ProjectTagKey: opts.ProjectName(),
 		stack.EnvTagKey:     opts.targetEnvironment.Name,
-		stack.AppTagKey:     opts.app,
+		stack.AppTagKey:     opts.AppName,
 	}
 	if err := opts.applyAppDeployTemplate(template, stackName, changeSetName, opts.targetEnvironment.ExecutionRoleARN, tags); err != nil {
 		opts.spinner.Stop("Error!")
@@ -339,26 +177,178 @@ func (opts appDeployOpts) deployApp() error {
 	}
 	opts.spinner.Stop("")
 
-	identifier, err := describe.NewAppIdentifier(opts.ProjectName(), opts.app)
+	identifier, err := describe.NewAppIdentifier(opts.ProjectName(), opts.AppName)
 	if err != nil {
-		return fmt.Errorf("create identifier for application %s in project %s: %w", opts.app, opts.ProjectName(), err)
+		return fmt.Errorf("create identifier for application %s in project %s: %w", opts.AppName, opts.ProjectName(), err)
 	}
 	uri, err = identifier.URI(opts.targetEnvironment.Name)
 	if err != nil {
-		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", opts.env, err)
+		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", opts.EnvName, err)
 	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.app), uri)
-
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.AppName), uri)
 	return nil
 }
 
-func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (opts *appDeployOpts) RecommendedActions() []string {
+	return nil
+}
+
+func (opts *appDeployOpts) validateAppName() error {
+	names, err := opts.workspaceAppNames()
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		if opts.AppName == name {
+			return nil
+		}
+	}
+	return fmt.Errorf("application %s not found in the workspace", color.HighlightUserInput(opts.AppName))
+}
+
+func (opts *appDeployOpts) validateEnvName() error {
+	if _, err := opts.targetEnv(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (opts *appDeployOpts) targetEnv() (*archer.Environment, error) {
+	env, err := opts.projectService.GetEnvironment(opts.ProjectName(), opts.EnvName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s from metadata store: %w", opts.EnvName, err)
+	}
+	return env, nil
+}
+
+func (opts *appDeployOpts) workspaceAppNames() ([]string, error) {
+	apps, err := opts.workspaceService.Apps()
+	if err != nil {
+		return nil, fmt.Errorf("get applications in the workspace: %w", err)
+	}
+	var names []string
+	for _, app := range apps {
+		names = append(names, app.AppName())
+	}
+	return names, nil
+}
+
+func (opts *appDeployOpts) askAppName() error {
+	if opts.AppName != "" {
+		return nil
+	}
+
+	names, err := opts.workspaceAppNames()
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return errors.New("no applications found in the workspace")
+	}
+	if len(names) == 1 {
+		opts.AppName = names[0]
+		log.Infof("Only found one app, defaulting to: %s\n", color.HighlightUserInput(opts.AppName))
+		return nil
+	}
+
+	selectedAppName, err := opts.prompt.SelectOne("Select an application", "", names)
+	if err != nil {
+		return fmt.Errorf("select app name: %w", err)
+	}
+	opts.AppName = selectedAppName
+	return nil
+}
+
+func (opts *appDeployOpts) askEnvName() error {
+	if opts.EnvName != "" {
+		return nil
+	}
+
+	envs, err := opts.projectService.ListEnvironments(opts.ProjectName())
+	if err != nil {
+		return fmt.Errorf("get environments for project %s from metadata store: %w", opts.ProjectName(), err)
+	}
+	if len(envs) == 0 {
+		log.Infof("Couldn't find any environments associated with project %s, try initializing one: %s\n",
+			color.HighlightUserInput(opts.ProjectName()),
+			color.HighlightCode("ecs-preview env init"))
+		return fmt.Errorf("no environments found in project %s", opts.ProjectName())
+	}
+	if len(envs) == 1 {
+		opts.EnvName = envs[0].Name
+		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(opts.EnvName))
+		return nil
+	}
+
+	var names []string
+	for _, env := range envs {
+		names = append(names, env.Name)
+	}
+
+	selectedEnvName, err := opts.prompt.SelectOne("Select an environment", "", names)
+	if err != nil {
+		return fmt.Errorf("select env name: %w", err)
+	}
+	opts.EnvName = selectedEnvName
+	return nil
+}
+
+func (opts *appDeployOpts) askImageTag() error {
+	if opts.ImageTag != "" {
+		return nil
+	}
+
+	var buf bytes.Buffer
+	err := opts.runner.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
+	if err == nil {
+		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
+		opts.ImageTag = strings.TrimSpace(buf.String())
+		return nil
+	}
+
+	log.Warningln("Failed to default tag, are you in a git repository?")
+	tag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
+	if err != nil {
+		return fmt.Errorf("prompt for image tag: %w", err)
+	}
+	opts.ImageTag = tag
+	return nil
+}
+
+func (o *appDeployOpts) configureClients() error {
+	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("create ECR session with region %s: %w", o.targetEnvironment.Region, err)
+	}
+
+	envSession, err := o.sessProvider.FromRole(o.targetEnvironment.ManagerRoleARN, o.targetEnvironment.Region)
+	if err != nil {
+		return fmt.Errorf("assuming environment manager role: %w", err)
+	}
+
+	// ECR client against tools account profile AND target environment region
+	o.ecrService = ecr.New(defaultSessEnvRegion)
+
+	// app deploy CF client against env account profile AND target environment region
+	o.appDeployCfClient = cloudformation.New(envSession)
+
+	// app package CF client against tools account
+	appPackageCfSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create app package CF session: %w", err)
+	}
+	o.appPackageCfClient = cloudformation.New(appPackageCfSess)
+	return nil
+}
+
+func (opts *appDeployOpts) getAppDeployTemplate() (string, error) {
 	buffer := &bytes.Buffer{}
 
 	appPackage := PackageAppOpts{
-		AppName:      opts.app,
+		AppName:      opts.AppName,
 		EnvName:      opts.targetEnvironment.Name,
-		Tag:          opts.imageTag,
+		Tag:          opts.ImageTag,
 		stackWriter:  buffer,
 		paramsWriter: ioutil.Discard,
 		store:        opts.projectService,
@@ -370,19 +360,17 @@ func (opts appDeployOpts) getAppDeployTemplate() (string, error) {
 	if err := appPackage.Execute(); err != nil {
 		return "", fmt.Errorf("package application: %w", err)
 	}
-
 	return buffer.String(), nil
 }
 
-func (opts appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string) error {
+func (opts *appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string) error {
 	if err := opts.appDeployCfClient.DeployApp(template, stackName, changeSetName, cfExecutionRole, tags); err != nil {
 		return fmt.Errorf("deploy application: %w", err)
 	}
-
 	return nil
 }
 
-func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
+func (opts *appDeployOpts) getAppDockerfilePath() (string, error) {
 	manifestFileNames, err := opts.workspaceService.ListManifestFiles()
 	if err != nil {
 		return "", fmt.Errorf("list local manifest files: %w", err)
@@ -393,13 +381,13 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 
 	var targetManifestFile string
 	for _, f := range manifestFileNames {
-		if strings.Contains(f, opts.app) {
+		if strings.Contains(f, opts.AppName) {
 			targetManifestFile = f
 			break
 		}
 	}
 	if targetManifestFile == "" {
-		return "", fmt.Errorf("couldn't find local manifest %s", opts.app)
+		return "", fmt.Errorf("couldn't find local manifest %s", opts.AppName)
 	}
 
 	manifestBytes, err := opts.workspaceService.ReadFile(targetManifestFile)
@@ -417,7 +405,7 @@ func (opts appDeployOpts) getAppDockerfilePath() (string, error) {
 
 // BuildAppDeployCmd builds the `app deploy` subcommand.
 func BuildAppDeployCmd() *cobra.Command {
-	input := &appDeployOpts{
+	opts := &appDeployOpts{
 		GlobalOpts:    NewGlobalOpts(),
 		spinner:       termprogress.NewSpinner(),
 		dockerService: docker.New(),
@@ -427,34 +415,30 @@ func BuildAppDeployCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
-		Short: "Deploy an application to an environment.",
-		Long:  `Deploy an application to an environment.`,
+		Short: "Deploys an application to an environment.",
+		Long:  `Deploys an application to an environment.`,
 		Example: `
-  Deploy an application named "frontend" to a "test" environment.
+  Deploys an application named "frontend" to a "test" environment.
   /code $ ecs-preview app deploy --name frontend --env test`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := input.init(); err != nil {
-				return err
-			}
-			if err := input.sourceInputs(); err != nil {
-				return err
-			}
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := input.deployApp(); err != nil {
+			if err := opts.init(); err != nil {
+				return err
+			}
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
+				return err
+			}
+			if err := opts.Execute(); err != nil {
 				return err
 			}
 			return nil
 		}),
-		// PostRunE: func(cmd *cobra.Command, args []string) error {
-		// TODO: recommended actions?
-		// },
 	}
-
-	cmd.Flags().StringVarP(&input.app, nameFlag, nameFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&input.env, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&input.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&opts.EnvName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&opts.ImageTag, imageTagFlag, "", imageTagFlagDescription)
 
 	return cmd
 }

@@ -18,11 +18,11 @@ func (mad mockAppDeployer) init() error {
 	return nil
 }
 
-func (mad mockAppDeployer) sourceInputs() error {
+func (mad mockAppDeployer) Ask() error {
 	return nil
 }
 
-func (mad mockAppDeployer) deployApp() error {
+func (mad mockAppDeployer) Execute() error {
 	return nil
 }
 
@@ -101,6 +101,8 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt).
 					Return(true, nil)
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.appDeploy.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.appDeploy.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
 		},
 		"app deploy happy path": {
@@ -117,6 +119,8 @@ func TestInitOpts_Run(t *testing.T) {
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt).
 					Return(true, nil)
 				opts.initEnv.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
+				opts.appDeploy.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
+				opts.appDeploy.(*climocks.MockactionCommand).EXPECT().Execute().Return(nil)
 			},
 		},
 		"should not deploy the app if shouldDeploy is false": {
@@ -151,7 +155,7 @@ func TestInitOpts_Run(t *testing.T) {
 				initProject: climocks.NewMockactionCommand(ctrl),
 				initApp:     climocks.NewMockactionCommand(ctrl),
 				initEnv:     climocks.NewMockactionCommand(ctrl),
-				appDeployer: mockAppDeployer{},
+				appDeploy:   climocks.NewMockactionCommand(ctrl),
 
 				prompt: climocks.NewMockprompter(ctrl),
 

@@ -42,7 +42,7 @@ type InitOpts struct {
 	initProject actionCommand
 	initApp     actionCommand
 	initEnv     actionCommand
-	appDeployer appDeployer
+	appDeploy   actionCommand
 
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
@@ -105,13 +105,15 @@ func NewInitOpts() (*InitOpts, error) {
 		GlobalOpts:    NewGlobalOpts(),
 	}
 
-	deployApp := &appDeployOpts{
-		env: defaultEnvironmentName,
+	appDeploy := &appDeployOpts{
+		EnvName: defaultEnvironmentName,
 
-		spinner:       spin,
-		dockerService: docker.New(),
-		runner:        command.New(),
-		sessProvider:  sessProvider,
+		projectService:   ssm,
+		workspaceService: ws,
+		spinner:          spin,
+		dockerService:    docker.New(),
+		runner:           command.New(),
+		sessProvider:     sessProvider,
 
 		GlobalOpts: NewGlobalOpts(),
 	}
@@ -120,7 +122,7 @@ func NewInitOpts() (*InitOpts, error) {
 		initProject: initProject,
 		initApp:     initApp,
 		initEnv:     initEnv,
-		appDeployer: deployApp,
+		appDeploy:   appDeploy,
 
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
@@ -201,20 +203,15 @@ func (opts *InitOpts) deployApp() error {
 	if !opts.ShouldDeploy {
 		return nil
 	}
-	if deployOpts, ok := opts.appDeployer.(*appDeployOpts); ok {
+	if deployOpts, ok := opts.appDeploy.(*appDeployOpts); ok {
 		// Set the application's name to the deploy sub-command.
-		deployOpts.app = *opts.appName
+		deployOpts.AppName = *opts.appName
 	}
 
-	if err := opts.appDeployer.init(); err != nil {
+	if err := opts.appDeploy.Ask(); err != nil {
 		return err
 	}
-
-	if err := opts.appDeployer.sourceInputs(); err != nil {
-		return err
-	}
-
-	return opts.appDeployer.deployApp()
+	return opts.appDeploy.Execute()
 }
 
 func (opts *InitOpts) askShouldDeploy() error {
