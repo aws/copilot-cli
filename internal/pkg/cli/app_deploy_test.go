@@ -8,343 +8,298 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 )
 
-func TestSourceProjectApplications(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockWorkspaceService := mocks.NewMockWorkspace(ctrl)
-
-	const (
-		mockProjectName = "mockProjectName"
-		mockAppName     = "mockApp"
-	)
-
-	mockError := errors.New("error")
-
+func TestAppDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		setupMocks func()
+		inProjectName string
+		inAppName     string
+		inEnvName     string
 
-		wantErr  error
-		wantApps []string
+		mockWs    func(m *mocks.MockWorkspace)
+		mockStore func(m *climocks.MockprojectService)
+
+		wantedError error
 	}{
-		"should wrap error returned from ListApplications": {
-			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return(nil, mockError)
-			},
-			wantErr: fmt.Errorf("get apps: %w", mockError),
+		"no existing projects": {
+			mockWs:    func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {},
+
+			wantedError: errNoProjectInWorkspace,
 		},
-		"should return error given no apps returned": {
-			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{}, nil)
+		"with workspace error": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return(nil, errors.New("some error"))
 			},
-			wantErr: errors.New("no applications found"),
+			mockStore: func(m *climocks.MockprojectService) {},
+
+			wantedError: errors.New("get applications in the workspace: some error"),
 		},
-		"should set opts projectApplications field": {
-			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{
+		"with application not in workspace": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
+			},
+			mockStore: func(m *climocks.MockprojectService) {},
+
+			wantedError: errors.New("application frontend not found in the workspace"),
+		},
+		"with unknown environment": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").
+					Return(nil, errors.New("unknown env"))
+			},
+
+			wantedError: errors.New("get environment test from metadata store: unknown env"),
+		},
+		"successful validation": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			inEnvName:     "test",
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{
 					&manifest.LBFargateManifest{
 						AppManifest: manifest.AppManifest{
-							Name: mockAppName,
+							Name: "frontend",
 						},
 					},
 				}, nil)
 			},
-			wantApps: []string{mockAppName},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&archer.Environment{Name: "test"}, nil)
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.setupMocks()
-
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockWs := mocks.NewMockWorkspace(ctrl)
+			mockStore := climocks.NewMockprojectService(ctrl)
+			tc.mockWs(mockWs)
+			tc.mockStore(mockStore)
 			opts := appDeployOpts{
 				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
+					projectName: tc.inProjectName,
 				},
-				workspaceService: mockWorkspaceService,
+				AppName:          tc.inAppName,
+				EnvName:          tc.inEnvName,
+				workspaceService: mockWs,
+				projectService:   mockStore,
 			}
 
-			gotErr := opts.sourceProjectApplications()
+			// WHEN
+			err := opts.Validate()
 
-			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantApps, opts.localProjectAppNames)
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+			}
 		})
 	}
 }
 
-func TestSourceProjectEnvironments(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockProjectService := climocks.NewMockprojectService(ctrl)
-
-	mockProjectName := "mockProjectName"
-	mockError := errors.New("error")
-	mockEnvs := []*archer.Environment{
-		&archer.Environment{
-			Project: mockProjectName,
-		},
-	}
-
+func TestAppDeployOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		setupMocks func()
+		inProjectName string
+		inAppName     string
+		inEnvName     string
+		inImageTag    string
 
-		wantErr  error
-		wantEnvs []*archer.Environment
+		mockWs     func(m *mocks.MockWorkspace)
+		mockStore  func(m *climocks.MockprojectService)
+		mockPrompt func(m *climocks.Mockprompter)
+
+		wantedAppName  string
+		wantedEnvName  string
+		wantedImageTag string
+		wantedError    error
 	}{
-		"should wrap error returned from ListEnvironments": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(nil, mockError)
+		"no applications in the workspace": {
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
 			},
-			wantErr: fmt.Errorf("get environments: %w", mockError),
+			mockStore:  func(m *climocks.MockprojectService) {},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedError: errors.New("no applications found in the workspace"),
 		},
-		"should return error given no environments returned": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return([]*archer.Environment{}, nil)
+		"default to single application": {
+			inEnvName:  "test",
+			inImageTag: "latest",
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "frontend",
+						},
+					},
+				}, nil)
 			},
-			wantErr: errors.New("no environments found"),
+			mockStore:  func(m *climocks.MockprojectService) {},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedAppName:  "frontend",
+			wantedEnvName:  "test",
+			wantedImageTag: "latest",
 		},
-		"should set the opts projectEnvironments field": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil)
+		"prompts for application name if there are more than one option": {
+			inEnvName:  "test",
+			inImageTag: "latest",
+			mockWs: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "frontend",
+						},
+					},
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "webhook",
+						},
+					},
+				}, nil)
 			},
-			wantEnvs: mockEnvs,
+			mockStore: func(m *climocks.MockprojectService) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne("Select an application", "", []string{"frontend", "webhook"}).
+					Return("frontend", nil)
+			},
+
+			wantedAppName:  "frontend",
+			wantedEnvName:  "test",
+			wantedImageTag: "latest",
+		},
+		"fails to list environments": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			inImageTag:    "latest",
+			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments("phonetool").Return(nil, errors.New("some error"))
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {
+			},
+
+			wantedError: errors.New("get environments for project phonetool from metadata store: some error"),
+		},
+		"no existing environments": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			inImageTag:    "latest",
+			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {
+			},
+
+			wantedError: errors.New("no environments found in project phonetool"),
+		},
+		"defaults to single environment": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			inImageTag:    "latest",
+			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
+					{
+						Name: "test",
+					},
+				}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {
+			},
+
+			wantedAppName:  "frontend",
+			wantedEnvName:  "test",
+			wantedImageTag: "latest",
+		},
+		"prompts for environment name if there are more than one option": {
+			inProjectName: "phonetool",
+			inAppName:     "frontend",
+			inImageTag:    "latest",
+			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
+					{
+						Name: "test",
+					},
+					{
+						Name: "prod-iad",
+					},
+				}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne("Select an environment", "", []string{"test", "prod-iad"}).
+					Return("prod-iad", nil)
+			},
+
+			wantedAppName:  "frontend",
+			wantedEnvName:  "prod-iad",
+			wantedImageTag: "latest",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.setupMocks()
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockWs := mocks.NewMockWorkspace(ctrl)
+			mockStore := climocks.NewMockprojectService(ctrl)
+			mockPrompt := climocks.NewMockprompter(ctrl)
+			tc.mockWs(mockWs)
+			tc.mockStore(mockStore)
+			tc.mockPrompt(mockPrompt)
 
 			opts := appDeployOpts{
 				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
+					projectName: tc.inProjectName,
+					prompt:      mockPrompt,
 				},
-				projectService: mockProjectService,
+				AppName:          tc.inAppName,
+				EnvName:          tc.inEnvName,
+				ImageTag:         tc.inImageTag,
+				workspaceService: mockWs,
+				projectService:   mockStore,
 			}
 
-			gotErr := opts.sourceProjectEnvironments()
+			// WHEN
+			err := opts.Ask()
 
-			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantEnvs, opts.projectEnvironments)
+			// THEN
+			if tc.wantedError == nil {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedAppName, opts.AppName)
+				require.Equal(t, tc.wantedEnvName, opts.EnvName)
+				require.Equal(t, tc.wantedImageTag, opts.ImageTag)
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
 		})
 	}
 }
 
-func TestSourceAppName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockPrompt := climocks.NewMockprompter(ctrl)
-
-	mockAppName := "myapp"
-
-	testCases := map[string]struct {
-		setupMocks func()
-
-		inputAppFlag         string
-		localProjectAppNames []string
-
-		wantAppName string
-		wantErr     error
-	}{
-		"should validate the input app flag name": {
-			setupMocks:           func() {},
-			inputAppFlag:         mockAppName,
-			localProjectAppNames: []string{mockAppName},
-			wantAppName:          mockAppName,
-		},
-		"should default the app name if there's only one option": {
-			setupMocks:           func() {},
-			localProjectAppNames: []string{mockAppName},
-			wantAppName:          mockAppName,
-		},
-		"should prompt the user to select an app if there's multiple options": {
-			setupMocks: func() {
-				mockPrompt.EXPECT().
-					SelectOne(gomock.Eq("Select an application"), gomock.Eq(""), gomock.Eq([]string{mockAppName, "anotherone"})).
-					Times(1).
-					Return(mockAppName, nil)
-			},
-			localProjectAppNames: []string{mockAppName, "anotherone"},
-			wantAppName:          mockAppName,
-		},
-		"should return error if flag input value is not valid": {
-			setupMocks:           func() {},
-			inputAppFlag:         mockAppName,
-			localProjectAppNames: []string{"anotherone"},
-			wantErr:              fmt.Errorf("invalid app name: %s", mockAppName),
-			wantAppName:          mockAppName,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			tc.setupMocks()
-
-			opts := appDeployOpts{
-				app:                  tc.inputAppFlag,
-				localProjectAppNames: tc.localProjectAppNames,
-				GlobalOpts: &GlobalOpts{
-					prompt: mockPrompt,
-				},
-			}
-
-			gotErr := opts.sourceAppName()
-
-			require.Equal(t, tc.wantErr, gotErr)
-			require.Equal(t, tc.wantAppName, opts.app)
-		})
-	}
-}
-
-func TestSourceTargetEnv(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockPrompt := climocks.NewMockprompter(ctrl)
-
-	mockEnvName := "mockEnvName"
-	mockEnv := &archer.Environment{
-		Name: mockEnvName,
-	}
-
-	testCases := map[string]struct {
-		setupMocks func()
-
-		inputEnvFlag        string
-		projectEnvironments []*archer.Environment
-
-		wantErr error
-	}{
-		"should validate the input env flag name": {
-			setupMocks:          func() {},
-			inputEnvFlag:        mockEnvName,
-			projectEnvironments: []*archer.Environment{mockEnv},
-		},
-		"should default the env name if there's only one option": {
-			setupMocks:          func() {},
-			projectEnvironments: []*archer.Environment{mockEnv},
-		},
-		"should prompt the user to select an env if there's multiple options": {
-			setupMocks: func() {
-				mockPrompt.EXPECT().
-					SelectOne(gomock.Eq("Select an environment"), gomock.Eq(""), gomock.Eq([]string{mockEnv.Name, "anotherone"})).
-					Times(1).
-					Return(mockEnvName, nil)
-			},
-			projectEnvironments: []*archer.Environment{
-				mockEnv,
-				&archer.Environment{
-					Name: "anotherone",
-				},
-			},
-		},
-		"should return error if flag input value is not valid": {
-			setupMocks:   func() {},
-			inputEnvFlag: mockEnvName,
-			projectEnvironments: []*archer.Environment{
-				&archer.Environment{
-					Name: "anotherone",
-				},
-			},
-			wantErr: fmt.Errorf("invalid env name: %s", mockEnvName),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			tc.setupMocks()
-
-			opts := appDeployOpts{
-				env:                 tc.inputEnvFlag,
-				projectEnvironments: tc.projectEnvironments,
-				GlobalOpts: &GlobalOpts{
-					prompt: mockPrompt,
-				},
-			}
-
-			gotErr := opts.sourceTargetEnv()
-
-			require.Equal(t, tc.wantErr, gotErr)
-		})
-	}
-}
-
-type mockECRService struct {
-	t *testing.T
-
-	mockGetRepository func(t *testing.T, name string) (string, error)
-	mockGetECRAuth    func() (ecr.Auth, error)
-}
-
-func (m mockECRService) GetRepository(name string) (string, error) {
-	return m.mockGetRepository(m.t, name)
-}
-
-func (m mockECRService) GetECRAuth() (ecr.Auth, error) {
-	return m.GetECRAuth()
-}
-
-// TODO: expand on test suite once workspace/manifest and docker commands are more mockable
-func TestDeployApp(t *testing.T) {
-	mockProjectName := "mockProjectName"
-	mockApp := "mockApp"
-	mockError := errors.New("mockError")
-
-	tests := map[string]struct {
-		projectName string
-		app         string
-
-		mockGetRepository func(t *testing.T, name string) (string, error)
-
-		want error
-	}{
-		"wrap error returned from ECR GetRepository": {
-			projectName: mockProjectName,
-			app:         mockApp,
-
-			mockGetRepository: func(t *testing.T, name string) (string, error) {
-				require.Equal(t, fmt.Sprintf("%s/%s", mockProjectName, mockApp), name)
-
-				return "", mockError
-			},
-
-			want: fmt.Errorf("get ECR repository URI: %w", mockError),
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			opts := appDeployOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: test.projectName,
-				},
-				app: test.app,
-				ecrService: mockECRService{
-					t:                 t,
-					mockGetRepository: test.mockGetRepository,
-				},
-			}
-
-			got := opts.deployApp()
-
-			require.Equal(t, test.want, got)
-		})
-	}
-}
-
-func TestGetAppDockerfilePath(t *testing.T) {
+func TestAppDeployOpts_getAppDockerfilePath(t *testing.T) {
 	var mockWorkspace *mocks.MockWorkspace
 
 	mockError := errors.New("mockError")
@@ -427,7 +382,7 @@ image:
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
 			opts := appDeployOpts{
-				app:              test.inputApp,
+				AppName:          test.inputApp,
 				workspaceService: mockWorkspace,
 			}
 
@@ -439,7 +394,7 @@ image:
 	}
 }
 
-func TestSourceImageTag(t *testing.T) {
+func TestAppDeployOpts_askImageTag(t *testing.T) {
 	var mockRunner *climocks.Mockrunner
 	var mockPrompter *climocks.Mockprompter
 
@@ -497,14 +452,14 @@ func TestSourceImageTag(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompter,
 				},
-				imageTag: test.inputImageTag,
+				ImageTag: test.inputImageTag,
 				runner:   mockRunner,
 			}
 
-			got := opts.sourceImageTag()
+			got := opts.askImageTag()
 
 			require.Equal(t, test.wantErr, got)
-			require.Equal(t, test.wantImageTag, opts.imageTag)
+			require.Equal(t, test.wantImageTag, opts.ImageTag)
 		})
 	}
 }

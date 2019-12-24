@@ -41,9 +41,3 @@ type deployer interface {
 	projectDeployer
 	pipelineDeployer
 }
-
-type appDeployer interface {
-	init() error
-	sourceInputs() error
-	deployApp() error
-}

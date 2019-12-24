@@ -28,7 +28,7 @@ An application represents an Amazon ECS service or task.`,
 	cmd.AddCommand(BuildAppInitCmd())
 	cmd.AddCommand(BuildAppListCmd())
 	cmd.AddCommand(BuildAppPackageCmd())
-	cmd.AddCommand(BuildAppDeployCommand())
+	cmd.AddCommand(BuildAppDeployCmd())
 	cmd.AddCommand(BuildAppDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
