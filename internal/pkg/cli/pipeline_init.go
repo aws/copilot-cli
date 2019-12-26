@@ -7,11 +7,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"text/template"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -39,8 +39,6 @@ const (
 	pipelineSelectGitHubURLHelpPrompt = `The GitHub repository linked to your workspace.
 Pushing to this repository will trigger your pipeline build stage.
 Please enter full repository URL, e.g. "https://github.com/myCompany/myRepo", or the owner/rep, e.g. "myCompany/myRepo"`
-	pipelineSelectGitBranchPrompt     = "Which git branch would you like to use?"
-	pipelineSelectGitBranchHelpPrompt = "Name of the git branch that you wish to use."
 )
 
 const (

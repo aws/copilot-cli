@@ -87,20 +87,14 @@ func (opts *InitAppOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (opts *InitAppOpts) Ask() error {
-	if opts.AppType == "" {
-		if err := opts.askAppType(); err != nil {
-			return err
-		}
+	if err := opts.askAppType(); err != nil {
+		return err
 	}
-	if opts.AppName == "" {
-		if err := opts.askAppName(); err != nil {
-			return err
-		}
+	if err := opts.askAppName(); err != nil {
+		return err
 	}
-	if opts.DockerfilePath == "" {
-		if err := opts.askDockerfile(); err != nil {
-			return err
-		}
+	if err := opts.askDockerfile(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -173,6 +167,10 @@ func (opts *InitAppOpts) createAppInProject(projectName string) error {
 }
 
 func (opts *InitAppOpts) askAppType() error {
+	if opts.AppType != "" {
+		return nil
+	}
+
 	t, err := opts.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
@@ -182,6 +180,10 @@ func (opts *InitAppOpts) askAppType() error {
 }
 
 func (opts *InitAppOpts) askAppName() error {
+	if opts.AppName != "" {
+		return nil
+	}
+
 	name, err := opts.prompt.Get(
 		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(opts.AppType)),
 		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
@@ -196,6 +198,10 @@ func (opts *InitAppOpts) askAppName() error {
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
+	if opts.DockerfilePath != "" {
+		return nil
+	}
+
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
 	dockerfiles, err := listDockerfiles(opts.fs, ".")
 	if err != nil {

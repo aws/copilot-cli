@@ -15,9 +15,6 @@ func BuildPipelineCmd() *cobra.Command {
 		Use:   "pipeline",
 		Short: "Pipeline commands.",
 		Long:  `Command for working with pipelines.`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			bindProjectName()
-		},
 	}
 
 	cmd.AddCommand(BuildPipelineInitCmd())

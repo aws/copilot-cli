@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -201,8 +200,7 @@ func BuildAppListCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
-	viper.BindPFlag(projectFlag, cmd.PersistentFlags().Lookup(projectFlag))
+	cmd.Flags().StringVarP(&opts.projectName, projectFlag, projectFlagShort, opts.ProjectName(), projectFlagDescription)
 	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&opts.ShouldShowLocalApps, appLocalFlag, false, appLocalFlagDescription)
 	return cmd
