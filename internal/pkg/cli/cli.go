@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -151,4 +152,17 @@ type sessionProvider interface {
 	defaultSessionProvider
 	regionalSessionProvider
 	sessionFromRoleProvider
+}
+
+type resourceIdentifier interface {
+	URI(envName string) (*describe.WebAppURI, error)
+}
+
+type storeReader interface {
+	archer.ProjectLister
+	archer.ProjectGetter
+	archer.EnvironmentLister
+	archer.EnvironmentGetter
+	archer.ApplicationLister
+	archer.ApplicationGetter
 }

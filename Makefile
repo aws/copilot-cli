@@ -147,6 +147,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
-	${GOBIN}/mockgen -source=./internal/pkg/describe/describe.go -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/webapp.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/mocks/mock_ecr.go github.com/aws/aws-sdk-go/service/ecr/ecriface ECRAPI
 	${GOBIN}/mockgen -source=./internal/pkg/build/docker/docker.go -package=mocks -destination=./internal/pkg/build/docker/mocks/mock_docker.go

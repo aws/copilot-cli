@@ -9,73 +9,96 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws"
+	clientSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-// webAppURI represents the unique identifier to access a web application.
-type webAppURI struct {
+// WebAppURI represents the unique identifier to access a web application.
+type WebAppURI struct {
 	DNSName string // The environment's subdomain if the application is served on HTTPS. Otherwise, the public load balancer's DNS.
 	Path    string // Empty if the application is served on HTTPS. Otherwise, the pattern used to match the application.
 }
 
-func (uri *webAppURI) String() string {
+type stackDescriber interface {
+	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+}
+
+type sessionFromRoleProvider interface {
+	FromRole(roleARN string, region string) (*clientSession.Session, error)
+}
+
+type envGetter interface {
+	archer.EnvironmentGetter
+}
+
+func (uri *WebAppURI) String() string {
 	if uri.Path != "" {
 		return fmt.Sprintf("%s and path %s", color.HighlightResource("http://"+uri.DNSName), color.HighlightResource(uri.Path))
 	}
 	return color.HighlightResource("https://" + uri.DNSName)
 }
 
-// webAppDescriber retrieves information about a load balanced web application.
-type webAppDescriber struct {
+// WebAppDescriber retrieves information about a load balanced web application.
+type WebAppDescriber struct {
 	app *archer.Application
 
-	store           archer.EnvironmentGetter
+	store           envGetter
 	stackDescribers map[string]stackDescriber
 	sessProvider    sessionFromRoleProvider
 }
 
-func newWebAppDescriber(app *archer.Application, store archer.EnvironmentGetter) *webAppDescriber {
-	return &webAppDescriber{
-		app:             app,
-		store:           store,
+// NewWebAppDescriber instantiates a load balanced application.
+func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
+	svc, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to store: %w", err)
+	}
+	meta, err := svc.GetApplication(project, app)
+	if err != nil {
+		return nil, err
+	}
+	return &WebAppDescriber{
+		app:             meta,
+		store:           svc,
 		stackDescribers: make(map[string]stackDescriber),
 		sessProvider:    session.NewProvider(),
-	}
+	}, nil
 }
 
-// URI returns the stringified webAppURI to identify this application uniquely given an environment name.
-func (d *webAppDescriber) URI(envName string) (string, error) {
+// URI returns the stringified WebAppURI to identify this application uniquely given an environment name.
+func (d *WebAppDescriber) URI(envName string) (*WebAppURI, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	envOutputs, err := d.envOutputs(env)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	appParams, err := d.appParams(env)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	uri := &webAppURI{
+	uri := &WebAppURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
 		Path:    appParams[stack.LBFargateRulePathKey],
 	}
 	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
 	if isHTTPS {
 		dnsName := fmt.Sprintf("%s.%s", d.app.Name, envOutputs[stack.EnvOutputSubdomain])
-		uri = &webAppURI{
+		uri = &WebAppURI{
 			DNSName: dnsName,
 		}
 	}
-	return uri.String(), nil
+	return uri, nil
 }
 
-func (d *webAppDescriber) envOutputs(env *archer.Environment) (map[string]string, error) {
+func (d *WebAppDescriber) envOutputs(env *archer.Environment) (map[string]string, error) {
 	envStack, err := d.stack(env.ManagerRoleARN, env.Region, stack.NameForEnv(d.app.Project, env.Name))
 	if err != nil {
 		return nil, err
@@ -87,7 +110,7 @@ func (d *webAppDescriber) envOutputs(env *archer.Environment) (map[string]string
 	return outputs, nil
 }
 
-func (d *webAppDescriber) appParams(env *archer.Environment) (map[string]string, error) {
+func (d *WebAppDescriber) appParams(env *archer.Environment) (map[string]string, error) {
 	appStack, err := d.stack(env.ManagerRoleARN, env.Region, stack.NameForApp(d.app.Project, env.Name, d.app.Name))
 	if err != nil {
 		return nil, err
@@ -99,7 +122,7 @@ func (d *webAppDescriber) appParams(env *archer.Environment) (map[string]string,
 	return params, nil
 }
 
-func (d *webAppDescriber) stack(roleARN, region, stackName string) (*cloudformation.Stack, error) {
+func (d *WebAppDescriber) stack(roleARN, region, stackName string) (*cloudformation.Stack, error) {
 	svc, err := d.stackDescriber(roleARN, region)
 	if err != nil {
 		return nil, err
@@ -116,7 +139,7 @@ func (d *webAppDescriber) stack(roleARN, region, stackName string) (*cloudformat
 	return out.Stacks[0], nil
 }
 
-func (d *webAppDescriber) stackDescriber(roleARN, region string) (stackDescriber, error) {
+func (d *WebAppDescriber) stackDescriber(roleARN, region string) (stackDescriber, error) {
 	if _, ok := d.stackDescribers[roleARN]; !ok {
 		sess, err := d.sessProvider.FromRole(roleARN, region)
 		if err != nil {
