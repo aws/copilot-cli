@@ -231,34 +231,36 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 }
 
 func TestPackageAppOpts_Validate(t *testing.T) {
+	var (
+		mockWorkspace      *mocks.MockWorkspace
+		mockProjectService *climocks.MockprojectService
+		mockRunner         *climocks.Mockrunner
+		mockError          = errors.New("mockError")
+	)
+
 	testCases := map[string]struct {
 		inProjectName string
 		inEnvName     string
 		inAppName     string
 		inTag         string
 
-		expectWS    func(m *mocks.MockWorkspace)
-		expectStore func(m *climocks.MockprojectService)
+		setupMocks func()
 
 		wantedErrorS string
 	}{
 		"invalid workspace": {
-			expectWS: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Times(0)
+			setupMocks: func() {
+				mockWorkspace.EXPECT().Apps().Times(0)
+				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
-			},
-
 			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
 		},
 		"invalid image tag": {
 			inProjectName: "phonetool",
-			expectWS: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Times(0)
-			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			setupMocks: func() {
+				mockWorkspace.EXPECT().Apps().Times(0)
+				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				mockRunner.EXPECT().Run(gomock.Eq("git"), gomock.Eq([]string{"describe", "--always"}), gomock.Any()).Return(mockError)
 			},
 			wantedErrorS: "image tag cannot be empty, please provide the `--tag` flag",
 		},
@@ -266,12 +268,9 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inTag:         "manual-1234",
-
-			expectWS: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
-			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			setupMocks: func() {
+				mockWorkspace.EXPECT().Apps().Return(nil, errors.New("some error"))
+				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedErrorS: "list applications in workspace: some error",
@@ -280,18 +279,15 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inTag:         "manual-1234",
-
-			expectWS: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
+			setupMocks: func() {
+				mockWorkspace.EXPECT().Apps().Return([]archer.Manifest{
 					&manifest.LBFargateManifest{
 						AppManifest: manifest.AppManifest{
 							Name: "backend",
 						},
 					},
 				}, nil)
-			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedErrorS: "application 'frontend' does not exist in the workspace",
@@ -301,11 +297,9 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inEnvName:     "test",
 			inTag:         "manual-1234",
 
-			expectWS: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Times(0)
-			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
+			setupMocks: func() {
+				mockWorkspace.EXPECT().Apps().Times(0)
+				mockProjectService.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
 					ProjectName:     "phonetool",
 					EnvironmentName: "test",
 				})
@@ -324,18 +318,20 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockWorkspace(ctrl)
-			mockStore := climocks.NewMockprojectService(ctrl)
-			tc.expectWS(mockWorkspace)
-			tc.expectStore(mockStore)
+			mockWorkspace = mocks.NewMockWorkspace(ctrl)
+			mockProjectService = climocks.NewMockprojectService(ctrl)
+			mockRunner = climocks.NewMockrunner(ctrl)
+
+			tc.setupMocks()
 
 			opts := &PackageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
 				Tag:     tc.inTag,
 
-				ws:    mockWorkspace,
-				store: mockStore,
+				ws:     mockWorkspace,
+				store:  mockProjectService,
+				runner: mockRunner,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
