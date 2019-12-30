@@ -177,15 +177,15 @@ func (opts *appDeployOpts) Execute() error {
 	}
 	opts.spinner.Stop("")
 
-	identifier, err := describe.NewAppIdentifier(opts.ProjectName(), opts.AppName)
+	identifier, err := describe.NewWebAppDescriber(opts.ProjectName(), opts.AppName)
 	if err != nil {
 		return fmt.Errorf("create identifier for application %s in project %s: %w", opts.AppName, opts.ProjectName(), err)
 	}
-	uri, err = identifier.URI(opts.targetEnvironment.Name)
+	loadBalancerURI, err := identifier.URI(opts.targetEnvironment.Name)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", opts.EnvName, err)
 	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.AppName), uri)
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(opts.AppName), loadBalancerURI.String())
 	return nil
 }
 
@@ -299,20 +299,23 @@ func (opts *appDeployOpts) askImageTag() error {
 		return nil
 	}
 
-	var buf bytes.Buffer
-	err := opts.runner.Run("git", []string{"describe", "--always"}, command.Stdout(&buf))
+	tag, err := getVersionTag(opts.runner)
+
 	if err == nil {
-		// NOTE: `git describe` output bytes includes a `\n` character, so we trim it out.
-		opts.ImageTag = strings.TrimSpace(buf.String())
+		opts.ImageTag = tag
+
 		return nil
 	}
 
 	log.Warningln("Failed to default tag, are you in a git repository?")
-	tag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
+
+	userInputTag, err := opts.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}
-	opts.ImageTag = tag
+
+	opts.ImageTag = userInputTag
+
 	return nil
 }
 

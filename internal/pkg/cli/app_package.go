@@ -4,14 +4,12 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -52,26 +50,16 @@ type PackageAppOpts struct {
 	*GlobalOpts // Embed global options.
 }
 
-// NewPackageAppOpts returns a new PackageAppOpts where the image tag is set to "manual-{short git sha}".
-// The CloudFormation template is written to stdout and the parameters are discarded by default.
-// If an error occurred while running git, we leave the image tag empty "".
+// NewPackageAppOpts returns a new PackageAppOpts. The CloudFormation template is
+// written to stdout and the parameters are discarded by default.
 func NewPackageAppOpts() *PackageAppOpts {
-	opts := &PackageAppOpts{
+	return &PackageAppOpts{
 		runner:       command.New(),
 		stackWriter:  os.Stdout,
 		paramsWriter: ioutil.Discard,
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		GlobalOpts:   NewGlobalOpts(),
 	}
-
-	var buf bytes.Buffer
-	if err := opts.runner.Run("git", []string{"rev-parse", "--short", "HEAD"}, command.Stdout(&buf)); err != nil {
-		return opts
-	}
-
-	opts.Tag = fmt.Sprintf("manual-%s", strings.TrimSpace(buf.String()))
-
-	return opts
 }
 
 // Ask prompts the user for any missing required fields.
@@ -113,7 +101,11 @@ func (opts *PackageAppOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 	if opts.Tag == "" {
-		return fmt.Errorf("image tag cannot be empty, please provide the %s flag", color.HighlightCode("--tag"))
+		tag, err := getVersionTag(opts.runner)
+		if err != nil {
+			return fmt.Errorf("image tag cannot be empty, please provide the %s flag", color.HighlightCode("--tag"))
+		}
+		opts.Tag = tag
 	}
 	if opts.AppName != "" {
 		names, err := opts.listAppNames()
