@@ -65,7 +65,6 @@ const (
 	githubURLFlagDescription         = "GitHub repository URL for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
-	deployPipelineFlagDescription    = "Deploys the pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."

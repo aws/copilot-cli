@@ -46,7 +46,6 @@ type UpdatePipelineOpts struct {
 	PipelineFile     string
 	PipelineName     string
 	SkipConfirmation bool
-	// Deploy bool
 
 	pipelineDeployer pipelineDeployer
 	project          *archer.Project
@@ -274,7 +273,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
-	// cmd.Flags().BoolVar(&opts.Deploy, deployFlag, false, deployFlagDescription)
 
 	return cmd
 }

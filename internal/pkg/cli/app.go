@@ -20,9 +20,6 @@ func BuildAppCmd() *cobra.Command {
 		Short: "Application commands.",
 		Long: `Command for working with applications.
 An application represents an Amazon ECS service or task.`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			bindProjectName()
-		},
 	}
 
 	cmd.AddCommand(BuildAppInitCmd())
@@ -37,6 +34,5 @@ An application represents an Amazon ECS service or task.`,
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,
 	}
-
 	return cmd
 }

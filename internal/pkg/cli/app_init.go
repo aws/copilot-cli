@@ -62,28 +62,11 @@ type InitAppOpts struct {
 	*GlobalOpts
 }
 
-// Ask prompts for fields that are required but not passed in.
-func (opts *InitAppOpts) Ask() error {
-	if opts.AppType == "" {
-		if err := opts.askAppType(); err != nil {
-			return err
-		}
-	}
-	if opts.AppName == "" {
-		if err := opts.askAppName(); err != nil {
-			return err
-		}
-	}
-	if opts.DockerfilePath == "" {
-		if err := opts.askDockerfile(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Validate returns an error if the flag values passed by the user are invalid.
 func (opts *InitAppOpts) Validate() error {
+	if opts.ProjectName() == "" {
+		return errNoProjectInWorkspace
+	}
 	if opts.AppType != "" {
 		if err := validateApplicationType(opts.AppType); err != nil {
 			return err
@@ -99,8 +82,19 @@ func (opts *InitAppOpts) Validate() error {
 			return err
 		}
 	}
-	if opts.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	return nil
+}
+
+// Ask prompts for fields that are required but not passed in.
+func (opts *InitAppOpts) Ask() error {
+	if err := opts.askAppType(); err != nil {
+		return err
+	}
+	if err := opts.askAppName(); err != nil {
+		return err
+	}
+	if err := opts.askDockerfile(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -173,6 +167,10 @@ func (opts *InitAppOpts) createAppInProject(projectName string) error {
 }
 
 func (opts *InitAppOpts) askAppType() error {
+	if opts.AppType != "" {
+		return nil
+	}
+
 	t, err := opts.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
@@ -182,6 +180,10 @@ func (opts *InitAppOpts) askAppType() error {
 }
 
 func (opts *InitAppOpts) askAppName() error {
+	if opts.AppName != "" {
+		return nil
+	}
+
 	name, err := opts.prompt.Get(
 		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(opts.AppType)),
 		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
@@ -196,6 +198,10 @@ func (opts *InitAppOpts) askAppName() error {
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
 func (opts *InitAppOpts) askDockerfile() error {
+	if opts.DockerfilePath != "" {
+		return nil
+	}
+
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
 	dockerfiles, err := listDockerfiles(opts.fs, ".")
 	if err != nil {
@@ -278,25 +284,25 @@ This command is also run as part of "ecs-preview init".`,
 			opts.projDeployer = cloudformation.New(sess)
 
 			opts.prog = termprogress.NewSpinner()
-			return opts.Validate()
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil { // validate flags
+				return err
+			}
 			log.Warningln("It's best to run this command in the root of your workspace.")
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
+			if err := opts.Execute(); err != nil {
 				return err
 			}
-			return opts.Execute()
-		}),
-		PostRunE: func(cmd *cobra.Command, args []string) error {
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil
-		},
+		}),
 	}
 	cmd.Flags().StringVarP(&opts.AppType, appTypeFlag, appTypeFlagShort, "" /* default */, appTypeFlagDescription)
 	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)

@@ -31,8 +31,9 @@ func NewGlobalOpts() *GlobalOpts {
 	bindProjectName()
 
 	return &GlobalOpts{
-		projectName: viper.GetString(projectFlag),
-		prompt:      prompt.New(),
+		// Leave the projectName as empty in case it's overwritten by a global flag.
+		// See https://github.com/aws/amazon-ecs-cli-v2/issues/570#issuecomment-569133741
+		prompt: prompt.New(),
 	}
 }
 

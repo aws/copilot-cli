@@ -191,14 +191,17 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		wantedErr      error
 	}{
 		"invalid app type": {
-			inAppType: "TestAppType",
-			wantedErr: errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App"`),
+			inProjectName: "phonetool",
+			inAppType:     "TestAppType",
+			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App"`),
 		},
 		"invalid app name": {
-			inAppName: "1234",
-			wantedErr: fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
+			inProjectName: "phonetool",
+			inAppName:     "1234",
+			wantedErr:     fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
 		},
 		"invalid dockerfile directory path": {
+			inProjectName:    "phonetool",
 			inDockerfilePath: "./hello/Dockerfile",
 			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
 		},

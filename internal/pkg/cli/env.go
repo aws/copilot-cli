@@ -18,9 +18,6 @@ func BuildEnvCmd() *cobra.Command {
 		Short: "Environment commands.",
 		Long: `Command for working with environments.
 An environment represents a deployment stage.`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			bindProjectName()
-		},
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
