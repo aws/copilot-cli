@@ -30,7 +30,7 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-type serializedLoadBalancedWebAppEnv struct {
+type serializedWebAppEnv struct {
 	Name   string `json:"name"`
 	Region string `json:"region"`
 	Prod   bool   `json:"prod"`
@@ -38,13 +38,20 @@ type serializedLoadBalancedWebAppEnv struct {
 	Path   string `json:"path"`
 }
 
-type serializedLoadBalancedWebApp struct {
-	AppName      string                            `json:"appName"`
-	Type         string                            `json:"type"`
-	Project      string                            `json:"project"`
-	Account      string                            `json:"account"`
-	Environments []serializedLoadBalancedWebAppEnv `json:"environments"`
-	// Service      serializedService `json:"service"`
+type serializedWebAppService struct {
+	Port   string `json:"port"`
+	Tasks  string `json:"tasks"`
+	CPU    string `json:"cpu"`
+	Memory string `json:"memory"`
+}
+
+type serializedWebApp struct {
+	AppName      string                    `json:"appName"`
+	Type         string                    `json:"type"`
+	Project      string                    `json:"project"`
+	Account      string                    `json:"account"`
+	Environments []serializedWebAppEnv     `json:"environments"`
+	Services     []serializedWebAppService `json:"services"`
 }
 
 // ShowAppOpts contains the fields to collect for showing an application.
@@ -52,12 +59,12 @@ type ShowAppOpts struct {
 	ShouldOutputJSON bool
 
 	proj *archer.Project
-	app  serializedLoadBalancedWebApp
+	app  serializedWebApp
 
 	appName string
 
-	storeSvc   storeReader
-	identifier resourceIdentifier
+	storeSvc  storeReader
+	describer webAppDescriber
 
 	w io.Writer
 
@@ -105,7 +112,7 @@ func (opts *ShowAppOpts) Execute() error {
 			return err
 		}
 	} else {
-		opts.app = serializedLoadBalancedWebApp{}
+		opts.app = serializedWebApp{}
 	}
 
 	if opts.ShouldOutputJSON {
@@ -126,7 +133,7 @@ func (opts *ShowAppOpts) retrieveData() error {
 	if err != nil {
 		return fmt.Errorf("getting application: %w", err)
 	}
-	opts.app = serializedLoadBalancedWebApp{
+	opts.app = serializedWebApp{
 		AppName: app.Name,
 		Type:    app.Type,
 		Project: opts.ProjectName(),
@@ -138,16 +145,27 @@ func (opts *ShowAppOpts) retrieveData() error {
 		return fmt.Errorf("listing environments: %w", err)
 	}
 
-	var serializedEnvs []serializedLoadBalancedWebAppEnv
+	var serializedEnvs []serializedWebAppEnv
+	var serializedServices []serializedWebAppService
 	for _, env := range environments {
-		webAppURI, err := opts.identifier.URI(env.Name)
+		webAppURI, err := opts.describer.URI(env.Name)
 		if err == nil {
-			serializedEnvs = append(serializedEnvs, serializedLoadBalancedWebAppEnv{
+			serializedEnvs = append(serializedEnvs, serializedWebAppEnv{
 				Name:   env.Name,
 				Region: env.Region,
 				Prod:   env.Prod,
 				URL:    webAppURI.DNSName,
 				Path:   webAppURI.Path,
+			})
+			webAppECSParams, err := opts.describer.ECSParams(env.Name)
+			if err != nil {
+				return fmt.Errorf("retrieving application deployment configuration: %w", err)
+			}
+			serializedServices = append(serializedServices, serializedWebAppService{
+				Port:   webAppECSParams.ContainerPort,
+				Tasks:  webAppECSParams.TaskCount,
+				CPU:    webAppECSParams.CPU,
+				Memory: webAppECSParams.Memory,
 			})
 			continue
 		}
@@ -156,6 +174,7 @@ func (opts *ShowAppOpts) retrieveData() error {
 		}
 	}
 	opts.app.Environments = serializedEnvs
+	opts.app.Services = serializedServices
 
 	return nil
 }
@@ -181,20 +200,28 @@ func applicationNotDeployed(err error) bool {
 
 func (opts *ShowAppOpts) humanOutput() {
 	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", "Environment", "Is Production?", "Path", "URL")
+	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Environment", "Is Production?", "Memory", "CPU", "Tasks", "Port", "Path", "URL")
 	envLengthMax := len("Environment")
 	prodLengthMax := len("Is Production?")
+	memoryLengthMax := len("Memory")
+	cpuLengthMax := len("CPU")
+	tasksLengthMax := len("Tasks")
+	portLengthMax := len("Port")
 	pathLengthMax := len("Path")
 	urlLengthMax := len("URL")
-	for _, env := range opts.app.Environments {
+	for ind, env := range opts.app.Environments {
 		envLengthMax = int(math.Max(float64(envLengthMax), float64(len(env.Name))))
 		prodLengthMax = int(math.Max(float64(prodLengthMax), float64(len(strconv.FormatBool(env.Prod)))))
+		memoryLengthMax = int(math.Max(float64(memoryLengthMax), float64(len(opts.app.Services[ind].Memory))))
+		cpuLengthMax = int(math.Max(float64(cpuLengthMax), float64(len(opts.app.Services[ind].CPU))))
+		tasksLengthMax = int(math.Max(float64(tasksLengthMax), float64(len(opts.app.Services[ind].Tasks))))
+		portLengthMax = int(math.Max(float64(portLengthMax), float64(len(opts.app.Services[ind].Port))))
 		pathLengthMax = int(math.Max(float64(pathLengthMax), float64(len(env.Path))))
 		urlLengthMax = int(math.Max(float64(urlLengthMax), float64(len(env.URL))))
 	}
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", strings.Repeat("-", envLengthMax), strings.Repeat("-", prodLengthMax), strings.Repeat("-", pathLengthMax), strings.Repeat("-", urlLengthMax))
-	for _, env := range opts.app.Environments {
-		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", env.Name, strconv.FormatBool(env.Prod), env.Path, env.URL)
+	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", strings.Repeat("-", envLengthMax), strings.Repeat("-", prodLengthMax), strings.Repeat("-", memoryLengthMax), strings.Repeat("-", cpuLengthMax), strings.Repeat("-", tasksLengthMax), strings.Repeat("-", portLengthMax), strings.Repeat("-", pathLengthMax), strings.Repeat("-", urlLengthMax))
+	for ind, env := range opts.app.Environments {
+		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", env.Name, strconv.FormatBool(env.Prod), opts.app.Services[ind].Memory, opts.app.Services[ind].CPU, opts.app.Services[ind].Tasks, opts.app.Services[ind].Port, env.Path, env.URL)
 	}
 	writer.Flush()
 }
@@ -300,11 +327,11 @@ func BuildAppShowCmd() *cobra.Command {
 				return err
 			}
 			if opts.appName != "" {
-				identifier, err := describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
+				describer, err := describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
 				if err != nil {
-					return fmt.Errorf("creating identifier for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
+					return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
 				}
-				opts.identifier = identifier
+				opts.describer = describer
 			}
 			if err := opts.Execute(); err != nil {
 				return err

@@ -618,31 +618,31 @@ func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
 }
 
-// MockresourceIdentifier is a mock of resourceIdentifier interface
-type MockresourceIdentifier struct {
+// MockwebAppDescriber is a mock of webAppDescriber interface
+type MockwebAppDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockresourceIdentifierMockRecorder
+	recorder *MockwebAppDescriberMockRecorder
 }
 
-// MockresourceIdentifierMockRecorder is the mock recorder for MockresourceIdentifier
-type MockresourceIdentifierMockRecorder struct {
-	mock *MockresourceIdentifier
+// MockwebAppDescriberMockRecorder is the mock recorder for MockwebAppDescriber
+type MockwebAppDescriberMockRecorder struct {
+	mock *MockwebAppDescriber
 }
 
-// NewMockresourceIdentifier creates a new mock instance
-func NewMockresourceIdentifier(ctrl *gomock.Controller) *MockresourceIdentifier {
-	mock := &MockresourceIdentifier{ctrl: ctrl}
-	mock.recorder = &MockresourceIdentifierMockRecorder{mock}
+// NewMockwebAppDescriber creates a new mock instance
+func NewMockwebAppDescriber(ctrl *gomock.Controller) *MockwebAppDescriber {
+	mock := &MockwebAppDescriber{ctrl: ctrl}
+	mock.recorder = &MockwebAppDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockresourceIdentifier) EXPECT() *MockresourceIdentifierMockRecorder {
+func (m *MockwebAppDescriber) EXPECT() *MockwebAppDescriberMockRecorder {
 	return m.recorder
 }
 
 // URI mocks base method
-func (m *MockresourceIdentifier) URI(envName string) (*describe.WebAppURI, error) {
+func (m *MockwebAppDescriber) URI(envName string) (*describe.WebAppURI, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "URI", envName)
 	ret0, _ := ret[0].(*describe.WebAppURI)
@@ -651,9 +651,24 @@ func (m *MockresourceIdentifier) URI(envName string) (*describe.WebAppURI, error
 }
 
 // URI indicates an expected call of URI
-func (mr *MockresourceIdentifierMockRecorder) URI(envName interface{}) *gomock.Call {
+func (mr *MockwebAppDescriberMockRecorder) URI(envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockresourceIdentifier)(nil).URI), envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockwebAppDescriber)(nil).URI), envName)
+}
+
+// ECSParams mocks base method
+func (m *MockwebAppDescriber) ECSParams(envName string) (*describe.WebAppECSParams, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ECSParams", envName)
+	ret0, _ := ret[0].(*describe.WebAppECSParams)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ECSParams indicates an expected call of ECSParams
+func (mr *MockwebAppDescriberMockRecorder) ECSParams(envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSParams", reflect.TypeOf((*MockwebAppDescriber)(nil).ECSParams), envName)
 }
 
 // MockstoreReader is a mock of storeReader interface

@@ -251,3 +251,104 @@ func TestWebAppDescriber_URI(t *testing.T) {
 		})
 	}
 }
+
+func TestWebAppDescriber_ECSParams(t *testing.T) {
+	const (
+		testProject        = "phonetool"
+		testEnv            = "test"
+		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
+		testApp            = "jobs"
+		testCPU            = "256"
+		testMemory         = "512"
+		testPort           = "8080"
+		testTasks          = "3"
+	)
+	testCases := map[string]struct {
+		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvGetter
+		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
+
+		wantedECSParams *WebAppECSParams
+		wantedError     error
+	}{
+		"get web application deploy info": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStacks(&cloudformation.DescribeStacksInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(&cloudformation.DescribeStacksOutput{
+					Stacks: []*cloudformation.Stack{
+						{
+							Parameters: []*cloudformation.Parameter{
+								{
+									ParameterKey:   aws.String(stack.LBFargateTaskCPUKey),
+									ParameterValue: aws.String(testCPU),
+								},
+								{
+									ParameterKey:   aws.String(stack.LBFargateTaskMemoryKey),
+									ParameterValue: aws.String(testMemory),
+								},
+								{
+									ParameterKey:   aws.String(stack.LBFargateParamContainerPortKey),
+									ParameterValue: aws.String(testPort),
+								},
+								{
+									ParameterKey:   aws.String(stack.LBFargateTaskCountKey),
+									ParameterValue: aws.String(testTasks),
+								},
+							},
+						},
+					},
+				}, nil)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedECSParams: &WebAppECSParams{
+				ContainerPort: testPort,
+				TaskSize: TaskSize{
+					CPU:    testCPU,
+					Memory: testMemory,
+				},
+				TaskCount: testTasks,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			d := &WebAppDescriber{
+				app: &archer.Application{
+					Project: testProject,
+					Name:    testApp,
+				},
+				store:           tc.mockStore(ctrl),
+				stackDescribers: tc.mockStackDescribers(ctrl),
+			}
+
+			// WHEN
+			actual, err := d.ECSParams(testEnv)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedECSParams, actual)
+			}
+		})
+	}
+}

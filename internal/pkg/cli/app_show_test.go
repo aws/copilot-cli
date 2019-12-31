@@ -244,8 +244,8 @@ func TestAppShow_Execute(t *testing.T) {
 		inputApp         string
 		shouldOutputJSON bool
 
-		mockStoreReader        func(m *climocks.MockstoreReader)
-		mockResourceIdentifier func(m *climocks.MockresourceIdentifier)
+		mockStoreReader     func(m *climocks.MockstoreReader)
+		mockWebAppDescriber func(m *climocks.MockwebAppDescriber)
 
 		wantedContent string
 		wantedError   error
@@ -271,7 +271,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/frontend",
@@ -280,9 +280,25 @@ func TestAppShow_Execute(t *testing.T) {
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
+				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+					ContainerPort: "80",
+					TaskSize: describe.TaskSize{
+						CPU:    "256",
+						Memory: "512",
+					},
+					TaskCount: "1",
+				}, nil)
+				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+					ContainerPort: "5000",
+					TaskSize: describe.TaskSize{
+						CPU:    "512",
+						Memory: "1024",
+					},
+					TaskCount: "3",
+				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"account\":\"\",\"environments\":[{\"name\":\"test\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"name\":\"prod\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}]}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"account\":\"\",\"environments\":[{\"name\":\"test\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"name\":\"prod\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"services\":[{\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}]}\n",
 		},
 		"prompt for all input for human output": {
 			inputProject: &archer.Project{
@@ -305,7 +321,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/frontend",
@@ -314,12 +330,28 @@ func TestAppShow_Execute(t *testing.T) {
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
+				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+					ContainerPort: "80",
+					TaskSize: describe.TaskSize{
+						CPU:    "256",
+						Memory: "512",
+					},
+					TaskCount: "1",
+				}, nil)
+				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+					ContainerPort: "5000",
+					TaskSize: describe.TaskSize{
+						CPU:    "512",
+						Memory: "1024",
+					},
+					TaskCount: "3",
+				}, nil)
 			},
 
-			wantedContent: `Environment         Is Production?      Path                URL
------------         --------------      ---------           ---------------------------------------
-test                false               /frontend           my-pr-Publi.us-west-2.elb.amazonaws.com
-prod                false               /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
+			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
+-----------         --------------      ------              ---                 -----               ----                ---------           ---------------------------------------
+test                false               512                 256                 1                   80                  /frontend           my-pr-Publi.us-west-2.elb.amazonaws.com
+prod                false               1024                512                 3                   5000                /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
 `,
 		},
 		"returns error if fail to get application": {
@@ -333,7 +365,7 @@ prod                false               /backend            my-pr-Publi.us-west-
 				m.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {},
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
 			wantedError: fmt.Errorf("getting application: some error"),
 		},
@@ -351,7 +383,7 @@ prod                false               /backend            my-pr-Publi.us-west-
 				m.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {},
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
 			wantedError: fmt.Errorf("listing environments: some error"),
 		},
@@ -364,9 +396,9 @@ prod                false               /backend            my-pr-Publi.us-west-
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {},
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedContent: "{\"appName\":\"\",\"type\":\"\",\"project\":\"\",\"account\":\"\",\"environments\":null}\n",
+			wantedContent: "{\"appName\":\"\",\"type\":\"\",\"project\":\"\",\"account\":\"\",\"environments\":null,\"services\":null}\n",
 		},
 		"do not return error if no application found": {
 			inputProject: &archer.Project{
@@ -377,10 +409,10 @@ prod                false               /backend            my-pr-Publi.us-west-
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {},
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedContent: `Environment         Is Production?      Path                URL
------------         --------------      ----                ---
+			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
+-----------         --------------      ------              ---                 -----               ----                ----                ---
 `,
 		},
 		"returns error if fail to retrieve URI": {
@@ -404,11 +436,42 @@ prod                false               /backend            my-pr-Publi.us-west-
 				}, nil)
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("retrieving application URI: some error"),
+		},
+		"returns error if fail to retrieve deploy info": {
+			inputProject: &archer.Project{
+				Name: "my-project",
+			},
+			inputApp:         "my-app",
+			shouldOutputJSON: false,
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+					Name: "my-app",
+				}, nil)
+				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					&archer.Environment{
+						Name: "test",
+					},
+					&archer.Environment{
+						Name: "prod",
+					},
+				}, nil)
+			},
+
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
+				m.EXPECT().URI("test").Return(&describe.WebAppURI{
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+					Path:    "/frontend",
+				}, nil)
+				m.EXPECT().ECSParams("test").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("retrieving application deployment configuration: some error"),
 		},
 		"do not return error if fail to retrieve URI because of application not deployed": {
 			inputProject: &archer.Project{
@@ -431,17 +494,26 @@ prod                false               /backend            my-pr-Publi.us-west-
 				}, nil)
 			},
 
-			mockResourceIdentifier: func(m *climocks.MockresourceIdentifier) {
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(nil, fmt.Errorf("describe stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
+				m.EXPECT().ECSParams("test").Times(0)
+				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+					ContainerPort: "5000",
+					TaskSize: describe.TaskSize{
+						CPU:    "512",
+						Memory: "1024",
+					},
+					TaskCount: "3",
+				}, nil)
 			},
 
-			wantedContent: `Environment         Is Production?      Path                URL
------------         --------------      --------            ---------------------------------------
-prod                false               /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
+			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
+-----------         --------------      ------              ---                 -----               ----                --------            ---------------------------------------
+prod                false               1024                512                 3                   5000                /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
 `,
 		},
 	}
@@ -453,17 +525,17 @@ prod                false               /backend            my-pr-Publi.us-west-
 
 			b := &bytes.Buffer{}
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockResourceIdentifier := climocks.NewMockresourceIdentifier(ctrl)
+			mockWebAppDescriber := climocks.NewMockwebAppDescriber(ctrl)
 			tc.mockStoreReader(mockStoreReader)
-			tc.mockResourceIdentifier(mockResourceIdentifier)
+			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			showApps := &ShowAppOpts{
 				proj:             tc.inputProject,
 				appName:          tc.inputApp,
 				ShouldOutputJSON: tc.shouldOutputJSON,
 
-				storeSvc:   mockStoreReader,
-				identifier: mockResourceIdentifier,
+				storeSvc:  mockStoreReader,
+				describer: mockWebAppDescriber,
 
 				w: b,
 
