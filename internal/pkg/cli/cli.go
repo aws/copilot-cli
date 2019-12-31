@@ -155,8 +155,9 @@ type sessionProvider interface {
 	sessionFromRoleProvider
 }
 
-type resourceIdentifier interface {
+type webAppDescriber interface {
 	URI(envName string) (*describe.WebAppURI, error)
+	ECSParams(envName string) (*describe.WebAppECSParams, error)
 }
 
 type storeReader interface {

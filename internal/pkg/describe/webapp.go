@@ -22,6 +22,18 @@ type WebAppURI struct {
 	Path    string // Empty if the application is served on HTTPS. Otherwise, the pattern used to match the application.
 }
 
+// WebAppECSParams contains ECS deploy parameters of a web application.
+type WebAppECSParams struct {
+	TaskSize
+	ContainerPort string
+	TaskCount     string
+}
+
+type TaskSize struct {
+	CPU    string
+	Memory string
+}
+
 type stackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 }
@@ -68,7 +80,29 @@ func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 	}, nil
 }
 
-// URI returns the stringified WebAppURI to identify this application uniquely given an environment name.
+// ECSParams returns the deploy infomation of a web application given an environment name.
+func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
+	env, err := d.store.GetEnvironment(d.app.Project, envName)
+	if err != nil {
+		return nil, err
+	}
+
+	appParams, err := d.appParams(env)
+	if err != nil {
+		return nil, err
+	}
+
+	return &WebAppECSParams{
+		ContainerPort: appParams[stack.LBFargateParamContainerPortKey],
+		TaskSize: TaskSize{
+			CPU:    appParams[stack.LBFargateTaskCPUKey],
+			Memory: appParams[stack.LBFargateTaskMemoryKey],
+		},
+		TaskCount: appParams[stack.LBFargateTaskCountKey],
+	}, nil
+}
+
+// URI returns the WebAppURI to identify this application uniquely given an environment name.
 func (d *WebAppDescriber) URI(envName string) (*WebAppURI, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
 	if err != nil {
