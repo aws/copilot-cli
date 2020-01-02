@@ -182,20 +182,20 @@ func BuildAppListCmd() *cobra.Command {
 				return err
 			}
 			opts.projectLister = ssmStore
-			return opts.Ask()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts.appLister = ssmStore
+			opts.projectGetter = ssmStore
+
 			ws, err := workspace.New()
 			if err != nil {
 				return err
 			}
 			opts.ws = ws
-			ssmStore, err := store.New()
-			if err != nil {
+			return nil
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Ask(); err != nil {
 				return err
 			}
-			opts.appLister = ssmStore
-			opts.projectGetter = ssmStore
 			return opts.Execute()
 		}),
 	}
