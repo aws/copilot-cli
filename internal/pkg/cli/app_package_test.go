@@ -25,13 +25,16 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string
 		inEnvName string
+		inTag     string
 
 		expectWS     func(m *mocks.MockWorkspace)
 		expectStore  func(m *climocks.MockprojectService)
 		expectPrompt func(m *climocks.Mockprompter)
+		expectRunner func(m *climocks.Mockrunner)
 
 		wantedAppName string
 		wantedEnvName string
+		wantedTag     string
 		wantedErrorS  string
 	}{
 		"wrap list apps error": {
@@ -44,6 +47,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedErrorS: "list applications in workspace: some error",
 		},
@@ -57,6 +61,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedErrorS: "there are no applications in the workspace, run `ecs-preview init` first",
 		},
@@ -71,6 +76,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedErrorS:  "list environments for project : some ssm error",
@@ -86,6 +92,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedErrorS:  "there are no environments in project ",
@@ -114,16 +121,22 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
+			},
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
 				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
+				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
 			},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
+			wantedTag:     "v1.0.0",
 		},
 		"prompt only for the app name": {
 			inEnvName: "test",
+			inTag:     "v1.0.0",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().Apps().Return([]archer.Manifest{
@@ -144,12 +157,15 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
+			wantedTag:     "v1.0.0",
 		},
 		"prompt only for the env name": {
 			inAppName: "frontend",
+			inTag:     "v1.0.0",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().Apps().Times(0)
@@ -167,13 +183,16 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
+			wantedTag:     "v1.0.0",
 		},
 		"don't prompt": {
 			inAppName: "frontend",
 			inEnvName: "test",
+			inTag:     "v1.0.0",
 
 			expectWS: func(m *mocks.MockWorkspace) {
 				m.EXPECT().Apps().Times(0)
@@ -184,9 +203,30 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+			expectRunner: func(m *climocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
+			wantedTag:     "v1.0.0",
+		},
+		"prompt for image if there is a runner error": {
+			inAppName: "frontend",
+			inEnvName: "test",
+			expectWS: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Times(0)
+			},
+			expectStore: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
+			},
+			expectPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
+			},
+			expectRunner: func(m *climocks.Mockrunner) {
+				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+			},
+			wantedAppName: "frontend",
+			wantedEnvName: "test",
+			wantedTag:     "v1.0.0",
 		},
 	}
 
@@ -199,16 +239,20 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			mockStore := climocks.NewMockprojectService(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockRunner := climocks.NewMockrunner(ctrl)
 
 			tc.expectWS(mockWorkspace)
 			tc.expectStore(mockStore)
 			tc.expectPrompt(mockPrompt)
+			tc.expectRunner(mockRunner)
 
 			opts := &PackageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
+				Tag:     tc.inTag,
 				ws:      mockWorkspace,
 				store:   mockStore,
+				runner:  mockRunner,
 				GlobalOpts: &GlobalOpts{
 					prompt: mockPrompt,
 				},
@@ -220,6 +264,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedAppName, opts.AppName)
 			require.Equal(t, tc.wantedEnvName, opts.EnvName)
+			require.Equal(t, tc.wantedTag, opts.Tag)
 
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
@@ -234,15 +279,12 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 	var (
 		mockWorkspace      *mocks.MockWorkspace
 		mockProjectService *climocks.MockprojectService
-		mockRunner         *climocks.Mockrunner
-		mockError          = errors.New("mockError")
 	)
 
 	testCases := map[string]struct {
 		inProjectName string
 		inEnvName     string
 		inAppName     string
-		inTag         string
 
 		setupMocks func()
 
@@ -255,19 +297,9 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			},
 			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
 		},
-		"invalid image tag": {
-			inProjectName: "phonetool",
-			setupMocks: func() {
-				mockWorkspace.EXPECT().Apps().Times(0)
-				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
-				mockRunner.EXPECT().Run(gomock.Eq("git"), gomock.Eq([]string{"describe", "--always"}), gomock.Any()).Return(mockError)
-			},
-			wantedErrorS: "image tag cannot be empty, please provide the `--tag` flag",
-		},
 		"error while fetching application": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			inTag:         "manual-1234",
 			setupMocks: func() {
 				mockWorkspace.EXPECT().Apps().Return(nil, errors.New("some error"))
 				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
@@ -278,7 +310,6 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error when application not in workspace": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			inTag:         "manual-1234",
 			setupMocks: func() {
 				mockWorkspace.EXPECT().Apps().Return([]archer.Manifest{
 					&manifest.LBFargateManifest{
@@ -295,7 +326,6 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 		"error while fetching environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
-			inTag:         "manual-1234",
 
 			setupMocks: func() {
 				mockWorkspace.EXPECT().Apps().Times(0)
@@ -320,19 +350,14 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			mockWorkspace = mocks.NewMockWorkspace(ctrl)
 			mockProjectService = climocks.NewMockprojectService(ctrl)
-			mockRunner = climocks.NewMockrunner(ctrl)
 
 			tc.setupMocks()
 
 			opts := &PackageAppOpts{
-				AppName: tc.inAppName,
-				EnvName: tc.inEnvName,
-				Tag:     tc.inTag,
-
-				ws:     mockWorkspace,
-				store:  mockProjectService,
-				runner: mockRunner,
-
+				AppName:    tc.inAppName,
+				EnvName:    tc.inEnvName,
+				ws:         mockWorkspace,
+				store:      mockProjectService,
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 

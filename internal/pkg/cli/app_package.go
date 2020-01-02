@@ -18,7 +18,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -62,94 +61,122 @@ func NewPackageAppOpts() *PackageAppOpts {
 	}
 }
 
-// Ask prompts the user for any missing required fields.
-func (opts *PackageAppOpts) Ask() error {
-	if opts.AppName == "" {
-		names, err := opts.listAppNames()
-		if err != nil {
-			return err
-		}
-		if len(names) == 0 {
-			return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
-		}
-		app, err := opts.prompt.SelectOne(appPackageAppNamePrompt, "", names)
-		if err != nil {
-			return fmt.Errorf("prompt application name: %w", err)
-		}
-		opts.AppName = app
+// Validate returns an error if the values provided by the user are invalid.
+func (o *PackageAppOpts) Validate() error {
+	if o.ProjectName() == "" {
+		return errNoProjectInWorkspace
 	}
-	if opts.EnvName == "" {
-		names, err := opts.listEnvNames()
+	if o.AppName != "" {
+		names, err := o.listAppNames()
 		if err != nil {
 			return err
 		}
-		if len(names) == 0 {
-			return fmt.Errorf("there are no environments in project %s", opts.ProjectName())
+		if !contains(o.AppName, names) {
+			return fmt.Errorf("application '%s' does not exist in the workspace", o.AppName)
 		}
-		env, err := opts.prompt.SelectOne(appPackageEnvNamePrompt, "", names)
-		if err != nil {
-			return fmt.Errorf("prompt environment name: %w", err)
+	}
+	if o.EnvName != "" {
+		if _, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
+			return err
 		}
-		opts.EnvName = env
 	}
 	return nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
-func (opts *PackageAppOpts) Validate() error {
-	if opts.ProjectName() == "" {
-		return errNoProjectInWorkspace
+// Ask prompts the user for any missing required fields.
+func (o *PackageAppOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
 	}
-	if opts.Tag == "" {
-		tag, err := getVersionTag(opts.runner)
-		if err != nil {
-			return fmt.Errorf("image tag cannot be empty, please provide the %s flag", color.HighlightCode("--tag"))
-		}
-		opts.Tag = tag
+	if err := o.askEnvName(); err != nil {
+		return err
 	}
-	if opts.AppName != "" {
-		names, err := opts.listAppNames()
-		if err != nil {
-			return err
-		}
-		if !contains(opts.AppName, names) {
-			return fmt.Errorf("application '%s' does not exist in the workspace", opts.AppName)
-		}
-	}
-	if opts.EnvName != "" {
-		if _, err := opts.store.GetEnvironment(opts.ProjectName(), opts.EnvName); err != nil {
-			return err
-		}
-	}
-	return nil
+	return o.askTag()
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
-func (opts *PackageAppOpts) Execute() error {
-	env, err := opts.store.GetEnvironment(opts.ProjectName(), opts.EnvName)
+func (o *PackageAppOpts) Execute() error {
+	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return err
 	}
 
-	if opts.OutputDir != "" {
-		if err := opts.setFileWriters(); err != nil {
+	if o.OutputDir != "" {
+		if err := o.setFileWriters(); err != nil {
 			return err
 		}
 	}
 
-	templates, err := opts.getTemplates(env)
+	templates, err := o.getTemplates(env)
 	if err != nil {
 		return err
 	}
-	if _, err = opts.stackWriter.Write([]byte(templates.stack)); err != nil {
+	if _, err = o.stackWriter.Write([]byte(templates.stack)); err != nil {
 		return err
 	}
-	_, err = opts.paramsWriter.Write([]byte(templates.configuration))
+	_, err = o.paramsWriter.Write([]byte(templates.configuration))
 	return err
 }
 
-func (opts *PackageAppOpts) listAppNames() ([]string, error) {
-	apps, err := opts.ws.Apps()
+func (o *PackageAppOpts) askAppName() error {
+	if o.AppName != "" {
+		return nil
+	}
+
+	names, err := o.listAppNames()
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
+	}
+	app, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", names)
+	if err != nil {
+		return fmt.Errorf("prompt application name: %w", err)
+	}
+	o.AppName = app
+	return nil
+}
+
+func (o *PackageAppOpts) askEnvName() error {
+	if o.EnvName != "" {
+		return nil
+	}
+
+	names, err := o.listEnvNames()
+	if err != nil {
+		return err
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("there are no environments in project %s", o.ProjectName())
+	}
+	env, err := o.prompt.SelectOne(appPackageEnvNamePrompt, "", names)
+	if err != nil {
+		return fmt.Errorf("prompt environment name: %w", err)
+	}
+	o.EnvName = env
+	return nil
+}
+
+func (o *PackageAppOpts) askTag() error {
+	if o.Tag != "" {
+		return nil
+	}
+
+	tag, err := getVersionTag(o.runner)
+	if err != nil {
+		// We're not in a Git repository, prompt the user for an explicit tag.
+		tag, err = o.prompt.Get(inputImageTagPrompt, "", nil)
+		if err != nil {
+			return fmt.Errorf("prompt get image tag: %w", err)
+		}
+	}
+	o.Tag = tag
+	return nil
+}
+
+func (o *PackageAppOpts) listAppNames() ([]string, error) {
+	apps, err := o.ws.Apps()
 	if err != nil {
 		return nil, fmt.Errorf("list applications in workspace: %w", err)
 	}
@@ -166,8 +193,8 @@ type cfnTemplates struct {
 }
 
 // getTemplates returns the CloudFormation stack's template and its parameters.
-func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
-	raw, err := opts.ws.ReadFile(opts.ws.AppManifestFileName(opts.AppName))
+func (o *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
+	raw, err := o.ws.ReadFile(o.ws.AppManifestFileName(o.AppName))
 	if err != nil {
 		return nil, err
 	}
@@ -176,19 +203,19 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 		return nil, err
 	}
 
-	proj, err := opts.store.GetProject(opts.ProjectName())
+	proj, err := o.store.GetProject(o.ProjectName())
 	if err != nil {
 		return nil, err
 	}
-	resources, err := opts.describer.GetProjectResourcesByRegion(proj, env.Region)
+	resources, err := o.describer.GetProjectResourcesByRegion(proj, env.Region)
 	if err != nil {
 		return nil, err
 	}
 
-	repoURL, ok := resources.RepositoryURLs[opts.AppName]
+	repoURL, ok := resources.RepositoryURLs[o.AppName]
 	if !ok {
 		return nil, &errRepoNotFound{
-			appName:       opts.AppName,
+			appName:       o.AppName,
 			envRegion:     env.Region,
 			projAccountID: proj.AccountID,
 		}
@@ -200,7 +227,7 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 			App:          mft.(*manifest.LBFargateManifest),
 			Env:          env,
 			ImageRepoURL: repoURL,
-			ImageTag:     opts.Tag,
+			ImageTag:     o.Tag,
 		}
 		var appStack *stack.LBFargateStackConfig
 		// If the project supports DNS Delegation, we'll also
@@ -226,26 +253,26 @@ func (opts *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates
 }
 
 // setFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
-func (opts *PackageAppOpts) setFileWriters() error {
-	if err := opts.fs.MkdirAll(opts.OutputDir, 0755); err != nil {
-		return fmt.Errorf("create directory %s: %w", opts.OutputDir, err)
+func (o *PackageAppOpts) setFileWriters() error {
+	if err := o.fs.MkdirAll(o.OutputDir, 0755); err != nil {
+		return fmt.Errorf("create directory %s: %w", o.OutputDir, err)
 	}
 
-	templatePath := filepath.Join(opts.OutputDir,
-		fmt.Sprintf(archer.AppCfnTemplateNameFormat, opts.AppName))
-	templateFile, err := opts.fs.Create(templatePath)
+	templatePath := filepath.Join(o.OutputDir,
+		fmt.Sprintf(archer.AppCfnTemplateNameFormat, o.AppName))
+	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
 	}
-	opts.stackWriter = templateFile
+	o.stackWriter = templateFile
 
-	paramsPath := filepath.Join(opts.OutputDir,
-		fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat, opts.AppName, opts.EnvName))
-	paramsFile, err := opts.fs.Create(paramsPath)
+	paramsPath := filepath.Join(o.OutputDir,
+		fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat, o.AppName, o.EnvName))
+	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
 	}
-	opts.paramsWriter = paramsFile
+	o.paramsWriter = paramsFile
 	return nil
 }
 
@@ -258,10 +285,10 @@ func contains(s string, items []string) bool {
 	return false
 }
 
-func (opts *PackageAppOpts) listEnvNames() ([]string, error) {
-	envs, err := opts.store.ListEnvironments(opts.ProjectName())
+func (o *PackageAppOpts) listEnvNames() ([]string, error) {
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", opts.ProjectName(), err)
+		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
 	}
 	var names []string
 	for _, env := range envs {
@@ -324,13 +351,13 @@ func BuildAppPackageCmd() *cobra.Command {
 				return fmt.Errorf("error retrieving default session: %w", err)
 			}
 			opts.describer = cloudformation.New(sess)
-			return opts.Validate()
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Ask(); err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
+			if err := opts.Ask(); err != nil {
 				return err
 			}
 			return opts.Execute()
