@@ -8,12 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"strconv"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -30,36 +28,28 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-type serializedWebAppEnv struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
-	Prod   bool   `json:"prod"`
-	URL    string `json:"url"`
-	Path   string `json:"path"`
-}
-
-type serializedWebAppService struct {
-	Port   string `json:"port"`
-	Tasks  string `json:"tasks"`
-	CPU    string `json:"cpu"`
-	Memory string `json:"memory"`
+type serializedWebAppConfig struct {
+	Environment string `json:"environment"`
+	Port        string `json:"port"`
+	Tasks       string `json:"tasks"`
+	CPU         string `json:"cpu"`
+	Memory      string `json:"memory"`
+	URL         string `json:"url"`
+	Path        string `json:"path"`
 }
 
 type serializedWebApp struct {
-	AppName      string                    `json:"appName"`
-	Type         string                    `json:"type"`
-	Project      string                    `json:"project"`
-	Account      string                    `json:"account"`
-	Environments []serializedWebAppEnv     `json:"environments"`
-	Services     []serializedWebAppService `json:"services"`
+	AppName       string                   `json:"appName"`
+	Type          string                   `json:"type"`
+	Project       string                   `json:"project"`
+	DeployConfigs []serializedWebAppConfig `json:"deployConfig"`
 }
 
 // ShowAppOpts contains the fields to collect for showing an application.
 type ShowAppOpts struct {
 	ShouldOutputJSON bool
 
-	proj *archer.Project
-	app  serializedWebApp
+	app serializedWebApp
 
 	appName string
 
@@ -72,100 +62,92 @@ type ShowAppOpts struct {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *ShowAppOpts) Ask() error {
-	// get project
-	if opts.ProjectName() == "" {
-		projectName, err := opts.selectProject()
-		if err != nil {
-			return err
-		}
-		opts.projectName = projectName
+func (o *ShowAppOpts) Ask() error {
+	if err := o.askProject(); err != nil {
+		return err
 	}
-
-	// get application of the project
-	if opts.appName == "" {
-		appName, err := opts.selectApplication()
-		if err != nil {
-			return err
-		}
-		opts.appName = appName
-	}
-
-	return nil
+	return o.askAppName()
 }
 
-// Validate returns an error if the user inputs are invalid.
-func (opts *ShowAppOpts) Validate() error {
-	proj, err := opts.storeSvc.GetProject(opts.ProjectName())
-	if err != nil {
-		return fmt.Errorf("getting project: %w", err)
+// Validate returns an error if the values provided by the user are invalid.
+func (o *ShowAppOpts) Validate() error {
+	if o.ProjectName() != "" {
+		names, err := o.retrieveProjects()
+		if err != nil {
+			return err
+		}
+		if !contains(o.ProjectName(), names) {
+			return fmt.Errorf("project '%s' does not exist in the workspace", o.ProjectName())
+		}
 	}
-	opts.proj = proj
+	if o.appName != "" {
+		names, err := o.retrieveApplications()
+		if err != nil {
+			return err
+		}
+		if !contains(o.appName, names) {
+			return fmt.Errorf("application '%s' does not exist in project '%s'", o.appName, o.ProjectName())
+		}
+	}
 
 	return nil
 }
 
 // Execute shows the applications through the prompt.
-func (opts *ShowAppOpts) Execute() error {
-	if opts.appName != "" {
-		if err := opts.retrieveData(); err != nil {
+func (o *ShowAppOpts) Execute() error {
+	if o.appName != "" {
+		if err := o.retrieveData(); err != nil {
 			return err
 		}
 	} else {
-		opts.app = serializedWebApp{}
+		o.app = serializedWebApp{}
 	}
 
-	if opts.ShouldOutputJSON {
-		data, err := opts.jsonOutput()
+	if o.ShouldOutputJSON {
+		data, err := o.jsonOutput()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(opts.w, data)
+		fmt.Fprintf(o.w, data)
 	} else {
-		opts.humanOutput()
+		o.humanOutput()
 	}
 
 	return nil
 }
 
-func (opts *ShowAppOpts) retrieveData() error {
-	app, err := opts.storeSvc.GetApplication(opts.ProjectName(), opts.appName)
+func (o *ShowAppOpts) retrieveData() error {
+	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 	if err != nil {
 		return fmt.Errorf("getting application: %w", err)
 	}
-	opts.app = serializedWebApp{
+	o.app = serializedWebApp{
 		AppName: app.Name,
 		Type:    app.Type,
-		Project: opts.ProjectName(),
-		Account: opts.proj.AccountID,
+		Project: o.ProjectName(),
 	}
 
-	environments, err := opts.storeSvc.ListEnvironments(opts.ProjectName())
+	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("listing environments: %w", err)
 	}
 
-	var serializedEnvs []serializedWebAppEnv
-	var serializedServices []serializedWebAppService
+	var serializedDeployConfigs []serializedWebAppConfig
 	for _, env := range environments {
-		webAppURI, err := opts.describer.URI(env.Name)
+		webAppURI, err := o.describer.URI(env.Name)
 		if err == nil {
-			serializedEnvs = append(serializedEnvs, serializedWebAppEnv{
-				Name:   env.Name,
-				Region: env.Region,
-				Prod:   env.Prod,
-				URL:    webAppURI.DNSName,
-				Path:   webAppURI.Path,
-			})
-			webAppECSParams, err := opts.describer.ECSParams(env.Name)
+			webAppECSParams, err := o.describer.ECSParams(env.Name)
 			if err != nil {
 				return fmt.Errorf("retrieving application deployment configuration: %w", err)
 			}
-			serializedServices = append(serializedServices, serializedWebAppService{
-				Port:   webAppECSParams.ContainerPort,
-				Tasks:  webAppECSParams.TaskCount,
-				CPU:    webAppECSParams.CPU,
-				Memory: webAppECSParams.Memory,
+			serializedDeployConfigs = append(serializedDeployConfigs, serializedWebAppConfig{
+				Environment: env.Name,
+				URL:         webAppURI.DNSName,
+				Path:        webAppURI.Path,
+				Port:        webAppECSParams.ContainerPort,
+				Tasks:       webAppECSParams.TaskCount,
+				CPU:         webAppECSParams.CPU,
+				Memory:      webAppECSParams.Memory,
 			})
 			continue
 		}
@@ -173,8 +155,7 @@ func (opts *ShowAppOpts) retrieveData() error {
 			return fmt.Errorf("retrieving application URI: %w", err)
 		}
 	}
-	opts.app.Environments = serializedEnvs
-	opts.app.Services = serializedServices
+	o.app.DeployConfigs = serializedDeployConfigs
 
 	return nil
 }
@@ -198,82 +179,95 @@ func applicationNotDeployed(err error) bool {
 	}
 }
 
-func (opts *ShowAppOpts) humanOutput() {
-	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Environment", "Is Production?", "Memory", "CPU", "Tasks", "Port", "Path", "URL")
-	envLengthMax := len("Environment")
-	prodLengthMax := len("Is Production?")
-	memoryLengthMax := len("Memory")
-	cpuLengthMax := len("CPU")
-	tasksLengthMax := len("Tasks")
-	portLengthMax := len("Port")
-	pathLengthMax := len("Path")
-	urlLengthMax := len("URL")
-	for ind, env := range opts.app.Environments {
-		envLengthMax = int(math.Max(float64(envLengthMax), float64(len(env.Name))))
-		prodLengthMax = int(math.Max(float64(prodLengthMax), float64(len(strconv.FormatBool(env.Prod)))))
-		memoryLengthMax = int(math.Max(float64(memoryLengthMax), float64(len(opts.app.Services[ind].Memory))))
-		cpuLengthMax = int(math.Max(float64(cpuLengthMax), float64(len(opts.app.Services[ind].CPU))))
-		tasksLengthMax = int(math.Max(float64(tasksLengthMax), float64(len(opts.app.Services[ind].Tasks))))
-		portLengthMax = int(math.Max(float64(portLengthMax), float64(len(opts.app.Services[ind].Port))))
-		pathLengthMax = int(math.Max(float64(pathLengthMax), float64(len(env.Path))))
-		urlLengthMax = int(math.Max(float64(urlLengthMax), float64(len(env.URL))))
+func (o *ShowAppOpts) humanOutput() {
+	writer := tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	writer.Flush()
+	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Project", o.app.Project)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", o.app.AppName)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Type", o.app.Type)
+	writer.Flush()
+	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
+	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "CPU (vCPU)", "Memory (MiB)", "Port", "Tasks")
+	for _, config := range o.app.DeployConfigs {
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, cpuToString(config.CPU), config.Memory, config.Port, config.Tasks)
 	}
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", strings.Repeat("-", envLengthMax), strings.Repeat("-", prodLengthMax), strings.Repeat("-", memoryLengthMax), strings.Repeat("-", cpuLengthMax), strings.Repeat("-", tasksLengthMax), strings.Repeat("-", portLengthMax), strings.Repeat("-", pathLengthMax), strings.Repeat("-", urlLengthMax))
-	for ind, env := range opts.app.Environments {
-		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", env.Name, strconv.FormatBool(env.Prod), opts.app.Services[ind].Memory, opts.app.Services[ind].CPU, opts.app.Services[ind].Tasks, opts.app.Services[ind].Port, env.Path, env.URL)
+	writer.Flush()
+	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
+	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
+	for _, config := range o.app.DeployConfigs {
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", config.Environment, config.URL, config.Path)
 	}
 	writer.Flush()
 }
 
-func (opts *ShowAppOpts) jsonOutput() (string, error) {
-	b, err := json.Marshal(opts.app)
+func cpuToString(s string) string {
+	cpuInt, _ := strconv.Atoi(s)
+	cpuFloat := float64(cpuInt) / 1024
+	return fmt.Sprintf("%g", cpuFloat)
+}
+
+func (o *ShowAppOpts) jsonOutput() (string, error) {
+	b, err := json.Marshal(o.app)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-func (opts *ShowAppOpts) selectProject() (string, error) {
-	projNames, err := opts.retrieveProjects()
+func (o *ShowAppOpts) askProject() error {
+	if o.ProjectName() != "" {
+		return nil
+	}
+	projNames, err := o.retrieveProjects()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if len(projNames) == 0 {
 		log.Infoln("There are no projects to select.")
 	}
-	proj, err := opts.prompt.SelectOne(
+	proj, err := o.prompt.SelectOne(
 		applicationShowProjectNamePrompt,
 		applicationShowProjectNameHelpPrompt,
 		projNames,
 	)
 	if err != nil {
-		return "", fmt.Errorf("selecting projects: %w", err)
+		return fmt.Errorf("selecting projects: %w", err)
 	}
-	return proj, nil
+	o.projectName = proj
+
+	return nil
 }
 
-func (opts *ShowAppOpts) selectApplication() (string, error) {
-	appNames, err := opts.retrieveApplications()
+func (o *ShowAppOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+	appNames, err := o.retrieveApplications()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if len(appNames) == 0 {
-		return "", nil
+		return nil
 	}
-	appName, err := opts.prompt.SelectOne(
-		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(opts.ProjectName())),
+	appName, err := o.prompt.SelectOne(
+		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(o.ProjectName())),
 		applicationShowAppNameHelpPrompt,
 		appNames,
 	)
 	if err != nil {
-		return "", fmt.Errorf("selecting applications for project %s: %w", opts.ProjectName(), err)
+		return fmt.Errorf("selecting applications for project %s: %w", o.ProjectName(), err)
 	}
-	return appName, nil
+	o.appName = appName
+
+	return nil
 }
 
-func (opts *ShowAppOpts) retrieveProjects() ([]string, error) {
-	projs, err := opts.storeSvc.ListProjects()
+func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
+	projs, err := o.storeSvc.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("listing projects: %w", err)
 	}
@@ -284,10 +278,10 @@ func (opts *ShowAppOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (opts *ShowAppOpts) retrieveApplications() ([]string, error) {
-	apps, err := opts.storeSvc.ListApplications(opts.ProjectName())
+func (o *ShowAppOpts) retrieveApplications() ([]string, error) {
+	apps, err := o.storeSvc.ListApplications(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("listing applications for project %s: %w", opts.ProjectName(), err)
+		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -320,10 +314,10 @@ func BuildAppShowCmd() *cobra.Command {
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Ask(); err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
+			if err := opts.Ask(); err != nil {
 				return err
 			}
 			if opts.appName != "" {

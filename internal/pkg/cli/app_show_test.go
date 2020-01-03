@@ -182,30 +182,53 @@ func TestAppShow_Ask(t *testing.T) {
 }
 func TestAppShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputProject    string
-		mockStoreReader func(m *climocks.MockstoreReader)
+		inputProject     string
+		inputApplication string
+		mockStoreReader  func(m *climocks.MockstoreReader)
 
 		wantedError error
 	}{
-		"valid project name": {
-			inputProject: "my-project",
+		"valid project name and application name": {
+			inputProject:     "my-project",
+			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
 					Name: "my-project",
-				}, nil)
+				}}, nil)
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{&archer.Application{
+					Name: "my-app",
+				}}, nil)
 			},
 
 			wantedError: nil,
 		},
 		"invalid project name": {
-			inputProject: "my-project",
+			inputProject:     "my-project",
+			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
+					Name: "my-bad-project",
+				}}, nil)
 			},
 
-			wantedError: fmt.Errorf("getting project: some error"),
+			wantedError: fmt.Errorf("project 'my-project' does not exist in the workspace"),
+		},
+		"invalid application name": {
+			inputProject:     "my-project",
+			inputApplication: "my-app",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
+					Name: "my-project",
+				}}, nil)
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{&archer.Application{
+					Name: "my-bad-app",
+				}}, nil)
+			},
+
+			wantedError: fmt.Errorf("application 'my-app' does not exist in project 'my-project'"),
 		},
 	}
 
@@ -220,6 +243,7 @@ func TestAppShow_Validate(t *testing.T) {
 			showApps := &ShowAppOpts{
 				storeSvc: mockStoreReader,
 
+				appName: tc.inputApplication,
 				GlobalOpts: &GlobalOpts{
 					projectName: tc.inputProject,
 				},
@@ -239,8 +263,8 @@ func TestAppShow_Validate(t *testing.T) {
 }
 
 func TestAppShow_Execute(t *testing.T) {
+	projectName := "my-project"
 	testCases := map[string]struct {
-		inputProject     *archer.Project
 		inputApp         string
 		shouldOutputJSON bool
 
@@ -251,9 +275,6 @@ func TestAppShow_Execute(t *testing.T) {
 		wantedError   error
 	}{
 		"prompt for all input for json output": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: true,
 
@@ -298,12 +319,9 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"account\":\"\",\"environments\":[{\"name\":\"test\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"name\":\"prod\",\"region\":\"\",\"prod\":false,\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"services\":[{\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}]}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"deployConfig\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}]}\n",
 		},
 		"prompt for all input for human output": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -348,16 +366,26 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
------------         --------------      ------              ---                 -----               ----                ---------           ---------------------------------------
-test                false               512                 256                 1                   80                  /frontend           my-pr-Publi.us-west-2.elb.amazonaws.com
-prod                false               1024                512                 3                   5000                /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
+			wantedContent: `About
+
+  Project           my-project
+  Name              my-app
+  Type              
+
+Configurations
+
+  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks
+  test              0.25                512                 80                  1
+  prod              0.5                 1024                5000                3
+
+Routes
+
+  Environment       URL                                      Path
+  test              my-pr-Publi.us-west-2.elb.amazonaws.com  /frontend
+  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
 `,
 		},
 		"returns error if fail to get application": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -370,9 +398,6 @@ prod                false               1024                512                 
 			wantedError: fmt.Errorf("getting application: some error"),
 		},
 		"returns error if fail to list environments": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -388,9 +413,6 @@ prod                false               1024                512                 
 			wantedError: fmt.Errorf("listing environments: some error"),
 		},
 		"do not return error if no application found with json format": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "",
 			shouldOutputJSON: true,
 
@@ -398,12 +420,9 @@ prod                false               1024                512                 
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedContent: "{\"appName\":\"\",\"type\":\"\",\"project\":\"\",\"account\":\"\",\"environments\":null,\"services\":null}\n",
+			wantedContent: "{\"appName\":\"\",\"type\":\"\",\"project\":\"\",\"deployConfig\":null}\n",
 		},
 		"do not return error if no application found": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "",
 			shouldOutputJSON: false,
 
@@ -411,14 +430,9 @@ prod                false               1024                512                 
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
------------         --------------      ------              ---                 -----               ----                ----                ---
-`,
+			wantedContent: "About\n\n  Project           \n  Name              \n  Type              \n\nConfigurations\n\n  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks\n\nRoutes\n\n  Environment       URL                 Path\n",
 		},
 		"returns error if fail to retrieve URI": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -443,9 +457,6 @@ prod                false               1024                512                 
 			wantedError: fmt.Errorf("retrieving application URI: some error"),
 		},
 		"returns error if fail to retrieve deploy info": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -474,9 +485,6 @@ prod                false               1024                512                 
 			wantedError: fmt.Errorf("retrieving application deployment configuration: some error"),
 		},
 		"do not return error if fail to retrieve URI because of application not deployed": {
-			inputProject: &archer.Project{
-				Name: "my-project",
-			},
 			inputApp:         "my-app",
 			shouldOutputJSON: false,
 
@@ -511,10 +519,7 @@ prod                false               1024                512                 
 				}, nil)
 			},
 
-			wantedContent: `Environment         Is Production?      Memory              CPU                 Tasks               Port                Path                URL
------------         --------------      ------              ---                 -----               ----                --------            ---------------------------------------
-prod                false               1024                512                 3                   5000                /backend            my-pr-Publi.us-west-2.elb.amazonaws.com
-`,
+			wantedContent: "About\n\n  Project           my-project\n  Name              my-app\n  Type              \n\nConfigurations\n\n  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks\n  prod              0.5                 1024                5000                3\n\nRoutes\n\n  Environment       URL                                      Path\n  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend\n",
 		},
 	}
 
@@ -530,7 +535,6 @@ prod                false               1024                512                 
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			showApps := &ShowAppOpts{
-				proj:             tc.inputProject,
 				appName:          tc.inputApp,
 				ShouldOutputJSON: tc.shouldOutputJSON,
 
@@ -540,7 +544,7 @@ prod                false               1024                512                 
 				w: b,
 
 				GlobalOpts: &GlobalOpts{
-					projectName: tc.inputProject.Name,
+					projectName: projectName,
 				},
 			}
 
