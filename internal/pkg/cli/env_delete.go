@@ -53,10 +53,17 @@ type DeleteEnvOpts struct {
 	deployClient environmentDeployer
 	prog         progress
 
-	// Cached objects to avoid multiple requests.
-	env *archer.Environment
-
 	*GlobalOpts
+}
+
+// Validate returns an error if the individual user inputs are invalid.
+func (o *DeleteEnvOpts) Validate() error {
+	if o.EnvName != "" {
+		if err := o.validateEnvName(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -64,51 +71,8 @@ func (o *DeleteEnvOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	return o.askProfile()
-}
-
-// Validate returns an error if the environment name does not exist in the project, or if there are live applications under the environment.
-func (o *DeleteEnvOpts) Validate() error {
-	// Validate that the environment is stored in SSM.
-	env, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName)
-	if err != nil {
-		return fmt.Errorf("get environment %s metadata in project %s: %w", o.EnvName, o.ProjectName(), err)
-	}
-	o.env = env
-
-	// Look up applications by searching for cloudformation stacks in the environment's region.
-	// TODO We should move this to a package like "describe" similar to the existing "store" pkg.
-	stacks, err := o.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
-		ResourceTypeFilters: []*string{aws.String("cloudformation")},
-		TagFilters: []*resourcegroupstaggingapi.TagFilter{
-			{
-				Key:    aws.String(stack.AppTagKey),
-				Values: []*string{}, // Matches any application stack.
-			},
-			{
-				Key:    aws.String(stack.EnvTagKey),
-				Values: []*string{aws.String(env.Name)},
-			},
-			{
-				Key:    aws.String(stack.ProjectTagKey),
-				Values: []*string{aws.String(env.Project)},
-			},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("find application cloudformation stacks: %w", err)
-	}
-	if len(stacks.ResourceTagMappingList) > 0 {
-		var appNames []string
-		for _, cfnStack := range stacks.ResourceTagMappingList {
-			for _, t := range cfnStack.Tags {
-				if *t.Key != stack.AppTagKey {
-					continue
-				}
-				appNames = append(appNames, *t.Value)
-			}
-		}
-		return fmt.Errorf("applications: '%s' still exist within the environment %s", strings.Join(appNames, ", "), env.Name)
+	if err := o.askProfile(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -118,7 +82,14 @@ func (o *DeleteEnvOpts) Validate() error {
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
 func (o *DeleteEnvOpts) Execute() error {
-	shouldDelete, err := o.shouldDelete(o.env.Project, o.env.Name)
+	if err := initDeleteEnvClientsFromProfile(o); err != nil {
+		return nil
+	}
+	if err := o.validateNoRunningApps(); err != nil {
+		return err
+	}
+
+	shouldDelete, err := o.shouldDelete(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return err
 	}
@@ -136,6 +107,49 @@ func (o *DeleteEnvOpts) Execute() error {
 
 // RecommendedActions is a no-op for this command.
 func (o *DeleteEnvOpts) RecommendedActions() []string {
+	return nil
+}
+
+func (o *DeleteEnvOpts) validateEnvName() error {
+	if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
+		return fmt.Errorf("get environment %s metadata in project %s: %w", o.EnvName, o.ProjectName(), err)
+	}
+	return nil
+}
+
+func (o *DeleteEnvOpts) validateNoRunningApps() error {
+	stacks, err := o.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+		ResourceTypeFilters: []*string{aws.String("cloudformation")},
+		TagFilters: []*resourcegroupstaggingapi.TagFilter{
+			{
+				Key:    aws.String(stack.AppTagKey),
+				Values: []*string{}, // Matches any application stack.
+			},
+			{
+				Key:    aws.String(stack.EnvTagKey),
+				Values: []*string{aws.String(o.EnvName)},
+			},
+			{
+				Key:    aws.String(stack.ProjectTagKey),
+				Values: []*string{aws.String(o.ProjectName())},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("find application cloudformation stacks: %w", err)
+	}
+	if len(stacks.ResourceTagMappingList) > 0 {
+		var appNames []string
+		for _, cfnStack := range stacks.ResourceTagMappingList {
+			for _, t := range cfnStack.Tags {
+				if *t.Key != stack.AppTagKey {
+					continue
+				}
+				appNames = append(appNames, *t.Value)
+			}
+		}
+		return fmt.Errorf("applications: '%s' still exist within the environment %s", strings.Join(appNames, ", "), o.EnvName)
+	}
 	return nil
 }
 
@@ -191,19 +205,30 @@ func (o *DeleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
 
 // deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
 func (o *DeleteEnvOpts) deleteStack() bool {
-	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.env.Name, o.env.Project))
-	if err := o.deployClient.DeleteEnvironment(o.env.Project, o.env.Name); err != nil {
-		o.prog.Stop(fmt.Sprintf(fmtDeleteEnvFailed, o.env.Name, o.env.Project, err))
+	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.ProjectName()))
+	if err := o.deployClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
+		o.prog.Stop(fmt.Sprintf(fmtDeleteEnvFailed, o.EnvName, o.ProjectName(), err))
 		return false
 	}
-	o.prog.Stop(fmt.Sprintf(fmtDeleteEnvComplete, o.env.Name, o.env.Project))
+	o.prog.Stop(fmt.Sprintf(fmtDeleteEnvComplete, o.EnvName, o.ProjectName()))
 	return true
 }
 
 func (o *DeleteEnvOpts) deleteFromStore() {
-	if err := o.storeClient.DeleteEnvironment(o.env.Project, o.env.Name); err != nil {
-		log.Infof("Failed to remove environment %s from project %s store: %w\n", o.env.Name, o.env.Project, err)
+	if err := o.storeClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
+		log.Infof("Failed to remove environment %s from project %s store: %w\n", o.EnvName, o.ProjectName(), err)
 	}
+}
+
+// initDeleteEnvClientsFromProfile is overriden in tests.
+var initDeleteEnvClientsFromProfile = func(o *DeleteEnvOpts) error {
+	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+	if err != nil {
+		return fmt.Errorf("cannot create session from profile %s: %w", o.EnvProfile, err)
+	}
+	o.rgClient = resourcegroupstaggingapi.New(profileSess)
+	o.deployClient = cloudformation.New(profileSess)
+	return nil
 }
 
 // BuildEnvDeleteCmd builds the command to delete environment(s).
@@ -227,21 +252,15 @@ func BuildEnvDeleteCmd() *cobra.Command {
 				return fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 			}
 			opts.storeClient = store
-
+			return nil
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-
-			p := session.NewProvider()
-			profileSess, err := p.FromProfile(opts.EnvProfile)
-			if err != nil {
-				return fmt.Errorf("cannot create session from profile %s: %w", opts.EnvProfile, err)
-			}
-			opts.rgClient = resourcegroupstaggingapi.New(profileSess)
-			opts.deployClient = cloudformation.New(profileSess)
-			return opts.Validate()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return opts.Execute()
 		}),
 	}
