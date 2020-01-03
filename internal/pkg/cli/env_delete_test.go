@@ -20,10 +20,16 @@ import (
 )
 
 func TestDeleteEnvOpts_Ask(t *testing.T) {
+	const (
+		testProject = "phonetool"
+		testEnv     = "test"
+		testProfile = "default"
+	)
 	testCases := map[string]struct {
 		inEnvName    string
 		inEnvProfile string
 
+		mockStore  func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
 		mockPrompt func(ctrl *gomock.Controller) *climocks.Mockprompter
 
 		wantedEnvName    string
@@ -31,28 +37,49 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 		wantedError      error
 	}{
 		"prompts for all required flags": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				m := mocks.NewMockEnvironmentStore(ctrl)
+				m.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					{
+						Name: testEnv,
+					},
+				}, nil)
+				return m
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
-				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
-					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("default", nil)
+				p.EXPECT().SelectOne(envDeleteNamePrompt, "", []string{testEnv}).Return(testEnv, nil)
+				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(testEnv)),
+					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return(testProfile, nil)
 				return p
 			},
-			wantedEnvName:    "test",
-			wantedEnvProfile: "default",
+			wantedEnvName:    testEnv,
+			wantedEnvProfile: testProfile,
 		},
 		"wraps error from prompting for env name": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				m := mocks.NewMockEnvironmentStore(ctrl)
+				m.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					{
+						Name: testEnv,
+					},
+				}, nil)
+				return m
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("", errors.New("some error"))
+				p.EXPECT().SelectOne(envDeleteNamePrompt, "", gomock.Any()).Return("", errors.New("some error"))
 				return p
 			},
-			wantedError: errors.New("prompt to get environment name: some error"),
+			wantedError: errors.New("prompt for environment name: some error"),
 		},
 		"wraps error from prompting from profile": {
+			inEnvName: testEnv,
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				return nil
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
 				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
 					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 				return p
@@ -67,10 +94,12 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := DeleteEnvOpts{
-				EnvName:    tc.inEnvName,
-				EnvProfile: tc.inEnvProfile,
+				EnvName:     tc.inEnvName,
+				EnvProfile:  tc.inEnvProfile,
+				storeClient: tc.mockStore(ctrl),
 				GlobalOpts: &GlobalOpts{
-					prompt: tc.mockPrompt(ctrl),
+					prompt:      tc.mockPrompt(ctrl),
+					projectName: testProject,
 				},
 			}
 
