@@ -158,6 +158,7 @@ type sessionProvider interface {
 type webAppDescriber interface {
 	URI(envName string) (*describe.WebAppURI, error)
 	ECSParams(envName string) (*describe.WebAppECSParams, error)
+	StackResources(envName string) ([]*describe.CfnResource, error)
 }
 
 type storeReader interface {

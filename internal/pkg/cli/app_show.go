@@ -4,13 +4,10 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -28,28 +25,10 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-type serializedWebAppConfig struct {
-	Environment string `json:"environment"`
-	Port        string `json:"port"`
-	Tasks       string `json:"tasks"`
-	CPU         string `json:"cpu"`
-	Memory      string `json:"memory"`
-	URL         string `json:"url"`
-	Path        string `json:"path"`
-}
-
-type serializedWebApp struct {
-	AppName       string                   `json:"appName"`
-	Type          string                   `json:"type"`
-	Project       string                   `json:"project"`
-	DeployConfigs []serializedWebAppConfig `json:"deployConfig"`
-}
-
 // ShowAppOpts contains the fields to collect for showing an application.
 type ShowAppOpts struct {
-	ShouldOutputJSON bool
-
-	app serializedWebApp
+	shouldOutputJSON      bool
+	shouldOutputResources bool
 
 	appName string
 
@@ -61,6 +40,24 @@ type ShowAppOpts struct {
 	*GlobalOpts
 }
 
+// Validate returns an error if the values provided by the user are invalid.
+func (o *ShowAppOpts) Validate() error {
+	if o.ProjectName() != "" {
+		_, err := o.storeSvc.GetProject(o.ProjectName())
+		if err != nil {
+			return err
+		}
+	}
+	if o.appName != "" {
+		_, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Ask asks for fields that are required but not passed in.
 func (o *ShowAppOpts) Ask() error {
 	if err := o.askProject(); err != nil {
@@ -69,81 +66,53 @@ func (o *ShowAppOpts) Ask() error {
 	return o.askAppName()
 }
 
-// Validate returns an error if the values provided by the user are invalid.
-func (o *ShowAppOpts) Validate() error {
-	if o.ProjectName() != "" {
-		names, err := o.retrieveProjects()
-		if err != nil {
-			return err
-		}
-		if !contains(o.ProjectName(), names) {
-			return fmt.Errorf("project '%s' does not exist in the workspace", o.ProjectName())
-		}
-	}
-	if o.appName != "" {
-		names, err := o.retrieveApplications()
-		if err != nil {
-			return err
-		}
-		if !contains(o.appName, names) {
-			return fmt.Errorf("application '%s' does not exist in project '%s'", o.appName, o.ProjectName())
-		}
-	}
-
-	return nil
-}
-
 // Execute shows the applications through the prompt.
 func (o *ShowAppOpts) Execute() error {
-	if o.appName != "" {
-		if err := o.retrieveData(); err != nil {
-			return err
-		}
-	} else {
-		o.app = serializedWebApp{}
+	app, err := o.retrieveData()
+	if err != nil {
+		return err
 	}
 
-	if o.ShouldOutputJSON {
-		data, err := o.jsonOutput()
+	if o.shouldOutputJSON {
+		data, err := app.JSONString()
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(o.w, data)
 	} else {
-		o.humanOutput()
+		fmt.Fprintf(o.w, app.HumanString())
 	}
 
 	return nil
 }
 
-func (o *ShowAppOpts) retrieveData() error {
+func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
 	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 	if err != nil {
-		return fmt.Errorf("getting application: %w", err)
-	}
-	o.app = serializedWebApp{
-		AppName: app.Name,
-		Type:    app.Type,
-		Project: o.ProjectName(),
+		return nil, fmt.Errorf("getting application: %w", err)
 	}
 
 	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
-		return fmt.Errorf("listing environments: %w", err)
+		return nil, fmt.Errorf("listing environments: %w", err)
 	}
 
-	var serializedDeployConfigs []serializedWebAppConfig
+	var routes []describe.WebAppRoute
+	var configs []describe.WebAppConfig
 	for _, env := range environments {
 		webAppURI, err := o.describer.URI(env.Name)
 		if err == nil {
-			webAppECSParams, err := o.describer.ECSParams(env.Name)
-			if err != nil {
-				return fmt.Errorf("retrieving application deployment configuration: %w", err)
-			}
-			serializedDeployConfigs = append(serializedDeployConfigs, serializedWebAppConfig{
+			routes = append(routes, describe.WebAppRoute{
 				Environment: env.Name,
 				URL:         webAppURI.DNSName,
 				Path:        webAppURI.Path,
+			})
+			webAppECSParams, err := o.describer.ECSParams(env.Name)
+			if err != nil {
+				return nil, fmt.Errorf("retrieving application deployment configuration: %w", err)
+			}
+			configs = append(configs, describe.WebAppConfig{
+				Environment: env.Name,
 				Port:        webAppECSParams.ContainerPort,
 				Tasks:       webAppECSParams.TaskCount,
 				CPU:         webAppECSParams.CPU,
@@ -152,12 +121,39 @@ func (o *ShowAppOpts) retrieveData() error {
 			continue
 		}
 		if !applicationNotDeployed(err) {
-			return fmt.Errorf("retrieving application URI: %w", err)
+			return nil, fmt.Errorf("retrieving application URI: %w", err)
 		}
 	}
-	o.app.DeployConfigs = serializedDeployConfigs
 
-	return nil
+	if o.shouldOutputResources {
+		resources := make(map[string][]*describe.CfnResource)
+		for _, env := range environments {
+			webAppResources, err := o.describer.StackResources(env.Name)
+			if err == nil {
+				resources[env.Name] = webAppResources
+				continue
+			}
+			if !applicationNotDeployed(err) {
+				return nil, fmt.Errorf("retrieving application resources: %w", err)
+			}
+		}
+		return &describe.WebApp{
+			AppName:        app.Name,
+			Type:           app.Type,
+			Project:        o.ProjectName(),
+			Configurations: configs,
+			Routes:         routes,
+			Resources:      resources,
+		}, nil
+	}
+
+	return &describe.WebApp{
+		AppName:        app.Name,
+		Type:           app.Type,
+		Project:        o.ProjectName(),
+		Configurations: configs,
+		Routes:         routes,
+	}, nil
 }
 
 func applicationNotDeployed(err error) bool {
@@ -177,45 +173,6 @@ func applicationNotDeployed(err error) bool {
 		}
 		return true
 	}
-}
-
-func (o *ShowAppOpts) humanOutput() {
-	writer := tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
-	writer.Flush()
-	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Project", o.app.Project)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", o.app.AppName)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Type", o.app.Type)
-	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
-	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "CPU (vCPU)", "Memory (MiB)", "Port", "Tasks")
-	for _, config := range o.app.DeployConfigs {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, cpuToString(config.CPU), config.Memory, config.Port, config.Tasks)
-	}
-	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
-	writer = tabwriter.NewWriter(o.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
-	for _, config := range o.app.DeployConfigs {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", config.Environment, config.URL, config.Path)
-	}
-	writer.Flush()
-}
-
-func cpuToString(s string) string {
-	cpuInt, _ := strconv.Atoi(s)
-	cpuFloat := float64(cpuInt) / 1024
-	return fmt.Sprintf("%g", cpuFloat)
-}
-
-func (o *ShowAppOpts) jsonOutput() (string, error) {
-	b, err := json.Marshal(o.app)
-	if err != nil {
-		return "", fmt.Errorf("marshal applications: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
 }
 
 func (o *ShowAppOpts) askProject() error {
@@ -251,6 +208,7 @@ func (o *ShowAppOpts) askAppName() error {
 		return err
 	}
 	if len(appNames) == 0 {
+		log.Infof("No applications found in project '%s'\n.", o.ProjectName())
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(
@@ -300,7 +258,6 @@ func BuildAppShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Displays information about an application per environment.",
-		Long:  "For Load Balanced Web Applications, displays the URL and path the application can be accessed at.",
 		Example: `
   Shows details for the application "my-app"
   /code $ ecs-preview app show -a my-app`,
@@ -326,9 +283,9 @@ func BuildAppShowCmd() *cobra.Command {
 					return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
 				}
 				opts.describer = describer
-			}
-			if err := opts.Execute(); err != nil {
-				return err
+				if err := opts.Execute(); err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -336,7 +293,8 @@ func BuildAppShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&opts.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVarP(&opts.shouldOutputResources, resourcesFlag, resourcesFlagShort, false, resourcesFlagDescription)
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 	return cmd

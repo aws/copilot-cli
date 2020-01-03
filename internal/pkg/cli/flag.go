@@ -21,6 +21,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
+	resourcesFlag         = "resources"
 	githubURLFlag         = "github-url"
 	githubAccessTokenFlag = "github-access-token"
 	gitBranchFlag         = "git-branch"
@@ -45,6 +46,7 @@ const (
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
+	resourcesFlagShort         = "r"
 )
 
 // Descriptions for flags.
@@ -67,6 +69,7 @@ const (
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
+	resourcesFlagDescription         = "Optional. Show the resources of your application."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
 	appLocalFlagDescription          = "Only show applications in the current directory."
 )

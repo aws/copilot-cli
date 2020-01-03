@@ -4,7 +4,11 @@
 package describe
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"strconv"
+	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -16,10 +20,25 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+const (
+	// Display settings.
+	minCellWidth           = 20  // minimum number of characters in a table's cell.
+	tabWidth               = 4   // number of characters in between columns.
+	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
+	paddingChar            = ' ' // character in between columns.
+	noAdditionalFormatting = 0
+)
+
 // WebAppURI represents the unique identifier to access a web application.
 type WebAppURI struct {
 	DNSName string // The environment's subdomain if the application is served on HTTPS. Otherwise, the public load balancer's DNS.
 	Path    string // Empty if the application is served on HTTPS. Otherwise, the pattern used to match the application.
+}
+
+// CfnResource contains application resources created by cloudformation.
+type CfnResource struct {
+	Type       string
+	PhysicalID string
 }
 
 // WebAppECSParams contains ECS deploy parameters of a web application.
@@ -34,8 +53,35 @@ type TaskSize struct {
 	Memory string
 }
 
+// WebAppConfig contains serialized configuration parameters for a web application.
+type WebAppConfig struct {
+	Environment string `json:"environment"`
+	Port        string `json:"port"`
+	Tasks       string `json:"tasks"`
+	CPU         string `json:"cpu"`
+	Memory      string `json:"memory"`
+}
+
+// WebAppRoute contains serialized route parameters for a web application.
+type WebAppRoute struct {
+	Environment string `json:"environment"`
+	URL         string `json:"url"`
+	Path        string `json:"path"`
+}
+
+// WebApp contains serialized parameters for a web application.
+type WebApp struct {
+	AppName        string                    `json:"appName"`
+	Type           string                    `json:"type"`
+	Project        string                    `json:"project"`
+	Configurations []WebAppConfig            `json:"configurations"`
+	Routes         []WebAppRoute             `json:"routes"`
+	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
+}
+
 type stackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
+	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)
 }
 
 type sessionFromRoleProvider interface {
@@ -102,6 +148,28 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 	}, nil
 }
 
+// StackResources returns the physical ID of stack resources created by cloudformation.
+func (d *WebAppDescriber) StackResources(envName string) ([]*CfnResource, error) {
+	env, err := d.store.GetEnvironment(d.app.Project, envName)
+	if err != nil {
+		return nil, err
+	}
+
+	appResource, err := d.describeStackResources(env.ManagerRoleARN, env.Region, stack.NameForApp(d.app.Project, env.Name, d.app.Name))
+	if err != nil {
+		return nil, err
+	}
+	var resources []*CfnResource
+	for _, appResource := range appResource {
+		resources = append(resources, &CfnResource{
+			PhysicalID: aws.StringValue(appResource.PhysicalResourceId),
+			Type:       aws.StringValue(appResource.ResourceType),
+		})
+	}
+
+	return resources, nil
+}
+
 // URI returns the WebAppURI to identify this application uniquely given an environment name.
 func (d *WebAppDescriber) URI(envName string) (*WebAppURI, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
@@ -156,6 +224,20 @@ func (d *WebAppDescriber) appParams(env *archer.Environment) (map[string]string,
 	return params, nil
 }
 
+func (d *WebAppDescriber) describeStackResources(roleARN, region, stackName string) ([]*cloudformation.StackResource, error) {
+	svc, err := d.stackDescriber(roleARN, region)
+	if err != nil {
+		return nil, err
+	}
+	out, err := svc.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe resources for stack %s: %w", stackName, err)
+	}
+	return out.StackResources, nil
+}
+
 func (d *WebAppDescriber) stack(roleARN, region, stackName string) (*cloudformation.Stack, error) {
 	svc, err := d.stackDescriber(roleARN, region)
 	if err != nil {
@@ -182,4 +264,54 @@ func (d *WebAppDescriber) stackDescriber(roleARN, region string) (stackDescriber
 		d.stackDescribers[roleARN] = cloudformation.New(sess)
 	}
 	return d.stackDescribers[roleARN], nil
+}
+
+// JSONString returns the stringified WebApp struct with json format.
+func (w *WebApp) JSONString() (string, error) {
+	b, err := json.Marshal(w)
+	if err != nil {
+		return "", fmt.Errorf("marshal applications: %w", err)
+	}
+	return fmt.Sprintf("%s\n", b), nil
+}
+
+// HumanString returns the stringified WebApp struct with human readable format.
+func (w *WebApp) HumanString() string {
+	var b bytes.Buffer
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Project", w.Project)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.AppName)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
+	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
+	for _, config := range w.Configurations {
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
+	}
+	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
+	for _, route := range w.Routes {
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", route.Environment, route.URL, route.Path)
+	}
+	if len(w.Resources) != 0 {
+		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
+		writer.Flush()
+		for env, resources := range w.Resources {
+			fmt.Fprintf(writer, "\n  %s\n", env)
+			for _, resource := range resources {
+				fmt.Fprintf(writer, "    %s\t%s\n", resource.Type, resource.PhysicalID)
+			}
+		}
+	}
+	writer.Flush()
+	return b.String()
+}
+
+func cpuToString(s string) string {
+	cpuInt, _ := strconv.Atoi(s)
+	cpuFloat := float64(cpuInt) / 1024
+	return fmt.Sprintf("%g", cpuFloat)
 }

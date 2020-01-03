@@ -352,3 +352,105 @@ func TestWebAppDescriber_ECSParams(t *testing.T) {
 		})
 	}
 }
+
+func TestWebAppDescriber_StackResources(t *testing.T) {
+	const (
+		testProject        = "phonetool"
+		testEnv            = "test"
+		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
+		testApp            = "jobs"
+	)
+	testCfnResources := []*CfnResource{
+		&CfnResource{
+			Type:       "AWS::EC2::SecurityGroup",
+			PhysicalID: "sg-0758ed6b233743530",
+		},
+	}
+	testCases := map[string]struct {
+		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvGetter
+		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
+
+		wantedResources []*CfnResource
+		wantedError     error
+	}{
+		"get stack resources": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(&cloudformation.DescribeStackResourcesOutput{
+					StackResources: []*cloudformation.StackResource{
+						&cloudformation.StackResource{
+							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
+							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+						},
+					},
+				}, nil)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedResources: testCfnResources,
+		},
+		"returns error when fail to describe stack resources": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(nil, errors.New("some error"))
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedError: fmt.Errorf("describe resources for stack phonetool-test-jobs: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			d := &WebAppDescriber{
+				app: &archer.Application{
+					Project: testProject,
+					Name:    testApp,
+				},
+				store:           tc.mockStore(ctrl),
+				stackDescribers: tc.mockStackDescribers(ctrl),
+			}
+
+			// WHEN
+			actual, err := d.StackResources(testEnv)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedResources, actual)
+			}
+		})
+	}
+}

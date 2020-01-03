@@ -193,12 +193,12 @@ func TestAppShow_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
+				m.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name: "my-project",
-				}}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{&archer.Application{
+				}, nil)
+				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
 					Name: "my-app",
-				}}, nil)
+				}, nil)
 			},
 
 			wantedError: nil,
@@ -208,27 +208,23 @@ func TestAppShow_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
-					Name: "my-bad-project",
-				}}, nil)
+				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("project 'my-project' does not exist in the workspace"),
+			wantedError: fmt.Errorf("some error"),
 		},
 		"invalid application name": {
 			inputProject:     "my-project",
 			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{&archer.Project{
+				m.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name: "my-project",
-				}}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{&archer.Application{
-					Name: "my-bad-app",
-				}}, nil)
+				}, nil)
+				m.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("application 'my-app' does not exist in project 'my-project'"),
+			wantedError: fmt.Errorf("some error"),
 		},
 	}
 
@@ -265,8 +261,9 @@ func TestAppShow_Validate(t *testing.T) {
 func TestAppShow_Execute(t *testing.T) {
 	projectName := "my-project"
 	testCases := map[string]struct {
-		inputApp         string
-		shouldOutputJSON bool
+		inputApp              string
+		shouldOutputJSON      bool
+		shouldOutputResources bool
 
 		mockStoreReader     func(m *climocks.MockstoreReader)
 		mockWebAppDescriber func(m *climocks.MockwebAppDescriber)
@@ -275,8 +272,9 @@ func TestAppShow_Execute(t *testing.T) {
 		wantedError   error
 	}{
 		"prompt for all input for json output": {
-			inputApp:         "my-app",
-			shouldOutputJSON: true,
+			inputApp:              "my-app",
+			shouldOutputJSON:      true,
+			shouldOutputResources: true,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
@@ -317,13 +315,26 @@ func TestAppShow_Execute(t *testing.T) {
 					},
 					TaskCount: "3",
 				}, nil)
+				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
+					&describe.CfnResource{
+						Type:       "AWS::EC2::SecurityGroup",
+						PhysicalID: "sg-0758ed6b233743530",
+					},
+				}, nil)
+				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+					&describe.CfnResource{
+						Type:       "AWS::EC2::SecurityGroupIngress",
+						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					},
+				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"deployConfig\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}]}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"Type\":\"AWS::EC2::SecurityGroupIngress\",\"PhysicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"Type\":\"AWS::EC2::SecurityGroup\",\"PhysicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: true,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
@@ -363,6 +374,18 @@ func TestAppShow_Execute(t *testing.T) {
 						Memory: "1024",
 					},
 					TaskCount: "3",
+				}, nil)
+				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
+					&describe.CfnResource{
+						Type:       "AWS::EC2::SecurityGroup",
+						PhysicalID: "sg-0758ed6b233743530",
+					},
+				}, nil)
+				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+					&describe.CfnResource{
+						Type:       "AWS::EC2::SecurityGroupIngress",
+						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					},
 				}, nil)
 			},
 
@@ -374,20 +397,29 @@ func TestAppShow_Execute(t *testing.T) {
 
 Configurations
 
-  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks
-  test              0.25                512                 80                  1
-  prod              0.5                 1024                5000                3
+  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  test              1                   0.25                512                 80
+  prod              3                   0.5                 1024                5000
 
 Routes
 
   Environment       URL                                      Path
   test              my-pr-Publi.us-west-2.elb.amazonaws.com  /frontend
   prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+
+Resources
+
+  test
+    AWS::EC2::SecurityGroup  sg-0758ed6b233743530
+
+  prod
+    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
 		},
 		"returns error if fail to get application": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: false,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
@@ -398,8 +430,9 @@ Routes
 			wantedError: fmt.Errorf("getting application: some error"),
 		},
 		"returns error if fail to list environments": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: false,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
@@ -412,29 +445,10 @@ Routes
 
 			wantedError: fmt.Errorf("listing environments: some error"),
 		},
-		"do not return error if no application found with json format": {
-			inputApp:         "",
-			shouldOutputJSON: true,
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {},
-
-			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
-
-			wantedContent: "{\"appName\":\"\",\"type\":\"\",\"project\":\"\",\"deployConfig\":null}\n",
-		},
-		"do not return error if no application found": {
-			inputApp:         "",
-			shouldOutputJSON: false,
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {},
-
-			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
-
-			wantedContent: "About\n\n  Project           \n  Name              \n  Type              \n\nConfigurations\n\n  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks\n\nRoutes\n\n  Environment       URL                 Path\n",
-		},
 		"returns error if fail to retrieve URI": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: false,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
@@ -484,9 +498,59 @@ Routes
 
 			wantedError: fmt.Errorf("retrieving application deployment configuration: some error"),
 		},
+		"returns error if fail to retrieve application resources": {
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: true,
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+					Name: "my-app",
+				}, nil)
+				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					&archer.Environment{
+						Name: "test",
+					},
+					&archer.Environment{
+						Name: "prod",
+					},
+				}, nil)
+			},
+
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
+				m.EXPECT().URI("test").Return(&describe.WebAppURI{
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+					Path:    "/frontend",
+				}, nil)
+				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+					Path:    "/backend",
+				}, nil)
+				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+					ContainerPort: "80",
+					TaskSize: describe.TaskSize{
+						CPU:    "256",
+						Memory: "512",
+					},
+					TaskCount: "1",
+				}, nil)
+				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+					ContainerPort: "5000",
+					TaskSize: describe.TaskSize{
+						CPU:    "512",
+						Memory: "1024",
+					},
+					TaskCount: "3",
+				}, nil)
+				m.EXPECT().StackResources("test").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("retrieving application resources: some error"),
+		},
 		"do not return error if fail to retrieve URI because of application not deployed": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
+			inputApp:              "my-app",
+			shouldOutputJSON:      false,
+			shouldOutputResources: true,
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
@@ -517,9 +581,36 @@ Routes
 					},
 					TaskCount: "3",
 				}, nil)
+				m.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
+				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+					&describe.CfnResource{
+						Type:       "AWS::EC2::SecurityGroupIngress",
+						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					},
+				}, nil)
 			},
 
-			wantedContent: "About\n\n  Project           my-project\n  Name              my-app\n  Type              \n\nConfigurations\n\n  Environment       CPU (vCPU)          Memory (MiB)        Port                Tasks\n  prod              0.5                 1024                5000                3\n\nRoutes\n\n  Environment       URL                                      Path\n  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend\n",
+			wantedContent: `About
+
+  Project           my-project
+  Name              my-app
+  Type              
+
+Configurations
+
+  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  prod              3                   0.5                 1024                5000
+
+Routes
+
+  Environment       URL                                      Path
+  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+
+Resources
+
+  prod
+    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
+`,
 		},
 	}
 
@@ -535,8 +626,9 @@ Routes
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			showApps := &ShowAppOpts{
-				appName:          tc.inputApp,
-				ShouldOutputJSON: tc.shouldOutputJSON,
+				appName:               tc.inputApp,
+				shouldOutputJSON:      tc.shouldOutputJSON,
+				shouldOutputResources: tc.shouldOutputResources,
 
 				storeSvc:  mockStoreReader,
 				describer: mockWebAppDescriber,
