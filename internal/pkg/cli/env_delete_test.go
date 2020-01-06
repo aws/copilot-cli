@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws"
@@ -36,10 +37,16 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			inEnv:         testEnvName,
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
 				envStore := mocks.NewMockEnvironmentStore(ctrl)
-				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, errors.New("some error"))
+				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, &store.ErrNoSuchEnvironment{
+					ProjectName:     testProjName,
+					EnvironmentName: testEnvName,
+				})
 				return envStore
 			},
-			wantedError: errors.New("get environment test metadata in project phonetool: some error"),
+			wantedError: &store.ErrNoSuchEnvironment{
+				ProjectName:     testProjName,
+				EnvironmentName: testEnvName,
+			},
 		},
 		"environment exists": {
 			inProjectName: testProjName,

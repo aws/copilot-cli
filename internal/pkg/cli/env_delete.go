@@ -94,6 +94,7 @@ func (o *DeleteEnvOpts) Execute() error {
 		return err
 	}
 	if !shouldDelete {
+		log.Infof("Aborted deletion of environment %s.\n", color.HighlightUserInput(o.EnvName))
 		return nil
 	}
 
@@ -112,7 +113,7 @@ func (o *DeleteEnvOpts) RecommendedActions() []string {
 
 func (o *DeleteEnvOpts) validateEnvName() error {
 	if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
-		return fmt.Errorf("get environment %s metadata in project %s: %w", o.EnvName, o.ProjectName(), err)
+		return err
 	}
 	return nil
 }
@@ -175,6 +176,7 @@ func (o *DeleteEnvOpts) askEnvName() error {
 }
 
 func (o *DeleteEnvOpts) askProfile() error {
+	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/585
 	if o.EnvProfile != "" {
 		return nil
 	}
