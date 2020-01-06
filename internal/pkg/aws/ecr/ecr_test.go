@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/golang/mock/gomock"
@@ -25,19 +25,19 @@ func TestGetECRAuth(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", mockUsername, mockPassword)))
 
 	testCases := map[string]struct {
-		mockECRAPI func(m *awsmocks.MockECRAPI)
+		mockECRClient func(m *mocks.MockecrClient)
 
 		wantAuth Auth
 		wantErr  error
 	}{
 		"should return wrapped error given error returned from GetAuthorizationToken": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().GetAuthorizationToken(gomock.Any()).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("get ECR auth: %w", mockError),
 		},
 		"should return Auth data": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().GetAuthorizationToken(gomock.Any()).Return(&ecr.GetAuthorizationTokenOutput{
 					AuthorizationData: []*ecr.AuthorizationData{
 						&ecr.AuthorizationData{
@@ -59,8 +59,8 @@ func TestGetECRAuth(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECRAPI := awsmocks.NewMockECRAPI(ctrl)
-			tc.mockECRAPI(mockECRAPI)
+			mockECRAPI := mocks.NewMockecrClient(ctrl)
+			tc.mockECRClient(mockECRAPI)
 
 			service := Service{
 				ecr: mockECRAPI,
@@ -82,19 +82,19 @@ func TestGetRepository(t *testing.T) {
 	mockRepoURI := "mockRepoURI"
 
 	testCases := map[string]struct {
-		mockECRAPI func(m *awsmocks.MockECRAPI)
+		mockECRClient func(m *mocks.MockecrClient)
 
 		wantURI string
 		wantErr error
 	}{
 		"should return wrapped error given error returned from DescribeRepositories": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeRepositories(gomock.Any()).Return(nil, mockError)
 			},
 			wantErr: fmt.Errorf("ecr describe repository %s: %w", mockRepoName, mockError),
 		},
 		"should return error given no repositories returned in list": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeRepositories(&ecr.DescribeRepositoriesInput{
 					RepositoryNames: aws.StringSlice([]string{mockRepoName}),
 				}).Return(&ecr.DescribeRepositoriesOutput{
@@ -104,7 +104,7 @@ func TestGetRepository(t *testing.T) {
 			wantErr: errors.New("no repositories found"),
 		},
 		"should return repository URI": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeRepositories(&ecr.DescribeRepositoriesInput{
 					RepositoryNames: aws.StringSlice([]string{mockRepoName}),
 				}).Return(&ecr.DescribeRepositoriesOutput{
@@ -125,8 +125,8 @@ func TestGetRepository(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECRAPI := awsmocks.NewMockECRAPI(ctrl)
-			tc.mockECRAPI(mockECRAPI)
+			mockECRAPI := mocks.NewMockecrClient(ctrl)
+			tc.mockECRClient(mockECRAPI)
 
 			service := Service{
 				mockECRAPI,
@@ -185,20 +185,20 @@ func TestListImages(t *testing.T) {
 	mockNextToken := "next"
 
 	tests := map[string]struct {
-		mockECRAPI func(m *awsmocks.MockECRAPI)
+		mockECRClient func(m *mocks.MockecrClient)
 
 		wantImages []Image
 		wantError  error
 	}{
 		"should wrap error returned by ECR DescribeImages": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeImages(gomock.Any()).Return(nil, mockError)
 			},
 			wantImages: nil,
 			wantError:  fmt.Errorf("ecr repo %s describe images: %w", mockRepoName, mockError),
 		},
 		"should return Image list": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeImages(gomock.Any()).Return(&ecr.DescribeImagesOutput{
 					ImageDetails: []*ecr.ImageDetail{
 						&ecr.ImageDetail{
@@ -211,7 +211,7 @@ func TestListImages(t *testing.T) {
 			wantError:  nil,
 		},
 		"should return all images when paginated": {
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
 					RepositoryName: aws.String(mockRepoName),
 				}).Return(&ecr.DescribeImagesOutput{
@@ -244,8 +244,8 @@ func TestListImages(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECRAPI := awsmocks.NewMockECRAPI(ctrl)
-			tc.mockECRAPI(mockECRAPI)
+			mockECRAPI := mocks.NewMockecrClient(ctrl)
+			tc.mockECRClient(mockECRAPI)
 
 			service := Service{
 				mockECRAPI,
@@ -286,26 +286,26 @@ func TestDeleteImages(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		images     []Image
-		mockECRAPI func(m *awsmocks.MockECRAPI)
+		images        []Image
+		mockECRClient func(m *mocks.MockecrClient)
 
 		wantError error
 	}{
 		"should not return error if input Image list is empty": {
-			images:     nil,
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {},
-			wantError:  nil,
+			images:        nil,
+			mockECRClient: func(m *mocks.MockecrClient) {},
+			wantError:     nil,
 		},
 		"should wrap error return from BatchDeleteImage": {
 			images: mockImages,
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().BatchDeleteImage(gomock.Any()).Return(nil, mockError)
 			},
 			wantError: fmt.Errorf("ecr repo %s batch delete image: %w", mockRepoName, mockError),
 		},
 		"should return nil if call to BatchDeleteImage successful": {
 			images: mockImages,
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().BatchDeleteImage(&ecr.BatchDeleteImageInput{
 					RepositoryName: aws.String(mockRepoName),
 					ImageIds:       imageIdentifiers,
@@ -315,7 +315,7 @@ func TestDeleteImages(t *testing.T) {
 		},
 		fmt.Sprintf("should be able to batch delete more than %d images", batchDeleteLimit): {
 			images: mockBatchImages,
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().BatchDeleteImage(&ecr.BatchDeleteImageInput{
 					RepositoryName: aws.String(mockRepoName),
 					ImageIds:       batchImageIdentifiers,
@@ -329,7 +329,7 @@ func TestDeleteImages(t *testing.T) {
 		},
 		"warns if fail to delete some images": {
 			images: mockImages,
-			mockECRAPI: func(m *awsmocks.MockECRAPI) {
+			mockECRClient: func(m *mocks.MockecrClient) {
 				m.EXPECT().BatchDeleteImage(&ecr.BatchDeleteImageInput{
 					RepositoryName: aws.String(mockRepoName),
 					ImageIds:       imageIdentifiers,
@@ -353,8 +353,8 @@ func TestDeleteImages(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECRAPI := awsmocks.NewMockECRAPI(ctrl)
-			tc.mockECRAPI(mockECRAPI)
+			mockECRAPI := mocks.NewMockecrClient(ctrl)
+			tc.mockECRClient(mockECRAPI)
 
 			service := Service{
 				mockECRAPI,
