@@ -4,16 +4,11 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"math"
-	"strconv"
 	"strings"
-	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -30,36 +25,10 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-type serializedWebAppEnv struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
-	Prod   bool   `json:"prod"`
-	URL    string `json:"url"`
-	Path   string `json:"path"`
-}
-
-type serializedWebAppService struct {
-	Port   string `json:"port"`
-	Tasks  string `json:"tasks"`
-	CPU    string `json:"cpu"`
-	Memory string `json:"memory"`
-}
-
-type serializedWebApp struct {
-	AppName      string                    `json:"appName"`
-	Type         string                    `json:"type"`
-	Project      string                    `json:"project"`
-	Account      string                    `json:"account"`
-	Environments []serializedWebAppEnv     `json:"environments"`
-	Services     []serializedWebAppService `json:"services"`
-}
-
 // ShowAppOpts contains the fields to collect for showing an application.
 type ShowAppOpts struct {
-	ShouldOutputJSON bool
-
-	proj *archer.Project
-	app  serializedWebApp
+	shouldOutputJSON      bool
+	shouldOutputResources bool
 
 	appName string
 
@@ -71,112 +40,120 @@ type ShowAppOpts struct {
 	*GlobalOpts
 }
 
-// Ask asks for fields that are required but not passed in.
-func (opts *ShowAppOpts) Ask() error {
-	// get project
-	if opts.ProjectName() == "" {
-		projectName, err := opts.selectProject()
+// Validate returns an error if the values provided by the user are invalid.
+func (o *ShowAppOpts) Validate() error {
+	if o.ProjectName() != "" {
+		_, err := o.storeSvc.GetProject(o.ProjectName())
 		if err != nil {
 			return err
 		}
-		opts.projectName = projectName
 	}
-
-	// get application of the project
-	if opts.appName == "" {
-		appName, err := opts.selectApplication()
+	if o.appName != "" {
+		_, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 		if err != nil {
 			return err
 		}
-		opts.appName = appName
 	}
 
 	return nil
 }
 
-// Validate returns an error if the user inputs are invalid.
-func (opts *ShowAppOpts) Validate() error {
-	proj, err := opts.storeSvc.GetProject(opts.ProjectName())
-	if err != nil {
-		return fmt.Errorf("getting project: %w", err)
+// Ask asks for fields that are required but not passed in.
+func (o *ShowAppOpts) Ask() error {
+	if err := o.askProject(); err != nil {
+		return err
 	}
-	opts.proj = proj
-
-	return nil
+	return o.askAppName()
 }
 
 // Execute shows the applications through the prompt.
-func (opts *ShowAppOpts) Execute() error {
-	if opts.appName != "" {
-		if err := opts.retrieveData(); err != nil {
-			return err
-		}
-	} else {
-		opts.app = serializedWebApp{}
+func (o *ShowAppOpts) Execute() error {
+	app, err := o.retrieveData()
+	if err != nil {
+		return err
 	}
 
-	if opts.ShouldOutputJSON {
-		data, err := opts.jsonOutput()
+	if o.shouldOutputJSON {
+		data, err := app.JSONString()
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(opts.w, data)
+		fmt.Fprintf(o.w, data)
 	} else {
-		opts.humanOutput()
+		fmt.Fprintf(o.w, app.HumanString())
 	}
 
 	return nil
 }
 
-func (opts *ShowAppOpts) retrieveData() error {
-	app, err := opts.storeSvc.GetApplication(opts.ProjectName(), opts.appName)
+func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
+	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 	if err != nil {
-		return fmt.Errorf("getting application: %w", err)
-	}
-	opts.app = serializedWebApp{
-		AppName: app.Name,
-		Type:    app.Type,
-		Project: opts.ProjectName(),
-		Account: opts.proj.AccountID,
+		return nil, fmt.Errorf("getting application: %w", err)
 	}
 
-	environments, err := opts.storeSvc.ListEnvironments(opts.ProjectName())
+	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
-		return fmt.Errorf("listing environments: %w", err)
+		return nil, fmt.Errorf("listing environments: %w", err)
 	}
 
-	var serializedEnvs []serializedWebAppEnv
-	var serializedServices []serializedWebAppService
+	var routes []describe.WebAppRoute
+	var configs []describe.WebAppConfig
 	for _, env := range environments {
-		webAppURI, err := opts.describer.URI(env.Name)
+		webAppURI, err := o.describer.URI(env.Name)
 		if err == nil {
-			serializedEnvs = append(serializedEnvs, serializedWebAppEnv{
-				Name:   env.Name,
-				Region: env.Region,
-				Prod:   env.Prod,
-				URL:    webAppURI.DNSName,
-				Path:   webAppURI.Path,
+			routes = append(routes, describe.WebAppRoute{
+				Environment: env.Name,
+				URL:         webAppURI.DNSName,
+				Path:        webAppURI.Path,
 			})
-			webAppECSParams, err := opts.describer.ECSParams(env.Name)
+			webAppECSParams, err := o.describer.ECSParams(env.Name)
 			if err != nil {
-				return fmt.Errorf("retrieving application deployment configuration: %w", err)
+				return nil, fmt.Errorf("retrieving application deployment configuration: %w", err)
 			}
-			serializedServices = append(serializedServices, serializedWebAppService{
-				Port:   webAppECSParams.ContainerPort,
-				Tasks:  webAppECSParams.TaskCount,
-				CPU:    webAppECSParams.CPU,
-				Memory: webAppECSParams.Memory,
+			configs = append(configs, describe.WebAppConfig{
+				Environment: env.Name,
+				Port:        webAppECSParams.ContainerPort,
+				Tasks:       webAppECSParams.TaskCount,
+				CPU:         webAppECSParams.CPU,
+				Memory:      webAppECSParams.Memory,
 			})
 			continue
 		}
 		if !applicationNotDeployed(err) {
-			return fmt.Errorf("retrieving application URI: %w", err)
+			return nil, fmt.Errorf("retrieving application URI: %w", err)
 		}
 	}
-	opts.app.Environments = serializedEnvs
-	opts.app.Services = serializedServices
 
-	return nil
+	if o.shouldOutputResources {
+		resources := make(map[string][]*describe.CfnResource)
+		for _, env := range environments {
+			webAppResources, err := o.describer.StackResources(env.Name)
+			if err == nil {
+				resources[env.Name] = webAppResources
+				continue
+			}
+			if !applicationNotDeployed(err) {
+				return nil, fmt.Errorf("retrieving application resources: %w", err)
+			}
+		}
+		return &describe.WebApp{
+			AppName:        app.Name,
+			Type:           app.Type,
+			Project:        o.ProjectName(),
+			Configurations: configs,
+			Routes:         routes,
+			Resources:      resources,
+		}, nil
+	}
+
+	return &describe.WebApp{
+		AppName:        app.Name,
+		Type:           app.Type,
+		Project:        o.ProjectName(),
+		Configurations: configs,
+		Routes:         routes,
+	}, nil
 }
 
 func applicationNotDeployed(err error) bool {
@@ -198,82 +175,57 @@ func applicationNotDeployed(err error) bool {
 	}
 }
 
-func (opts *ShowAppOpts) humanOutput() {
-	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Environment", "Is Production?", "Memory", "CPU", "Tasks", "Port", "Path", "URL")
-	envLengthMax := len("Environment")
-	prodLengthMax := len("Is Production?")
-	memoryLengthMax := len("Memory")
-	cpuLengthMax := len("CPU")
-	tasksLengthMax := len("Tasks")
-	portLengthMax := len("Port")
-	pathLengthMax := len("Path")
-	urlLengthMax := len("URL")
-	for ind, env := range opts.app.Environments {
-		envLengthMax = int(math.Max(float64(envLengthMax), float64(len(env.Name))))
-		prodLengthMax = int(math.Max(float64(prodLengthMax), float64(len(strconv.FormatBool(env.Prod)))))
-		memoryLengthMax = int(math.Max(float64(memoryLengthMax), float64(len(opts.app.Services[ind].Memory))))
-		cpuLengthMax = int(math.Max(float64(cpuLengthMax), float64(len(opts.app.Services[ind].CPU))))
-		tasksLengthMax = int(math.Max(float64(tasksLengthMax), float64(len(opts.app.Services[ind].Tasks))))
-		portLengthMax = int(math.Max(float64(portLengthMax), float64(len(opts.app.Services[ind].Port))))
-		pathLengthMax = int(math.Max(float64(pathLengthMax), float64(len(env.Path))))
-		urlLengthMax = int(math.Max(float64(urlLengthMax), float64(len(env.URL))))
+func (o *ShowAppOpts) askProject() error {
+	if o.ProjectName() != "" {
+		return nil
 	}
-	fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", strings.Repeat("-", envLengthMax), strings.Repeat("-", prodLengthMax), strings.Repeat("-", memoryLengthMax), strings.Repeat("-", cpuLengthMax), strings.Repeat("-", tasksLengthMax), strings.Repeat("-", portLengthMax), strings.Repeat("-", pathLengthMax), strings.Repeat("-", urlLengthMax))
-	for ind, env := range opts.app.Environments {
-		fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", env.Name, strconv.FormatBool(env.Prod), opts.app.Services[ind].Memory, opts.app.Services[ind].CPU, opts.app.Services[ind].Tasks, opts.app.Services[ind].Port, env.Path, env.URL)
-	}
-	writer.Flush()
-}
-
-func (opts *ShowAppOpts) jsonOutput() (string, error) {
-	b, err := json.Marshal(opts.app)
+	projNames, err := o.retrieveProjects()
 	if err != nil {
-		return "", fmt.Errorf("marshal applications: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
-}
-
-func (opts *ShowAppOpts) selectProject() (string, error) {
-	projNames, err := opts.retrieveProjects()
-	if err != nil {
-		return "", err
+		return err
 	}
 	if len(projNames) == 0 {
 		log.Infoln("There are no projects to select.")
 	}
-	proj, err := opts.prompt.SelectOne(
+	proj, err := o.prompt.SelectOne(
 		applicationShowProjectNamePrompt,
 		applicationShowProjectNameHelpPrompt,
 		projNames,
 	)
 	if err != nil {
-		return "", fmt.Errorf("selecting projects: %w", err)
+		return fmt.Errorf("selecting projects: %w", err)
 	}
-	return proj, nil
+	o.projectName = proj
+
+	return nil
 }
 
-func (opts *ShowAppOpts) selectApplication() (string, error) {
-	appNames, err := opts.retrieveApplications()
+func (o *ShowAppOpts) askAppName() error {
+	if o.appName != "" {
+		return nil
+	}
+	appNames, err := o.retrieveApplications()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if len(appNames) == 0 {
-		return "", nil
+		log.Infof("No applications found in project '%s'\n.", o.ProjectName())
+		return nil
 	}
-	appName, err := opts.prompt.SelectOne(
-		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(opts.ProjectName())),
+	appName, err := o.prompt.SelectOne(
+		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(o.ProjectName())),
 		applicationShowAppNameHelpPrompt,
 		appNames,
 	)
 	if err != nil {
-		return "", fmt.Errorf("selecting applications for project %s: %w", opts.ProjectName(), err)
+		return fmt.Errorf("selecting applications for project %s: %w", o.ProjectName(), err)
 	}
-	return appName, nil
+	o.appName = appName
+
+	return nil
 }
 
-func (opts *ShowAppOpts) retrieveProjects() ([]string, error) {
-	projs, err := opts.storeSvc.ListProjects()
+func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
+	projs, err := o.storeSvc.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("listing projects: %w", err)
 	}
@@ -284,10 +236,10 @@ func (opts *ShowAppOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (opts *ShowAppOpts) retrieveApplications() ([]string, error) {
-	apps, err := opts.storeSvc.ListApplications(opts.ProjectName())
+func (o *ShowAppOpts) retrieveApplications() ([]string, error) {
+	apps, err := o.storeSvc.ListApplications(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("listing applications for project %s: %w", opts.ProjectName(), err)
+		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -306,7 +258,6 @@ func BuildAppShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Displays information about an application per environment.",
-		Long:  "For Load Balanced Web Applications, displays the URL and path the application can be accessed at.",
 		Example: `
   Shows details for the application "my-app"
   /code $ ecs-preview app show -a my-app`,
@@ -320,10 +271,10 @@ func BuildAppShowCmd() *cobra.Command {
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Ask(); err != nil {
+			if err := opts.Validate(); err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
+			if err := opts.Ask(); err != nil {
 				return err
 			}
 			if opts.appName != "" {
@@ -332,9 +283,9 @@ func BuildAppShowCmd() *cobra.Command {
 					return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
 				}
 				opts.describer = describer
-			}
-			if err := opts.Execute(); err != nil {
-				return err
+				if err := opts.Execute(); err != nil {
+					return err
+				}
 			}
 
 			return nil
@@ -342,7 +293,8 @@ func BuildAppShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&opts.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVarP(&opts.shouldOutputResources, resourcesFlag, resourcesFlagShort, false, resourcesFlagDescription)
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 	return cmd

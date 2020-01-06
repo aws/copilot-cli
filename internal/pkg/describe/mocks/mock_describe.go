@@ -50,6 +50,21 @@ func (mr *MockstackDescriberMockRecorder) DescribeStacks(input interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*MockstackDescriber)(nil).DescribeStacks), input)
 }
 
+// DescribeStackResources mocks base method
+func (m *MockstackDescriber) DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackResources", input)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackResourcesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackResources indicates an expected call of DescribeStackResources
+func (mr *MockstackDescriberMockRecorder) DescribeStackResources(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackResources", reflect.TypeOf((*MockstackDescriber)(nil).DescribeStackResources), input)
+}
+
 // MocksessionFromRoleProvider is a mock of sessionFromRoleProvider interface
 type MocksessionFromRoleProvider struct {
 	ctrl     *gomock.Controller

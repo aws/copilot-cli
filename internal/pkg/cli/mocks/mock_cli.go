@@ -671,6 +671,21 @@ func (mr *MockwebAppDescriberMockRecorder) ECSParams(envName interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSParams", reflect.TypeOf((*MockwebAppDescriber)(nil).ECSParams), envName)
 }
 
+// StackResources mocks base method
+func (m *MockwebAppDescriber) StackResources(envName string) ([]*describe.CfnResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackResources", envName)
+	ret0, _ := ret[0].([]*describe.CfnResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StackResources indicates an expected call of StackResources
+func (mr *MockwebAppDescriberMockRecorder) StackResources(envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockwebAppDescriber)(nil).StackResources), envName)
+}
+
 // MockstoreReader is a mock of storeReader interface
 type MockstoreReader struct {
 	ctrl     *gomock.Controller

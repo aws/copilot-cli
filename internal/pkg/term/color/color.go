@@ -20,6 +20,7 @@ var (
 	Red        = color.New(color.FgHiRed)
 	Cyan       = color.New(color.FgCyan)
 	HiCyan     = color.New(color.FgHiCyan)
+	Bold       = color.New(color.Bold)
 	BoldItalic = color.New(color.Bold).Add(color.Italic)
 )
 
