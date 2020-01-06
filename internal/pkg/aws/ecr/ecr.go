@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
 )
 
 const (
@@ -24,9 +23,16 @@ const (
 	batchDeleteLimit  = 100
 )
 
+type ecrClient interface {
+	DescribeImages(*ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error)
+	GetAuthorizationToken(*ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error)
+	DescribeRepositories(*ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error)
+	BatchDeleteImage(*ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error)
+}
+
 // Service wraps an AWS ECR client.
 type Service struct {
-	ecr ecriface.ECRAPI
+	ecr ecrClient
 }
 
 // New returns a Service configured against the input session.
