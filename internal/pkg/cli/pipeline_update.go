@@ -264,10 +264,12 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 				return err
 			}
 			opts.ws = ws
-
-			return opts.Validate()
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
 			return opts.Execute()
 		}),
 	}
