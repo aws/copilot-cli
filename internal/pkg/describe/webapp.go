@@ -37,8 +37,8 @@ type WebAppURI struct {
 
 // CfnResource contains application resources created by cloudformation.
 type CfnResource struct {
-	Type       string
-	PhysicalID string
+	Type       string `json:"type"`
+	PhysicalID string `json:"physicalID"`
 }
 
 // WebAppECSParams contains ECS deploy parameters of a web application.

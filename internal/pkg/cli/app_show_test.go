@@ -17,169 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppShow_Ask(t *testing.T) {
-	testCases := map[string]struct {
-		inputProject string
-		inputApp     string
-
-		mockStoreReader func(m *climocks.MockstoreReader)
-		mockPrompt      func(m *climocks.Mockprompter)
-
-		wantedProject string
-		wantedApp     string
-		wantedError   error
-	}{
-		"with all flags": {
-			inputProject: "my-project",
-			inputApp:     "my-app",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {},
-
-			mockPrompt: func(m *climocks.Mockprompter) {},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"prompt for all input": {
-			inputProject: "",
-			inputApp:     "",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{
-						Name: "my-app",
-					},
-					{
-						Name: "archer-app",
-					},
-				}, nil)
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
-			},
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"returns error when fail to list project": {
-			inputProject: "",
-			inputApp:     "",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return(nil, errors.New("some error"))
-			},
-
-			mockPrompt:    func(m *climocks.Mockprompter) {},
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("listing projects: some error"),
-		},
-		"returns error when fail to select project": {
-			inputProject: "",
-			inputApp:     "",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
-			},
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("selecting projects: some error"),
-		},
-		"returns error when fail to list applications": {
-			inputProject: "",
-			inputApp:     "",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error"))
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-			},
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("listing applications for project my-project: some error"),
-		},
-		"returns error when fail to select application": {
-			inputProject: "",
-			inputApp:     "",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{
-						Name: "my-app",
-					},
-					{
-						Name: "archer-app",
-					},
-				}, nil)
-			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1)
-			},
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("selecting applications for project my-project: some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			tc.mockPrompt(mockPrompter)
-			tc.mockStoreReader(mockStoreReader)
-
-			showApps := &ShowAppOpts{
-				appName:  tc.inputApp,
-				storeSvc: mockStoreReader,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
-				},
-			}
-
-			// WHEN
-			err := showApps.Ask()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showApps.ProjectName(), "expected project name to match")
-				require.Equal(t, tc.wantedApp, showApps.appName, "expected application name to match")
-			}
-		})
-	}
-}
 func TestAppShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject     string
@@ -253,6 +90,170 @@ func TestAppShow_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestAppShow_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		inputProject string
+		inputApp     string
+
+		mockStoreReader func(m *climocks.MockstoreReader)
+		mockPrompt      func(m *climocks.Mockprompter)
+
+		wantedProject string
+		wantedApp     string
+		wantedError   error
+	}{
+		"with all flags": {
+			inputProject: "my-project",
+			inputApp:     "my-app",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {},
+
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   nil,
+		},
+		"prompt for all input": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					{
+						Name: "my-app",
+					},
+					{
+						Name: "archer-app",
+					},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
+			},
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   nil,
+		},
+		"returns error when fail to list project": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+			},
+
+			mockPrompt:    func(m *climocks.Mockprompter) {},
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   fmt.Errorf("list projects: some error"),
+		},
+		"returns error when fail to select project": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
+			},
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   fmt.Errorf("select projects: some error"),
+		},
+		"returns error when fail to list applications": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+				m.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error"))
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+			},
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   fmt.Errorf("list applications for project my-project: some error"),
+		},
+		"returns error when fail to select application": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					{
+						Name: "my-app",
+					},
+					{
+						Name: "archer-app",
+					},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1)
+			},
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   fmt.Errorf("select applications for project my-project: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockPrompter := climocks.NewMockprompter(ctrl)
+			tc.mockPrompt(mockPrompter)
+			tc.mockStoreReader(mockStoreReader)
+
+			showApps := &ShowAppOpts{
+				appName:  tc.inputApp,
+				storeSvc: mockStoreReader,
+				GlobalOpts: &GlobalOpts{
+					prompt:      mockPrompter,
+					projectName: tc.inputProject,
+				},
+			}
+
+			// WHEN
+			err := showApps.Ask()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedProject, showApps.ProjectName(), "expected project name to match")
+				require.Equal(t, tc.wantedApp, showApps.appName, "expected application name to match")
 			}
 		})
 	}
@@ -337,7 +338,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"Type\":\"AWS::EC2::SecurityGroupIngress\",\"PhysicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"Type\":\"AWS::EC2::SecurityGroup\",\"PhysicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
 			inputApp:              "my-app",
@@ -435,7 +436,7 @@ Resources
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedError: fmt.Errorf("getting application: some error"),
+			wantedError: fmt.Errorf("get application: some error"),
 		},
 		"returns error if fail to list environments": {
 			inputApp:              "my-app",
@@ -451,7 +452,7 @@ Resources
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {},
 
-			wantedError: fmt.Errorf("listing environments: some error"),
+			wantedError: fmt.Errorf("list environments: some error"),
 		},
 		"returns error if fail to retrieve URI": {
 			inputApp:              "my-app",
@@ -476,7 +477,7 @@ Resources
 				m.EXPECT().URI("test").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("retrieving application URI: some error"),
+			wantedError: fmt.Errorf("retrieve application URI: some error"),
 		},
 		"returns error if fail to retrieve deploy info": {
 			inputApp:         "my-app",
@@ -504,7 +505,7 @@ Resources
 				m.EXPECT().ECSParams("test").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("retrieving application deployment configuration: some error"),
+			wantedError: fmt.Errorf("retrieve application deployment configuration: some error"),
 		},
 		"returns error if fail to retrieve application resources": {
 			inputApp:              "my-app",
@@ -553,7 +554,7 @@ Resources
 				m.EXPECT().StackResources("test").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("retrieving application resources: some error"),
+			wantedError: fmt.Errorf("retrieve application resources: some error"),
 		},
 		"do not return error if fail to retrieve URI because of application not deployed": {
 			inputApp:              "my-app",

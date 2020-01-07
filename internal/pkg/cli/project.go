@@ -20,6 +20,7 @@ A Project represents all of your deployment environments.`,
 	}
 	cmd.AddCommand(BuildProjectInitCommand())
 	cmd.AddCommand(BuildProjectListCommand())
+	cmd.AddCommand(BuildProjectShowCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

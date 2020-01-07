@@ -96,12 +96,12 @@ func (o *ShowAppOpts) Execute() error {
 func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
 	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 	if err != nil {
-		return nil, fmt.Errorf("getting application: %w", err)
+		return nil, fmt.Errorf("get application: %w", err)
 	}
 
 	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("listing environments: %w", err)
+		return nil, fmt.Errorf("list environments: %w", err)
 	}
 
 	var routes []describe.WebAppRoute
@@ -116,7 +116,7 @@ func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
 			})
 			webAppECSParams, err := o.describer.ECSParams(env.Name)
 			if err != nil {
-				return nil, fmt.Errorf("retrieving application deployment configuration: %w", err)
+				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
 			}
 			configs = append(configs, describe.WebAppConfig{
 				Environment: env.Name,
@@ -128,7 +128,7 @@ func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
 			continue
 		}
 		if !applicationNotDeployed(err) {
-			return nil, fmt.Errorf("retrieving application URI: %w", err)
+			return nil, fmt.Errorf("retrieve application URI: %w", err)
 		}
 	}
 
@@ -141,7 +141,7 @@ func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
 				continue
 			}
 			if !applicationNotDeployed(err) {
-				return nil, fmt.Errorf("retrieving application resources: %w", err)
+				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
 		}
 		return &describe.WebApp{
@@ -199,7 +199,7 @@ func (o *ShowAppOpts) askProject() error {
 		projNames,
 	)
 	if err != nil {
-		return fmt.Errorf("selecting projects: %w", err)
+		return fmt.Errorf("select projects: %w", err)
 	}
 	o.projectName = proj
 
@@ -224,7 +224,7 @@ func (o *ShowAppOpts) askAppName() error {
 		appNames,
 	)
 	if err != nil {
-		return fmt.Errorf("selecting applications for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select applications for project %s: %w", o.ProjectName(), err)
 	}
 	o.appName = appName
 
@@ -234,7 +234,7 @@ func (o *ShowAppOpts) askAppName() error {
 func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeSvc.ListProjects()
 	if err != nil {
-		return nil, fmt.Errorf("listing projects: %w", err)
+		return nil, fmt.Errorf("list projects: %w", err)
 	}
 	projNames := make([]string, len(projs))
 	for ind, proj := range projs {
@@ -246,7 +246,7 @@ func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
 func (o *ShowAppOpts) retrieveApplications() ([]string, error) {
 	apps, err := o.storeSvc.ListApplications(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -272,7 +272,7 @@ func BuildAppShowCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Displays information about an application per environment.",
+		Short: "Show details of an application per environment.",
 		Example: `
   Shows details for the application "my-app"
   /code $ ecs-preview app show -a my-app`,
