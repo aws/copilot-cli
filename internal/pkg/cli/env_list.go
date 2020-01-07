@@ -35,8 +35,8 @@ type ListEnvOpts struct {
 	*GlobalOpts
 }
 
-func (opts *ListEnvOpts) selectProject() (string, error) {
-	projs, err := opts.projectLister.ListProjects()
+func (o *ListEnvOpts) selectProject() (string, error) {
+	projs, err := o.projectLister.ListProjects()
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +48,7 @@ func (opts *ListEnvOpts) selectProject() (string, error) {
 		log.Infoln("There are no projects to select.")
 		return "", nil
 	}
-	proj, err := opts.prompt.SelectOne(
+	proj, err := o.prompt.SelectOne(
 		environmentListProjectNamePrompt,
 		environmentListProjectNameHelper,
 		projStrs,
@@ -57,47 +57,47 @@ func (opts *ListEnvOpts) selectProject() (string, error) {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *ListEnvOpts) Ask() error {
-	if opts.ProjectName() != "" {
+func (o *ListEnvOpts) Ask() error {
+	if o.ProjectName() != "" {
 		return nil
 	}
-	projectName, err := opts.selectProject()
+	projectName, err := o.selectProject()
 	if err != nil {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
-	opts.projectName = projectName
+	o.projectName = projectName
 
 	return nil
 }
 
 // Execute lists the environments through the prompt.
-func (opts *ListEnvOpts) Execute() error {
+func (o *ListEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
+	if _, err := o.projectGetter.GetProject(o.ProjectName()); err != nil {
 		return err
 	}
 
-	envs, err := opts.manager.ListEnvironments(opts.ProjectName())
+	envs, err := o.manager.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return err
 	}
 
 	var out string
-	if opts.ShouldOutputJSON {
-		data, err := opts.jsonOutput(envs)
+	if o.ShouldOutputJSON {
+		data, err := o.jsonOutput(envs)
 		if err != nil {
 			return err
 		}
 		out = data
 	} else {
-		out = opts.humanOutput(envs)
+		out = o.humanOutput(envs)
 	}
-	fmt.Fprintf(opts.w, out)
+	fmt.Fprintf(o.w, out)
 
 	return nil
 }
 
-func (opts *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
+func (o *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
 	b := &strings.Builder{}
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
@@ -110,7 +110,7 @@ func (opts *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
 	return b.String()
 }
 
-func (opts *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
+func (o *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
 	type serializedEnvs struct {
 		Environments []*archer.Environment `json:"environments"`
 	}
@@ -139,15 +139,14 @@ func BuildEnvListCmd() *cobra.Command {
 				return err
 			}
 			opts.projectLister = ssmStore
-			return opts.Ask()
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
-			if err != nil {
-				return err
-			}
 			opts.manager = ssmStore
 			opts.projectGetter = ssmStore
+			return nil
+		}),
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Ask(); err != nil {
+				return err
+			}
 			return opts.Execute()
 		}),
 	}
