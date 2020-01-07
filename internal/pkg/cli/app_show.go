@@ -29,13 +29,12 @@ const (
 type ShowAppOpts struct {
 	shouldOutputJSON      bool
 	shouldOutputResources bool
+	appName               string
 
-	appName string
-
-	storeSvc  storeReader
-	describer webAppDescriber
-
-	w io.Writer
+	w             io.Writer
+	storeSvc      storeReader
+	describer     webAppDescriber
+	initDescriber func(*ShowAppOpts) error // Overriden in tests.
 
 	*GlobalOpts
 }
@@ -68,6 +67,9 @@ func (o *ShowAppOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *ShowAppOpts) Execute() error {
+	if err := o.initDescriber(o); err != nil {
+		return err
+	}
 	app, err := o.retrieveData()
 	if err != nil {
 		return err
@@ -254,6 +256,14 @@ func BuildAppShowCmd() *cobra.Command {
 	opts := ShowAppOpts{
 		w:          log.OutputWriter,
 		GlobalOpts: NewGlobalOpts(),
+		initDescriber: func(o *ShowAppOpts) error {
+			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			if err != nil {
+				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+			}
+			o.describer = d
+			return nil
+		},
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
@@ -267,7 +277,6 @@ func BuildAppShowCmd() *cobra.Command {
 				return fmt.Errorf("connect to environment datastore: %w", err)
 			}
 			opts.storeSvc = ssmStore
-
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
@@ -277,18 +286,7 @@ func BuildAppShowCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if opts.appName != "" {
-				describer, err := describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
-				if err != nil {
-					return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
-				}
-				opts.describer = describer
-				if err := opts.Execute(); err != nil {
-					return err
-				}
-			}
-
-			return nil
+			return opts.Execute()
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
