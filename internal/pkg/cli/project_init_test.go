@@ -154,6 +154,7 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			inProjectName: "123chicken",
 			wantedError:   errValueBadFormat,
 		},
+		"skip if empty project name": {},
 	}
 
 	for name, tc := range testCases {
