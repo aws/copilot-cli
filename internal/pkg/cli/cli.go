@@ -49,9 +49,16 @@ func (o *GlobalOpts) ProjectName() string {
 
 // actionCommand is the interface that every command that creates a resource implements.
 type actionCommand interface {
-	Ask() error
+	// Validate returns an error if a flag's value is invalid.
 	Validate() error
+
+	// Ask prompts for flag values that are required but not passed in.
+	Ask() error
+
+	// Execute runs the command after collecting all required options.
 	Execute() error
+
+	// RecommendedActions returns a list of follow-up suggestions users can run once the command executes successfully.
 	RecommendedActions() []string
 }
 
