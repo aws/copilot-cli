@@ -440,10 +440,6 @@ func BuildPipelineInitCmd() *cobra.Command {
 	  /code  --environments "stage,prod" \
 	  /code  --deploy`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
 			// TODO: move these logic to a method
 			projectEnvs, err := opts.getEnvNames()
 			if err != nil {
@@ -481,19 +477,22 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			return opts.Execute()
-		}),
-		PostRunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.Execute(); err != nil {
+				return err
+			}
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
 			for _, followup := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followup)
 			}
 			return nil
-		},
+		}),
 	}
 	cmd.Flags().StringVarP(&opts.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
 	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
