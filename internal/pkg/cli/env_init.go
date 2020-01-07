@@ -69,7 +69,7 @@ func (o *InitEnvOpts) Validate() error {
 		}
 	}
 	if o.ProjectName() == "" {
-		return errors.New("no project found, run `project init` first please")
+		return fmt.Errorf("no project found: run %s or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	return nil
 }

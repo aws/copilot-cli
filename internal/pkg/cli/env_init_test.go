@@ -42,7 +42,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "test-pdx",
 			inProjectName: "",
 
-			wantedErr: "no project found, run `project init` first please",
+			wantedErr: "no project found: run `project init` or `cd` into your workspace please",
 		},
 	}
 
