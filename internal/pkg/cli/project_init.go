@@ -40,93 +40,66 @@ type InitProjectOpts struct {
 	prog         progress
 }
 
-// NewInitProjectOpts returns a new InitProjectOpts.
-func NewInitProjectOpts() (*InitProjectOpts, error) {
-	p := session.NewProvider()
-	defaultSession, err := p.Default()
-	if err != nil {
-		return nil, err
-	}
-
-	store, err := store.New()
-	if err != nil {
-		return nil, err
-	}
-
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, err
-	}
-	return &InitProjectOpts{
-		identity:     identity.New(defaultSession),
-		projectStore: store,
-		ws:           ws,
-		deployer:     cloudformation.New(defaultSession),
-		prompt:       prompt.New(),
-		prog:         termprogress.NewSpinner(),
-	}, nil
-}
-
 // Ask prompts the user for any required arguments that they didn't provide.
-func (opts *InitProjectOpts) Ask() error {
+func (o *InitProjectOpts) Ask() error {
 	// If there's a local project, we'll use that over anything else.
-	summary, err := opts.ws.Summary()
+	summary, err := o.ws.Summary()
 	if err == nil {
 		msg := fmt.Sprintf(
 			"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project.",
 			color.HighlightResource(summary.ProjectName))
-		if opts.ProjectName != "" && opts.ProjectName != summary.ProjectName {
+		if o.ProjectName != "" && o.ProjectName != summary.ProjectName {
 			msg = fmt.Sprintf(
 				"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project instead of %s.",
 				color.HighlightResource(summary.ProjectName),
-				color.HighlightUserInput(opts.ProjectName))
+				color.HighlightUserInput(o.ProjectName))
 		}
 		log.Infoln(msg)
-		opts.ProjectName = summary.ProjectName
+		o.ProjectName = summary.ProjectName
 		return nil
 	}
 
-	if opts.ProjectName != "" {
+	if o.ProjectName != "" {
 		// Flag is set by user.
 		return nil
 	}
 
-	existingProjects, _ := opts.projectStore.ListProjects()
+	existingProjects, _ := o.projectStore.ListProjects()
 	if len(existingProjects) == 0 {
 		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
-		return opts.askNewProjectName()
+		return o.askNewProjectName()
 	}
 
 	log.Infoln("Looks like you have some projects already.")
-	useExistingProject, err := opts.prompt.Confirm(
+	useExistingProject, err := o.prompt.Confirm(
 		"Would you like to use one of your existing projects?", "", prompt.WithTrueDefault())
 	if err != nil {
 		return fmt.Errorf("prompt to confirm using existing project: %w", err)
 	}
 	if useExistingProject {
 		log.Infoln("Ok, here are your existing projects.")
-		return opts.askSelectExistingProjectName(existingProjects)
+		return o.askSelectExistingProjectName(existingProjects)
 	}
 	log.Infoln("Ok, let's create a new project then.")
-	return opts.askNewProjectName()
+	return o.askNewProjectName()
 }
 
 // Validate returns an error if the user's input is invalid.
-func (opts *InitProjectOpts) Validate() error {
-	return validateProjectName(opts.ProjectName)
+func (o *InitProjectOpts) Validate() error {
+	return validateProjectName(o.ProjectName)
 }
 
 // Execute creates a new managed empty project.
-func (opts *InitProjectOpts) Execute() error {
-	caller, err := opts.identity.Get()
+func (o *InitProjectOpts) Execute() error {
+	caller, err := o.identity.Get()
 	if err != nil {
 		return err
 	}
 
-	err = opts.projectStore.CreateProject(&archer.Project{
+	err = o.projectStore.CreateProject(&archer.Project{
 		AccountID: caller.Account,
-		Name:      opts.ProjectName,
-		Domain:    opts.DomainName,
+		Name:      o.ProjectName,
+		Domain:    o.DomainName,
 	})
 	if err != nil {
 		// If the project already exists, move on - otherwise return the error.
@@ -135,62 +108,62 @@ func (opts *InitProjectOpts) Execute() error {
 			return err
 		}
 	}
-	err = opts.ws.Create(opts.ProjectName)
+	err = o.ws.Create(o.ProjectName)
 	if err != nil {
 		return err
 	}
-	opts.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(opts.ProjectName)))
-	err = opts.deployer.DeployProject(&deploy.CreateProjectInput{
-		Project:    opts.ProjectName,
+	o.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(o.ProjectName)))
+	err = o.deployer.DeployProject(&deploy.CreateProjectInput{
+		Project:    o.ProjectName,
 		AccountID:  caller.Account,
-		DomainName: opts.DomainName,
+		DomainName: o.DomainName,
 	})
 	if err != nil {
-		opts.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(opts.ProjectName)))
+		o.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(o.ProjectName)))
 		return err
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(opts.ProjectName)))
+	o.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(o.ProjectName)))
 	return nil
 }
 
 // RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
-func (opts *InitProjectOpts) RecommendedActions() []string {
+func (o *InitProjectOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("ecs-preview init")),
 	}
 }
 
-func (opts *InitProjectOpts) askNewProjectName() error {
-	projectName, err := opts.prompt.Get(
+func (o *InitProjectOpts) askNewProjectName() error {
+	projectName, err := o.prompt.Get(
 		fmt.Sprintf("What would you like to %s your project?", color.Emphasize("name")),
 		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
 		validateProjectName)
 	if err != nil {
 		return fmt.Errorf("prompt get project name: %w", err)
 	}
-	opts.ProjectName = projectName
+	o.ProjectName = projectName
 	return nil
 }
 
-func (opts *InitProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
+func (o *InitProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
 	var projectNames []string
 	for _, p := range existingProjects {
 		projectNames = append(projectNames, p.Name)
 	}
-	projectName, err := opts.prompt.SelectOne(
+	projectName, err := o.prompt.SelectOne(
 		fmt.Sprintf("Which %s do you want to add a new application to?", color.Emphasize("existing project")),
 		"Applications in the same project share the same VPC, ECS Cluster and are discoverable via service discovery.",
 		projectNames)
 	if err != nil {
 		return fmt.Errorf("prompt select project name: %w", err)
 	}
-	opts.ProjectName = projectName
+	o.ProjectName = projectName
 	return nil
 }
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	opts, err := NewInitProjectOpts()
+	opts := &InitProjectOpts{}
 
 	cmd := &cobra.Command{
 		Use:   "init [name]",
@@ -202,7 +175,26 @@ A project is a collection of containerized applications (or micro-services) that
   /code $ ecs-preview project init test`,
 		Args: reservedArgs,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			return err
+			sess, err := session.NewProvider().Default()
+			if err != nil {
+				return err
+			}
+			store, err := store.New()
+			if err != nil {
+				return err
+			}
+			ws, err := workspace.New()
+			if err != nil {
+				return err
+			}
+
+			opts.ws = ws
+			opts.projectStore = store
+			opts.identity = identity.New(sess)
+			opts.deployer = cloudformation.New(sess)
+			opts.prompt = prompt.New()
+			opts.prog = termprogress.NewSpinner()
+			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
