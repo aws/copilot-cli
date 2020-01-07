@@ -40,6 +40,16 @@ type InitProjectOpts struct {
 	prog         progress
 }
 
+// Validate returns an error if the user's input is invalid.
+func (o *InitProjectOpts) Validate() error {
+	if o.ProjectName != "" {
+		if err := validateProjectName(o.ProjectName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *InitProjectOpts) Ask() error {
 	// If there's a local project, we'll use that over anything else.
@@ -82,11 +92,6 @@ func (o *InitProjectOpts) Ask() error {
 	}
 	log.Infoln("Ok, let's create a new project then.")
 	return o.askNewProjectName()
-}
-
-// Validate returns an error if the user's input is invalid.
-func (o *InitProjectOpts) Validate() error {
-	return validateProjectName(o.ProjectName)
 }
 
 // Execute creates a new managed empty project.
@@ -200,22 +205,23 @@ A project is a collection of containerized applications (or micro-services) that
 			if len(args) == 1 {
 				opts.ProjectName = args[0]
 			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
-			return opts.Execute()
-		}),
-		PostRun: func(cmd *cobra.Command, args []string) {
+			if err := opts.Ask(); err != nil {
+				return err
+			}
+			if err := opts.Execute(); err != nil {
+				return err
+			}
 			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ProjectDirectoryName), color.HighlightUserInput(opts.ProjectName))
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
 			for _, followUp := range opts.RecommendedActions() {
 				log.Infof("- %s\n", followUp)
 			}
-		},
+			return nil
+		}),
 	}
 	cmd.Flags().StringVar(&opts.DomainName, domainNameFlag, "", domainNameFlagDescription)
 	return cmd
