@@ -40,8 +40,8 @@ type resourceGetter interface {
 	GetResources(*resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
 }
 
-// DeleteEnvOpts holds the fields needed to delete an environment.
-type DeleteEnvOpts struct {
+// deleteEnvOpts holds the fields needed to delete an environment.
+type deleteEnvOpts struct {
 	// Required flags.
 	EnvName          string
 	EnvProfile       string
@@ -53,11 +53,30 @@ type DeleteEnvOpts struct {
 	deployClient environmentDeployer
 	prog         progress
 
+	// initProfileClients is overriden in tests.
+	initProfileClients func(*deleteEnvOpts) error
+
 	*GlobalOpts
 }
 
+func newDeleteEnvOpts() *deleteEnvOpts {
+	return &deleteEnvOpts{
+		prog: termprogress.NewSpinner(),
+		initProfileClients: func(o *deleteEnvOpts) error {
+			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+			if err != nil {
+				return fmt.Errorf("cannot create session from profile %s: %w", o.EnvProfile, err)
+			}
+			o.rgClient = resourcegroupstaggingapi.New(profileSess)
+			o.deployClient = cloudformation.New(profileSess)
+			return nil
+		},
+		GlobalOpts: NewGlobalOpts(),
+	}
+}
+
 // Validate returns an error if the individual user inputs are invalid.
-func (o *DeleteEnvOpts) Validate() error {
+func (o *deleteEnvOpts) Validate() error {
 	if o.EnvName != "" {
 		if err := o.validateEnvName(); err != nil {
 			return err
@@ -67,7 +86,7 @@ func (o *DeleteEnvOpts) Validate() error {
 }
 
 // Ask prompts for fields that are required but not passed in.
-func (o *DeleteEnvOpts) Ask() error {
+func (o *deleteEnvOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -81,8 +100,8 @@ func (o *DeleteEnvOpts) Ask() error {
 // If an operation fails, it moves on to the next one instead of halting the execution.
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
-func (o *DeleteEnvOpts) Execute() error {
-	if err := initDeleteEnvClientsFromProfile(o); err != nil {
+func (o *deleteEnvOpts) Execute() error {
+	if err := o.initProfileClients(o); err != nil {
 		return nil
 	}
 	if err := o.validateNoRunningApps(); err != nil {
@@ -107,18 +126,18 @@ func (o *DeleteEnvOpts) Execute() error {
 }
 
 // RecommendedActions is a no-op for this command.
-func (o *DeleteEnvOpts) RecommendedActions() []string {
+func (o *deleteEnvOpts) RecommendedActions() []string {
 	return nil
 }
 
-func (o *DeleteEnvOpts) validateEnvName() error {
+func (o *deleteEnvOpts) validateEnvName() error {
 	if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (o *DeleteEnvOpts) validateNoRunningApps() error {
+func (o *deleteEnvOpts) validateNoRunningApps() error {
 	stacks, err := o.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
@@ -154,7 +173,7 @@ func (o *DeleteEnvOpts) validateNoRunningApps() error {
 	return nil
 }
 
-func (o *DeleteEnvOpts) askEnvName() error {
+func (o *deleteEnvOpts) askEnvName() error {
 	if o.EnvName != "" {
 		return nil
 	}
@@ -175,7 +194,7 @@ func (o *DeleteEnvOpts) askEnvName() error {
 	return nil
 }
 
-func (o *DeleteEnvOpts) askProfile() error {
+func (o *deleteEnvOpts) askProfile() error {
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/585
 	if o.EnvProfile != "" {
 		return nil
@@ -193,7 +212,7 @@ func (o *DeleteEnvOpts) askProfile() error {
 	return nil
 }
 
-func (o *DeleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
+func (o *deleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
 	if o.SkipConfirmation {
 		return true, nil
 	}
@@ -206,7 +225,7 @@ func (o *DeleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
 }
 
 // deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
-func (o *DeleteEnvOpts) deleteStack() bool {
+func (o *deleteEnvOpts) deleteStack() bool {
 	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.ProjectName()))
 	if err := o.deployClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
 		o.prog.Stop(fmt.Sprintf(fmtDeleteEnvFailed, o.EnvName, o.ProjectName(), err))
@@ -216,29 +235,15 @@ func (o *DeleteEnvOpts) deleteStack() bool {
 	return true
 }
 
-func (o *DeleteEnvOpts) deleteFromStore() {
+func (o *deleteEnvOpts) deleteFromStore() {
 	if err := o.storeClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
 		log.Infof("Failed to remove environment %s from project %s store: %w\n", o.EnvName, o.ProjectName(), err)
 	}
 }
 
-// initDeleteEnvClientsFromProfile is overriden in tests.
-var initDeleteEnvClientsFromProfile = func(o *DeleteEnvOpts) error {
-	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
-	if err != nil {
-		return fmt.Errorf("cannot create session from profile %s: %w", o.EnvProfile, err)
-	}
-	o.rgClient = resourcegroupstaggingapi.New(profileSess)
-	o.deployClient = cloudformation.New(profileSess)
-	return nil
-}
-
 // BuildEnvDeleteCmd builds the command to delete environment(s).
 func BuildEnvDeleteCmd() *cobra.Command {
-	opts := &DeleteEnvOpts{
-		prog:       termprogress.NewSpinner(),
-		GlobalOpts: NewGlobalOpts(),
-	}
+	opts := newDeleteEnvOpts()
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes an environment from your project.",

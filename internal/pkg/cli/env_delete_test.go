@@ -64,7 +64,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := &DeleteEnvOpts{
+			opts := &deleteEnvOpts{
 				EnvName:     tc.inEnv,
 				storeClient: tc.mockStore(ctrl),
 				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
@@ -155,7 +155,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := DeleteEnvOpts{
+			opts := deleteEnvOpts{
 				EnvName:     tc.inEnvName,
 				EnvProfile:  tc.inEnvProfile,
 				storeClient: tc.mockStore(ctrl),
@@ -181,13 +181,6 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 }
 
 func TestDeleteEnvOpts_Execute(t *testing.T) {
-	// Transform initDeleteEnvClientsFromProfile to a no-op while testing.
-	var oldInit = initDeleteEnvClientsFromProfile
-	initDeleteEnvClientsFromProfile = func(o *DeleteEnvOpts) error {
-		return nil
-	}
-	defer func() { initDeleteEnvClientsFromProfile = oldInit }()
-
 	const (
 		testProject = "phonetool"
 		testEnv     = "test"
@@ -344,13 +337,16 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := DeleteEnvOpts{
+			opts := deleteEnvOpts{
 				EnvName:          testEnv,
 				SkipConfirmation: tc.inSkipPrompt,
 				storeClient:      tc.mockStore(ctrl),
 				deployClient:     tc.mockDeploy(ctrl),
 				rgClient:         tc.mockRG(ctrl),
 				prog:             tc.mockProg(ctrl),
+				initProfileClients: func(o *deleteEnvOpts) error {
+					return nil
+				},
 				GlobalOpts: &GlobalOpts{
 					projectName: testProject,
 					prompt:      tc.mockPrompt(ctrl),
