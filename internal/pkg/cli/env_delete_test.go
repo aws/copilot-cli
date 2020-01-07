@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,11 +20,78 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDeleteEnvOpts_Validate(t *testing.T) {
+	const (
+		testProjName = "phonetool"
+		testEnvName  = "test"
+	)
+	testCases := map[string]struct {
+		inProjectName string
+		inEnv         string
+		mockStore     func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
+
+		wantedError error
+	}{
+		"failed to retrieve environment from store": {
+			inProjectName: testProjName,
+			inEnv:         testEnvName,
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				envStore := mocks.NewMockEnvironmentStore(ctrl)
+				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, &store.ErrNoSuchEnvironment{
+					ProjectName:     testProjName,
+					EnvironmentName: testEnvName,
+				})
+				return envStore
+			},
+			wantedError: &store.ErrNoSuchEnvironment{
+				ProjectName:     testProjName,
+				EnvironmentName: testEnvName,
+			},
+		},
+		"environment exists": {
+			inProjectName: testProjName,
+			inEnv:         testEnvName,
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				envStore := mocks.NewMockEnvironmentStore(ctrl)
+				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(&archer.Environment{}, nil)
+				return envStore
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			opts := &deleteEnvOpts{
+				EnvName:     tc.inEnv,
+				storeClient: tc.mockStore(ctrl),
+				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}
+
 func TestDeleteEnvOpts_Ask(t *testing.T) {
+	const (
+		testProject = "phonetool"
+		testEnv     = "test"
+		testProfile = "default"
+	)
 	testCases := map[string]struct {
 		inEnvName    string
 		inEnvProfile string
 
+		mockStore  func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
 		mockPrompt func(ctrl *gomock.Controller) *climocks.Mockprompter
 
 		wantedEnvName    string
@@ -31,28 +99,49 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 		wantedError      error
 	}{
 		"prompts for all required flags": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				m := mocks.NewMockEnvironmentStore(ctrl)
+				m.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					{
+						Name: testEnv,
+					},
+				}, nil)
+				return m
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
-				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
-					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("default", nil)
+				p.EXPECT().SelectOne(envDeleteNamePrompt, "", []string{testEnv}).Return(testEnv, nil)
+				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(testEnv)),
+					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return(testProfile, nil)
 				return p
 			},
-			wantedEnvName:    "test",
-			wantedEnvProfile: "default",
+			wantedEnvName:    testEnv,
+			wantedEnvProfile: testProfile,
 		},
 		"wraps error from prompting for env name": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				m := mocks.NewMockEnvironmentStore(ctrl)
+				m.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					{
+						Name: testEnv,
+					},
+				}, nil)
+				return m
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("", errors.New("some error"))
+				p.EXPECT().SelectOne(envDeleteNamePrompt, "", gomock.Any()).Return("", errors.New("some error"))
 				return p
 			},
-			wantedError: errors.New("prompt to get environment name: some error"),
+			wantedError: errors.New("prompt for environment name: some error"),
 		},
 		"wraps error from prompting from profile": {
+			inEnvName: testEnv,
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				return nil
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				p := climocks.NewMockprompter(ctrl)
-				p.EXPECT().Get(envDeleteNamePrompt, envDeleteNameHelpPrompt, gomock.Any()).Return("test", nil)
 				p.EXPECT().Get(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput("test")),
 					envDeleteProfileHelpPrompt, gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 				return p
@@ -66,11 +155,13 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := DeleteEnvOpts{
-				EnvName:    tc.inEnvName,
-				EnvProfile: tc.inEnvProfile,
+			opts := deleteEnvOpts{
+				EnvName:     tc.inEnvName,
+				EnvProfile:  tc.inEnvProfile,
+				storeClient: tc.mockStore(ctrl),
 				GlobalOpts: &GlobalOpts{
-					prompt: tc.mockPrompt(ctrl),
+					prompt:      tc.mockPrompt(ctrl),
+					projectName: testProject,
 				},
 			}
 
@@ -89,60 +180,44 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestDeleteEnvOpts_Validate(t *testing.T) {
+func TestDeleteEnvOpts_Execute(t *testing.T) {
 	const (
-		testProjName       = "phonetool"
-		testEnvName        = "test"
-		testRegion         = "us-west-2"
-		testManagerRoleARN = "arn:aws:iam::1111:role/phonetool-test-EnvManagerRole"
+		testProject = "phonetool"
+		testEnv     = "test"
 	)
-	var storeWithEnv = func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
-		envStore := mocks.NewMockEnvironmentStore(ctrl)
-		envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(&archer.Environment{
-			Project:        testProjName,
-			Name:           testEnvName,
-			Region:         testRegion,
-			ManagerRoleARN: testManagerRoleARN,
-		}, nil)
-		return envStore
-	}
+	testError := errors.New("some error")
 
 	testCases := map[string]struct {
-		inProjectName string
-		inEnv         string
-		mockStore     func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
-		mockRG        func(ctrl *gomock.Controller) *climocks.MockresourceGetter
+		inSkipPrompt bool
+		mockRG       func(ctrl *gomock.Controller) *climocks.MockresourceGetter
+		mockPrompt   func(ctrl *gomock.Controller) *climocks.Mockprompter
+		mockProg     func(ctrl *gomock.Controller) *climocks.Mockprogress
+		mockDeploy   func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer
+		mockStore    func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
 
 		wantedError error
 	}{
-		"failed to retrieve environment from store": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
-			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
-				envStore := mocks.NewMockEnvironmentStore(ctrl)
-				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, errors.New("some error"))
-				return envStore
-			},
-			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
-				return nil
-			},
-			wantedError: errors.New("get environment test metadata in project phonetool: some error"),
-		},
 		"failed to get resources with tags": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
-			mockStore:     storeWithEnv,
 			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
 				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(nil, errors.New("some error"))
 				return rg
 			},
+			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
+				return nil
+			},
+			mockProg: func(ctrl *gomock.Controller) *climocks.Mockprogress {
+				return nil
+			},
+			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {
+				return nil
+			},
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				return nil
+			},
 			wantedError: errors.New("find application cloudformation stacks: some error"),
 		},
-		"environment has applications": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
-			mockStore:     storeWithEnv,
+		"environment has running applications": {
 			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
 				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
@@ -163,61 +238,27 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 				}, nil)
 				return rg
 			},
+			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
+				return nil
+			},
+			mockProg: func(ctrl *gomock.Controller) *climocks.Mockprogress {
+				return nil
+			},
+			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {
+				return nil
+			},
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
+				return nil
+			},
 			wantedError: errors.New("applications: 'frontend, backend' still exist within the environment test"),
 		},
-		"success on empty environment": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
-			mockStore:     storeWithEnv,
+		"error from prompt": {
 			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
 				rg := climocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 				return rg
 			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			opts := &DeleteEnvOpts{
-				EnvName:     tc.inEnv,
-				storeClient: tc.mockStore(ctrl),
-				rgClient:    tc.mockRG(ctrl),
-				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			}
-		})
-	}
-}
-
-func TestDeleteEnvOpts_Execute(t *testing.T) {
-	const (
-		testProject = "phonetool"
-		testEnv     = "test"
-	)
-	testError := errors.New("some error")
-
-	testCases := map[string]struct {
-		inSkipPrompt bool
-		mockPrompt   func(ctrl *gomock.Controller) *climocks.Mockprompter
-		mockProg     func(ctrl *gomock.Controller) *climocks.Mockprogress
-		mockDeploy   func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer
-		mockStore    func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore
-
-		wantedError error
-	}{
-		"error from prompt": {
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				prompt := climocks.NewMockprompter(ctrl)
 				prompt.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testProject), gomock.Any()).Return(false, testError)
@@ -237,6 +278,12 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 		},
 		"error from delete stack": {
 			inSkipPrompt: true,
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+				rg := climocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+				return rg
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				return climocks.NewMockprompter(ctrl)
 			},
@@ -257,6 +304,12 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 		},
 		"deletes from store if stack deletion succeeds": {
 			inSkipPrompt: true,
+			mockRG: func(ctrl *gomock.Controller) *climocks.MockresourceGetter {
+				rg := climocks.NewMockresourceGetter(ctrl)
+				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
+					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
+				return rg
+			},
 			mockPrompt: func(ctrl *gomock.Controller) *climocks.Mockprompter {
 				return climocks.NewMockprompter(ctrl)
 			},
@@ -284,15 +337,15 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			opts := DeleteEnvOpts{
+			opts := deleteEnvOpts{
 				EnvName:          testEnv,
 				SkipConfirmation: tc.inSkipPrompt,
 				storeClient:      tc.mockStore(ctrl),
 				deployClient:     tc.mockDeploy(ctrl),
+				rgClient:         tc.mockRG(ctrl),
 				prog:             tc.mockProg(ctrl),
-				env: &archer.Environment{
-					Project: testProject,
-					Name:    testEnv,
+				initProfileClients: func(o *deleteEnvOpts) error {
+					return nil
 				},
 				GlobalOpts: &GlobalOpts{
 					projectName: testProject,
