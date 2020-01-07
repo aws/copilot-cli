@@ -61,6 +61,19 @@ type InitEnvOpts struct {
 	*GlobalOpts
 }
 
+// Validate returns an error if the values passed by the user are invalid.
+func (opts *InitEnvOpts) Validate() error {
+	if opts.EnvName != "" {
+		if err := validateEnvironmentName(opts.EnvName); err != nil {
+			return err
+		}
+	}
+	if opts.ProjectName() == "" {
+		return errors.New("no project found, run `project init` first please")
+	}
+	return nil
+}
+
 // Ask asks for fields that are required but not passed in.
 func (opts *InitEnvOpts) Ask() error {
 	if opts.EnvName == "" {
@@ -80,20 +93,6 @@ func (opts *InitEnvOpts) Ask() error {
 			return fmt.Errorf("prompt to get the profile name: %w", err)
 		}
 		opts.EnvProfile = profile
-	}
-	return nil
-}
-
-// Validate returns an error if the values passed by the user are invalid.
-func (opts *InitEnvOpts) Validate() error {
-	if err := validateEnvironmentName(opts.EnvName); err != nil {
-		return err
-	}
-	if opts.EnvProfile == "" {
-		return fmt.Errorf("profile name cannot be empty, please provide a value with %s", color.HighlightCode(profileFlag))
-	}
-	if opts.ProjectName() == "" {
-		return errors.New("no project found, run `project init` first please")
 	}
 	return nil
 }
@@ -254,13 +253,6 @@ func BuildEnvInitCmd() *cobra.Command {
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ ecs-preview env init --name prod-iad --profile prod-admin --prod`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-
 			store, err := store.New()
 			if err != nil {
 				return err
@@ -283,6 +275,12 @@ func BuildEnvInitCmd() *cobra.Command {
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			if err := opts.Validate(); err != nil {
+				return err
+			}
+			if err := opts.Ask(); err != nil {
+				return err
+			}
 			return opts.Execute()
 		}),
 	}
