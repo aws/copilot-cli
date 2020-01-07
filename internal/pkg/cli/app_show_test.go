@@ -47,14 +47,14 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
+					{Name: "my-project"},
+					{Name: "archer-project"},
 				}, nil)
 				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					&archer.Application{
+					{
 						Name: "my-app",
 					},
-					&archer.Application{
+					{
 						Name: "archer-app",
 					},
 				}, nil)
@@ -87,8 +87,8 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
+					{Name: "my-project"},
+					{Name: "archer-project"},
 				}, nil)
 			},
 
@@ -105,8 +105,8 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
+					{Name: "my-project"},
+					{Name: "archer-project"},
 				}, nil)
 				m.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error"))
 			},
@@ -124,14 +124,14 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
+					{Name: "my-project"},
+					{Name: "archer-project"},
 				}, nil)
 				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					&archer.Application{
+					{
 						Name: "my-app",
 					},
-					&archer.Application{
+					{
 						Name: "archer-app",
 					},
 				}, nil)
@@ -281,10 +281,10 @@ func TestAppShow_Execute(t *testing.T) {
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -316,13 +316,13 @@ func TestAppShow_Execute(t *testing.T) {
 					TaskCount: "3",
 				}, nil)
 				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-					&describe.CfnResource{
+					{
 						Type:       "AWS::EC2::SecurityGroup",
 						PhysicalID: "sg-0758ed6b233743530",
 					},
 				}, nil)
 				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					&describe.CfnResource{
+					{
 						Type:       "AWS::EC2::SecurityGroupIngress",
 						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 					},
@@ -341,10 +341,10 @@ func TestAppShow_Execute(t *testing.T) {
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -376,13 +376,13 @@ func TestAppShow_Execute(t *testing.T) {
 					TaskCount: "3",
 				}, nil)
 				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-					&describe.CfnResource{
+					{
 						Type:       "AWS::EC2::SecurityGroup",
 						PhysicalID: "sg-0758ed6b233743530",
 					},
 				}, nil)
 				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					&describe.CfnResource{
+					{
 						Type:       "AWS::EC2::SecurityGroupIngress",
 						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 					},
@@ -455,10 +455,10 @@ Resources
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -479,10 +479,10 @@ Resources
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -508,10 +508,10 @@ Resources
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -557,10 +557,10 @@ Resources
 					Name: "my-app",
 				}, nil)
 				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+					{
 						Name: "test",
 					},
-					&archer.Environment{
+					{
 						Name: "prod",
 					},
 				}, nil)
@@ -583,7 +583,7 @@ Resources
 				}, nil)
 				m.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
 				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					&describe.CfnResource{
+					{
 						Type:       "AWS::EC2::SecurityGroupIngress",
 						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 					},
@@ -630,8 +630,9 @@ Resources
 				shouldOutputJSON:      tc.shouldOutputJSON,
 				shouldOutputResources: tc.shouldOutputResources,
 
-				storeSvc:  mockStoreReader,
-				describer: mockWebAppDescriber,
+				storeSvc:      mockStoreReader,
+				describer:     mockWebAppDescriber,
+				initDescriber: func(*ShowAppOpts) error { return nil },
 
 				w: b,
 
