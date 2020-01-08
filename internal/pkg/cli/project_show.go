@@ -4,13 +4,10 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
-	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -52,97 +49,57 @@ func (o *ShowProjectOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *ShowProjectOpts) Execute() error {
-	proj, err := o.storeSvc.GetProject(o.ProjectName())
+	projectToSerialize, err := o.retrieveData()
 	if err != nil {
-		return fmt.Errorf("get project: %w", err)
+		return err
 	}
-	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
-	if err != nil {
-		return fmt.Errorf("list environment: %w", err)
-	}
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
-	if err != nil {
-		return fmt.Errorf("list application: %w", err)
-	}
-
 	if o.shouldOutputJSON {
-		data, err := o.jsonOutPut(proj, envs, apps)
+		data, err := projectToSerialize.JSONString()
 		if err != nil {
 			return err
 		}
 		fmt.Fprintf(o.w, data)
 	} else {
-		fmt.Fprintf(o.w, o.humanOutPut(proj, envs, apps))
+		fmt.Fprintf(o.w, projectToSerialize.HumanString())
 	}
 
 	return nil
 }
 
-func (o *ShowProjectOpts) humanOutPut(proj *archer.Project, envs []*archer.Environment, apps []*archer.Application) string {
-	var b bytes.Buffer
-	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", proj.Name)
-	fmt.Fprintf(writer, "  %s\t%s\n", "URI", proj.Domain)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nEnvironments\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "AccountID", "Region")
+func (o *ShowProjectOpts) retrieveData() (*describe.Project, error) {
+	proj, err := o.storeSvc.GetProject(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("get project: %w", err)
+	}
+	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("list environment: %w", err)
+	}
+	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("list application: %w", err)
+	}
+	var envsToSerialize []*describe.Environment
 	for _, env := range envs {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
-	}
-	fmt.Fprintf(writer, color.Bold.Sprint("\nApplications\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	for _, app := range apps {
-		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
-	}
-	writer.Flush()
-	return b.String()
-}
-
-func (o *ShowProjectOpts) jsonOutPut(proj *archer.Project, envs []*archer.Environment, apps []*archer.Application) (string, error) {
-	type environment struct {
-		Name      string `json:"name"`
-		AccountID string `json:"accountID"`
-		Region    string `json:"region"`
-	}
-	type application struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-	}
-	type project struct {
-		Name string         `json:"name"`
-		URI  string         `json:"uri"`
-		Envs []*environment `json:"environments"`
-		Apps []*application `json:"applications"`
-	}
-	var envsToSerialize []*environment
-	for _, env := range envs {
-		envsToSerialize = append(envsToSerialize, &environment{
+		envsToSerialize = append(envsToSerialize, &describe.Environment{
 			Name:      env.Name,
 			AccountID: env.AccountID,
 			Region:    env.Region,
 		})
 	}
-	var appsToSerialize []*application
+	var appsToSerialize []*describe.Application
 	for _, app := range apps {
-		appsToSerialize = append(appsToSerialize, &application{
+		appsToSerialize = append(appsToSerialize, &describe.Application{
 			Name: app.Name,
 			Type: app.Type,
 		})
 	}
-	projectToSerialize := &project{
+	return &describe.Project{
 		Name: proj.Name,
 		URI:  proj.Domain,
 		Envs: envsToSerialize,
 		Apps: appsToSerialize,
-	}
-	b, err := json.Marshal(projectToSerialize)
-	if err != nil {
-		return "", fmt.Errorf("marshal project: %w", err)
-	}
-	return fmt.Sprintf("%s\n", b), nil
+	}, nil
 }
 
 func (o *ShowProjectOpts) askProject() error {
@@ -154,7 +111,7 @@ func (o *ShowProjectOpts) askProject() error {
 		return err
 	}
 	if len(projNames) == 0 {
-		log.Infoln("There are no projects to select.")
+		return fmt.Errorf("no project found: run %s to set one up, or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	proj, err := o.prompt.SelectOne(
 		applicationShowProjectNamePrompt,
@@ -189,9 +146,10 @@ func BuildProjectShowCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show details of a project.",
+		Short: "Shows info about a project.",
+		Long:  "Shows configuration, environments and applications for a project.",
 		Example: `
-  Shows details for the project "my-project"
+  Shows info about the project "my-project"
   /code $ ecs-preview project show -p my-project`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()

@@ -120,6 +120,17 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			wantedError: fmt.Errorf("list project: some error"),
 		},
+		"returns error if no project found": {
+			inputProject: "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedError: fmt.Errorf("no project found: run `project init` to set one up, or `cd` into your workspace please"),
+		},
 		"returns error if fail to select project": {
 			inputProject: "",
 

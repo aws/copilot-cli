@@ -191,7 +191,7 @@ func (o *ShowAppOpts) askProject() error {
 		return err
 	}
 	if len(projNames) == 0 {
-		log.Infoln("There are no projects to select.")
+		return fmt.Errorf("no project found: run %s or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	proj, err := o.prompt.SelectOne(
 		applicationShowProjectNamePrompt,
@@ -272,9 +272,11 @@ func BuildAppShowCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show details of an application per environment.",
+		Short: "Shows info about a deployed application per environment.",
+		Long:  "Shows info about a deployed application, including endpoints, capacity and related resources per environment.",
+
 		Example: `
-  Shows details for the application "my-app"
+  Shows info about the application "my-app"
   /code $ ecs-preview app show -a my-app`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
