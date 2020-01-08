@@ -271,6 +271,14 @@ func TestAppShow_Execute(t *testing.T) {
 		wantedContent string
 		wantedError   error
 	}{
+		"noop if app name is empty": {
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().GetApplication(gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
+				m.EXPECT().URI(gomock.Any()).Times(0)
+			},
+		},
 		"prompt for all input for json output": {
 			inputApp:              "my-app",
 			shouldOutputJSON:      true,

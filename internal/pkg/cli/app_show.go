@@ -67,6 +67,11 @@ func (o *ShowAppOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *ShowAppOpts) Execute() error {
+	if o.appName == "" {
+		// If there are no local applications in the workspace, we exit without error.
+		return nil
+	}
+
 	if err := o.initDescriber(o); err != nil {
 		return err
 	}
@@ -210,7 +215,7 @@ func (o *ShowAppOpts) askAppName() error {
 		return err
 	}
 	if len(appNames) == 0 {
-		log.Infof("No applications found in project '%s'\n.", o.ProjectName())
+		log.Infof("No applications found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(
