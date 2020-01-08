@@ -299,7 +299,12 @@ func (w *WebApp) HumanString() string {
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
-		for env, resources := range w.Resources {
+
+		// Go maps don't have a guaranteed order.
+		// Show the resources by the order of environments displayed under Routes for a consistent view.
+		for _, route := range w.Routes {
+			env := route.Environment
+			resources := w.Resources[env]
 			fmt.Fprintf(writer, "\n  %s\n", env)
 			for _, resource := range resources {
 				fmt.Fprintf(writer, "    %s\t%s\n", resource.Type, resource.PhysicalID)
