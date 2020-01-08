@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
@@ -21,6 +20,52 @@ import (
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
+
+func TestInitEnvOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inEnvName     string
+		inProjectName string
+
+		wantedErr string
+	}{
+		"valid environment creation": {
+			inEnvName:     "test-pdx",
+			inProjectName: "phonetool",
+		},
+		"invalid environment name": {
+			inEnvName:     "123env",
+			inProjectName: "phonetool",
+
+			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
+		},
+		"new workspace": {
+			inEnvName:     "test-pdx",
+			inProjectName: "",
+
+			wantedErr: "no project found: run `project init` or `cd` into your workspace please",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &InitEnvOpts{
+				EnvName:    tc.inEnvName,
+				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
 
 func TestInitEnvOpts_Ask(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -80,63 +125,6 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// THEN
 			require.NoError(t, err)
 			require.Equal(t, mockEnv, addEnv.EnvName, "expected environment names to match")
-		})
-	}
-}
-
-func TestInitEnvOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inEnvName     string
-		inProfileName string
-		inProjectName string
-
-		wantedErr string
-	}{
-		"valid environment creation": {
-			inEnvName:     "test-pdx",
-			inProfileName: "default",
-			inProjectName: "phonetool",
-		},
-		"invalid environment name": {
-			inEnvName:     "123env",
-			inProfileName: "default",
-			inProjectName: "phonetool",
-
-			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
-		},
-		"empty profile name": {
-			inEnvName:     "test-pdx",
-			inProjectName: "phonetool",
-
-			wantedErr: fmt.Sprintf("profile name cannot be empty, please provide a value with %s", color.HighlightCode(profileFlag)),
-		},
-		"new workspace": {
-			inEnvName:     "test-pdx",
-			inProfileName: "default",
-			inProjectName: "",
-
-			wantedErr: "no project found, run `project init` first please",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &InitEnvOpts{
-				EnvName:    tc.inEnvName,
-				EnvProfile: tc.inProfileName,
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
-			} else {
-				require.Nil(t, err)
-			}
 		})
 	}
 }
