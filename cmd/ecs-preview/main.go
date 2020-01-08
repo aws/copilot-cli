@@ -63,10 +63,11 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildCompletionCmd(cmd))
 
 	// "Storage" command group.
-	cmd.AddCommand(cli.BuildStorageCmd())
+	cmd.AddCommand(cli.BuildDatabaseCmd())
 
 	// "Release" command group.
 	cmd.AddCommand(cli.BuildPipelineCmd())
+	cmd.AddCommand(cli.BuildEndpointCmd())
 
 	cmd.SetUsageTemplate(template.RootUsage)
 

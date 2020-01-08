@@ -4,14 +4,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildStorageRdsCmd adds an RDS database.
-func BuildStorageRdsCmd() *cobra.Command {
+// BuildEndpointCreateCmd adds a secret.
+func BuildEndpointCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rds",
-		Short: "Creates an RDS database.",
-		Example: `
-  Delete the "test" environment.
-  /code $ ecs-preview env delete --name test --profile default`,
+		Use:   "create-prod-url",
+		Short: "Creates a CNAME for the prod app.",
+		Example: `/code $ ecs-preview endpoint create-prod-url`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			return nil
 		}),

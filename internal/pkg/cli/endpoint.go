@@ -9,20 +9,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildSecretCmd is the top level command for secrets.
-func BuildSecretCmd() *cobra.Command {
+// BuildEndpointCmd is the top level command for the storage options.
+func BuildEndpointCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "secret",
-		Short: "Secret commands.",
-		Long:  `Command for working with secrets.`,
+		Use:   "endpoint",
+		Short: "Endpoint commands.",
+		Long:  `Command for working with URLs.`,
 	}
 
-	cmd.AddCommand(BuildSecretAddCmd())
-	cmd.AddCommand(BuildSecretRemoveCmd())
+	cmd.AddCommand(BuildEndpointCreateCmd())
+	cmd.AddCommand(BuildEndpointDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": group.Secrets,
+		"group": group.Release,
 	}
 
 	return cmd

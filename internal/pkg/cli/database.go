@@ -9,19 +9,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildStorageCmd is the top level command for the storage options.
-func BuildStorageCmd() *cobra.Command {
+// BuildDatabaseCmd is the top level command for the storage options.
+func BuildDatabaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "storage",
-		Short: "Storage commands.",
-		Long:  `Command for working with different storage options.`,
+		Use:   "database",
+		Short: "Database commands.",
+		Long:  `Command for working with RDS databases.`,
 	}
 
-	cmd.AddCommand(BuildStorageRdsCmd())
+	cmd.AddCommand(BuildDatabaseCreateCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": group.Release,
+		"group": group.Storage,
 	}
 
 	return cmd
