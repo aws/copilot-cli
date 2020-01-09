@@ -2,13 +2,17 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 // ShowAppOpts contains the fields to collect for showing an application.
@@ -17,10 +21,12 @@ type SecretAddOpts struct {
 	secretName  string
 	secretValue string
 
+	manifestPath string
+
 	secretManager archer.SecretsManager
 	storeReader   storeReader
 
-	manifestPath string
+	ws archer.Workspace
 
 	*GlobalOpts
 }
@@ -67,11 +73,47 @@ func (o *SecretAddOpts) Execute() error {
 		return err
 	}
 
-	// TODO save key-name to manifest
-
 	log.Successf("Created/updated %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
 		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
+
+	envVar := strings.ToUpper(o.secretName)
+	envVar = strings.ReplaceAll(envVar, "-", "_")
+
+	// save the secret to the manifest
+	// TODO currently, it wipes out comments in the doc, not cool bro
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+
+	mft, err := o.readManifest()
+	if err != nil {
+		return err
+	}
+	lbmft := mft.(*manifest.LBFargateManifest)
+	if lbmft.Secrets == nil {
+		lbmft.Secrets = make(map[string]string)
+	}
+	lbmft.Secrets[envVar] = key
+
+	if err = o.writeManifest(lbmft); err != nil {
+		return err
+	}
+
+	log.Successf("Saved the secret to the manifest. It's available as %s.\n",
+		color.HighlightUserInput(envVar))
 	return nil
+}
+
+func (o *SecretAddOpts) readManifest() (archer.Manifest, error) {
+	raw, err := o.ws.ReadFile(o.manifestPath)
+	if err != nil {
+		return nil, err
+	}
+	return manifest.UnmarshalApp(raw)
+}
+
+func (o *SecretAddOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
+	manifestBytes, err := yaml.Marshal(manifest)
+	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
+	return err
 }
 
 func (o *SecretAddOpts) askProject() error {
@@ -198,12 +240,17 @@ func BuildSecretAddCmd() *cobra.Command {
 The encrypted value is added as the env var SECRET_NAME.
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			store, err := store.New()
+			ssmStore, err := store.New()
 			if err != nil {
 				return fmt.Errorf("connect to environment datastore: %w", err)
 			}
-			opts.storeReader = store
-			opts.secretManager = store
+			ws, err := workspace.New()
+			if err != nil {
+				return fmt.Errorf("new workspace: %w", err)
+			}
+			opts.ws = ws
+			opts.storeReader = ssmStore
+			opts.secretManager = ssmStore
 
 			return nil
 		}),
@@ -219,7 +266,7 @@ The encrypted value is added as the env var SECRET_NAME.
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&opts.secretName, nameFlag, nameFlagShort, "", "Name of the secret.")
+	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
 	cmd.Flags().StringVarP(&opts.secretValue, "secret-value", "v", "", "Value to encrypt.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
