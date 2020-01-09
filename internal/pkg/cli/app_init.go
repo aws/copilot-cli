@@ -41,8 +41,7 @@ const (
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
 
-// InitAppOpts holds the configuration needed to create a new application.
-type InitAppOpts struct {
+type initAppOpts struct {
 	// Fields with matching flags.
 	AppType        string
 	AppName        string
@@ -63,7 +62,7 @@ type InitAppOpts struct {
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *InitAppOpts) Validate() error {
+func (opts *initAppOpts) Validate() error {
 	if opts.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
@@ -86,7 +85,7 @@ func (opts *InitAppOpts) Validate() error {
 }
 
 // Ask prompts for fields that are required but not passed in.
-func (opts *InitAppOpts) Ask() error {
+func (opts *initAppOpts) Ask() error {
 	if err := opts.askAppType(); err != nil {
 		return err
 	}
@@ -100,7 +99,7 @@ func (opts *InitAppOpts) Ask() error {
 }
 
 // Execute writes the application's manifest file and stores the application in SSM.
-func (opts *InitAppOpts) Execute() error {
+func (opts *initAppOpts) Execute() error {
 	if err := opts.ensureNoExistingApp(opts.ProjectName(), opts.AppName); err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func (opts *InitAppOpts) Execute() error {
 	return opts.createAppInProject(opts.ProjectName())
 }
 
-func (opts *InitAppOpts) createManifest() (string, error) {
+func (opts *initAppOpts) createManifest() (string, error) {
 	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
@@ -155,7 +154,7 @@ func (opts *InitAppOpts) createManifest() (string, error) {
 	return relPath, nil
 }
 
-func (opts *InitAppOpts) createAppInProject(projectName string) error {
+func (opts *initAppOpts) createAppInProject(projectName string) error {
 	if err := opts.appStore.CreateApplication(&archer.Application{
 		Project: projectName,
 		Name:    opts.AppName,
@@ -166,7 +165,7 @@ func (opts *InitAppOpts) createAppInProject(projectName string) error {
 	return nil
 }
 
-func (opts *InitAppOpts) askAppType() error {
+func (opts *initAppOpts) askAppType() error {
 	if opts.AppType != "" {
 		return nil
 	}
@@ -179,7 +178,7 @@ func (opts *InitAppOpts) askAppType() error {
 	return nil
 }
 
-func (opts *InitAppOpts) askAppName() error {
+func (opts *initAppOpts) askAppName() error {
 	if opts.AppName != "" {
 		return nil
 	}
@@ -197,7 +196,7 @@ func (opts *InitAppOpts) askAppName() error {
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
-func (opts *InitAppOpts) askDockerfile() error {
+func (opts *initAppOpts) askDockerfile() error {
 	if opts.DockerfilePath != "" {
 		return nil
 	}
@@ -222,7 +221,7 @@ func (opts *InitAppOpts) askDockerfile() error {
 	return nil
 }
 
-func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error {
+func (opts *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
 	_, err := opts.appStore.GetApplication(projectName, opts.AppName)
 	// If the app doesn't exist - that's perfect, return no error.
 	var existsErr *store.ErrNoSuchApplication
@@ -238,7 +237,7 @@ func (opts *InitAppOpts) ensureNoExistingApp(projectName, appName string) error 
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (opts *InitAppOpts) RecommendedActions() []string {
+func (opts *initAppOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
@@ -249,7 +248,7 @@ func (opts *InitAppOpts) RecommendedActions() []string {
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &InitAppOpts{
+	opts := &initAppOpts{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{

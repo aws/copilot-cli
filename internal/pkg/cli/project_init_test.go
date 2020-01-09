@@ -22,14 +22,14 @@ import (
 func TestInitProjectOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inProjectName string
-		expect        func(opts *InitProjectOpts)
+		expect        func(opts *initProjectOpts)
 
 		wantedProjectName string
 		wantedErr         string
 	}{
 		"override flag from project name if summary exists": {
 			inProjectName: "testname",
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(&archer.WorkspaceSummary{ProjectName: "metrics"}, nil)
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
@@ -37,14 +37,14 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		},
 		"use flag if there is no summary": {
 			inProjectName: "metrics",
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
 			wantedProjectName: "metrics",
 		},
 		"return error from new project name": {
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
@@ -54,7 +54,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			wantedErr: "prompt get project name: my error",
 		},
 		"enter new project name if no existing projects": {
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
@@ -64,7 +64,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			wantedProjectName: "metrics",
 		},
 		"return error from project selection": {
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
@@ -80,7 +80,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			wantedErr: "prompt select project name: my error",
 		},
 		"use existing projects": {
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
@@ -96,7 +96,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			wantedProjectName: "metrics",
 		},
 		"enter new project name if user opts out of selection": {
-			expect: func(opts *InitProjectOpts) {
+			expect: func(opts *initProjectOpts) {
 				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
@@ -120,7 +120,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			opts := &InitProjectOpts{
+			opts := &initProjectOpts{
 				ProjectName:  tc.inProjectName,
 				projectStore: mocks.NewMockProjectStore(ctrl),
 				ws:           mocks.NewMockWorkspace(ctrl),
@@ -160,7 +160,7 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := &InitProjectOpts{
+			opts := &initProjectOpts{
 				ProjectName: tc.inProjectName,
 			}
 
@@ -335,7 +335,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			mockDeployer := climocks.NewMockprojectDeployer(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)
 
-			opts := &InitProjectOpts{
+			opts := &initProjectOpts{
 				ProjectName: "project",
 				DomainName:  tc.inDomainName,
 

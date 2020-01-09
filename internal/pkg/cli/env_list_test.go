@@ -23,13 +23,13 @@ func TestEnvList_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		listOpts        ListEnvOpts
+		listOpts        listEnvOpts
 		mocking         func()
 		expectedErr     error
 		expectedContent string
 	}{
 		"with json envs": {
-			listOpts: ListEnvOpts{
+			listOpts: listEnvOpts{
 				ShouldOutputJSON: true,
 				manager:          mockEnvStore,
 				projectGetter:    mockProjectStore,
@@ -52,7 +52,7 @@ func TestEnvList_Execute(t *testing.T) {
 			expectedContent: `{"environments":[{"project":"","name":"test","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""},{"project":"","name":"test2","region":"","accountID":"","prod":false,"registryURL":"","executionRoleARN":"","managerRoleARN":""}]}` + "\n",
 		},
 		"with envs": {
-			listOpts: ListEnvOpts{
+			listOpts: listEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -75,7 +75,7 @@ func TestEnvList_Execute(t *testing.T) {
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
-			listOpts: ListEnvOpts{
+			listOpts: listEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -95,7 +95,7 @@ func TestEnvList_Execute(t *testing.T) {
 		},
 		"with failed call to list": {
 			expectedErr: mockError,
-			listOpts: ListEnvOpts{
+			listOpts: listEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -114,7 +114,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 		},
 		"with production envs": {
-			listOpts: ListEnvOpts{
+			listOpts: listEnvOpts{
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -192,7 +192,7 @@ func TestEnvList_Ask(t *testing.T) {
 			tc.mockProjectLister(mockProjectLister)
 			tc.mockPrompt(mockPrompter)
 
-			listEnvs := &ListEnvOpts{
+			listEnvs := &listEnvOpts{
 				projectLister: mockProjectLister,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,

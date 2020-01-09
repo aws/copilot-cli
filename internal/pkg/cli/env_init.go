@@ -42,8 +42,7 @@ const (
 	fmtAddEnvToProjectComplete = "Linked account %s and region %s project %s."
 )
 
-// InitEnvOpts contains the fields to collect for adding an environment.
-type InitEnvOpts struct {
+type initEnvOpts struct {
 	// Flags set by the user.
 	EnvName      string // Name of the environment.
 	EnvProfile   string // AWS profile used to create an environment.
@@ -62,7 +61,7 @@ type InitEnvOpts struct {
 }
 
 // Validate returns an error if the values passed by the user are invalid.
-func (o *InitEnvOpts) Validate() error {
+func (o *initEnvOpts) Validate() error {
 	if o.EnvName != "" {
 		if err := validateEnvironmentName(o.EnvName); err != nil {
 			return err
@@ -75,7 +74,7 @@ func (o *InitEnvOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *InitEnvOpts) Ask() error {
+func (o *initEnvOpts) Ask() error {
 	if o.EnvName == "" {
 		envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
 		if err != nil {
@@ -98,7 +97,7 @@ func (o *InitEnvOpts) Ask() error {
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
-func (o *InitEnvOpts) Execute() error {
+func (o *initEnvOpts) Execute() error {
 	project, err := o.projectGetter.GetProject(o.ProjectName())
 	if err != nil {
 		// Ensure the project actually exists before we do a deployment.
@@ -170,7 +169,7 @@ func (o *InitEnvOpts) Execute() error {
 	return nil
 }
 
-func (o *InitEnvOpts) delegateDNSFromProject(project *archer.Project) error {
+func (o *initEnvOpts) delegateDNSFromProject(project *archer.Project) error {
 	envAccount, err := o.envIdentity.Get()
 	if err != nil {
 		return fmt.Errorf("getting environment account ID for DNS Delegation: %w", err)
@@ -190,7 +189,7 @@ func (o *InitEnvOpts) delegateDNSFromProject(project *archer.Project) error {
 	return nil
 }
 
-func (o *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
+func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
 	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
 		textVPC: func(event deploy.Resource) bool {
 			return event.Type == "AWS::EC2::VPC"
@@ -231,13 +230,13 @@ func (o *InitEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *InitEnvOpts) RecommendedActions() []string {
+func (o *initEnvOpts) RecommendedActions() []string {
 	return nil
 }
 
 // BuildEnvInitCmd builds the command for adding an environment.
 func BuildEnvInitCmd() *cobra.Command {
-	opts := InitEnvOpts{
+	opts := initEnvOpts{
 		IsProduction: false,
 		prog:         termprogress.NewSpinner(),
 		GlobalOpts:   NewGlobalOpts(),

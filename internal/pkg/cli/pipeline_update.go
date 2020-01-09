@@ -41,8 +41,7 @@ const (
 
 var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `ecs-preview pipeline init` to create an pipeline")
 
-// UpdatePipelineOpts holds the configuration needed to create or update a pipeline
-type UpdatePipelineOpts struct {
+type updatePipelineOpts struct {
 	PipelineFile     string
 	PipelineName     string
 	SkipConfirmation bool
@@ -57,16 +56,15 @@ type UpdatePipelineOpts struct {
 	*GlobalOpts
 }
 
-// NewUpdatePipelineOpts returns a new UpdatePipelineOpts struct.
-func NewUpdatePipelineOpts() *UpdatePipelineOpts {
-	return &UpdatePipelineOpts{
+func newUpdatePipelineOpts() *updatePipelineOpts {
+	return &updatePipelineOpts{
 		GlobalOpts: NewGlobalOpts(),
 		prog:       termprogress.NewSpinner(),
 	}
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *UpdatePipelineOpts) Validate() error {
+func (opts *updatePipelineOpts) Validate() error {
 	if opts.PipelineFile == "" {
 		return errNoPipelineFile
 	}
@@ -74,7 +72,7 @@ func (opts *UpdatePipelineOpts) Validate() error {
 	return nil
 }
 
-func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
+func (opts *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
 	apps, err := opts.ws.Apps()
 	if err != nil {
@@ -107,7 +105,7 @@ func (opts *UpdatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 	return stages, nil
 }
 
-func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
+func (opts *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
 	regionalResources, err := opts.pipelineDeployer.GetRegionalProjectResources(opts.project)
 	if err != nil {
 		return nil, err
@@ -125,7 +123,7 @@ func (opts *UpdatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
-func (opts *UpdatePipelineOpts) shouldUpdate() (bool, error) {
+func (opts *updatePipelineOpts) shouldUpdate() (bool, error) {
 	if opts.SkipConfirmation {
 		return true, nil
 	}
@@ -137,7 +135,7 @@ func (opts *UpdatePipelineOpts) shouldUpdate() (bool, error) {
 	return shouldUpdate, nil
 }
 
-func (opts *UpdatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
+func (opts *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
 	exist, err := opts.pipelineDeployer.PipelineExists(in)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
@@ -173,7 +171,7 @@ func (opts *UpdatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) e
 }
 
 // Execute create a new pipeline or update the current pipeline if it already exists.
-func (opts *UpdatePipelineOpts) Execute() error {
+func (opts *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
 	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
@@ -227,7 +225,7 @@ func (opts *UpdatePipelineOpts) Execute() error {
 
 // BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
 func BuildPipelineUpdateCmd() *cobra.Command {
-	opts := NewUpdatePipelineOpts()
+	opts := newUpdatePipelineOpts()
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Deploys a pipeline for applications in your workspace.",

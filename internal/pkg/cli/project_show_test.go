@@ -52,7 +52,7 @@ func TestProjectShow_Validate(t *testing.T) {
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			tc.mockStoreReader(mockStoreReader)
 
-			showProjects := &ShowProjectOpts{
+			showProjects := &showProjectOpts{
 				storeSvc: mockStoreReader,
 
 				GlobalOpts: &GlobalOpts{
@@ -159,7 +159,7 @@ func TestProjectShow_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompter)
 			tc.mockStoreReader(mockStoreReader)
 
-			showProjects := &ShowProjectOpts{
+			showProjects := &showProjectOpts{
 				storeSvc: mockStoreReader,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
@@ -325,7 +325,7 @@ Applications
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			tc.mockStoreReader(mockStoreReader)
 
-			showProjects := &ShowProjectOpts{
+			showProjects := &showProjectOpts{
 				shouldOutputJSON: tc.shouldOutputJSON,
 
 				storeSvc: mockStoreReader,

@@ -13,14 +13,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListProjectOpts contains the fields to collect for listing a project.
-type ListProjectOpts struct {
+type listProjectOpts struct {
 	store archer.ProjectLister
 	w     io.Writer
 }
 
 // Execute lists the existing projects to the prompt.
-func (opts *ListProjectOpts) Execute() error {
+func (opts *listProjectOpts) Execute() error {
 	projects, err := opts.store.ListProjects()
 	if err != nil {
 		return err
@@ -35,7 +34,7 @@ func (opts *ListProjectOpts) Execute() error {
 
 // BuildProjectListCommand builds the command to list existing projects.
 func BuildProjectListCommand() *cobra.Command {
-	opts := ListProjectOpts{
+	opts := listProjectOpts{
 		w: os.Stdout,
 	}
 	cmd := &cobra.Command{

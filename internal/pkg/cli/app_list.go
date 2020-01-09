@@ -31,8 +31,7 @@ const (
 	noAdditionalFormatting = 0
 )
 
-// ListAppOpts contains the fields to collect for listing an application.
-type ListAppOpts struct {
+type listAppOpts struct {
 	ShouldOutputJSON    bool
 	ShouldShowLocalApps bool
 
@@ -47,7 +46,7 @@ type ListAppOpts struct {
 	*GlobalOpts
 }
 
-func (opts *ListAppOpts) selectProject() (string, error) {
+func (opts *listAppOpts) selectProject() (string, error) {
 	projs, err := opts.projectLister.ListProjects()
 	if err != nil {
 		return "", err
@@ -68,7 +67,7 @@ func (opts *ListAppOpts) selectProject() (string, error) {
 	return proj, err
 }
 
-func (opts *ListAppOpts) localAppsFilter(appNames []string) {
+func (opts *listAppOpts) localAppsFilter(appNames []string) {
 	var filtered []*archer.Application
 	isLocal := make(map[string]bool)
 	for _, name := range appNames {
@@ -84,7 +83,7 @@ func (opts *ListAppOpts) localAppsFilter(appNames []string) {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (opts *ListAppOpts) Ask() error {
+func (opts *listAppOpts) Ask() error {
 	if opts.ProjectName() != "" {
 		return nil
 	}
@@ -98,7 +97,7 @@ func (opts *ListAppOpts) Ask() error {
 }
 
 // Execute lists the applications through the prompt.
-func (opts *ListAppOpts) Execute() error {
+func (opts *listAppOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its applications.
 	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
 		return err
@@ -137,7 +136,7 @@ func (opts *ListAppOpts) Execute() error {
 	return nil
 }
 
-func (opts *ListAppOpts) humanOutput() {
+func (opts *listAppOpts) humanOutput() {
 	writer := tabwriter.NewWriter(opts.w, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, "%s\t%s\n", "Name", "Type")
 	nameLengthMax := len("Name")
@@ -153,7 +152,7 @@ func (opts *ListAppOpts) humanOutput() {
 	writer.Flush()
 }
 
-func (opts *ListAppOpts) jsonOutput() (string, error) {
+func (opts *listAppOpts) jsonOutput() (string, error) {
 	type serializedApps struct {
 		Applications []*archer.Application `json:"applications"`
 	}
@@ -166,7 +165,7 @@ func (opts *ListAppOpts) jsonOutput() (string, error) {
 
 // BuildAppListCmd builds the command for listing applications in a project.
 func BuildAppListCmd() *cobra.Command {
-	opts := ListAppOpts{
+	opts := listAppOpts{
 		w:          os.Stdout,
 		GlobalOpts: NewGlobalOpts(),
 	}

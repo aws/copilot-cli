@@ -178,7 +178,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
 
-			opts := &InitPipelineOpts{
+			opts := &initPipelineOpts{
 				Environments:      tc.inEnvironments,
 				GitHubOwner:       tc.inGitHubOwner,
 				GitHubRepo:        tc.inGitHubRepo,
@@ -230,7 +230,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			opts := &InitPipelineOpts{
+			opts := &initPipelineOpts{
 				projectEnvs: tc.inProjectEnvs,
 
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
@@ -366,7 +366,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			tc.mockBox(mockBox)
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
-			opts := &InitPipelineOpts{
+			opts := &initPipelineOpts{
 				Environments:      tc.inEnvironments,
 				GitHubRepo:        tc.inGitHubRepo,
 				GitHubAccessToken: tc.inGitHubToken,
@@ -413,7 +413,7 @@ func TestInitPipelineOpts_createSecretName(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := &InitPipelineOpts{
+			opts := &initPipelineOpts{
 				GitHubRepo: tc.inGitHubRepo,
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -447,7 +447,7 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := &InitPipelineOpts{
+			opts := &initPipelineOpts{
 				GitHubRepo:  tc.inGitHubRepo,
 				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
 				GitHubOwner: tc.inProjectOwner,
@@ -489,7 +489,7 @@ koke	git://github.com/koke/grit.git (push)`,
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := &InitPipelineOpts{}
+			opts := &initPipelineOpts{}
 
 			// WHEN
 			urls, err := opts.parseGitRemoteResult(tc.inRemoteResult)

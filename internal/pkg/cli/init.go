@@ -32,8 +32,7 @@ const (
 	initShouldDeployHelpPrompt = "An environment with your application deployed to it. This will allow you to test your application before placing it in production."
 )
 
-// InitOpts holds the fields to bootstrap a new application.
-type InitOpts struct {
+type initOpts struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
 	ShouldDeploy          bool // true means we should create a test environment and deploy the application in it. Defaults to false.
 	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
@@ -55,8 +54,7 @@ type InitOpts struct {
 	prompt prompter
 }
 
-// NewInitOpts initiates the fields to bootstrap a new application.
-func NewInitOpts() (*InitOpts, error) {
+func newInitOpts() (*initOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, err
@@ -75,7 +73,7 @@ func NewInitOpts() (*InitOpts, error) {
 	id := identity.New(sess)
 	deployer := cloudformation.New(sess)
 
-	initProject := &InitProjectOpts{
+	initProject := &initProjectOpts{
 		projectStore: ssm,
 		ws:           ws,
 		prompt:       prompt,
@@ -83,7 +81,7 @@ func NewInitOpts() (*InitOpts, error) {
 		deployer:     deployer,
 		prog:         spin,
 	}
-	initApp := &InitAppOpts{
+	initApp := &initAppOpts{
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 		manifestWriter: ws,
 		appStore:       ssm,
@@ -92,7 +90,7 @@ func NewInitOpts() (*InitOpts, error) {
 		prog:           spin,
 		GlobalOpts:     NewGlobalOpts(),
 	}
-	initEnv := &InitEnvOpts{
+	initEnv := &initEnvOpts{
 		EnvName:       defaultEnvironmentName,
 		EnvProfile:    "default",
 		IsProduction:  false,
@@ -118,7 +116,7 @@ func NewInitOpts() (*InitOpts, error) {
 		GlobalOpts: NewGlobalOpts(),
 	}
 
-	return &InitOpts{
+	return &initOpts{
 		initProject: initProject,
 		initApp:     initApp,
 		initEnv:     initEnv,
@@ -134,7 +132,7 @@ func NewInitOpts() (*InitOpts, error) {
 }
 
 // Run executes "project init", "env init", "app init" and "app deploy".
-func (opts *InitOpts) Run() error {
+func (opts *initOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your Git repository.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
 to help you get set up with a project on ECS. A project is a collection of 
@@ -165,7 +163,7 @@ containerized applications (or micro-services) that operate together.`)
 	return opts.deployApp()
 }
 
-func (opts *InitOpts) loadProject() error {
+func (opts *initOpts) loadProject() error {
 	if err := opts.initProject.Ask(); err != nil {
 		return fmt.Errorf("prompt for project init: %w", err)
 	}
@@ -177,7 +175,7 @@ func (opts *InitOpts) loadProject() error {
 	return nil
 }
 
-func (opts *InitOpts) loadApp() error {
+func (opts *initOpts) loadApp() error {
 	if err := opts.initApp.Ask(); err != nil {
 		return fmt.Errorf("prompt for app init: %w", err)
 	}
@@ -185,7 +183,7 @@ func (opts *InitOpts) loadApp() error {
 }
 
 // deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
-func (opts *InitOpts) deployEnv() error {
+func (opts *initOpts) deployEnv() error {
 	if opts.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
 		if err := opts.askShouldDeploy(); err != nil {
@@ -199,7 +197,7 @@ func (opts *InitOpts) deployEnv() error {
 	return opts.initEnv.Execute()
 }
 
-func (opts *InitOpts) deployApp() error {
+func (opts *initOpts) deployApp() error {
 	if !opts.ShouldDeploy {
 		return nil
 	}
@@ -214,7 +212,7 @@ func (opts *InitOpts) deployApp() error {
 	return opts.appDeploy.Execute()
 }
 
-func (opts *InitOpts) askShouldDeploy() error {
+func (opts *initOpts) askShouldDeploy() error {
 	v, err := opts.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
@@ -225,7 +223,7 @@ func (opts *InitOpts) askShouldDeploy() error {
 
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
-	opts, err := NewInitOpts()
+	opts, err := newInitOpts()
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application.",

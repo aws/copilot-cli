@@ -20,12 +20,12 @@ func TestProjectList_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		listOpts ListProjectOpts
+		listOpts listProjectOpts
 		mocking  func()
 		want     error
 	}{
 		"with projects": {
-			listOpts: ListProjectOpts{
+			listOpts: listProjectOpts{
 				store: mockProjectStore,
 				w:     ioutil.Discard,
 			},
@@ -41,7 +41,7 @@ func TestProjectList_Execute(t *testing.T) {
 			},
 		},
 		"with an error": {
-			listOpts: ListProjectOpts{
+			listOpts: listProjectOpts{
 				store: mockProjectStore,
 				w:     ioutil.Discard,
 			},

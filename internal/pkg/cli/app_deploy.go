@@ -348,7 +348,7 @@ func (o *appDeployOpts) configureClients() error {
 func (opts *appDeployOpts) getAppDeployTemplate() (string, error) {
 	buffer := &bytes.Buffer{}
 
-	appPackage := PackageAppOpts{
+	appPackage := packageAppOpts{
 		AppName:      opts.AppName,
 		EnvName:      opts.targetEnvironment.Name,
 		Tag:          opts.ImageTag,

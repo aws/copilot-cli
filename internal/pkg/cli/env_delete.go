@@ -40,7 +40,6 @@ type resourceGetter interface {
 	GetResources(*resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
 }
 
-// deleteEnvOpts holds the fields needed to delete an environment.
 type deleteEnvOpts struct {
 	// Required flags.
 	EnvName          string

@@ -88,7 +88,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockWorkspace(mockWorkspace)
 
-			opts := &UpdatePipelineOpts{
+			opts := &updatePipelineOpts{
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
 
@@ -145,7 +145,7 @@ func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 			mockPipelineDeployer := climocks.NewMockpipelineDeployer(ctrl)
 			tc.mockDeployer(mockPipelineDeployer)
 
-			opts := &UpdatePipelineOpts{
+			opts := &updatePipelineOpts{
 				pipelineDeployer: mockPipelineDeployer,
 			}
 
@@ -584,7 +584,7 @@ stages:
 			tc.mockProgress(mockProgress)
 			tc.mockPrompt(mockPrompt)
 
-			opts := &UpdatePipelineOpts{
+			opts := &updatePipelineOpts{
 				PipelineFile:     tc.inPipelineFile,
 				PipelineName:     tc.inPipelineName,
 				pipelineDeployer: mockPipelineDeployer,

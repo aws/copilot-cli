@@ -29,8 +29,7 @@ const (
 	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
-// PackageAppOpts holds the configuration needed to transform an application's manifest to CloudFormation.
-type PackageAppOpts struct {
+type packageAppOpts struct {
 	// Fields with matching flags.
 	AppName   string
 	EnvName   string
@@ -49,10 +48,8 @@ type PackageAppOpts struct {
 	*GlobalOpts // Embed global options.
 }
 
-// NewPackageAppOpts returns a new PackageAppOpts. The CloudFormation template is
-// written to stdout and the parameters are discarded by default.
-func NewPackageAppOpts() *PackageAppOpts {
-	return &PackageAppOpts{
+func newPackageAppOpts() *packageAppOpts {
+	return &packageAppOpts{
 		runner:       command.New(),
 		stackWriter:  os.Stdout,
 		paramsWriter: ioutil.Discard,
@@ -62,7 +59,7 @@ func NewPackageAppOpts() *PackageAppOpts {
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *PackageAppOpts) Validate() error {
+func (o *packageAppOpts) Validate() error {
 	if o.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
@@ -84,7 +81,7 @@ func (o *PackageAppOpts) Validate() error {
 }
 
 // Ask prompts the user for any missing required fields.
-func (o *PackageAppOpts) Ask() error {
+func (o *packageAppOpts) Ask() error {
 	if err := o.askAppName(); err != nil {
 		return err
 	}
@@ -95,7 +92,7 @@ func (o *PackageAppOpts) Ask() error {
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
-func (o *PackageAppOpts) Execute() error {
+func (o *packageAppOpts) Execute() error {
 	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return err
@@ -118,7 +115,7 @@ func (o *PackageAppOpts) Execute() error {
 	return err
 }
 
-func (o *PackageAppOpts) askAppName() error {
+func (o *packageAppOpts) askAppName() error {
 	if o.AppName != "" {
 		return nil
 	}
@@ -138,7 +135,7 @@ func (o *PackageAppOpts) askAppName() error {
 	return nil
 }
 
-func (o *PackageAppOpts) askEnvName() error {
+func (o *packageAppOpts) askEnvName() error {
 	if o.EnvName != "" {
 		return nil
 	}
@@ -158,7 +155,7 @@ func (o *PackageAppOpts) askEnvName() error {
 	return nil
 }
 
-func (o *PackageAppOpts) askTag() error {
+func (o *packageAppOpts) askTag() error {
 	if o.Tag != "" {
 		return nil
 	}
@@ -175,7 +172,7 @@ func (o *PackageAppOpts) askTag() error {
 	return nil
 }
 
-func (o *PackageAppOpts) listAppNames() ([]string, error) {
+func (o *packageAppOpts) listAppNames() ([]string, error) {
 	apps, err := o.ws.Apps()
 	if err != nil {
 		return nil, fmt.Errorf("list applications in workspace: %w", err)
@@ -193,7 +190,7 @@ type cfnTemplates struct {
 }
 
 // getTemplates returns the CloudFormation stack's template and its parameters.
-func (o *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
+func (o *packageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
 	raw, err := o.ws.ReadFile(o.ws.AppManifestFileName(o.AppName))
 	if err != nil {
 		return nil, err
@@ -253,7 +250,7 @@ func (o *PackageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, e
 }
 
 // setFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
-func (o *PackageAppOpts) setFileWriters() error {
+func (o *packageAppOpts) setFileWriters() error {
 	if err := o.fs.MkdirAll(o.OutputDir, 0755); err != nil {
 		return fmt.Errorf("create directory %s: %w", o.OutputDir, err)
 	}
@@ -285,7 +282,7 @@ func contains(s string, items []string) bool {
 	return false
 }
 
-func (o *PackageAppOpts) listEnvNames() ([]string, error) {
+func (o *packageAppOpts) listEnvNames() ([]string, error) {
 	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
@@ -319,7 +316,7 @@ func (e *errRepoNotFound) Is(target error) bool {
 
 // BuildAppPackageCmd builds the command for printing an application's CloudFormation template.
 func BuildAppPackageCmd() *cobra.Command {
-	opts := NewPackageAppOpts()
+	opts := newPackageAppOpts()
 	cmd := &cobra.Command{
 		Use:   "package",
 		Short: "Prints the AWS CloudFormation template of an application.",

@@ -25,13 +25,13 @@ func TestAppList_Execute(t *testing.T) {
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
-		listOpts        ListAppOpts
+		listOpts        listAppOpts
 		mocking         func()
 		expectedErr     error
 		expectedContent string
 	}{
 		"with json outputs": {
-			listOpts: ListAppOpts{
+			listOpts: listAppOpts{
 				ShouldOutputJSON: true,
 				appLister:        mockAppStore,
 				projectGetter:    mockProjectStore,
@@ -54,7 +54,7 @@ func TestAppList_Execute(t *testing.T) {
 			expectedContent: `{"applications":[{"project":"","name":"my-app","type":""},{"project":"","name":"lb-app","type":""}]}` + "\n",
 		},
 		"with human outputs": {
-			listOpts: ListAppOpts{
+			listOpts: listAppOpts{
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -77,7 +77,7 @@ func TestAppList_Execute(t *testing.T) {
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
-			listOpts: ListAppOpts{
+			listOpts: listAppOpts{
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -97,7 +97,7 @@ func TestAppList_Execute(t *testing.T) {
 		},
 		"with failed call to list": {
 			expectedErr: mockError,
-			listOpts: ListAppOpts{
+			listOpts: listAppOpts{
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
 				GlobalOpts: &GlobalOpts{
@@ -117,7 +117,7 @@ func TestAppList_Execute(t *testing.T) {
 		},
 		"with local flag enabled": {
 			expectedErr: nil,
-			listOpts: ListAppOpts{
+			listOpts: listAppOpts{
 				appLister:           mockAppStore,
 				projectGetter:       mockProjectStore,
 				ws:                  mockWorkspace,
@@ -205,7 +205,7 @@ func TestAppList_Ask(t *testing.T) {
 			tc.mockProjectLister(mockProjectLister)
 			tc.mockPrompt(mockPrompter)
 
-			listApps := &ListAppOpts{
+			listApps := &listAppOpts{
 				projectLister: mockProjectLister,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
