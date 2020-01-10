@@ -27,8 +27,7 @@ const (
 	fmtDeployProjectFailed   = "Failed to create the infrastructure to manage container repositories under project %s."
 )
 
-// InitProjectOpts contains the fields to collect for creating a project.
-type InitProjectOpts struct {
+type initProjectOpts struct {
 	ProjectName string
 	DomainName  string
 
@@ -41,7 +40,7 @@ type InitProjectOpts struct {
 }
 
 // Validate returns an error if the user's input is invalid.
-func (o *InitProjectOpts) Validate() error {
+func (o *initProjectOpts) Validate() error {
 	if o.ProjectName != "" {
 		if err := validateProjectName(o.ProjectName); err != nil {
 			return err
@@ -51,7 +50,7 @@ func (o *InitProjectOpts) Validate() error {
 }
 
 // Ask prompts the user for any required arguments that they didn't provide.
-func (o *InitProjectOpts) Ask() error {
+func (o *initProjectOpts) Ask() error {
 	// If there's a local project, we'll use that over anything else.
 	summary, err := o.ws.Summary()
 	if err == nil {
@@ -95,7 +94,7 @@ func (o *InitProjectOpts) Ask() error {
 }
 
 // Execute creates a new managed empty project.
-func (o *InitProjectOpts) Execute() error {
+func (o *initProjectOpts) Execute() error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return err
@@ -132,13 +131,13 @@ func (o *InitProjectOpts) Execute() error {
 }
 
 // RecommendedActions returns a list of suggested additional commands users can run after successfully executing this command.
-func (o *InitProjectOpts) RecommendedActions() []string {
+func (o *initProjectOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to add a new application to your project.", color.HighlightCode("ecs-preview init")),
 	}
 }
 
-func (o *InitProjectOpts) askNewProjectName() error {
+func (o *initProjectOpts) askNewProjectName() error {
 	projectName, err := o.prompt.Get(
 		fmt.Sprintf("What would you like to %s your project?", color.Emphasize("name")),
 		"Applications under the same project share the same VPC and ECS Cluster and are discoverable via service discovery.",
@@ -150,7 +149,7 @@ func (o *InitProjectOpts) askNewProjectName() error {
 	return nil
 }
 
-func (o *InitProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
+func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
 	var projectNames []string
 	for _, p := range existingProjects {
 		projectNames = append(projectNames, p.Name)
@@ -168,7 +167,7 @@ func (o *InitProjectOpts) askSelectExistingProjectName(existingProjects []*arche
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	opts := &InitProjectOpts{}
+	opts := &initProjectOpts{}
 
 	cmd := &cobra.Command{
 		Use:   "init [name]",

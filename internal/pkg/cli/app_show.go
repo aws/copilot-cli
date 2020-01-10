@@ -25,8 +25,7 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-// ShowAppOpts contains the fields to collect for showing an application.
-type ShowAppOpts struct {
+type showAppOpts struct {
 	shouldOutputJSON      bool
 	shouldOutputResources bool
 	appName               string
@@ -34,13 +33,13 @@ type ShowAppOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
-	initDescriber func(*ShowAppOpts) error // Overriden in tests.
+	initDescriber func(*showAppOpts) error // Overriden in tests.
 
 	*GlobalOpts
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *ShowAppOpts) Validate() error {
+func (o *showAppOpts) Validate() error {
 	if o.ProjectName() != "" {
 		_, err := o.storeSvc.GetProject(o.ProjectName())
 		if err != nil {
@@ -58,7 +57,7 @@ func (o *ShowAppOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *ShowAppOpts) Ask() error {
+func (o *showAppOpts) Ask() error {
 	if err := o.askProject(); err != nil {
 		return err
 	}
@@ -66,7 +65,7 @@ func (o *ShowAppOpts) Ask() error {
 }
 
 // Execute shows the applications through the prompt.
-func (o *ShowAppOpts) Execute() error {
+func (o *showAppOpts) Execute() error {
 	if o.appName == "" {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
@@ -93,7 +92,7 @@ func (o *ShowAppOpts) Execute() error {
 	return nil
 }
 
-func (o *ShowAppOpts) retrieveData() (*describe.WebApp, error) {
+func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
 	if err != nil {
 		return nil, fmt.Errorf("get application: %w", err)
@@ -182,7 +181,7 @@ func applicationNotDeployed(err error) bool {
 	}
 }
 
-func (o *ShowAppOpts) askProject() error {
+func (o *showAppOpts) askProject() error {
 	if o.ProjectName() != "" {
 		return nil
 	}
@@ -206,7 +205,7 @@ func (o *ShowAppOpts) askProject() error {
 	return nil
 }
 
-func (o *ShowAppOpts) askAppName() error {
+func (o *showAppOpts) askAppName() error {
 	if o.appName != "" {
 		return nil
 	}
@@ -231,7 +230,7 @@ func (o *ShowAppOpts) askAppName() error {
 	return nil
 }
 
-func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
+func (o *showAppOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeSvc.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
@@ -243,7 +242,7 @@ func (o *ShowAppOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (o *ShowAppOpts) retrieveApplications() ([]string, error) {
+func (o *showAppOpts) retrieveApplications() ([]string, error) {
 	apps, err := o.storeSvc.ListApplications(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
@@ -258,10 +257,10 @@ func (o *ShowAppOpts) retrieveApplications() ([]string, error) {
 
 // BuildAppShowCmd builds the command for showing applications in a project.
 func BuildAppShowCmd() *cobra.Command {
-	opts := ShowAppOpts{
+	opts := showAppOpts{
 		w:          log.OutputWriter,
 		GlobalOpts: NewGlobalOpts(),
-		initDescriber: func(o *ShowAppOpts) error {
+		initDescriber: func(o *showAppOpts) error {
 			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
 			if err != nil {
 				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)

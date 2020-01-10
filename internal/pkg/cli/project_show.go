@@ -15,8 +15,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ShowProjectOpts contains the fields to collect for showing a project.
-type ShowProjectOpts struct {
+type showProjectOpts struct {
 	shouldOutputJSON bool
 
 	storeSvc storeReader
@@ -27,7 +26,7 @@ type ShowProjectOpts struct {
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *ShowProjectOpts) Validate() error {
+func (o *showProjectOpts) Validate() error {
 	if o.ProjectName() != "" {
 		_, err := o.storeSvc.GetProject(o.ProjectName())
 		if err != nil {
@@ -39,7 +38,7 @@ func (o *ShowProjectOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *ShowProjectOpts) Ask() error {
+func (o *showProjectOpts) Ask() error {
 	if err := o.askProject(); err != nil {
 		return err
 	}
@@ -48,7 +47,7 @@ func (o *ShowProjectOpts) Ask() error {
 }
 
 // Execute shows the applications through the prompt.
-func (o *ShowProjectOpts) Execute() error {
+func (o *showProjectOpts) Execute() error {
 	projectToSerialize, err := o.retrieveData()
 	if err != nil {
 		return err
@@ -66,7 +65,7 @@ func (o *ShowProjectOpts) Execute() error {
 	return nil
 }
 
-func (o *ShowProjectOpts) retrieveData() (*describe.Project, error) {
+func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 	proj, err := o.storeSvc.GetProject(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
@@ -102,7 +101,7 @@ func (o *ShowProjectOpts) retrieveData() (*describe.Project, error) {
 	}, nil
 }
 
-func (o *ShowProjectOpts) askProject() error {
+func (o *showProjectOpts) askProject() error {
 	if o.ProjectName() != "" {
 		return nil
 	}
@@ -126,7 +125,7 @@ func (o *ShowProjectOpts) askProject() error {
 	return nil
 }
 
-func (o *ShowProjectOpts) retrieveProjects() ([]string, error) {
+func (o *showProjectOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeSvc.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("list project: %w", err)
@@ -140,7 +139,7 @@ func (o *ShowProjectOpts) retrieveProjects() ([]string, error) {
 
 // BuildProjectShowCmd builds the command for showing details of a project.
 func BuildProjectShowCmd() *cobra.Command {
-	opts := ShowProjectOpts{
+	opts := showProjectOpts{
 		w:          log.OutputWriter,
 		GlobalOpts: NewGlobalOpts(),
 	}

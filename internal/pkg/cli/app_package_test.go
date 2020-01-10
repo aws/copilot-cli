@@ -246,7 +246,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			tc.expectPrompt(mockPrompt)
 			tc.expectRunner(mockRunner)
 
-			opts := &PackageAppOpts{
+			opts := &packageAppOpts{
 				AppName: tc.inAppName,
 				EnvName: tc.inEnvName,
 				Tag:     tc.inTag,
@@ -353,7 +353,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			tc.setupMocks()
 
-			opts := &PackageAppOpts{
+			opts := &packageAppOpts{
 				AppName:    tc.inAppName,
 				EnvName:    tc.inEnvName,
 				ws:         mockWorkspace,
@@ -684,7 +684,7 @@ count: 1`), nil)
 			templateBuf := &strings.Builder{}
 			paramsBuf := &strings.Builder{}
 			mockFS := &afero.Afero{Fs: afero.NewMemMapFs()}
-			opts := PackageAppOpts{
+			opts := packageAppOpts{
 				EnvName:   tc.inEnvName,
 				AppName:   tc.inAppName,
 				Tag:       tc.inTagName,

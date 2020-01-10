@@ -151,7 +151,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
-			opts := &InitAppOpts{
+			opts := &initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
@@ -226,7 +226,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := InitAppOpts{
+			opts := initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,
@@ -438,7 +438,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockProjGetter := mocks.NewMockProjectGetter(ctrl)
 			mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
 			mockProg := climocks.NewMockprogress(ctrl)
-			opts := InitAppOpts{
+			opts := initAppOpts{
 				AppType:        tc.inAppType,
 				AppName:        tc.inAppName,
 				DockerfilePath: tc.inDockerfilePath,

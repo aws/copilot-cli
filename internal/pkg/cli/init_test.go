@@ -31,25 +31,25 @@ func TestInitOpts_Run(t *testing.T) {
 		inShouldDeploy          bool
 		inPromptForShouldDeploy bool
 
-		expect      func(opts *InitOpts)
+		expect      func(opts *initOpts)
 		wantedError string
 	}{
 		"returns prompt error for project": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Times(0)
 			},
 			wantedError: "prompt for project init: my error",
 		},
 		"returns validation error for project": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(errors.New("my error"))
 			},
 			wantedError: "my error",
 		},
 		"returns prompt error for app": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(errors.New("my error"))
@@ -58,7 +58,7 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "prompt for app init: my error",
 		},
 		"returns validation error for app": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -67,7 +67,7 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "my error",
 		},
 		"returns execute error for project": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -78,7 +78,7 @@ func TestInitOpts_Run(t *testing.T) {
 			wantedError: "execute project init: my error",
 		},
 		"returns execute error for app": {
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -90,7 +90,7 @@ func TestInitOpts_Run(t *testing.T) {
 		},
 		"deploys environment": {
 			inPromptForShouldDeploy: true,
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -108,7 +108,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"app deploy happy path": {
 			inPromptForShouldDeploy: true,
 			inShouldDeploy:          true,
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -126,7 +126,7 @@ func TestInitOpts_Run(t *testing.T) {
 		"should not deploy the app if shouldDeploy is false": {
 			inPromptForShouldDeploy: true,
 			inShouldDeploy:          false,
-			expect: func(opts *InitOpts) {
+			expect: func(opts *initOpts) {
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
 				opts.initProject.(*climocks.MockactionCommand).EXPECT().Validate().Return(nil)
 				opts.initApp.(*climocks.MockactionCommand).EXPECT().Ask().Return(nil)
@@ -148,7 +148,7 @@ func TestInitOpts_Run(t *testing.T) {
 
 			var mockProjectName, mockAppName, mockAppType string
 
-			opts := &InitOpts{
+			opts := &initOpts{
 				ShouldDeploy:          tc.inShouldDeploy,
 				promptForShouldDeploy: tc.inPromptForShouldDeploy,
 

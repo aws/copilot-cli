@@ -22,8 +22,7 @@ const (
 	environmentListProjectNameHelper = "A project groups all of your environments together."
 )
 
-// ListEnvOpts contains the fields to collect for listing an environment.
-type ListEnvOpts struct {
+type listEnvOpts struct {
 	ShouldOutputJSON bool
 
 	manager       archer.EnvironmentLister
@@ -35,7 +34,7 @@ type ListEnvOpts struct {
 	*GlobalOpts
 }
 
-func (o *ListEnvOpts) selectProject() (string, error) {
+func (o *listEnvOpts) selectProject() (string, error) {
 	projs, err := o.projectLister.ListProjects()
 	if err != nil {
 		return "", err
@@ -57,7 +56,7 @@ func (o *ListEnvOpts) selectProject() (string, error) {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *ListEnvOpts) Ask() error {
+func (o *listEnvOpts) Ask() error {
 	if o.ProjectName() != "" {
 		return nil
 	}
@@ -71,7 +70,7 @@ func (o *ListEnvOpts) Ask() error {
 }
 
 // Execute lists the environments through the prompt.
-func (o *ListEnvOpts) Execute() error {
+func (o *listEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
 	if _, err := o.projectGetter.GetProject(o.ProjectName()); err != nil {
 		return err
@@ -97,7 +96,7 @@ func (o *ListEnvOpts) Execute() error {
 	return nil
 }
 
-func (o *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
+func (o *listEnvOpts) humanOutput(envs []*archer.Environment) string {
 	b := &strings.Builder{}
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
@@ -110,7 +109,7 @@ func (o *ListEnvOpts) humanOutput(envs []*archer.Environment) string {
 	return b.String()
 }
 
-func (o *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
+func (o *listEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
 	type serializedEnvs struct {
 		Environments []*archer.Environment `json:"environments"`
 	}
@@ -123,7 +122,7 @@ func (o *ListEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
 
 // BuildEnvListCmd builds the command for listing environments in a project.
 func BuildEnvListCmd() *cobra.Command {
-	opts := ListEnvOpts{
+	opts := listEnvOpts{
 		w:          os.Stdout,
 		GlobalOpts: NewGlobalOpts(),
 	}

@@ -49,7 +49,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := &InitEnvOpts{
+			opts := &initEnvOpts{
 				EnvName:    tc.inEnvName,
 				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
@@ -109,7 +109,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			addEnv := &InitEnvOpts{
+			addEnv := &initEnvOpts{
 				EnvName:    tc.inputEnv,
 				EnvProfile: tc.inputProfile,
 				GlobalOpts: &GlobalOpts{
@@ -459,7 +459,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				tc.expectProgress(mockProgress)
 			}
 
-			opts := &InitEnvOpts{
+			opts := &initEnvOpts{
 				EnvName:       tc.inEnvName,
 				projectGetter: mockProjectGetter,
 				envCreator:    mockEnvCreator,
@@ -580,7 +580,7 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			if tc.expectProgress != nil {
 				tc.expectProgress(mockProgress)
 			}
-			opts := &InitEnvOpts{
+			opts := &initEnvOpts{
 				envIdentity:  mockIdentity,
 				projDeployer: mockDeployer,
 				prog:         mockProgress,

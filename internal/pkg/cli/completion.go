@@ -19,8 +19,7 @@ type shellCompleter interface {
 	GenZshCompletion(w io.Writer) error
 }
 
-// CompletionOpts contains the fields needed to generate completion scripts.
-type CompletionOpts struct {
+type completionOpts struct {
 	Shell string // must be "bash" or "zsh"
 
 	w         io.Writer
@@ -28,7 +27,7 @@ type CompletionOpts struct {
 }
 
 // Validate returns an error if the shell is not "bash" or "zsh".
-func (opts *CompletionOpts) Validate() error {
+func (opts *completionOpts) Validate() error {
 	if opts.Shell == "bash" {
 		return nil
 	}
@@ -40,7 +39,7 @@ func (opts *CompletionOpts) Validate() error {
 
 // Execute writes the completion code to the writer.
 // This method assumes that Validate() was called prior to invocation.
-func (opts *CompletionOpts) Execute() error {
+func (opts *completionOpts) Execute() error {
 	if opts.Shell == "bash" {
 		return opts.completer.GenBashCompletion(opts.w)
 	}
@@ -49,7 +48,7 @@ func (opts *CompletionOpts) Execute() error {
 
 // BuildCompletionCmd returns the command to output shell completion code for the specified shell (bash or zsh).
 func BuildCompletionCmd(rootCmd *cobra.Command) *cobra.Command {
-	opts := &CompletionOpts{}
+	opts := &completionOpts{}
 	cmd := &cobra.Command{
 		Use:   "completion [shell]",
 		Short: "Output shell completion code.",

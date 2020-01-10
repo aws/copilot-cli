@@ -34,7 +34,7 @@ func TestCompletionOpts_Validate(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			opts := CompletionOpts{Shell: tc.inputShell}
+			opts := completionOpts{Shell: tc.inputShell}
 
 			// WHEN
 			err := opts.Validate()
@@ -79,7 +79,7 @@ func TestCompletionOpts_Execute(t *testing.T) {
 			// GIVEN
 			mock := mocks.NewMockshellCompleter(ctrl)
 			tc.mocking(mock)
-			opts := CompletionOpts{Shell: tc.inputShell, completer: mock}
+			opts := completionOpts{Shell: tc.inputShell, completer: mock}
 
 			// WHEN
 			opts.Execute()

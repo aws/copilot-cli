@@ -73,7 +73,7 @@ func TestAppShow_Validate(t *testing.T) {
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			tc.mockStoreReader(mockStoreReader)
 
-			showApps := &ShowAppOpts{
+			showApps := &showAppOpts{
 				storeSvc: mockStoreReader,
 
 				appName: tc.inputApplication,
@@ -248,7 +248,7 @@ func TestAppShow_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompter)
 			tc.mockStoreReader(mockStoreReader)
 
-			showApps := &ShowAppOpts{
+			showApps := &showAppOpts{
 				appName:  tc.inputApp,
 				storeSvc: mockStoreReader,
 				GlobalOpts: &GlobalOpts{
@@ -647,14 +647,14 @@ Resources
 			tc.mockStoreReader(mockStoreReader)
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
-			showApps := &ShowAppOpts{
+			showApps := &showAppOpts{
 				appName:               tc.inputApp,
 				shouldOutputJSON:      tc.shouldOutputJSON,
 				shouldOutputResources: tc.shouldOutputResources,
 
 				storeSvc:      mockStoreReader,
 				describer:     mockWebAppDescriber,
-				initDescriber: func(*ShowAppOpts) error { return nil },
+				initDescriber: func(*showAppOpts) error { return nil },
 
 				w: b,
 
