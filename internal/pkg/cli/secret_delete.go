@@ -16,10 +16,9 @@ import (
 )
 
 // ShowAppOpts contains the fields to collect for showing an application.
-type SecretAddOpts struct {
+type SecretDeleteOpts struct {
 	appName     string
 	secretName  string
-	secretValue string
 
 	manifestPath string
 
@@ -32,7 +31,7 @@ type SecretAddOpts struct {
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *SecretAddOpts) Validate() error {
+func (o *SecretDeleteOpts) Validate() error {
 	if o.ProjectName() != "" {
 		_, err := o.storeReader.GetProject(o.ProjectName())
 		if err != nil {
@@ -50,7 +49,7 @@ func (o *SecretAddOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *SecretAddOpts) Ask() error {
+func (o *SecretDeleteOpts) Ask() error {
 	if err := o.askProject(); err != nil {
 		return err
 	}
@@ -58,29 +57,25 @@ func (o *SecretAddOpts) Ask() error {
 		return err
 	}
 
-	if err := o.askSecretName(); err != nil {
-		return err
-	}
-	return o.askSecretValue()
+	return o.askSecretName()
 }
 
-// Execute encrypts the secret.
-func (o *SecretAddOpts) Execute() error {
+// Execute deletes the secret.
+func (o *SecretDeleteOpts) Execute() error {
 	key := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/%s", o.GlobalOpts.ProjectName(),
 		o.appName, o.secretName)
 
-	if _, err := o.secretManager.CreateSecret(key, o.secretValue); err != nil {
+	if err := o.secretManager.DeleteSecret(key); err != nil {
 		return err
 	}
 
-	log.Successf("Created/updated %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
+	log.Successf("Deleted %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
 		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
 
 	envVar := strings.ToUpper(o.secretName)
 	envVar = strings.ReplaceAll(envVar, "-", "_")
 
-	// save the secret to the manifest
-	// TODO currently, it wipes out comments in the doc, not cool bro
+	// remove the secret from the manifest
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
 
 	mft, err := o.readManifest()
@@ -88,21 +83,17 @@ func (o *SecretAddOpts) Execute() error {
 		return err
 	}
 	lbmft := mft.(*manifest.LBFargateManifest)
-	if lbmft.Secrets == nil {
-		lbmft.Secrets = make(map[string]string)
-	}
-	lbmft.Secrets[envVar] = key
+	delete(lbmft.Secrets, envVar)
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err
 	}
 
-	log.Successf("Saved the secret to the manifest. It's available as %s.\n",
-		color.HighlightUserInput(envVar))
+	log.Successf("Removed the secret from the manifest\n")
 	return nil
 }
 
-func (o *SecretAddOpts) readManifest() (archer.Manifest, error) {
+func (o *SecretDeleteOpts) readManifest() (archer.Manifest, error) {
 	raw, err := o.ws.ReadFile(o.manifestPath)
 	if err != nil {
 		return nil, err
@@ -110,13 +101,13 @@ func (o *SecretAddOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *SecretAddOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
+func (o *SecretDeleteOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
 	manifestBytes, err := yaml.Marshal(manifest)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
 
-func (o *SecretAddOpts) askProject() error {
+func (o *SecretDeleteOpts) askProject() error {
 	if o.ProjectName() != "" {
 		return nil
 	}
@@ -140,7 +131,7 @@ func (o *SecretAddOpts) askProject() error {
 	return nil
 }
 
-func (o *SecretAddOpts) askAppName() error {
+func (o *SecretDeleteOpts) askAppName() error {
 	if o.appName != "" {
 		return nil
 	}
@@ -165,14 +156,14 @@ func (o *SecretAddOpts) askAppName() error {
 	return nil
 }
 
-func (o *SecretAddOpts) askSecretName() error {
+func (o *SecretDeleteOpts) askSecretName() error {
 	if o.secretName != "" {
 		return nil
 	}
 
 	name, err := o.prompt.Get(
 		fmt.Sprintf("Secret name:"),
-		fmt.Sprintf(`The name that will uniquely identify your secret within your app.`),
+		fmt.Sprintf(`The name of the secret.`),
 		validateApplicationName)
 
 	if err != nil {
@@ -183,25 +174,7 @@ func (o *SecretAddOpts) askSecretName() error {
 	return nil
 }
 
-func (o *SecretAddOpts) askSecretValue() error {
-	if o.secretValue != "" {
-		return nil
-	}
-
-	secret, err := o.prompt.GetSecret(
-		fmt.Sprintf("Value to encrypt:"),
-		fmt.Sprintf(`The value to be encrypted and accessed by the app.`),
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to get secret value: %w", err)
-	}
-
-	o.secretValue = secret
-	return nil
-}
-
-func (o *SecretAddOpts) retrieveProjects() ([]string, error) {
+func (o *SecretDeleteOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeReader.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("listing projects: %w", err)
@@ -213,7 +186,7 @@ func (o *SecretAddOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (o *SecretAddOpts) retrieveApplications() ([]string, error) {
+func (o *SecretDeleteOpts) retrieveApplications() ([]string, error) {
 	apps, err := o.storeReader.ListApplications(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
@@ -225,17 +198,17 @@ func (o *SecretAddOpts) retrieveApplications() ([]string, error) {
 	return appNames, nil
 }
 
-// BuildSecretAddCmd adds a secret.
-func BuildSecretAddCmd() *cobra.Command {
-	opts := SecretAddOpts{
+// BuildSecretDeleteCmd removes a secret.
+func BuildSecretDeleteCmd() *cobra.Command {
+	opts := SecretDeleteOpts{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Adds a secret.",
+		Use:   "delete",
+		Short: "Delete a secret.",
 		Example: `
-  /code $ ecs-preview secret add -n secret-name
-  The encrypted value is added as the env var SECRET_NAME.
+  /code $ ecs-preview secret delete -n secret-name
+  The env var, SECRET_NAME, is also removed.
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
@@ -265,7 +238,6 @@ func BuildSecretAddCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
-	cmd.Flags().StringVarP(&opts.secretValue, "secret-value", "v", "", "Value to encrypt.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 

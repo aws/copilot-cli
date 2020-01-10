@@ -18,7 +18,7 @@ func BuildSecretCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(BuildSecretAddCmd())
-	cmd.AddCommand(BuildSecretRemoveCmd())
+	cmd.AddCommand(BuildSecretDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

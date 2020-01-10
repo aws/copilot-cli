@@ -61,6 +61,10 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 	return aws.StringValue(resp.ARN), nil
 }
 
+func (s *SecretsManager) DeleteSecret(secretName string) error {
+	return nil
+}
+
 type ErrSecretAlreadyExists struct {
 	secretName string
 	parentErr  error

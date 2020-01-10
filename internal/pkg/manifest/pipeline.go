@@ -53,7 +53,7 @@ type GitHubProperties struct {
 	// An example for OwnerAndRepository would be: "aws/amazon-ecs-cli-v2"
 	OwnerAndRepository    string `structs:"repository" yaml:"repository"`
 	Branch                string `structs:"branch" yaml:"branch"`
-	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret` // TODO fix naming
+	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret"` // TODO fix naming
 }
 
 // NewProvider creates a source provider based on the type of
@@ -96,7 +96,7 @@ type Source struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name string `yaml:"name`
+	Name string `yaml:"name"`
 }
 
 // CreatePipeline returns a pipeline manifest object.
