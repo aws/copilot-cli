@@ -12,6 +12,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -102,6 +104,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 		mockStoreReader func(m *climocks.MockstoreReader)
 		mockPrompt      func(m *climocks.Mockprompter)
+		mockWorkspace   func(m *mocks.MockWorkspace)
 
 		wantedProject string
 		wantedApp     string
@@ -115,11 +118,13 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
+			mockWorkspace: func(m *mocks.MockWorkspace) {},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   nil,
 		},
-		"prompt for all input": {
+		"retrieve all app names if fail to retrieve app name from local": {
 			inputProject: "",
 			inputApp:     "",
 
@@ -142,6 +147,100 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
 			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			},
+
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   nil,
+		},
+		"retrieve all app names if no app found in local dir": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					{
+						Name: "my-app",
+					},
+					{
+						Name: "archer-app",
+					},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
+			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
+			},
+
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   nil,
+		},
+		"retrieve local app names": {
+			inputProject: "",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListProjects().Return([]*archer.Project{
+					{Name: "my-project"},
+					{Name: "archer-project"},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
+			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return([]archer.Manifest{
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "my-app",
+						},
+					},
+					&manifest.LBFargateManifest{
+						AppManifest: manifest.AppManifest{
+							Name: "archer-app",
+						},
+					},
+				}, nil)
+			},
+
+			wantedProject: "my-project",
+			wantedApp:     "my-app",
+			wantedError:   nil,
+		},
+		"skip selecting if only one application found": {
+			inputProject: "my-project",
+			inputApp:     "",
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					{
+						Name: "my-app",
+					},
+				}, nil)
+			},
+
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   nil,
@@ -154,7 +253,10 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().ListProjects().Return(nil, errors.New("some error"))
 			},
 
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   fmt.Errorf("list projects: some error"),
@@ -167,7 +269,10 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 			},
 
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   fmt.Errorf("no project found: run `project init` or `cd` into your workspace please"),
@@ -186,6 +291,9 @@ func TestAppShow_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
 			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   fmt.Errorf("select projects: some error"),
@@ -205,6 +313,11 @@ func TestAppShow_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   fmt.Errorf("list applications for project my-project: some error"),
@@ -232,6 +345,11 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1)
 			},
+
+			mockWorkspace: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			},
+
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
 			wantedError:   fmt.Errorf("select applications for project my-project: some error"),
@@ -245,12 +363,15 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockWorkspace := mocks.NewMockWorkspace(ctrl)
 			tc.mockPrompt(mockPrompter)
 			tc.mockStoreReader(mockStoreReader)
+			tc.mockWorkspace(mockWorkspace)
 
 			showApps := &showAppOpts{
 				appName:  tc.inputApp,
 				storeSvc: mockStoreReader,
+				ws:       mockWorkspace,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
 					projectName: tc.inputProject,
