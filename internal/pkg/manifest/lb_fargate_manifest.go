@@ -29,6 +29,7 @@ type ImageWithPort struct {
 type LBFargateConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	ContainersConfig `yaml:",inline"`
+	Database         DatabaseConfig     `yaml:",flow"`
 	Scaling          *AutoScalingConfig `yaml:",flow"`
 }
 
@@ -39,6 +40,12 @@ type ContainersConfig struct {
 	Count     int               `yaml:"count"`
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
+}
+
+// DatabaseConfig represents the resource boundaries and environment variables for the database in the service.
+type DatabaseConfig struct {
+	MinCapacity int `yaml:"minCapacity"`
+	MaxCapacity int `yaml:"maxCapacity"`
 }
 
 // RoutingRule holds the path to route requests to the service.

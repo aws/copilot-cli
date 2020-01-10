@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ShowAppOpts contains the fields to collect for showing an application.
+// SecretDeleteOpts contains the fields to collect to delete a secret.
 type SecretDeleteOpts struct {
 	appName     string
 	secretName  string

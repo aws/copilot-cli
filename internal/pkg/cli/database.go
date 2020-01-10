@@ -18,6 +18,7 @@ func BuildDatabaseCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(BuildDatabaseCreateCmd())
+	cmd.AddCommand(BuildDatabaseDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
