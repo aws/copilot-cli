@@ -21,9 +21,9 @@ type DatabaseDeleteOpts struct {
 
 	manifestPath string
 
-	dbManager   archer.DatabaseManager
+	dbManager     archer.DatabaseManager
 	secretManager archer.SecretsManager
-	storeReader storeReader
+	storeReader   storeReader
 
 	ws archer.Workspace
 
@@ -58,7 +58,9 @@ func (o *DatabaseDeleteOpts) Ask() error {
 
 // Execute creates the cluster.
 func (o *DatabaseDeleteOpts) Execute() error {
+	project := o.GlobalOpts.ProjectName()
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", project, o.appName)
 
 	mft, err := o.readManifest()
 	if err != nil {
@@ -66,31 +68,32 @@ func (o *DatabaseDeleteOpts) Execute() error {
 	}
 	lbmft := mft.(*manifest.LBFargateManifest)
 
-	clusterID := fmt.Sprintf("%s-%s-%s", o.GlobalOpts.ProjectName(),
-		o.appName, lbmft.Variables["DB_NAME"])
-
-	finalSnapshotID := fmt.Sprintf("%s-%s", clusterID, time.Now().Format("2006-01-02-15-04"))
-
-	if err := o.dbManager.DeleteDatabase(clusterID, finalSnapshotID); err != nil {
+	envs, err := o.storeReader.ListEnvironments(project)
+	if err != nil {
 		return err
 	}
 
-	log.Successf("Deleted the database %s in %s under project %s. Final snapshot: %s.\n",
-		color.HighlightUserInput(lbmft.Variables["DB_NAME"]), color.HighlightResource(o.appName),
-		color.HighlightResource(o.GlobalOpts.ProjectName()), color.HighlightResource(finalSnapshotID))
+	for _, e := range envs {
+		clusterID := fmt.Sprintf("%s-%s-%s-%s", project, e.Name, o.appName, lbmft.Variables["DB_NAME"])
+		finalSnapshotID := fmt.Sprintf("%s-%s", clusterID, time.Now().Format("2006-01-02-15-04"))
 
-	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", o.GlobalOpts.ProjectName(),
-		o.appName)
+		if err := o.dbManager.DeleteDatabase(clusterID, finalSnapshotID); err != nil {
+			return err
+		}
+
+		delete(lbmft.Environments[e.Name].ContainersConfig.Variables, "DB_HOST")
+	}
+
+	log.Successf("Deleted the database %s in %s under project %s.\n",
+		color.HighlightUserInput(lbmft.Variables["DB_NAME"]), color.HighlightResource(o.appName),
+		color.HighlightResource(o.GlobalOpts.ProjectName()))
 
 	if err := o.secretManager.DeleteSecret(pwKey); err != nil {
 		return err
 	}
 
-	log.Successf("Deleted the secret for the database password in %s under project %s.\n",
-		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
+	log.Successf("Deleted the secret for the database password.\n")
 
-	// remove the db details from the manifest
-	delete(lbmft.Variables, "DB_HOST")
 	delete(lbmft.Variables, "DB_PORT")
 	delete(lbmft.Variables, "DB_NAME")
 	delete(lbmft.Variables, "DB_USERNAME")

@@ -13,55 +13,55 @@ import (
 // LBFargateManifest holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LBFargateManifest struct {
-	AppManifest     `yaml:",inline"`
-	Image           ImageWithPort `yaml:",flow"`
-	LBFargateConfig `yaml:",inline"`
-	Environments    map[string]LBFargateConfig `yaml:",flow"` // Fields to override per environment.
+	AppManifest     `yaml:",omitempty,inline"`
+	Image           ImageWithPort `yaml:",omitempty,flow"`
+	LBFargateConfig `yaml:",omitempty,inline"`
+	Environments    map[string]LBFargateConfig `yaml:",omitempty,flow"` // Fields to override per environment.
 }
 
 // ImageWithPort represents a container image with an exposed port.
 type ImageWithPort struct {
-	AppImage `yaml:",inline"`
-	Port     int `yaml:"port"`
+	AppImage `yaml:",omitempty,inline"`
+	Port     int `yaml:"port,omitempty"`
 }
 
 // LBFargateConfig represents a load balanced web application with AWS Fargate as compute.
 type LBFargateConfig struct {
-	RoutingRule      `yaml:"http,flow"`
-	ContainersConfig `yaml:",inline"`
-	Database         DatabaseConfig     `yaml:",flow"`
-	Scaling          *AutoScalingConfig `yaml:",flow"`
+	RoutingRule      `yaml:"http,omitempty,flow"`
+	ContainersConfig `yaml:",omitempty,inline"`
+	Database         DatabaseConfig     `yaml:",omitempty,flow"`
+	Scaling          *AutoScalingConfig `yaml:",omitempty,flow"`
 }
 
 // ContainersConfig represents the resource boundaries and environment variables for the containers in the service.
 type ContainersConfig struct {
-	CPU       int               `yaml:"cpu"`
-	Memory    int               `yaml:"memory"`
-	Count     int               `yaml:"count"`
-	Variables map[string]string `yaml:"variables"`
-	Secrets   map[string]string `yaml:"secrets"`
+	CPU       int               `yaml:"cpu,omitempty"`
+	Memory    int               `yaml:"memory,omitempty"`
+	Count     int               `yaml:"count,omitempty"`
+	Variables map[string]string `yaml:"variables,omitempty"`
+	Secrets   map[string]string `yaml:"secrets,omitempty"`
 }
 
 // DatabaseConfig represents the resource boundaries and environment variables for the database in the service.
 type DatabaseConfig struct {
-	Engine string `yaml:"engine"`
+	Engine string `yaml:"engine,omitempty"`
 
-	MinCapacity int `yaml:"minCapacity"`
-	MaxCapacity int `yaml:"maxCapacity"`
+	MinCapacity int `yaml:"minCapacity,omitempty"`
+	MaxCapacity int `yaml:"maxCapacity,omitempty"`
 }
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path string `yaml:"path"`
+	Path string `yaml:"path,omitempty,flow"`
 }
 
 // AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
 type AutoScalingConfig struct {
-	MinCount int `yaml:"minCount"`
-	MaxCount int `yaml:"maxCount"`
+	MinCount int `yaml:"minCount,omitempty"`
+	MaxCount int `yaml:"maxCount,omitempty"`
 
-	TargetCPU    float64 `yaml:"targetCPU"`
-	TargetMemory float64 `yaml:"targetMemory"`
+	TargetCPU    float64 `yaml:"targetCPU,omitempty"`
+	TargetMemory float64 `yaml:"targetMemory,omitempty"`
 }
 
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives

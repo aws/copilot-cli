@@ -22,9 +22,9 @@ type DatabaseCreateOpts struct {
 
 	manifestPath string
 
-	dbManager   archer.DatabaseManager
+	dbManager     archer.DatabaseManager
 	secretManager archer.SecretsManager
-	storeReader storeReader
+	storeReader   storeReader
 
 	ws archer.Workspace
 
@@ -72,36 +72,13 @@ func (o *DatabaseCreateOpts) Ask() error {
 
 // Execute creates the cluster.
 func (o *DatabaseCreateOpts) Execute() error {
-	clusterID := fmt.Sprintf("%s-%s-%s", o.GlobalOpts.ProjectName(),
-		o.appName, o.db.DatabaseName)
-
-	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", o.GlobalOpts.ProjectName(),
-		o.appName)
+	project := o.GlobalOpts.ProjectName()
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", project, o.appName)
 
 	o.db.BackupRetentionPeriod = 7
-	o.db.ClusterIdentifier = clusterID
-
 	o.db.MinCapacity = 2
 	o.db.MaxCapacity = 4
-
-	output, err := o.dbManager.CreateDatabase(o.db)
-	if err != nil {
-		return err
-	}
-
-	log.Successf("Created the database %s in %s under project %s.\n",
-		color.HighlightUserInput(o.db.DatabaseName), color.HighlightResource(o.appName),
-		color.HighlightResource(o.GlobalOpts.ProjectName()))
-
-	if _, err := o.secretManager.CreateSecret(pwKey, o.db.Password); err != nil {
-		return err
-	}
-
-	log.Successf("Created a secret with the database password in %s under project %s.\n",
-		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
-
-	// save the db details to the manifest
-	o.manifestPath = o.ws.AppManifestFileName(o.appName)
 
 	mft, err := o.readManifest()
 	if err != nil {
@@ -111,11 +88,53 @@ func (o *DatabaseCreateOpts) Execute() error {
 	if lbmft.Variables == nil {
 		lbmft.Variables = make(map[string]string)
 	}
+	if lbmft.Environments == nil {
+		lbmft.Environments = make(map[string]manifest.LBFargateConfig)
+	}
+
+	envs, err := o.storeReader.ListEnvironments(project)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range envs {
+		o.db.ClusterIdentifier = fmt.Sprintf("%s-%s-%s-%s", project, e.Name, o.appName, o.db.DatabaseName)
+
+		output, err := o.dbManager.CreateDatabase(o.db)
+		if err != nil {
+			return err
+		}
+
+		env := lbmft.Environments[e.Name]
+		if _, ok := lbmft.Environments[e.Name]; !ok {
+			env = manifest.LBFargateConfig{
+				ContainersConfig: manifest.ContainersConfig{
+					Variables: make(map[string]string),
+				},
+			}
+		}
+		if env.ContainersConfig.Variables == nil {
+			env.ContainersConfig.Variables = make(map[string]string)
+		}
+		env.ContainersConfig.Variables["DB_HOST"] = *output.Endpoint
+		lbmft.Environments[e.Name] = env
+
+		lbmft.Variables["DB_PORT"] = strconv.Itoa(int(*output.Port))
+	}
+
+	log.Successf("Created the database %s in %s under project %s.\n",
+		color.HighlightUserInput(o.db.DatabaseName), color.HighlightResource(o.appName),
+		color.HighlightResource(project))
+
+	if _, err := o.secretManager.CreateSecret(pwKey, o.db.Password); err != nil {
+		return err
+	}
+
+	log.Successf("Created a secret with the database password.\n")
+
 	if lbmft.Secrets == nil {
 		lbmft.Secrets = make(map[string]string)
 	}
-	lbmft.Variables["DB_HOST"] = *output.Endpoint
-	lbmft.Variables["DB_PORT"] = strconv.Itoa(int(*output.Port))
 	lbmft.Variables["DB_NAME"] = o.db.DatabaseName
 	lbmft.Variables["DB_USERNAME"] = o.db.Username
 	lbmft.Secrets["DB_PASSWORD"] = pwKey
