@@ -44,6 +44,8 @@ type ContainersConfig struct {
 
 // DatabaseConfig represents the resource boundaries and environment variables for the database in the service.
 type DatabaseConfig struct {
+	Engine string `yaml:"engine"`
+
 	MinCapacity int `yaml:"minCapacity"`
 	MaxCapacity int `yaml:"maxCapacity"`
 }

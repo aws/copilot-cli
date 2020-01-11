@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -22,6 +23,7 @@ type DatabaseCreateOpts struct {
 	manifestPath string
 
 	dbManager   archer.DatabaseManager
+	secretManager archer.SecretsManager
 	storeReader storeReader
 
 	ws archer.Workspace
@@ -59,6 +61,9 @@ func (o *DatabaseCreateOpts) Ask() error {
 	if err := o.askDatabaseName(); err != nil {
 		return err
 	}
+	if err := o.askEngine(); err != nil {
+		return err
+	}
 	if err := o.askUsername(); err != nil {
 		return err
 	}
@@ -70,9 +75,13 @@ func (o *DatabaseCreateOpts) Execute() error {
 	clusterID := fmt.Sprintf("%s-%s-%s", o.GlobalOpts.ProjectName(),
 		o.appName, o.db.DatabaseName)
 
+	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", o.GlobalOpts.ProjectName(),
+		o.appName)
+
 	o.db.BackupRetentionPeriod = 7
 	o.db.ClusterIdentifier = clusterID
-	o.db.MinCapacity = 1
+
+	o.db.MinCapacity = 2
 	o.db.MaxCapacity = 4
 
 	output, err := o.dbManager.CreateDatabase(o.db)
@@ -80,9 +89,16 @@ func (o *DatabaseCreateOpts) Execute() error {
 		return err
 	}
 
-	log.Successf("Created/updated the database &s in %s under project %s.\n",
+	log.Successf("Created the database %s in %s under project %s.\n",
 		color.HighlightUserInput(o.db.DatabaseName), color.HighlightResource(o.appName),
 		color.HighlightResource(o.GlobalOpts.ProjectName()))
+
+	if _, err := o.secretManager.CreateSecret(pwKey, o.db.Password); err != nil {
+		return err
+	}
+
+	log.Successf("Created a secret with the database password in %s under project %s.\n",
+		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
 
 	// save the db details to the manifest
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
@@ -95,11 +111,16 @@ func (o *DatabaseCreateOpts) Execute() error {
 	if lbmft.Variables == nil {
 		lbmft.Variables = make(map[string]string)
 	}
-	lbmft.Variables["DB_HOST"] = ""
-	lbmft.Variables["DB_PORT"] = string(*output.Port)
+	if lbmft.Secrets == nil {
+		lbmft.Secrets = make(map[string]string)
+	}
+	lbmft.Variables["DB_HOST"] = *output.Endpoint
+	lbmft.Variables["DB_PORT"] = strconv.Itoa(int(*output.Port))
 	lbmft.Variables["DB_NAME"] = o.db.DatabaseName
 	lbmft.Variables["DB_USERNAME"] = o.db.Username
-	lbmft.Variables["DB_PASSWORD"] = o.db.Password
+	lbmft.Secrets["DB_PASSWORD"] = pwKey
+
+	lbmft.Database.Engine = o.db.Engine
 	lbmft.Database.MinCapacity = int(o.db.MinCapacity)
 	lbmft.Database.MaxCapacity = int(o.db.MaxCapacity)
 
@@ -192,6 +213,25 @@ func (o *DatabaseCreateOpts) askDatabaseName() error {
 	return nil
 }
 
+func (o *DatabaseCreateOpts) askEngine() error {
+	if o.db.Engine != "" {
+		return nil
+	}
+
+	engines := []string{"mysql", "postgresql"}
+	engine, err := o.prompt.SelectOne(
+		fmt.Sprintf("Which engine:"),
+		"The type of engine for the database.",
+		engines,
+	)
+	if err != nil {
+		return fmt.Errorf("selecting engine: %w", err)
+	}
+
+	o.db.Engine = engine
+	return nil
+}
+
 func (o *DatabaseCreateOpts) askUsername() error {
 	if o.db.Username != "" {
 		return nil
@@ -255,6 +295,8 @@ func (o *DatabaseCreateOpts) retrieveApplications() ([]string, error) {
 // BuildDatabaseCreateCmd adds a serverless Aurora cluster.
 func BuildDatabaseCreateCmd() *cobra.Command {
 	opts := DatabaseCreateOpts{
+		db: &archer.Database{},
+
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
@@ -272,8 +314,9 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 				return fmt.Errorf("new workspace: %w", err)
 			}
 			opts.ws = ws
-			opts.storeReader = store
 			opts.dbManager = store
+			opts.secretManager = store
+			opts.storeReader = store
 
 			return nil
 		}),
@@ -290,8 +333,9 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&opts.db.DatabaseName, "db-name", "d", "", "Name of the database.")
+	cmd.Flags().StringVarP(&opts.db.Engine, "engine", "e", "", "Type of database; mysql or postgresql.")
 	cmd.Flags().StringVarP(&opts.db.Username, "username", "u", "", "Name of the master user.")
-	cmd.Flags().StringVarP(&opts.db.Password, "password", "p", "", "Password of the master user.")
+	cmd.Flags().StringVarP(&opts.db.Password, "password", "s", "", "Password of the master user.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 

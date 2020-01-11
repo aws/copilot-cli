@@ -7,11 +7,13 @@ import "github.com/aws/aws-sdk-go/service/rds"
 
 // Database represents a serverless Aurora cluster.
 type Database struct {
-	BackupRetentionPeriod int64 `json:"backupRetentionPeriod"`
-	DatabaseName string `json:"dbName"`
 	ClusterIdentifier string `json:"clusterID"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+	DatabaseName      string `json:"dbName"`
+	Username          string `json:"username"`
+	Password          string `json:"password"`
+
+	BackupRetentionPeriod int64  `json:"backupRetentionPeriod"`
+	Engine                string `json:"engine"`
 
 	MinCapacity int64 `json:"minCapacity"`
 	MaxCapacity int64 `json:"maxCapacity"`
@@ -30,5 +32,5 @@ type DatabaseCreator interface {
 
 // SecretDeleter deletes a database
 type DatabaseDeleter interface {
-	DeleteDatabase(clusterID string) error
+	DeleteDatabase(clusterID, finalSnapshotID string) error
 }

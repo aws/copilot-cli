@@ -7,11 +7,19 @@ import (
 )
 
 func (s *Store) CreateDatabase(db *archer.Database) (*rds.DBCluster, error) {
+	var engine string
+	switch db.Engine {
+	case "mysql":
+		engine = "aurora"
+	case "postgresql":
+		engine = "aurora-postgresql"
+	}
+
 	output, err := s.rdsClient.CreateDBCluster(&rds.CreateDBClusterInput{
 		BackupRetentionPeriod: aws.Int64(db.BackupRetentionPeriod),
 		DatabaseName:          aws.String(db.DatabaseName),
 		DBClusterIdentifier:   aws.String(db.ClusterIdentifier),
-		Engine:                aws.String("aurora-mysql"), // for MySQL 5.7
+		Engine:                aws.String(engine),
 		EngineMode:            aws.String("serverless"),
 		MasterUserPassword:    aws.String(db.Password),
 		MasterUsername:        aws.String(db.Username),
@@ -21,7 +29,6 @@ func (s *Store) CreateDatabase(db *archer.Database) (*rds.DBCluster, error) {
 			MinCapacity: aws.Int64(db.MinCapacity),
 		},
 		StorageEncrypted: aws.Bool(true),
-		//VpcSecurityGroupIds: nil, TODO figure what to do with this
 	})
 	if err != nil {
 		return nil, err
@@ -29,10 +36,10 @@ func (s *Store) CreateDatabase(db *archer.Database) (*rds.DBCluster, error) {
 	return output.DBCluster, nil
 }
 
-func (s *Store) DeleteDatabase(clusterID string) error {
+func (s *Store) DeleteDatabase(clusterID, finalSnapshotID string) error {
 	_, err := s.rdsClient.DeleteDBCluster(&rds.DeleteDBClusterInput{
 		DBClusterIdentifier:       aws.String(clusterID),
-		FinalDBSnapshotIdentifier: aws.String(clusterID),
+		FinalDBSnapshotIdentifier: aws.String(finalSnapshotID),
 		SkipFinalSnapshot:         aws.Bool(false),
 	})
 	return err
