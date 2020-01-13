@@ -15,18 +15,19 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
 const (
+	appDeleteNamePrompt    = "Which application would you like to delete?"
 	appDeleteConfirmPrompt = "Are you sure you want to delete %s from project %s?"
 	appDeleteConfirmHelp   = "This will undeploy the app from all environments, delete the local workspace file, and remove ECR repositories."
 )
 
 var (
 	errAppDeleteCancelled = errors.New("app delete cancelled - no changes made")
+	errAppNotFound        = errors.New("no applications found in current workspace")
 )
 
 type deleteAppOpts struct {
@@ -36,51 +37,39 @@ type deleteAppOpts struct {
 	AppName          string
 
 	// Interfaces to dependencies.
-	projectService   projectService
-	workspaceService archer.Workspace
-	sessProvider     sessionProvider
-	spinner          progress
-	prompter         prompter
+	projectService     projectService
+	initProjectService func(*deleteAppOpts) error // Overriden in test
+	workspaceService   archer.Workspace
+	sessProvider       sessionProvider
+	spinner            progress
 
 	// Internal state.
 	projectEnvironments []*archer.Environment
 }
 
-func (opts *deleteAppOpts) init() error {
-	projectService, err := store.New()
-	if err != nil {
-		return fmt.Errorf("create project service: %w", err)
-	}
-	opts.projectService = projectService
-
-	workspaceService, err := workspace.New()
-	if err != nil {
-		return fmt.Errorf("intialize workspace service: %w", err)
-	}
-	opts.workspaceService = workspaceService
-
-	return nil
-}
-
 // Validate returns an error if the user inputs are invalid.
-func (opts *deleteAppOpts) Validate() error {
-	if opts.ProjectName() == "" {
+func (o *deleteAppOpts) Validate() error {
+	if o.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
-	if err := opts.validateAppName(); err != nil {
+	if err := o.validateAppName(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Ask prompts the user for any required flags.
-func (opts deleteAppOpts) Ask() error {
-	if opts.SkipConfirmation {
+func (o *deleteAppOpts) Ask() error {
+	if err := o.askAppName(); err != nil {
+		return err
+	}
+
+	if o.SkipConfirmation {
 		return nil
 	}
 
-	deleteConfirmed, err := opts.prompter.Confirm(
-		fmt.Sprintf(appDeleteConfirmPrompt, opts.AppName, opts.projectName),
+	deleteConfirmed, err := o.prompt.Confirm(
+		fmt.Sprintf(appDeleteConfirmPrompt, o.AppName, o.projectName),
 		appDeleteConfirmHelp)
 
 	if err != nil {
@@ -95,57 +84,91 @@ func (opts deleteAppOpts) Ask() error {
 }
 
 // Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
-func (opts deleteAppOpts) Execute() error {
-	if err := opts.sourceProjectEnvironments(); err != nil {
+func (o *deleteAppOpts) Execute() error {
+	if err := o.initProjectService(o); err != nil {
 		return err
 	}
 
-	if err := opts.deleteStacks(); err != nil {
-		return err
-	}
-	if err := opts.emptyECRRepos(); err != nil {
-		return err
-	}
-	if err := opts.removeAppProjectResources(); err != nil {
-		return err
-	}
-	if err := opts.deleteSSMParam(); err != nil {
-		return err
-	}
-	if err := opts.deleteWorkspaceFile(); err != nil {
+	if err := o.sourceProjectEnvironments(); err != nil {
 		return err
 	}
 
-	log.Successf("removed app %s from project %s\n", opts.AppName, opts.projectName)
+	if err := o.deleteStacks(); err != nil {
+		return err
+	}
+	if err := o.emptyECRRepos(); err != nil {
+		return err
+	}
+	if err := o.removeAppProjectResources(); err != nil {
+		return err
+	}
+	if err := o.deleteSSMParam(); err != nil {
+		return err
+	}
+	if err := o.deleteWorkspaceFile(); err != nil {
+		return err
+	}
+
+	log.Successf("removed app %s from project %s\n", o.AppName, o.projectName)
 	return nil
 }
 
-func (opts *deleteAppOpts) validateAppName() error {
-	localApps, err := opts.workspaceService.Apps()
+func (o *deleteAppOpts) askAppName() error {
+	if o.AppName != "" {
+		return nil
+	}
 
+	names, err := o.retrieveLocalAppName()
 	if err != nil {
-		return fmt.Errorf("get app names: %w", err)
+		return err
+	}
+	name, err := o.prompt.SelectOne(appDeleteNamePrompt, "", names)
+	if err != nil {
+		return fmt.Errorf("select application to delete: %w", err)
+	}
+	o.AppName = name
+	return nil
+}
+
+func (o *deleteAppOpts) validateAppName() error {
+	if o.AppName == "" {
+		return nil
 	}
 
-	if len(localApps) == 0 {
-		return errors.New("no applications found")
+	appNames, err := o.retrieveLocalAppName()
+	if err != nil {
+		return err
 	}
-
 	exists := false
-	for _, app := range localApps {
-		if opts.AppName == app.AppName() {
+	for _, appName := range appNames {
+		if o.AppName == appName {
 			exists = true
 		}
 	}
 	if !exists {
-		return fmt.Errorf("input app %s not found", opts.AppName)
+		return fmt.Errorf("input app %s not found", o.AppName)
 	}
 
 	return nil
 }
 
-func (opts *deleteAppOpts) sourceProjectEnvironments() error {
-	envs, err := opts.projectService.ListEnvironments(opts.ProjectName())
+func (o *deleteAppOpts) retrieveLocalAppName() ([]string, error) {
+	localApps, err := o.workspaceService.Apps()
+	if err != nil {
+		return nil, fmt.Errorf("get app names: %w", err)
+	}
+	if len(localApps) == 0 {
+		return nil, errAppNotFound
+	}
+	var names []string
+	for _, app := range localApps {
+		names = append(names, app.AppName())
+	}
+	return names, nil
+}
+
+func (o *deleteAppOpts) sourceProjectEnvironments() error {
+	envs, err := o.projectService.ListEnvironments(o.ProjectName())
 
 	if err != nil {
 		return fmt.Errorf("get environments: %w", err)
@@ -153,54 +176,54 @@ func (opts *deleteAppOpts) sourceProjectEnvironments() error {
 
 	if len(envs) == 0 {
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
-			color.HighlightUserInput(opts.ProjectName()),
+			color.HighlightUserInput(o.ProjectName()),
 			color.HighlightCode("ecs-preview env init"))
 
 		return errors.New("no environments found")
 	}
 
-	opts.projectEnvironments = envs
+	o.projectEnvironments = envs
 
 	return nil
 }
 
-func (opts deleteAppOpts) deleteStacks() error {
-	for _, env := range opts.projectEnvironments {
-		sess, err := opts.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+func (o *deleteAppOpts) deleteStacks() error {
+	for _, env := range o.projectEnvironments {
+		sess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
 
 		cfClient := cloudformation.New(sess)
 
-		stackName := fmt.Sprintf("%s-%s-%s", opts.projectName, env.Name, opts.AppName)
+		stackName := fmt.Sprintf("%s-%s-%s", o.projectName, env.Name, o.AppName)
 
 		// TODO: check if the stack exists first
-		opts.spinner.Start(fmt.Sprintf("deleting app %s from env %s", opts.AppName, env.Name))
+		o.spinner.Start(fmt.Sprintf("deleting app %s from env %s", o.AppName, env.Name))
 		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
-			opts.spinner.Stop(log.Serrorf("deleting app %s from env %s", opts.AppName, env.Name))
+			o.spinner.Stop(log.Serrorf("deleting app %s from env %s", o.AppName, env.Name))
 
 			return err
 		}
-		opts.spinner.Stop(log.Ssuccessf("deleted app %s from env %s", opts.AppName, env.Name))
+		o.spinner.Stop(log.Ssuccessf("deleted app %s from env %s", o.AppName, env.Name))
 	}
 
 	return nil
 }
 
-func (opts deleteAppOpts) emptyECRRepos() error {
+func (o *deleteAppOpts) emptyECRRepos() error {
 	var uniqueRegions []string
-	for _, env := range opts.projectEnvironments {
+	for _, env := range o.projectEnvironments {
 		if !contains(env.Region, uniqueRegions) {
 			uniqueRegions = append(uniqueRegions, env.Region)
 		}
 	}
 
 	// TODO: centralized ECR repo name
-	repoName := fmt.Sprintf("%s/%s", opts.projectName, opts.AppName)
+	repoName := fmt.Sprintf("%s/%s", o.projectName, o.AppName)
 
 	for _, region := range uniqueRegions {
-		sess, err := opts.sessProvider.DefaultWithRegion(region)
+		sess, err := o.sessProvider.DefaultWithRegion(region)
 		if err != nil {
 			return err
 		}
@@ -216,13 +239,13 @@ func (opts deleteAppOpts) emptyECRRepos() error {
 	return nil
 }
 
-func (opts deleteAppOpts) removeAppProjectResources() error {
-	proj, err := opts.projectService.GetProject(opts.projectName)
+func (o *deleteAppOpts) removeAppProjectResources() error {
+	proj, err := o.projectService.GetProject(o.projectName)
 	if err != nil {
 		return err
 	}
 
-	sess, err := opts.sessProvider.Default()
+	sess, err := o.sessProvider.Default()
 	if err != nil {
 		return err
 	}
@@ -230,35 +253,35 @@ func (opts deleteAppOpts) removeAppProjectResources() error {
 	// TODO: make this opts.toolsAccountCfClient...
 	cfClient := cloudformation.New(sess)
 
-	opts.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", opts.AppName, opts.projectName))
-	if err := cfClient.RemoveAppFromProject(proj, opts.AppName); err != nil {
-		opts.spinner.Stop(log.Serrorf("removing app %s resources from project %s", opts.AppName, opts.projectName))
+	o.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", o.AppName, o.projectName))
+	if err := cfClient.RemoveAppFromProject(proj, o.AppName); err != nil {
+		o.spinner.Stop(log.Serrorf("removing app %s resources from project %s", o.AppName, o.projectName))
 
 		return err
 	}
-	opts.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", opts.AppName, opts.projectName))
+	o.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", o.AppName, o.projectName))
 
 	return nil
 }
 
-func (opts deleteAppOpts) deleteSSMParam() error {
-	if err := opts.projectService.DeleteApplication(opts.projectName, opts.AppName); err != nil {
-		return fmt.Errorf("remove app %s from project %s: %w", opts.AppName, opts.projectName, err)
+func (o *deleteAppOpts) deleteSSMParam() error {
+	if err := o.projectService.DeleteApplication(o.projectName, o.AppName); err != nil {
+		return fmt.Errorf("remove app %s from project %s: %w", o.AppName, o.projectName, err)
 	}
 
 	return nil
 }
 
-func (opts deleteAppOpts) deleteWorkspaceFile() error {
-	if err := opts.workspaceService.DeleteFile(opts.AppName); err != nil {
-		return fmt.Errorf("delete app file %s: %w", opts.AppName, err)
+func (o *deleteAppOpts) deleteWorkspaceFile() error {
+	if err := o.workspaceService.DeleteFile(o.AppName); err != nil {
+		return fmt.Errorf("delete app file %s: %w", o.AppName, err)
 	}
 
 	return nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (opts *deleteAppOpts) RecommendedActions() []string {
+func (o *deleteAppOpts) RecommendedActions() []string {
 	// TODO: Add recommendation to do `pipeline delete` when it is available
 	return []string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
@@ -271,29 +294,36 @@ func BuildAppDeleteCmd() *cobra.Command {
 	opts := &deleteAppOpts{
 		GlobalOpts:   NewGlobalOpts(),
 		spinner:      termprogress.NewSpinner(),
-		prompter:     prompt.New(),
 		sessProvider: session.NewProvider(),
+		initProjectService: func(o *deleteAppOpts) error {
+			projectService, err := store.New()
+			if err != nil {
+				return fmt.Errorf("create project service: %w", err)
+			}
+			o.projectService = projectService
+			return nil
+		},
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete [name]",
+		Use:   "delete",
 		Short: "Deletes an application from your project.",
 		Example: `
   Delete the "test" application.
-  /code $ ecs-preview app delete test
+  /code $ ecs-preview app delete --name test
 
   Delete the "test" application without prompting.
-  /code $ ecs-preview app delete test --yes`,
+	/code $ ecs-preview app delete --name test --yes`,
+		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			workspaceService, err := workspace.New()
+			if err != nil {
+				return fmt.Errorf("intialize workspace service: %w", err)
+			}
+			opts.workspaceService = workspaceService
+
+			return nil
+		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("requires a single application name as argument")
-			}
-			opts.AppName = args[0]
-
-			if err := opts.init(); err != nil {
-				return err
-			}
-
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -312,6 +342,7 @@ func BuildAppDeleteCmd() *cobra.Command {
 		}),
 	}
 
+	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd
