@@ -200,7 +200,7 @@ func BuildAppListCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&opts.projectName, projectFlag, projectFlagShort, opts.ProjectName(), projectFlagDescription)
+	cmd.Flags().StringVarP(&opts.projectName, projectFlag, projectFlagShort, "dw-run", projectFlagDescription)
 	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&opts.ShouldShowLocalApps, appLocalFlag, false, appLocalFlagDescription)
 	return cmd

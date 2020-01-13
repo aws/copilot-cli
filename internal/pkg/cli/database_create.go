@@ -355,7 +355,7 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.db.Engine, "engine", "e", "", "Type of database; mysql or postgresql.")
 	cmd.Flags().StringVarP(&opts.db.Username, "username", "u", "", "Name of the master user.")
 	cmd.Flags().StringVarP(&opts.db.Password, "password", "s", "", "Password of the master user.")
-	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 
 	return cmd

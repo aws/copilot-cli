@@ -233,7 +233,7 @@ func BuildDatabaseDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 
 	return cmd

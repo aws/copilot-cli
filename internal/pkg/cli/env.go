@@ -20,7 +20,7 @@ func BuildEnvCmd() *cobra.Command {
 An environment represents a deployment stage.`,
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	cmd.PersistentFlags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.PersistentFlags().Lookup(projectFlag))
 
 	cmd.AddCommand(BuildEnvInitCmd())

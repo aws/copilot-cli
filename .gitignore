@@ -1,4 +1,5 @@
 bin/
+local/
 coverage.out
 .idea/*
 .vscode/*

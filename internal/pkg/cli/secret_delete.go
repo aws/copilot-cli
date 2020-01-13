@@ -238,7 +238,7 @@ func BuildSecretDeleteCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
-	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 
 	return cmd

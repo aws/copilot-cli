@@ -250,7 +250,7 @@ func BuildInitCmd() *cobra.Command {
 			}
 		},
 	}
-	cmd.Flags().StringVarP(opts.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(opts.projectName, projectFlag, projectFlagShort, "dw-run", projectFlagDescription)
 	cmd.Flags().StringVarP(opts.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(opts.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(opts.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
