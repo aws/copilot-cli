@@ -537,6 +537,7 @@ Resources:
       Region: !Ref AWS::Region
       SubjectAlternativeNames:
       - !Sub "*.${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
+      - !Sub "*.${ProjectDNSName}" # needed for {app-name}.dw.run domain names
 Outputs:
   VpcId:
     Value: !Ref VPC

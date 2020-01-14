@@ -188,9 +188,9 @@ func (opts *InitOpts) loadApp() error {
 func (opts *InitOpts) deployEnv() error {
 	if opts.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
-		if err := opts.askShouldDeploy(); err != nil {
-			return err
-		}
+		//if err := opts.askShouldDeploy(); err != nil {
+		//	return err
+		//}
 	}
 	if !opts.ShouldDeploy {
 		// User chose not to deploy the application, exit.
@@ -240,14 +240,14 @@ func BuildInitCmd() *cobra.Command {
 			return opts.Run()
 		}),
 		PostRun: func(cmd *cobra.Command, args []string) {
-			if !opts.ShouldDeploy {
-				log.Info("\nNo problem, you can deploy your application later:\n")
-				log.Infof("- Run %s to create your staging environment.\n",
-					color.HighlightCode(fmt.Sprintf("ecs-preview env init --name %s --profile default --project %s", defaultEnvironmentName, *opts.projectName)))
-				for _, followup := range opts.initApp.RecommendedActions() {
-					log.Infof("- %s\n", followup)
-				}
-			}
+			//if !opts.ShouldDeploy {
+			//	log.Info("\nNo problem, you can deploy your application later:\n")
+			//	log.Infof("- Run %s to create your staging environment.\n",
+			//		color.HighlightCode(fmt.Sprintf("ecs-preview env init --name %s --profile default --project %s", defaultEnvironmentName, *opts.projectName)))
+			//	for _, followup := range opts.initApp.RecommendedActions() {
+			//		log.Infof("- %s\n", followup)
+			//	}
+			//}
 		},
 	}
 	cmd.Flags().StringVarP(opts.projectName, projectFlag, projectFlagShort, "dw-run", projectFlagDescription)

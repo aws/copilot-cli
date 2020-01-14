@@ -272,7 +272,7 @@ func BuildEnvDeleteCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "dev-admin", profileFlagDescription)
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }
