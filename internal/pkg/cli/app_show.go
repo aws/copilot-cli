@@ -9,10 +9,12 @@ import (
 	"io"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,6 +35,7 @@ type showAppOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
+	ws            archer.Workspace
 	initDescriber func(*showAppOpts) error // Overriden in tests.
 
 	*GlobalOpts
@@ -206,15 +209,25 @@ func (o *showAppOpts) askProject() error {
 }
 
 func (o *showAppOpts) askAppName() error {
+	// return if app name is set by flag
 	if o.appName != "" {
 		return nil
 	}
-	appNames, err := o.retrieveApplications()
+
+	appNames, err := o.retrieveLocalApplication()
 	if err != nil {
-		return err
+		appNames, err = o.retrieveAllApplications()
+		if err != nil {
+			return err
+		}
 	}
+
 	if len(appNames) == 0 {
 		log.Infof("No applications found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
+		return nil
+	}
+	if len(appNames) == 1 {
+		o.appName = appNames[0]
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(
@@ -242,7 +255,22 @@ func (o *showAppOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (o *showAppOpts) retrieveApplications() ([]string, error) {
+func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
+	localApps, err := o.ws.Apps()
+	if err != nil {
+		return nil, err
+	}
+	if len(localApps) == 0 {
+		return nil, errors.New("no application found")
+	}
+	localAppNames := make([]string, 0, len(localApps))
+	for _, app := range localApps {
+		localAppNames = append(localAppNames, app.AppName())
+	}
+	return localAppNames, nil
+}
+
+func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
 	apps, err := o.storeSvc.ListApplications(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
@@ -283,6 +311,11 @@ func BuildAppShowCmd() *cobra.Command {
 				return fmt.Errorf("connect to environment datastore: %w", err)
 			}
 			opts.storeSvc = ssmStore
+			ws, err := workspace.New()
+			if err != nil {
+				return err
+			}
+			opts.ws = ws
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
