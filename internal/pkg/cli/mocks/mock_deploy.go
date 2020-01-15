@@ -266,6 +266,20 @@ func (mr *MockprojectDeployerMockRecorder) DelegateDNSPermissions(project, accou
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelegateDNSPermissions", reflect.TypeOf((*MockprojectDeployer)(nil).DelegateDNSPermissions), project, accountID)
 }
 
+// DeleteProject mocks base method
+func (m *MockprojectDeployer) DeleteProject(name string, accounts, regions []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProject", name, accounts, regions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProject indicates an expected call of DeleteProject
+func (mr *MockprojectDeployerMockRecorder) DeleteProject(name, accounts, regions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockprojectDeployer)(nil).DeleteProject), name, accounts, regions)
+}
+
 // MockprojectResourcesGetter is a mock of projectResourcesGetter interface
 type MockprojectResourcesGetter struct {
 	ctrl     *gomock.Controller
@@ -439,6 +453,20 @@ func (m *Mockdeployer) DelegateDNSPermissions(project *archer.Project, accountID
 func (mr *MockdeployerMockRecorder) DelegateDNSPermissions(project, accountID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DelegateDNSPermissions", reflect.TypeOf((*Mockdeployer)(nil).DelegateDNSPermissions), project, accountID)
+}
+
+// DeleteProject mocks base method
+func (m *Mockdeployer) DeleteProject(name string, accounts, regions []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProject", name, accounts, regions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProject indicates an expected call of DeleteProject
+func (mr *MockdeployerMockRecorder) DeleteProject(name, accounts, regions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*Mockdeployer)(nil).DeleteProject), name, accounts, regions)
 }
 
 // CreatePipeline mocks base method

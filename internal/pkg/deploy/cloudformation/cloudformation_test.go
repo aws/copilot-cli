@@ -41,8 +41,10 @@ type mockCloudFormation struct {
 	mockCreateStackSet                              func(t *testing.T, in *cloudformation.CreateStackSetInput) (*cloudformation.CreateStackSetOutput, error)
 	mockDescribeStackSet                            func(t *testing.T, in *cloudformation.DescribeStackSetInput) (*cloudformation.DescribeStackSetOutput, error)
 	mockUpdateStackSet                              func(t *testing.T, in *cloudformation.UpdateStackSetInput) (*cloudformation.UpdateStackSetOutput, error)
+	mockDeleteStackSet                              func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error)
 	mockListStackInstances                          func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
 	mockCreateStackInstances                        func(t *testing.T, in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error)
+	mockDeleteStackInstances                        func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error)
 	mockDescribeStackSetOperation                   func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
 	mockDescribeStackEvents                         func(t *testing.T, in *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error)
 	mockCreateStack                                 func(t *testing.T, in *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error)
@@ -89,12 +91,20 @@ func (cf mockCloudFormation) UpdateStackSet(in *cloudformation.UpdateStackSetInp
 	return cf.mockUpdateStackSet(cf.t, in)
 }
 
+func (cf mockCloudFormation) DeleteStackSet(in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
+	return cf.mockDeleteStackSet(cf.t, in)
+}
+
 func (cf mockCloudFormation) ListStackInstances(in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
 	return cf.mockListStackInstances(cf.t, in)
 }
 
 func (cf mockCloudFormation) CreateStackInstances(in *cloudformation.CreateStackInstancesInput) (*cloudformation.CreateStackInstancesOutput, error) {
 	return cf.mockCreateStackInstances(cf.t, in)
+}
+
+func (cf mockCloudFormation) DeleteStackInstances(in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
+	return cf.mockDeleteStackInstances(cf.t, in)
 }
 
 func (cf mockCloudFormation) DescribeStackSetOperation(in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {

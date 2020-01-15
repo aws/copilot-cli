@@ -77,6 +77,20 @@ func (mr *MockProjectStoreMockRecorder) CreateProject(project interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProject", reflect.TypeOf((*MockProjectStore)(nil).CreateProject), project)
 }
 
+// DeleteProject mocks base method
+func (m *MockProjectStore) DeleteProject(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProject", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProject indicates an expected call of DeleteProject
+func (mr *MockProjectStoreMockRecorder) DeleteProject(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockProjectStore)(nil).DeleteProject), name)
+}
+
 // MockProjectLister is a mock of ProjectLister interface
 type MockProjectLister struct {
 	ctrl     *gomock.Controller
@@ -188,6 +202,43 @@ func (m *MockProjectGetter) GetProject(projectName string) (*archer.Project, err
 func (mr *MockProjectGetterMockRecorder) GetProject(projectName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockProjectGetter)(nil).GetProject), projectName)
+}
+
+// MockProjectDeleter is a mock of ProjectDeleter interface
+type MockProjectDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockProjectDeleterMockRecorder
+}
+
+// MockProjectDeleterMockRecorder is the mock recorder for MockProjectDeleter
+type MockProjectDeleterMockRecorder struct {
+	mock *MockProjectDeleter
+}
+
+// NewMockProjectDeleter creates a new mock instance
+func NewMockProjectDeleter(ctrl *gomock.Controller) *MockProjectDeleter {
+	mock := &MockProjectDeleter{ctrl: ctrl}
+	mock.recorder = &MockProjectDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockProjectDeleter) EXPECT() *MockProjectDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteProject mocks base method
+func (m *MockProjectDeleter) DeleteProject(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProject", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProject indicates an expected call of DeleteProject
+func (mr *MockProjectDeleterMockRecorder) DeleteProject(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockProjectDeleter)(nil).DeleteProject), name)
 }
 
 // MockProjectResourceStore is a mock of ProjectResourceStore interface

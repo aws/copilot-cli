@@ -29,6 +29,7 @@ type ProjectStore interface {
 	ProjectLister
 	ProjectGetter
 	ProjectCreator
+	ProjectDeleter
 }
 
 // ProjectLister lists all the projects in the underlying project manager.
@@ -44,6 +45,11 @@ type ProjectCreator interface {
 // ProjectGetter fetches an individual project from the underlying project manager.
 type ProjectGetter interface {
 	GetProject(projectName string) (*Project, error)
+}
+
+// ProjectDeleter deletes project resources.
+type ProjectDeleter interface {
+	DeleteProject(name string) error
 }
 
 // ProjectResourceStore fetches resources related to the project.
