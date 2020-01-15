@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package cli contains the ecs-preview subcommands.
@@ -165,6 +165,7 @@ type sessionProvider interface {
 type webAppDescriber interface {
 	URI(envName string) (*describe.WebAppURI, error)
 	ECSParams(envName string) (*describe.WebAppECSParams, error)
+	EnvVars(env *archer.Environment) ([]*describe.WebAppEnvVars, error)
 	StackResources(envName string) ([]*describe.CfnResource, error)
 }
 

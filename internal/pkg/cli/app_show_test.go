@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -458,6 +458,20 @@ func TestAppShow_Execute(t *testing.T) {
 					},
 					TaskCount: "3",
 				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "test",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "test",
+					},
+				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "prod",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
+				}, nil)
 				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
 					{
 						Type:       "AWS::EC2::SecurityGroup",
@@ -472,7 +486,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
 			inputApp:              "my-app",
@@ -518,6 +532,20 @@ func TestAppShow_Execute(t *testing.T) {
 					},
 					TaskCount: "3",
 				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "test",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "test",
+					},
+				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "prod",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
+				}, nil)
 				m.EXPECT().StackResources("test").Return([]*describe.CfnResource{
 					{
 						Type:       "AWS::EC2::SecurityGroup",
@@ -549,6 +577,12 @@ Routes
   Environment       URL                                      Path
   test              my-pr-Publi.us-west-2.elb.amazonaws.com  /frontend
   prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+
+Variables
+
+  Name                      Environment         Value
+  ECS_CLI_ENVIRONMENT_NAME  prod                prod
+  -                         test                test
 
 Resources
 
@@ -641,6 +675,42 @@ Resources
 
 			wantedError: fmt.Errorf("retrieve application deployment configuration: some error"),
 		},
+		"returns error if fail to retrieve environment variables": {
+			inputApp:         "my-app",
+			shouldOutputJSON: false,
+
+			mockStoreReader: func(m *climocks.MockstoreReader) {
+				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+					Name: "my-app",
+				}, nil)
+				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					{
+						Name: "test",
+					},
+					{
+						Name: "prod",
+					},
+				}, nil)
+			},
+
+			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
+				m.EXPECT().URI("test").Return(&describe.WebAppURI{
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+					Path:    "/frontend",
+				}, nil)
+				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+					ContainerPort: "80",
+					TaskSize: describe.TaskSize{
+						CPU:    "256",
+						Memory: "512",
+					},
+					TaskCount: "1",
+				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("retrieve environment variables: some error"),
+		},
 		"returns error if fail to retrieve application resources": {
 			inputApp:              "my-app",
 			shouldOutputJSON:      false,
@@ -676,6 +746,20 @@ Resources
 						Memory: "512",
 					},
 					TaskCount: "1",
+				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "test",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "test",
+					},
+				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "prod",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
 				}, nil)
 				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
 					ContainerPort: "5000",
@@ -724,6 +808,14 @@ Resources
 					},
 					TaskCount: "3",
 				}, nil)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Times(0)
+				m.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+					&describe.WebAppEnvVars{
+						Environment: "prod",
+						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
+				}, nil)
 				m.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
 				m.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
 					{
@@ -748,6 +840,11 @@ Routes
 
   Environment       URL                                      Path
   prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+
+Variables
+
+  Name                      Environment         Value
+  ECS_CLI_ENVIRONMENT_NAME  prod                prod
 
 Resources
 

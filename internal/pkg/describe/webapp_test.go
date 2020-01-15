@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -9,10 +9,12 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	ECSAPI "github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -348,6 +350,110 @@ func TestWebAppDescriber_ECSParams(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedECSParams, actual)
+			}
+		})
+	}
+}
+
+func TestWebAppDescriber_EnvVars(t *testing.T) {
+	const (
+		testProject = "phonetool"
+		testApp     = "jobs"
+	)
+	testEnv := &archer.Environment{
+		Name:           "test",
+		ManagerRoleARN: "arn:aws:iam::1111:role/manager",
+		Region:         "us-west-2",
+	}
+	testCases := map[string]struct {
+		project     string
+		app         string
+		environment *archer.Environment
+
+		mockECSClient func(ctrl *gomock.Controller) map[string]ecsService
+
+		wantedEnvVars []*WebAppEnvVars
+		wantedError   error
+	}{
+		"get environment variables": {
+			project:     testProject,
+			app:         testApp,
+			environment: testEnv,
+			mockECSClient: func(ctrl *gomock.Controller) map[string]ecsService {
+				m := mocks.NewMockecsService(ctrl)
+				ecsClient := make(map[string]ecsService)
+				m.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+					ContainerDefinitions: []*ECSAPI.ContainerDefinition{
+						&ECSAPI.ContainerDefinition{
+							Environment: []*ECSAPI.KeyValuePair{
+								&ECSAPI.KeyValuePair{
+									Name:  aws.String("ECS_CLI_APP_NAME"),
+									Value: aws.String("my-app"),
+								},
+								&ECSAPI.KeyValuePair{
+									Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+									Value: aws.String("prod"),
+								},
+							},
+						},
+					},
+				}, nil)
+				ecsClient[testEnv.ManagerRoleARN] = m
+				return ecsClient
+			},
+
+			wantedEnvVars: []*WebAppEnvVars{
+				&WebAppEnvVars{
+					Environment: "test",
+					Name:        "ECS_CLI_APP_NAME",
+					Value:       "my-app",
+				},
+				&WebAppEnvVars{
+					Environment: "test",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "prod",
+				},
+			},
+		},
+		"returns error if fails to get environment variables": {
+			project:     testProject,
+			app:         testApp,
+			environment: testEnv,
+			mockECSClient: func(ctrl *gomock.Controller) map[string]ecsService {
+				m := mocks.NewMockecsService(ctrl)
+				ecsClient := make(map[string]ecsService)
+				m.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error"))
+				ecsClient[testEnv.ManagerRoleARN] = m
+				return ecsClient
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			d := &WebAppDescriber{
+				app: &archer.Application{
+					Project: tc.project,
+					Name:    tc.app,
+				},
+				ecsClient: tc.mockECSClient(ctrl),
+			}
+
+			// WHEN
+			actual, err := d.EnvVars(tc.environment)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.EqualValues(t, tc.wantedEnvVars, actual)
 			}
 		})
 	}
