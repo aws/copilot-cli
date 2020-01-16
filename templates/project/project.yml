@@ -167,3 +167,9 @@ Outputs:
   AdministrationRoleARN:
     Description: AdministrationRole used by this project to manage this project's StackSet
     Value: !GetAtt AdministrationRole.Arn
+  # d.w specific - needed to allow {app-name}.dw.run paths
+  ProjectDomain:
+    Description: The domain name of this project.
+    Value: !Ref ProjectDomainName
+    Export:
+      Name: !Sub ${ProjectName}-ProjectDomain

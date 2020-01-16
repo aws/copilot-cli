@@ -360,6 +360,12 @@ Resources:
                 - - !Ref AppName
                   - Fn::ImportValue:
                       !Sub "${ProjectName}-${EnvName}-SubDomain"
+              # d.w specific - needed to allow {app-name}.dw.run paths
+              - Fn::Join:
+                - '.'
+                - - !Ref AppName
+                  - Fn::ImportValue:
+                      !Sub "${ProjectName}-ProjectDomain"
       ListenerArn:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
