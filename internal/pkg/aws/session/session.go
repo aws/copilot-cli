@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package session provides functions that return AWS sessions to use in the AWS SDK.
@@ -16,7 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-const userAgentHeader = "User-Agent"
+const (
+	userAgentHeader   = "User-Agent"
+	awsCredentialsDir = ".aws"
+	awsConfigFileName = "config"
+)
 
 // userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.
 func userAgentHandler() request.NamedHandler {

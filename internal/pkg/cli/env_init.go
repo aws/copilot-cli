@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -42,6 +42,10 @@ const (
 	fmtAddEnvToProjectComplete = "Linked account %s and region %s project %s."
 )
 
+var (
+	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
+)
+
 type initEnvOpts struct {
 	// Flags set by the user.
 	EnvName      string // Name of the environment.
@@ -55,6 +59,7 @@ type initEnvOpts struct {
 	projDeployer  deployer
 	identity      identityService
 	envIdentity   identityService
+	profileConfig profileNames
 	prog          progress
 
 	*GlobalOpts
@@ -75,25 +80,10 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
-	if o.EnvName == "" {
-		envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
-		if err != nil {
-			return fmt.Errorf("prompt to get environment name: %w", err)
-		}
-		o.EnvName = envName
+	if err := o.askEnvName(); err != nil {
+		return err
 	}
-	if o.EnvProfile == "" {
-		profile, err := o.prompt.Get(
-			fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(o.EnvName)),
-			envInitProfileHelpPrompt,
-			nil, // no validation needed
-			prompt.WithDefaultInput("default"))
-		if err != nil {
-			return fmt.Errorf("prompt to get the profile name: %w", err)
-		}
-		o.EnvProfile = profile
-	}
-	return nil
+	return o.askEnvProfile()
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
@@ -189,6 +179,40 @@ func (o *initEnvOpts) delegateDNSFromProject(project *archer.Project) error {
 	return nil
 }
 
+func (o *initEnvOpts) askEnvName() error {
+	if o.EnvName != "" {
+		return nil
+	}
+
+	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
+	if err != nil {
+		return fmt.Errorf("prompt to get environment name: %w", err)
+	}
+	o.EnvName = envName
+	return nil
+}
+
+func (o *initEnvOpts) askEnvProfile() error {
+	if o.EnvProfile != "" {
+		return nil
+	}
+
+	names := o.profileConfig.Names()
+	if len(names) == 0 {
+		return errNamedProfilesNotFound
+	}
+
+	profile, err := o.prompt.SelectOne(
+		fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(o.EnvName)),
+		envInitProfileHelpPrompt,
+		names)
+	if err != nil {
+		return fmt.Errorf("prompt to get the profile name: %w", err)
+	}
+	o.EnvProfile = profile
+	return nil
+}
+
 func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.ResourceEvent) []termprogress.TabRow {
 	matcher := map[termprogress.Text]termprogress.ResourceMatcher{
 		textVPC: func(event deploy.Resource) bool {
@@ -265,12 +289,17 @@ func BuildEnvInitCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			cfg, err := profile.NewConfig()
+			if err != nil {
+				return fmt.Errorf("read named profiles: %w", err)
+			}
 			opts.envCreator = store
 			opts.projectGetter = store
 			opts.envDeployer = cloudformation.New(profileSess)
 			opts.projDeployer = cloudformation.New(defaultSession)
 			opts.identity = identity.New(defaultSession)
 			opts.envIdentity = identity.New(profileSess)
+			opts.profileConfig = cfg
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {

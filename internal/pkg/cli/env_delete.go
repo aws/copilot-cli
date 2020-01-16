@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -15,7 +16,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/spf13/cobra"
@@ -47,10 +47,11 @@ type deleteEnvOpts struct {
 	SkipConfirmation bool
 
 	// Interfaces for dependencies.
-	storeClient  archer.EnvironmentStore
-	rgClient     resourceGetter
-	deployClient environmentDeployer
-	prog         progress
+	storeClient   archer.EnvironmentStore
+	rgClient      resourceGetter
+	deployClient  environmentDeployer
+	profileConfig profileNames
+	prog          progress
 
 	// initProfileClients is overriden in tests.
 	initProfileClients func(*deleteEnvOpts) error
@@ -194,16 +195,19 @@ func (o *deleteEnvOpts) askEnvName() error {
 }
 
 func (o *deleteEnvOpts) askProfile() error {
-	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/585
 	if o.EnvProfile != "" {
 		return nil
 	}
 
-	profile, err := o.prompt.Get(
+	names := o.profileConfig.Names()
+	if len(names) == 0 {
+		return errNamedProfilesNotFound
+	}
+
+	profile, err := o.prompt.SelectOne(
 		fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(o.EnvName)),
 		envDeleteProfileHelpPrompt,
-		nil, // no validation needed
-		prompt.WithDefaultInput("default"))
+		names)
 	if err != nil {
 		return fmt.Errorf("prompt to get the profile name: %w", err)
 	}
@@ -257,7 +261,14 @@ func BuildEnvDeleteCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 			}
+
+			cfg, err := profile.NewConfig()
+			if err != nil {
+				return err
+			}
+
 			opts.storeClient = store
+			opts.profileConfig = cfg
 			return nil
 		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {

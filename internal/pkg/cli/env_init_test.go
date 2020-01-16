@@ -68,10 +68,6 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 }
 
 func TestInitEnvOpts_Ask(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockPrompter := climocks.NewMockprompter(ctrl)
 
 	mockEnv := "test"
 	mockProfile := "default"
@@ -81,50 +77,70 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		inputProfile string
 		inputProject string
 
-		setupMocks func()
+		setupMocks func(*climocks.Mockprompter, *climocks.MockprofileNames)
+
+		wantedError error
 	}{
 		"with no flags set": {
-			setupMocks: func() {
-				gomock.InOrder(
-					mockPrompter.EXPECT().
-						Get(
-							gomock.Eq(envInitNamePrompt),
-							gomock.Eq(envInitNameHelpPrompt),
-							gomock.Any()).
-						Return(mockEnv, nil).
-						Times(1),
-					mockPrompter.EXPECT().
-						Get(
-							gomock.Eq(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv)),
-							gomock.Eq(envInitProfileHelpPrompt),
-							gomock.Any(),
-							gomock.Any()).
-						Return(mockProfile, nil).
-						Times(1),
-				)
+			setupMocks: func(mockPrompter *climocks.Mockprompter, mockCfg *climocks.MockprofileNames) {
+				mockPrompter.EXPECT().
+					Get(
+						gomock.Eq(envInitNamePrompt),
+						gomock.Eq(envInitNameHelpPrompt),
+						gomock.Any()).
+					Return(mockEnv, nil)
+				mockCfg.EXPECT().Names().Return([]string{mockProfile})
+				mockPrompter.EXPECT().
+					SelectOne(
+						gomock.Eq(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv)),
+						gomock.Eq(envInitProfileHelpPrompt),
+						gomock.Any()).
+					Return(mockProfile, nil)
 			},
+		},
+		"with no existing named profiles": {
+			setupMocks: func(mockPrompter *climocks.Mockprompter, mockCfg *climocks.MockprofileNames) {
+				mockPrompter.EXPECT().
+					Get(
+						gomock.Eq(envInitNamePrompt),
+						gomock.Eq(envInitNameHelpPrompt),
+						gomock.Any()).
+					Return(mockEnv, nil)
+				mockCfg.EXPECT().Names().Return([]string{})
+			},
+			wantedError: errNamedProfilesNotFound,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockCfg := climocks.NewMockprofileNames(ctrl)
 			// GIVEN
 			addEnv := &initEnvOpts{
-				EnvName:    tc.inputEnv,
-				EnvProfile: tc.inputProfile,
+				EnvName:       tc.inputEnv,
+				EnvProfile:    tc.inputProfile,
+				profileConfig: mockCfg,
 				GlobalOpts: &GlobalOpts{
 					prompt:      mockPrompter,
 					projectName: tc.inputProject,
 				},
 			}
-			tc.setupMocks()
+			tc.setupMocks(mockPrompter, mockCfg)
 
 			// WHEN
 			err := addEnv.Ask()
 
 			// THEN
-			require.NoError(t, err)
-			require.Equal(t, mockEnv, addEnv.EnvName, "expected environment names to match")
+			if tc.wantedError == nil {
+				require.NoError(t, err)
+				require.Equal(t, mockEnv, addEnv.EnvName, "expected environment names to match")
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
 		})
 	}
 }
