@@ -98,7 +98,7 @@ func (o *DatabaseDeleteOpts) Execute() error {
 	delete(lbmft.Variables, "DB_NAME")
 	delete(lbmft.Variables, "DB_USERNAME")
 	delete(lbmft.Secrets, "DB_PASSWORD")
-	lbmft.Database = manifest.DatabaseConfig{}
+	lbmft.Database = &manifest.DatabaseConfig{}
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err

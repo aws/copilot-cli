@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	route53API "github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
@@ -51,6 +52,7 @@ type identityService interface {
 type Store struct {
 	idClient      identityService
 	route53Svc    route53.Lister
+	route53Full   route53iface.Route53API
 	rdsClient     rdsiface.RDSAPI
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
@@ -71,6 +73,7 @@ func New() (*Store, error) {
 		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
 		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
 		route53Svc:    route53API.New(sess, aws.NewConfig().WithRegion("us-east-1")),
+		route53Full:   route53API.New(sess, aws.NewConfig().WithRegion("us-east-1")),
 		rdsClient:     rds.New(sess),
 		ssmClient:     ssm.New(sess),
 		sessionRegion: *sess.Config.Region,

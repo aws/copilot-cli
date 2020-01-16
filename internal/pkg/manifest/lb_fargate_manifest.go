@@ -13,24 +13,24 @@ import (
 // LBFargateManifest holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LBFargateManifest struct {
-	AppManifest     `yaml:",omitempty,inline"`
-	Image           ImageWithPort `yaml:",omitempty,flow"`
-	LBFargateConfig `yaml:",omitempty,inline"`
-	Environments    map[string]LBFargateConfig `yaml:",omitempty,flow"` // Fields to override per environment.
+	AppManifest     `yaml:",inline,omitempty"`
+	Image           ImageWithPort `yaml:",omitempty"`
+	LBFargateConfig `yaml:",inline,omitempty"`
+	Environments    map[string]LBFargateConfig `yaml:",flow,omitempty"` // Fields to override per environment.
 }
 
 // ImageWithPort represents a container image with an exposed port.
 type ImageWithPort struct {
-	AppImage `yaml:",omitempty,inline"`
+	AppImage `yaml:",inline,omitempty"`
 	Port     int `yaml:"port,omitempty"`
 }
 
 // LBFargateConfig represents a load balanced web application with AWS Fargate as compute.
 type LBFargateConfig struct {
-	RoutingRule      `yaml:"http,omitempty,flow"`
-	ContainersConfig `yaml:",omitempty,inline"`
-	Database         DatabaseConfig     `yaml:",omitempty,flow"`
-	Scaling          *AutoScalingConfig `yaml:",omitempty,flow"`
+	RoutingRule      `yaml:"http,omitempty"`
+	ContainersConfig `yaml:",inline,omitempty"`
+	Database         *DatabaseConfig    `yaml:",omitempty"`
+	Scaling          *AutoScalingConfig `yaml:",omitempty"`
 }
 
 // ContainersConfig represents the resource boundaries and environment variables for the containers in the service.
@@ -42,7 +42,7 @@ type ContainersConfig struct {
 	Secrets   map[string]string `yaml:"secrets,omitempty"`
 }
 
-// DatabaseConfig represents the resource boundaries and environment variables for the database in the service.
+// DatabaseConfig represents the resource boundaries for the database in the service.
 type DatabaseConfig struct {
 	Engine string `yaml:"engine,omitempty"`
 
@@ -52,7 +52,7 @@ type DatabaseConfig struct {
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path string `yaml:"path,omitempty,flow"`
+	Path string `yaml:"path,omitempty"`
 }
 
 // AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
@@ -139,6 +139,14 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 			TargetMemory: m.Scaling.TargetMemory,
 		}
 	}
+	var database *DatabaseConfig
+	if m.Database != nil {
+		database = &DatabaseConfig{
+			Engine:      m.Database.Engine,
+			MinCapacity: m.Database.MinCapacity,
+			MaxCapacity: m.Database.MaxCapacity,
+		}
+	}
 	conf := LBFargateConfig{
 		RoutingRule: RoutingRule{
 			Path: m.Path,
@@ -150,7 +158,8 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 			Variables: envVars,
 			Secrets:   secrets,
 		},
-		Scaling: scaling,
+		Database: database,
+		Scaling:  scaling,
 	}
 
 	// Override with fields set in the environment.
@@ -188,6 +197,20 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 		}
 		if target.Scaling.TargetMemory != 0 {
 			conf.Scaling.TargetMemory = target.Scaling.TargetMemory
+		}
+	}
+	if target.Database != nil {
+		if conf.Database == nil {
+			conf.Database = &DatabaseConfig{}
+		}
+		if target.Database.MinCapacity != 0 {
+			conf.Database.MinCapacity = target.Database.MinCapacity
+		}
+		if target.Database.MaxCapacity != 0 {
+			conf.Database.MaxCapacity = target.Database.MaxCapacity
+		}
+		if target.Database.Engine != "" {
+			conf.Database.Engine = target.Database.Engine
 		}
 	}
 	return conf
