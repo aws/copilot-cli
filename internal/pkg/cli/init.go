@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
@@ -72,6 +73,10 @@ func newInitOpts() (*initOpts, error) {
 	spin := termprogress.NewSpinner()
 	id := identity.New(sess)
 	deployer := cloudformation.New(sess)
+	cfg, err := profile.NewConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	initProject := &initProjectOpts{
 		projectStore: ssm,
@@ -98,6 +103,7 @@ func newInitOpts() (*initOpts, error) {
 		projectGetter: ssm,
 		envDeployer:   deployer,
 		projDeployer:  deployer, // TODO #317
+		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,
 		GlobalOpts:    NewGlobalOpts(),
