@@ -48,7 +48,7 @@ compile-darwin:
 
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
-	env -i PATH=$$PATH:${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
+	env -i PATH="$$PATH":${GOBIN} GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) \
 	go generate ./...
 
 packr-clean: tools package-custom-resources-clean
@@ -104,7 +104,7 @@ e2e-test: build
 	# the target assumes the AWS-* environment variables are exported
 	# -p: The number of test binaries that can be run in parallel
 	# -parallel: Within a single test binary, how many test functions can run in parallel
-	env -i PATH=$$PATH GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) GOPROXY=direct \
+	env -i PATH="$$PATH" GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) GOPROXY=direct \
 	AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
 	AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
 	AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
