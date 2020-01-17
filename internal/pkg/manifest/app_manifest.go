@@ -37,10 +37,10 @@ type AppImage struct {
 
 // CreateApp returns a manifest object based on the application's type.
 // If the application type is invalid, then returns an ErrInvalidManifestType.
-func CreateApp(appName, appType, dockerfile string) (archer.Manifest, error) {
+func CreateApp(appName, appType, dockerfile string, port int) (archer.Manifest, error) {
 	switch appType {
 	case LoadBalancedWebApplication:
-		return NewLoadBalancedFargateManifest(appName, dockerfile), nil
+		return NewLoadBalancedFargateManifest(appName, dockerfile, port), nil
 	default:
 		return nil, &ErrInvalidAppManifestType{Type: appType}
 	}

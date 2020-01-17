@@ -66,7 +66,7 @@ type AutoScalingConfig struct {
 
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
 // all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
-func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargateManifest {
+func NewLoadBalancedFargateManifest(appName, dockerfile string, port int) *LBFargateManifest {
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
 			Name: appName,
@@ -76,7 +76,7 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 			AppImage: AppImage{
 				Build: dockerfile,
 			},
-			Port: 80,
+			Port: port,
 		},
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{

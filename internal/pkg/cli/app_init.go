@@ -6,8 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -47,6 +50,7 @@ type InitAppOpts struct {
 	AppType        string
 	AppName        string
 	DockerfilePath string
+	Port           int
 
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
@@ -105,6 +109,10 @@ func (opts *InitAppOpts) Execute() error {
 		return err
 	}
 
+	if err := opts.getPort(); err != nil {
+		return err
+	}
+
 	manifestPath, err := opts.createManifest()
 	if err != nil {
 		return err
@@ -130,8 +138,31 @@ func (opts *InitAppOpts) Execute() error {
 	return opts.createAppInProject(opts.ProjectName())
 }
 
+// getPort discerns the port being used by extracting the EXPOSE value from the Dockerfile.
+func (opts *InitAppOpts) getPort() error {
+	dockerfile, err := ioutil.ReadFile(opts.DockerfilePath)
+	if err != nil {
+		return err
+	}
+
+	re := regexp.MustCompile(`EXPOSE (\d*)`)
+	results := re.FindStringSubmatch(string(dockerfile))
+
+	var port int
+	if len(results) > 0 {
+		port, err = strconv.Atoi(results[1])
+		if err != nil {
+			return err
+		}
+		opts.Port = port
+	} else {
+		opts.Port = 80
+	}
+	return nil
+}
+
 func (opts *InitAppOpts) createManifest() (string, error) {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
+	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath, opts.Port)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}

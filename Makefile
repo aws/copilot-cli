@@ -24,7 +24,7 @@ all: build
 build: packr-build compile-local packr-clean
 
 .PHONY: release
-release: packr-build compile-darwin compile-linux compile-windows packr-clean
+release: packr-build compile-darwin packr-clean
 
 .PHONY: release-docker
 release-docker:
