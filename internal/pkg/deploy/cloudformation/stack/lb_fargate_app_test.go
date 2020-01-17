@@ -97,7 +97,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		},
 		"render default template": {
 			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+				App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80),
 				Env: &archer.Environment{
 					Project:   "phonetool",
 					Name:      "test",
@@ -176,7 +176,7 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 			// GIVEN
 			conf := &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -261,7 +261,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		"render params template": {
 			in: &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -309,7 +309,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		"render params template for https": {
 			in: &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -376,7 +376,7 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	// GIVEN
 	conf := &LBFargateStackConfig{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80),
 			Env: &archer.Environment{
 				Project:   "phonetool",
 				Name:      "test",

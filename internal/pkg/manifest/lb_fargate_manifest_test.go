@@ -58,7 +58,7 @@ count: 1
 #  test:
 #    count: 2               # Number of tasks to run for the "test" environment.
 `
-	m := NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile")
+	m := NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile", 80)
 
 	// WHEN
 	b, err := m.Marshal()
