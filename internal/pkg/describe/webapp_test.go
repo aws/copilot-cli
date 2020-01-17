@@ -405,13 +405,13 @@ func TestWebAppDescriber_EnvVars(t *testing.T) {
 			wantedEnvVars: []*WebAppEnvVars{
 				&WebAppEnvVars{
 					Environment: "test",
-					Name:        "ECS_CLI_APP_NAME",
-					Value:       "my-app",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "prod",
 				},
 				&WebAppEnvVars{
 					Environment: "test",
-					Name:        "ECS_CLI_ENVIRONMENT_NAME",
-					Value:       "prod",
+					Name:        "ECS_CLI_APP_NAME",
+					Value:       "my-app",
 				},
 			},
 		},
@@ -453,7 +453,7 @@ func TestWebAppDescriber_EnvVars(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.EqualValues(t, tc.wantedEnvVars, actual)
+				require.ElementsMatch(t, tc.wantedEnvVars, actual)
 			}
 		})
 	}
