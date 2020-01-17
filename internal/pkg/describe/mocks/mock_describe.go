@@ -6,6 +6,7 @@ package mocks
 
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
@@ -139,4 +140,79 @@ func (m *MockenvGetter) GetEnvironment(projectName, environmentName string) (*ar
 func (mr *MockenvGetterMockRecorder) GetEnvironment(projectName, environmentName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvGetter)(nil).GetEnvironment), projectName, environmentName)
+}
+
+// MockecsService is a mock of ecsService interface
+type MockecsService struct {
+	ctrl     *gomock.Controller
+	recorder *MockecsServiceMockRecorder
+}
+
+// MockecsServiceMockRecorder is the mock recorder for MockecsService
+type MockecsServiceMockRecorder struct {
+	mock *MockecsService
+}
+
+// NewMockecsService creates a new mock instance
+func NewMockecsService(ctrl *gomock.Controller) *MockecsService {
+	mock := &MockecsService{ctrl: ctrl}
+	mock.recorder = &MockecsServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockecsService) EXPECT() *MockecsServiceMockRecorder {
+	return m.recorder
+}
+
+// TaskDefinition mocks base method
+func (m *MockecsService) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TaskDefinition", taskDefName)
+	ret0, _ := ret[0].(*ecs.TaskDefinition)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TaskDefinition indicates an expected call of TaskDefinition
+func (mr *MockecsServiceMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsService)(nil).TaskDefinition), taskDefName)
+}
+
+// MockecsTaskDefinition is a mock of ecsTaskDefinition interface
+type MockecsTaskDefinition struct {
+	ctrl     *gomock.Controller
+	recorder *MockecsTaskDefinitionMockRecorder
+}
+
+// MockecsTaskDefinitionMockRecorder is the mock recorder for MockecsTaskDefinition
+type MockecsTaskDefinitionMockRecorder struct {
+	mock *MockecsTaskDefinition
+}
+
+// NewMockecsTaskDefinition creates a new mock instance
+func NewMockecsTaskDefinition(ctrl *gomock.Controller) *MockecsTaskDefinition {
+	mock := &MockecsTaskDefinition{ctrl: ctrl}
+	mock.recorder = &MockecsTaskDefinitionMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockecsTaskDefinition) EXPECT() *MockecsTaskDefinitionMockRecorder {
+	return m.recorder
+}
+
+// EnvironmentVariables mocks base method
+func (m *MockecsTaskDefinition) EnvironmentVariables() map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentVariables")
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// EnvironmentVariables indicates an expected call of EnvironmentVariables
+func (mr *MockecsTaskDefinitionMockRecorder) EnvironmentVariables() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentVariables", reflect.TypeOf((*MockecsTaskDefinition)(nil).EnvironmentVariables))
 }

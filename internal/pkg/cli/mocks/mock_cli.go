@@ -37,20 +37,6 @@ func (m *MockactionCommand) EXPECT() *MockactionCommandMockRecorder {
 	return m.recorder
 }
 
-// Ask mocks base method
-func (m *MockactionCommand) Ask() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ask")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Ask indicates an expected call of Ask
-func (mr *MockactionCommandMockRecorder) Ask() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*MockactionCommand)(nil).Ask))
-}
-
 // Validate mocks base method
 func (m *MockactionCommand) Validate() error {
 	m.ctrl.T.Helper()
@@ -63,6 +49,20 @@ func (m *MockactionCommand) Validate() error {
 func (mr *MockactionCommandMockRecorder) Validate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockactionCommand)(nil).Validate))
+}
+
+// Ask mocks base method
+func (m *MockactionCommand) Ask() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ask")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ask indicates an expected call of Ask
+func (mr *MockactionCommandMockRecorder) Ask() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*MockactionCommand)(nil).Ask))
 }
 
 // Execute mocks base method
@@ -669,6 +669,21 @@ func (m *MockwebAppDescriber) ECSParams(envName string) (*describe.WebAppECSPara
 func (mr *MockwebAppDescriberMockRecorder) ECSParams(envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSParams", reflect.TypeOf((*MockwebAppDescriber)(nil).ECSParams), envName)
+}
+
+// EnvVars mocks base method
+func (m *MockwebAppDescriber) EnvVars(env *archer.Environment) ([]*describe.WebAppEnvVars, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvVars", env)
+	ret0, _ := ret[0].([]*describe.WebAppEnvVars)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvVars indicates an expected call of EnvVars
+func (mr *MockwebAppDescriberMockRecorder) EnvVars(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockwebAppDescriber)(nil).EnvVars), env)
 }
 
 // StackResources mocks base method

@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -11,6 +11,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -69,13 +70,21 @@ type WebAppRoute struct {
 	Path        string `json:"path"`
 }
 
+// WebAppEnvVars contains serialized environment variables for a web application.
+type WebAppEnvVars struct {
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	Value       string `json:"value"`
+}
+
 // WebApp contains serialized parameters for a web application.
 type WebApp struct {
 	AppName        string                    `json:"appName"`
 	Type           string                    `json:"type"`
 	Project        string                    `json:"project"`
-	Configurations []WebAppConfig            `json:"configurations"`
-	Routes         []WebAppRoute             `json:"routes"`
+	Configurations []*WebAppConfig           `json:"configurations"`
+	Routes         []*WebAppRoute            `json:"routes"`
+	Variables      []*WebAppEnvVars          `json:"variables"`
 	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
 }
 
@@ -92,6 +101,10 @@ type envGetter interface {
 	archer.EnvironmentGetter
 }
 
+type ecsService interface {
+	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+}
+
 func (uri *WebAppURI) String() string {
 	if uri.Path != "" {
 		return fmt.Sprintf("%s and path %s", color.HighlightResource("http://"+uri.DNSName), color.HighlightResource(uri.Path))
@@ -104,6 +117,7 @@ type WebAppDescriber struct {
 	app *archer.Application
 
 	store           envGetter
+	ecsClient       map[string]ecsService
 	stackDescribers map[string]stackDescriber
 	sessProvider    sessionFromRoleProvider
 }
@@ -122,11 +136,39 @@ func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 		app:             meta,
 		store:           svc,
 		stackDescribers: make(map[string]stackDescriber),
+		ecsClient:       make(map[string]ecsService),
 		sessProvider:    session.NewProvider(),
 	}, nil
 }
 
-// ECSParams returns the deploy infomation of a web application given an environment name.
+// EnvVars returns the environment variables of the task definition.
+func (d *WebAppDescriber) EnvVars(env *archer.Environment) ([]*WebAppEnvVars, error) {
+	if _, ok := d.ecsClient[env.ManagerRoleARN]; !ok {
+		sess, err := d.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+		}
+		d.ecsClient[env.ManagerRoleARN] = ecs.New(sess)
+	}
+	taskDefName := fmt.Sprintf("%s-%s-%s", d.app.Project, env.Name, d.app.Name)
+	taskDefinition, err := d.ecsClient[env.ManagerRoleARN].TaskDefinition(taskDefName)
+	if err != nil {
+		return nil, err
+	}
+	envVars := taskDefinition.EnvironmentVariables()
+	var flatEnvVars []*WebAppEnvVars
+	for name, value := range envVars {
+		flatEnvVars = append(flatEnvVars, &WebAppEnvVars{
+			Environment: env.Name,
+			Name:        name,
+			Value:       value,
+		})
+	}
+
+	return flatEnvVars, nil
+}
+
+// ECSParams returns the deploy information of a web application given an environment name.
 func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
 	if err != nil {
@@ -295,6 +337,29 @@ func (w *WebApp) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", route.Environment, route.URL, route.Path)
+	}
+	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
+	var prevName string
+	var prevValue string
+	for _, variable := range w.Variables {
+		// Instead of re-writing the same variable value, we replace it with "-" to reduce text.
+		if variable.Name != prevName {
+			if variable.Value != prevValue {
+				fmt.Fprintf(writer, "  %s\t%s\t%s\n", variable.Name, variable.Environment, variable.Value)
+			} else {
+				fmt.Fprintf(writer, "  %s\t%s\t-\n", variable.Name, variable.Environment)
+			}
+		} else {
+			if variable.Value != prevValue {
+				fmt.Fprintf(writer, "  -\t%s\t%s\n", variable.Environment, variable.Value)
+			} else {
+				fmt.Fprintf(writer, "  -\t%s\t-\n", variable.Environment)
+			}
+		}
+		prevName = variable.Name
+		prevValue = variable.Value
 	}
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))

@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -106,36 +107,47 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
 
-	var routes []describe.WebAppRoute
-	var configs []describe.WebAppConfig
+	var routes []*describe.WebAppRoute
+	var configs []*describe.WebAppConfig
+	var envVars []*describe.WebAppEnvVars
 	for _, env := range environments {
 		webAppURI, err := o.describer.URI(env.Name)
 		if err == nil {
-			routes = append(routes, describe.WebAppRoute{
+			routes = append(routes, &describe.WebAppRoute{
 				Environment: env.Name,
 				URL:         webAppURI.DNSName,
 				Path:        webAppURI.Path,
 			})
+
 			webAppECSParams, err := o.describer.ECSParams(env.Name)
 			if err != nil {
 				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
 			}
-			configs = append(configs, describe.WebAppConfig{
+			configs = append(configs, &describe.WebAppConfig{
 				Environment: env.Name,
 				Port:        webAppECSParams.ContainerPort,
 				Tasks:       webAppECSParams.TaskCount,
 				CPU:         webAppECSParams.CPU,
 				Memory:      webAppECSParams.Memory,
 			})
+
+			webAppEnvVars, err := o.describer.EnvVars(env)
+			if err != nil {
+				return nil, fmt.Errorf("retrieve environment variables: %w", err)
+			}
+			envVars = append(envVars, webAppEnvVars...)
+
 			continue
 		}
 		if !applicationNotDeployed(err) {
 			return nil, fmt.Errorf("retrieve application URI: %w", err)
 		}
 	}
+	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
+	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
+	resources := make(map[string][]*describe.CfnResource)
 	if o.shouldOutputResources {
-		resources := make(map[string][]*describe.CfnResource)
 		for _, env := range environments {
 			webAppResources, err := o.describer.StackResources(env.Name)
 			if err == nil {
@@ -146,14 +158,6 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
 		}
-		return &describe.WebApp{
-			AppName:        app.Name,
-			Type:           app.Type,
-			Project:        o.ProjectName(),
-			Configurations: configs,
-			Routes:         routes,
-			Resources:      resources,
-		}, nil
 	}
 
 	return &describe.WebApp{
@@ -162,6 +166,8 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 		Project:        o.ProjectName(),
 		Configurations: configs,
 		Routes:         routes,
+		Variables:      envVars,
+		Resources:      resources,
 	}, nil
 }
 
