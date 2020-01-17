@@ -181,12 +181,19 @@ Resources:
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      DefaultActions:
-        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
-          Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 80
       Protocol: HTTP
+      DefaultActions:
+        !If
+        - DelegateDNS
+        - - Type: redirect
+            RedirectConfig:
+              Protocol: HTTPS
+              StatusCode: HTTP_301
+              Port: 443
+        - - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+            Type: forward
 
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
