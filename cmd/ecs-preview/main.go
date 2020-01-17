@@ -7,12 +7,11 @@ package main
 import (
 	"os"
 
-	"github.com/spf13/cobra"
-
 	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
+	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -21,6 +20,9 @@ func init() {
 }
 
 func main() {
+	if err := os.Setenv("AWS_PROFILE", "dev-admin"); err != nil {
+		os.Exit(2)
+	}
 	cmd := buildRootCmd()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
