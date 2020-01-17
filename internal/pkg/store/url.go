@@ -29,10 +29,10 @@ func (s *Store) changeRecordSets(action, source, target string) error {
 				{
 					Action: aws.String(action),
 					ResourceRecordSet: &route53.ResourceRecordSet{
-						Name: aws.String(source),
+						Name: aws.String(target),
 						ResourceRecords: []*route53.ResourceRecord{
 							{
-								Value: aws.String(target),
+								Value: aws.String(source),
 							},
 						},
 						TTL:  aws.Int64(300),
