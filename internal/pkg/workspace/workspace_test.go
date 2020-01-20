@@ -501,9 +501,9 @@ func TestDeleteFile(t *testing.T) {
 				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
 			},
 		},
-		"should return an ErrManifestNotFound if file to delete doesn't exist": {
+		"should return nil if file to delete doesn't exist": {
 			manifestFile: "traveling-salesman",
-			want:         fmt.Errorf("manifest file traveling-salesman-app.yml does not exists"),
+			want:         nil,
 			workingDir:   "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)

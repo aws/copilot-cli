@@ -5,8 +5,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
@@ -15,6 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -180,4 +183,41 @@ type storeReader interface {
 	archer.EnvironmentGetter
 	archer.ApplicationLister
 	archer.ApplicationGetter
+}
+
+// returns true if error type is stack set not exist.
+func isStackSetNotExistsErr(err error) bool {
+	for {
+		if err == nil {
+			return false
+		}
+		aerr, ok := err.(awserr.Error)
+		if !ok {
+			return isStackSetNotExistsErr(errors.Unwrap(err))
+		}
+		if aerr.Code() != "StackSetNotFoundException" {
+			return isStackSetNotExistsErr(errors.Unwrap(err))
+		}
+		return true
+	}
+}
+
+// returns true if error type is stack not exist.
+func isStackNotExistsErr(err error) bool {
+	for {
+		if err == nil {
+			return false
+		}
+		aerr, ok := err.(awserr.Error)
+		if !ok {
+			return isStackNotExistsErr(errors.Unwrap(err))
+		}
+		if aerr.Code() != "ValidationError" {
+			return isStackNotExistsErr(errors.Unwrap(err))
+		}
+		if !strings.Contains(aerr.Message(), "does not exist") {
+			return isStackNotExistsErr(errors.Unwrap(err))
+		}
+		return true
+	}
 }

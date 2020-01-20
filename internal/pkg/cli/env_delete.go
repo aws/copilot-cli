@@ -102,7 +102,7 @@ func (o *deleteEnvOpts) Ask() error {
 // Execute assumes that Validate is invoked first.
 func (o *deleteEnvOpts) Execute() error {
 	if err := o.initProfileClients(o); err != nil {
-		return nil
+		return err
 	}
 	if err := o.validateNoRunningApps(); err != nil {
 		return err
@@ -185,6 +185,10 @@ func (o *deleteEnvOpts) askEnvName() error {
 	var names []string
 	for _, env := range envs {
 		names = append(names, env.Name)
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("couldn't find any environment in the project %s", o.ProjectName())
+
 	}
 	name, err := o.prompt.SelectOne(envDeleteNamePrompt, "", names)
 	if err != nil {

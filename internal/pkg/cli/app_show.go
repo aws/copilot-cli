@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
@@ -16,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -45,14 +43,12 @@ type showAppOpts struct {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeSvc.GetProject(o.ProjectName())
-		if err != nil {
+		if _, err := o.storeSvc.GetProject(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		_, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
-		if err != nil {
+		if _, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
@@ -139,7 +135,7 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 
 			continue
 		}
-		if !applicationNotDeployed(err) {
+		if !isStackNotExistsErr(err) {
 			return nil, fmt.Errorf("retrieve application URI: %w", err)
 		}
 	}
@@ -154,7 +150,7 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 				resources[env.Name] = webAppResources
 				continue
 			}
-			if !applicationNotDeployed(err) {
+			if !isStackNotExistsErr(err) {
 				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
 		}
@@ -169,25 +165,6 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 		Variables:      envVars,
 		Resources:      resources,
 	}, nil
-}
-
-func applicationNotDeployed(err error) bool {
-	for {
-		if err == nil {
-			return false
-		}
-		aerr, ok := err.(awserr.Error)
-		if !ok {
-			return applicationNotDeployed(errors.Unwrap(err))
-		}
-		if aerr.Code() != "ValidationError" {
-			return applicationNotDeployed(errors.Unwrap(err))
-		}
-		if !strings.Contains(aerr.Message(), "does not exist") {
-			return applicationNotDeployed(errors.Unwrap(err))
-		}
-		return true
-	}
 }
 
 func (o *showAppOpts) askProject() error {

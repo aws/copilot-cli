@@ -8,11 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
-
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -21,8 +18,8 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockWorkspaceService := mocks.NewMockWorkspace(ctrl)
-	mockError := errors.New("mockError")
+	mockProjectService := climocks.NewMockprojectService(ctrl)
+	mockError := errors.New("some error")
 
 	tests := map[string]struct {
 		inProjectName string
@@ -45,45 +42,19 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
 			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "my-app",
-						},
-					},
+				mockProjectService.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(&archer.Application{
+					Name: "my-app",
 				}, nil)
 			},
 			want: nil,
 		},
-		"should wrap error returned from workspaceService Apps() call": {
+		"should return error if fail to get app name": {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
 			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return(nil, mockError)
+				mockProjectService.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(nil, mockError)
 			},
-			want: fmt.Errorf("get app names: %w", mockError),
-		},
-		"should return error if call to Apps() returns empty list": {
-			inProjectName: "phonetool",
-			inAppName:     "my-app",
-			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{}, nil)
-			},
-			want: errors.New("no applications found in current workspace"),
-		},
-		"should return error if app name is not found": {
-			inProjectName: "phonetool",
-			inAppName:     "my-app",
-			setupMocks: func() {
-				mockWorkspaceService.EXPECT().Apps().Times(1).Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "bad-app",
-						},
-					},
-				}, nil)
-			},
-			want: errors.New("input app my-app not found"),
+			want: errors.New("some error"),
 		},
 	}
 
@@ -94,8 +65,8 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					projectName: test.inProjectName,
 				},
-				AppName:          test.inAppName,
-				workspaceService: mockWorkspaceService,
+				AppName:        test.inAppName,
+				projectService: mockProjectService,
 			}
 
 			got := opts.Validate()
@@ -106,16 +77,19 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 }
 
 func TestDeleteAppOpts_Ask(t *testing.T) {
-	mockProjectName := "phonetool"
-	testAppName := "my-app"
+	const (
+		mockProjectName = "phonetool"
+		testAppName     = "my-app"
+		testProjectName = "my-project"
+	)
 	mockError := errors.New("mockError")
 
 	tests := map[string]struct {
 		skipConfirmation bool
 		inAppName        string
 
-		mockWorkSpace func(m *mocks.MockWorkspace)
-		mockPrompt    func(m *climocks.Mockprompter)
+		mockProjectService func(m *climocks.MockprojectService)
+		mockPrompt         func(m *climocks.Mockprompter)
 
 		wantedApp   string
 		wantedError error
@@ -123,17 +97,13 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 		"should ask for app name": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockWorkSpace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Times(1).Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "my-app",
-						},
+			mockProjectService: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+					&archer.Application{
+						Name: "my-app",
 					},
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "test-app",
-						},
+					&archer.Application{
+						Name: "test-app",
 					},
 				}, nil)
 			},
@@ -143,20 +113,26 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 
 			wantedApp: testAppName,
 		},
+		"returns error if no application found": {
+			inAppName:        "",
+			skipConfirmation: true,
+			mockProjectService: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedError: fmt.Errorf("couldn't find any application in the project phonetool"),
+		},
 		"returns error if fail to select application": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockWorkSpace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Times(1).Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "my-app",
-						},
+			mockProjectService: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+					&archer.Application{
+						Name: "my-app",
 					},
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "test-app",
-						},
+					&archer.Application{
+						Name: "test-app",
 					},
 				}, nil)
 			},
@@ -167,17 +143,17 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select application to delete: %w", mockError),
 		},
 		"should skip confirmation": {
-			inAppName:        testAppName,
-			skipConfirmation: true,
-			mockWorkSpace:    func(m *mocks.MockWorkspace) {},
-			mockPrompt:       func(m *climocks.Mockprompter) {},
+			inAppName:          testAppName,
+			skipConfirmation:   true,
+			mockProjectService: func(m *climocks.MockprojectService) {},
+			mockPrompt:         func(m *climocks.Mockprompter) {},
 
 			wantedApp: testAppName,
 		},
 		"should wrap error returned from prompter confirmation": {
-			inAppName:        testAppName,
-			skipConfirmation: false,
-			mockWorkSpace:    func(m *mocks.MockWorkspace) {},
+			inAppName:          testAppName,
+			skipConfirmation:   false,
+			mockProjectService: func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
@@ -188,9 +164,9 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("app delete confirmation prompt: %w", mockError),
 		},
 		"should return error if user does not confirm app deletion": {
-			inAppName:        testAppName,
-			skipConfirmation: false,
-			mockWorkSpace:    func(m *mocks.MockWorkspace) {},
+			inAppName:          testAppName,
+			skipConfirmation:   false,
+			mockProjectService: func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
@@ -201,9 +177,9 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			wantedError: errAppDeleteCancelled,
 		},
 		"should return error nil if user confirms app delete": {
-			inAppName:        testAppName,
-			skipConfirmation: false,
-			mockWorkSpace:    func(m *mocks.MockWorkspace) {},
+			inAppName:          testAppName,
+			skipConfirmation:   false,
+			mockProjectService: func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
@@ -221,9 +197,9 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockWorkspaceService := mocks.NewMockWorkspace(ctrl)
+			mockProjectService := climocks.NewMockprojectService(ctrl)
 			test.mockPrompt(mockPrompter)
-			test.mockWorkSpace(mockWorkspaceService)
+			test.mockProjectService(mockProjectService)
 
 			opts := deleteAppOpts{
 				GlobalOpts: &GlobalOpts{
@@ -231,7 +207,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 					prompt:      mockPrompter,
 				},
 				AppName:          test.inAppName,
-				workspaceService: mockWorkspaceService,
+				projectService:   mockProjectService,
 				SkipConfirmation: test.skipConfirmation,
 			}
 
@@ -270,13 +246,6 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 			want:            fmt.Errorf("get environments: %w", mockError),
 			wantOptsEnvList: nil,
 		},
-		"should return error if call to ListEnvironments() returns an empty list": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return([]*archer.Environment{}, nil)
-			},
-			want:            errors.New("no environments found"),
-			wantOptsEnvList: nil,
-		},
 		"should set the opts environment list": {
 			setupMocks: func() {
 				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvList, nil)
@@ -293,8 +262,7 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 				GlobalOpts: &GlobalOpts{
 					projectName: mockProjectName,
 				},
-				projectService:     mockProjectService,
-				initProjectService: func(*deleteAppOpts) error { return nil },
+				projectService: mockProjectService,
 			}
 
 			got := opts.sourceProjectEnvironments()
