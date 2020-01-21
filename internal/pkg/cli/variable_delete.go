@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -15,15 +14,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SecretDeleteOpts contains the fields to collect to delete a secret.
-type SecretDeleteOpts struct {
-	appName     string
-	secretName  string
+// VariableDeleteOpts contains the fields to collect to delete an environment variable.
+type VariableDeleteOpts struct {
+	appName string
+	name    string
 
 	manifestPath string
 
-	secretManager archer.SecretsManager
-	storeReader   storeReader
+	storeReader storeReader
 
 	ws archer.Workspace
 
@@ -31,7 +29,7 @@ type SecretDeleteOpts struct {
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *SecretDeleteOpts) Validate() error {
+func (o *VariableDeleteOpts) Validate() error {
 	if o.ProjectName() != "" {
 		_, err := o.storeReader.GetProject(o.ProjectName())
 		if err != nil {
@@ -49,7 +47,7 @@ func (o *SecretDeleteOpts) Validate() error {
 }
 
 // Ask asks for fields that are required but not passed in.
-func (o *SecretDeleteOpts) Ask() error {
+func (o *VariableDeleteOpts) Ask() error {
 	if err := o.askProject(); err != nil {
 		return err
 	}
@@ -57,43 +55,31 @@ func (o *SecretDeleteOpts) Ask() error {
 		return err
 	}
 
-	return o.askSecretName()
+	return o.askEnvVarName()
 }
 
-// Execute deletes the secret.
-func (o *SecretDeleteOpts) Execute() error {
+// Execute deletes the environment variable.
+func (o *VariableDeleteOpts) Execute() error {
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
 	mft, err := o.readManifest()
 	if err != nil {
 		return err
 	}
 
-	name := strings.ToLower(o.secretName)
-	name = strings.ReplaceAll(name, "_", "-")
-
-	key := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/%s", o.GlobalOpts.ProjectName(),
-		o.appName, name)
-
-	if err := o.secretManager.DeleteSecret(key); err != nil {
-		return err
-	}
-
-	log.Successf("Deleted %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
-		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
-
-	// remove the secret from the manifest
+	// remove the env var from the manifest
 	lbmft := mft.(*manifest.LBFargateManifest)
-	delete(lbmft.Secrets, o.secretName)
+	delete(lbmft.Variables, o.name)
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err
 	}
 
-	log.Successf("Removed the secret from the manifest\n")
+	log.Successf("Removed the environment variable %s from the manifest.\n",
+		color.HighlightUserInput(o.name))
 	return nil
 }
 
-func (o *SecretDeleteOpts) readManifest() (archer.Manifest, error) {
+func (o *VariableDeleteOpts) readManifest() (archer.Manifest, error) {
 	raw, err := o.ws.ReadFile(o.manifestPath)
 	if err != nil {
 		return nil, err
@@ -101,13 +87,13 @@ func (o *SecretDeleteOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *SecretDeleteOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
+func (o *VariableDeleteOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
 	manifestBytes, err := yaml.Marshal(manifest)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
 
-func (o *SecretDeleteOpts) askProject() error {
+func (o *VariableDeleteOpts) askProject() error {
 	if o.ProjectName() != "" {
 		return nil
 	}
@@ -131,7 +117,7 @@ func (o *SecretDeleteOpts) askProject() error {
 	return nil
 }
 
-func (o *SecretDeleteOpts) askAppName() error {
+func (o *VariableDeleteOpts) askAppName() error {
 	if o.appName != "" {
 		return nil
 	}
@@ -145,7 +131,7 @@ func (o *SecretDeleteOpts) askAppName() error {
 	}
 	appName, err := o.prompt.SelectOne(
 		fmt.Sprintf("Which app:"),
-		"The app this secret belongs to.",
+		"The app this environment variable belongs to.",
 		appNames,
 	)
 	if err != nil {
@@ -156,25 +142,25 @@ func (o *SecretDeleteOpts) askAppName() error {
 	return nil
 }
 
-func (o *SecretDeleteOpts) askSecretName() error {
-	if o.secretName != "" {
+func (o *VariableDeleteOpts) askEnvVarName() error {
+	if o.name != "" {
 		return nil
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf("Secret name:"),
-		fmt.Sprintf(`The name of the secret.`),
+		fmt.Sprintf("Name:"),
+		fmt.Sprintf(`The name of the variable.`),
 		validateEnvVarName)
 
 	if err != nil {
-		return fmt.Errorf("failed to get secret name: %w", err)
+		return fmt.Errorf("failed to get the name: %w", err)
 	}
 
-	o.secretName = name
+	o.name = name
 	return nil
 }
 
-func (o *SecretDeleteOpts) retrieveProjects() ([]string, error) {
+func (o *VariableDeleteOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeReader.ListProjects()
 	if err != nil {
 		return nil, fmt.Errorf("listing projects: %w", err)
@@ -186,7 +172,7 @@ func (o *SecretDeleteOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (o *SecretDeleteOpts) retrieveApplications() ([]string, error) {
+func (o *VariableDeleteOpts) retrieveApplications() ([]string, error) {
 	apps, err := o.storeReader.ListApplications(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
@@ -198,19 +184,19 @@ func (o *SecretDeleteOpts) retrieveApplications() ([]string, error) {
 	return appNames, nil
 }
 
-// BuildSecretDeleteCmd removes a secret.
-func BuildSecretDeleteCmd() *cobra.Command {
-	opts := SecretDeleteOpts{
+// BuildVariableDeleteCmd removes an environment variable.
+func BuildVariableDeleteCmd() *cobra.Command {
+	opts := VariableDeleteOpts{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a secret.",
+		Short: "Deletes an environment variable.",
 		Example: `
-  /code $ ecs-preview secret delete -n secret-name
+  /code $ ecs-preview variable delete
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
+			store, err := store.New()
 			if err != nil {
 				return fmt.Errorf("connect to environment datastore: %w", err)
 			}
@@ -219,8 +205,7 @@ func BuildSecretDeleteCmd() *cobra.Command {
 				return fmt.Errorf("new workspace: %w", err)
 			}
 			opts.ws = ws
-			opts.storeReader = ssmStore
-			opts.secretManager = ssmStore
+			opts.storeReader = store
 
 			return nil
 		}),
@@ -236,7 +221,7 @@ func BuildSecretDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
+	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Name of the environment variable.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 

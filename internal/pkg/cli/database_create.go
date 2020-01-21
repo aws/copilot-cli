@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -58,9 +59,6 @@ func (o *DatabaseCreateOpts) Ask() error {
 		return err
 	}
 
-	if err := o.askDatabaseName(); err != nil {
-		return err
-	}
 	if err := o.askEngine(); err != nil {
 		return err
 	}
@@ -75,6 +73,10 @@ func (o *DatabaseCreateOpts) Execute() error {
 	project := o.GlobalOpts.ProjectName()
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
 	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", project, o.appName)
+
+	o.db.DatabaseName = o.appName
+	o.db.DatabaseName = strings.ReplaceAll(o.db.DatabaseName, "-", "")
+	o.db.DatabaseName = fmt.Sprintf("%sdb", o.db.DatabaseName)
 
 	o.db.BackupRetentionPeriod = 7
 	o.db.MinCapacity = 2
@@ -91,6 +93,12 @@ func (o *DatabaseCreateOpts) Execute() error {
 	if lbmft.Environments == nil {
 		lbmft.Environments = make(map[string]manifest.LBFargateConfig)
 	}
+	if lbmft.Secrets == nil {
+		lbmft.Secrets = make(map[string]string)
+	}
+	if lbmft.Database == nil {
+		lbmft.Database = &manifest.DatabaseConfig{}
+	}
 
 	envs, err := o.storeReader.ListEnvironments(project)
 	if err != nil {
@@ -98,7 +106,7 @@ func (o *DatabaseCreateOpts) Execute() error {
 	}
 
 	for _, e := range envs {
-		o.db.ClusterIdentifier = fmt.Sprintf("%s-%s-%s-%s", project, e.Name, o.appName, o.db.DatabaseName)
+		o.db.ClusterIdentifier = fmt.Sprintf("%s-%s-%s", project, e.Name, o.appName)
 
 		output, err := o.dbManager.CreateDatabase(o.db)
 		if err != nil {
@@ -132,9 +140,6 @@ func (o *DatabaseCreateOpts) Execute() error {
 
 	log.Successf("Created a secret with the database password.\n")
 
-	if lbmft.Secrets == nil {
-		lbmft.Secrets = make(map[string]string)
-	}
 	lbmft.Variables["DB_NAME"] = o.db.DatabaseName
 	lbmft.Variables["DB_USERNAME"] = o.db.Username
 	lbmft.Secrets["DB_PASSWORD"] = pwKey
@@ -211,24 +216,6 @@ func (o *DatabaseCreateOpts) askAppName() error {
 	}
 	o.appName = appName
 
-	return nil
-}
-
-func (o *DatabaseCreateOpts) askDatabaseName() error {
-	if o.db.DatabaseName != "" {
-		return nil
-	}
-
-	name, err := o.prompt.Get(
-		fmt.Sprintf("Database name:"),
-		fmt.Sprintf(`The name of the database.`),
-		validateApplicationName) // TODO update validation, for all asked-for variables
-
-	if err != nil {
-		return fmt.Errorf("failed to get database name: %w", err)
-	}
-
-	o.db.DatabaseName = name
 	return nil
 }
 
@@ -351,7 +338,6 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&opts.db.DatabaseName, "db-name", "d", "", "Name of the database.")
 	cmd.Flags().StringVarP(&opts.db.Engine, "engine", "e", "", "Type of database; mysql or postgresql.")
 	cmd.Flags().StringVarP(&opts.db.Username, "username", "u", "", "Name of the master user.")
 	cmd.Flags().StringVarP(&opts.db.Password, "password", "s", "", "Password of the master user.")

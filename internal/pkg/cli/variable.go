@@ -9,16 +9,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BuildSecretCmd is the top level command for secrets.
-func BuildSecretCmd() *cobra.Command {
+// BuildVariableCmd is the top level command for secrets.
+func BuildVariableCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "secret",
-		Short: "Secret commands.",
-		Long:  `Command for working with secrets.`,
+		Use:   "variable",
+		Short: "Environment variable commands.",
+		Long:  `Command for working with environment variables.`,
 	}
 
-	cmd.AddCommand(BuildSecretAddCmd())
-	cmd.AddCommand(BuildSecretDeleteCmd())
+	cmd.AddCommand(BuildVariableAddCmd())
+	cmd.AddCommand(BuildVariableDeleteCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

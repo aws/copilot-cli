@@ -9,7 +9,6 @@ package group
 const (
 	GettingStarted = "Getting Started ✨"
 	Develop        = "Develop 🔧"
-	Secrets        = "Secrets 🔑️"
 	Settings       = "Settings ⚙️"
 	Storage        = "Storage 💾️"
 	Release        = "Release 🚀"

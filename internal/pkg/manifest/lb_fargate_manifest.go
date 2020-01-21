@@ -16,7 +16,7 @@ type LBFargateManifest struct {
 	AppManifest     `yaml:",inline,omitempty"`
 	Image           ImageWithPort `yaml:",omitempty"`
 	LBFargateConfig `yaml:",inline,omitempty"`
-	Environments    map[string]LBFargateConfig `yaml:",flow,omitempty"` // Fields to override per environment.
+	Environments    map[string]LBFargateConfig `yaml:",omitempty"` // Fields to override per environment.
 }
 
 // ImageWithPort represents a container image with an exposed port.

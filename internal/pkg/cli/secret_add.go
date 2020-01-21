@@ -66,8 +66,17 @@ func (o *SecretAddOpts) Ask() error {
 
 // Execute encrypts the secret.
 func (o *SecretAddOpts) Execute() error {
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+	mft, err := o.readManifest()
+	if err != nil {
+		return err
+	}
+
+	name := strings.ToLower(o.secretName)
+	name = strings.ReplaceAll(name, "_", "-")
+
 	key := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/%s", o.GlobalOpts.ProjectName(),
-		o.appName, o.secretName)
+		o.appName, name)
 
 	if _, err := o.secretManager.CreateSecret(key, o.secretValue); err != nil {
 		return err
@@ -76,29 +85,18 @@ func (o *SecretAddOpts) Execute() error {
 	log.Successf("Created/updated %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
 		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
 
-	envVar := strings.ToUpper(o.secretName)
-	envVar = strings.ReplaceAll(envVar, "-", "_")
-
 	// save the secret to the manifest
-	// TODO currently, it wipes out comments in the doc, not cool bro
-	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-
-	mft, err := o.readManifest()
-	if err != nil {
-		return err
-	}
 	lbmft := mft.(*manifest.LBFargateManifest)
 	if lbmft.Secrets == nil {
 		lbmft.Secrets = make(map[string]string)
 	}
-	lbmft.Secrets[envVar] = key
+	lbmft.Secrets[o.secretName] = key
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err
 	}
 
-	log.Successf("Saved the secret to the manifest. It's available as %s.\n",
-		color.HighlightUserInput(envVar))
+	log.Successf("Saved the secret %s to the manifest.\n", color.HighlightUserInput(o.secretName))
 	return nil
 }
 
@@ -171,9 +169,9 @@ func (o *SecretAddOpts) askSecretName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf("Secret name:"),
+		fmt.Sprintf("Secret name (e.g. MY_SECRET):"),
 		fmt.Sprintf(`The name that will uniquely identify your secret within your app.`),
-		validateApplicationName)
+		validateEnvVarName)
 
 	if err != nil {
 		return fmt.Errorf("failed to get secret name: %w", err)
@@ -235,7 +233,6 @@ func BuildSecretAddCmd() *cobra.Command {
 		Short: "Adds a secret.",
 		Example: `
   /code $ ecs-preview secret add -n secret-name
-  The encrypted value is added as the env var SECRET_NAME.
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
@@ -264,7 +261,7 @@ func BuildSecretAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
+	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret, e.g. MY_SECRET.")
 	cmd.Flags().StringVarP(&opts.secretValue, "secret-value", "v", "", "Value to encrypt.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))

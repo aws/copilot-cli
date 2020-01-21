@@ -56,8 +56,7 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildProjCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildAppCmd())
-
-	// "Secrets" command group.
+	cmd.AddCommand(cli.BuildVariableCmd())
 	cmd.AddCommand(cli.BuildSecretCmd())
 
 	// "Settings" command group.

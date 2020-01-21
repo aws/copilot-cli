@@ -74,7 +74,7 @@ func (o *DatabaseDeleteOpts) Execute() error {
 	}
 
 	for _, e := range envs {
-		clusterID := fmt.Sprintf("%s-%s-%s-%s", project, e.Name, o.appName, lbmft.Variables["DB_NAME"])
+		clusterID := fmt.Sprintf("%s-%s-%s", project, e.Name, o.appName)
 		finalSnapshotID := fmt.Sprintf("%s-%s", clusterID, time.Now().Format("2006-01-02-15-04"))
 
 		if err := o.dbManager.DeleteDatabase(clusterID, finalSnapshotID); err != nil {
@@ -84,8 +84,8 @@ func (o *DatabaseDeleteOpts) Execute() error {
 		delete(lbmft.Environments[e.Name].ContainersConfig.Variables, "DB_HOST")
 	}
 
-	log.Successf("Deleted the database %s in %s under project %s.\n",
-		color.HighlightUserInput(lbmft.Variables["DB_NAME"]), color.HighlightResource(o.appName),
+	log.Successf("Deleted the database %s under project %s.\n",
+		color.HighlightUserInput(color.HighlightResource(o.appName)),
 		color.HighlightResource(o.GlobalOpts.ProjectName()))
 
 	if err := o.secretManager.DeleteSecret(pwKey); err != nil {
