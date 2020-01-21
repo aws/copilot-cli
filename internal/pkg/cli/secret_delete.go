@@ -21,6 +21,7 @@ type SecretDeleteOpts struct {
 	secretName  string
 
 	manifestPath string
+	manifest     *manifest.LBFargateManifest
 
 	secretManager archer.SecretsManager
 	storeReader   storeReader
@@ -62,12 +63,6 @@ func (o *SecretDeleteOpts) Ask() error {
 
 // Execute deletes the secret.
 func (o *SecretDeleteOpts) Execute() error {
-	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-	mft, err := o.readManifest()
-	if err != nil {
-		return err
-	}
-
 	name := strings.ToLower(o.secretName)
 	name = strings.ReplaceAll(name, "_", "-")
 
@@ -81,11 +76,9 @@ func (o *SecretDeleteOpts) Execute() error {
 	log.Successf("Deleted %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
 		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
 
-	// remove the secret from the manifest
-	lbmft := mft.(*manifest.LBFargateManifest)
-	delete(lbmft.Secrets, o.secretName)
+	delete(o.manifest.Secrets, o.secretName)
 
-	if err = o.writeManifest(lbmft); err != nil {
+	if err := o.writeManifest(o.manifest); err != nil {
 		return err
 	}
 
@@ -156,18 +149,43 @@ func (o *SecretDeleteOpts) askAppName() error {
 	return nil
 }
 
+func (o *SecretDeleteOpts) retrieveSecrets() ([]string, error) {
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+	mft, err := o.readManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	o.manifest = mft.(*manifest.LBFargateManifest)
+
+	var keys []string
+	for k := range o.manifest.Secrets {
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
 func (o *SecretDeleteOpts) askSecretName() error {
 	if o.secretName != "" {
 		return nil
 	}
 
-	name, err := o.prompt.Get(
+	secrets, err := o.retrieveSecrets()
+	if err != nil {
+		return err
+	}
+	if len(secrets) == 0 {
+		log.Infof("No secrets found in app %s\n.", o.appName)
+		return nil
+	}
+	name, err := o.prompt.SelectOne(
 		fmt.Sprintf("Secret name:"),
-		fmt.Sprintf(`The name of the secret.`),
-		validateEnvVarName)
+		"The name of the secret.",
+		secrets,
+	)
 
 	if err != nil {
-		return fmt.Errorf("failed to get secret name: %w", err)
+		return fmt.Errorf("failed to get the name of the secret: %w", err)
 	}
 
 	o.secretName = name

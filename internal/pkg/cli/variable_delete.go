@@ -20,6 +20,7 @@ type VariableDeleteOpts struct {
 	name    string
 
 	manifestPath string
+	manifest     *manifest.LBFargateManifest
 
 	storeReader storeReader
 
@@ -60,17 +61,9 @@ func (o *VariableDeleteOpts) Ask() error {
 
 // Execute deletes the environment variable.
 func (o *VariableDeleteOpts) Execute() error {
-	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-	mft, err := o.readManifest()
-	if err != nil {
-		return err
-	}
+	delete(o.manifest.Variables, o.name)
 
-	// remove the env var from the manifest
-	lbmft := mft.(*manifest.LBFargateManifest)
-	delete(lbmft.Variables, o.name)
-
-	if err = o.writeManifest(lbmft); err != nil {
+	if err := o.writeManifest(o.manifest); err != nil {
 		return err
 	}
 
@@ -142,18 +135,43 @@ func (o *VariableDeleteOpts) askAppName() error {
 	return nil
 }
 
+func (o *VariableDeleteOpts) retrieveEnvVars() ([]string, error) {
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
+	mft, err := o.readManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	o.manifest = mft.(*manifest.LBFargateManifest)
+
+	var keys []string
+	for k := range o.manifest.Variables {
+		keys = append(keys, k)
+	}
+	return keys, nil
+}
+
 func (o *VariableDeleteOpts) askEnvVarName() error {
 	if o.name != "" {
 		return nil
 	}
 
-	name, err := o.prompt.Get(
+	envVarNames, err := o.retrieveEnvVars()
+	if err != nil {
+		return err
+	}
+	if len(envVarNames) == 0 {
+		log.Infof("No environment variables found in app %s\n.", o.appName)
+		return nil
+	}
+	name, err := o.prompt.SelectOne(
 		fmt.Sprintf("Name:"),
-		fmt.Sprintf(`The name of the variable.`),
-		validateEnvVarName)
+		"The name of the variable.",
+		envVarNames,
+	)
 
 	if err != nil {
-		return fmt.Errorf("failed to get the name: %w", err)
+		return fmt.Errorf("failed to get the name of the environment variable: %w", err)
 	}
 
 	o.name = name
