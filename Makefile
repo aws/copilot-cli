@@ -13,8 +13,10 @@ VERSION=$(shell git describe --always --tags)
 
 BINARY_S3_BUCKET_PATH=https://ecs-cli-v2-release.s3.amazonaws.com
 
-LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}\
--X github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
+BUILD_DATE=$(shell date -u '+%Y%m%d')
+SHORT_SHA1=$(shell git log -1 --pretty=%h)
+
+LINKER_FLAGS=-X github.com/datadotworld/dev-tools/go-common/_version.VersionDate=${BUILD_DATE} -X github.com/datadotworld/dev-tools/go-common/_version.VersionCommit=${SHORT_SHA1}
 # RELEASE_BUILD_LINKER_FLAGS disables DWARF and symbol table generation to reduce binary size
 RELEASE_BUILD_LINKER_FLAGS=-s -w
 

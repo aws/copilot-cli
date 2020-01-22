@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
+	"github.com/datadotworld/dev-tools/go-common/_version"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +21,7 @@ func BuildVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version number.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("version: %s, built for %s\n", version.Version, runtime.GOOS)
+			fmt.Printf("version: %s, built for %s\n", version.FullVersion(), runtime.GOOS)
 			return nil
 		}),
 		Annotations: map[string]string{
