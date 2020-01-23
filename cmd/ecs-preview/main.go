@@ -57,7 +57,7 @@ func buildRootCmd() *cobra.Command {
 
 			err := updater.DoUpdate(
 				artifactory.New("run"),
-				disableUpdate, forceUpdate)
+				disableUpdate, forceUpdate, true)
 			if err != nil {
 				_ = fmt.Errorf("update attempt failed - %w", err)
 			}
