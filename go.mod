@@ -7,7 +7,7 @@ require (
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/aws/aws-sdk-go v1.27.1
 	github.com/briandowns/spinner v1.8.0
-	github.com/datadotworld/dev-tools v0.0.0-20200121151710-24387b1bcda9
+	github.com/datadotworld/dev-tools v0.0.0-20200123173253-20af47cb94c8
 	github.com/fatih/color v1.8.0
 	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v0.3.0

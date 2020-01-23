@@ -41,6 +41,8 @@ github.com/cpuguy83/go-md2man v1.0.10/go.mod h1:SmD6nW6nTyfqj6ABTjUi3V3JVMnlJmwc
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/datadotworld/dev-tools v0.0.0-20200121151710-24387b1bcda9 h1:nFNbBzEu/Ygp4bXFUxgLWs2BjSnHihp4llg6kxn1Jf4=
 github.com/datadotworld/dev-tools v0.0.0-20200121151710-24387b1bcda9/go.mod h1:meL6CKHNM0XlaRTeIO4hdpN5vdR4FLC5HhB3JZSeExY=
+github.com/datadotworld/dev-tools v0.0.0-20200123173253-20af47cb94c8 h1:+o89InYzXidnweGCTiILXmuM9hlD+aWzjYRU2dI9IU4=
+github.com/datadotworld/dev-tools v0.0.0-20200123173253-20af47cb94c8/go.mod h1:B0QGEyI7DmPzC1tCl+O+VlQ1E0LftZ7S+MzoVqdgfLg=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
