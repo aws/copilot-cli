@@ -10,9 +10,17 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
+type Database struct {
+	Name     string
+	Username string
+	Password string
+	Engine   string
+}
+
 // CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
 type CreateLBFargateAppInput struct {
 	App          *manifest.LBFargateManifest
+	Database     *Database
 	Env          *archer.Environment
 	ImageRepoURL string
 	ImageTag     string

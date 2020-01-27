@@ -34,12 +34,32 @@ Parameters:
     Type: String
     AllowedValues: [true, false]
     Default: '{{.HTTPSEnabled}}'
+  DBName:
+    Type: String
+    Default: '{{.Database.Name}}'
+  DBUsername:
+    Type: String
+    Default: '{{.Database.Username}}'
+  DBPassword:
+    Type: String
+    Default: '{{.Database.Password}}'
+  DBEngine:
+    Type: String
+    Default: '{{.Database.Engine}}'
+  DBMinCapacity:
+    Type: Number
+    Default: {{.App.Database.MinCapacity}}
+  DBMaxCapacity:
+    Type: Number
+    Default: {{.App.Database.MaxCapacity}}
 Conditions:
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  Database:
+    !Not [!Equals [ !Ref DBEngine, "" ]]
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -67,6 +87,10 @@ Resources:
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
           Environment:
+          - Name: DB_HOST
+            Value: !GetAtt RDSDatabase.Endpoint.Address
+          - Name: DB_PORT
+            Value: !GetAtt RDSDatabase.Endpoint.Port
           - Name: ECS_CLI_PROJECT_NAME
             Value: !Sub '${ProjectName}'
           - Name: ECS_CLI_ENVIRONMENT_NAME
@@ -426,3 +450,24 @@ Resources:
       Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
       Timeout: "1"
       Count: 0
+
+  RDSDatabase:
+    Type: AWS::RDS::DBCluster
+    Condition: Database
+    Properties:
+      BackupRetentionPeriod: 7
+      DatabaseName: !Ref DBName
+      DBSubnetGroupName:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-${EnvName}-DBSubnetGroupName"
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Sub "{{"{{"}}resolve:secretsmanager:${DBPassword}{{"}}"}}"
+      DBClusterIdentifier: !Sub "${ProjectName}-${EnvName}-${AppName}"
+      Engine: !Ref DBEngine
+      EngineMode: serverless
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: !Ref DBMinCapacity
+        MaxCapacity: !Ref DBMaxCapacity
+      StorageEncrypted: true
+      VpcSecurityGroupIds: [ !Ref 'ContainerSecurityGroup' ]

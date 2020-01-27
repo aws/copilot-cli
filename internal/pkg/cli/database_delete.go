@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -21,9 +20,7 @@ type DatabaseDeleteOpts struct {
 
 	manifestPath string
 
-	dbManager     archer.DatabaseManager
-	secretManager archer.SecretsManager
-	storeReader   storeReader
+	storeReader storeReader
 
 	ws archer.Workspace
 
@@ -58,9 +55,8 @@ func (o *DatabaseDeleteOpts) Ask() error {
 
 // Execute creates the cluster.
 func (o *DatabaseDeleteOpts) Execute() error {
-	project := o.GlobalOpts.ProjectName()
+	//project := o.GlobalOpts.ProjectName()
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", project, o.appName)
 
 	mft, err := o.readManifest()
 	if err != nil {
@@ -68,35 +64,17 @@ func (o *DatabaseDeleteOpts) Execute() error {
 	}
 	lbmft := mft.(*manifest.LBFargateManifest)
 
-	envs, err := o.storeReader.ListEnvironments(project)
-	if err != nil {
-		return err
-	}
+	// TODO delete secret from secretsmanager
+	//if err := o.secretManager.DeleteSecret(pwKey); err != nil {
+	//	return err
+	//}
 
-	for _, e := range envs {
-		clusterID := fmt.Sprintf("%s-%s-%s", project, e.Name, o.appName)
-		finalSnapshotID := fmt.Sprintf("%s-%s", clusterID, time.Now().Format("2006-01-02-15-04"))
+	//log.Successf("Deleted the secret for the database password.\n")
 
-		if err := o.dbManager.DeleteDatabase(clusterID, finalSnapshotID); err != nil {
-			return err
-		}
-
-		delete(lbmft.Environments[e.Name].ContainersConfig.Variables, "DB_HOST")
-	}
-
-	log.Successf("Deleted the database %s under project %s.\n",
-		color.HighlightUserInput(color.HighlightResource(o.appName)),
-		color.HighlightResource(o.GlobalOpts.ProjectName()))
-
-	if err := o.secretManager.DeleteSecret(pwKey); err != nil {
-		return err
-	}
-
-	log.Successf("Deleted the secret for the database password.\n")
-
-	delete(lbmft.Variables, "DB_PORT")
 	delete(lbmft.Variables, "DB_NAME")
 	delete(lbmft.Variables, "DB_USERNAME")
+	delete(lbmft.Variables, "DB_HOST")
+	delete(lbmft.Variables, "DB_PORT")
 	delete(lbmft.Secrets, "DB_PASSWORD")
 	lbmft.Database = &manifest.DatabaseConfig{}
 
@@ -106,6 +84,13 @@ func (o *DatabaseDeleteOpts) Execute() error {
 
 	log.Successf("Removed the parameters of the database from the manifest.\n")
 	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *DatabaseDeleteOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Run %s to remove the database assets.", color.HighlightCode("dw-run.sh app deploy")),
+	}
 }
 
 func (o *DatabaseDeleteOpts) readManifest() (archer.Manifest, error) {
@@ -215,8 +200,6 @@ func BuildDatabaseDeleteCmd() *cobra.Command {
 				return fmt.Errorf("new workspace: %w", err)
 			}
 			opts.ws = ws
-			opts.dbManager = store
-			opts.secretManager = store
 			opts.storeReader = store
 
 			return nil
@@ -230,6 +213,14 @@ func BuildDatabaseDeleteCmd() *cobra.Command {
 			}
 			return opts.Execute()
 		}),
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
+		},
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)

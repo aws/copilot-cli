@@ -1,13 +1,14 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -23,7 +24,6 @@ type DatabaseCreateOpts struct {
 
 	manifestPath string
 
-	dbManager     archer.DatabaseManager
 	secretManager archer.SecretsManager
 	storeReader   storeReader
 
@@ -72,13 +72,11 @@ func (o *DatabaseCreateOpts) Ask() error {
 func (o *DatabaseCreateOpts) Execute() error {
 	project := o.GlobalOpts.ProjectName()
 	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-	pwKey := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/database", project, o.appName)
 
 	o.db.DatabaseName = o.appName
 	o.db.DatabaseName = strings.ReplaceAll(o.db.DatabaseName, "-", "")
 	o.db.DatabaseName = fmt.Sprintf("%sdb", o.db.DatabaseName)
 
-	o.db.BackupRetentionPeriod = 7
 	o.db.MinCapacity = 2
 	o.db.MaxCapacity = 4
 
@@ -100,49 +98,24 @@ func (o *DatabaseCreateOpts) Execute() error {
 		lbmft.Database = &manifest.DatabaseConfig{}
 	}
 
-	envs, err := o.storeReader.ListEnvironments(project)
+	secretName := fmt.Sprintf("%s-%s-database", project, o.appName)
+	_, err = o.secretManager.CreateSecret(secretName, o.db.Password)
+
 	if err != nil {
-		return err
-	}
-
-	for _, e := range envs {
-		o.db.ClusterIdentifier = fmt.Sprintf("%s-%s-%s", project, e.Name, o.appName)
-
-		output, err := o.dbManager.CreateDatabase(o.db)
-		if err != nil {
+		var existsErr *secretsmanager.ErrSecretAlreadyExists
+		if !errors.As(err, &existsErr) {
 			return err
 		}
-
-		env := lbmft.Environments[e.Name]
-		if _, ok := lbmft.Environments[e.Name]; !ok {
-			env = manifest.LBFargateConfig{
-				ContainersConfig: manifest.ContainersConfig{
-					Variables: make(map[string]string),
-				},
-			}
-		}
-		if env.ContainersConfig.Variables == nil {
-			env.ContainersConfig.Variables = make(map[string]string)
-		}
-		env.ContainersConfig.Variables["DB_HOST"] = *output.Endpoint
-		lbmft.Environments[e.Name] = env
-
-		lbmft.Variables["DB_PORT"] = strconv.Itoa(int(*output.Port))
-	}
-
-	log.Successf("Created the database %s in %s under project %s.\n",
-		color.HighlightUserInput(o.db.DatabaseName), color.HighlightResource(o.appName),
-		color.HighlightResource(project))
-
-	if _, err := o.secretManager.CreateSecret(pwKey, o.db.Password); err != nil {
-		return err
+		log.Successf("Secret already exists for the %s database! Do nothing.\n", color.HighlightUserInput(o.appName))
 	}
 
 	log.Successf("Created a secret with the database password.\n")
 
 	lbmft.Variables["DB_NAME"] = o.db.DatabaseName
 	lbmft.Variables["DB_USERNAME"] = o.db.Username
-	lbmft.Secrets["DB_PASSWORD"] = pwKey
+	lbmft.Variables["DB_HOST"] = "*auto-generated*"
+	lbmft.Variables["DB_PORT"] = "*auto-generated*"
+	lbmft.Secrets["DB_PASSWORD"] = secretName
 
 	lbmft.Database.Engine = o.db.Engine
 	lbmft.Database.MinCapacity = int(o.db.MinCapacity)
@@ -154,6 +127,13 @@ func (o *DatabaseCreateOpts) Execute() error {
 
 	log.Successf("Saved the parameters of the database to the manifest.\n")
 	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *DatabaseCreateOpts) RecommendedActions() []string {
+	return []string{
+		fmt.Sprintf("Run %s to deploy your database.", color.HighlightCode("dw-run.sh app deploy")),
+	}
 }
 
 func (o *DatabaseCreateOpts) readManifest() (archer.Manifest, error) {
@@ -320,8 +300,11 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 				return fmt.Errorf("new workspace: %w", err)
 			}
 			opts.ws = ws
-			opts.dbManager = store
-			opts.secretManager = store
+			secretManager, err := secretsmanager.NewStore()
+			if err != nil {
+				return fmt.Errorf("couldn't create secrets manager: %w", err)
+			}
+			opts.secretManager = secretManager
 			opts.storeReader = store
 
 			return nil
@@ -335,6 +318,14 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 			}
 			return opts.Execute()
 		}),
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			log.Infoln()
+			log.Infoln("Recommended follow-up actions:")
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
+			return nil
+		},
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)

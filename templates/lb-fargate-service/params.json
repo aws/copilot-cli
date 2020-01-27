@@ -9,7 +9,13 @@
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
     "TaskCount": "{{.App.Count}}",
-    "HTTPSEnabled": "{{.HTTPSEnabled}}"
+    "HTTPSEnabled": "{{.HTTPSEnabled}}",
+    "DBName": "{{.Database.Name}}",
+    "DBUsername": "{{.Database.Username}}",
+    "DBPassword": "{{.Database.Password}}",
+    "DBEngine": "{{.Database.Engine}}",
+    "DBMinCapacity": "{{.App.Database.MinCapacity}}",
+    "DBMaxCapacity": "{{.App.Database.MaxCapacity}}"
   },
   "Tags": {
     "ecs-project": "{{.Env.Project}}",

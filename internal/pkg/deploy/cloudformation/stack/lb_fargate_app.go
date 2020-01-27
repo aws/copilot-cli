@@ -200,13 +200,34 @@ type lbFargateTemplateParams struct {
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
 	url := fmt.Sprintf("%s:%s", c.ImageRepoURL, c.ImageTag)
+
+	db := &deploy.Database{
+		Name:     c.App.Variables["DB_NAME"],
+		Username: c.App.Variables["DB_USERNAME"],
+		Password: c.App.Secrets["DB_PASSWORD"],
+	}
+
+	switch c.App.Database.Engine {
+	case "mysql":
+		db.Engine = "aurora"
+	case "postgresql":
+		db.Engine = "aurora-postgresql"
+	}
+
+	c.App.Secrets["DB_PASSWORD"] = fmt.Sprintf("!Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:%s",
+		c.App.Secrets["DB_PASSWORD"])
+
+	delete(c.App.Variables, "DB_HOST")
+	delete(c.App.Variables, "DB_PORT")
+
 	return &lbFargateTemplateParams{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
 			App: &manifest.LBFargateManifest{
 				AppManifest:     c.App.AppManifest,
 				LBFargateConfig: c.CreateLBFargateAppInput.App.EnvConf(c.Env.Name), // Get environment specific app configuration.
 			},
-			Env: c.Env,
+			Database: db,
+			Env:      c.Env,
 		},
 		HTTPSEnabled: strconv.FormatBool(c.httpsEnabled),
 		Image: struct {

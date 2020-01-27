@@ -530,6 +530,13 @@ Resources:
       NameServers: !GetAtt EnvironmentHostedZone.NameServers
       RootDNSRole: !Ref ProjectDNSDelegationRole
 
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub "${ProjectName}-${EnvironmentName}"
+      DBSubnetGroupDescription: !Sub "${EnvironmentName} subnet group"
+      SubnetIds: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ]
+
   HTTPSCert:
     Condition: DelegateDNS
     Type: Custom::CertificateValidationFunction
@@ -560,6 +567,11 @@ Outputs:
     Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
+
+  DBSubnetGroupName:
+    Value: !Ref DBSubnetGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-DBSubnetGroupName
 
   PublicLoadBalancerDNSName:
     Condition: CreatePublicLoadBalancer
