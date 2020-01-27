@@ -272,7 +272,7 @@ func (opts *appDeployOpts) askEnvName() error {
 	if len(envs) == 0 {
 		log.Infof("Couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("ecs-preview env init"))
+			color.HighlightCode("dw_run.sh env init"))
 		return fmt.Errorf("no environments found in project %s", opts.ProjectName())
 	}
 	if len(envs) == 1 {
@@ -421,8 +421,8 @@ func BuildAppDeployCmd() *cobra.Command {
 		Short: "Deploys an application to an environment.",
 		Long:  `Deploys an application to an environment.`,
 		Example: `
-  Deploys an application named "frontend" to a "test" environment.
-  /code $ ecs-preview app deploy --name frontend --env test`,
+  Deploys an application named "frontend" to the "dev" environment.
+  /code $ dw_run.sh app deploy --name frontend --env dev`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.init(); err != nil {
 				return err

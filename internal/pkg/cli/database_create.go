@@ -286,10 +286,11 @@ func BuildDatabaseCreateCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Creates a serverless Aurora database.",
+		Use:     "create",
+		Aliases: []string{"add"},
+		Short:   "Creates a serverless Aurora database.",
 		Example: `
-  /code $ ecs-preview database create`,
+  /code $ dw_run.sh database create`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {

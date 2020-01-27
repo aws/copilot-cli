@@ -143,9 +143,10 @@ func BuildEndpointDeleteCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "delete-prod-url",
-		Short: "Deletes the short URL reference to the prod app.",
-		Example: `/code $ ecs-preview endpoint delete-prod-url`,
+		Use:     "delete-prod-url",
+		Aliases: []string{"delete"},
+		Short:   "Deletes the short URL reference to the prod app.",
+		Example: `/code $ dw_run.sh endpoint delete-prod-url`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {

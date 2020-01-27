@@ -260,7 +260,7 @@ func BuildAppShowCmd() *cobra.Command {
 		Short: "Displays information about an application per environment.",
 		Example: `
   Shows details for the application "my-app"
-  /code $ ecs-preview app show -a my-app`,
+  /code $ dw_run.sh app show -a my-app`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {

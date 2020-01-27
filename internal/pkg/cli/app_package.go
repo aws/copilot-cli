@@ -128,7 +128,7 @@ func (o *PackageAppOpts) askAppName() error {
 		return err
 	}
 	if len(names) == 0 {
-		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
+		return errors.New("there are no applications in the workspace, run `dw_run.sh init` first")
 	}
 	app, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", names)
 	if err != nil {
@@ -325,11 +325,11 @@ func BuildAppPackageCmd() *cobra.Command {
 		Short: "Prints the AWS CloudFormation template of an application.",
 		Long:  `Prints the CloudFormation template used to deploy an application to an environment.`,
 		Example: `
-  Print the CloudFormation template for the "frontend" application parametrized for the "test" environment.
-  /code $ ecs-preview app package -n frontend -e test
+  Print the CloudFormation template for the "frontend" application parametrized for the "dev" environment.
+  /code $ dw_run.sh app package -n frontend -e dev
 
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ ecs-preview app package -n frontend -e test --output-dir ./infrastructure
+  /code $ dw_run.sh app package -n frontend -e dev --output-dir ./infrastructure
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {

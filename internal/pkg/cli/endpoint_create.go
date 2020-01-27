@@ -145,8 +145,9 @@ func BuildEndpointCreateCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:     "create-prod-url",
+		Aliases: []string{"create"},
 		Short:   "Creates a short reference to the prod app; e.g. {app-name}.prod.dw-run.dw.run -> {app-name}.dw.run.",
-		Example: `/code $ ecs-preview endpoint create-prod-url`,
+		Example: `/code $ dw_run.sh endpoint create-prod-url`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {

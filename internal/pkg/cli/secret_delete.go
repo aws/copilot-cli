@@ -17,8 +17,8 @@ import (
 
 // SecretDeleteOpts contains the fields to collect to delete a secret.
 type SecretDeleteOpts struct {
-	appName     string
-	secretName  string
+	appName    string
+	secretName string
 
 	manifestPath string
 	manifest     *manifest.LBFargateManifest
@@ -222,10 +222,11 @@ func BuildSecretDeleteCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete a secret.",
+		Use:     "delete",
+		Aliases: []string{"remove"},
+		Short:   "Delete a secret.",
 		Example: `
-  /code $ ecs-preview secret delete -n secret-name
+  /code $ dw_run.sh secret delete -n secret-name
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()

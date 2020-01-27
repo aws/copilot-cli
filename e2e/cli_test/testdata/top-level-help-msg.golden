@@ -12,8 +12,8 @@ Commands
     completion  Output shell completion code
 
 Flags
-  -h, --help   help for ecs-preview
+  -h, --help   help for dw_run.sh
 
 Examples
   Display the help menu for the init command
-  $ ecs-preview init --help
+  $ dw_run.sh init --help

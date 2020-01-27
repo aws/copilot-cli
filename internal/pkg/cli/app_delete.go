@@ -154,7 +154,7 @@ func (opts *deleteAppOpts) sourceProjectEnvironments() error {
 	if len(envs) == 0 {
 		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
 			color.HighlightUserInput(opts.ProjectName()),
-			color.HighlightCode("ecs-preview env init"))
+			color.HighlightCode("dw_run.sh env init"))
 
 		return errors.New("no environments found")
 	}
@@ -262,7 +262,7 @@ func (opts *deleteAppOpts) RecommendedActions() []string {
 	// TODO: Add recommendation to do `pipeline delete` when it is available
 	return []string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
-			color.HighlightCode(fmt.Sprintf("ecs-preview pipeline update"))),
+			color.HighlightCode(fmt.Sprintf("dw_run.sh pipeline update"))),
 	}
 }
 
@@ -276,14 +276,15 @@ func BuildAppDeleteCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:   "delete [name]",
-		Short: "Deletes an application from your project.",
+		Use:     "delete [name]",
+		Aliases: []string{"remove [name]"},
+		Short:   "Deletes an application from your project.",
 		Example: `
   Delete the "test" application.
-  /code $ ecs-preview app delete test
+  /code $ dw_run.sh app delete test
 
   Delete the "test" application without prompting.
-  /code $ ecs-preview app delete test --yes`,
+  /code $ dw_run.sh app delete test --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return errors.New("requires a single application name as argument")

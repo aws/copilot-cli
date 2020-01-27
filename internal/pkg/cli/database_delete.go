@@ -89,7 +89,7 @@ func (o *DatabaseDeleteOpts) Execute() error {
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (o *DatabaseDeleteOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Run %s to remove the database assets.", color.HighlightCode("dw-run.sh app deploy")),
+		fmt.Sprintf("Run %s to delete the database.", color.HighlightCode("dw-run.sh app deploy")),
 	}
 }
 
@@ -186,10 +186,11 @@ func BuildDatabaseDeleteCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes a serverless Aurora database.",
+		Use:     "delete",
+		Aliases: []string{"remove"},
+		Short:   "Deletes a serverless Aurora database.",
 		Example: `
-/code $ ecs-preview env delete --name test --profile default`,
+/code $ dw_run.sh database delete`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {

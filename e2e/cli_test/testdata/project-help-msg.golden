@@ -2,7 +2,7 @@ Command for working with projects.
 A Project represents all of your deployment environments.
 
 Usage
-  ecs-preview project [command]
+  dw_run.sh project [command]
 
 Available Commands
   init        Creates a new, empty project

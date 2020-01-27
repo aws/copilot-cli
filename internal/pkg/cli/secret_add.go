@@ -229,10 +229,11 @@ func BuildSecretAddCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Adds a secret.",
+		Use:     "add",
+		Aliases: []string{"create"},
+		Short:   "Adds a secret.",
 		Example: `
-  /code $ ecs-preview secret add -n secret-name
+  /code $ dw_run.sh secret add -n secret-name
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()

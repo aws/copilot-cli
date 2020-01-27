@@ -215,10 +215,11 @@ func BuildVariableAddCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Adds an environment variable.",
+		Use:     "add",
+		Aliases: []string{"create"},
+		Short:   "Adds an environment variable.",
 		Example: `
-  /code $ ecs-preview variable add
+  /code $ dw_run.sh variable add
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()

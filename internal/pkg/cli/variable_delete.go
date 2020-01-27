@@ -208,10 +208,11 @@ func BuildVariableDeleteCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes an environment variable.",
+		Use:     "delete",
+		Aliases: []string{"remove"},
+		Short:   "Deletes an environment variable.",
 		Example: `
-  /code $ ecs-preview variable delete
+  /code $ dw_run.sh variable delete
 `,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()

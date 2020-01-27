@@ -39,7 +39,7 @@ const (
 	fmtUpdateEnvPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
-var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `ecs-preview pipeline init` to create an pipeline")
+var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `dw_run.sh pipeline init` to create an pipeline")
 
 // UpdatePipelineOpts holds the configuration needed to create or update a pipeline
 type UpdatePipelineOpts struct {
@@ -234,7 +234,7 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 		Long:  `Deploys a pipeline for the applications in your workspace, using the environments associated with the applications.`,
 		Example: `
   Deploy an updated pipeline for the applications in your workspace:
-  /code $ ecs-preview pipeline update`,
+  /code $ dw_run.sh pipeline update`,
 
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()

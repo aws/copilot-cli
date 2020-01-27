@@ -2,7 +2,7 @@ Command for working with environments.
 An environment represents a deployment stage.
 
 Usage
-  ecs-preview env [command]
+  dw_run.sh env [command]
 
 Available Commands
   add         Deploy a new environment to your project

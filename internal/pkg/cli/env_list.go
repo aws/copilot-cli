@@ -132,7 +132,7 @@ func BuildEnvListCmd() *cobra.Command {
 		Short: "Lists all the environments in a project",
 		Example: `
   Lists all the environments for the test project
-  /code $ ecs-preview env ls --project test`,
+  /code $ dw_run.sh env ls --project test`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			ssmStore, err := store.New()
 			if err != nil {

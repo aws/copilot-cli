@@ -63,7 +63,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			},
 			expectRunner: func(m *climocks.Mockrunner) {},
 
-			wantedErrorS: "there are no applications in the workspace, run `ecs-preview init` first",
+			wantedErrorS: "there are no applications in the workspace, run `dw_run.sh init` first",
 		},
 		"wrap list envs error": {
 			inAppName: "frontend",

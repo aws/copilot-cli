@@ -245,14 +245,15 @@ func (o *deleteEnvOpts) deleteFromStore() {
 func BuildEnvDeleteCmd() *cobra.Command {
 	opts := newDeleteEnvOpts()
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes an environment from your project.",
+		Use:     "delete",
+		Aliases: []string{"remove"},
+		Short:   "Deletes an environment from your project.",
 		Example: `
   Delete the "test" environment.
-  /code $ ecs-preview env delete --name test --profile default
+  /code $ dw_run.sh env delete --name test --profile default
 
   Delete the "test" environment without prompting.
-  /code $ ecs-preview env delete --name test --profile default --yes`,
+  /code $ dw_run.sh env delete --name test --profile default --yes`,
 		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			store, err := store.New()
 			if err != nil {
