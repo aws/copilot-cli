@@ -508,6 +508,47 @@ func TestWebAppDescriber_StackResources(t *testing.T) {
 
 			wantedResources: testCfnResources,
 		},
+		"ignores dummy stack resources": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(&cloudformation.DescribeStackResourcesOutput{
+					StackResources: []*cloudformation.StackResource{
+						&cloudformation.StackResource{
+							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
+							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+						},
+						&cloudformation.StackResource{
+							ResourceType:       aws.String("AWS::CloudFormation::WaitConditionHandle"),
+							PhysicalResourceId: aws.String("https://cloudformation-waitcondition-us-west-2.s3-us-west-2.amazonaws.com/"),
+						},
+						&cloudformation.StackResource{
+							ResourceType:       aws.String("Custom::RulePriorityFunction"),
+							PhysicalResourceId: aws.String("alb-rule-priority-HTTPRulePriorityAction"),
+						},
+						&cloudformation.StackResource{
+							ResourceType:       aws.String("AWS::CloudFormation::WaitCondition"),
+							PhysicalResourceId: aws.String(" arn:aws:cloudformation:us-west-2:1234567890"),
+						},
+					},
+				}, nil)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedResources: testCfnResources,
+		},
 		"returns error when fail to describe stack resources": {
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
 				m := mocks.NewMockenvGetter(ctrl)
