@@ -28,6 +28,11 @@ const (
 	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
+
+	// Ignored resources
+	rulePriorityFunction = "Custom::RulePriorityFunction"
+	waitCondition        = "AWS::CloudFormation::WaitCondition"
+	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
 )
 
 // WebAppURI represents the unique identifier to access a web application.
@@ -202,7 +207,16 @@ func (d *WebAppDescriber) StackResources(envName string) ([]*CfnResource, error)
 		return nil, err
 	}
 	var resources []*CfnResource
+	// See https://github.com/aws/amazon-ecs-cli-v2/issues/621
+	ignoredResources := map[string]bool{
+		rulePriorityFunction: true,
+		waitCondition:        true,
+		waitConditionHandle:  true,
+	}
 	for _, appResource := range appResource {
+		if ignoredResources[aws.StringValue(appResource.ResourceType)] {
+			continue
+		}
 		resources = append(resources, &CfnResource{
 			PhysicalID: aws.StringValue(appResource.PhysicalResourceId),
 			Type:       aws.StringValue(appResource.ResourceType),
