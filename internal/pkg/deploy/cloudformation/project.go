@@ -406,9 +406,12 @@ func (cf CloudFormation) getLastDeployedProjectConfig(projectConfig *stack.Proje
 	describeOutput, err := cf.client.DescribeStackSet(&cloudformation.DescribeStackSetInput{
 		StackSetName: aws.String(projectConfig.StackSetName()),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("describe stack set: %w", err)
+	}
 	previouslyDeployedConfig, err := stack.ProjectConfigFrom(describeOutput.StackSet.TemplateBody)
 	if err != nil {
-		return nil, fmt.Errorf("parsing previous deployed stackset %w", err)
+		return nil, fmt.Errorf("parse previous deployed stackset %w", err)
 	}
 	return previouslyDeployedConfig, nil
 }

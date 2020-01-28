@@ -27,7 +27,6 @@ const (
 
 var (
 	errAppDeleteCancelled = errors.New("app delete cancelled - no changes made")
-	errAppNotFound        = errors.New("no applications found in current workspace")
 )
 
 type deleteAppOpts struct {
@@ -37,11 +36,10 @@ type deleteAppOpts struct {
 	AppName          string
 
 	// Interfaces to dependencies.
-	projectService     projectService
-	initProjectService func(*deleteAppOpts) error // Overriden in test
-	workspaceService   archer.Workspace
-	sessProvider       sessionProvider
-	spinner            progress
+	projectService   projectService
+	workspaceService archer.Workspace
+	sessProvider     sessionProvider
+	spinner          progress
 
 	// Internal state.
 	projectEnvironments []*archer.Environment
@@ -52,8 +50,10 @@ func (o *deleteAppOpts) Validate() error {
 	if o.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
-	if err := o.validateAppName(); err != nil {
-		return err
+	if o.AppName != "" {
+		if _, err := o.projectService.GetApplication(o.ProjectName(), o.AppName); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -85,10 +85,6 @@ func (o *deleteAppOpts) Ask() error {
 
 // Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
 func (o *deleteAppOpts) Execute() error {
-	if err := o.initProjectService(o); err != nil {
-		return err
-	}
-
 	if err := o.sourceProjectEnvironments(); err != nil {
 		return err
 	}
@@ -118,9 +114,12 @@ func (o *deleteAppOpts) askAppName() error {
 		return nil
 	}
 
-	names, err := o.retrieveLocalAppName()
+	names, err := o.retrieveAppNames()
 	if err != nil {
 		return err
+	}
+	if len(names) == 0 {
+		return fmt.Errorf("couldn't find any application in the project %s", o.ProjectName())
 	}
 	name, err := o.prompt.SelectOne(appDeleteNamePrompt, "", names)
 	if err != nil {
@@ -130,39 +129,14 @@ func (o *deleteAppOpts) askAppName() error {
 	return nil
 }
 
-func (o *deleteAppOpts) validateAppName() error {
-	if o.AppName == "" {
-		return nil
-	}
-
-	appNames, err := o.retrieveLocalAppName()
-	if err != nil {
-		return err
-	}
-	exists := false
-	for _, appName := range appNames {
-		if o.AppName == appName {
-			exists = true
-		}
-	}
-	if !exists {
-		return fmt.Errorf("input app %s not found", o.AppName)
-	}
-
-	return nil
-}
-
-func (o *deleteAppOpts) retrieveLocalAppName() ([]string, error) {
-	localApps, err := o.workspaceService.Apps()
+func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
+	apps, err := o.projectService.ListApplications(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get app names: %w", err)
 	}
-	if len(localApps) == 0 {
-		return nil, errAppNotFound
-	}
 	var names []string
-	for _, app := range localApps {
-		names = append(names, app.AppName())
+	for _, app := range apps {
+		names = append(names, app.Name)
 	}
 	return names, nil
 }
@@ -172,14 +146,6 @@ func (o *deleteAppOpts) sourceProjectEnvironments() error {
 
 	if err != nil {
 		return fmt.Errorf("get environments: %w", err)
-	}
-
-	if len(envs) == 0 {
-		log.Infof("couldn't find any environments associated with project %s, try initializing one: %s\n",
-			color.HighlightUserInput(o.ProjectName()),
-			color.HighlightCode("ecs-preview env init"))
-
-		return errors.New("no environments found")
 	}
 
 	o.projectEnvironments = envs
@@ -198,7 +164,6 @@ func (o *deleteAppOpts) deleteStacks() error {
 
 		stackName := fmt.Sprintf("%s-%s-%s", o.projectName, env.Name, o.AppName)
 
-		// TODO: check if the stack exists first
 		o.spinner.Start(fmt.Sprintf("deleting app %s from env %s", o.AppName, env.Name))
 		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
 			o.spinner.Stop(log.Serrorf("deleting app %s from env %s", o.AppName, env.Name))
@@ -231,7 +196,6 @@ func (o *deleteAppOpts) emptyECRRepos() error {
 		ecrService := ecr.New(sess)
 
 		if err := ecrService.ClearRepository(repoName); err != nil {
-
 			return err
 		}
 	}
@@ -255,9 +219,10 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 
 	o.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", o.AppName, o.projectName))
 	if err := cfClient.RemoveAppFromProject(proj, o.AppName); err != nil {
-		o.spinner.Stop(log.Serrorf("removing app %s resources from project %s", o.AppName, o.projectName))
-
-		return err
+		if !isStackSetNotExistsErr(err) {
+			o.spinner.Stop(log.Serrorf("removing app %s resources from project %s", o.AppName, o.projectName))
+			return err
+		}
 	}
 	o.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", o.AppName, o.projectName))
 
@@ -273,6 +238,7 @@ func (o *deleteAppOpts) deleteSSMParam() error {
 }
 
 func (o *deleteAppOpts) deleteWorkspaceFile() error {
+	// Return if manifest does not exist.
 	if err := o.workspaceService.DeleteFile(o.AppName); err != nil {
 		return fmt.Errorf("delete app file %s: %w", o.AppName, err)
 	}
@@ -295,14 +261,6 @@ func BuildAppDeleteCmd() *cobra.Command {
 		GlobalOpts:   NewGlobalOpts(),
 		spinner:      termprogress.NewSpinner(),
 		sessProvider: session.NewProvider(),
-		initProjectService: func(o *deleteAppOpts) error {
-			projectService, err := store.New()
-			if err != nil {
-				return fmt.Errorf("create project service: %w", err)
-			}
-			o.projectService = projectService
-			return nil
-		},
 	}
 
 	cmd := &cobra.Command{
@@ -320,6 +278,12 @@ func BuildAppDeleteCmd() *cobra.Command {
 				return fmt.Errorf("intialize workspace service: %w", err)
 			}
 			opts.workspaceService = workspaceService
+
+			projectService, err := store.New()
+			if err != nil {
+				return fmt.Errorf("create project service: %w", err)
+			}
+			opts.projectService = projectService
 
 			return nil
 		}),
@@ -342,7 +306,7 @@ func BuildAppDeleteCmd() *cobra.Command {
 		}),
 	}
 
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd

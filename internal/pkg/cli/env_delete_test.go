@@ -139,6 +139,19 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 			wantedError: errors.New("prompt for environment name: some error"),
 		},
+		"wraps error if no environment found": {
+			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
+				mockEnvStore := mocks.NewMockEnvironmentStore(ctrl)
+				mockEnvStore.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{}, nil)
+
+				mockPrompter := climocks.NewMockprompter(ctrl)
+
+				o.storeClient = mockEnvStore
+				o.GlobalOpts.prompt = mockPrompter
+			},
+
+			wantedError: errors.New("couldn't find any environment in the project phonetool"),
+		},
 		"wraps error from prompting from profile": {
 			inEnvName: testEnv,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {

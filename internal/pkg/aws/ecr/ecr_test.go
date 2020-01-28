@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr/mocks"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -363,6 +364,85 @@ func TestDeleteImages(t *testing.T) {
 			got := service.DeleteImages(tc.images, mockRepoName)
 
 			require.Equal(t, tc.wantError, got)
+		})
+	}
+}
+
+func TestClearRepository(t *testing.T) {
+	mockRepoName := "mockRepoName"
+	mockAwsError := awserr.New("someErrorCode", "some error", nil)
+	mockError := errors.New("some error")
+	mockRepoNotFoundError := awserr.New("RepositoryNotFoundException", "some error", nil)
+	mockDigest := "mockDigest"
+	mockImageID := ecr.ImageIdentifier{
+		ImageDigest: aws.String(mockDigest),
+	}
+
+	tests := map[string]struct {
+		mockECRClient func(m *mocks.MockecrClient)
+
+		wantError error
+	}{
+		"should clear repo if exists": {
+			mockECRClient: func(m *mocks.MockecrClient) {
+				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
+					RepositoryName: aws.String(mockRepoName),
+				}).Return(&ecr.DescribeImagesOutput{
+					ImageDetails: []*ecr.ImageDetail{
+						&ecr.ImageDetail{
+							ImageDigest: aws.String(mockDigest),
+						},
+					},
+				}, nil)
+				m.EXPECT().BatchDeleteImage(&ecr.BatchDeleteImageInput{
+					RepositoryName: aws.String(mockRepoName),
+					ImageIds:       []*ecr.ImageIdentifier{&mockImageID},
+				}).Return(&ecr.BatchDeleteImageOutput{}, nil)
+			},
+			wantError: nil,
+		},
+		"returns nil if repo not exists": {
+			mockECRClient: func(m *mocks.MockecrClient) {
+				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
+					RepositoryName: aws.String(mockRepoName),
+				}).Return(nil, mockRepoNotFoundError)
+			},
+			wantError: nil,
+		},
+		"returns error if fail to check repo existance": {
+			mockECRClient: func(m *mocks.MockecrClient) {
+				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
+					RepositoryName: aws.String(mockRepoName),
+				}).Return(nil, mockAwsError)
+			},
+			wantError: fmt.Errorf("ecr repo mockRepoName describe images: %w", mockAwsError),
+		},
+		"returns error if fail to check repo existance because of non-awserr error type": {
+			mockECRClient: func(m *mocks.MockecrClient) {
+				m.EXPECT().DescribeImages(&ecr.DescribeImagesInput{
+					RepositoryName: aws.String(mockRepoName),
+				}).Return(nil, mockError)
+			},
+			wantError: fmt.Errorf("ecr repo mockRepoName describe images: %w", mockError),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECRAPI := mocks.NewMockecrClient(ctrl)
+			tc.mockECRClient(mockECRAPI)
+
+			service := Service{
+				mockECRAPI,
+			}
+
+			gotError := service.ClearRepository(mockRepoName)
+
+			require.Equal(t, tc.wantError, gotError)
 		})
 	}
 }

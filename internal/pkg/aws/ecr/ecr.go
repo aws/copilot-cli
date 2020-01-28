@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
@@ -172,12 +173,14 @@ func (s Service) DeleteImages(images []Image, repoName string) error {
 func (s Service) ClearRepository(repoName string) error {
 	images, err := s.ListImages(repoName)
 
-	if err != nil {
-		return err
+	if err == nil {
+		// TODO: add retry handling in case images are added to a repository after a call to ListImages
+		return s.DeleteImages(images, repoName)
 	}
-
-	// TODO: add retry handling in case images are added to a repository after a call to ListImages
-	return s.DeleteImages(images, repoName)
+	if isRepoNotFoundErr(errors.Unwrap(err)) {
+		return nil
+	}
+	return err
 }
 
 // URIFromARN converts an ECR Repo ARN to a Repository URI
@@ -193,4 +196,15 @@ func URIFromARN(repositoryARN string) (string, error) {
 		repoARN.AccountID,
 		repoARN.Region,
 		repoName), nil
+}
+
+func isRepoNotFoundErr(err error) bool {
+	aerr, ok := err.(awserr.Error)
+	if !ok {
+		return false
+	}
+	if aerr.Code() == "RepositoryNotFoundException" {
+		return true
+	}
+	return false
 }
