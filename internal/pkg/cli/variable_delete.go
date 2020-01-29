@@ -114,12 +114,17 @@ func (o *VariableDeleteOpts) askAppName() error {
 	if o.appName != "" {
 		return nil
 	}
-	appNames, err := o.retrieveApplications()
+	appNames, err := o.workspaceAppNames()
 	if err != nil {
 		return err
 	}
 	if len(appNames) == 0 {
 		log.Infof("No applications found in project '%s'\n.", o.ProjectName())
+		return nil
+	}
+	if len(appNames) == 1 {
+		o.appName = appNames[0]
+		log.Infof("Found the app: %s\n", color.HighlightUserInput(o.appName))
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(
@@ -190,16 +195,16 @@ func (o *VariableDeleteOpts) retrieveProjects() ([]string, error) {
 	return projNames, nil
 }
 
-func (o *VariableDeleteOpts) retrieveApplications() ([]string, error) {
-	apps, err := o.storeReader.ListApplications(o.ProjectName())
+func (o *VariableDeleteOpts) workspaceAppNames() ([]string, error) {
+	apps, err := o.ws.Apps()
 	if err != nil {
-		return nil, fmt.Errorf("listing applications for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("get applications in the workspace: %w", err)
 	}
-	appNames := make([]string, len(apps))
-	for ind, app := range apps {
-		appNames[ind] = app.Name
+	var names []string
+	for _, app := range apps {
+		names = append(names, app.AppName())
 	}
-	return appNames, nil
+	return names, nil
 }
 
 // BuildVariableDeleteCmd removes an environment variable.
