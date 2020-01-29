@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package color provides functionality to displayed colored text on the terminal.
@@ -18,6 +18,7 @@ import (
 var (
 	Grey       = color.New(color.FgWhite)
 	Red        = color.New(color.FgHiRed)
+	Yellow     = color.New(color.FgHiYellow)
 	Cyan       = color.New(color.FgCyan)
 	HiCyan     = color.New(color.FgHiCyan)
 	Bold       = color.New(color.Bold)

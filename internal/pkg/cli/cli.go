@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -135,6 +136,11 @@ type projectService interface {
 type ecrService interface {
 	GetRepository(name string) (string, error)
 	GetECRAuth() (ecr.Auth, error)
+}
+
+type cwlogService interface {
+	TaskLogEvents(logGroupName string, stringTokens map[string]*string, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	LogGroupExists(logGroupName string) (bool, error)
 }
 
 type dockerService interface {

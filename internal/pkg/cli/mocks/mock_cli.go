@@ -6,6 +6,7 @@ package mocks
 
 import (
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -341,6 +342,64 @@ func (m *MockecrService) GetECRAuth() (ecr.Auth, error) {
 func (mr *MockecrServiceMockRecorder) GetECRAuth() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetECRAuth", reflect.TypeOf((*MockecrService)(nil).GetECRAuth))
+}
+
+// MockcwlogService is a mock of cwlogService interface
+type MockcwlogService struct {
+	ctrl     *gomock.Controller
+	recorder *MockcwlogServiceMockRecorder
+}
+
+// MockcwlogServiceMockRecorder is the mock recorder for MockcwlogService
+type MockcwlogServiceMockRecorder struct {
+	mock *MockcwlogService
+}
+
+// NewMockcwlogService creates a new mock instance
+func NewMockcwlogService(ctrl *gomock.Controller) *MockcwlogService {
+	mock := &MockcwlogService{ctrl: ctrl}
+	mock.recorder = &MockcwlogServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcwlogService) EXPECT() *MockcwlogServiceMockRecorder {
+	return m.recorder
+}
+
+// TaskLogEvents mocks base method
+func (m *MockcwlogService) TaskLogEvents(logGroupName string, stringTokens map[string]*string, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{logGroupName, stringTokens}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "TaskLogEvents", varargs...)
+	ret0, _ := ret[0].(*cloudwatchlogs.LogEventsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// TaskLogEvents indicates an expected call of TaskLogEvents
+func (mr *MockcwlogServiceMockRecorder) TaskLogEvents(logGroupName, stringTokens interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{logGroupName, stringTokens}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockcwlogService)(nil).TaskLogEvents), varargs...)
+}
+
+// LogGroupExists mocks base method
+func (m *MockcwlogService) LogGroupExists(logGroupName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LogGroupExists", logGroupName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LogGroupExists indicates an expected call of LogGroupExists
+func (mr *MockcwlogServiceMockRecorder) LogGroupExists(logGroupName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogGroupExists", reflect.TypeOf((*MockcwlogService)(nil).LogGroupExists), logGroupName)
 }
 
 // MockdockerService is a mock of dockerService interface
