@@ -87,10 +87,16 @@ Resources:
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
           Environment:
-          - Name: DB_HOST
-            Value: !GetAtt RDSDatabase.Endpoint.Address
-          - Name: DB_PORT
-            Value: !GetAtt RDSDatabase.Endpoint.Port
+          - !If
+            - Database
+            - Name: DB_HOST
+              Value: !GetAtt RDSDatabase.Endpoint.Address
+            - !Ref "AWS::NoValue"
+          - !If
+            - Database
+            - Name: DB_PORT
+              Value: !GetAtt RDSDatabase.Endpoint.Port
+            - !Ref "AWS::NoValue"
           - Name: ECS_CLI_PROJECT_NAME
             Value: !Sub '${ProjectName}'
           - Name: ECS_CLI_ENVIRONMENT_NAME

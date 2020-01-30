@@ -20,6 +20,8 @@ var (
 	Red        = color.New(color.FgHiRed)
 	Cyan       = color.New(color.FgCyan)
 	HiCyan     = color.New(color.FgHiCyan)
+	Green      = color.New(color.FgGreen)
+	Yellow     = color.New(color.FgYellow)
 	Bold       = color.New(color.Bold)
 	BoldItalic = color.New(color.Bold).Add(color.Italic)
 )
@@ -68,4 +70,12 @@ func HighlightResource(s string) string {
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
 func HighlightCode(s string) string {
 	return HiCyan.Sprintf("`%s`", s)
+}
+
+func HighlightLogTimestamp(s string) string {
+	return Green.Sprint(s)
+}
+
+func HighlightLogStreamName(s string) string {
+	return Yellow.Sprint(s)
 }

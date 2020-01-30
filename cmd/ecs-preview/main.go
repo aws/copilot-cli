@@ -82,6 +82,7 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildProjCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildAppCmd())
+	cmd.AddCommand(cli.BuildLogCmd())
 	cmd.AddCommand(cli.BuildVariableCmd())
 	cmd.AddCommand(cli.BuildSecretCmd())
 

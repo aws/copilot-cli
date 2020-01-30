@@ -199,26 +199,32 @@ type lbFargateTemplateParams struct {
 }
 
 func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
+	db := &deploy.Database{}
 	url := fmt.Sprintf("%s:%s", c.ImageRepoURL, c.ImageTag)
 
-	db := &deploy.Database{
-		Name:     c.App.Variables["DB_NAME"],
-		Username: c.App.Variables["DB_USERNAME"],
-		Password: c.App.Secrets["DB_PASSWORD"],
+	if c.App.Database == nil {
+		c.App.Database = &manifest.DatabaseConfig{}
 	}
 
-	switch c.App.Database.Engine {
-	case "mysql":
-		db.Engine = "aurora"
-	case "postgresql":
-		db.Engine = "aurora-postgresql"
+	// checking if the user created a DB and if so, deploy it
+	if c.App.Variables["DB_NAME"] != "" {
+		db.Name = c.App.Variables["DB_NAME"]
+		db.Username = c.App.Variables["DB_USERNAME"]
+		db.Password = c.App.Secrets["DB_PASSWORD"]
+
+		switch c.App.Database.Engine {
+		case "mysql":
+			db.Engine = "aurora"
+		case "postgresql":
+			db.Engine = "aurora-postgresql"
+		}
+
+		c.App.Secrets["DB_PASSWORD"] = fmt.Sprintf("!Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:%s",
+			c.App.Secrets["DB_PASSWORD"])
+
+		delete(c.App.Variables, "DB_HOST")
+		delete(c.App.Variables, "DB_PORT")
 	}
-
-	c.App.Secrets["DB_PASSWORD"] = fmt.Sprintf("!Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:%s",
-		c.App.Secrets["DB_PASSWORD"])
-
-	delete(c.App.Variables, "DB_HOST")
-	delete(c.App.Variables, "DB_PORT")
 
 	return &lbFargateTemplateParams{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
