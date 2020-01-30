@@ -45,6 +45,26 @@ type deleteAppOpts struct {
 	projectEnvironments []*archer.Environment
 }
 
+func newDeleteAppOpts() (*deleteAppOpts, error) {
+	workspaceService, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("intialize workspace service: %w", err)
+	}
+
+	projectService, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("create project service: %w", err)
+	}
+
+	return &deleteAppOpts{
+		GlobalOpts:       NewGlobalOpts(),
+		spinner:          termprogress.NewSpinner(),
+		sessProvider:     session.NewProvider(),
+		workspaceService: workspaceService,
+		projectService:   projectService,
+	}, nil
+}
+
 // Validate returns an error if the user inputs are invalid.
 func (o *deleteAppOpts) Validate() error {
 	if o.ProjectName() == "" {
@@ -105,7 +125,7 @@ func (o *deleteAppOpts) Execute() error {
 		return err
 	}
 
-	log.Successf("removed app %s from project %s\n", o.AppName, o.projectName)
+	log.Successf("Deleted app %s from project %s.\n", o.AppName, o.projectName)
 	return nil
 }
 
@@ -164,13 +184,13 @@ func (o *deleteAppOpts) deleteStacks() error {
 
 		stackName := fmt.Sprintf("%s-%s-%s", o.projectName, env.Name, o.AppName)
 
-		o.spinner.Start(fmt.Sprintf("deleting app %s from env %s", o.AppName, env.Name))
+		o.spinner.Start(fmt.Sprintf("Deleting app %s from env %s.", o.AppName, env.Name))
 		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
-			o.spinner.Stop(log.Serrorf("deleting app %s from env %s", o.AppName, env.Name))
+			o.spinner.Stop(log.Serrorf("Deleting app %s from env %s.", o.AppName, env.Name))
 
 			return err
 		}
-		o.spinner.Stop(log.Ssuccessf("deleted app %s from env %s", o.AppName, env.Name))
+		o.spinner.Stop(log.Ssuccessf("Deleted app %s from env %s.", o.AppName, env.Name))
 	}
 
 	return nil
@@ -217,21 +237,21 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 	// TODO: make this opts.toolsAccountCfClient...
 	cfClient := cloudformation.New(sess)
 
-	o.spinner.Start(fmt.Sprintf("removing app %s resources from project %s", o.AppName, o.projectName))
+	o.spinner.Start(fmt.Sprintf("Deleting app %s resources from project %s.", o.AppName, o.projectName))
 	if err := cfClient.RemoveAppFromProject(proj, o.AppName); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf("removing app %s resources from project %s", o.AppName, o.projectName))
+			o.spinner.Stop(log.Serrorf("Deleting app %s resources from project %s.", o.AppName, o.projectName))
 			return err
 		}
 	}
-	o.spinner.Stop(log.Ssuccessf("removed app %s resources from project %s", o.AppName, o.projectName))
+	o.spinner.Stop(log.Ssuccessf("Deleted app %s resources from project %s.", o.AppName, o.projectName))
 
 	return nil
 }
 
 func (o *deleteAppOpts) deleteSSMParam() error {
 	if err := o.projectService.DeleteApplication(o.projectName, o.AppName); err != nil {
-		return fmt.Errorf("remove app %s from project %s: %w", o.AppName, o.projectName, err)
+		return fmt.Errorf("delete app %s from project %s: %w", o.AppName, o.projectName, err)
 	}
 
 	return nil

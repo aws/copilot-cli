@@ -118,3 +118,27 @@ func (s *Store) ListProjects() ([]*archer.Project, error) {
 	}
 	return projects, nil
 }
+
+// DeleteProject deletes the SSM parameter related to the project.
+func (s *Store) DeleteProject(name string) error {
+	paramName := fmt.Sprintf(fmtProjectPath, name)
+
+	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+		Name: aws.String(paramName),
+	})
+
+	if err != nil {
+		awserr, ok := err.(awserr.Error)
+		if !ok {
+			return err
+		}
+
+		if awserr.Code() == ssm.ErrCodeParameterNotFound {
+			return nil
+		}
+
+		return fmt.Errorf("delete SSM param %s: %w", paramName, awserr)
+	}
+
+	return nil
+}

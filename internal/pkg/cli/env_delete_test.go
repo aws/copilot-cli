@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
@@ -319,7 +320,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockProg: func(ctrl *gomock.Controller) *climocks.Mockprogress {
 				prog := climocks.NewMockprogress(ctrl)
 				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testProject))
-				prog.EXPECT().Stop(fmt.Sprintf(fmtDeleteEnvFailed, testEnv, testProject, testError))
+				prog.EXPECT().Stop(log.Serrorf(fmtDeleteEnvFailed, testEnv, testProject, testError))
 				return prog
 			},
 			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {
@@ -345,7 +346,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockProg: func(ctrl *gomock.Controller) *climocks.Mockprogress {
 				prog := climocks.NewMockprogress(ctrl)
 				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testProject))
-				prog.EXPECT().Stop(fmt.Sprintf(fmtDeleteEnvComplete, testEnv, testProject))
+				prog.EXPECT().Stop(log.Ssuccessf(fmtDeleteEnvComplete, testEnv, testProject))
 				return prog
 			},
 			mockDeploy: func(ctrl *gomock.Controller) *climocks.MockenvironmentDeployer {

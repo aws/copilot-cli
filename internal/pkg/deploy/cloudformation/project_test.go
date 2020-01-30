@@ -1307,3 +1307,48 @@ func boxWithProjectTemplate() packd.Box {
 
 	return box
 }
+
+func TestDeleteProject(t *testing.T) {
+	tests := map[string]struct {
+		projectName string
+		accounts    []string
+		regions     []string
+
+		mockDeleteStackInstances func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error)
+		mockDeleteStackSet       func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error)
+		mockDeleteStack          func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
+
+		want error
+	}{
+		"should return nil given happy path": {
+			mockDeleteStackInstances: func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
+				return &cloudformation.DeleteStackInstancesOutput{}, nil
+			},
+			mockDeleteStackSet: func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
+				return &cloudformation.DeleteStackSetOutput{}, nil
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				return &cloudformation.DeleteStackOutput{}, nil
+			},
+			want: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			cf := CloudFormation{
+				// TODO: replace this custom mock client with gomock.
+				client: &mockCloudFormation{
+					t:                        t,
+					mockDeleteStackInstances: test.mockDeleteStackInstances,
+					mockDeleteStackSet:       test.mockDeleteStackSet,
+					mockDeleteStack:          test.mockDeleteStack,
+				},
+			}
+
+			got := cf.DeleteProject(test.projectName, test.accounts, test.regions)
+
+			require.Equal(t, test.want, got)
+		})
+	}
+}

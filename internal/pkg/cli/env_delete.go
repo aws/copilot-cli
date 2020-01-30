@@ -235,10 +235,10 @@ func (o *deleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
 func (o *deleteEnvOpts) deleteStack() bool {
 	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.ProjectName()))
 	if err := o.deployClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
-		o.prog.Stop(fmt.Sprintf(fmtDeleteEnvFailed, o.EnvName, o.ProjectName(), err))
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.EnvName, o.ProjectName(), err))
 		return false
 	}
-	o.prog.Stop(fmt.Sprintf(fmtDeleteEnvComplete, o.EnvName, o.ProjectName()))
+	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.EnvName, o.ProjectName()))
 	return true
 }
 

@@ -545,3 +545,20 @@ func TestDeleteFile(t *testing.T) {
 		})
 	}
 }
+
+func TestDelete(t *testing.T) {
+	t.Run("should delete the folder", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		err := fs.Mkdir(ProjectDirectoryName, 0755)
+		require.NoError(t, err)
+		ws := Workspace{
+			fsUtils: &afero.Afero{
+				Fs: fs,
+			},
+		}
+
+		got := ws.Delete()
+
+		require.NoError(t, got)
+	})
+}

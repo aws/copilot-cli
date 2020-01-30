@@ -406,3 +406,54 @@ func TestStore_CreateProject(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteProject(t *testing.T) {
+	mockProjectName := "mockProjectName"
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		mockDeleteParameter func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+
+		want error
+	}{
+		"should return nil given success": {
+			mockDeleteParameter: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, mockProjectName), *in.Name)
+
+				return &ssm.DeleteParameterOutput{}, nil
+			},
+			want: nil,
+		},
+		"should return nil given paramter not found error code": {
+			mockDeleteParameter: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, mockProjectName), *in.Name)
+
+				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "whatevs", mockError)
+			},
+			want: nil,
+		},
+		"should return unhandled non-awserr": {
+			mockDeleteParameter: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
+				require.Equal(t, fmt.Sprintf(fmtProjectPath, mockProjectName), *in.Name)
+
+				return nil, mockError
+			},
+			want: mockError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			store := &Store{
+				ssmClient: &mockSSM{
+					t:                   t,
+					mockDeleteParameter: test.mockDeleteParameter,
+				},
+			}
+
+			got := store.DeleteProject(mockProjectName)
+
+			require.Equal(t, test.want, got)
+		})
+	}
+}

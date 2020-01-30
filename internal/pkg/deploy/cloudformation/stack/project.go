@@ -6,9 +6,9 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"text/template"
 	"sort"
 	"strings"
+	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"

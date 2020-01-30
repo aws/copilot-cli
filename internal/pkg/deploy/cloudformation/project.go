@@ -18,6 +18,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 )
 
+const (
+	maxDeleteStackSetAttempts   = 10
+	deleteStackSetSleepDuration = 30 * time.Second
+)
+
 // DeployProject sets up everything required for our project-wide resources.
 // These resources include things that are regional, rather than scoped to a particular
 // environment, such as ECR Repos, CodePipeline KMS keys & S3 buckets.
@@ -441,4 +446,52 @@ func (cf CloudFormation) waitForStackSetOperation(stackSetName, operationID stri
 
 		time.Sleep(3 * time.Second)
 	}
+}
+
+// DeleteProject deletes all project specific StackSet and Stack resources.
+func (cf CloudFormation) DeleteProject(name string, accounts, regions []string) error {
+	stackSetName := fmt.Sprintf("%s-infrastructure", name)
+
+	if _, err := cf.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
+		Accounts:     aws.StringSlice(accounts),
+		RetainStacks: aws.Bool(false),
+		Regions:      aws.StringSlice(regions),
+		StackSetName: aws.String(stackSetName),
+	}); err != nil {
+		return fmt.Errorf("DeleteStackInstances for stackset %s, accounts %s, and regions %s: %w",
+			stackSetName, accounts, regions, err)
+	}
+
+	// The looping here is because there's no Wait convenience function the SDK provides
+	// for waiting on StackSet Instances to delete. The DeleteStackSet call will return the
+	// ErrCodeOperationInProgressException while instances are still actively being deleted.
+	maxAttempts := maxDeleteStackSetAttempts
+	for maxAttempts > 0 {
+		_, err := cf.client.DeleteStackSet(&cloudformation.DeleteStackSetInput{
+			StackSetName: aws.String(stackSetName),
+		})
+
+		if err != nil {
+			awserr, ok := err.(awserr.Error)
+			if !ok {
+				return err
+			}
+
+			if awserr.Code() == cloudformation.ErrCodeOperationInProgressException {
+				maxAttempts--
+				time.Sleep(deleteStackSetSleepDuration)
+				continue
+			}
+		}
+
+		break
+	}
+
+	if _, err := cf.client.DeleteStack(&cloudformation.DeleteStackInput{
+		StackName: aws.String(fmt.Sprintf("%s-infrastructure-roles", name)),
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }

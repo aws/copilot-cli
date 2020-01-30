@@ -293,3 +293,8 @@ func (ws *Workspace) DeleteFile(appName string) error {
 
 	return ws.fsUtils.Remove(manifestPath)
 }
+
+// Delete deletes the local workspace folder.
+func (ws *Workspace) Delete() error {
+	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
+}
