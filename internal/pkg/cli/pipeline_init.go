@@ -54,8 +54,7 @@ var (
 
 var errNoEnvsInProject = errors.New("there were no more environments found that can be added to your pipeline. Please run `ecs-preview env init` to create a new environment")
 
-type initPipelineOpts struct {
-	// Fields with matching flags.
+type initPipelineVars struct {
 	Environments      []string
 	GitHubOwner       string
 	GitHubRepo        string
@@ -63,8 +62,12 @@ type initPipelineOpts struct {
 	GitHubAccessToken string
 	GitBranch         string
 	PipelineFilename  string
-	// TODO add pipeline file (to write to different file than pipeline.yml?)
+	*GlobalOpts
+}
 
+type initPipelineOpts struct {
+	// TODO add pipeline file (to write to different file than pipeline.yml?)
+	initPipelineVars
 	// Interfaces to interact with dependencies.
 	workspace      archer.ManifestIO
 	secretsmanager archer.SecretsManager
@@ -81,16 +84,58 @@ type initPipelineOpts struct {
 	repoURLs    []string
 	fsUtils     *afero.Afero
 	buffer      bytes.Buffer
-
-	*GlobalOpts
 }
 
-func newInitPipelineOpts() *initPipelineOpts {
-	return &initPipelineOpts{
-		runner:     command.New(),
-		fsUtils:    &afero.Afero{Fs: afero.NewOsFs()},
-		GlobalOpts: NewGlobalOpts(),
+func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
+	opts := &initPipelineOpts{
+		initPipelineVars: vars,
+		runner:           command.New(),
+		fsUtils:          &afero.Afero{Fs: afero.NewOsFs()},
 	}
+	projectEnvs, err := opts.getEnvNames()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't get environments: %w", err)
+	}
+	if len(projectEnvs) == 0 {
+		return nil, errNoEnvsInProject
+	}
+	opts.projectEnvs = projectEnvs
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+	}
+	opts.workspace = ws
+
+	secretsmanager, err := secretsmanager.NewStore()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
+	}
+	opts.secretsmanager = secretsmanager
+	opts.box = templates.Box()
+
+	err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
+	if err != nil {
+		return nil, fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
+	}
+	urls, err := opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+	if err != nil {
+		return nil, err
+	}
+	opts.repoURLs = urls
+	opts.buffer.Reset()
+
+	return opts, nil
+}
+
+// Validate returns an error if the flag values passed by the user are invalid.
+func (o *initPipelineOpts) Validate() error {
+	// TODO add validation for flags
+	if o.ProjectName() == "" {
+		return errNoProjectInWorkspace
+	}
+
+	return nil
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -119,16 +164,6 @@ func (o *initPipelineOpts) Ask() error {
 
 	if o.GitBranch == "" {
 		o.GitBranch = masterBranch
-	}
-
-	return nil
-}
-
-// Validate returns an error if the flag values passed by the user are invalid.
-func (o *initPipelineOpts) Validate() error {
-	// TODO add validation for flags
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
 	}
 
 	return nil
@@ -425,7 +460,9 @@ func (o *initPipelineOpts) getEnvNames() ([]string, error) {
 
 // BuildPipelineInitCmd build the command for creating a new pipeline.
 func BuildPipelineInitCmd() *cobra.Command {
-	opts := newInitPipelineOpts()
+	vars := initPipelineVars{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a pipeline for applications in your workspace.",
@@ -437,44 +474,11 @@ func BuildPipelineInitCmd() *cobra.Command {
 	  /code  --github-access-token file://myGitHubToken \
 	  /code  --environments "stage,prod" \
 	  /code  --deploy`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			// TODO: move these logic to a method
-			projectEnvs, err := opts.getEnvNames()
-			if err != nil {
-				return fmt.Errorf("couldn't get environments: %w", err)
-			}
-			if len(projectEnvs) == 0 {
-				return errNoEnvsInProject
-			}
-			opts.projectEnvs = projectEnvs
-
-			ws, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("workspace cannot be created: %w", err)
-			}
-			opts.workspace = ws
-
-			secretsmanager, err := secretsmanager.NewStore()
-			if err != nil {
-				return fmt.Errorf("couldn't create secrets manager: %w", err)
-			}
-			opts.secretsmanager = secretsmanager
-			opts.box = templates.Box()
-
-			err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
-			if err != nil {
-				return fmt.Errorf("get remote repository info: %w, run `git remote add` first please", err)
-			}
-			urls, err := opts.parseGitRemoteResult(strings.TrimSpace(opts.buffer.String()))
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newInitPipelineOpts(vars)
 			if err != nil {
 				return err
 			}
-			opts.repoURLs = urls
-			opts.buffer.Reset()
-
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -492,10 +496,10 @@ func BuildPipelineInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
-	cmd.Flags().StringVarP(&opts.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
-	cmd.Flags().StringVarP(&opts.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
-	cmd.Flags().StringSliceVarP(&opts.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
+	cmd.Flags().StringVarP(&vars.GitHubURL, githubURLFlag, githubURLFlagShort, "", githubURLFlagDescription)
+	cmd.Flags().StringVarP(&vars.GitHubAccessToken, githubAccessTokenFlag, githubAccessTokenFlagShort, "", githubAccessTokenFlagDescription)
+	cmd.Flags().StringVarP(&vars.GitBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
+	cmd.Flags().StringSliceVarP(&vars.Environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
 
 	return cmd
 }

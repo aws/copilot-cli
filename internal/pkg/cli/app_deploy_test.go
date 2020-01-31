@@ -95,11 +95,13 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			opts := appDeployOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: tc.inProjectName,
+				appDeployVars: appDeployVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inProjectName,
+					},
+					AppName: tc.inAppName,
+					EnvName: tc.inEnvName,
 				},
-				AppName:          tc.inAppName,
-				EnvName:          tc.inEnvName,
 				workspaceService: mockWs,
 				projectService:   mockStore,
 			}
@@ -272,13 +274,15 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompt)
 
 			opts := appDeployOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: tc.inProjectName,
-					prompt:      mockPrompt,
+				appDeployVars: appDeployVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inProjectName,
+						prompt:      mockPrompt,
+					},
+					AppName:  tc.inAppName,
+					EnvName:  tc.inEnvName,
+					ImageTag: tc.inImageTag,
 				},
-				AppName:          tc.inAppName,
-				EnvName:          tc.inEnvName,
-				ImageTag:         tc.inImageTag,
 				workspaceService: mockWs,
 				projectService:   mockStore,
 			}
@@ -382,7 +386,9 @@ image:
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
 			opts := appDeployOpts{
-				AppName:          test.inputApp,
+				appDeployVars: appDeployVars{
+					AppName: test.inputApp,
+				},
 				workspaceService: mockWorkspace,
 			}
 
@@ -449,11 +455,13 @@ func TestAppDeployOpts_askImageTag(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			test.setupMocks(ctrl)
 			opts := &appDeployOpts{
-				GlobalOpts: &GlobalOpts{
-					prompt: mockPrompter,
+				appDeployVars: appDeployVars{
+					GlobalOpts: &GlobalOpts{
+						prompt: mockPrompter,
+					},
+					ImageTag: test.inputImageTag,
 				},
-				ImageTag: test.inputImageTag,
-				runner:   mockRunner,
+				runner: mockRunner,
 			}
 
 			got := opts.askImageTag()

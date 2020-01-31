@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -26,18 +25,47 @@ const (
 	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
-type showAppOpts struct {
+type showAppVars struct {
+	*GlobalOpts
 	shouldOutputJSON      bool
 	shouldOutputResources bool
 	appName               string
+}
+
+type showAppOpts struct {
+	showAppVars
 
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
 	ws            archer.Workspace
 	initDescriber func(*showAppOpts) error // Overriden in tests.
+}
 
-	*GlobalOpts
+func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+	}
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &showAppOpts{
+		showAppVars: vars,
+		storeSvc:    ssmStore,
+		ws:          ws,
+		w:           log.OutputWriter,
+		initDescriber: func(o *showAppOpts) error {
+			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			if err != nil {
+				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+			}
+			o.describer = d
+			return nil
+		},
+	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -268,17 +296,8 @@ func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
 
 // BuildAppShowCmd builds the command for showing applications in a project.
 func BuildAppShowCmd() *cobra.Command {
-	opts := showAppOpts{
-		w:          log.OutputWriter,
+	vars := showAppVars{
 		GlobalOpts: NewGlobalOpts(),
-		initDescriber: func(o *showAppOpts) error {
-			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
-			if err != nil {
-				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
-			}
-			o.describer = d
-			return nil
-		},
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
@@ -288,20 +307,11 @@ func BuildAppShowCmd() *cobra.Command {
 		Example: `
   Shows info about the application "my-app"
   /code $ ecs-preview app show -a my-app`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
-			if err != nil {
-				return fmt.Errorf("connect to environment datastore: %w", err)
-			}
-			opts.storeSvc = ssmStore
-			ws, err := workspace.New()
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newShowAppOpts(vars)
 			if err != nil {
 				return err
 			}
-			opts.ws = ws
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -312,10 +322,9 @@ func BuildAppShowCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().BoolVar(&opts.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&opts.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
-	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
-	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	return cmd
 }

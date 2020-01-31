@@ -19,14 +19,14 @@ type listProjectOpts struct {
 }
 
 // Execute lists the existing projects to the prompt.
-func (opts *listProjectOpts) Execute() error {
-	projects, err := opts.store.ListProjects()
+func (o *listProjectOpts) Execute() error {
+	projects, err := o.store.ListProjects()
 	if err != nil {
 		return err
 	}
 
 	for _, proj := range projects {
-		fmt.Fprintln(opts.w, proj.Name)
+		fmt.Fprintln(o.w, proj.Name)
 	}
 
 	return nil
@@ -34,9 +34,6 @@ func (opts *listProjectOpts) Execute() error {
 
 // BuildProjectListCommand builds the command to list existing projects.
 func BuildProjectListCommand() *cobra.Command {
-	opts := listProjectOpts{
-		w: os.Stdout,
-	}
 	cmd := &cobra.Command{
 		Use:   "ls",
 		Short: "Lists all projects in your account.",
@@ -44,6 +41,9 @@ func BuildProjectListCommand() *cobra.Command {
   List all the projects in your account and region
   /code $ ecs-preview project ls`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts := listProjectOpts{
+				w: os.Stdout,
+			}
 			ssmStore, err := store.New()
 			if err != nil {
 				return err

@@ -40,12 +40,15 @@ type resourceGetter interface {
 	GetResources(*resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
 }
 
-type deleteEnvOpts struct {
-	// Required flags.
+type deleteEnvVars struct {
+	*GlobalOpts
 	EnvName          string
 	EnvProfile       string
 	SkipConfirmation bool
+}
 
+type deleteEnvOpts struct {
+	deleteEnvVars
 	// Interfaces for dependencies.
 	storeClient   archer.EnvironmentStore
 	rgClient      resourceGetter
@@ -55,13 +58,23 @@ type deleteEnvOpts struct {
 
 	// initProfileClients is overriden in tests.
 	initProfileClients func(*deleteEnvOpts) error
-
-	*GlobalOpts
 }
 
-func newDeleteEnvOpts() *deleteEnvOpts {
+func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
+	store, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to ecs-cli metadata store: %w", err)
+	}
+	cfg, err := profile.NewConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	return &deleteEnvOpts{
-		prog: termprogress.NewSpinner(),
+		deleteEnvVars: vars,
+		storeClient:   store,
+		profileConfig: cfg,
+		prog:          termprogress.NewSpinner(),
 		initProfileClients: func(o *deleteEnvOpts) error {
 			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
 			if err != nil {
@@ -71,8 +84,7 @@ func newDeleteEnvOpts() *deleteEnvOpts {
 			o.deployClient = cloudformation.New(profileSess)
 			return nil
 		},
-		GlobalOpts: NewGlobalOpts(),
-	}
+	}, nil
 }
 
 // Validate returns an error if the individual user inputs are invalid.
@@ -250,7 +262,9 @@ func (o *deleteEnvOpts) deleteFromStore() {
 
 // BuildEnvDeleteCmd builds the command to delete environment(s).
 func BuildEnvDeleteCmd() *cobra.Command {
-	opts := newDeleteEnvOpts()
+	vars := deleteEnvVars{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes an environment from your project.",
@@ -259,23 +273,12 @@ func BuildEnvDeleteCmd() *cobra.Command {
   /code $ ecs-preview env delete --name test --profile default
 
   Delete the "test" environment without prompting.
-  /code $ ecs-preview env delete --name test --profile default --yes`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			store, err := store.New()
-			if err != nil {
-				return fmt.Errorf("connect to ecs-cli metadata store: %w", err)
-			}
-
-			cfg, err := profile.NewConfig()
+	/code $ ecs-preview env delete --name test --profile default --yes`,
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newDeleteEnvOpts(vars)
 			if err != nil {
 				return err
 			}
-
-			opts.storeClient = store
-			opts.profileConfig = cfg
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -285,8 +288,8 @@ func BuildEnvDeleteCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "", profileFlagDescription)
-	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringVarP(&vars.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.EnvProfile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	return cmd
 }

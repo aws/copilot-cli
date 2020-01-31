@@ -12,17 +12,31 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-type showProjectOpts struct {
+type showProjectVars struct {
+	*GlobalOpts
 	shouldOutputJSON bool
+}
+
+type showProjectOpts struct {
+	showProjectVars
 
 	storeSvc storeReader
+	w        io.Writer
+}
 
-	w io.Writer
+func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+	}
 
-	*GlobalOpts
+	return &showProjectOpts{
+		showProjectVars: vars,
+		storeSvc:        ssmStore,
+		w:               log.OutputWriter,
+	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -139,8 +153,7 @@ func (o *showProjectOpts) retrieveProjects() ([]string, error) {
 
 // BuildProjectShowCmd builds the command for showing details of a project.
 func BuildProjectShowCmd() *cobra.Command {
-	opts := showProjectOpts{
-		w:          log.OutputWriter,
+	vars := showProjectVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
@@ -150,16 +163,11 @@ func BuildProjectShowCmd() *cobra.Command {
 		Example: `
   Shows info about the project "my-project"
   /code $ ecs-preview project show -p my-project`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
-			if err != nil {
-				return fmt.Errorf("connect to environment datastore: %w", err)
-			}
-			opts.storeSvc = ssmStore
-
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newShowProjectOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -174,8 +182,7 @@ func BuildProjectShowCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().BoolVar(&opts.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
-	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
+	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	return cmd
 }

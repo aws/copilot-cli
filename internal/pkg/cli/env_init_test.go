@@ -50,8 +50,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
-				EnvName:    tc.inEnvName,
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				initEnvVars: initEnvVars{
+					EnvName:    tc.inEnvName,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 			}
 
 			// WHEN
@@ -121,13 +123,15 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			mockCfg := climocks.NewMockprofileNames(ctrl)
 			// GIVEN
 			addEnv := &initEnvOpts{
-				EnvName:       tc.inputEnv,
-				EnvProfile:    tc.inputProfile,
-				profileConfig: mockCfg,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
+				initEnvVars: initEnvVars{
+					EnvName:    tc.inputEnv,
+					EnvProfile: tc.inputProfile,
+					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
+						projectName: tc.inputProject,
+					},
 				},
+				profileConfig: mockCfg,
 			}
 			tc.setupMocks(mockPrompter, mockCfg)
 
@@ -476,7 +480,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			}
 
 			opts := &initEnvOpts{
-				EnvName:       tc.inEnvName,
+				initEnvVars: initEnvVars{
+					EnvName:    tc.inEnvName,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 				projectGetter: mockProjectGetter,
 				envCreator:    mockEnvCreator,
 				envDeployer:   mockDeployer,
@@ -484,7 +491,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				identity:      mockIdentity,
 				envIdentity:   mockIdentity,
 				prog:          mockProgress,
-				GlobalOpts:    &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -597,10 +603,12 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 				tc.expectProgress(mockProgress)
 			}
 			opts := &initEnvOpts{
+				initEnvVars: initEnvVars{
+					GlobalOpts: &GlobalOpts{projectName: tc.project.Name},
+				},
 				envIdentity:  mockIdentity,
 				projDeployer: mockDeployer,
 				prog:         mockProgress,
-				GlobalOpts:   &GlobalOpts{projectName: tc.project.Name},
 			}
 
 			// WHEN

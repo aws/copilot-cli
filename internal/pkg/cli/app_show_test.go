@@ -76,12 +76,13 @@ func TestAppShow_Validate(t *testing.T) {
 			tc.mockStoreReader(mockStoreReader)
 
 			showApps := &showAppOpts{
-				storeSvc: mockStoreReader,
-
-				appName: tc.inputApplication,
-				GlobalOpts: &GlobalOpts{
-					projectName: tc.inputProject,
+				showAppVars: showAppVars{
+					appName: tc.inputApplication,
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inputProject,
+					},
 				},
+				storeSvc: mockStoreReader,
 			}
 
 			// WHEN
@@ -369,13 +370,15 @@ func TestAppShow_Ask(t *testing.T) {
 			tc.mockWorkspace(mockWorkspace)
 
 			showApps := &showAppOpts{
-				appName:  tc.inputApp,
+				showAppVars: showAppVars{
+					appName: tc.inputApp,
+					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
+						projectName: tc.inputProject,
+					},
+				},
 				storeSvc: mockStoreReader,
 				ws:       mockWorkspace,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
-				},
 			}
 
 			// WHEN
@@ -866,19 +869,18 @@ Resources
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			showApps := &showAppOpts{
-				appName:               tc.inputApp,
-				shouldOutputJSON:      tc.shouldOutputJSON,
-				shouldOutputResources: tc.shouldOutputResources,
-
+				showAppVars: showAppVars{
+					appName:               tc.inputApp,
+					shouldOutputJSON:      tc.shouldOutputJSON,
+					shouldOutputResources: tc.shouldOutputResources,
+					GlobalOpts: &GlobalOpts{
+						projectName: projectName,
+					},
+				},
 				storeSvc:      mockStoreReader,
 				describer:     mockWebAppDescriber,
 				initDescriber: func(*showAppOpts) error { return nil },
-
-				w: b,
-
-				GlobalOpts: &GlobalOpts{
-					projectName: projectName,
-				},
+				w:             b,
 			}
 
 			// WHEN

@@ -46,11 +46,15 @@ var (
 	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
 )
 
-type initEnvOpts struct {
-	// Flags set by the user.
+type initEnvVars struct {
+	*GlobalOpts
 	EnvName      string // Name of the environment.
 	EnvProfile   string // AWS profile used to create an environment.
 	IsProduction bool   // Marks the environment as "production" to create it with additional guardrails.
+}
+
+type initEnvOpts struct {
+	initEnvVars
 
 	// Interfaces to interact with dependencies.
 	projectGetter archer.ProjectGetter
@@ -61,8 +65,38 @@ type initEnvOpts struct {
 	envIdentity   identityService
 	profileConfig profileNames
 	prog          progress
+}
 
-	*GlobalOpts
+func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
+	store, err := store.New()
+	if err != nil {
+		return nil, err
+	}
+	sessProvider := session.NewProvider()
+	profileSess, err := sessProvider.FromProfile(vars.EnvProfile)
+	if err != nil {
+		return nil, err
+	}
+	defaultSession, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := profile.NewConfig()
+	if err != nil {
+		return nil, fmt.Errorf("read named profiles: %w", err)
+	}
+
+	return &initEnvOpts{
+		initEnvVars:   vars,
+		projectGetter: store,
+		envCreator:    store,
+		envDeployer:   cloudformation.New(profileSess),
+		projDeployer:  cloudformation.New(defaultSession),
+		identity:      identity.New(defaultSession),
+		envIdentity:   identity.New(profileSess),
+		profileConfig: cfg,
+		prog:          termprogress.NewSpinner(),
+	}, nil
 }
 
 // Validate returns an error if the values passed by the user are invalid.
@@ -260,10 +294,8 @@ func (o *initEnvOpts) RecommendedActions() []string {
 
 // BuildEnvInitCmd builds the command for adding an environment.
 func BuildEnvInitCmd() *cobra.Command {
-	opts := initEnvOpts{
-		IsProduction: false,
-		prog:         termprogress.NewSpinner(),
-		GlobalOpts:   NewGlobalOpts(),
+	vars := initEnvVars{
+		GlobalOpts: NewGlobalOpts(),
 	}
 
 	cmd := &cobra.Command{
@@ -275,34 +307,11 @@ func BuildEnvInitCmd() *cobra.Command {
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ ecs-preview env init --name prod-iad --profile prod-admin --prod`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			store, err := store.New()
-			if err != nil {
-				return err
-			}
-			sessProvider := session.NewProvider()
-			profileSess, err := sessProvider.FromProfile(opts.EnvProfile)
-			if err != nil {
-				return err
-			}
-			defaultSession, err := sessProvider.Default()
-			if err != nil {
-				return err
-			}
-			cfg, err := profile.NewConfig()
-			if err != nil {
-				return fmt.Errorf("read named profiles: %w", err)
-			}
-			opts.envCreator = store
-			opts.projectGetter = store
-			opts.envDeployer = cloudformation.New(profileSess)
-			opts.projDeployer = cloudformation.New(defaultSession)
-			opts.identity = identity.New(defaultSession)
-			opts.envIdentity = identity.New(profileSess)
-			opts.profileConfig = cfg
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newInitEnvOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -312,8 +321,8 @@ func BuildEnvInitCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&opts.EnvProfile, profileFlag, "", profileFlagDescription)
-	cmd.Flags().BoolVar(&opts.IsProduction, prodEnvFlag, opts.IsProduction, prodEnvFlagDescription)
+	cmd.Flags().StringVarP(&vars.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.EnvProfile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
 	return cmd
 }

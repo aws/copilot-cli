@@ -41,10 +41,15 @@ const (
 
 var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `ecs-preview pipeline init` to create an pipeline")
 
-type updatePipelineOpts struct {
+type updatePipelineVars struct {
 	PipelineFile     string
 	PipelineName     string
 	SkipConfirmation bool
+	*GlobalOpts
+}
+
+type updatePipelineOpts struct {
+	updatePipelineVars
 
 	pipelineDeployer pipelineDeployer
 	project          *archer.Project
@@ -52,29 +57,53 @@ type updatePipelineOpts struct {
 	region           string
 	envStore         archer.EnvironmentStore
 	ws               archer.Workspace
-
-	*GlobalOpts
 }
 
-func newUpdatePipelineOpts() *updatePipelineOpts {
-	return &updatePipelineOpts{
-		GlobalOpts: NewGlobalOpts(),
-		prog:       termprogress.NewSpinner(),
+func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
+	store, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
 	}
+
+	project, err := store.GetProject(vars.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("get project %s: %w", vars.ProjectName(), err)
+	}
+
+	p := session.NewProvider()
+	defaultSession, err := p.Default()
+	if err != nil {
+		return nil, err
+	}
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &updatePipelineOpts{
+		project:            project,
+		pipelineDeployer:   cloudformation.New(defaultSession),
+		region:             aws.StringValue(defaultSession.Config.Region),
+		updatePipelineVars: vars,
+		envStore:           store,
+		ws:                 ws,
+		prog:               termprogress.NewSpinner(),
+	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *updatePipelineOpts) Validate() error {
-	if opts.PipelineFile == "" {
+func (o *updatePipelineOpts) Validate() error {
+	if o.PipelineFile == "" {
 		return errNoPipelineFile
 	}
 
 	return nil
 }
 
-func (opts *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
+func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	apps, err := opts.ws.Apps()
+	apps, err := o.ws.Apps()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +114,7 @@ func (opts *updatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 	}
 
 	for _, stage := range manifestStages {
-		env, err := opts.envStore.GetEnvironment(opts.ProjectName(), stage.Name)
+		env, err := o.envStore.GetEnvironment(o.ProjectName(), stage.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -105,8 +134,8 @@ func (opts *updatePipelineOpts) convertStages(manifestStages []manifest.Pipeline
 	return stages, nil
 }
 
-func (opts *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
-	regionalResources, err := opts.pipelineDeployer.GetRegionalProjectResources(opts.project)
+func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
+	regionalResources, err := o.pipelineDeployer.GetRegionalProjectResources(o.project)
 	if err != nil {
 		return nil, err
 	}
@@ -123,66 +152,66 @@ func (opts *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, e
 	return buckets, nil
 }
 
-func (opts *updatePipelineOpts) shouldUpdate() (bool, error) {
-	if opts.SkipConfirmation {
+func (o *updatePipelineOpts) shouldUpdate() (bool, error) {
+	if o.SkipConfirmation {
 		return true, nil
 	}
 
-	shouldUpdate, err := opts.prompt.Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, opts.PipelineName), "")
+	shouldUpdate, err := o.prompt.Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, o.PipelineName), "")
 	if err != nil {
 		return false, fmt.Errorf("prompt for pipeline update: %w", err)
 	}
 	return shouldUpdate, nil
 }
 
-func (opts *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
-	exist, err := opts.pipelineDeployer.PipelineExists(in)
+func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) error {
+	exist, err := o.pipelineDeployer.PipelineExists(in)
 	if err != nil {
 		return fmt.Errorf("check if pipeline exists: %w", err)
 	}
 	if !exist {
-		opts.prog.Start(fmt.Sprintf(fmtCreatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
-		if err := opts.pipelineDeployer.CreatePipeline(in); err != nil {
+		o.prog.Start(fmt.Sprintf(fmtCreatePipelineStart, color.HighlightUserInput(o.PipelineName)))
+		if err := o.pipelineDeployer.CreatePipeline(in); err != nil {
 			var alreadyExists *cloudformation.ErrStackAlreadyExists
 			if !errors.As(err, &alreadyExists) {
-				opts.prog.Stop(log.Serrorf(fmtCreatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+				o.prog.Stop(log.Serrorf(fmtCreatePipelineFailed, color.HighlightUserInput(o.PipelineName)))
 				return fmt.Errorf("create pipeline: %w", err)
 			}
 		}
-		opts.prog.Stop(log.Ssuccessf(fmtCreatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+		o.prog.Stop(log.Ssuccessf(fmtCreatePipelineComplete, color.HighlightUserInput(o.PipelineName)))
 		return nil
 	}
 
 	// If the stack already exists - we update it
-	shouldUpdate, err := opts.shouldUpdate()
+	shouldUpdate, err := o.shouldUpdate()
 	if err != nil {
 		return err
 	}
 	if !shouldUpdate {
 		return nil
 	}
-	opts.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(opts.PipelineName)))
-	if err := opts.pipelineDeployer.UpdatePipeline(in); err != nil {
-		opts.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(opts.PipelineName)))
+	o.prog.Start(fmt.Sprintf(fmtUpdatePipelineStart, color.HighlightUserInput(o.PipelineName)))
+	if err := o.pipelineDeployer.UpdatePipeline(in); err != nil {
+		o.prog.Stop(log.Serrorf(fmtUpdatePipelineFailed, color.HighlightUserInput(o.PipelineName)))
 		return fmt.Errorf("update pipeline: %w", err)
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(opts.PipelineName)))
+	o.prog.Stop(log.Ssuccessf(fmtUpdatePipelineComplete, color.HighlightUserInput(o.PipelineName)))
 	return nil
 }
 
 // Execute create a new pipeline or update the current pipeline if it already exists.
-func (opts *updatePipelineOpts) Execute() error {
+func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	opts.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(opts.ProjectName())))
-	err := opts.pipelineDeployer.AddPipelineResourcesToProject(opts.project, opts.region)
+	o.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(o.ProjectName())))
+	err := o.pipelineDeployer.AddPipelineResourcesToProject(o.project, o.region)
 	if err != nil {
-		opts.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(opts.ProjectName())))
-		return fmt.Errorf("add pipeline resources to project %s in %s: %w", opts.ProjectName(), opts.region, err)
+		o.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(o.ProjectName())))
+		return fmt.Errorf("add pipeline resources to project %s in %s: %w", o.ProjectName(), o.region, err)
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(opts.ProjectName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(o.ProjectName())))
 
 	// read pipeline manifest
-	data, err := opts.ws.ReadFile(workspace.PipelineFileName)
+	data, err := o.ws.ReadFile(workspace.PipelineFileName)
 	if err != nil {
 		return fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
 	}
@@ -190,33 +219,33 @@ func (opts *updatePipelineOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
 	}
-	opts.PipelineName = pipeline.Name
+	o.PipelineName = pipeline.Name
 	source := &deploy.Source{
 		ProviderName: pipeline.Source.ProviderName,
 		Properties:   pipeline.Source.Properties,
 	}
 
 	// convert environments to deployment stages
-	stages, err := opts.convertStages(pipeline.Stages)
+	stages, err := o.convertStages(pipeline.Stages)
 	if err != nil {
 		return fmt.Errorf("convert environments to deployment stage: %w", err)
 	}
 
 	// get cross-regional resources
-	artifactBuckets, err := opts.getArtifactBuckets()
+	artifactBuckets, err := o.getArtifactBuckets()
 	if err != nil {
 		return fmt.Errorf("get cross-regional resources: %w", err)
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		ProjectName:     opts.ProjectName(),
+		ProjectName:     o.ProjectName(),
 		Name:            pipeline.Name,
 		Source:          source,
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 	}
 
-	if err := opts.deployPipeline(deployPipelineInput); err != nil {
+	if err := o.deployPipeline(deployPipelineInput); err != nil {
 		return err
 	}
 
@@ -225,7 +254,9 @@ func (opts *updatePipelineOpts) Execute() error {
 
 // BuildPipelineUpdateCmd build the command for deploying a new pipeline or updating an existing pipeline.
 func BuildPipelineUpdateCmd() *cobra.Command {
-	opts := newUpdatePipelineOpts()
+	vars := updatePipelineVars{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Deploys a pipeline for applications in your workspace.",
@@ -233,46 +264,19 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 		Example: `
   Deploy an updated pipeline for the applications in your workspace:
   /code $ ecs-preview pipeline update`,
-
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			store, err := store.New()
-			if err != nil {
-				return fmt.Errorf("couldn't connect to project datastore: %w", err)
-			}
-			opts.envStore = store
-
-			project, err := store.GetProject(opts.ProjectName())
-			if err != nil {
-				return fmt.Errorf("get project %s: %w", opts.ProjectName(), err)
-			}
-			opts.project = project
-
-			p := session.NewProvider()
-			defaultSession, err := p.Default()
-			if err != nil {
-				return err
-			}
-			opts.pipelineDeployer = cloudformation.New(defaultSession)
-
-			region := aws.StringValue(defaultSession.Config.Region)
-			opts.region = region
-
-			ws, err := workspace.New()
-			if err != nil {
-				return err
-			}
-			opts.ws = ws
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newUpdatePipelineOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
-	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringVarP(&vars.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
+	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd
 }

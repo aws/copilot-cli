@@ -33,8 +33,10 @@ func TestDeleteProjectOptsValidate(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := deleteProjOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: test.projectName,
+				deleteProjVars: deleteProjVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: test.projectName,
+					},
 				},
 			}
 
@@ -105,11 +107,13 @@ func TestDeleteProjectOptsAsk(t *testing.T) {
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
 			opts := deleteProjOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
-					prompt:      mockPrompter,
+				deleteProjVars: deleteProjVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: mockProjectName,
+						prompt:      mockPrompter,
+					},
+					skipConfirmation: test.skipConfirmation,
 				},
-				skipConfirmation: test.skipConfirmation,
 			}
 
 			got := opts.Ask()
@@ -158,8 +162,10 @@ func TestDeleteProjectOptsDeleteApps(t *testing.T) {
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
 			opts := deleteProjOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
+				deleteProjVars: deleteProjVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: mockProjectName,
+					},
 				},
 				store: mockStore,
 			}

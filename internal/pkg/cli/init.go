@@ -33,8 +33,16 @@ const (
 	initShouldDeployHelpPrompt = "An environment with your application deployed to it. This will allow you to test your application before placing it in production."
 )
 
-type initOpts struct {
+type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
+	shouldDeploy   bool
+	projectName    string
+	appType        string
+	appName        string
+	dockerfilePath string
+}
+
+type initOpts struct {
 	ShouldDeploy          bool // true means we should create a test environment and deploy the application in it. Defaults to false.
 	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
 
@@ -55,7 +63,7 @@ type initOpts struct {
 	prompt prompter
 }
 
-func newInitOpts() (*initOpts, error) {
+func newInitOpts(vars initVars) (*initOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, err
@@ -79,6 +87,9 @@ func newInitOpts() (*initOpts, error) {
 	}
 
 	initProject := &initProjectOpts{
+		initProjectVars: initProjectVars{
+			ProjectName: vars.projectName,
+		},
 		projectStore: ssm,
 		ws:           ws,
 		prompt:       prompt,
@@ -87,18 +98,26 @@ func newInitOpts() (*initOpts, error) {
 		prog:         spin,
 	}
 	initApp := &initAppOpts{
+		initAppVars: initAppVars{
+			AppType:        vars.appType,
+			AppName:        vars.appName,
+			DockerfilePath: vars.dockerfilePath,
+			GlobalOpts:     NewGlobalOpts(),
+		},
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 		manifestWriter: ws,
 		appStore:       ssm,
 		projGetter:     ssm,
 		projDeployer:   deployer,
 		prog:           spin,
-		GlobalOpts:     NewGlobalOpts(),
 	}
 	initEnv := &initEnvOpts{
-		EnvName:       defaultEnvironmentName,
-		EnvProfile:    "default",
-		IsProduction:  false,
+		initEnvVars: initEnvVars{
+			GlobalOpts:   NewGlobalOpts(),
+			EnvName:      defaultEnvironmentName,
+			EnvProfile:   "default",
+			IsProduction: false,
+		},
 		envCreator:    ssm,
 		projectGetter: ssm,
 		envDeployer:   deployer,
@@ -106,11 +125,13 @@ func newInitOpts() (*initOpts, error) {
 		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,
-		GlobalOpts:    NewGlobalOpts(),
 	}
 
 	appDeploy := &appDeployOpts{
-		EnvName: defaultEnvironmentName,
+		appDeployVars: appDeployVars{
+			GlobalOpts: NewGlobalOpts(),
+			EnvName:    defaultEnvironmentName,
+		},
 
 		projectService:   ssm,
 		workspaceService: ws,
@@ -118,11 +139,11 @@ func newInitOpts() (*initOpts, error) {
 		dockerService:    docker.New(),
 		runner:           command.New(),
 		sessProvider:     sessProvider,
-
-		GlobalOpts: NewGlobalOpts(),
 	}
 
 	return &initOpts{
+		ShouldDeploy: vars.shouldDeploy,
+
 		initProject: initProject,
 		initApp:     initApp,
 		initEnv:     initEnv,
@@ -138,112 +159,110 @@ func newInitOpts() (*initOpts, error) {
 }
 
 // Run executes "project init", "env init", "app init" and "app deploy".
-func (opts *initOpts) Run() error {
+func (o *initOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your Git repository.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
 to help you get set up with a project on ECS. A project is a collection of 
 containerized applications (or micro-services) that operate together.`)
 	log.Infoln()
 
-	if err := opts.loadProject(); err != nil {
+	if err := o.loadProject(); err != nil {
 		return err
 	}
-	if err := opts.loadApp(); err != nil {
+	if err := o.loadApp(); err != nil {
 		return err
 	}
 
 	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
-		color.HighlightUserInput(*opts.appType), color.HighlightUserInput(*opts.appName), color.HighlightUserInput(*opts.projectName))
+		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName))
 
-	if err := opts.initProject.Execute(); err != nil {
+	if err := o.initProject.Execute(); err != nil {
 		return fmt.Errorf("execute project init: %w", err)
 	}
-	if err := opts.initApp.Execute(); err != nil {
+	if err := o.initApp.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
 
-	if err := opts.deployEnv(); err != nil {
+	if err := o.deployEnv(); err != nil {
 		return err
 	}
 
-	return opts.deployApp()
+	return o.deployApp()
 }
 
-func (opts *initOpts) loadProject() error {
-	if err := opts.initProject.Ask(); err != nil {
+func (o *initOpts) loadProject() error {
+	if err := o.initProject.Ask(); err != nil {
 		return fmt.Errorf("prompt for project init: %w", err)
 	}
-	if err := opts.initProject.Validate(); err != nil {
+	if err := o.initProject.Validate(); err != nil {
 		return err
 	}
 	// Write the project name to viper so that sub-commands can retrieve its value.
-	viper.Set(projectFlag, opts.projectName)
+	viper.Set(projectFlag, o.projectName)
 	return nil
 }
 
-func (opts *initOpts) loadApp() error {
-	if err := opts.initApp.Ask(); err != nil {
+func (o *initOpts) loadApp() error {
+	if err := o.initApp.Ask(); err != nil {
 		return fmt.Errorf("prompt for app init: %w", err)
 	}
-	return opts.initApp.Validate()
+	return o.initApp.Validate()
 }
 
 // deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
-func (opts *initOpts) deployEnv() error {
-	if opts.promptForShouldDeploy {
+func (o *initOpts) deployEnv() error {
+	if o.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
-		if err := opts.askShouldDeploy(); err != nil {
+		if err := o.askShouldDeploy(); err != nil {
 			return err
 		}
 	}
-	if !opts.ShouldDeploy {
+	if !o.ShouldDeploy {
 		// User chose not to deploy the application, exit.
 		return nil
 	}
-	return opts.initEnv.Execute()
+	return o.initEnv.Execute()
 }
 
-func (opts *initOpts) deployApp() error {
-	if !opts.ShouldDeploy {
+func (o *initOpts) deployApp() error {
+	if !o.ShouldDeploy {
 		return nil
 	}
-	if deployOpts, ok := opts.appDeploy.(*appDeployOpts); ok {
+	if deployOpts, ok := o.appDeploy.(*appDeployOpts); ok {
 		// Set the application's name to the deploy sub-command.
-		deployOpts.AppName = *opts.appName
+		deployOpts.AppName = *o.appName
 	}
 
-	if err := opts.appDeploy.Ask(); err != nil {
+	if err := o.appDeploy.Ask(); err != nil {
 		return err
 	}
-	return opts.appDeploy.Execute()
+	return o.appDeploy.Execute()
 }
 
-func (opts *initOpts) askShouldDeploy() error {
-	v, err := opts.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt)
+func (o *initOpts) askShouldDeploy() error {
+	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}
-	opts.ShouldDeploy = v
+	o.ShouldDeploy = v
 	return nil
 }
 
 // BuildInitCmd builds the command for bootstrapping an application.
 func BuildInitCmd() *cobra.Command {
-	opts, err := newInitOpts()
+	vars := initVars{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application.",
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if *opts.dockerfilePath == "" {
-				_, err = listDockerfiles(&afero.Afero{Fs: afero.NewOsFs()}, ".")
-			}
-			return err
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newInitOpts(vars)
+			if err != nil {
+				return err
+			}
 			opts.promptForShouldDeploy = !cmd.Flags().Changed(deployFlag)
-			return opts.Run()
-		}),
-		PostRun: func(cmd *cobra.Command, args []string) {
+			if err := opts.Run(); err != nil {
+				return err
+			}
 			if !opts.ShouldDeploy {
 				log.Info("\nNo problem, you can deploy your application later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
@@ -252,13 +271,14 @@ func BuildInitCmd() *cobra.Command {
 					log.Infof("- %s\n", followup)
 				}
 			}
-		},
+			return nil
+		}),
 	}
-	cmd.Flags().StringVarP(opts.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
-	cmd.Flags().StringVarP(opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(opts.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
-	cmd.Flags().StringVarP(opts.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
-	cmd.Flags().BoolVar(&opts.ShouldDeploy, deployFlag, false, deployTestFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,

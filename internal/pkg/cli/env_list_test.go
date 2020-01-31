@@ -30,12 +30,14 @@ func TestEnvList_Execute(t *testing.T) {
 	}{
 		"with json envs": {
 			listOpts: listEnvOpts{
-				ShouldOutputJSON: true,
-				manager:          mockEnvStore,
-				projectGetter:    mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
+				listEnvVars: listEnvVars{
+					ShouldOutputJSON: true,
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
 				},
+				manager:       mockEnvStore,
+				projectGetter: mockProjectStore,
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -53,11 +55,13 @@ func TestEnvList_Execute(t *testing.T) {
 		},
 		"with envs": {
 			listOpts: listEnvOpts{
+				listEnvVars: listEnvVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -76,11 +80,13 @@ func TestEnvList_Execute(t *testing.T) {
 		"with invalid project name": {
 			expectedErr: mockError,
 			listOpts: listEnvOpts{
+				listEnvVars: listEnvVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -96,11 +102,13 @@ func TestEnvList_Execute(t *testing.T) {
 		"with failed call to list": {
 			expectedErr: mockError,
 			listOpts: listEnvOpts{
+				listEnvVars: listEnvVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -115,11 +123,13 @@ func TestEnvList_Execute(t *testing.T) {
 		},
 		"with production envs": {
 			listOpts: listEnvOpts{
+				listEnvVars: listEnvVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				manager:       mockEnvStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -193,11 +203,13 @@ func TestEnvList_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompter)
 
 			listEnvs := &listEnvOpts{
-				projectLister: mockProjectLister,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
+				listEnvVars: listEnvVars{
+					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
+						projectName: tc.inputProject,
+					},
 				},
+				projectLister: mockProjectLister,
 			}
 
 			err := listEnvs.Ask()
