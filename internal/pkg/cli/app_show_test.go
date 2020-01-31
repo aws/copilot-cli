@@ -302,8 +302,8 @@ func TestAppShow_Execute(t *testing.T) {
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
 					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
+						CPU:    "512",
+						Memory: "1024",
 					},
 					TaskCount: "1",
 				}, nil)
@@ -329,7 +329,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"Type\":\"AWS::EC2::SecurityGroupIngress\",\"PhysicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"Type\":\"AWS::EC2::SecurityGroup\",\"PhysicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"512\",\"memory\":\"1024\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/frontend\"},{\"environment\":\"prod\",\"url\":\"my-pr-Publi.us-west-2.elb.amazonaws.com\",\"path\":\"/backend\"}],\"resources\":{\"prod\":[{\"Type\":\"AWS::EC2::SecurityGroupIngress\",\"PhysicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"Type\":\"AWS::EC2::SecurityGroup\",\"PhysicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
 			inputApp:              "my-app",
@@ -362,8 +362,8 @@ func TestAppShow_Execute(t *testing.T) {
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
 					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
+						CPU:    "512",
+						Memory: "1024",
 					},
 					TaskCount: "1",
 				}, nil)
@@ -529,8 +529,8 @@ Resources
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
 					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
+						CPU:    "512",
+						Memory: "1024",
 					},
 					TaskCount: "1",
 				}, nil)

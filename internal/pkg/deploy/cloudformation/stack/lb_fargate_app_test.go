@@ -129,8 +129,8 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
   ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c
   ContainerPort: 80
   RulePath: '*'
-  TaskCPU: '256'
-  TaskMemory: '512'
+  TaskCPU: '512'
+  TaskMemory: '1024'
   TaskCount: 1`,
 		},
 	}
@@ -221,11 +221,11 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBFargateTaskCPUKey),
-					ParameterValue: aws.String("256"),
+					ParameterValue: aws.String("512"),
 				},
 				{
 					ParameterKey:   aws.String(LBFargateTaskMemoryKey),
-					ParameterValue: aws.String("512"),
+					ParameterValue: aws.String("1024"),
 				},
 				{
 					ParameterKey:   aws.String(LBFargateTaskCountKey),
@@ -299,8 +299,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
     "RulePath": "*",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
+    "TaskCPU": "512",
+    "TaskMemory": "1024",
     "TaskCount": "1",
     "HTTPSEnabled": "false"
   }
@@ -346,8 +346,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
     "RulePath": "*",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
+    "TaskCPU": "512",
+    "TaskMemory": "1024",
     "TaskCount": "1",
     "HTTPSEnabled": "true"
   }

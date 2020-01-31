@@ -565,8 +565,8 @@ image:
   port: 80
 http:
   path: '*'
-cpu: 256
-memory: 512
+cpu: 512
+memory: 1024
 count: 1`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -605,8 +605,8 @@ image:
   port: 80
 http:
   path: '*'
-cpu: 256
-memory: 512
+cpu: 512
+memory: 1024
 count: 1`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -645,8 +645,8 @@ image:
   port: 80
 http:
   path: '*'
-cpu: 256
-memory: 512
+cpu: 512
+memory: 1024
 count: 1`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {

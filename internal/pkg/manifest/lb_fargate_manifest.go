@@ -28,6 +28,7 @@ type ImageWithPort struct {
 // LBFargateConfig represents a load balanced web application with AWS Fargate as compute.
 type LBFargateConfig struct {
 	RoutingRule      `yaml:"http,omitempty"`
+	HealthCheck      HealthCheck        `yaml:"healthcheck,omitempty"`
 	ContainersConfig `yaml:",inline,omitempty"`
 	Database         *DatabaseConfig    `yaml:",omitempty"`
 	Scaling          *AutoScalingConfig `yaml:",omitempty"`
@@ -48,6 +49,11 @@ type DatabaseConfig struct {
 
 	MinCapacity int `yaml:"minCapacity,omitempty"`
 	MaxCapacity int `yaml:"maxCapacity,omitempty"`
+}
+
+// HealthCheck holds the health check info for the service.
+type HealthCheck struct {
+	Path string `yaml:"path,omitempty"`
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -82,9 +88,12 @@ func NewLoadBalancedFargateManifest(appName, dockerfile string, port int) *LBFar
 			RoutingRule: RoutingRule{
 				Path: "*",
 			},
+			HealthCheck: HealthCheck{
+				Path: "/",
+			},
 			ContainersConfig: ContainersConfig{
-				CPU:    256,
-				Memory: 512,
+				CPU:    512,
+				Memory: 1024,
 				Count:  1,
 			},
 		},
@@ -151,6 +160,9 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 		RoutingRule: RoutingRule{
 			Path: m.Path,
 		},
+		HealthCheck: HealthCheck{
+			Path: m.HealthCheck.Path,
+		},
 		ContainersConfig: ContainersConfig{
 			CPU:       m.CPU,
 			Memory:    m.Memory,
@@ -166,6 +178,9 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 	target := m.Environments[envName]
 	if target.RoutingRule.Path != "" {
 		conf.RoutingRule.Path = target.RoutingRule.Path
+	}
+	if target.HealthCheck.Path != "" {
+		conf.HealthCheck.Path = target.HealthCheck.Path
 	}
 	if target.CPU != 0 {
 		conf.CPU = target.CPU

@@ -21,6 +21,9 @@ Parameters:
   RulePath:
     Type: String
     Default: '{{.App.Path}}'
+  HealthCheckPath:
+    Type: String
+    Default: '{{.App.HealthCheck.Path}}'
   TaskCPU:
     Type: String
     Default: '{{.App.CPU}}'
@@ -292,6 +295,7 @@ Resources:
       HealthCheckIntervalSeconds: 10 # Default is 30.
       HealthyThresholdCount: 2       # Default is 5.
       HealthCheckTimeoutSeconds: 5
+      HealthCheckPath: !Ref HealthCheckPath
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:

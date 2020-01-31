@@ -6,6 +6,7 @@
     "ContainerImage": "{{.Image.URL}}",
     "ContainerPort": "{{.Image.Port}}",
     "RulePath": "{{.App.Path}}",
+    "HealthCheckPath": "{{.App.HealthCheck.Path}}",
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
     "TaskCount": "{{.App.Count}}",

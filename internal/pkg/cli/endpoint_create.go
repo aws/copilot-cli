@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -59,8 +58,7 @@ func (o *EndpointCreateOpts) Execute() error {
 		return err
 	}
 
-	log.Successf("Created a CNAME, %s -> %s.\n", color.HighlightUserInput(source),
-		color.HighlightUserInput(target))
+	log.Successf("You can now access the app at %s\n", fmt.Sprintf("https://%s", target))
 
 	return nil
 }

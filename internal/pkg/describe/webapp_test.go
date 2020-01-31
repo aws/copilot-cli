@@ -258,8 +258,8 @@ func TestWebAppDescriber_ECSParams(t *testing.T) {
 		testEnv            = "test"
 		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
 		testApp            = "jobs"
-		testCPU            = "256"
-		testMemory         = "512"
+		testCPU            = "512"
+		testMemory         = "1024"
 		testPort           = "8080"
 		testTasks          = "3"
 	)

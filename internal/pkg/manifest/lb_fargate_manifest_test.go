@@ -31,10 +31,13 @@ http:
   # Requests to this path will be forwarded to your service.
   path: '*'
 
+healthcheck:
+  path: '/'
+
 # Number of CPU units for the task.
-cpu: 256
+cpu: 512
 # Amount of memory in MiB used by the task.
-memory: 512
+memory: 1024
 # Number of tasks that should be running in your service.
 count: 1
 
