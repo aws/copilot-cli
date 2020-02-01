@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -17,6 +18,7 @@ import (
 // VariableDeleteOpts contains the fields to collect to delete an environment variable.
 type VariableDeleteOpts struct {
 	appName string
+	envName string
 	name    string
 
 	manifestPath string
@@ -43,6 +45,11 @@ func (o *VariableDeleteOpts) Validate() error {
 			return err
 		}
 	}
+	if o.envName != "" {
+		if _, err := o.storeReader.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -61,7 +68,11 @@ func (o *VariableDeleteOpts) Ask() error {
 
 // Execute deletes the environment variable.
 func (o *VariableDeleteOpts) Execute() error {
-	delete(o.manifest.Variables, o.name)
+	if o.envName == "" {
+		delete(o.manifest.Variables, o.name)
+	} else {
+		delete(o.manifest.Environments[o.envName].Variables, o.name)
+	}
 
 	if err := o.writeManifest(o.manifest); err != nil {
 		return err
@@ -80,8 +91,16 @@ func (o *VariableDeleteOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *VariableDeleteOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
-	manifestBytes, err := yaml.Marshal(manifest)
+func (o *VariableDeleteOpts) writeManifest(mft *manifest.LBFargateManifest) error {
+	if len(o.manifest.Environments[o.envName].Variables) == 0 {
+		envConf := o.manifest.Environments[o.envName]
+		envConf.Variables = nil
+		o.manifest.Environments[o.envName] = envConf
+	}
+	if reflect.DeepEqual(o.manifest.Environments[o.envName], manifest.LBFargateConfig{}) {
+		delete(o.manifest.Environments, o.envName)
+	}
+	manifestBytes, err := yaml.Marshal(mft)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
@@ -150,7 +169,15 @@ func (o *VariableDeleteOpts) retrieveEnvVars() ([]string, error) {
 	o.manifest = mft.(*manifest.LBFargateManifest)
 
 	var keys []string
-	for k := range o.manifest.Variables {
+	var variables map[string]string
+
+	if o.envName == "" {
+		variables = o.manifest.Variables
+	} else {
+		variables = o.manifest.Environments[o.envName].Variables
+	}
+
+	for k := range variables {
 		keys = append(keys, k)
 	}
 	return keys, nil
@@ -245,6 +272,7 @@ func BuildVariableDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Name of the environment variable.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))

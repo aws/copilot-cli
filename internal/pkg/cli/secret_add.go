@@ -18,6 +18,7 @@ import (
 // SecretAddOpts contains the fields to collect to create a secret.
 type SecretAddOpts struct {
 	appName     string
+	envName     string
 	secretName  string
 	secretValue string
 
@@ -42,6 +43,11 @@ func (o *SecretAddOpts) Validate() error {
 	if o.appName != "" {
 		_, err := o.storeReader.GetApplication(o.ProjectName(), o.appName)
 		if err != nil {
+			return err
+		}
+	}
+	if o.envName != "" {
+		if _, err := o.storeReader.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -76,6 +82,9 @@ func (o *SecretAddOpts) Execute() error {
 
 	key := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/%s", o.GlobalOpts.ProjectName(),
 		o.appName, name)
+	if o.envName != "" {
+		key = fmt.Sprintf("%s-%s", key, o.envName)
+	}
 
 	if _, err := o.secretManager.CreateSecret(key, o.secretValue); err != nil {
 		return err
@@ -86,10 +95,26 @@ func (o *SecretAddOpts) Execute() error {
 
 	// save the secret to the manifest
 	lbmft := mft.(*manifest.LBFargateManifest)
-	if lbmft.Secrets == nil {
-		lbmft.Secrets = make(map[string]string)
+
+	if o.envName == "" {
+		if lbmft.Secrets == nil {
+			lbmft.Secrets = make(map[string]string)
+		}
+		lbmft.Secrets[o.secretName] = key
+	} else {
+		if lbmft.Environments == nil {
+			lbmft.Environments = make(map[string]manifest.LBFargateConfig)
+		}
+		if _, ok := lbmft.Environments[o.envName]; !ok {
+			lbmft.Environments[o.envName] = manifest.LBFargateConfig{}
+		}
+		if lbmft.Environments[o.envName].Secrets == nil {
+			envConf := lbmft.Environments[o.envName]
+			envConf.Secrets = make(map[string]string)
+			lbmft.Environments[o.envName] = envConf
+		}
+		lbmft.Environments[o.envName].Secrets[o.secretName] = key
 	}
-	lbmft.Secrets[o.secretName] = key
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err
@@ -107,8 +132,8 @@ func (o *SecretAddOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *SecretAddOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
-	manifestBytes, err := yaml.Marshal(manifest)
+func (o *SecretAddOpts) writeManifest(mft *manifest.LBFargateManifest) error {
+	manifestBytes, err := yaml.Marshal(mft)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
@@ -265,6 +290,7 @@ func BuildSecretAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret, e.g. MY_SECRET.")
 	cmd.Flags().StringVarP(&opts.secretValue, "secret-value", "v", "", "Value to encrypt.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)

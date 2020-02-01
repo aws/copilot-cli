@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -18,6 +19,7 @@ import (
 // SecretDeleteOpts contains the fields to collect to delete a secret.
 type SecretDeleteOpts struct {
 	appName    string
+	envName    string
 	secretName string
 
 	manifestPath string
@@ -45,7 +47,11 @@ func (o *SecretDeleteOpts) Validate() error {
 			return err
 		}
 	}
-
+	if o.envName != "" {
+		if _, err := o.storeReader.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -68,6 +74,9 @@ func (o *SecretDeleteOpts) Execute() error {
 
 	key := fmt.Sprintf("/ecs-cli-v2/%s/applications/%s/secrets/%s", o.GlobalOpts.ProjectName(),
 		o.appName, name)
+	if o.envName != "" {
+		key = fmt.Sprintf("%s-%s", key, o.envName)
+	}
 
 	if err := o.secretManager.DeleteSecret(key); err != nil {
 		return err
@@ -76,13 +85,17 @@ func (o *SecretDeleteOpts) Execute() error {
 	log.Successf("Deleted %s in %s under project %s.\n", color.HighlightUserInput(o.secretName),
 		color.HighlightResource(o.appName), color.HighlightResource(o.GlobalOpts.ProjectName()))
 
-	delete(o.manifest.Secrets, o.secretName)
+	if o.envName == "" {
+		delete(o.manifest.Secrets, o.secretName)
+	} else {
+		delete(o.manifest.Environments[o.envName].Secrets, o.secretName)
+	}
 
 	if err := o.writeManifest(o.manifest); err != nil {
 		return err
 	}
 
-	log.Successf("Removed the secret from the manifest\n")
+	log.Successf("Removed the secret %s from the manifest\n", o.secretName)
 	return nil
 }
 
@@ -94,8 +107,16 @@ func (o *SecretDeleteOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *SecretDeleteOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
-	manifestBytes, err := yaml.Marshal(manifest)
+func (o *SecretDeleteOpts) writeManifest(mft *manifest.LBFargateManifest) error {
+	if len(o.manifest.Environments[o.envName].Secrets) == 0 {
+		envConf := o.manifest.Environments[o.envName]
+		envConf.Secrets = nil
+		o.manifest.Environments[o.envName] = envConf
+	}
+	if reflect.DeepEqual(o.manifest.Environments[o.envName], manifest.LBFargateConfig{}) {
+		delete(o.manifest.Environments, o.envName)
+	}
+	manifestBytes, err := yaml.Marshal(mft)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
@@ -164,7 +185,15 @@ func (o *SecretDeleteOpts) retrieveSecrets() ([]string, error) {
 	o.manifest = mft.(*manifest.LBFargateManifest)
 
 	var keys []string
-	for k := range o.manifest.Secrets {
+	var secrets map[string]string
+
+	if o.envName == "" {
+		secrets = o.manifest.Secrets
+	} else {
+		secrets = o.manifest.Environments[o.envName].Secrets
+	}
+
+	for k := range secrets {
 		keys = append(keys, k)
 	}
 	return keys, nil
@@ -260,6 +289,7 @@ func BuildSecretDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&opts.secretName, "secret-name", "n", "", "Name of the secret.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))

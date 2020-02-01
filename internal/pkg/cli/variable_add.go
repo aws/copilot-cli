@@ -17,6 +17,7 @@ import (
 // VariableAddOpts contains the fields to collect to create an environment variable.
 type VariableAddOpts struct {
 	appName string
+	envName string
 	name    string
 	value   string
 
@@ -40,6 +41,11 @@ func (o *VariableAddOpts) Validate() error {
 	if o.appName != "" {
 		_, err := o.storeReader.GetApplication(o.ProjectName(), o.appName)
 		if err != nil {
+			return err
+		}
+	}
+	if o.envName != "" {
+		if _, err := o.storeReader.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -72,10 +78,26 @@ func (o *VariableAddOpts) Execute() error {
 
 	// add the env var to the manifest
 	lbmft := mft.(*manifest.LBFargateManifest)
-	if lbmft.Variables == nil {
-		lbmft.Variables = make(map[string]string)
+
+	if o.envName == "" {
+		if lbmft.Variables == nil {
+			lbmft.Variables = make(map[string]string)
+		}
+		lbmft.Variables[o.name] = o.value
+	} else {
+		if lbmft.Environments == nil {
+			lbmft.Environments = make(map[string]manifest.LBFargateConfig)
+		}
+		if _, ok := lbmft.Environments[o.envName]; !ok {
+			lbmft.Environments[o.envName] = manifest.LBFargateConfig{}
+		}
+		if lbmft.Environments[o.envName].Variables == nil {
+			envConf := lbmft.Environments[o.envName]
+			envConf.Variables = make(map[string]string)
+			lbmft.Environments[o.envName] = envConf
+		}
+		lbmft.Environments[o.envName].Variables[o.name] = o.value
 	}
-	lbmft.Variables[o.name] = o.value
 
 	if err = o.writeManifest(lbmft); err != nil {
 		return err
@@ -94,8 +116,8 @@ func (o *VariableAddOpts) readManifest() (archer.Manifest, error) {
 	return manifest.UnmarshalApp(raw)
 }
 
-func (o *VariableAddOpts) writeManifest(manifest *manifest.LBFargateManifest) error {
-	manifestBytes, err := yaml.Marshal(manifest)
+func (o *VariableAddOpts) writeManifest(mft *manifest.LBFargateManifest) error {
+	manifestBytes, err := yaml.Marshal(mft)
 	_, err = o.ws.WriteFile(manifestBytes, o.manifestPath)
 	return err
 }
@@ -252,6 +274,7 @@ func BuildVariableAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVarP(&opts.name, "name", "n", "", "Name of the environment variable.")
 	cmd.Flags().StringVarP(&opts.value, "value", "v", "", "Value of the environment variable.")
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
