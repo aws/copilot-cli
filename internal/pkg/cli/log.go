@@ -128,7 +128,7 @@ func (o *logOpts) Execute() error {
 	if o.tail {
 		// listen for Enter key to exit
 		go func() {
-			_, _ = fmt.Scanln()
+			fmt.Scanln()
 			os.Exit(0)
 		}()
 
@@ -323,7 +323,7 @@ func BuildLogCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVar(&opts.start, "start", "s", "How far back to look, e.g. `20m`.")
+	cmd.Flags().StringVarP(&opts.start, "start", "s", "", "How far back to look, e.g. `20m`.")
 	cmd.Flags().BoolVar(&opts.tail, "tail", false,"Continuously show new entries.")
 	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
