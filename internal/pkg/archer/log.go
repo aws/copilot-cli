@@ -6,7 +6,7 @@ package archer
 
 // LogEntry represents a single CloudWatch log entry.
 type LogEntry struct {
-	Timestamp  string `json:"timestamp"`
+	Timestamp  int64  `json:"timestamp"`
 	StreamName string `json:"streamName"`
 	Message    string `json:"message"`
 }
@@ -17,5 +17,5 @@ type LogManager interface {
 
 // LogGetter fetches and returns log events from CloudWatch.
 type LogGetter interface {
-	GetLog(appName, startTime string) (*[]LogEntry, error)
+	GetLog(logID string, startTime int64) (*[]LogEntry, int64, error)
 }

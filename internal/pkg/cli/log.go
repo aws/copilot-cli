@@ -1,7 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -81,37 +87,81 @@ func (o *logOpts) Ask() error {
 
 // Execute displays the logs.
 func (o *logOpts) Execute() error {
-	if err := o.showHistoricalEntries(); err != nil {
+	var startTime int64
+
+	logID := fmt.Sprintf("%s-%s-%s", o.projectName, o.envName, o.appName)
+
+	if o.start == "" {
+		startTime = time.Now().Add(-24 * time.Hour).UnixNano() / 1e6 // msec
+	} else {
+		re := regexp.MustCompile(`^([0-9]*)([A-Za-z])$`)
+		results := re.FindStringSubmatch(o.start)
+		if len(results) != 3 {
+			return errors.New("'start' must be in the format: 24h")
+		}
+		startNum, _ := strconv.Atoi(results[1])
+		startType := results[2]
+
+		var then time.Time
+		now := time.Now()
+
+		switch strings.ToLower(startType) {
+		case "m":
+			then = now.Add(time.Duration(-startNum) * time.Minute)
+		case "h":
+			then = now.Add(time.Duration(-startNum) * time.Hour)
+		case "d":
+			then = now.AddDate(0, 0, -startNum)
+		case "w":
+			then = now.AddDate(0, 0, -startNum * 7)
+		default:
+			return errors.New("'start' type must be: m, h, d, w")
+		}
+
+		startTime = then.UnixNano() / 1e6 // msec
+	}
+
+	startTime, err := o.showEntries(logID, startTime)
+	if err != nil {
 		return err
 	}
 	if o.tail {
-		if err := o.continuouslyShowNewEntries(); err != nil {
-			return err
+		// listen for Enter key to exit
+		go func() {
+			_, _ = fmt.Scanln()
+			os.Exit(0)
+		}()
+
+		for {
+			time.Sleep(10 * time.Second)
+			startTime, err = o.showEntries(logID, startTime)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (o *logOpts) showHistoricalEntries() error {
-	var startTime string
-	if o.start != "" {
-
-	} else {
-		//startTime = 24h ago
-	}
-
-	entries, err := o.logManager.GetLog(o.appName, startTime)
+// returns the endTime to serve as the startTime for the next iteration
+func (o *logOpts) showEntries(logID string, startTime int64) (int64, error) {
+	entries, endTime, err := o.logManager.GetLog(logID, startTime)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	for _, e := range *entries {
-		fmt.Printf("%s %s\n", color.HighlightLogTimestamp(e.Timestamp), e.Message)
-	}
-	return nil
+	o.print(entries)
+
+	return endTime, nil
 }
 
-func (o *logOpts) continuouslyShowNewEntries() error {
-	return nil
+func (o *logOpts) print(entries *[]archer.LogEntry) {
+	for _, e := range *entries {
+		sec := e.Timestamp / 1000
+		localTime := time.Unix(sec, 0).Local().Format(time.RFC3339)
+
+		fmt.Printf("%s %s %s\n", color.HighlightLogTimestamp(localTime),
+			color.HighlightLogStreamName(e.StreamName), e.Message)
+	}
 }
 
 func (o *logOpts) askProject() error {
@@ -273,7 +323,7 @@ func BuildLogCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVar(&opts.start, "start", "", "How far back to look, e.g. `20m`.")
+	cmd.Flags().StringVar(&opts.start, "start", "s", "How far back to look, e.g. `20m`.")
 	cmd.Flags().BoolVar(&opts.tail, "tail", false,"Continuously show new entries.")
 	cmd.Flags().StringVarP(&opts.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "dw-run" /* default */, projectFlagDescription)
