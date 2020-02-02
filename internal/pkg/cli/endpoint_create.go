@@ -58,7 +58,8 @@ func (o *EndpointCreateOpts) Execute() error {
 		return err
 	}
 
-	log.Successf("You can now access the app at %s\n", fmt.Sprintf("https://%s", target))
+	log.Successf("You can now access the app at %s. It'll probably take a few minutes until it's available.\n",
+		fmt.Sprintf("https://%s", target))
 
 	return nil
 }

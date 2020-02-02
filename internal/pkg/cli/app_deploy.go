@@ -191,7 +191,11 @@ func (opts *appDeployOpts) Execute() error {
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
 func (opts *appDeployOpts) RecommendedActions() []string {
-	return nil
+	return []string{
+		fmt.Sprintf("Run %s to claim %s if you haven't yet.\n",
+			color.HighlightCode("dw_run.sh endpoint create-prod-url"),
+			color.HighlightResource(fmt.Sprintf("https://%s.dw.run", opts.AppName))),
+	}
 }
 
 func (opts *appDeployOpts) validateAppName() error {
@@ -438,6 +442,16 @@ func BuildAppDeployCmd() *cobra.Command {
 			}
 			return nil
 		}),
+		PostRunE: func(cmd *cobra.Command, args []string) error {
+			if opts.targetEnvironment.Name == "prod" {
+				log.Infoln()
+				log.Infoln("Recommended follow-up actions:")
+				for _, followup := range opts.RecommendedActions() {
+					log.Infof("- %s\n", followup)
+				}
+			}
+			return nil
+		},
 	}
 	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&opts.EnvName, envFlag, envFlagShort, "", envFlagDescription)
