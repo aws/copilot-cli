@@ -68,6 +68,13 @@ func (o *VariableDeleteOpts) Ask() error {
 
 // Execute deletes the environment variable.
 func (o *VariableDeleteOpts) Execute() error {
+	if o.manifest == nil {
+		err := o.readManifest()
+		if err != nil {
+			return err
+		}
+	}
+
 	if o.envName == "" {
 		delete(o.manifest.Variables, o.name)
 	} else {
@@ -83,12 +90,19 @@ func (o *VariableDeleteOpts) Execute() error {
 	return nil
 }
 
-func (o *VariableDeleteOpts) readManifest() (archer.Manifest, error) {
+func (o *VariableDeleteOpts) readManifest() error {
+	o.manifestPath = o.ws.AppManifestFileName(o.appName)
 	raw, err := o.ws.ReadFile(o.manifestPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return manifest.UnmarshalApp(raw)
+	mft, err := manifest.UnmarshalApp(raw)
+	if err != nil {
+		return err
+	}
+
+	o.manifest = mft.(*manifest.LBFargateManifest)
+	return nil
 }
 
 func (o *VariableDeleteOpts) writeManifest(mft *manifest.LBFargateManifest) error {
@@ -159,14 +173,12 @@ func (o *VariableDeleteOpts) askAppName() error {
 	return nil
 }
 
+
 func (o *VariableDeleteOpts) retrieveEnvVars() ([]string, error) {
-	o.manifestPath = o.ws.AppManifestFileName(o.appName)
-	mft, err := o.readManifest()
+	err := o.readManifest()
 	if err != nil {
 		return nil, err
 	}
-
-	o.manifest = mft.(*manifest.LBFargateManifest)
 
 	var keys []string
 	var variables map[string]string
