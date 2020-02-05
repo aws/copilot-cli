@@ -27,9 +27,13 @@ const (
 	fmtDeployProjectFailed   = "Failed to create the infrastructure to manage container repositories under project %s."
 )
 
-type initProjectOpts struct {
+type initProjectVars struct {
 	ProjectName string
 	DomainName  string
+}
+
+type initProjectOpts struct {
+	initProjectVars
 
 	identity     identityService
 	projectStore archer.ProjectStore
@@ -37,6 +41,31 @@ type initProjectOpts struct {
 	deployer     projectDeployer
 	prompt       prompter
 	prog         progress
+}
+
+func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
+	sess, err := session.NewProvider().Default()
+	if err != nil {
+		return nil, err
+	}
+	store, err := store.New()
+	if err != nil {
+		return nil, err
+	}
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &initProjectOpts{
+		initProjectVars: vars,
+		identity:        identity.New(sess),
+		projectStore:    store,
+		ws:              ws,
+		deployer:        cloudformation.New(sess),
+		prompt:          prompt.New(),
+		prog:            termprogress.NewSpinner(),
+	}, nil
 }
 
 // Validate returns an error if the user's input is invalid.
@@ -167,8 +196,7 @@ func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*arche
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	opts := &initProjectOpts{}
-
+	vars := initProjectVars{}
 	cmd := &cobra.Command{
 		Use:   "init [name]",
 		Short: "Creates a new empty project.",
@@ -178,29 +206,11 @@ A project is a collection of containerized applications (or micro-services) that
   Create a new project named test
   /code $ ecs-preview project init test`,
 		Args: reservedArgs,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			sess, err := session.NewProvider().Default()
-			if err != nil {
-				return err
-			}
-			store, err := store.New()
-			if err != nil {
-				return err
-			}
-			ws, err := workspace.New()
-			if err != nil {
-				return err
-			}
-
-			opts.ws = ws
-			opts.projectStore = store
-			opts.identity = identity.New(sess)
-			opts.deployer = cloudformation.New(sess)
-			opts.prompt = prompt.New()
-			opts.prog = termprogress.NewSpinner()
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newInitProjectOpts(vars)
+			if err != nil {
+				return err
+			}
 			if len(args) == 1 {
 				opts.ProjectName = args[0]
 			}
@@ -222,6 +232,6 @@ A project is a collection of containerized applications (or micro-services) that
 			return nil
 		}),
 	}
-	cmd.Flags().StringVar(&opts.DomainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
 	return cmd
 }

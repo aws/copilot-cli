@@ -32,12 +32,14 @@ func TestAppList_Execute(t *testing.T) {
 	}{
 		"with json outputs": {
 			listOpts: listAppOpts{
-				ShouldOutputJSON: true,
-				appLister:        mockAppStore,
-				projectGetter:    mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
+				listAppVars: listAppVars{
+					ShouldOutputJSON: true,
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
 				},
+				appLister:     mockAppStore,
+				projectGetter: mockProjectStore,
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -55,11 +57,13 @@ func TestAppList_Execute(t *testing.T) {
 		},
 		"with human outputs": {
 			listOpts: listAppOpts{
+				listAppVars: listAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -78,11 +82,13 @@ func TestAppList_Execute(t *testing.T) {
 		"with invalid project name": {
 			expectedErr: mockError,
 			listOpts: listAppOpts{
+				listAppVars: listAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -98,11 +104,13 @@ func TestAppList_Execute(t *testing.T) {
 		"with failed call to list": {
 			expectedErr: mockError,
 			listOpts: listAppOpts{
+				listAppVars: listAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
+				},
 				appLister:     mockAppStore,
 				projectGetter: mockProjectStore,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
-				},
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -118,13 +126,15 @@ func TestAppList_Execute(t *testing.T) {
 		"with local flag enabled": {
 			expectedErr: nil,
 			listOpts: listAppOpts{
-				appLister:           mockAppStore,
-				projectGetter:       mockProjectStore,
-				ws:                  mockWorkspace,
-				ShouldShowLocalApps: true,
-				GlobalOpts: &GlobalOpts{
-					projectName: "coolproject",
+				listAppVars: listAppVars{
+					ShouldShowLocalApps: true,
+					GlobalOpts: &GlobalOpts{
+						projectName: "coolproject",
+					},
 				},
+				appLister:     mockAppStore,
+				projectGetter: mockProjectStore,
+				ws:            mockWorkspace,
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
@@ -206,11 +216,13 @@ func TestAppList_Ask(t *testing.T) {
 			tc.mockPrompt(mockPrompter)
 
 			listApps := &listAppOpts{
-				projectLister: mockProjectLister,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
+				listAppVars: listAppVars{
+					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
+						projectName: tc.inputProject,
+					},
 				},
+				projectLister: mockProjectLister,
 			}
 
 			err := listApps.Ask()

@@ -62,10 +62,12 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			test.setupMocks()
 			opts := deleteAppOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: test.inProjectName,
+				deleteAppVars: deleteAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: test.inProjectName,
+					},
+					AppName: test.inAppName,
 				},
-				AppName:        test.inAppName,
 				projectService: mockProjectService,
 			}
 
@@ -202,13 +204,15 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			test.mockProjectService(mockProjectService)
 
 			opts := deleteAppOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
-					prompt:      mockPrompter,
+				deleteAppVars: deleteAppVars{
+					SkipConfirmation: test.skipConfirmation,
+					GlobalOpts: &GlobalOpts{
+						projectName: mockProjectName,
+						prompt:      mockPrompter,
+					},
+					AppName: test.inAppName,
 				},
-				AppName:          test.inAppName,
-				projectService:   mockProjectService,
-				SkipConfirmation: test.skipConfirmation,
+				projectService: mockProjectService,
 			}
 
 			got := opts.Ask()
@@ -259,8 +263,10 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			test.setupMocks()
 			opts := deleteAppOpts{
-				GlobalOpts: &GlobalOpts{
-					projectName: mockProjectName,
+				deleteAppVars: deleteAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: mockProjectName,
+					},
 				},
 				projectService: mockProjectService,
 			}

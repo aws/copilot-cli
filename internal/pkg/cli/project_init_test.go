@@ -121,7 +121,9 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			opts := &initProjectOpts{
-				ProjectName:  tc.inProjectName,
+				initProjectVars: initProjectVars{
+					ProjectName: tc.inProjectName,
+				},
 				projectStore: mocks.NewMockProjectStore(ctrl),
 				ws:           mocks.NewMockWorkspace(ctrl),
 				prompt:       climocks.NewMockprompter(ctrl),
@@ -161,7 +163,9 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			opts := &initProjectOpts{
-				ProjectName: tc.inProjectName,
+				initProjectVars: initProjectVars{
+					ProjectName: tc.inProjectName,
+				},
 			}
 
 			// WHEN
@@ -336,9 +340,10 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			mockProgress := climocks.NewMockprogress(ctrl)
 
 			opts := &initProjectOpts{
-				ProjectName: "project",
-				DomainName:  tc.inDomainName,
-
+				initProjectVars: initProjectVars{
+					ProjectName: "project",
+					DomainName:  tc.inDomainName,
+				},
 				projectStore: mockProjectStore,
 				identity:     mockIdentityService,
 				deployer:     mockDeployer,

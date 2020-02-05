@@ -22,16 +22,34 @@ const (
 	environmentListProjectNameHelper = "A project groups all of your environments together."
 )
 
-type listEnvOpts struct {
+type listEnvVars struct {
+	*GlobalOpts
 	ShouldOutputJSON bool
+}
+
+type listEnvOpts struct {
+	listEnvVars
 
 	manager       archer.EnvironmentLister
 	projectGetter archer.ProjectGetter
 	projectLister archer.ProjectLister
 
 	w io.Writer
+}
 
-	*GlobalOpts
+func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &listEnvOpts{
+		listEnvVars:   vars,
+		manager:       ssmStore,
+		projectGetter: ssmStore,
+		projectLister: ssmStore,
+		w:             os.Stdout,
+	}, nil
 }
 
 func (o *listEnvOpts) selectProject() (string, error) {
@@ -122,8 +140,7 @@ func (o *listEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
 
 // BuildEnvListCmd builds the command for listing environments in a project.
 func BuildEnvListCmd() *cobra.Command {
-	opts := listEnvOpts{
-		w:          os.Stdout,
+	vars := listEnvVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
@@ -132,23 +149,17 @@ func BuildEnvListCmd() *cobra.Command {
 		Example: `
   Lists all the environments for the test project
   /code $ ecs-preview env ls --project test`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newListEnvOpts(vars)
 			if err != nil {
 				return err
 			}
-			opts.projectLister = ssmStore
-			opts.manager = ssmStore
-			opts.projectGetter = ssmStore
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&vars.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	return cmd
 }

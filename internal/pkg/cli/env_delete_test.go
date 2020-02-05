@@ -66,9 +66,11 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := &deleteEnvOpts{
-				EnvName:     tc.inEnv,
+				deleteEnvVars: deleteEnvVars{
+					EnvName:    tc.inEnv,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 				storeClient: tc.mockStore(ctrl),
-				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -187,10 +189,12 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := &deleteEnvOpts{
-				EnvName:    tc.inEnvName,
-				EnvProfile: tc.inEnvProfile,
-				GlobalOpts: &GlobalOpts{
-					projectName: testProject,
+				deleteEnvVars: deleteEnvVars{
+					EnvName:    tc.inEnvName,
+					EnvProfile: tc.inEnvProfile,
+					GlobalOpts: &GlobalOpts{
+						projectName: testProject,
+					},
 				},
 			}
 			tc.mockDependencies(ctrl, opts)
@@ -368,18 +372,20 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			opts := deleteEnvOpts{
-				EnvName:          testEnv,
-				SkipConfirmation: tc.inSkipPrompt,
-				storeClient:      tc.mockStore(ctrl),
-				deployClient:     tc.mockDeploy(ctrl),
-				rgClient:         tc.mockRG(ctrl),
-				prog:             tc.mockProg(ctrl),
+				deleteEnvVars: deleteEnvVars{
+					EnvName:          testEnv,
+					SkipConfirmation: tc.inSkipPrompt,
+					GlobalOpts: &GlobalOpts{
+						projectName: testProject,
+						prompt:      tc.mockPrompt(ctrl),
+					},
+				},
+				storeClient:  tc.mockStore(ctrl),
+				deployClient: tc.mockDeploy(ctrl),
+				rgClient:     tc.mockRG(ctrl),
+				prog:         tc.mockProg(ctrl),
 				initProfileClients: func(o *deleteEnvOpts) error {
 					return nil
-				},
-				GlobalOpts: &GlobalOpts{
-					projectName: testProject,
-					prompt:      tc.mockPrompt(ctrl),
 				},
 			}
 

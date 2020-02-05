@@ -89,10 +89,11 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			tc.mockWorkspace(mockWorkspace)
 
 			opts := &updatePipelineOpts{
+				updatePipelineVars: updatePipelineVars{
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 				envStore: mockEnvStore,
 				ws:       mockWorkspace,
-
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -585,18 +586,20 @@ stages:
 			tc.mockPrompt(mockPrompt)
 
 			opts := &updatePipelineOpts{
-				PipelineFile:     tc.inPipelineFile,
-				PipelineName:     tc.inPipelineName,
+				updatePipelineVars: updatePipelineVars{
+					PipelineFile: tc.inPipelineFile,
+					PipelineName: tc.inPipelineName,
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inProjectName,
+						prompt:      mockPrompt,
+					},
+				},
 				pipelineDeployer: mockPipelineDeployer,
 				ws:               mockWorkspace,
 				project:          tc.inProject,
 				region:           tc.inRegion,
 				envStore:         mockEnvStore,
 				prog:             mockProgress,
-				GlobalOpts: &GlobalOpts{
-					projectName: tc.inProjectName,
-					prompt:      mockPrompt,
-				},
 			}
 
 			// WHEN

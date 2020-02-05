@@ -247,15 +247,17 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			tc.expectRunner(mockRunner)
 
 			opts := &packageAppOpts{
-				AppName: tc.inAppName,
-				EnvName: tc.inEnvName,
-				Tag:     tc.inTag,
-				ws:      mockWorkspace,
-				store:   mockStore,
-				runner:  mockRunner,
-				GlobalOpts: &GlobalOpts{
-					prompt: mockPrompt,
+				packageAppVars: packageAppVars{
+					AppName: tc.inAppName,
+					EnvName: tc.inEnvName,
+					Tag:     tc.inTag,
+					GlobalOpts: &GlobalOpts{
+						prompt: mockPrompt,
+					},
 				},
+				ws:     mockWorkspace,
+				store:  mockStore,
+				runner: mockRunner,
 			}
 
 			// WHEN
@@ -354,11 +356,13 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			tc.setupMocks()
 
 			opts := &packageAppOpts{
-				AppName:    tc.inAppName,
-				EnvName:    tc.inEnvName,
-				ws:         mockWorkspace,
-				store:      mockProjectService,
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				packageAppVars: packageAppVars{
+					AppName:    tc.inAppName,
+					EnvName:    tc.inEnvName,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
+				ws:    mockWorkspace,
+				store: mockProjectService,
 			}
 
 			// WHEN
@@ -685,10 +689,13 @@ count: 1`), nil)
 			paramsBuf := &strings.Builder{}
 			mockFS := &afero.Afero{Fs: afero.NewMemMapFs()}
 			opts := packageAppOpts{
-				EnvName:   tc.inEnvName,
-				AppName:   tc.inAppName,
-				Tag:       tc.inTagName,
-				OutputDir: tc.inOutputDir,
+				packageAppVars: packageAppVars{
+					EnvName:    tc.inEnvName,
+					AppName:    tc.inAppName,
+					Tag:        tc.inTagName,
+					OutputDir:  tc.inOutputDir,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 
 				store:        mockStore,
 				ws:           mockWorkspace,
@@ -696,8 +703,6 @@ count: 1`), nil)
 				stackWriter:  templateBuf,
 				paramsWriter: paramsBuf,
 				fs:           mockFS,
-
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN

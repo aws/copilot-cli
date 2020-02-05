@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -31,12 +30,15 @@ var (
 	errOperationCancelled = errors.New("operation cancelled")
 )
 
-type deleteProjOpts struct {
-	*GlobalOpts
-
+type deleteProjVars struct {
 	skipConfirmation bool
 	profile          string
 
+	*GlobalOpts
+}
+
+type deleteProjOpts struct {
+	deleteProjVars
 	store    projectService
 	deployer deployer
 	ws       workspaceDeleter
@@ -47,7 +49,7 @@ type workspaceDeleter interface {
 	Delete() error
 }
 
-func newDeleteProjOpts() (*deleteProjOpts, error) {
+func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 	store, err := store.New()
 	if err != nil {
 		return nil, err
@@ -65,13 +67,11 @@ func newDeleteProjOpts() (*deleteProjOpts, error) {
 	cf := cloudformation.New(s)
 
 	return &deleteProjOpts{
-		GlobalOpts:       NewGlobalOpts(),
-		skipConfirmation: viper.GetBool(yesFlag),
-		profile:          viper.GetString(profileFlag),
-		store:            store,
-		ws:               ws,
-		deployer:         cf,
-		spinner:          termprogress.NewSpinner(),
+		deleteProjVars: vars,
+		store:          store,
+		ws:             ws,
+		deployer:       cf,
+		spinner:        termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -141,7 +141,13 @@ func (o *deleteProjOpts) Execute() error {
 	}
 
 	for _, e := range envs {
-		deo := newDeleteEnvOpts()
+		vars := deleteEnvVars{
+			GlobalOpts: NewGlobalOpts(),
+		}
+		deo, err := newDeleteEnvOpts(vars)
+		if err != nil {
+			return err
+		}
 		deo.EnvName = e.Name
 		// TODO: enable users to specify a profile per environment deletion?
 		// deo.EnvProfile = o.profile
@@ -184,7 +190,9 @@ func (o *deleteProjOpts) deleteApps() error {
 	}
 
 	for _, a := range apps {
-		ado, err := newDeleteAppOpts()
+		ado, err := newDeleteAppOpts(deleteAppVars{
+			GlobalOpts: NewGlobalOpts(),
+		})
 		if err != nil {
 			return err
 		}
@@ -201,13 +209,16 @@ func (o *deleteProjOpts) deleteApps() error {
 
 // BuildProjectDeleteCommand builds the `project delete` subcommand.
 func BuildProjectDeleteCommand() *cobra.Command {
+	vars := deleteProjVars{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete all resources associated with the local project.",
 		Example: `
   /code $ ecs-preview project delete --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newDeleteProjOpts()
+			opts, err := newDeleteProjOpts(vars)
 			if err != nil {
 				return err
 			}
@@ -224,10 +235,8 @@ func BuildProjectDeleteCommand() *cobra.Command {
 		}),
 	}
 
-	cmd.Flags().Bool(yesFlag, false, yesFlagDescription)
-	viper.BindPFlag(yesFlag, cmd.Flags().Lookup(yesFlag))
-	cmd.Flags().String(profileFlag, defaultProfile, profileFlagDescription)
-	viper.BindPFlag(profileFlag, cmd.Flags().Lookup(profileFlag))
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultProfile, profileFlagDescription)
 
 	return cmd
 }

@@ -53,11 +53,12 @@ func TestProjectShow_Validate(t *testing.T) {
 			tc.mockStoreReader(mockStoreReader)
 
 			showProjects := &showProjectOpts{
-				storeSvc: mockStoreReader,
-
-				GlobalOpts: &GlobalOpts{
-					projectName: tc.inputProject,
+				showProjectVars: showProjectVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inputProject,
+					},
 				},
+				storeSvc: mockStoreReader,
 			}
 
 			// WHEN
@@ -160,11 +161,13 @@ func TestProjectShow_Ask(t *testing.T) {
 			tc.mockStoreReader(mockStoreReader)
 
 			showProjects := &showProjectOpts{
-				storeSvc: mockStoreReader,
-				GlobalOpts: &GlobalOpts{
-					prompt:      mockPrompter,
-					projectName: tc.inputProject,
+				showProjectVars: showProjectVars{
+					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
+						projectName: tc.inputProject,
+					},
 				},
+				storeSvc: mockStoreReader,
 			}
 
 			// WHEN
@@ -326,15 +329,15 @@ Applications
 			tc.mockStoreReader(mockStoreReader)
 
 			showProjects := &showProjectOpts{
-				shouldOutputJSON: tc.shouldOutputJSON,
-
+				showProjectVars: showProjectVars{
+					shouldOutputJSON: tc.shouldOutputJSON,
+					GlobalOpts: &GlobalOpts{
+						projectName: projectName,
+					},
+				},
 				storeSvc: mockStoreReader,
 
 				w: b,
-
-				GlobalOpts: &GlobalOpts{
-					projectName: projectName,
-				},
 			}
 
 			// WHEN

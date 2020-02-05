@@ -33,7 +33,7 @@ const (
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
 	pipelineFileFlag      = "file"
-	appLocalFlag          = "local"
+	localAppFlag          = "local"
 )
 
 // Short flag names.
@@ -83,5 +83,5 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	resourcesFlagDescription         = "Optional. Show the resources of your application."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
-	appLocalFlagDescription          = "Only show applications in the current directory."
+	localAppFlagDescription          = "Only show applications in the current directory."
 )

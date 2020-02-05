@@ -29,11 +29,14 @@ var (
 	errAppDeleteCancelled = errors.New("app delete cancelled - no changes made")
 )
 
-type deleteAppOpts struct {
-	// Flags or arguments that are user inputs.
+type deleteAppVars struct {
 	*GlobalOpts
 	SkipConfirmation bool
 	AppName          string
+}
+
+type deleteAppOpts struct {
+	deleteAppVars
 
 	// Interfaces to dependencies.
 	projectService   projectService
@@ -45,7 +48,7 @@ type deleteAppOpts struct {
 	projectEnvironments []*archer.Environment
 }
 
-func newDeleteAppOpts() (*deleteAppOpts, error) {
+func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 	workspaceService, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("intialize workspace service: %w", err)
@@ -57,11 +60,12 @@ func newDeleteAppOpts() (*deleteAppOpts, error) {
 	}
 
 	return &deleteAppOpts{
-		GlobalOpts:       NewGlobalOpts(),
-		spinner:          termprogress.NewSpinner(),
-		sessProvider:     session.NewProvider(),
+		deleteAppVars: vars,
+
 		workspaceService: workspaceService,
 		projectService:   projectService,
+		spinner:          termprogress.NewSpinner(),
+		sessProvider:     session.NewProvider(),
 	}, nil
 }
 
@@ -277,12 +281,9 @@ func (o *deleteAppOpts) RecommendedActions() []string {
 
 // BuildAppDeleteCmd builds the command to delete application(s).
 func BuildAppDeleteCmd() *cobra.Command {
-	opts := &deleteAppOpts{
-		GlobalOpts:   NewGlobalOpts(),
-		spinner:      termprogress.NewSpinner(),
-		sessProvider: session.NewProvider(),
+	vars := deleteAppVars{
+		GlobalOpts: NewGlobalOpts(),
 	}
-
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Deletes an application from your project.",
@@ -292,22 +293,11 @@ func BuildAppDeleteCmd() *cobra.Command {
 
   Delete the "test" application without prompting.
 	/code $ ecs-preview app delete --name test --yes`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			workspaceService, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("intialize workspace service: %w", err)
-			}
-			opts.workspaceService = workspaceService
-
-			projectService, err := store.New()
-			if err != nil {
-				return fmt.Errorf("create project service: %w", err)
-			}
-			opts.projectService = projectService
-
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newDeleteAppOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -326,8 +316,8 @@ func BuildAppDeleteCmd() *cobra.Command {
 		}),
 	}
 
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
-	cmd.Flags().BoolVar(&opts.SkipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd
 }

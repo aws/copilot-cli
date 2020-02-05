@@ -31,9 +31,14 @@ const (
 	noAdditionalFormatting = 0
 )
 
-type listAppOpts struct {
+type listAppVars struct {
+	*GlobalOpts
 	ShouldOutputJSON    bool
 	ShouldShowLocalApps bool
+}
+
+type listAppOpts struct {
+	listAppVars
 
 	applications  []*archer.Application
 	appLister     archer.ApplicationLister
@@ -42,8 +47,27 @@ type listAppOpts struct {
 
 	ws archer.Workspace
 	w  io.Writer
+}
 
-	*GlobalOpts
+func newListAppOpts(vars listAppVars) (*listAppOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, err
+	}
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, err
+	}
+
+	return &listAppOpts{
+		listAppVars: vars,
+
+		projectGetter: ssmStore,
+		appLister:     ssmStore,
+		projectLister: ssmStore,
+		ws:            ws,
+		w:             os.Stdout,
+	}, nil
 }
 
 func (opts *listAppOpts) selectProject() (string, error) {
@@ -165,8 +189,7 @@ func (opts *listAppOpts) jsonOutput() (string, error) {
 
 // BuildAppListCmd builds the command for listing applications in a project.
 func BuildAppListCmd() *cobra.Command {
-	opts := listAppOpts{
-		w:          os.Stdout,
+	vars := listAppVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
@@ -175,23 +198,11 @@ func BuildAppListCmd() *cobra.Command {
 		Example: `
   Lists all the applications for the test project
   /code $ ecs-preview app ls --project test`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ssmStore, err := store.New()
-			if err != nil {
-				return err
-			}
-			opts.projectLister = ssmStore
-			opts.appLister = ssmStore
-			opts.projectGetter = ssmStore
-
-			ws, err := workspace.New()
-			if err != nil {
-				return err
-			}
-			opts.ws = ws
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newListAppOpts(vars)
+			if err != nil {
+				return err
+			}
 			if err := opts.Ask(); err != nil {
 				return err
 			}
@@ -199,8 +210,8 @@ func BuildAppListCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&opts.projectName, projectFlag, projectFlagShort, opts.ProjectName(), projectFlagDescription)
-	cmd.Flags().BoolVar(&opts.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&opts.ShouldShowLocalApps, appLocalFlag, false, appLocalFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().BoolVar(&vars.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
+	cmd.Flags().BoolVar(&vars.ShouldShowLocalApps, localAppFlag, false, localAppFlagDescription)
 	return cmd
 }

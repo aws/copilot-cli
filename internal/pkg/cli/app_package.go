@@ -29,12 +29,16 @@ const (
 	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
-type packageAppOpts struct {
-	// Fields with matching flags.
+type packageAppVars struct {
+	*GlobalOpts
 	AppName   string
 	EnvName   string
 	Tag       string
 	OutputDir string
+}
+
+type packageAppOpts struct {
+	packageAppVars
 
 	// Interfaces to interact with dependencies.
 	ws           archer.Workspace
@@ -44,18 +48,33 @@ type packageAppOpts struct {
 	paramsWriter io.Writer
 	fs           afero.Fs
 	runner       runner
-
-	*GlobalOpts // Embed global options.
 }
 
-func newPackageAppOpts() *packageAppOpts {
-	return &packageAppOpts{
-		runner:       command.New(),
-		stackWriter:  os.Stdout,
-		paramsWriter: ioutil.Discard,
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		GlobalOpts:   NewGlobalOpts(),
+func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
 	}
+	store, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't connect to application datastore: %w", err)
+	}
+	p := session.NewProvider()
+	sess, err := p.Default()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving default session: %w", err)
+	}
+
+	return &packageAppOpts{
+		packageAppVars: vars,
+		ws:             ws,
+		store:          store,
+		describer:      cloudformation.New(sess),
+		runner:         command.New(),
+		stackWriter:    os.Stdout,
+		paramsWriter:   ioutil.Discard,
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -316,7 +335,9 @@ func (e *errRepoNotFound) Is(target error) bool {
 
 // BuildAppPackageCmd builds the command for printing an application's CloudFormation template.
 func BuildAppPackageCmd() *cobra.Command {
-	opts := newPackageAppOpts()
+	vars := packageAppVars{
+		GlobalOpts: NewGlobalOpts(),
+	}
 	cmd := &cobra.Command{
 		Use:   "package",
 		Short: "Prints the AWS CloudFormation template of an application.",
@@ -329,28 +350,12 @@ func BuildAppPackageCmd() *cobra.Command {
   /code $ ecs-preview app package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			ws, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("new workspace: %w", err)
-			}
-			opts.ws = ws
-
-			store, err := store.New()
-			if err != nil {
-				return fmt.Errorf("couldn't connect to application datastore: %w", err)
-			}
-			opts.store = store
-
-			p := session.NewProvider()
-			sess, err := p.Default()
-			if err != nil {
-				return fmt.Errorf("error retrieving default session: %w", err)
-			}
-			opts.describer = cloudformation.New(sess)
-			return nil
-		}),
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newPackageAppOpts(vars)
+			if err != nil {
+				return err
+			}
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -361,9 +366,9 @@ func BuildAppPackageCmd() *cobra.Command {
 		}),
 	}
 	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, opts.AppName, appFlagDescription)
-	cmd.Flags().StringVarP(&opts.EnvName, envFlag, envFlagShort, opts.EnvName, envFlagDescription)
-	cmd.Flags().StringVar(&opts.Tag, imageTagFlag, opts.Tag, imageTagFlagDescription)
-	cmd.Flags().StringVar(&opts.OutputDir, stackOutputDirFlag, opts.OutputDir, stackOutputDirFlagDescription)
+	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.Tag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVar(&vars.OutputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	return cmd
 }

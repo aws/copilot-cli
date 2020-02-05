@@ -36,11 +36,15 @@ var (
 	errNoLocalManifestsFound = errors.New("no manifest files found")
 )
 
-type appDeployOpts struct {
+type appDeployVars struct {
 	*GlobalOpts
 	AppName  string
 	EnvName  string
 	ImageTag string
+}
+
+type appDeployOpts struct {
+	appDeployVars
 
 	projectService     projectService
 	workspaceService   archer.Workspace
@@ -56,23 +60,27 @@ type appDeployOpts struct {
 	targetEnvironment *archer.Environment
 }
 
-func (o *appDeployOpts) String() string {
-	return fmt.Sprintf("project: %s, app: %s, env: %s, tag: %s", o.ProjectName(), o.AppName, o.EnvName, o.ImageTag)
-}
-
-func (o *appDeployOpts) init() error {
+func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
 	projectService, err := store.New()
 	if err != nil {
-		return fmt.Errorf("create project service: %w", err)
+		return nil, fmt.Errorf("create project service: %w", err)
 	}
-	o.projectService = projectService
 
 	workspaceService, err := workspace.New()
 	if err != nil {
-		return fmt.Errorf("intialize workspace service: %w", err)
+		return nil, fmt.Errorf("intialize workspace service: %w", err)
 	}
-	o.workspaceService = workspaceService
-	return nil
+
+	return &appDeployOpts{
+		appDeployVars: vars,
+
+		projectService:   projectService,
+		workspaceService: workspaceService,
+		spinner:          termprogress.NewSpinner(),
+		dockerService:    docker.New(),
+		runner:           command.New(),
+		sessProvider:     session.NewProvider(),
+	}, nil
 }
 
 // Validate returns an error if the user inputs are invalid.
@@ -349,15 +357,18 @@ func (o *appDeployOpts) getAppDeployTemplate() (string, error) {
 	buffer := &bytes.Buffer{}
 
 	appPackage := packageAppOpts{
-		AppName:      o.AppName,
-		EnvName:      o.targetEnvironment.Name,
-		Tag:          o.ImageTag,
+		packageAppVars: packageAppVars{
+			AppName:    o.AppName,
+			EnvName:    o.targetEnvironment.Name,
+			Tag:        o.ImageTag,
+			GlobalOpts: o.GlobalOpts,
+		},
+
 		stackWriter:  buffer,
 		paramsWriter: ioutil.Discard,
 		store:        o.projectService,
 		describer:    o.appPackageCfClient,
 		ws:           o.workspaceService,
-		GlobalOpts:   o.GlobalOpts,
 	}
 
 	if err := appPackage.Execute(); err != nil {
@@ -408,14 +419,9 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 
 // BuildAppDeployCmd builds the `app deploy` subcommand.
 func BuildAppDeployCmd() *cobra.Command {
-	opts := &appDeployOpts{
-		GlobalOpts:    NewGlobalOpts(),
-		spinner:       termprogress.NewSpinner(),
-		dockerService: docker.New(),
-		runner:        command.New(),
-		sessProvider:  session.NewProvider(),
+	vars := appDeployVars{
+		GlobalOpts: NewGlobalOpts(),
 	}
-
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploys an application to an environment.",
@@ -424,7 +430,8 @@ func BuildAppDeployCmd() *cobra.Command {
   Deploys an application named "frontend" to a "test" environment.
   /code $ ecs-preview app deploy --name frontend --env test`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			if err := opts.init(); err != nil {
+			opts, err := newAppDeployOpts(vars)
+			if err != nil {
 				return err
 			}
 			if err := opts.Validate(); err != nil {
@@ -439,9 +446,9 @@ func BuildAppDeployCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&opts.EnvName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&opts.ImageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.ImageTag, imageTagFlag, "", imageTagFlagDescription)
 
 	return cmd
 }

@@ -41,11 +41,15 @@ const (
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
 
-type initAppOpts struct {
-	// Fields with matching flags.
+type initAppVars struct {
+	*GlobalOpts
 	AppType        string
 	AppName        string
 	DockerfilePath string
+}
+
+type initAppOpts struct {
+	initAppVars
 
 	// Interfaces to interact with dependencies.
 	fs             afero.Fs
@@ -57,27 +61,54 @@ type initAppOpts struct {
 
 	// Outputs stored on successful actions.
 	manifestPath string
+}
 
-	*GlobalOpts
+func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
+	store, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
+	}
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+	}
+
+	p := session.NewProvider()
+	sess, err := p.Default()
+	if err != nil {
+		return nil, err
+	}
+
+	return &initAppOpts{
+		initAppVars: vars,
+
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		appStore:       store,
+		projGetter:     store,
+		manifestWriter: ws,
+		projDeployer:   cloudformation.New(sess),
+		prog:           termprogress.NewSpinner(),
+	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
-func (opts *initAppOpts) Validate() error {
-	if opts.ProjectName() == "" {
+func (o *initAppOpts) Validate() error {
+	if o.ProjectName() == "" {
 		return errNoProjectInWorkspace
 	}
-	if opts.AppType != "" {
-		if err := validateApplicationType(opts.AppType); err != nil {
+	if o.AppType != "" {
+		if err := validateApplicationType(o.AppType); err != nil {
 			return err
 		}
 	}
-	if opts.AppName != "" {
-		if err := validateApplicationName(opts.AppName); err != nil {
+	if o.AppName != "" {
+		if err := validateApplicationName(o.AppName); err != nil {
 			return err
 		}
 	}
-	if opts.DockerfilePath != "" {
-		if _, err := opts.fs.Stat(opts.DockerfilePath); err != nil {
+	if o.DockerfilePath != "" {
+		if _, err := o.fs.Stat(o.DockerfilePath); err != nil {
 			return err
 		}
 	}
@@ -85,52 +116,52 @@ func (opts *initAppOpts) Validate() error {
 }
 
 // Ask prompts for fields that are required but not passed in.
-func (opts *initAppOpts) Ask() error {
-	if err := opts.askAppType(); err != nil {
+func (o *initAppOpts) Ask() error {
+	if err := o.askAppType(); err != nil {
 		return err
 	}
-	if err := opts.askAppName(); err != nil {
+	if err := o.askAppName(); err != nil {
 		return err
 	}
-	if err := opts.askDockerfile(); err != nil {
+	if err := o.askDockerfile(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // Execute writes the application's manifest file and stores the application in SSM.
-func (opts *initAppOpts) Execute() error {
-	if err := opts.ensureNoExistingApp(opts.ProjectName(), opts.AppName); err != nil {
+func (o *initAppOpts) Execute() error {
+	if err := o.ensureNoExistingApp(o.ProjectName(), o.AppName); err != nil {
 		return err
 	}
 
-	manifestPath, err := opts.createManifest()
+	manifestPath, err := o.createManifest()
 	if err != nil {
 		return err
 	}
-	opts.manifestPath = manifestPath
+	o.manifestPath = manifestPath
 
 	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(opts.AppName), color.HighlightResource(opts.manifestPath))
+	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(o.manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
-	proj, err := opts.projGetter.GetProject(opts.ProjectName())
+	proj, err := o.projGetter.GetProject(o.ProjectName())
 	if err != nil {
-		return fmt.Errorf("get project %s: %w", opts.ProjectName(), err)
+		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
-	opts.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, opts.AppName))
-	if err := opts.projDeployer.AddAppToProject(proj, opts.AppName); err != nil {
-		opts.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, opts.AppName))
-		return fmt.Errorf("add app %s to project %s: %w", opts.AppName, opts.ProjectName(), err)
+	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
+	if err := o.projDeployer.AddAppToProject(proj, o.AppName); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
+		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
 	}
-	opts.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, opts.AppName))
+	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	return opts.createAppInProject(opts.ProjectName())
+	return o.createAppInProject(o.ProjectName())
 }
 
-func (opts *initAppOpts) createManifest() (string, error) {
-	manifest, err := manifest.CreateApp(opts.AppName, opts.AppType, opts.DockerfilePath)
+func (o *initAppOpts) createManifest() (string, error) {
+	manifest, err := manifest.CreateApp(o.AppName, o.AppType, o.DockerfilePath)
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
@@ -138,10 +169,10 @@ func (opts *initAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	filename := opts.manifestWriter.AppManifestFileName(opts.AppName)
-	manifestPath, err := opts.manifestWriter.WriteFile(manifestBytes, filename)
+	filename := o.manifestWriter.AppManifestFileName(o.AppName)
+	manifestPath, err := o.manifestWriter.WriteFile(manifestBytes, filename)
 	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", opts.AppName, err)
+		return "", fmt.Errorf("write manifest for app %s: %w", o.AppName, err)
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {
@@ -154,61 +185,61 @@ func (opts *initAppOpts) createManifest() (string, error) {
 	return relPath, nil
 }
 
-func (opts *initAppOpts) createAppInProject(projectName string) error {
-	if err := opts.appStore.CreateApplication(&archer.Application{
+func (o *initAppOpts) createAppInProject(projectName string) error {
+	if err := o.appStore.CreateApplication(&archer.Application{
 		Project: projectName,
-		Name:    opts.AppName,
-		Type:    opts.AppType,
+		Name:    o.AppName,
+		Type:    o.AppType,
 	}); err != nil {
-		return fmt.Errorf("saving application %s: %w", opts.AppName, err)
+		return fmt.Errorf("saving application %s: %w", o.AppName, err)
 	}
 	return nil
 }
 
-func (opts *initAppOpts) askAppType() error {
-	if opts.AppType != "" {
+func (o *initAppOpts) askAppType() error {
+	if o.AppType != "" {
 		return nil
 	}
 
-	t, err := opts.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
+	t, err := o.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
 	}
-	opts.AppType = t
+	o.AppType = t
 	return nil
 }
 
-func (opts *initAppOpts) askAppName() error {
-	if opts.AppName != "" {
+func (o *initAppOpts) askAppName() error {
+	if o.AppName != "" {
 		return nil
 	}
 
-	name, err := opts.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(opts.AppType)),
-		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, opts.ProjectName()),
+	name, err := o.prompt.Get(
+		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(o.AppType)),
+		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, o.ProjectName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
 	}
-	opts.AppName = name
+	o.AppName = name
 	return nil
 }
 
 // askDockerfile prompts for the Dockerfile by looking at sub-directories with a Dockerfile.
 // If the user chooses to enter a custom path, then we prompt them for the path.
-func (opts *initAppOpts) askDockerfile() error {
-	if opts.DockerfilePath != "" {
+func (o *initAppOpts) askDockerfile() error {
+	if o.DockerfilePath != "" {
 		return nil
 	}
 
 	// TODO https://github.com/aws/amazon-ecs-cli-v2/issues/206
-	dockerfiles, err := listDockerfiles(opts.fs, ".")
+	dockerfiles, err := listDockerfiles(o.fs, ".")
 	if err != nil {
 		return err
 	}
 
-	sel, err := opts.prompt.SelectOne(
-		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(opts.AppName)),
+	sel, err := o.prompt.SelectOne(
+		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(o.AppName)),
 		appInitDockerfileHelpPrompt,
 		dockerfiles,
 	)
@@ -216,13 +247,13 @@ func (opts *initAppOpts) askDockerfile() error {
 		return fmt.Errorf("failed to select Dockerfile: %w", err)
 	}
 
-	opts.DockerfilePath = sel
+	o.DockerfilePath = sel
 
 	return nil
 }
 
-func (opts *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
-	_, err := opts.appStore.GetApplication(projectName, opts.AppName)
+func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
+	_, err := o.appStore.GetApplication(projectName, o.AppName)
 	// If the app doesn't exist - that's perfect, return no error.
 	var existsErr *store.ErrNoSuchApplication
 	if errors.As(err, &existsErr) {
@@ -237,18 +268,18 @@ func (opts *initAppOpts) ensureNoExistingApp(projectName, appName string) error 
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (opts *initAppOpts) RecommendedActions() []string {
+func (o *initAppOpts) RecommendedActions() []string {
 	return []string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(opts.manifestPath)),
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", opts.AppName, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", o.AppName, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
 
 // BuildAppInitCmd build the command for creating a new application.
 func BuildAppInitCmd() *cobra.Command {
-	opts := &initAppOpts{
+	vars := initAppVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
@@ -258,34 +289,12 @@ func BuildAppInitCmd() *cobra.Command {
 This command is also run as part of "ecs-preview init".`,
 		Example: `
   Create a "frontend" web application.
-  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts.fs = &afero.Afero{Fs: afero.NewOsFs()}
-
-			store, err := store.New()
-			if err != nil {
-				return fmt.Errorf("couldn't connect to project datastore: %w", err)
-			}
-			opts.appStore = store
-			opts.projGetter = store
-
-			ws, err := workspace.New()
-			if err != nil {
-				return fmt.Errorf("workspace cannot be created: %w", err)
-			}
-			opts.manifestWriter = ws
-
-			p := session.NewProvider()
-			sess, err := p.Default()
+	/code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newInitAppOpts(vars)
 			if err != nil {
 				return err
 			}
-			opts.projDeployer = cloudformation.New(sess)
-
-			opts.prog = termprogress.NewSpinner()
-			return nil
-		}),
-		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			if err := opts.Validate(); err != nil { // validate flags
 				return err
 			}
@@ -303,8 +312,8 @@ This command is also run as part of "ecs-preview init".`,
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&opts.AppType, appTypeFlag, appTypeFlagShort, "" /* default */, appTypeFlagDescription)
-	cmd.Flags().StringVarP(&opts.AppName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
-	cmd.Flags().StringVarP(&opts.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "" /* default */, dockerFileFlagDescription)
+	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	return cmd
 }

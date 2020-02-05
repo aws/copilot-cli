@@ -179,17 +179,18 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			mockPrompt := climocks.NewMockprompter(ctrl)
 
 			opts := &initPipelineOpts{
-				Environments:      tc.inEnvironments,
-				GitHubOwner:       tc.inGitHubOwner,
-				GitHubRepo:        tc.inGitHubRepo,
-				GitHubAccessToken: tc.inGitHubAccessToken,
+				initPipelineVars: initPipelineVars{
+					Environments:      tc.inEnvironments,
+					GitHubOwner:       tc.inGitHubOwner,
+					GitHubRepo:        tc.inGitHubRepo,
+					GitHubAccessToken: tc.inGitHubAccessToken,
+					GlobalOpts: &GlobalOpts{
+						prompt: mockPrompt,
+					},
+				},
 
 				projectEnvs: tc.inProjectEnvs,
 				repoURLs:    tc.inURLs,
-
-				GlobalOpts: &GlobalOpts{
-					prompt: mockPrompt,
-				},
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -231,9 +232,10 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			opts := &initPipelineOpts{
+				initPipelineVars: initPipelineVars{
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 				projectEnvs: tc.inProjectEnvs,
-
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 			}
 
 			// WHEN
@@ -367,16 +369,18 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
 			opts := &initPipelineOpts{
-				Environments:      tc.inEnvironments,
-				GitHubRepo:        tc.inGitHubRepo,
-				GitHubAccessToken: tc.inGitHubToken,
-				GitBranch:         tc.inGitBranch,
-				secretsmanager:    mockSecretsManager,
-				workspace:         mockWriter,
-				box:               mockBox,
-				fsUtils:           memFs,
+				initPipelineVars: initPipelineVars{
+					Environments:      tc.inEnvironments,
+					GitHubRepo:        tc.inGitHubRepo,
+					GitHubAccessToken: tc.inGitHubToken,
+					GitBranch:         tc.inGitBranch,
+					GlobalOpts:        &GlobalOpts{projectName: tc.inProjectName},
+				},
 
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				secretsmanager: mockSecretsManager,
+				workspace:      mockWriter,
+				box:            mockBox,
+				fsUtils:        memFs,
 			}
 
 			// WHEN
@@ -414,8 +418,10 @@ func TestInitPipelineOpts_createSecretName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			opts := &initPipelineOpts{
-				GitHubRepo: tc.inGitHubRepo,
-				GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				initPipelineVars: initPipelineVars{
+					GitHubRepo: tc.inGitHubRepo,
+					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+				},
 			}
 
 			// WHEN
@@ -448,9 +454,11 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			opts := &initPipelineOpts{
-				GitHubRepo:  tc.inGitHubRepo,
-				GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
-				GitHubOwner: tc.inProjectOwner,
+				initPipelineVars: initPipelineVars{
+					GitHubRepo:  tc.inGitHubRepo,
+					GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
+					GitHubOwner: tc.inProjectOwner,
+				},
 			}
 
 			// WHEN
