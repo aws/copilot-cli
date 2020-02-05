@@ -263,6 +263,7 @@ Resources:
               "logs:GetQueryResults",
               "logs:StartQuery",
               "logs:GetLogEvents",
+              "logs:DescribeLogStreams",
               "logs:StopQuery",
               "logs:TestMetricFilter",
               "logs:FilterLogEvents",

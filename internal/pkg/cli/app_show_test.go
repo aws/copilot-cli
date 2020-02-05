@@ -275,7 +275,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("no project found: run `project init` or `cd` into your workspace please"),
+			wantedError:   fmt.Errorf("no project found: run `project init` please"),
 		},
 		"returns error when fail to select project": {
 			inputProject: "",

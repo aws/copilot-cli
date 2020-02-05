@@ -176,7 +176,7 @@ func (o *showAppOpts) askProject() error {
 		return err
 	}
 	if len(projNames) == 0 {
-		return fmt.Errorf("no project found: run %s or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
+		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
 	}
 	proj, err := o.prompt.SelectOne(
 		applicationShowProjectNamePrompt,
@@ -314,7 +314,7 @@ func BuildAppShowCmd() *cobra.Command {
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().StringVarP(&opts.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&opts.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVarP(&opts.shouldOutputResources, resourcesFlag, resourcesFlagShort, false, resourcesFlagDescription)
+	cmd.Flags().BoolVar(&opts.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
 	cmd.Flags().StringP(projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
 	viper.BindPFlag(projectFlag, cmd.Flags().Lookup(projectFlag))
 	return cmd

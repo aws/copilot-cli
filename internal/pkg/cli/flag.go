@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -19,6 +19,11 @@ const (
 	dockerFileFlag        = "dockerfile"
 	imageTagFlag          = "tag"
 	stackOutputDirFlag    = "output-dir"
+	limitFlag             = "limit"
+	followFlag            = "follow"
+	sinceFlag             = "since"
+	startTimeFlag         = "start-time"
+	endTimeFlag           = "end-time"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -46,7 +51,6 @@ const (
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
 	pipelineFileFlagShort      = "f"
-	resourcesFlagShort         = "r"
 )
 
 // Descriptions for flags.
@@ -57,12 +61,20 @@ const (
 	appTypeFlagDescription = "Type of application to create."
 	profileFlagDescription = "Name of the profile."
 	yesFlagDescription     = "Skips confirmation prompt."
-	jsonFlagDescription    = "Output in JSON format."
+	jsonFlagDescription    = "Optional. Outputs in JSON format."
 
-	dockerFileFlagDescription        = "Path to the Dockerfile."
-	imageTagFlagDescription          = `Optional. The application's image tag.`
-	stackOutputDirFlagDescription    = "Optional. Writes the stack template and template configuration to a directory."
-	prodEnvFlagDescription           = "If the environment contains production services."
+	dockerFileFlagDescription     = "Path to the Dockerfile."
+	imageTagFlagDescription       = `Optional. The application's image tag.`
+	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
+	prodEnvFlagDescription        = "If the environment contains production services."
+	limitFlagDescription          = "Optional. The maximum number of log events returned."
+	followFlagDescription         = "Optional. Specifies if the logs should be streamed."
+	sinceFlagDescription          = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+Defaults to all logs. Only one of start-time / since may be used.`
+	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
+Defaults to all logs. Only one of start-time / since may be used.`
+	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
+Defaults to all logs. Only one of end-time / follow may be used.`
 	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
 	githubURLFlagDescription         = "GitHub repository URL for your application."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
