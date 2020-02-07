@@ -127,7 +127,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		envCreator:    ssm,
 		projectGetter: ssm,
 		envDeployer:   envDeployer,
-		projDeployer:  deployer, // TODO #317
+		projDeployer:  deployer,
 		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,
