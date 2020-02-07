@@ -40,6 +40,7 @@ type initVars struct {
 	appType        string
 	appName        string
 	dockerfilePath string
+	profile        string
 }
 
 type initOpts struct {
@@ -77,10 +78,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	profileSess, err := sessProvider.FromProfile(vars.profile)
+	if err != nil {
+		return nil, err
+	}
 	prompt := prompt.New()
 	spin := termprogress.NewSpinner()
 	id := identity.New(sess)
 	deployer := cloudformation.New(sess)
+	envDeployer := cloudformation.New(profileSess)
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, err
@@ -115,12 +121,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
 			EnvName:      defaultEnvironmentName,
-			EnvProfile:   "default",
+			EnvProfile:   vars.profile,
 			IsProduction: false,
 		},
 		envCreator:    ssm,
 		projectGetter: ssm,
-		envDeployer:   deployer,
+		envDeployer:   envDeployer,
 		projDeployer:  deployer, // TODO #317
 		profileConfig: cfg,
 		prog:          spin,
@@ -221,6 +227,9 @@ func (o *initOpts) deployEnv() error {
 		// User chose not to deploy the application, exit.
 		return nil
 	}
+	if err := o.initEnv.Ask(); err != nil {
+		return err
+	}
 	return o.initEnv.Execute()
 }
 
@@ -274,6 +283,7 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
+	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
