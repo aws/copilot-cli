@@ -252,7 +252,7 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
 
-	manifestBytes, err := manifest.Marshal()
+	manifestBytes, err := manifest.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
