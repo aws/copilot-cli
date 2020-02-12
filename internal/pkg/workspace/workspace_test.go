@@ -5,6 +5,7 @@ package workspace
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -434,67 +435,7 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestDeleteFile(t *testing.T) {
-	tests := map[string]struct {
-		workingDir     string
-		manifestFile   string
-		want           error
-		mockFileSystem func(appFS afero.Fs)
-	}{
-		"should delete the file if it exists": {
-			manifestFile: "frontend",
-			workingDir:   "test/",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs-project", 0755)
-				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
-			},
-		},
-		"should return nil if file to delete doesn't exist": {
-			manifestFile: "traveling-salesman",
-			want:         nil,
-			workingDir:   "test/",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs-project", 0755)
-				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
-			},
-		},
-		"should return an error if manifest directory cannot be found": {
-			manifestFile: "frontend",
-			want:         fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
-			workingDir:   "/",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs-project", 0755)
-				afero.WriteFile(appFS, "test/ecs-project/frontend-app.yml", []byte("frontend"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/backend-app.yml", []byte("backend"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/not-manifest.yml", []byte("nothing"), 0644)
-				afero.WriteFile(appFS, "test/ecs-project/.ecs-workspace", []byte("hiddenproject"), 0644)
-			},
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			appFS := afero.NewMemMapFs()
-			test.mockFileSystem(appFS)
-
-			ws := Workspace{
-				workingDir: test.workingDir,
-				fsUtils:    &afero.Afero{Fs: appFS},
-			}
-
-			got := ws.DeleteFile(test.manifestFile)
-
-			if test.want != nil {
-				require.Equal(t, test.want.Error(), got.Error())
-			}
-		})
-	}
-}
-
-func TestDelete(t *testing.T) {
+func TestWorkspace_DeleteAll(t *testing.T) {
 	t.Run("should delete the folder", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		err := fs.Mkdir(ProjectDirectoryName, 0755)
@@ -505,7 +446,7 @@ func TestDelete(t *testing.T) {
 			},
 		}
 
-		got := ws.Delete()
+		got := ws.DeleteAll()
 
 		require.NoError(t, got)
 	})
@@ -550,6 +491,68 @@ func TestWorkspace_Write(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
 			}
+		})
+	}
+}
+
+func TestWorkspace_DeleteApp(t *testing.T) {
+	testCases := map[string]struct {
+		name string
+
+		projectDir string
+		fs         func() afero.Fs
+	}{
+		"deletes existing app": {
+			name: "webhook",
+
+			projectDir: "/ecs-project",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project/webhook", 0755)
+				manifest, _ := fs.Create("/ecs-project/webhook/manifest.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("hello"))
+				return fs
+			},
+		},
+		"deletes an non-existing app": {
+			name: "webhook",
+
+			projectDir: "/ecs-project",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project", 0755)
+				return fs
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				projectDir: tc.projectDir,
+				fsUtils: &afero.Afero{
+					Fs: fs,
+				},
+			}
+
+			// WHEN
+			err := ws.DeleteApp(tc.name)
+
+			// THEN
+			require.NoError(t, err)
+
+			// There should be no more directory under the project directory.
+			path := filepath.Join(tc.projectDir, tc.name)
+			_, existErr := fs.Stat(path)
+			expectedErr := &os.PathError{
+				Op:   "open",
+				Path: path,
+				Err:  os.ErrNotExist,
+			}
+			require.EqualError(t, existErr, expectedErr.Error())
 		})
 	}
 }

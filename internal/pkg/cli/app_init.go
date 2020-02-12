@@ -53,7 +53,7 @@ type initAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs           afero.Fs
-	ws           workspaceWriter
+	ws           wsWriter
 	appStore     archer.ApplicationStore
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer

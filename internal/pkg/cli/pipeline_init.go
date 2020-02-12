@@ -69,7 +69,7 @@ type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      workspaceWriter
+	workspace      wsWriter
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 	runner         runner

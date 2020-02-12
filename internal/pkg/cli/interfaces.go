@@ -91,6 +91,10 @@ type storeReader interface {
 	archer.ApplicationGetter
 }
 
-type workspaceWriter interface {
+type wsWriter interface {
 	Write(data []byte, elem ...string) (string, error)
+}
+
+type wsAppDeleter interface {
+	DeleteApp(name string) error
 }

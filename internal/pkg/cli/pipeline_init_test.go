@@ -260,7 +260,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inProjectName  string
 
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
-		mockManifestWriter func(m *climocks.MockworkspaceWriter)
+		mockManifestWriter func(m *climocks.MockwsWriter)
 		mockBox            func(box *packd.MemoryBox)
 		mockFileSystem     func(mockFS afero.Fs)
 
@@ -279,7 +279,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+			mockManifestWriter: func(m *climocks.MockwsWriter) {
 				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().Write([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
@@ -302,7 +302,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
-			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+			mockManifestWriter: func(m *climocks.MockwsWriter) {
 				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().Write([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
@@ -324,7 +324,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+			mockManifestWriter: func(m *climocks.MockwsWriter) {
 				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().Write(gomock.Any(), workspace.BuildspecFileName).Times(0)
 			},
@@ -342,7 +342,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+			mockManifestWriter: func(m *climocks.MockwsWriter) {
 				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
 				m.EXPECT().Write(gomock.Any(), workspace.BuildspecFileName).Return("", errors.New("some error"))
 			},
@@ -360,7 +360,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
-			mockWriter := climocks.NewMockworkspaceWriter(ctrl)
+			mockWriter := climocks.NewMockwsWriter(ctrl)
 			mockBox := packd.NewMemoryBox()
 
 			tc.mockSecretsManager(mockSecretsManager)

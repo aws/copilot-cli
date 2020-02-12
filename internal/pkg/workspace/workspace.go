@@ -193,30 +193,17 @@ func (ws *Workspace) AppManifestFileName(appName string) string {
 	return fmt.Sprintf(fmtAppManifestFileName, appName)
 }
 
-// DeleteFile takes in a file name under the project directory (e.g. frontend-app.yml) and deletes it.
-func (ws *Workspace) DeleteFile(appName string) error {
+// DeleteApp removes the application directory from the project directory.
+func (ws *Workspace) DeleteApp(name string) error {
 	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return err
 	}
-
-	manifestFileName := ws.AppManifestFileName(appName)
-	manifestPath := filepath.Join(projectPath, manifestFileName)
-	manifestFileExists, err := ws.fsUtils.Exists(manifestPath)
-
-	if err != nil {
-		return err
-	}
-
-	if !manifestFileExists {
-		return nil
-	}
-
-	return ws.fsUtils.Remove(manifestPath)
+	return ws.fsUtils.RemoveAll(filepath.Join(projectPath, name))
 }
 
-// Delete deletes the local workspace folder.
-func (ws *Workspace) Delete() error {
+// DeleteAll removes the local project directory.
+func (ws *Workspace) DeleteAll() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
 }
 

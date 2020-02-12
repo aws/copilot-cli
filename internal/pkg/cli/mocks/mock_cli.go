@@ -924,31 +924,31 @@ func (mr *MockstoreReaderMockRecorder) GetApplication(projectName, applicationNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockstoreReader)(nil).GetApplication), projectName, applicationName)
 }
 
-// MockworkspaceWriter is a mock of workspaceWriter interface
-type MockworkspaceWriter struct {
+// MockwsWriter is a mock of wsWriter interface
+type MockwsWriter struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkspaceWriterMockRecorder
+	recorder *MockwsWriterMockRecorder
 }
 
-// MockworkspaceWriterMockRecorder is the mock recorder for MockworkspaceWriter
-type MockworkspaceWriterMockRecorder struct {
-	mock *MockworkspaceWriter
+// MockwsWriterMockRecorder is the mock recorder for MockwsWriter
+type MockwsWriterMockRecorder struct {
+	mock *MockwsWriter
 }
 
-// NewMockworkspaceWriter creates a new mock instance
-func NewMockworkspaceWriter(ctrl *gomock.Controller) *MockworkspaceWriter {
-	mock := &MockworkspaceWriter{ctrl: ctrl}
-	mock.recorder = &MockworkspaceWriterMockRecorder{mock}
+// NewMockwsWriter creates a new mock instance
+func NewMockwsWriter(ctrl *gomock.Controller) *MockwsWriter {
+	mock := &MockwsWriter{ctrl: ctrl}
+	mock.recorder = &MockwsWriterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkspaceWriter) EXPECT() *MockworkspaceWriterMockRecorder {
+func (m *MockwsWriter) EXPECT() *MockwsWriterMockRecorder {
 	return m.recorder
 }
 
 // Write mocks base method
-func (m *MockworkspaceWriter) Write(data []byte, elem ...string) (string, error) {
+func (m *MockwsWriter) Write(data []byte, elem ...string) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{data}
 	for _, a := range elem {
@@ -961,8 +961,45 @@ func (m *MockworkspaceWriter) Write(data []byte, elem ...string) (string, error)
 }
 
 // Write indicates an expected call of Write
-func (mr *MockworkspaceWriterMockRecorder) Write(data interface{}, elem ...interface{}) *gomock.Call {
+func (mr *MockwsWriterMockRecorder) Write(data interface{}, elem ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{data}, elem...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockworkspaceWriter)(nil).Write), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockwsWriter)(nil).Write), varargs...)
+}
+
+// MockwsAppDeleter is a mock of wsAppDeleter interface
+type MockwsAppDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsAppDeleterMockRecorder
+}
+
+// MockwsAppDeleterMockRecorder is the mock recorder for MockwsAppDeleter
+type MockwsAppDeleterMockRecorder struct {
+	mock *MockwsAppDeleter
+}
+
+// NewMockwsAppDeleter creates a new mock instance
+func NewMockwsAppDeleter(ctrl *gomock.Controller) *MockwsAppDeleter {
+	mock := &MockwsAppDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsAppDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsAppDeleter) EXPECT() *MockwsAppDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteApp mocks base method
+func (m *MockwsAppDeleter) DeleteApp(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApp", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApp indicates an expected call of DeleteApp
+func (mr *MockwsAppDeleterMockRecorder) DeleteApp(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteApp), name)
 }

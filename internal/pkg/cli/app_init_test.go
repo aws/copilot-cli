@@ -270,7 +270,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockworkspaceWriter(ctrl)
+				mockWriter := climocks.NewMockwsWriter(ctrl)
 				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
@@ -315,7 +315,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockworkspaceWriter(ctrl)
+				mockWriter := climocks.NewMockwsWriter(ctrl)
 				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
@@ -337,7 +337,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockworkspaceWriter(ctrl)
+				mockWriter := climocks.NewMockwsWriter(ctrl)
 				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
@@ -410,7 +410,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockworkspaceWriter(ctrl)
+				mockWriter := climocks.NewMockwsWriter(ctrl)
 				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)

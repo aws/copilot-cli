@@ -22,7 +22,6 @@ type ManifestIO interface {
 	WorkspaceFileReader
 	ListManifestFiles() ([]string, error)
 	AppManifestFileName(appName string) string
-	DeleteFile(name string) error
 }
 
 // WorkspaceFileReader is the interface to read files from the project directory in the workspace.
