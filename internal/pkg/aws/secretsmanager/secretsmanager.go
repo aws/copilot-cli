@@ -72,7 +72,7 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 		// RecoveryWindowInDays *int64 TODO specify?
 	})
 
-	return err
+	return fmt.Errorf("delete secret %s from secrets manager: %w", secretName, err)
 }
 
 type ErrSecretAlreadyExists struct {
