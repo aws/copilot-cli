@@ -200,9 +200,7 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 		Example: `
 			Delete the pipeline associated with your workspace:
 			/code $ ecs-preview pipeline delete`,
-		PreRunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			return nil
-		}),
+
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeletePipelineOpts(vars)
 			if err != nil {
