@@ -40,12 +40,13 @@ type deletePipelineVars struct {
 	*GlobalOpts
 	SkipConfirmation bool
 	DeleteSecret     bool
-	PipelineName     string // Might not need to pass in as flag?
-	PipelineSecret   string // Might not need to pass in as flag?
 }
 
 type deletePipelineOpts struct {
 	deletePipelineVars
+
+	PipelineName   string
+	PipelineSecret string
 
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer

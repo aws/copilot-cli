@@ -53,11 +53,11 @@ func TestDeletePipelineOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
-					PipelineName: tc.inPipelineName,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
 					},
 				},
+				PipelineName: tc.inPipelineName,
 			}
 
 			// WHEN
@@ -116,12 +116,12 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					SkipConfirmation: tc.skipConfirmation,
-					PipelineName:     tc.inPipelineName,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
 						prompt:      mockPrompter,
 					},
 				},
+				PipelineName: tc.inPipelineName,
 			}
 
 			// WHEN
@@ -258,14 +258,14 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
-					DeleteSecret:   tc.deleteSecret,
-					PipelineName:   tc.inPipelineName,
-					PipelineSecret: tc.inPipelineSecret,
+					DeleteSecret: tc.deleteSecret,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
 						prompt:      mockPrompter,
 					},
 				},
+				PipelineName:     tc.inPipelineName,
+				PipelineSecret:   tc.inPipelineSecret,
 				secretsmanager:   mockSecretsManager,
 				pipelineDeployer: mockDeployer,
 				prog:             mockProg,
