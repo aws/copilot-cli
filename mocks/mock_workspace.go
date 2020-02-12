@@ -33,21 +33,6 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 	return m.recorder
 }
 
-// WriteFile mocks base method
-func (m *MockWorkspace) WriteFile(blob []byte, filename string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteFile", blob, filename)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteFile indicates an expected call of WriteFile
-func (mr *MockWorkspaceMockRecorder) WriteFile(blob, filename interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockWorkspace)(nil).WriteFile), blob, filename)
-}
-
 // ReadFile mocks base method
 func (m *MockWorkspace) ReadFile(filename string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -173,21 +158,6 @@ func (m *MockManifestIO) EXPECT() *MockManifestIOMockRecorder {
 	return m.recorder
 }
 
-// WriteFile mocks base method
-func (m *MockManifestIO) WriteFile(blob []byte, filename string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteFile", blob, filename)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteFile indicates an expected call of WriteFile
-func (mr *MockManifestIOMockRecorder) WriteFile(blob, filename interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockManifestIO)(nil).WriteFile), blob, filename)
-}
-
 // ReadFile mocks base method
 func (m *MockManifestIO) ReadFile(filename string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -246,46 +216,31 @@ func (mr *MockManifestIOMockRecorder) DeleteFile(name interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFile", reflect.TypeOf((*MockManifestIO)(nil).DeleteFile), name)
 }
 
-// MockWorkspaceFileReadWriter is a mock of WorkspaceFileReadWriter interface
-type MockWorkspaceFileReadWriter struct {
+// MockWorkspaceFileReader is a mock of WorkspaceFileReader interface
+type MockWorkspaceFileReader struct {
 	ctrl     *gomock.Controller
-	recorder *MockWorkspaceFileReadWriterMockRecorder
+	recorder *MockWorkspaceFileReaderMockRecorder
 }
 
-// MockWorkspaceFileReadWriterMockRecorder is the mock recorder for MockWorkspaceFileReadWriter
-type MockWorkspaceFileReadWriterMockRecorder struct {
-	mock *MockWorkspaceFileReadWriter
+// MockWorkspaceFileReaderMockRecorder is the mock recorder for MockWorkspaceFileReader
+type MockWorkspaceFileReaderMockRecorder struct {
+	mock *MockWorkspaceFileReader
 }
 
-// NewMockWorkspaceFileReadWriter creates a new mock instance
-func NewMockWorkspaceFileReadWriter(ctrl *gomock.Controller) *MockWorkspaceFileReadWriter {
-	mock := &MockWorkspaceFileReadWriter{ctrl: ctrl}
-	mock.recorder = &MockWorkspaceFileReadWriterMockRecorder{mock}
+// NewMockWorkspaceFileReader creates a new mock instance
+func NewMockWorkspaceFileReader(ctrl *gomock.Controller) *MockWorkspaceFileReader {
+	mock := &MockWorkspaceFileReader{ctrl: ctrl}
+	mock.recorder = &MockWorkspaceFileReaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockWorkspaceFileReadWriter) EXPECT() *MockWorkspaceFileReadWriterMockRecorder {
+func (m *MockWorkspaceFileReader) EXPECT() *MockWorkspaceFileReaderMockRecorder {
 	return m.recorder
 }
 
-// WriteFile mocks base method
-func (m *MockWorkspaceFileReadWriter) WriteFile(blob []byte, filename string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteFile", blob, filename)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// WriteFile indicates an expected call of WriteFile
-func (mr *MockWorkspaceFileReadWriterMockRecorder) WriteFile(blob, filename interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFile", reflect.TypeOf((*MockWorkspaceFileReadWriter)(nil).WriteFile), blob, filename)
-}
-
 // ReadFile mocks base method
-func (m *MockWorkspaceFileReadWriter) ReadFile(filename string) ([]byte, error) {
+func (m *MockWorkspaceFileReader) ReadFile(filename string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadFile", filename)
 	ret0, _ := ret[0].([]byte)
@@ -294,7 +249,7 @@ func (m *MockWorkspaceFileReadWriter) ReadFile(filename string) ([]byte, error) 
 }
 
 // ReadFile indicates an expected call of ReadFile
-func (mr *MockWorkspaceFileReadWriterMockRecorder) ReadFile(filename interface{}) *gomock.Call {
+func (mr *MockWorkspaceFileReaderMockRecorder) ReadFile(filename interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockWorkspaceFileReadWriter)(nil).ReadFile), filename)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockWorkspaceFileReader)(nil).ReadFile), filename)
 }

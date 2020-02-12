@@ -19,14 +19,13 @@ type Workspace interface {
 
 // ManifestIO can read, write and list local manifest files.
 type ManifestIO interface {
-	WorkspaceFileReadWriter
+	WorkspaceFileReader
 	ListManifestFiles() ([]string, error)
 	AppManifestFileName(appName string) string
 	DeleteFile(name string) error
 }
 
-// WorkspaceFileReadWriter is the interface to read and write files to the project directory in the workspace.
-type WorkspaceFileReadWriter interface {
-	WriteFile(blob []byte, filename string) (string, error)
+// WorkspaceFileReader is the interface to read files from the project directory in the workspace.
+type WorkspaceFileReader interface {
 	ReadFile(filename string) ([]byte, error)
 }

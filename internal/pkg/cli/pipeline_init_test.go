@@ -260,7 +260,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inProjectName  string
 
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
-		mockManifestWriter func(m *archermocks.MockManifestIO)
+		mockManifestWriter func(m *climocks.MockworkspaceWriter)
 		mockBox            func(box *packd.MemoryBox)
 		mockFileSystem     func(mockFS afero.Fs)
 
@@ -279,9 +279,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
+			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().Write([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
@@ -302,9 +302,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
-			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
+			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().Write([]byte("hello"), workspace.BuildspecFileName).Return(workspace.BuildspecFileName, nil)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
@@ -324,9 +324,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Times(0)
+			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().Write(gomock.Any(), workspace.BuildspecFileName).Times(0)
 			},
 			mockBox: func(m *packd.MemoryBox) {
 			},
@@ -342,9 +342,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockManifestWriter: func(m *archermocks.MockManifestIO) {
-				m.EXPECT().WriteFile(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
-				m.EXPECT().WriteFile(gomock.Any(), workspace.BuildspecFileName).Return("", errors.New("some error"))
+			mockManifestWriter: func(m *climocks.MockworkspaceWriter) {
+				m.EXPECT().Write(gomock.Any(), workspace.PipelineFileName).Return(workspace.PipelineFileName, nil)
+				m.EXPECT().Write(gomock.Any(), workspace.BuildspecFileName).Return("", errors.New("some error"))
 			},
 			mockBox: func(m *packd.MemoryBox) {
 				m.AddString(buildspecTemplatePath, "hello")
@@ -360,7 +360,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
-			mockWriter := archermocks.NewMockManifestIO(ctrl)
+			mockWriter := climocks.NewMockworkspaceWriter(ctrl)
 			mockBox := packd.NewMemoryBox()
 
 			tc.mockSecretsManager(mockSecretsManager)

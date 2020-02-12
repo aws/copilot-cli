@@ -220,58 +220,6 @@ func TestReadManifest(t *testing.T) {
 	}
 }
 
-func TestWriteManifest(t *testing.T) {
-	testCases := map[string]struct {
-		expectedContent string
-		manifestFile    string
-		workingDir      string
-		expectedPath    string
-		expectedError   error
-		mockFileSystem  func(appFS afero.Fs)
-	}{
-		"new content": {
-			manifestFile:    "frontend-app.yml",
-			expectedContent: "frontend",
-			workingDir:      "test/",
-			expectedPath:    "test/ecs-project/frontend-app.yml",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/ecs-project", 0755)
-			},
-		},
-		"no manifest dir": {
-			manifestFile:  "frontend-app.yml",
-			expectedPath:  "",
-			expectedError: fmt.Errorf("couldn't find a directory called ecs-project up to 5 levels up from /"),
-			workingDir:    "/",
-			mockFileSystem: func(appFS afero.Fs) {
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// Create an empty FileSystem
-			appFS := afero.NewMemMapFs()
-			// Set it up
-			tc.mockFileSystem(appFS)
-
-			ws := Workspace{
-				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: appFS},
-			}
-			manifestPath, err := ws.WriteFile([]byte(tc.expectedContent), tc.manifestFile)
-			require.Equal(t, tc.expectedPath, manifestPath)
-			if tc.expectedError == nil {
-				require.NoError(t, err)
-				readContent, err := ws.ReadFile(tc.manifestFile)
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedContent, string(readContent))
-			} else {
-				require.Equal(t, tc.expectedError.Error(), err.Error())
-			}
-		})
-	}
-}
-
 func TestManifestDirectoryPath(t *testing.T) {
 	// turn "test/ecs-project" into a platform-dependent path
 	var manifestDir = filepath.FromSlash("test/ecs-project")

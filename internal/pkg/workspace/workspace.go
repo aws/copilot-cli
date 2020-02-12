@@ -254,21 +254,6 @@ func (ws *Workspace) ReadFile(filename string) ([]byte, error) {
 	return value, nil
 }
 
-// WriteFile takes a blob and writes it to the project directory.
-// If successful returns the path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) WriteFile(blob []byte, filename string) (string, error) {
-	projectPath, err := ws.projectDirPath()
-	if err != nil {
-		return "", err
-	}
-
-	path := filepath.Join(projectPath, filename)
-	if err := ws.fsUtils.WriteFile(path, blob, 0644); err != nil {
-		return "", fmt.Errorf("failed to write manifest file: %w", err)
-	}
-	return path, nil
-}
-
 // AppManifestFileName returns the manifest's name from an application name.
 // TODO extend this to pipeline manifest filenames too
 func (ws *Workspace) AppManifestFileName(appName string) string {
@@ -303,7 +288,7 @@ func (ws *Workspace) Delete() error {
 }
 
 // Write writes the data to file under the project directory joined by path elements.
-// If successful returns the path of the file, otherwise returns an empty string and the error.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
 func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
 	projectPath, err := ws.projectDirPath()
 	if err != nil {

@@ -69,7 +69,7 @@ type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      archer.ManifestIO
+	workspace      workspaceWriter
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 	runner         runner
@@ -256,7 +256,7 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal manifest: %w", err)
 	}
-	manifestPath, err := o.workspace.WriteFile(manifestBytes, workspace.PipelineFileName)
+	manifestPath, err := o.workspace.Write(manifestBytes, workspace.PipelineFileName)
 	if err != nil {
 		return "", fmt.Errorf("write file %s to workspace: %w", workspace.PipelineFileName, err)
 	}
@@ -283,7 +283,7 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		return "", err
 	}
 
-	path, err := o.workspace.WriteFile(buf.Bytes(), workspace.BuildspecFileName)
+	path, err := o.workspace.Write(buf.Bytes(), workspace.BuildspecFileName)
 	if err != nil {
 		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
 	}
