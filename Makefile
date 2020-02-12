@@ -142,7 +142,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/aws/route53/route53.go -package=mocks -destination=./internal/pkg/aws/mocks/mock_route53.go
-	${GOBIN}/mockgen -source=./internal/pkg/cli/cli.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_cli.go
+	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_cli.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_deploy.go

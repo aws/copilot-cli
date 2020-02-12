@@ -52,12 +52,12 @@ type initAppOpts struct {
 	initAppVars
 
 	// Interfaces to interact with dependencies.
-	fs             afero.Fs
-	manifestWriter archer.ManifestIO
-	appStore       archer.ApplicationStore
-	projGetter     archer.ProjectGetter
-	projDeployer   projectDeployer
-	prog           progress
+	fs           afero.Fs
+	ws           workspaceWriter
+	appStore     archer.ApplicationStore
+	projGetter   archer.ProjectGetter
+	projDeployer projectDeployer
+	prog         progress
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -83,12 +83,12 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	return &initAppOpts{
 		initAppVars: vars,
 
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		appStore:       store,
-		projGetter:     store,
-		manifestWriter: ws,
-		projDeployer:   cloudformation.New(sess),
-		prog:           termprogress.NewSpinner(),
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		appStore:     store,
+		projGetter:   store,
+		ws:           ws,
+		projDeployer: cloudformation.New(sess),
+		prog:         termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -165,12 +165,11 @@ func (o *initAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
-	manifestBytes, err := manifest.MarshalBinary()
+	data, err := manifest.MarshalBinary()
 	if err != nil {
-		return "", fmt.Errorf("marshal manifest: %w", err)
+		return "", fmt.Errorf("marshal manifest to binary: %w", err)
 	}
-	filename := o.manifestWriter.AppManifestFileName(o.AppName)
-	manifestPath, err := o.manifestWriter.WriteFile(manifestBytes, filename)
+	manifestPath, err := o.ws.Write(data, o.AppName, workspace.ManifestFileName)
 	if err != nil {
 		return "", fmt.Errorf("write manifest for app %s: %w", o.AppName, err)
 	}

@@ -340,11 +340,11 @@ func TestManifestDirectoryPath(t *testing.T) {
 			tc.mockFileSystem(appFS)
 
 			ws := Workspace{
-				workingDir:  tc.workingDir,
-				fsUtils:     &afero.Afero{Fs: appFS},
-				manifestDir: tc.presetManifestDir,
+				workingDir: tc.workingDir,
+				fsUtils:    &afero.Afero{Fs: appFS},
+				projectDir: tc.presetManifestDir,
 			}
-			manifestDirPath, err := ws.manifestDirectoryPath()
+			manifestDirPath, err := ws.projectDirPath()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedManifestDir, manifestDirPath)
@@ -561,4 +561,47 @@ func TestDelete(t *testing.T) {
 
 		require.NoError(t, got)
 	})
+}
+
+func TestWorkspace_Write(t *testing.T) {
+	testCases := map[string]struct {
+		elems []string
+
+		wantedPath string
+		wantedErr  error
+	}{
+		"create file under nested directories": {
+			elems:      []string{"webhook", "addons", "policy.yml"},
+			wantedPath: "/ecs-project/webhook/addons/policy.yml",
+		},
+		"create file under project directory": {
+			elems:      []string{PipelineFileName},
+			wantedPath: "/ecs-project/pipeline.yml",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := afero.NewMemMapFs()
+			fs.MkdirAll("/ecs-project", 0755)
+			ws := &Workspace{
+				workingDir: "/",
+				projectDir: "/ecs-project",
+				fsUtils: &afero.Afero{
+					Fs: fs,
+				},
+			}
+
+			// WHEN
+			actualPath, actualErr := ws.Write(nil, tc.elems...)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
+			}
+		})
+	}
 }

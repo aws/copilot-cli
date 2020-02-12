@@ -1,14 +1,15 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package workspace contains the service to manage a user's local workspace. This includes
-// creating a manifest directory, reading and writing a summary file
-// to that directory and managing (reading, writing and listing) infrastructure-as-code files.
+// Package workspace contains functionality to manage a user's local workspace. This includes
+// creating a project directory, reading and writing a summary file
+// to that directory and managing (reading, writing, and listing) infrastructure-as-code files.
 // The typical workspace will be structured like:
 //  .
-//  ├── ecs-project                    (manifest directory)
+//  ├── ecs-project                    (project directory)
 //  │   ├── .ecs-workspace             (workspace summary)
-//  │   ├── my-app.yml                 (application manifest)
+//  │   └── my-app
+//  │   │   └── manifest.yml             (application manifest)
 //  │   ├── buildspec.yml              (buildspec for the pipeline's build stage)
 //  │   └── pipeline.yml               (pipeline manifest)
 //  └── my-app                         (customer application)
@@ -35,6 +36,8 @@ const (
 	PipelineFileName = "pipeline.yml"
 	// BuildspecFileName is the name of the CodeBuild build specification for the "build" stage of the pipeline.
 	BuildspecFileName = "buildspec.yml"
+	// ManifestFileName is the name of the file that describes the architecture of an application.
+	ManifestFileName = "manifest.yml"
 
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5
@@ -44,9 +47,9 @@ const (
 
 // Workspace manages a local workspace, including creating and managing manifest files.
 type Workspace struct {
-	workingDir  string
-	manifestDir string
-	fsUtils     *afero.Afero
+	workingDir string
+	projectDir string
+	fsUtils    *afero.Afero
 }
 
 // New returns a workspace, used for reading and writing to
@@ -72,7 +75,7 @@ func New() (*Workspace, error) {
 // directory with the project name.
 func (ws *Workspace) Create(projectName string) error {
 	// Create a manifest directory, if one doesn't exist
-	if createDirErr := ws.createManifestDirectory(); createDirErr != nil {
+	if createDirErr := ws.createProjectDirectory(); createDirErr != nil {
 		return createDirErr
 	}
 
@@ -156,7 +159,7 @@ func (ws *Workspace) Apps() ([]archer.Manifest, error) {
 }
 
 func (ws *Workspace) summaryPath() (string, error) {
-	manifestPath, err := ws.manifestDirectoryPath()
+	manifestPath, err := ws.projectDirPath()
 	if err != nil {
 		return "", err
 	}
@@ -164,24 +167,24 @@ func (ws *Workspace) summaryPath() (string, error) {
 	return workspaceSummaryPath, nil
 }
 
-func (ws *Workspace) createManifestDirectory() error {
+func (ws *Workspace) createProjectDirectory() error {
 	// First check to see if a manifest directory already exists
-	existingWorkspace, _ := ws.manifestDirectoryPath()
+	existingWorkspace, _ := ws.projectDirPath()
 	if existingWorkspace != "" {
 		return nil
 	}
 	return ws.fsUtils.Mkdir(ProjectDirectoryName, 0755)
 }
 
-func (ws *Workspace) manifestDirectoryPath() (string, error) {
-	if ws.manifestDir != "" {
-		return ws.manifestDir, nil
+func (ws *Workspace) projectDirPath() (string, error) {
+	if ws.projectDir != "" {
+		return ws.projectDir, nil
 	}
-	// Are we in the manifest directory?
+	// Are we in the project directory?
 	inEcsDir := filepath.Base(ws.workingDir) == ProjectDirectoryName
 	if inEcsDir {
-		ws.manifestDir = ws.workingDir
-		return ws.manifestDir, nil
+		ws.projectDir = ws.workingDir
+		return ws.projectDir, nil
 	}
 
 	searchingDir := ws.workingDir
@@ -192,8 +195,8 @@ func (ws *Workspace) manifestDirectoryPath() (string, error) {
 			return "", err
 		}
 		if inCurrentDirPath {
-			ws.manifestDir = currentDirectoryPath
-			return ws.manifestDir, nil
+			ws.projectDir = currentDirectoryPath
+			return ws.projectDir, nil
 		}
 		searchingDir = filepath.Dir(searchingDir)
 	}
@@ -207,11 +210,11 @@ func (ws *Workspace) manifestDirectoryPath() (string, error) {
 // ListManifestFiles returns a list of all the local application manifest filenames.
 // TODO add pipeline manifest ls?
 func (ws *Workspace) ListManifestFiles() ([]string, error) {
-	manifestDir, err := ws.manifestDirectoryPath()
+	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
 	}
-	manifestDirFiles, err := ws.fsUtils.ReadDir(manifestDir)
+	manifestDirFiles, err := ws.fsUtils.ReadDir(projectPath)
 	if err != nil {
 		return nil, err
 	}
@@ -228,11 +231,11 @@ func (ws *Workspace) ListManifestFiles() ([]string, error) {
 
 // ReadFile takes in a file name under the project directory (e.g. frontend-app.yml) and returns the read bytes.
 func (ws *Workspace) ReadFile(filename string) ([]byte, error) {
-	manifestDirPath, err := ws.manifestDirectoryPath()
+	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
 	}
-	manifestPath := filepath.Join(manifestDirPath, filename)
+	manifestPath := filepath.Join(projectPath, filename)
 	manifestFileExists, err := ws.fsUtils.Exists(manifestPath)
 
 	if err != nil {
@@ -254,12 +257,12 @@ func (ws *Workspace) ReadFile(filename string) ([]byte, error) {
 // WriteFile takes a blob and writes it to the project directory.
 // If successful returns the path of the file, otherwise returns an empty string and the error.
 func (ws *Workspace) WriteFile(blob []byte, filename string) (string, error) {
-	manifestPath, err := ws.manifestDirectoryPath()
+	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return "", err
 	}
 
-	path := filepath.Join(manifestPath, filename)
+	path := filepath.Join(projectPath, filename)
 	if err := ws.fsUtils.WriteFile(path, blob, 0644); err != nil {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}
@@ -274,13 +277,13 @@ func (ws *Workspace) AppManifestFileName(appName string) string {
 
 // DeleteFile takes in a file name under the project directory (e.g. frontend-app.yml) and deletes it.
 func (ws *Workspace) DeleteFile(appName string) error {
-	manifestDirPath, err := ws.manifestDirectoryPath()
+	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return err
 	}
 
 	manifestFileName := ws.AppManifestFileName(appName)
-	manifestPath := filepath.Join(manifestDirPath, manifestFileName)
+	manifestPath := filepath.Join(projectPath, manifestFileName)
 	manifestFileExists, err := ws.fsUtils.Exists(manifestPath)
 
 	if err != nil {
@@ -297,4 +300,23 @@ func (ws *Workspace) DeleteFile(appName string) error {
 // Delete deletes the local workspace folder.
 func (ws *Workspace) Delete() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
+}
+
+// Write writes the data to file under the project directory joined by path elements.
+// If successful returns the path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
+	projectPath, err := ws.projectDirPath()
+	if err != nil {
+		return "", err
+	}
+	pathElems := append([]string{projectPath}, elem...)
+	filename := filepath.Join(pathElems...)
+
+	if err := ws.fsUtils.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
+		return "", fmt.Errorf("failed to create directories for file %s: %w", filename, err)
+	}
+	if err := ws.fsUtils.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
+		return "", fmt.Errorf("failed to write manifest file: %w", err)
+	}
+	return filename, nil
 }
