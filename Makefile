@@ -152,3 +152,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecs/mocks/mock_ecs.go -source=./internal/pkg/aws/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudwatchlogs/mocks/mock_cloudwatchlogs.go -source=./internal/pkg/aws/cloudwatchlogs/cloudwatchlogs.go
 	${GOBIN}/mockgen -source=./internal/pkg/build/docker/docker.go -package=mocks -destination=./internal/pkg/build/docker/mocks/mock_docker.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/store/secretsmanager/mocks/secretsmanageriface_mock.go github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface SecretsManagerAPI

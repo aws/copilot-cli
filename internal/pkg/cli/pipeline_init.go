@@ -181,6 +181,7 @@ func (o *initPipelineOpts) Execute() error {
 		}
 		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.GitHubRepo))
 	}
+	log.Successf("Created the secret %s for pipeline source stage\n", color.HighlightUserInput(secretName))
 	o.secretName = secretName
 
 	// write pipeline.yml file, populate with:
@@ -429,6 +430,7 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 	if err != nil {
 		return fmt.Errorf("get GitHub access token: %w", err)
 	}
+	// TODO use existing secret (pass in name or ARN?)
 
 	o.GitHubAccessToken = token
 

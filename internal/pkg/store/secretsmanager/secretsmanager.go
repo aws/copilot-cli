@@ -56,6 +56,8 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 				}
 			}
 		}
+		return "", fmt.Errorf("create secret %s: %w", secretName, err)
+
 	}
 
 	return aws.StringValue(resp.ARN), nil
