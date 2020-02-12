@@ -118,24 +118,6 @@ func (ws *Workspace) Summary() (*archer.WorkspaceSummary, error) {
 	return nil, &ErrNoProjectAssociated{}
 }
 
-func (ws *Workspace) writeSummary(projectName string) error {
-	summaryPath, err := ws.summaryPath()
-	if err != nil {
-		return err
-	}
-
-	workspaceSummary := archer.WorkspaceSummary{
-		ProjectName: projectName,
-	}
-
-	serializedWorkspaceSummary, err := yaml.Marshal(workspaceSummary)
-
-	if err != nil {
-		return err
-	}
-	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
-}
-
 // Apps returns all the applications in the workspace
 func (ws *Workspace) Apps() ([]archer.Manifest, error) {
 	manifestFiles, err := ws.ListManifestFiles()
@@ -156,55 +138,6 @@ func (ws *Workspace) Apps() ([]archer.Manifest, error) {
 		apps = append(apps, mf)
 	}
 	return apps, nil
-}
-
-func (ws *Workspace) summaryPath() (string, error) {
-	manifestPath, err := ws.projectDirPath()
-	if err != nil {
-		return "", err
-	}
-	workspaceSummaryPath := filepath.Join(manifestPath, workspaceSummaryFileName)
-	return workspaceSummaryPath, nil
-}
-
-func (ws *Workspace) createProjectDirectory() error {
-	// First check to see if a manifest directory already exists
-	existingWorkspace, _ := ws.projectDirPath()
-	if existingWorkspace != "" {
-		return nil
-	}
-	return ws.fsUtils.Mkdir(ProjectDirectoryName, 0755)
-}
-
-func (ws *Workspace) projectDirPath() (string, error) {
-	if ws.projectDir != "" {
-		return ws.projectDir, nil
-	}
-	// Are we in the project directory?
-	inEcsDir := filepath.Base(ws.workingDir) == ProjectDirectoryName
-	if inEcsDir {
-		ws.projectDir = ws.workingDir
-		return ws.projectDir, nil
-	}
-
-	searchingDir := ws.workingDir
-	for try := 0; try < maximumParentDirsToSearch; try++ {
-		currentDirectoryPath := filepath.Join(searchingDir, ProjectDirectoryName)
-		inCurrentDirPath, err := ws.fsUtils.DirExists(currentDirectoryPath)
-		if err != nil {
-			return "", err
-		}
-		if inCurrentDirPath {
-			ws.projectDir = currentDirectoryPath
-			return ws.projectDir, nil
-		}
-		searchingDir = filepath.Dir(searchingDir)
-	}
-	return "", &ErrWorkspaceNotFound{
-		CurrentDirectory:      ws.workingDir,
-		ManifestDirectoryName: ProjectDirectoryName,
-		NumberOfLevelsChecked: maximumParentDirsToSearch,
-	}
 }
 
 // ListManifestFiles returns a list of all the local application manifest filenames.
@@ -287,7 +220,7 @@ func (ws *Workspace) Delete() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
 }
 
-// Write writes the data to file under the project directory joined by path elements.
+// Write writes the data to a file under the project directory joined by path elements.
 // If successful returns the full path of the file, otherwise returns an empty string and the error.
 func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
 	projectPath, err := ws.projectDirPath()
@@ -304,4 +237,71 @@ func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}
 	return filename, nil
+}
+
+func (ws *Workspace) writeSummary(projectName string) error {
+	summaryPath, err := ws.summaryPath()
+	if err != nil {
+		return err
+	}
+
+	workspaceSummary := archer.WorkspaceSummary{
+		ProjectName: projectName,
+	}
+
+	serializedWorkspaceSummary, err := yaml.Marshal(workspaceSummary)
+
+	if err != nil {
+		return err
+	}
+	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
+}
+
+func (ws *Workspace) summaryPath() (string, error) {
+	manifestPath, err := ws.projectDirPath()
+	if err != nil {
+		return "", err
+	}
+	workspaceSummaryPath := filepath.Join(manifestPath, workspaceSummaryFileName)
+	return workspaceSummaryPath, nil
+}
+
+func (ws *Workspace) createProjectDirectory() error {
+	// First check to see if a manifest directory already exists
+	existingWorkspace, _ := ws.projectDirPath()
+	if existingWorkspace != "" {
+		return nil
+	}
+	return ws.fsUtils.Mkdir(ProjectDirectoryName, 0755)
+}
+
+func (ws *Workspace) projectDirPath() (string, error) {
+	if ws.projectDir != "" {
+		return ws.projectDir, nil
+	}
+	// Are we in the project directory?
+	inEcsDir := filepath.Base(ws.workingDir) == ProjectDirectoryName
+	if inEcsDir {
+		ws.projectDir = ws.workingDir
+		return ws.projectDir, nil
+	}
+
+	searchingDir := ws.workingDir
+	for try := 0; try < maximumParentDirsToSearch; try++ {
+		currentDirectoryPath := filepath.Join(searchingDir, ProjectDirectoryName)
+		inCurrentDirPath, err := ws.fsUtils.DirExists(currentDirectoryPath)
+		if err != nil {
+			return "", err
+		}
+		if inCurrentDirPath {
+			ws.projectDir = currentDirectoryPath
+			return ws.projectDir, nil
+		}
+		searchingDir = filepath.Dir(searchingDir)
+	}
+	return "", &ErrWorkspaceNotFound{
+		CurrentDirectory:      ws.workingDir,
+		ManifestDirectoryName: ProjectDirectoryName,
+		NumberOfLevelsChecked: maximumParentDirsToSearch,
+	}
 }
