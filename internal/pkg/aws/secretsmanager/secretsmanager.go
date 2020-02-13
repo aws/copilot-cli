@@ -11,13 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 )
 
-// SecretsManager is in charge of fetching and creating projects, environment and pipeline
-// configuration in SecretsManager.
+type SecretsManagerAPI interface {
+	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
+}
+
+// SecretsManager is in charge of fetching and creating projects, environment
+// and pipeline configuration in SecretsManager.
 type SecretsManager struct {
-	secretsManager secretsmanageriface.SecretsManagerAPI
+	secretsManager SecretsManagerAPI
 	sessionRegion  string
 }
 
