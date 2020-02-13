@@ -267,17 +267,17 @@ func (mr *MockprojectDeployerMockRecorder) DelegateDNSPermissions(project, accou
 }
 
 // DeleteProject mocks base method
-func (m *MockprojectDeployer) DeleteProject(name string, accounts, regions []string) error {
+func (m *MockprojectDeployer) DeleteProject(name string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteProject", name, accounts, regions)
+	ret := m.ctrl.Call(m, "DeleteProject", name)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteProject indicates an expected call of DeleteProject
-func (mr *MockprojectDeployerMockRecorder) DeleteProject(name, accounts, regions interface{}) *gomock.Call {
+func (mr *MockprojectDeployerMockRecorder) DeleteProject(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockprojectDeployer)(nil).DeleteProject), name, accounts, regions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockprojectDeployer)(nil).DeleteProject), name)
 }
 
 // MockprojectResourcesGetter is a mock of projectResourcesGetter interface
@@ -456,17 +456,17 @@ func (mr *MockdeployerMockRecorder) DelegateDNSPermissions(project, accountID in
 }
 
 // DeleteProject mocks base method
-func (m *Mockdeployer) DeleteProject(name string, accounts, regions []string) error {
+func (m *Mockdeployer) DeleteProject(name string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteProject", name, accounts, regions)
+	ret := m.ctrl.Call(m, "DeleteProject", name)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteProject indicates an expected call of DeleteProject
-func (mr *MockdeployerMockRecorder) DeleteProject(name, accounts, regions interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) DeleteProject(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*Mockdeployer)(nil).DeleteProject), name, accounts, regions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*Mockdeployer)(nil).DeleteProject), name)
 }
 
 // CreatePipeline mocks base method
