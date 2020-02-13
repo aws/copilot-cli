@@ -65,6 +65,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
 	}
+
 	pipeline, err := manifest.UnmarshalPipeline(data)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
@@ -140,6 +141,11 @@ func (o *deletePipelineOpts) Execute() error {
 		return err
 	}
 
+	// TODO
+	// if err := o.deletePipelineFile(); err != nil {
+	// 	return err
+	// }
+
 	return nil
 }
 
@@ -185,6 +191,26 @@ func (o *deletePipelineOpts) deleteStack() error {
 	return nil
 }
 
+func (o *deletePipelineOpts) deletePipelineFile() error {
+	// TODO refactor to use workspace.DeleteFile
+	// manifestPath, err := o.ws.manifestDirectoryPath()
+	// path := filepath.Join(manifestPath, workspace.PipelineFileName)
+	// manifestFileExists, err := o.ws.fsUtils.Exists(manifestPath)
+
+	// if err != nil {
+	// 	return fmt.Errorf("delete pipeline file %s: %w", workspace.PipelineFileName, err)
+	// }
+
+	// if !manifestFileExists {
+	// 	return nil
+	// }
+
+	// return o.ws.fsUtils.Remove(manifestPath)
+
+	// log.Ssuccessf("Deleted pipeline file %s from workspace.", workspace.PipelineFileName)
+
+	return nil
+}
 // RecommendedActions is a no-op for this command.
 func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil
