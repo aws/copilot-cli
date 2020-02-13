@@ -56,7 +56,7 @@ type updatePipelineOpts struct {
 	prog             progress
 	region           string
 	envStore         archer.EnvironmentStore
-	ws               archer.Workspace
+	ws               wsAppReader
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
@@ -103,14 +103,9 @@ func (o *updatePipelineOpts) Validate() error {
 
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	apps, err := o.ws.Apps()
+	appNames, err := o.ws.AppNames()
 	if err != nil {
 		return nil, err
-	}
-	// TODO: Will fast follow with another PR to actually support #443
-	appNames := make([]string, 0, len(apps))
-	for _, app := range apps {
-		appNames = append(appNames, app.AppName())
 	}
 
 	for _, stage := range manifestStages {
@@ -211,7 +206,7 @@ func (o *updatePipelineOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(o.ProjectName())))
 
 	// read pipeline manifest
-	data, err := o.ws.ReadFile(workspace.PipelineFileName)
+	data, err := o.ws.Read(workspace.PipelineFileName)
 	if err != nil {
 		return fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
 	}

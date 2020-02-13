@@ -967,6 +967,48 @@ func (mr *MockwsWriterMockRecorder) Write(data interface{}, elem ...interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockwsWriter)(nil).Write), varargs...)
 }
 
+// MockwsReader is a mock of wsReader interface
+type MockwsReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsReaderMockRecorder
+}
+
+// MockwsReaderMockRecorder is the mock recorder for MockwsReader
+type MockwsReaderMockRecorder struct {
+	mock *MockwsReader
+}
+
+// NewMockwsReader creates a new mock instance
+func NewMockwsReader(ctrl *gomock.Controller) *MockwsReader {
+	mock := &MockwsReader{ctrl: ctrl}
+	mock.recorder = &MockwsReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsReader) EXPECT() *MockwsReaderMockRecorder {
+	return m.recorder
+}
+
+// Read mocks base method
+func (m *MockwsReader) Read(elem ...string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range elem {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Read", varargs...)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read
+func (mr *MockwsReaderMockRecorder) Read(elem ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockwsReader)(nil).Read), elem...)
+}
+
 // MockwsAppDeleter is a mock of wsAppDeleter interface
 type MockwsAppDeleter struct {
 	ctrl     *gomock.Controller
@@ -1002,4 +1044,113 @@ func (m *MockwsAppDeleter) DeleteApp(name string) error {
 func (mr *MockwsAppDeleterMockRecorder) DeleteApp(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteApp), name)
+}
+
+// MockwsAppReader is a mock of wsAppReader interface
+type MockwsAppReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsAppReaderMockRecorder
+}
+
+// MockwsAppReaderMockRecorder is the mock recorder for MockwsAppReader
+type MockwsAppReaderMockRecorder struct {
+	mock *MockwsAppReader
+}
+
+// NewMockwsAppReader creates a new mock instance
+func NewMockwsAppReader(ctrl *gomock.Controller) *MockwsAppReader {
+	mock := &MockwsAppReader{ctrl: ctrl}
+	mock.recorder = &MockwsAppReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsAppReader) EXPECT() *MockwsAppReaderMockRecorder {
+	return m.recorder
+}
+
+// AppNames mocks base method
+func (m *MockwsAppReader) AppNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AppNames indicates an expected call of AppNames
+func (mr *MockwsAppReaderMockRecorder) AppNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppNames", reflect.TypeOf((*MockwsAppReader)(nil).AppNames))
+}
+
+// Read mocks base method
+func (m *MockwsAppReader) Read(elem ...string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range elem {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Read", varargs...)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Read indicates an expected call of Read
+func (mr *MockwsAppReaderMockRecorder) Read(elem ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockwsAppReader)(nil).Read), elem...)
+}
+
+// MockwsProjectManager is a mock of wsProjectManager interface
+type MockwsProjectManager struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsProjectManagerMockRecorder
+}
+
+// MockwsProjectManagerMockRecorder is the mock recorder for MockwsProjectManager
+type MockwsProjectManagerMockRecorder struct {
+	mock *MockwsProjectManager
+}
+
+// NewMockwsProjectManager creates a new mock instance
+func NewMockwsProjectManager(ctrl *gomock.Controller) *MockwsProjectManager {
+	mock := &MockwsProjectManager{ctrl: ctrl}
+	mock.recorder = &MockwsProjectManagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsProjectManager) EXPECT() *MockwsProjectManagerMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method
+func (m *MockwsProjectManager) Create(projectName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", projectName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create
+func (mr *MockwsProjectManagerMockRecorder) Create(projectName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockwsProjectManager)(nil).Create), projectName)
+}
+
+// Summary mocks base method
+func (m *MockwsProjectManager) Summary() (*archer.WorkspaceSummary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Summary")
+	ret0, _ := ret[0].(*archer.WorkspaceSummary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Summary indicates an expected call of Summary
+func (mr *MockwsProjectManagerMockRecorder) Summary() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsProjectManager)(nil).Summary))
 }

@@ -9,12 +9,10 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 )
 
 func TestAppDeployOpts_Validate(t *testing.T) {
@@ -23,13 +21,13 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		inAppName     string
 		inEnvName     string
 
-		mockWs    func(m *mocks.MockWorkspace)
+		mockWs    func(m *climocks.MockwsAppReader)
 		mockStore func(m *climocks.MockprojectService)
 
 		wantedError error
 	}{
 		"no existing projects": {
-			mockWs:    func(m *mocks.MockWorkspace) {},
+			mockWs:    func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {},
 
 			wantedError: errNoProjectInWorkspace,
@@ -37,18 +35,18 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		"with workspace error": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 
-			wantedError: errors.New("get applications in the workspace: some error"),
+			wantedError: errors.New("list applications in the workspace: some error"),
 		},
 		"with application not in workspace": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 
@@ -57,7 +55,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		"with unknown environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
-			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockWs:        func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
@@ -69,14 +67,8 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inEnvName:     "test",
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "frontend",
-						},
-					},
-				}, nil)
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
@@ -90,7 +82,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockWorkspace(ctrl)
+			mockWs := climocks.NewMockwsAppReader(ctrl)
 			mockStore := climocks.NewMockprojectService(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -126,7 +118,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		inEnvName     string
 		inImageTag    string
 
-		mockWs     func(m *mocks.MockWorkspace)
+		mockWs     func(m *climocks.MockwsAppReader)
 		mockStore  func(m *climocks.MockprojectService)
 		mockPrompt func(m *climocks.Mockprompter)
 
@@ -136,8 +128,8 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		wantedError    error
 	}{
 		"no applications in the workspace": {
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{}, nil)
 			},
 			mockStore:  func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {},
@@ -147,14 +139,8 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		"default to single application": {
 			inEnvName:  "test",
 			inImageTag: "latest",
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "frontend",
-						},
-					},
-				}, nil)
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:  func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {},
@@ -166,19 +152,8 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		"prompts for application name if there are more than one option": {
 			inEnvName:  "test",
 			inImageTag: "latest",
-			mockWs: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "frontend",
-						},
-					},
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "webhook",
-						},
-					},
-				}, nil)
+			mockWs: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{"frontend", "webhook"}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -194,7 +169,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockWs:        func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments("phonetool").Return(nil, errors.New("some error"))
 			},
@@ -207,7 +182,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockWs:        func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{}, nil)
 			},
@@ -220,7 +195,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockWs:        func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
 					{
@@ -239,7 +214,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockWorkspace) {},
+			mockWs:        func(m *climocks.MockwsAppReader) {},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
 					{
@@ -266,7 +241,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockWorkspace(ctrl)
+			mockWs := climocks.NewMockwsAppReader(ctrl)
 			mockStore := climocks.NewMockprojectService(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 			tc.mockWs(mockWs)
@@ -304,13 +279,9 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 }
 
 func TestAppDeployOpts_getAppDockerfilePath(t *testing.T) {
-	var mockWorkspace *mocks.MockWorkspace
+	var mockWorkspace *climocks.MockwsAppReader
 
 	mockError := errors.New("mockError")
-	mockManifestList := []string{
-		"appA",
-		"appB",
-	}
 	mockManifest := []byte(`name: appA
 type: 'Load Balanced Web App'
 image:
@@ -324,42 +295,13 @@ image:
 		wantPath string
 		wantErr  error
 	}{
-		"should wrap error returned from workspaceService ListManifestFiles()": {
-			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockWorkspace(controller)
-
-				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(nil, mockError)
-			},
-			wantPath: "",
-			wantErr:  fmt.Errorf("list local manifest files: %w", mockError),
-		},
-		"should return error if list of manifest files returned from workspaceService is empty": {
-			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockWorkspace(controller)
-
-				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return([]string{}, nil)
-			},
-			wantPath: "",
-			wantErr:  errNoLocalManifestsFound,
-		},
-		"should return error if unable to match input app with local manifests": {
-			inputApp: "appC",
-			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockWorkspace(controller)
-
-				mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil)
-			},
-			wantPath: "",
-			wantErr:  fmt.Errorf("couldn't find local manifest %s", "appC"),
-		},
 		"should return error if workspaceService ReadFile returns error": {
 			inputApp: "appA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockWorkspace(controller)
+				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil),
-					mockWorkspace.EXPECT().ReadFile("appA").Times(1).Return(nil, mockError),
+					mockWorkspace.EXPECT().Read("appA").Times(1).Return(nil, mockError),
 				)
 			},
 			wantPath: "",
@@ -368,11 +310,10 @@ image:
 		"should trim the manifest DockerfilePath if it contains /Dockerfile": {
 			inputApp: "appA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockWorkspace(controller)
+				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ListManifestFiles().Times(1).Return(mockManifestList, nil),
-					mockWorkspace.EXPECT().ReadFile("appA").Times(1).Return(mockManifest, nil),
+					mockWorkspace.EXPECT().Read("appA").Times(1).Return(mockManifest, nil),
 				)
 			},
 			wantPath: "appA",

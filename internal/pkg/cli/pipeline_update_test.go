@@ -23,7 +23,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 		stages        []manifest.PipelineStage
 		inProjectName string
 
-		mockWorkspace func(m *archermocks.MockWorkspace)
+		mockWorkspace func(m *climocks.MockwsAppReader)
 		mockEnvStore  func(m *archermocks.MockEnvironmentStore)
 
 		expectedStages []deploy.PipelineStage
@@ -36,18 +36,8 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 				},
 			},
 			inProjectName: "badgoose",
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "frontend",
-						},
-					},
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "backend",
-						},
-					}}, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				mockEnv := &archer.Environment{
@@ -83,7 +73,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := archermocks.NewMockWorkspace(ctrl)
+			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
 
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockWorkspace(mockWorkspace)
@@ -211,19 +201,6 @@ stages:
 		Prod:      false,
 	}
 
-	manifest := []archer.Manifest{
-		&manifest.LBFargateManifest{
-			AppManifest: manifest.AppManifest{
-				Name: "frontend",
-			},
-		},
-		&manifest.LBFargateManifest{
-			AppManifest: manifest.AppManifest{
-				Name: "backend",
-			},
-		},
-	}
-
 	testCases := map[string]struct {
 		inProject      *archer.Project
 		inProjectName  string
@@ -231,7 +208,7 @@ stages:
 		inRegion       string
 		inPipelineFile string
 		mockDeployer   func(m *climocks.MockpipelineDeployer)
-		mockWorkspace  func(m *archermocks.MockWorkspace)
+		mockWorkspace  func(m *climocks.MockwsAppReader)
 		mockEnvStore   func(m *archermocks.MockEnvironmentStore)
 		mockProgress   func(m *climocks.Mockprogress)
 		mockPrompt     func(m *climocks.Mockprompter)
@@ -242,9 +219,9 @@ stages:
 			inProjectName:  projectName,
 			inRegion:       region,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -275,9 +252,9 @@ stages:
 			inProjectName:  projectName,
 			inRegion:       region,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -310,9 +287,9 @@ stages:
 			inProjectName:  projectName,
 			inRegion:       region,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -345,9 +322,9 @@ stages:
 			inProjectName:  projectName,
 			inRegion:       region,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -373,7 +350,7 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace:  func(m *archermocks.MockWorkspace) {},
+			mockWorkspace:  func(m *climocks.MockwsAppReader) {},
 			mockEnvStore:   func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
@@ -391,8 +368,8 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), errors.New("some error"))
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), errors.New("some error"))
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -411,9 +388,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
 				content := ""
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -432,9 +409,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, errors.New("some error")).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return(nil, errors.New("some error")).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -453,9 +430,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -478,9 +455,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -504,9 +481,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -537,9 +514,9 @@ stages:
 			inRegion:       region,
 			inProjectName:  projectName,
 			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *archermocks.MockWorkspace) {
-				m.EXPECT().ReadFile(gomock.Any()).Return([]byte(content), nil)
-				m.EXPECT().Apps().Return(manifest, nil).Times(1)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -576,7 +553,7 @@ stages:
 
 			mockPipelineDeployer := climocks.NewMockpipelineDeployer(ctrl)
 			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := archermocks.NewMockWorkspace(ctrl)
+			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 			tc.mockDeployer(mockPipelineDeployer)

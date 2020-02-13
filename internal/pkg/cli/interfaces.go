@@ -95,6 +95,20 @@ type wsWriter interface {
 	Write(data []byte, elem ...string) (string, error)
 }
 
+type wsReader interface {
+	Read(elem ...string) ([]byte, error)
+}
+
 type wsAppDeleter interface {
 	DeleteApp(name string) error
+}
+
+type wsAppReader interface {
+	AppNames() ([]string, error)
+	wsReader
+}
+
+type wsProjectManager interface {
+	Create(projectName string) error
+	Summary() (*archer.WorkspaceSummary, error)
 }

@@ -20,13 +20,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
 const (
@@ -118,93 +116,34 @@ func (ws *Workspace) Summary() (*archer.WorkspaceSummary, error) {
 	return nil, &ErrNoProjectAssociated{}
 }
 
-// Apps returns all the applications in the workspace
-func (ws *Workspace) Apps() ([]archer.Manifest, error) {
-	manifestFiles, err := ws.ListManifestFiles()
-	if err != nil {
-		return nil, err
-	}
-	apps := make([]archer.Manifest, 0, len(manifestFiles))
-	for _, file := range manifestFiles {
-		manifestBytes, err := ws.ReadFile(file)
-		if err != nil {
-			return nil, err
-		}
-
-		mf, err := manifest.UnmarshalApp(manifestBytes)
-		if err != nil {
-			return nil, err
-		}
-		apps = append(apps, mf)
-	}
-	return apps, nil
-}
-
-// ListManifestFiles returns a list of all the local application manifest filenames.
-// TODO add pipeline manifest ls?
-func (ws *Workspace) ListManifestFiles() ([]string, error) {
+// AppNames returns the application names in the workspace.
+func (ws *Workspace) AppNames() ([]string, error) {
 	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
 	}
-	manifestDirFiles, err := ws.fsUtils.ReadDir(projectPath)
+	files, err := ws.fsUtils.ReadDir(projectPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read directory %s: %w", projectPath, err)
 	}
-
-	var manifestFiles []string
-	for _, file := range manifestDirFiles {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), appManifestFileSuffix) {
-			manifestFiles = append(manifestFiles, file.Name())
+	var names []string
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
 		}
+		names = append(names, filepath.Base(f.Name()))
 	}
-
-	return manifestFiles, nil
+	return names, nil
 }
 
-// ReadFile takes in a file name under the project directory (e.g. frontend-app.yml) and returns the read bytes.
-func (ws *Workspace) ReadFile(filename string) ([]byte, error) {
+// Read returns the contents of the file under the project directory joined by path elements.
+func (ws *Workspace) Read(elem ...string) ([]byte, error) {
 	projectPath, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
 	}
-	manifestPath := filepath.Join(projectPath, filename)
-	manifestFileExists, err := ws.fsUtils.Exists(manifestPath)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !manifestFileExists {
-		return nil, &ErrManifestNotFound{ManifestName: filename}
-	}
-
-	value, err := ws.fsUtils.ReadFile(manifestPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
-}
-
-// AppManifestFileName returns the manifest's name from an application name.
-// TODO extend this to pipeline manifest filenames too
-func (ws *Workspace) AppManifestFileName(appName string) string {
-	return fmt.Sprintf(fmtAppManifestFileName, appName)
-}
-
-// DeleteApp removes the application directory from the project directory.
-func (ws *Workspace) DeleteApp(name string) error {
-	projectPath, err := ws.projectDirPath()
-	if err != nil {
-		return err
-	}
-	return ws.fsUtils.RemoveAll(filepath.Join(projectPath, name))
-}
-
-// DeleteAll removes the local project directory.
-func (ws *Workspace) DeleteAll() error {
-	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
+	pathElems := append([]string{projectPath}, elem...)
+	return ws.fsUtils.ReadFile(filepath.Join(pathElems...))
 }
 
 // Write writes the data to a file under the project directory joined by path elements.
@@ -224,6 +163,20 @@ func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
 		return "", fmt.Errorf("failed to write manifest file: %w", err)
 	}
 	return filename, nil
+}
+
+// DeleteApp removes the application directory from the project directory.
+func (ws *Workspace) DeleteApp(name string) error {
+	projectPath, err := ws.projectDirPath()
+	if err != nil {
+		return err
+	}
+	return ws.fsUtils.RemoveAll(filepath.Join(projectPath, name))
+}
+
+// DeleteAll removes the local project directory.
+func (ws *Workspace) DeleteAll() error {
+	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {

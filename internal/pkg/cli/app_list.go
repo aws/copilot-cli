@@ -45,7 +45,7 @@ type listAppOpts struct {
 	projectGetter archer.ProjectGetter
 	projectLister archer.ProjectLister
 
-	ws archer.Workspace
+	ws wsAppReader
 	w  io.Writer
 }
 
@@ -134,13 +134,9 @@ func (opts *listAppOpts) Execute() error {
 	opts.applications = apps
 
 	if opts.ShouldShowLocalApps {
-		localAppManifests, err := opts.ws.Apps()
+		localAppNames, err := opts.ws.AppNames()
 		if err != nil {
 			return fmt.Errorf("failed to get local app manifests: %w", err)
-		}
-		var localAppNames []string
-		for _, appManifest := range localAppManifests {
-			localAppNames = append(localAppNames, appManifest.AppName())
 		}
 		opts.localAppsFilter(localAppNames)
 	}
