@@ -23,8 +23,6 @@ import (
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
-
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 )
 
 const (
@@ -42,6 +40,11 @@ const (
 	appManifestFileSuffix     = "-app.yml"
 	fmtAppManifestFileName    = "%s" + appManifestFileSuffix
 )
+
+// Summary is a description of what's associated with this workspace.
+type Summary struct {
+	ProjectName string `yaml:"project"`
+}
 
 // Workspace manages a local workspace, including creating and managing manifest files.
 type Workspace struct {
@@ -99,7 +102,7 @@ func (ws *Workspace) Create(projectName string) error {
 }
 
 // Summary returns a summary of the workspace - including the project name.
-func (ws *Workspace) Summary() (*archer.WorkspaceSummary, error) {
+func (ws *Workspace) Summary() (*Summary, error) {
 	summaryPath, err := ws.summaryPath()
 	if err != nil {
 		return nil, err
@@ -110,7 +113,7 @@ func (ws *Workspace) Summary() (*archer.WorkspaceSummary, error) {
 		if err != nil {
 			return nil, err
 		}
-		wsSummary := archer.WorkspaceSummary{}
+		wsSummary := Summary{}
 		return &wsSummary, yaml.Unmarshal(value, &wsSummary)
 	}
 	return nil, &ErrNoProjectAssociated{}
@@ -185,7 +188,7 @@ func (ws *Workspace) writeSummary(projectName string) error {
 		return err
 	}
 
-	workspaceSummary := archer.WorkspaceSummary{
+	workspaceSummary := Summary{
 		ProjectName: projectName,
 	}
 

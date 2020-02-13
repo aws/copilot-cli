@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
@@ -100,13 +99,13 @@ func TestManifestDirectoryPath(t *testing.T) {
 
 func TestReadSummary(t *testing.T) {
 	testCases := map[string]struct {
-		expectedSummary archer.WorkspaceSummary
+		expectedSummary Summary
 		workingDir      string
 		expectedError   error
 		mockFileSystem  func(appFS afero.Fs)
 	}{
 		"existing workspace summary": {
-			expectedSummary: archer.WorkspaceSummary{ProjectName: "DavidsProject"},
+			expectedSummary: Summary{ProjectName: "DavidsProject"},
 			workingDir:      "test/",
 			mockFileSystem: func(appFS afero.Fs) {
 				appFS.MkdirAll("test/ecs-project", 0755)

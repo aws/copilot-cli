@@ -9,6 +9,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
@@ -110,5 +111,5 @@ type wsAppReader interface {
 
 type wsProjectManager interface {
 	Create(projectName string) error
-	Summary() (*archer.WorkspaceSummary, error)
+	Summary() (*workspace.Summary, error)
 }

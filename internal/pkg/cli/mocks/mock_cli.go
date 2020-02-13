@@ -10,6 +10,7 @@ import (
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
+	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -1141,10 +1142,10 @@ func (mr *MockwsProjectManagerMockRecorder) Create(projectName interface{}) *gom
 }
 
 // Summary mocks base method
-func (m *MockwsProjectManager) Summary() (*archer.WorkspaceSummary, error) {
+func (m *MockwsProjectManager) Summary() (*workspace.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Summary")
-	ret0, _ := ret[0].(*archer.WorkspaceSummary)
+	ret0, _ := ret[0].(*workspace.Summary)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
