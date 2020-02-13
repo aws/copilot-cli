@@ -180,8 +180,9 @@ func (o *initPipelineOpts) Execute() error {
 			return err
 		}
 		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.GitHubRepo))
+	} else {
+		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
 	}
-	log.Successf("Created the secret %s for pipeline source stage\n", color.HighlightUserInput(secretName))
 	o.secretName = secretName
 
 	// write pipeline.yml file, populate with:
