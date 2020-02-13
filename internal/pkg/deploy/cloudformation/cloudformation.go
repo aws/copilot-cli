@@ -250,6 +250,9 @@ func (cf CloudFormation) delete(stackName string, opts ...func(*cloudformation.D
 	}
 
 	if _, err := cf.client.DeleteStack(in); err != nil {
+		if stackDoesNotExist(err) {
+			return nil
+		}
 		return fmt.Errorf("deleting stack %s: %w", stackName, err)
 	}
 	return cf.client.WaitUntilStackDeleteCompleteWithContext(context.Background(),
@@ -338,6 +341,17 @@ func stackSetExists(err error) bool {
 		switch aerr.Code() {
 		case cloudformation.ErrCodeNameAlreadyExistsException:
 			// An ErrCodeNameAlreadyExistsException occurs when a stack set already exists.
+			return true
+		}
+	}
+	return false
+}
+
+func stackSetDoesNotExist(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case cloudformation.ErrCodeStackSetNotFoundException:
+			// An ErrCodeStackSetNotFoundException occurs when a stack set doesn't exist.
 			return true
 		}
 	}

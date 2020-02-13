@@ -449,48 +449,73 @@ func (cf CloudFormation) waitForStackSetOperation(stackSetName, operationID stri
 }
 
 // DeleteProject deletes all project specific StackSet and Stack resources.
-func (cf CloudFormation) DeleteProject(name string, accounts, regions []string) error {
-	stackSetName := fmt.Sprintf("%s-infrastructure", name)
+func (cf CloudFormation) DeleteProject(projectName string) error {
+	stackSetName := fmt.Sprintf("%s-infrastructure", projectName)
+	if err := cf.deleteProjectStackSet(stackSetName); err != nil {
+		return err
+	}
+	return cf.delete(fmt.Sprintf("%s-infrastructure-roles", projectName))
+}
 
-	if _, err := cf.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
-		Accounts:     aws.StringSlice(accounts),
-		RetainStacks: aws.Bool(false),
-		Regions:      aws.StringSlice(regions),
+func (cf CloudFormation) deleteProjectStackSet(stackSetName string) error {
+	stackInstances, err := cf.client.ListStackInstances(&cloudformation.ListStackInstancesInput{
 		StackSetName: aws.String(stackSetName),
-	}); err != nil {
-		return fmt.Errorf("DeleteStackInstances for stackset %s, accounts %s, and regions %s: %w",
-			stackSetName, accounts, regions, err)
+	})
+
+	if err != nil {
+		// If the stackset doesn't exist - just move on.
+		if stackSetDoesNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("fetching existing project stack instances: %w", err)
 	}
 
-	// The looping here is because there's no Wait convenience function the SDK provides
-	// for waiting on StackSet Instances to delete. The DeleteStackSet call will return the
-	// ErrCodeOperationInProgressException while instances are still actively being deleted.
-	maxAttempts := maxDeleteStackSetAttempts
-	for maxAttempts > 0 {
-		_, err := cf.client.DeleteStackSet(&cloudformation.DeleteStackSetInput{
+	// We want to delete all the stack instances, so we create
+	// a set of account ids and regions.
+	accountSet := map[string]bool{}
+	regionSet := map[string]bool{}
+	for _, summary := range stackInstances.Summaries {
+		accountSet[*summary.Account] = true
+		regionSet[*summary.Region] = true
+	}
+
+	var regions []string
+	var accounts []string
+	for key := range accountSet {
+		accounts = append(accounts, key)
+	}
+
+	for key := range regionSet {
+		regions = append(regions, key)
+	}
+
+	// Delete the Stack Instances for those accounts and regions.
+	if len(stackInstances.Summaries) > 0 {
+		operation, err := cf.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
+			Accounts:     aws.StringSlice(accounts),
+			RetainStacks: aws.Bool(false),
+			Regions:      aws.StringSlice(regions),
 			StackSetName: aws.String(stackSetName),
 		})
 
 		if err != nil {
-			awserr, ok := err.(awserr.Error)
-			if !ok {
-				return err
-			}
-
-			if awserr.Code() == cloudformation.ErrCodeOperationInProgressException {
-				maxAttempts--
-				time.Sleep(deleteStackSetSleepDuration)
-				continue
-			}
+			return fmt.Errorf("DeleteStackInstances for stackset %s, accounts %s, and regions %s: %w",
+				stackSetName, accounts, regions, err)
 		}
 
-		break
+		if err := cf.waitForStackSetOperation(stackSetName, *operation.OperationId); err != nil {
+			return fmt.Errorf("Waiting for stackset %s to be deleted: %w", stackSetName, err)
+		}
 	}
 
-	if _, err := cf.client.DeleteStack(&cloudformation.DeleteStackInput{
-		StackName: aws.String(fmt.Sprintf("%s-infrastructure-roles", name)),
+	// Delete the StackSet now that the stack set instances are deleted.
+	if _, err := cf.client.DeleteStackSet(&cloudformation.DeleteStackSetInput{
+		StackSetName: aws.String(stackSetName),
 	}); err != nil {
-		return err
+		// If the StackSet doesn't exist, that's fine, move on.
+		if !stackSetDoesNotExist(err) {
+			return err
+		}
 	}
 
 	return nil

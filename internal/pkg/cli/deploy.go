@@ -29,7 +29,7 @@ type projectDeployer interface {
 	AddAppToProject(project *archer.Project, appName string) error
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
 	DelegateDNSPermissions(project *archer.Project, accountID string) error
-	DeleteProject(name string, accounts, regions []string) error
+	DeleteProject(name string) error
 }
 
 type projectResourcesGetter interface {

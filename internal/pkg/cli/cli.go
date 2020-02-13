@@ -227,27 +227,3 @@ func isStackNotExistsErr(err error) bool {
 		return true
 	}
 }
-
-type stringSet struct {
-	m map[string]bool
-}
-
-func newStringSet() stringSet {
-	return stringSet{
-		m: make(map[string]bool),
-	}
-}
-
-func (s stringSet) put(item string) {
-	s.m[item] = true
-}
-
-func (s stringSet) items() []string {
-	var items []string
-
-	for k := range s.m {
-		items = append(items, k)
-	}
-
-	return items
-}
