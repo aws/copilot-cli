@@ -47,3 +47,18 @@ func (mr *MockSecretsManagerAPIMockRecorder) CreateSecret(arg0 interface{}) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).CreateSecret), arg0)
 }
+
+// DeleteSecret mocks base method
+func (m *MockSecretsManagerAPI) DeleteSecret(arg0 *secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSecret", arg0)
+	ret0, _ := ret[0].(*secretsmanager.DeleteSecretOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteSecret indicates an expected call of DeleteSecret
+func (mr *MockSecretsManagerAPIMockRecorder) DeleteSecret(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).DeleteSecret), arg0)
+}

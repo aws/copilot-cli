@@ -15,6 +15,7 @@ import (
 
 type SecretsManagerAPI interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
+	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
 }
 
 // SecretsManager is in charge of fetching and creating projects, environment
@@ -69,7 +70,7 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 func (s *SecretsManager) DeleteSecret(secretName string) error {
 	_, err := s.secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(secretName),
-		// RecoveryWindowInDays *int64 TODO specify?
+		ForceDeleteWithoutRecovery: aws.Bool(true), // forego the waiting period to delete the secret
 	})
 
 	return fmt.Errorf("delete secret %s from secrets manager: %w", secretName, err)
