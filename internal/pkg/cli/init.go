@@ -26,7 +26,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const defaultEnvironmentName = "test"
+const (
+	defaultEnvironmentName    = "test"
+	defaultEnvironmentProfile = "default"
+)
 
 const (
 	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
@@ -78,15 +81,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	profileSess, err := sessProvider.FromProfile(vars.profile)
-	if err != nil {
-		return nil, err
-	}
 	prompt := prompt.New()
 	spin := termprogress.NewSpinner()
 	id := identity.New(sess)
 	deployer := cloudformation.New(sess)
-	envDeployer := cloudformation.New(profileSess)
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, err
@@ -126,11 +124,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		},
 		envCreator:    ssm,
 		projectGetter: ssm,
-		envDeployer:   envDeployer,
 		projDeployer:  deployer,
 		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,
+
+		initProfileClients: func(o *initEnvOpts) error {
+			profileSess, err := session.NewProvider().FromProfile(vars.profile)
+			if err != nil {
+				return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
+			}
+			o.envIdentity = identity.New(profileSess)
+			o.envDeployer = cloudformation.New(profileSess)
+			return nil
+		},
 	}
 
 	appDeploy := &appDeployOpts{
@@ -227,9 +234,7 @@ func (o *initOpts) deployEnv() error {
 		// User chose not to deploy the application, exit.
 		return nil
 	}
-	if err := o.initEnv.Ask(); err != nil {
-		return err
-	}
+
 	return o.initEnv.Execute()
 }
 
@@ -283,7 +288,7 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVar(&vars.profile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)

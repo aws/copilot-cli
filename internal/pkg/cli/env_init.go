@@ -65,6 +65,9 @@ type initEnvOpts struct {
 	envIdentity   identityService
 	profileConfig profileNames
 	prog          progress
+
+	// initialize profile-specific env clients
+	initProfileClients func(*initEnvOpts) error
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -73,10 +76,6 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, err
 	}
 	sessProvider := session.NewProvider()
-	profileSess, err := sessProvider.FromProfile(vars.EnvProfile)
-	if err != nil {
-		return nil, err
-	}
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -90,12 +89,19 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		initEnvVars:   vars,
 		projectGetter: store,
 		envCreator:    store,
-		envDeployer:   cloudformation.New(profileSess),
 		projDeployer:  cloudformation.New(defaultSession),
 		identity:      identity.New(defaultSession),
-		envIdentity:   identity.New(profileSess),
 		profileConfig: cfg,
 		prog:          termprogress.NewSpinner(),
+		initProfileClients: func(o *initEnvOpts) error {
+			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+			if err != nil {
+				return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
+			}
+			o.envIdentity = identity.New(profileSess)
+			o.envDeployer = cloudformation.New(profileSess)
+			return nil
+		},
 	}, nil
 }
 
@@ -130,6 +136,10 @@ func (o *initEnvOpts) Execute() error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
+	}
+
+	if err = o.initProfileClients(o); err != nil {
+		return err
 	}
 
 	// 1. Start creating the CloudFormation stack for the environment.
