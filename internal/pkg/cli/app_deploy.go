@@ -373,7 +373,7 @@ func (o *appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetNam
 }
 
 func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
-	manifestBytes, err := o.workspaceService.Read(o.AppName, workspace.ManifestFileName)
+	manifestBytes, err := o.workspaceService.ReadAppManifest(o.AppName)
 	if err != nil {
 		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
 	}

@@ -53,7 +53,7 @@ type initAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs           afero.Fs
-	ws           wsWriter
+	ws           wsAppManifestWriter
 	appStore     archer.ApplicationStore
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
@@ -165,13 +165,9 @@ func (o *initAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
-	data, err := manifest.MarshalBinary()
+	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
 	if err != nil {
-		return "", fmt.Errorf("marshal manifest to binary: %w", err)
-	}
-	manifestPath, err := o.ws.Write(data, o.AppName, workspace.ManifestFileName)
-	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", o.AppName, err)
+		return "", err
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {

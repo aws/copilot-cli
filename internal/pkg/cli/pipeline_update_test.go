@@ -23,7 +23,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 		stages        []manifest.PipelineStage
 		inProjectName string
 
-		mockWorkspace func(m *climocks.MockwsAppReader)
+		mockWorkspace func(m *climocks.MockwsPipelineReader)
 		mockEnvStore  func(m *archermocks.MockEnvironmentStore)
 
 		expectedStages []deploy.PipelineStage
@@ -36,7 +36,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 				},
 			},
 			inProjectName: "badgoose",
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -73,7 +73,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
+			mockWorkspace := climocks.NewMockwsPipelineReader(ctrl)
 
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockWorkspace(mockWorkspace)
@@ -159,7 +159,6 @@ func TestUpdatePipelineOpts_Execute(t *testing.T) {
 		projectName  = "badgoose"
 		region       = "us-west-2"
 		accountID    = "123456789012"
-		pipelineFile = "pipeline.yml"
 		pipelineName = "pipepiper"
 		content      = `
 name: pipepiper
@@ -208,19 +207,18 @@ stages:
 		inRegion       string
 		inPipelineFile string
 		mockDeployer   func(m *climocks.MockpipelineDeployer)
-		mockWorkspace  func(m *climocks.MockwsAppReader)
+		mockWorkspace  func(m *climocks.MockwsPipelineReader)
 		mockEnvStore   func(m *archermocks.MockEnvironmentStore)
 		mockProgress   func(m *climocks.Mockprogress)
 		mockPrompt     func(m *climocks.Mockprompter)
 		expectedError  error
 	}{
 		"create and deploy pipeline": {
-			inProject:      &project,
-			inProjectName:  projectName,
-			inRegion:       region,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inProjectName: projectName,
+			inRegion:      region,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -248,12 +246,11 @@ stages:
 			expectedError: nil,
 		},
 		"update and deploy pipeline": {
-			inProject:      &project,
-			inProjectName:  projectName,
-			inRegion:       region,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inProjectName: projectName,
+			inRegion:      region,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -283,12 +280,11 @@ stages:
 			expectedError: nil,
 		},
 		"do not deploy pipeline if decline to update an existing pipeline": {
-			inProject:      &project,
-			inProjectName:  projectName,
-			inRegion:       region,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inProjectName: projectName,
+			inRegion:      region,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -318,12 +314,11 @@ stages:
 			expectedError: nil,
 		},
 		"returns an error if fails to prompt for pipeline update": {
-			inProject:      &project,
-			inProjectName:  projectName,
-			inRegion:       region,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inProjectName: projectName,
+			inRegion:      region,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -346,12 +341,11 @@ stages:
 			expectedError: fmt.Errorf("prompt for pipeline update: some error"),
 		},
 		"returns an error if fail to add pipeline resources to project": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace:  func(m *climocks.MockwsAppReader) {},
-			mockEnvStore:   func(m *archermocks.MockEnvironmentStore) {},
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {},
+			mockEnvStore:  func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(1)
@@ -364,12 +358,11 @@ stages:
 			expectedError: fmt.Errorf("add pipeline resources to project %s in %s: some error", projectName, region),
 		},
 		"returns an error if fail to read pipeline file": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), errors.New("some error"))
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), errors.New("some error"))
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -381,16 +374,15 @@ stages:
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
-			expectedError: fmt.Errorf("read pipeline file %s: some error", pipelineFile),
+			expectedError: fmt.Errorf("read pipeline manifest: some error"),
 		},
 		"returns an error if unable to unmarshal pipeline file": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				content := ""
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -402,15 +394,14 @@ stages:
 				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
-			expectedError: fmt.Errorf("unmarshal pipeline file %s: pipeline.yml contains invalid schema version: 0", pipelineFile),
+			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
 		"returns an error if unable to convert environments to deployment stage": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return(nil, errors.New("some error")).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
@@ -426,12 +417,11 @@ stages:
 			expectedError: fmt.Errorf("convert environments to deployment stage: some error"),
 		},
 		"returns an error if fails to get cross-regional resources": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -451,12 +441,11 @@ stages:
 			expectedError: fmt.Errorf("get cross-regional resources: some error"),
 		},
 		"returns an error if fails to check if pipeline exists": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -477,12 +466,11 @@ stages:
 			expectedError: fmt.Errorf("check if pipeline exists: some error"),
 		},
 		"returns an error if fails to create pipeline": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -510,12 +498,11 @@ stages:
 			expectedError: fmt.Errorf("create pipeline: some error"),
 		},
 		"returns an error if fails to update pipeline": {
-			inProject:      &project,
-			inRegion:       region,
-			inProjectName:  projectName,
-			inPipelineFile: pipelineFile,
-			mockWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Return([]byte(content), nil)
+			inProject:     &project,
+			inRegion:      region,
+			inProjectName: projectName,
+			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
@@ -553,7 +540,7 @@ stages:
 
 			mockPipelineDeployer := climocks.NewMockpipelineDeployer(ctrl)
 			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
+			mockWorkspace := climocks.NewMockwsPipelineReader(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)
 			mockPrompt := climocks.NewMockprompter(ctrl)
 			tc.mockDeployer(mockPipelineDeployer)
@@ -564,7 +551,6 @@ stages:
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
-					PipelineFile: tc.inPipelineFile,
 					PipelineName: tc.inPipelineName,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,

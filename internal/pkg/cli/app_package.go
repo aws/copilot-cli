@@ -198,7 +198,7 @@ type cfnTemplates struct {
 
 // getTemplates returns the CloudFormation stack's template and its parameters.
 func (o *packageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
-	raw, err := o.ws.Read(o.AppName, workspace.ManifestFileName)
+	raw, err := o.ws.ReadAppManifest(o.AppName)
 	if err != nil {
 		return nil, err
 	}

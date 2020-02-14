@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -270,8 +269,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsWriter(ctrl)
-				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
+				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -315,8 +314,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsWriter(ctrl)
-				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
+				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -337,8 +336,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsWriter(ctrl)
-				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
+				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
@@ -410,8 +409,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsWriter(ctrl)
-				mockWriter.EXPECT().Write(gomock.Any(), opts.AppName, workspace.ManifestFileName).Return("/frontend/manifest.yml", nil)
+				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})

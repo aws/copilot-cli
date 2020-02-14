@@ -16,6 +16,7 @@
 package workspace
 
 import (
+	"encoding"
 	"errors"
 	"fmt"
 	"os"
@@ -28,17 +29,12 @@ import (
 const (
 	// ProjectDirectoryName is the name of the directory where generated infrastructure code will be stored.
 	ProjectDirectoryName = "ecs-project"
-	// PipelineFileName is the name of the pipeline manifest file.
-	PipelineFileName = "pipeline.yml"
-	// BuildspecFileName is the name of the CodeBuild build specification for the "build" stage of the pipeline.
-	BuildspecFileName = "buildspec.yml"
-	// ManifestFileName is the name of the file that describes the architecture of an application.
-	ManifestFileName = "manifest.yml"
 
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5
-	appManifestFileSuffix     = "-app.yml"
-	fmtAppManifestFileName    = "%s" + appManifestFileSuffix
+	pipelineFileName          = "pipeline.yml"
+	manifestFileName          = "manifest.yml"
+	buildspecFileName         = "buildspec.yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -134,38 +130,53 @@ func (ws *Workspace) AppNames() ([]string, error) {
 		if !f.IsDir() {
 			continue
 		}
-		names = append(names, filepath.Base(f.Name()))
+		if exists, _ := ws.fsUtils.Exists(filepath.Join(projectPath, f.Name(), manifestFileName)); !exists {
+			// Swallow the error because we don't want to include any applications that we don't have permissions to read.
+			continue
+		}
+		names = append(names, f.Name())
 	}
 	return names, nil
 }
 
-// Read returns the contents of the file under the project directory joined by path elements.
-func (ws *Workspace) Read(elem ...string) ([]byte, error) {
-	projectPath, err := ws.projectDirPath()
-	if err != nil {
-		return nil, err
-	}
-	pathElems := append([]string{projectPath}, elem...)
-	return ws.fsUtils.ReadFile(filepath.Join(pathElems...))
+// ReadAppManifest returns the contents of the application manifest under ecs-project/{appName}/manifest.yml.
+func (ws *Workspace) ReadAppManifest(appName string) ([]byte, error) {
+	return ws.read(appName, manifestFileName)
 }
 
-// Write writes the data to a file under the project directory joined by path elements.
-// If successful returns the full path of the file, otherwise returns an empty string and the error.
-func (ws *Workspace) Write(data []byte, elem ...string) (string, error) {
-	projectPath, err := ws.projectDirPath()
-	if err != nil {
-		return "", err
-	}
-	pathElems := append([]string{projectPath}, elem...)
-	filename := filepath.Join(pathElems...)
+// ReadPipelineManifest returns the contents of the pipeline manifest under ecs-project/pipeline.yml.
+func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
+	return ws.read(pipelineFileName)
+}
 
-	if err := ws.fsUtils.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
-		return "", fmt.Errorf("failed to create directories for file %s: %w", filename, err)
+// WriteAppManifest writes the application manifest under the project directory.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
+	data, err := marshaler.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal app %s manifest to binary: %w", appName, err)
 	}
-	if err := ws.fsUtils.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
-		return "", fmt.Errorf("failed to write manifest file: %w", err)
+	return ws.write(data, appName, manifestFileName)
+}
+
+// WritePipelineBuildspec writes the pipeline buildspec under the project directory.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error) {
+	data, err := marshaler.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal pipeline buildspec to binary: %w", err)
 	}
-	return filename, nil
+	return ws.write(data, buildspecFileName)
+}
+
+// WritePipelineManifest writes the pipeline manifest under the project directory.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error) {
+	data, err := marshaler.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal pipeline manifest to binary: %w", err)
+	}
+	return ws.write(data, pipelineFileName)
 }
 
 // DeleteApp removes the application directory from the project directory.
@@ -247,4 +258,33 @@ func (ws *Workspace) projectDirPath() (string, error) {
 		ManifestDirectoryName: ProjectDirectoryName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
+}
+
+// write flushes the data to a file under the project directory joined by path elements.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
+	projectPath, err := ws.projectDirPath()
+	if err != nil {
+		return "", err
+	}
+	pathElems := append([]string{projectPath}, elem...)
+	filename := filepath.Join(pathElems...)
+
+	if err := ws.fsUtils.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
+		return "", fmt.Errorf("failed to create directories for file %s: %w", filename, err)
+	}
+	if err := ws.fsUtils.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
+		return "", fmt.Errorf("failed to write manifest file: %w", err)
+	}
+	return filename, nil
+}
+
+// read returns the contents of the file under the project directory joined by path elements.
+func (ws *Workspace) read(elem ...string) ([]byte, error) {
+	projectPath, err := ws.projectDirPath()
+	if err != nil {
+		return nil, err
+	}
+	pathElems := append([]string{projectPath}, elem...)
+	return ws.fsUtils.ReadFile(filepath.Join(pathElems...))
 }

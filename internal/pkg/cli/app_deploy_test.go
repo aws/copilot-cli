@@ -301,7 +301,7 @@ image:
 				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().Read("appA").Times(1).Return(nil, mockError),
+					mockWorkspace.EXPECT().ReadAppManifest("appA").Times(1).Return(nil, mockError),
 				)
 			},
 			wantPath: "",
@@ -313,7 +313,7 @@ image:
 				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().Read("appA").Times(1).Return(mockManifest, nil),
+					mockWorkspace.EXPECT().ReadAppManifest("appA").Times(1).Return(mockManifest, nil),
 				)
 			},
 			wantPath: "appA",

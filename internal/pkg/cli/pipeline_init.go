@@ -65,11 +65,21 @@ type initPipelineVars struct {
 	*GlobalOpts
 }
 
+// binaryBuffer is a bytes.Buffer that implements the encoding.BinaryMarshaler interface.
+type binaryBuffer struct {
+	*bytes.Buffer
+}
+
+// MarshalBinary returns the bytes of the underlying buffer.
+func (b binaryBuffer) MarshalBinary() ([]byte, error) {
+	return b.Bytes(), nil
+}
+
 type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      wsWriter
+	workspace      wsPipelineWriter
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 	runner         runner
@@ -252,13 +262,9 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
 
-	manifestBytes, err := manifest.MarshalBinary()
+	manifestPath, err := o.workspace.WritePipelineManifest(manifest)
 	if err != nil {
-		return "", fmt.Errorf("marshal manifest: %w", err)
-	}
-	manifestPath, err := o.workspace.Write(manifestBytes, workspace.PipelineFileName)
-	if err != nil {
-		return "", fmt.Errorf("write file %s to workspace: %w", workspace.PipelineFileName, err)
+		return "", err
 	}
 
 	return manifestPath, nil
@@ -283,9 +289,10 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		return "", err
 	}
 
-	path, err := o.workspace.Write(buf.Bytes(), workspace.BuildspecFileName)
+	// TODO remove binaryBuffer after https://github.com/aws/amazon-ecs-cli-v2/issues/661
+	path, err := o.workspace.WritePipelineBuildspec(binaryBuffer{Buffer: &buf})
 	if err != nil {
-		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
+		return "", fmt.Errorf("write buildspec to workspace: %w", err)
 	}
 	return path, nil
 }

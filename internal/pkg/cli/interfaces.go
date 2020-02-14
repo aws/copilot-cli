@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"encoding"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
@@ -92,12 +94,21 @@ type storeReader interface {
 	archer.ApplicationGetter
 }
 
-type wsWriter interface {
-	Write(data []byte, elem ...string) (string, error)
+type wsAppManifestReader interface {
+	ReadAppManifest(appName string) ([]byte, error)
 }
 
-type wsReader interface {
-	Read(elem ...string) ([]byte, error)
+type wsAppManifestWriter interface {
+	WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
+}
+
+type wsPipelineManifestReader interface {
+	ReadPipelineManifest() ([]byte, error)
+}
+
+type wsPipelineWriter interface {
+	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler) (string, error)
+	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
 type wsAppDeleter interface {
@@ -106,7 +117,12 @@ type wsAppDeleter interface {
 
 type wsAppReader interface {
 	AppNames() ([]string, error)
-	wsReader
+	wsAppManifestReader
+}
+
+type wsPipelineReader interface {
+	AppNames() ([]string, error)
+	wsPipelineManifestReader
 }
 
 type wsProjectManager interface {

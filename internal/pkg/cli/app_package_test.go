@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -379,7 +378,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				})
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read(gomock.Any()).Times(0)
+				m.EXPECT().ReadAppManifest(gomock.Any()).Times(0)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
@@ -400,7 +399,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return(nil, mockErr)
+				m.EXPECT().ReadAppManifest("frontend").Return(nil, mockErr)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
@@ -418,7 +417,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte("somecontent"), nil)
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte("somecontent"), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
 
@@ -437,7 +436,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				m.EXPECT().GetProject("phonetool").Return(nil, &store.ErrNoSuchProject{ProjectName: "phonetool"})
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {},
@@ -462,7 +461,7 @@ type: Load Balanced Web App`), nil)
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -491,7 +490,7 @@ type: Load Balanced Web App`), nil)
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App`), nil)
 			},
 			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
@@ -527,7 +526,7 @@ type: Load Balanced Web App`), nil)
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App
 image:
   build: frontend/Dockerfile
@@ -566,7 +565,7 @@ count: 1`), nil)
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App
 image:
   build: frontend/Dockerfile
@@ -605,7 +604,7 @@ count: 1`), nil)
 				}, nil)
 			},
 			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().Read("frontend", workspace.ManifestFileName).Return([]byte(`name: frontend
+				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
 type: Load Balanced Web App
 image:
   build: frontend/Dockerfile

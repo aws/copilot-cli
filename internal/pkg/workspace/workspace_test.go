@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestManifestDirectoryPath(t *testing.T) {
+func TestWorkspace_projectDirPath(t *testing.T) {
 	// turn "test/ecs-project" into a platform-dependent path
 	var manifestDir = filepath.FromSlash("test/ecs-project")
 
@@ -97,7 +97,7 @@ func TestManifestDirectoryPath(t *testing.T) {
 	}
 }
 
-func TestReadSummary(t *testing.T) {
+func TestWorkspace_Summary(t *testing.T) {
 	testCases := map[string]struct {
 		expectedSummary Summary
 		workingDir      string
@@ -147,7 +147,7 @@ func TestReadSummary(t *testing.T) {
 	}
 }
 
-func TestCreate(t *testing.T) {
+func TestWorkspace_Create(t *testing.T) {
 	testCases := map[string]struct {
 		projectName    string
 		workingDir     string
@@ -261,14 +261,23 @@ func TestWorkspace_AppNames(t *testing.T) {
 			},
 			wantedErr: errors.New("read directory /ecs-project: open /ecs-project: file does not exist"),
 		},
-		"retrieve only directories": {
+		"retrieve only directories with manifest files": {
 			projectDir: "/ecs-project",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				fs.Mkdir("/ecs-project", 0755)
 				fs.Create("/ecs-project/buildspec.yml")
+
+				// Valid app directory structure.
 				fs.Mkdir("/ecs-project/users", 0755)
+				fs.Create("/ecs-project/users/manifest.yml")
+
+				// Valid app directory structure.
 				fs.MkdirAll("/ecs-project/payments/addons", 0755)
+				fs.Create("/ecs-project/payments/manifest.yml")
+
+				// Missing manifest.yml.
+				fs.Mkdir("/ecs-project/inventory", 0755)
 				return fs
 			},
 			wantedNames: []string{"users", "payments"},
@@ -329,7 +338,7 @@ func TestWorkspace_Read(t *testing.T) {
 				},
 			}
 
-			data, err := ws.Read(tc.elems...)
+			data, err := ws.read(tc.elems...)
 
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedData, data)
@@ -349,7 +358,7 @@ func TestWorkspace_Write(t *testing.T) {
 			wantedPath: "/ecs-project/webhook/addons/policy.yml",
 		},
 		"create file under project directory": {
-			elems:      []string{PipelineFileName},
+			elems:      []string{pipelineFileName},
 			wantedPath: "/ecs-project/pipeline.yml",
 		},
 	}
@@ -368,7 +377,7 @@ func TestWorkspace_Write(t *testing.T) {
 			}
 
 			// WHEN
-			actualPath, actualErr := ws.Write(nil, tc.elems...)
+			actualPath, actualErr := ws.write(nil, tc.elems...)
 
 			// THEN
 			if tc.wantedErr != nil {
