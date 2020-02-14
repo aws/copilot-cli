@@ -24,6 +24,7 @@ const (
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
+	envProfilesFlag       = "env-profiles"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -84,4 +85,5 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	resourcesFlagDescription         = "Optional. Show the resources of your application."
 	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
 	localAppFlagDescription          = "Only show applications in the current directory."
+	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 )

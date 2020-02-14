@@ -14,9 +14,9 @@ import (
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -180,6 +180,8 @@ func (o *initPipelineOpts) Execute() error {
 			return err
 		}
 		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.GitHubRepo))
+	} else {
+		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
 	}
 	o.secretName = secretName
 
@@ -429,6 +431,7 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 	if err != nil {
 		return fmt.Errorf("get GitHub access token: %w", err)
 	}
+	// TODO use existing secret (pass in name or ARN?)
 
 	o.GitHubAccessToken = token
 

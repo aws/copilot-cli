@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	archermocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/gobuffalo/packd"
