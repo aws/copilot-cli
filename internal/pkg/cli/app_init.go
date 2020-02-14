@@ -59,6 +59,9 @@ type initAppOpts struct {
 	projDeployer projectDeployer
 	prog         progress
 
+	// Caches variables
+	proj *archer.Project
+
 	// Outputs stored on successful actions.
 	manifestPath string
 }
@@ -135,6 +138,12 @@ func (o *initAppOpts) Execute() error {
 		return err
 	}
 
+	proj, err := o.projGetter.GetProject(o.ProjectName())
+	if err != nil {
+		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+	}
+	o.proj = proj
+
 	manifestPath, err := o.createManifest()
 	if err != nil {
 		return err
@@ -146,12 +155,8 @@ func (o *initAppOpts) Execute() error {
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
-	proj, err := o.projGetter.GetProject(o.ProjectName())
-	if err != nil {
-		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
-	}
 	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
-	if err := o.projDeployer.AddAppToProject(proj, o.AppName); err != nil {
+	if err := o.projDeployer.AddAppToProject(o.proj, o.AppName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
 		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
 	}
@@ -161,10 +166,14 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
-	manifest, err := manifest.CreateApp(o.AppName, o.AppType, o.DockerfilePath)
-	if err != nil {
-		return "", fmt.Errorf("generate a manifest: %w", err)
+	props := &manifest.LBFargateManifestProps{
+		AppManifestProps: &manifest.AppManifestProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
 	}
+	props.Path = o.AppName
+	manifest := manifest.NewLoadBalancedFargateManifest(props)
 	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
 	if err != nil {
 		return "", err

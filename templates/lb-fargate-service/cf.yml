@@ -385,7 +385,8 @@ Resources:
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:
-            - !Ref RulePath
+            - !Sub "/${RulePath}"
+            - !Sub "/${RulePath}/*"
       ListenerArn:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"

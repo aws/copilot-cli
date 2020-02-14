@@ -9,47 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName    string
-		inAppType    string
-		inDockerfile string
-
-		requireCorrectType func(t *testing.T, i interface{})
-		wantedErr          error
-	}{
-		"load balanced web application": {
-			inAppName:    "ChickenApp",
-			inAppType:    LoadBalancedWebApplication,
-			inDockerfile: "ChickenApp/Dockerfile",
-
-			requireCorrectType: func(t *testing.T, i interface{}) {
-				_, ok := i.(*LBFargateManifest)
-				require.True(t, ok)
-			},
-		},
-		"invalid app type": {
-			inAppName:    "CowApp",
-			inAppType:    "Cow App",
-			inDockerfile: "CowApp/Dockerfile",
-
-			wantedErr: &ErrInvalidAppManifestType{Type: "Cow App"},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			m, err := CreateApp(tc.inAppName, tc.inAppType, tc.inDockerfile)
-
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				tc.requireCorrectType(t, m)
-			}
-		})
-	}
-}
-
 func TestUnmarshalApp(t *testing.T) {
 	testCases := map[string]struct {
 		inContent string

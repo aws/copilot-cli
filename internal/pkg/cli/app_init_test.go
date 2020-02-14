@@ -19,6 +19,76 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestAppInitOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inAppType        string
+		inAppName        string
+		inDockerfilePath string
+		inProjectName    string
+
+		mockFileSystem func(mockFS afero.Fs)
+		wantedErr      error
+	}{
+		"invalid app type": {
+			inProjectName: "phonetool",
+			inAppType:     "TestAppType",
+			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App"`),
+		},
+		"invalid app name": {
+			inProjectName: "phonetool",
+			inAppName:     "1234",
+			wantedErr:     fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
+		},
+		"invalid dockerfile directory path": {
+			inProjectName:    "phonetool",
+			inDockerfilePath: "./hello/Dockerfile",
+			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
+		},
+		"invalid project name": {
+			inProjectName: "",
+			wantedErr:     errNoProjectInWorkspace,
+		},
+		"valid flags": {
+			inAppName:        "frontend",
+			inAppType:        "Load Balanced Web App",
+			inDockerfilePath: "./hello/Dockerfile",
+			inProjectName:    "phonetool",
+
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("hello", 0755)
+				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+			},
+			wantedErr: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			opts := initAppOpts{
+				initAppVars: initAppVars{
+					AppType:        tc.inAppType,
+					AppName:        tc.inAppName,
+					DockerfilePath: tc.inDockerfilePath,
+					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+				},
+				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+			}
+			if tc.mockFileSystem != nil {
+				tc.mockFileSystem(opts.fs)
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
 func TestAppInitOpts_Ask(t *testing.T) {
 	const (
 		wantedAppType        = manifest.LoadBalancedWebApplication
@@ -181,78 +251,6 @@ func TestAppInitOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestAppInitOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppType        string
-		inAppName        string
-		inDockerfilePath string
-		inProjectName    string
-
-		mockFileSystem func(mockFS afero.Fs)
-		wantedErr      error
-	}{
-		"invalid app type": {
-			inProjectName: "phonetool",
-			inAppType:     "TestAppType",
-			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App"`),
-		},
-		"invalid app name": {
-			inProjectName: "phonetool",
-			inAppName:     "1234",
-			wantedErr:     fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
-		},
-		"invalid dockerfile directory path": {
-			inProjectName:    "phonetool",
-			inDockerfilePath: "./hello/Dockerfile",
-			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
-		},
-		"invalid project name": {
-			inProjectName: "",
-			wantedErr:     errNoProjectInWorkspace,
-		},
-		"valid flags": {
-			inAppName:        "frontend",
-			inAppType:        "Load Balanced Web App",
-			inDockerfilePath: "./hello/Dockerfile",
-			inProjectName:    "phonetool",
-
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("hello", 0755)
-				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			wantedErr: nil,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := initAppOpts{
-				initAppVars: initAppVars{
-					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
-				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
-			}
-			if tc.mockFileSystem != nil {
-				tc.mockFileSystem(opts.fs)
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.Nil(t, err)
-			}
-		})
-	}
-}
-
 func TestAppInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inAppType        string
@@ -315,7 +313,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})

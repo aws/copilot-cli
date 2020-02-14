@@ -29,7 +29,7 @@ image:
 
 http:
   # Requests to this path will be forwarded to your service.
-  path: '*'
+  path: 'frontend'
 
 # Number of CPU units for the task.
 cpu: 256
@@ -58,7 +58,13 @@ count: 1
 #  test:
 #    count: 2               # Number of tasks to run for the "test" environment.
 `
-	m := NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile")
+	m := NewLoadBalancedFargateManifest(&LBFargateManifestProps{
+		AppManifestProps: &AppManifestProps{
+			AppName:    "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+	})
 
 	// WHEN
 	b, err := m.MarshalBinary()
