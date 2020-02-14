@@ -140,6 +140,7 @@ type deletePipelineMocks struct {
 	prog           *climocks.Mockprogress
 	secretsmanager *awsmocks.MockSecretsManager
 	deployer       *climocks.MockpipelineDeployer
+	ws             *climocks.MockwsPipelineDeleter
 }
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
@@ -169,6 +170,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
 					mocks.deployer.EXPECT().DeletePipeline(stackName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -190,6 +192,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
 					mocks.deployer.EXPECT().DeletePipeline(stackName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -213,6 +216,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
 					mocks.deployer.EXPECT().DeletePipeline(stackName).Times(1).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -230,6 +234,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
 					mocks.deployer.EXPECT().DeletePipeline(stackName).Times(1).Return(testError),
 					mocks.prog.EXPECT().Stop(log.Serrorf(fmtDeletePipelineFailed, testPipelineName, testProjName, testError)),
+					mocks.ws.EXPECT().DeletePipelineManifest().Times(0),
 				)
 			},
 			wantedError: testError,
@@ -246,12 +251,14 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			mockProg := climocks.NewMockprogress(ctrl)
 			mockDeployer := climocks.NewMockpipelineDeployer(ctrl)
 			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,
 				prog:           mockProg,
 				secretsmanager: mockSecretsManager,
 				deployer:       mockDeployer,
+				ws:             mockWorkspace,
 			}
 
 			tc.setupMocks(mocks)
@@ -268,6 +275,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				PipelineSecret:   tc.inPipelineSecret,
 				secretsmanager:   mockSecretsManager,
 				pipelineDeployer: mockDeployer,
+				ws:               mockWorkspace,
 				prog:             mockProg,
 			}
 

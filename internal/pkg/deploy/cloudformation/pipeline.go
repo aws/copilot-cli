@@ -68,13 +68,5 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 }
 
 func (cf CloudFormation) DeletePipeline(stackName string) error {
-	// Check if the stack exists
-	out, err := cf.describeStack(&cloudformation.DescribeStacksInput{
-		StackName: aws.String(stackName),
-	})
-	if err != nil {
-		return err
-	}
-
-	return cf.delete(*out.StackId)
+	return cf.delete(stackName)
 }

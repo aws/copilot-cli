@@ -8,10 +8,10 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -52,7 +52,7 @@ type deletePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	prog             progress
 	secretsmanager   archer.SecretsManager
-	ws               archer.Workspace
+	ws               wsPipelineDeleter
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -61,14 +61,14 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	data, err := ws.ReadFile(workspace.PipelineFileName)
+	data, err := ws.ReadPipelineManifest()
 	if err != nil {
-		return nil, fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
+		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
 
 	pipeline, err := manifest.UnmarshalPipeline(data)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
+		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 
 	secretsmanager, err := secretsmanager.NewStore()
@@ -141,10 +141,9 @@ func (o *deletePipelineOpts) Execute() error {
 		return err
 	}
 
-	// TODO
-	// if err := o.deletePipelineFile(); err != nil {
-	// 	return err
-	// }
+	if err := o.deletePipelineFile(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -188,29 +187,19 @@ func (o *deletePipelineOpts) deleteStack() error {
 	}
 
 	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.ProjectName()))
+
 	return nil
 }
 
 func (o *deletePipelineOpts) deletePipelineFile() error {
-	// TODO refactor to use workspace.DeleteFile
-	// manifestPath, err := o.ws.manifestDirectoryPath()
-	// path := filepath.Join(manifestPath, workspace.PipelineFileName)
-	// manifestFileExists, err := o.ws.fsUtils.Exists(manifestPath)
+	err := o.ws.DeletePipelineManifest()
+	if err == nil {
+		log.Successf("Deleted pipeline manifest from workspace.")
+	}
 
-	// if err != nil {
-	// 	return fmt.Errorf("delete pipeline file %s: %w", workspace.PipelineFileName, err)
-	// }
-
-	// if !manifestFileExists {
-	// 	return nil
-	// }
-
-	// return o.ws.fsUtils.Remove(manifestPath)
-
-	// log.Ssuccessf("Deleted pipeline file %s from workspace.", workspace.PipelineFileName)
-
-	return nil
+	return err
 }
+
 // RecommendedActions is a no-op for this command.
 func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil

@@ -120,6 +120,11 @@ type wsAppReader interface {
 	wsAppManifestReader
 }
 
+type wsPipelineDeleter interface {
+	DeletePipelineManifest() error
+	wsPipelineManifestReader
+}
+
 type wsPipelineReader interface {
 	AppNames() ([]string, error)
 	wsPipelineManifestReader
