@@ -151,10 +151,6 @@ func (o *appDeployOpts) Execute() error {
 
 	o.dockerService.Login(uri, auth.Username, auth.Password)
 
-	if err != nil {
-		return err
-	}
-
 	if err = o.dockerService.Push(uri, o.ImageTag); err != nil {
 		return err
 	}

@@ -35,15 +35,10 @@ type AppImage struct {
 	Build string `yaml:"build"` // Path to the Dockerfile.
 }
 
-// CreateApp returns a manifest object based on the application's type.
-// If the application type is invalid, then returns an ErrInvalidManifestType.
-func CreateApp(appName, appType, dockerfile string) (archer.Manifest, error) {
-	switch appType {
-	case LoadBalancedWebApplication:
-		return NewLoadBalancedFargateManifest(appName, dockerfile), nil
-	default:
-		return nil, &ErrInvalidAppManifestType{Type: appType}
-	}
+// AppManifestProps contains properties for creating a new manifest.
+type AppManifestProps struct {
+	AppName    string
+	Dockerfile string
 }
 
 // UnmarshalApp deserializes the YAML input stream into a manifest object.

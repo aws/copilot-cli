@@ -97,7 +97,13 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		},
 		"render default template": {
 			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+					AppManifestProps: &manifest.AppManifestProps{
+						AppName:    "frontend",
+						Dockerfile: "frontend/Dockerfile",
+					},
+					Path: "frontend",
+				}),
 				Env: &archer.Environment{
 					Project:   "phonetool",
 					Name:      "test",
@@ -128,7 +134,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
   AppName: frontend
   ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c
   ContainerPort: 80
-  RulePath: '*'
+  RulePath: 'frontend'
   TaskCPU: '256'
   TaskMemory: '512'
   TaskCount: 1`,
@@ -176,7 +182,13 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 			// GIVEN
 			conf := &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+						AppManifestProps: &manifest.AppManifestProps{
+							AppName:    "frontend",
+							Dockerfile: "frontend/Dockerfile",
+						},
+						Path: "frontend",
+					}),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -217,7 +229,7 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBFargateRulePathKey),
-					ParameterValue: aws.String("*"),
+					ParameterValue: aws.String("frontend"),
 				},
 				{
 					ParameterKey:   aws.String(LBFargateTaskCPUKey),
@@ -261,7 +273,13 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		"render params template": {
 			in: &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+						AppManifestProps: &manifest.AppManifestProps{
+							AppName:    "frontend",
+							Dockerfile: "frontend/Dockerfile",
+						},
+						Path: "frontend",
+					}),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -298,7 +316,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "frontend",
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
-    "RulePath": "*",
+    "RulePath": "frontend",
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "1",
@@ -309,7 +327,13 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		"render params template for https": {
 			in: &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+						AppManifestProps: &manifest.AppManifestProps{
+							AppName:    "frontend",
+							Dockerfile: "frontend/Dockerfile",
+						},
+						Path: "frontend",
+					}),
 					Env: &archer.Environment{
 						Project:   "phonetool",
 						Name:      "test",
@@ -345,7 +369,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
     "AppName": "frontend",
     "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
     "ContainerPort": "80",
-    "RulePath": "*",
+    "RulePath": "frontend",
     "TaskCPU": "256",
     "TaskMemory": "512",
     "TaskCount": "1",
@@ -376,7 +400,13 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	// GIVEN
 	conf := &LBFargateStackConfig{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-			App: manifest.NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile"),
+			App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+				AppManifestProps: &manifest.AppManifestProps{
+					AppName:    "frontend",
+					Dockerfile: "frontend/Dockerfile",
+				},
+				Path: "frontend",
+			}),
 			Env: &archer.Environment{
 				Project:   "phonetool",
 				Name:      "test",
