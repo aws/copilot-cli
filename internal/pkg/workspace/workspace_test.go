@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package workspace
@@ -510,6 +510,66 @@ func TestWorkspace_DeletePipeline(t *testing.T) {
 					Err:  os.ErrNotExist,
 				}
 				require.EqualError(t, existErr, expectedErr.Error())
+			}
+		})
+	}
+}
+
+func TestWorkspace_ListAddonsFiles(t *testing.T) {
+	testCases := map[string]struct {
+		appName    string
+		projectDir string
+		fs         func() afero.Fs
+
+		wanted    []string
+		wantedErr error
+	}{
+		"list all files": {
+			appName: "webhook",
+
+			projectDir: "/ecs-project",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
+				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
+				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
+				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
+				other, _ := fs.Create("/ecs-project/webhook/addons/other")
+				defer params.Close()
+				defer policy.Close()
+				defer outputs.Close()
+				defer other.Close()
+				params.Write([]byte("params"))
+				policy.Write([]byte("policy"))
+				outputs.Write([]byte("outputs"))
+				other.Write([]byte("other"))
+				return fs
+			},
+
+			wanted:    []string{"params.yml", "policy.yml", "outputs.yml"},
+			wantedErr: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				projectDir: tc.projectDir,
+				fsUtils: &afero.Afero{
+					Fs: fs,
+				},
+			}
+
+			// WHEN
+			actual, actualErr := ws.ListAddonsFiles(tc.appName)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.ElementsMatch(t, tc.wanted, actual, "expected the same file names")
 			}
 		})
 	}

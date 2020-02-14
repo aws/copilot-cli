@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package workspace contains functionality to manage a user's local workspace. This includes
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -29,7 +30,10 @@ import (
 const (
 	// ProjectDirectoryName is the name of the directory where generated infrastructure code will be stored.
 	ProjectDirectoryName = "ecs-project"
+	// AddonsFileSuffix is the suffix of the addons files.
+	AddonsFileSuffix = ".yml"
 
+	addonsDirName             = "addons"
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5
 	pipelineFileName          = "pipeline.yml"
@@ -201,6 +205,31 @@ func (ws *Workspace) DeleteApp(name string) error {
 // DeleteAll removes the local project directory.
 func (ws *Workspace) DeleteAll() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
+}
+
+// ReadAddonsFile returns the contents of the addon file of an application.
+func (ws *Workspace) ReadAddonsFile(appName, fileName string) ([]byte, error) {
+	return ws.read(appName, addonsDirName, fileName)
+}
+
+// ListAddonsFiles lists addons file names for an application.
+func (ws *Workspace) ListAddonsFiles(appName string) ([]string, error) {
+	projectDir, err := ws.projectDirPath()
+	if err != nil {
+		return nil, err
+	}
+	addonsFiles, err := ws.fsUtils.ReadDir(filepath.Join(projectDir, appName, addonsDirName))
+	if err != nil {
+		return nil, err
+	}
+	var addonsFileNames []string
+	for _, file := range addonsFiles {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), AddonsFileSuffix) {
+			addonsFileNames = append(addonsFileNames, file.Name())
+		}
+	}
+
+	return addonsFileNames, nil
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {
