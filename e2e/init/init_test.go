@@ -17,7 +17,7 @@ var _ = Describe("init flow", func() {
 	)
 
 	BeforeAll(func() {
-		appName = "api"
+		appName = "front-end"
 		_, initErr = cli.Init(&client.InitRequest{
 			ProjectName: projectName,
 			AppName:     appName,
@@ -81,8 +81,8 @@ var _ = Describe("init flow", func() {
 		It("should return a valid route", func() {
 			Expect(len(app.Routes)).To(Equal(1))
 			Expect(app.Routes[0].Environment).To(Equal("test"))
-			Expect(app.Routes[0].Path).To(Equal("*"))
-			resp, fetchErr := http.Get(fmt.Sprintf("http://%s", app.Routes[0].URL))
+			Expect(app.Routes[0].Path).To(Equal(appName))
+			resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/", app.Routes[0].URL, app.Routes[0].Path))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 		})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/onsi/ginkgo"
@@ -69,7 +70,11 @@ type AppDeployInput struct {
 
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
-	cliPath := "/bin/ecs-preview"
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get wd: %w", err)
+	}
+	cliPath := filepath.Join(wd, "..", "..", "bin", "local", "ecs-preview")
 	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
 	}

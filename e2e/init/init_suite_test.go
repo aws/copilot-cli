@@ -31,7 +31,7 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete("api")
+	_, err := cli.AppDelete("front-end")
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = cli.EnvDelete("test", "default")
