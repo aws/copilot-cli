@@ -40,7 +40,7 @@ type deleteAppOpts struct {
 
 	// Interfaces to dependencies.
 	projectService   projectService
-	workspaceService archer.Workspace
+	workspaceService wsAppDeleter
 	sessProvider     sessionProvider
 	spinner          progress
 
@@ -262,9 +262,8 @@ func (o *deleteAppOpts) deleteSSMParam() error {
 }
 
 func (o *deleteAppOpts) deleteWorkspaceFile() error {
-	// Return if manifest does not exist.
-	if err := o.workspaceService.DeleteFile(o.AppName); err != nil {
-		return fmt.Errorf("delete app file %s: %w", o.AppName, err)
+	if err := o.workspaceService.DeleteApp(o.AppName); err != nil {
+		return fmt.Errorf("delete application %s directory: %w", o.AppName, err)
 	}
 
 	return nil

@@ -82,8 +82,8 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 	}
 }
 
-// Marshal serializes the manifest object into a YAML document.
-func (m *LBFargateManifest) Marshal() ([]byte, error) {
+// MarshalBinary serializes the manifest object into a binary YAML document.
+func (m *LBFargateManifest) MarshalBinary() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("lb-fargate-service/manifest.yml")
 	if err != nil {

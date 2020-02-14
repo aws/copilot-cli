@@ -39,10 +39,7 @@ const (
 	fmtUpdateEnvPrompt = "Are you sure you want to update an existing pipeline: %s?"
 )
 
-var errNoPipelineFile = errors.New("there was no pipeline manifest found in your workspace. Please run `ecs-preview pipeline init` to create an pipeline")
-
 type updatePipelineVars struct {
-	PipelineFile     string
 	PipelineName     string
 	SkipConfirmation bool
 	*GlobalOpts
@@ -56,7 +53,7 @@ type updatePipelineOpts struct {
 	prog             progress
 	region           string
 	envStore         archer.EnvironmentStore
-	ws               archer.Workspace
+	ws               wsPipelineReader
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
@@ -94,23 +91,14 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *updatePipelineOpts) Validate() error {
-	if o.PipelineFile == "" {
-		return errNoPipelineFile
-	}
-
 	return nil
 }
 
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	apps, err := o.ws.Apps()
+	appNames, err := o.ws.AppNames()
 	if err != nil {
 		return nil, err
-	}
-	// TODO: Will fast follow with another PR to actually support #443
-	appNames := make([]string, 0, len(apps))
-	for _, app := range apps {
-		appNames = append(appNames, app.AppName())
 	}
 
 	for _, stage := range manifestStages {
@@ -211,13 +199,13 @@ func (o *updatePipelineOpts) Execute() error {
 	o.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(o.ProjectName())))
 
 	// read pipeline manifest
-	data, err := o.ws.ReadFile(workspace.PipelineFileName)
+	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
-		return fmt.Errorf("read pipeline file %s: %w", workspace.PipelineFileName, err)
+		return fmt.Errorf("read pipeline manifest: %w", err)
 	}
 	pipeline, err := manifest.UnmarshalPipeline(data)
 	if err != nil {
-		return fmt.Errorf("unmarshal pipeline file %s: %w", workspace.PipelineFileName, err)
+		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 	o.PipelineName = pipeline.Name
 	source := &deploy.Source{
@@ -275,7 +263,6 @@ func BuildPipelineUpdateCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.PipelineFile, pipelineFileFlag, pipelineFileFlagShort, workspace.PipelineFileName, pipelineFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd

@@ -45,7 +45,7 @@ type deleteProjOpts struct {
 }
 
 type workspaceDeleter interface {
-	Delete() error
+	DeleteAll() error
 }
 
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
@@ -128,7 +128,7 @@ func (o *deleteProjOpts) Execute() error {
 	o.spinner.Stop(log.Ssuccess("Deleted project parameters."))
 
 	o.spinner.Start("Deleting local workspace folder.")
-	if err := o.ws.Delete(); err != nil {
+	if err := o.ws.DeleteAll(); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
 
 		return fmt.Errorf("delete workspace: %w", err)

@@ -61,7 +61,7 @@ count: 1
 	m := NewLoadBalancedFargateManifest("frontend", "frontend/Dockerfile")
 
 	// WHEN
-	b, err := m.Marshal()
+	b, err := m.MarshalBinary()
 
 	// THEN
 	require.NoError(t, err)

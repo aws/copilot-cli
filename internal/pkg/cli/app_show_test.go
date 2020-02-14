@@ -12,8 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -105,7 +103,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 		mockStoreReader func(m *climocks.MockstoreReader)
 		mockPrompt      func(m *climocks.Mockprompter)
-		mockWorkspace   func(m *mocks.MockWorkspace)
+		mockWorkspace   func(m *climocks.MockwsAppReader)
 
 		wantedProject string
 		wantedApp     string
@@ -119,7 +117,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {},
+			mockWorkspace: func(m *climocks.MockwsAppReader) {},
 
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
@@ -149,8 +147,8 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -181,8 +179,8 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{}, nil)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{}, nil)
 			},
 
 			wantedProject: "my-project",
@@ -205,19 +203,8 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return([]archer.Manifest{
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "my-app",
-						},
-					},
-					&manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
-							Name: "archer-app",
-						},
-					},
-				}, nil)
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return([]string{"my-app", "archer-app"}, nil)
 			},
 
 			wantedProject: "my-project",
@@ -238,8 +225,8 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -256,7 +243,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {},
+			mockWorkspace: func(m *climocks.MockwsAppReader) {},
 
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
@@ -272,7 +259,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {},
+			mockWorkspace: func(m *climocks.MockwsAppReader) {},
 
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
@@ -293,7 +280,7 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {},
+			mockWorkspace: func(m *climocks.MockwsAppReader) {},
 
 			wantedProject: "my-project",
 			wantedApp:     "my-app",
@@ -315,8 +302,8 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -347,8 +334,8 @@ func TestAppShow_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1)
 			},
 
-			mockWorkspace: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Apps().Return(nil, errors.New("some error"))
+			mockWorkspace: func(m *climocks.MockwsAppReader) {
+				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -364,7 +351,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockWorkspace := mocks.NewMockWorkspace(ctrl)
+			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
 			tc.mockPrompt(mockPrompter)
 			tc.mockStoreReader(mockStoreReader)
 			tc.mockWorkspace(mockWorkspace)

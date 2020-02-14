@@ -33,7 +33,6 @@ const (
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
-	pipelineFileFlag      = "file"
 	localAppFlag          = "local"
 )
 
@@ -51,7 +50,6 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
-	pipelineFileFlagShort      = "f"
 )
 
 // Descriptions for flags.
@@ -83,7 +81,6 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	resourcesFlagDescription         = "Optional. Show the resources of your application."
-	pipelineFileFlagDescription      = "Name of YAML file used to update the pipeline."
 	localAppFlagDescription          = "Only show applications in the current directory."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 )

@@ -123,9 +123,9 @@ func CreatePipeline(pipelineName string, provider Provider, stageNames []string)
 	}, nil
 }
 
-// Marshal serializes the pipeline manifest object into byte array that
+// MarshalBinary serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
-func (m *PipelineManifest) Marshal() ([]byte, error) {
+func (m *PipelineManifest) MarshalBinary() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("cicd/pipeline.yml")
 	if err != nil {

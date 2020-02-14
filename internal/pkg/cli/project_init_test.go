@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		"override flag from project name if summary exists": {
 			inProjectName: "testname",
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(&archer.WorkspaceSummary{ProjectName: "metrics"}, nil)
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(&workspace.Summary{ProjectName: "metrics"}, nil)
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
 			wantedProjectName: "metrics",
@@ -38,14 +39,14 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		"use flag if there is no summary": {
 			inProjectName: "metrics",
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Times(0)
 			},
 			wantedProjectName: "metrics",
 		},
 		"return error from new project name": {
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -55,7 +56,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		},
 		"enter new project name if no existing projects": {
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
 				opts.prompt.(*climocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -65,7 +66,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		},
 		"return error from project selection": {
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
 						Name: "metrics",
@@ -81,7 +82,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		},
 		"use existing projects": {
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
 						Name: "metrics",
@@ -97,7 +98,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		},
 		"enter new project name if user opts out of selection": {
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockWorkspace).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListProjects().Return([]*archer.Project{
 					{
 						Name: "metrics",
@@ -125,7 +126,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 					ProjectName: tc.inProjectName,
 				},
 				projectStore: mocks.NewMockProjectStore(ctrl),
-				ws:           mocks.NewMockWorkspace(ctrl),
+				ws:           climocks.NewMockwsProjectManager(ctrl),
 				prompt:       climocks.NewMockprompter(ctrl),
 			}
 			tc.expect(opts)
@@ -185,14 +186,14 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		expectedError error
 		mocking       func(t *testing.T,
-			mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 			mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 			mockProgress *climocks.Mockprogress)
 	}{
 		"with a succesfull call to add project": {
 			inDomainName: "amazon.com",
 
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
@@ -223,7 +224,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 		},
 		"with an error while deploying project": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
@@ -251,7 +252,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			},
 		},
 		"should ignore ErrProjectAlreadyExists from CreateProject": {
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
@@ -282,7 +283,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		"should return error from CreateProject": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
@@ -306,7 +307,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		"should return error from workspace.Create": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *mocks.MockWorkspace,
+			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
 				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
 				mockProgress *climocks.Mockprogress) {
 				mockIdentityService.
@@ -334,7 +335,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockProjectStore := mocks.NewMockProjectStore(ctrl)
-			mockWorkspace := mocks.NewMockWorkspace(ctrl)
+			mockWorkspace := climocks.NewMockwsProjectManager(ctrl)
 			mockIdentityService := climocks.NewMockidentityService(ctrl)
 			mockDeployer := climocks.NewMockprojectDeployer(ctrl)
 			mockProgress := climocks.NewMockprogress(ctrl)

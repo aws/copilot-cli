@@ -105,12 +105,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			DockerfilePath: vars.dockerfilePath,
 			GlobalOpts:     NewGlobalOpts(),
 		},
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		manifestWriter: ws,
-		appStore:       ssm,
-		projGetter:     ssm,
-		projDeployer:   deployer,
-		prog:           spin,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		ws:           ws,
+		appStore:     ssm,
+		projGetter:   ssm,
+		projDeployer: deployer,
+		prog:         spin,
 	}
 	initEnv := &initEnvOpts{
 		initEnvVars: initEnvVars{
