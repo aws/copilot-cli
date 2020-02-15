@@ -4,17 +4,14 @@
 package stack
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
-	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/templates"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/gobuffalo/packd"
 )
 
 const (
@@ -42,7 +39,7 @@ const (
 type LBFargateStackConfig struct {
 	*deploy.CreateLBFargateAppInput
 	httpsEnabled bool
-	box          packd.Box
+	parser       template.ReadParser
 }
 
 // NewLBFargateStack creates a new LBFargateStackConfig from a load-balanced AWS Fargate application.
@@ -50,7 +47,7 @@ func NewLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig
 	return &LBFargateStackConfig{
 		CreateLBFargateAppInput: in,
 		httpsEnabled:            false,
-		box:                     templates.Box(),
+		parser:                  template.New(),
 	}
 }
 
@@ -61,7 +58,7 @@ func NewHTTPSLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackC
 	return &LBFargateStackConfig{
 		CreateLBFargateAppInput: in,
 		httpsEnabled:            true,
-		box:                     templates.Box(),
+		parser:                  template.New(),
 	}
 }
 
@@ -72,35 +69,21 @@ func (c *LBFargateStackConfig) StackName() string {
 
 // Template returns the CloudFormation template for the application parametrized for the environment.
 func (c *LBFargateStackConfig) Template() (string, error) {
-
-	rulePriority, err := c.box.FindString(lbFargateAppRulePriorityGeneratorPath)
+	rulePriorityLambda, err := c.parser.Read(lbFargateAppRulePriorityGeneratorPath)
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppRulePriorityGeneratorPath, parentErr: err}
+		return "", err
 	}
-
-	content, err := c.box.FindString(lbFargateAppTemplatePath)
-	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppTemplatePath, parentErr: err}
-	}
-
-	tpl, err := template.New("template").Parse(content)
-	if err != nil {
-		return "", fmt.Errorf("parse CloudFormation template for %s: %w", c.App.Type, err)
-	}
-
-	templateData := struct {
+	content, err := c.parser.Parse(lbFargateAppTemplatePath, struct {
 		RulePriorityLambda string
 		*lbFargateTemplateParams
 	}{
-		RulePriorityLambda:      rulePriority,
+		RulePriorityLambda:      rulePriorityLambda.String(),
 		lbFargateTemplateParams: c.toTemplateParams(),
+	})
+	if err != nil {
+		return "", err
 	}
-
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, templateData); err != nil {
-		return "", fmt.Errorf("execute CloudFormation template for %s: %w", c.App.Type, err)
-	}
-	return buf.String(), nil
+	return content.String(), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
@@ -153,19 +136,11 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
-	content, err := c.box.FindString(lbFargateAppParamsPath)
+	params, err := c.parser.Parse(lbFargateAppParamsPath, c.toTemplateParams())
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: lbFargateAppParamsPath, parentErr: err}
+		return "", err
 	}
-	tpl, err := template.New("template").Parse(content)
-	if err != nil {
-		return "", fmt.Errorf("parse stack configuration for %s: %w", c.App.Type, err)
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, c.toTemplateParams()); err != nil {
-		return "", fmt.Errorf("execute stack configuration for %s: %w", c.App.Type, err)
-	}
-	return buf.String(), nil
+	return params.String(), nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.

@@ -4,11 +4,14 @@
 package manifest
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,50 +90,50 @@ func TestCreatePipeline(t *testing.T) {
 	}
 }
 
-func TestPipelineManifestMarshal(t *testing.T) {
-	const pipelineName = "pipepiper"
-	wantedContent := `# This YAML file defines the relationship and deployment ordering of your environments.
+func TestPipelineManifest_MarshalBinary(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(ctrl *gomock.Controller, manifest *PipelineManifest)
 
-# The name of the pipeline
-name: pipepiper
+		wantedBinary []byte
+		wantedError  error
+	}{
+		"error parsing template": {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *PipelineManifest) {
+				m := mocks.NewMockParser(ctrl)
+				manifest.parser = m
+				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(nil, errors.New("some error"))
+			},
 
-# The version of the schema used in this template
-version: 1
+			wantedError: errors.New("some error"),
+		},
+		"returns rendered content": {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *PipelineManifest) {
+				m := mocks.NewMockParser(ctrl)
+				manifest.parser = m
+				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
-# This section defines the source artifacts.
-source:
-  # The name of the provider that is used to store the source artifacts.
-  provider: GitHub
-  # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from. For example, the GitHub provider
-  # has the following properties: repository, branch.
-  properties:
-    access_token_secret: github-token-badgoose-backend
-    branch: master
-    repository: aws/amazon-ecs-cli-v2
+			},
 
-# The deployment section defines the order the pipeline will deploy
-# to your environments.
-stages:
-    - # The name of the environment to deploy to.
-      name: chicken
-    - # The name of the environment to deploy to.
-      name: wings
-`
-	// reset the global map before each test case is run
-	provider, err := NewProvider(&GitHubProperties{
-		OwnerAndRepository:    "aws/amazon-ecs-cli-v2",
-		GithubSecretIdKeyName: "github-token-badgoose-backend",
-		Branch:                "master",
-	})
-	require.NoError(t, err)
+			wantedBinary: []byte("hello"),
+		},
+	}
 
-	m, err := CreatePipeline(pipelineName, provider, []string{"chicken", "wings"})
-	require.NoError(t, err)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			manifest := &PipelineManifest{}
+			tc.mockDependencies(ctrl, manifest)
 
-	b, err := m.MarshalBinary()
-	require.NoError(t, err)
-	require.Equal(t, wantedContent, strings.Replace(string(b), "\r\n", "\n", -1))
+			// WHEN
+			b, err := manifest.MarshalBinary()
+
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
 }
 
 func TestUnmarshalPipeline(t *testing.T) {

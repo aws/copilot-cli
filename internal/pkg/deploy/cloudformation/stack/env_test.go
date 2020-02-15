@@ -4,39 +4,68 @@
 package stack
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/gobuffalo/packd"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEnvTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		box            packd.Box
-		expectedOutput string
-		want           error
+		mockDependencies func(ctrl *gomock.Controller, e *EnvStackConfig)
+		expectedOutput   string
+		want             error
 	}{
 		"should return error given template not found": {
-			box:  emptyEnvBox(),
-			want: fmt.Errorf("failed to find the cloudformation template at %s", EnvTemplatePath),
+			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(dnsDelegationTemplatePath).Return(nil, errors.New("some error"))
+				e.parser = m
+			},
+			want: errors.New("some error"),
 		},
 		"should return template body when present": {
-			box:            envBoxWithAllTemplateFiles(),
+			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
+				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
+				m.EXPECT().Parse(EnvTemplatePath, struct {
+					DNSDelegationLambda string
+					ACMValidationLambda string
+				}{
+					"customresources",
+					"customresources",
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
+				e.parser = m
+			},
 			expectedOutput: mockTemplate,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			envStack := NewEnvStackConfig(mockDeployEnvironmentInput(), tc.box)
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			envStack := &EnvStackConfig{
+				CreateEnvironmentInput: mockDeployEnvironmentInput(),
+			}
+			tc.mockDependencies(ctrl, envStack)
+
+			// WHEN
 			got, err := envStack.Template()
 
+			// THEN
 			if tc.want != nil {
 				require.EqualError(t, tc.want, err.Error())
 			} else {
@@ -117,7 +146,9 @@ func TestEnvParameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			env := NewEnvStackConfig(tc.input, emptyEnvBox())
+			env := &EnvStackConfig{
+				CreateEnvironmentInput: tc.input,
+			}
 			require.ElementsMatch(t, tc.want, env.Parameters())
 		})
 	}
@@ -175,7 +206,9 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 
 func TestEnvTags(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
-	env := NewEnvStackConfig(deploymentInput, emptyEnvBox())
+	env := &EnvStackConfig{
+		CreateEnvironmentInput: deploymentInput,
+	}
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
@@ -191,7 +224,9 @@ func TestEnvTags(t *testing.T) {
 
 func TestStackName(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
-	env := NewEnvStackConfig(deploymentInput, emptyEnvBox())
+	env := &EnvStackConfig{
+		CreateEnvironmentInput: deploymentInput,
+	}
 	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name), env.StackName())
 }
 
@@ -225,7 +260,9 @@ func TestToEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			envStack := NewEnvStackConfig(mockDeployInput, emptyEnvBox())
+			envStack := &EnvStackConfig{
+				CreateEnvironmentInput: mockDeployInput,
+			}
 			got, err := envStack.ToEnv(tc.mockStack)
 
 			if tc.want != nil {
@@ -262,18 +299,4 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
 	}
-}
-
-func emptyEnvBox() packd.Box {
-	return packd.NewMemoryBox()
-}
-
-func envBoxWithAllTemplateFiles() packd.Box {
-	box := packd.NewMemoryBox()
-
-	box.AddString(EnvTemplatePath, mockTemplate)
-	box.AddString(acmValidationTemplatePath, "customresources")
-	box.AddString(dnsDelegationTemplatePath, "customresources")
-
-	return box
 }

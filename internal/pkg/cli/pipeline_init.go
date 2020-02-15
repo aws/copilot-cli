@@ -11,20 +11,17 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/aws/amazon-ecs-cli-v2/templates"
-	"github.com/gobuffalo/packd"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -64,23 +61,13 @@ type initPipelineVars struct {
 	*GlobalOpts
 }
 
-// binaryBuffer is a bytes.Buffer that implements the encoding.BinaryMarshaler interface.
-type binaryBuffer struct {
-	*bytes.Buffer
-}
-
-// MarshalBinary returns the bytes of the underlying buffer.
-func (b binaryBuffer) MarshalBinary() ([]byte, error) {
-	return b.Bytes(), nil
-}
-
 type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
 	workspace      wsPipelineWriter
 	secretsmanager archer.SecretsManager
-	box            packd.Box
+	parser         template.Parser
 	runner         runner
 
 	// Outputs stored on successful actions.
@@ -121,7 +108,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
 	}
 	opts.secretsmanager = secretsmanager
-	opts.box = templates.Box()
+	opts.parser = template.New()
 
 	err = opts.runner.Run("git", []string{"remote", "-v"}, command.Stdout(&opts.buffer))
 	if err != nil {
@@ -270,26 +257,17 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 }
 
 func (o *initPipelineOpts) createBuildspec() (string, error) {
-	content, err := o.box.FindString(buildspecTemplatePath)
-	if err != nil {
-		return "", fmt.Errorf("find template for %s: %w", buildspecTemplatePath, err)
-	}
-
-	tmpl, err := template.New("cicd-buildspec").Parse(content)
-	if err != nil {
-		return "", err
-	}
-	buf := bytes.Buffer{}
-	type cicdBuildspecTemplate struct {
+	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
-	}
-	if err := tmpl.Execute(&buf, cicdBuildspecTemplate{BinaryS3BucketPath: binaryS3BucketPath, Version: version.Version}); err != nil {
+	}{
+		BinaryS3BucketPath: binaryS3BucketPath,
+		Version:            version.Version,
+	})
+	if err != nil {
 		return "", err
 	}
-
-	// TODO remove binaryBuffer after https://github.com/aws/amazon-ecs-cli-v2/issues/661
-	path, err := o.workspace.WritePipelineBuildspec(binaryBuffer{Buffer: &buf})
+	path, err := o.workspace.WritePipelineBuildspec(content)
 	if err != nil {
 		return "", fmt.Errorf("write buildspec to workspace: %w", err)
 	}

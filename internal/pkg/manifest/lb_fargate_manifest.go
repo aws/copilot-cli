@@ -4,10 +4,11 @@
 package manifest
 
 import (
-	"bytes"
-	"text/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+)
 
-	"github.com/aws/amazon-ecs-cli-v2/templates"
+const (
+	lbFargateManifestPath = "lb-fargate-service/manifest.yml"
 )
 
 // LBFargateManifest holds the configuration to build a container image with an exposed port that receives
@@ -17,6 +18,8 @@ type LBFargateManifest struct {
 	Image           ImageWithPort `yaml:",flow"`
 	LBFargateConfig `yaml:",inline"`
 	Environments    map[string]LBFargateConfig `yaml:",flow"` // Fields to override per environment.
+
+	parser template.Parser
 }
 
 // ImageWithPort represents a container image with an exposed port.
@@ -85,25 +88,18 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 				Count:  1,
 			},
 		},
+
+		parser: template.New(),
 	}
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 func (m *LBFargateManifest) MarshalBinary() ([]byte, error) {
-	box := templates.Box()
-	content, err := box.FindString("lb-fargate-service/manifest.yml")
+	content, err := m.parser.Parse(lbFargateManifestPath, *m)
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := template.New("template").Parse(content)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, *m); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return content.Bytes(), nil
 }
 
 // DockerfilePath returns the image build path.
