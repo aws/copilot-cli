@@ -26,7 +26,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const defaultEnvironmentName = "test"
+const (
+	defaultEnvironmentName    = "test"
+	defaultEnvironmentProfile = "default"
+)
 
 const (
 	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
@@ -40,6 +43,7 @@ type initVars struct {
 	appType        string
 	appName        string
 	dockerfilePath string
+	profile        string
 	imageTag       string
 }
 
@@ -116,16 +120,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
 			EnvName:      defaultEnvironmentName,
-			EnvProfile:   "default",
+			EnvProfile:   vars.profile,
 			IsProduction: false,
 		},
 		envCreator:    ssm,
 		projectGetter: ssm,
-		envDeployer:   deployer,
-		projDeployer:  deployer, // TODO #317
+		projDeployer:  deployer,
 		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,
+
+		initProfileClients: initEnvProfileClients,
 	}
 
 	appDeploy := &appDeployOpts{
@@ -223,6 +228,7 @@ func (o *initOpts) deployEnv() error {
 		// User chose not to deploy the application, exit.
 		return nil
 	}
+
 	return o.initEnv.Execute()
 }
 
@@ -276,6 +282,7 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
+	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)

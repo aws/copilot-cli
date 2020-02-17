@@ -491,6 +491,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				identity:      mockIdentity,
 				envIdentity:   mockIdentity,
 				prog:          mockProgress,
+				initProfileClients: func(o *initEnvOpts) error {
+					return nil
+				},
 			}
 
 			// WHEN
