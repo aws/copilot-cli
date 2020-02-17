@@ -70,7 +70,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 	}{
 		"with no existing environments": {
 			inDefaultConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/awards/*"},
+				RoutingRule: RoutingRule{
+					Path: "/awards/*",
+					HealthCheckPath: "/",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    1024,
 					Memory: 1024,
@@ -80,7 +83,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			inEnvNameToQuery: "prod-iad",
 
 			wantedConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/awards/*"},
+				RoutingRule: RoutingRule{
+					Path: "/awards/*",
+					HealthCheckPath: "/",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    1024,
 					Memory: 1024,
@@ -90,7 +96,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 		},
 		"with partial overrides": {
 			inDefaultConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/awards/*"},
+				RoutingRule: RoutingRule{
+					Path: "/awards/*",
+					HealthCheckPath: "/",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    1024,
 					Memory: 1024,
@@ -127,7 +136,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			},
 
 			wantedConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/awards/*"},
+				RoutingRule: RoutingRule{
+					Path: "/awards/*",
+					HealthCheckPath: "/",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    2046,
 					Memory: 1024,
@@ -150,7 +162,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 		},
 		"with complete override": {
 			inDefaultConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/awards/*"},
+				RoutingRule: RoutingRule{
+					Path: "/awards/*",
+					HealthCheckPath: "/",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    1024,
 					Memory: 1024,
@@ -166,7 +181,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			inEnvNameToQuery: "prod-iad",
 			inEnvOverride: map[string]LBFargateConfig{
 				"prod-iad": {
-					RoutingRule: RoutingRule{Path: "/frontend*"},
+					RoutingRule: RoutingRule{
+						Path: "/frontend*",
+						HealthCheckPath: "/healthcheck",
+					},
 					ContainersConfig: ContainersConfig{
 						CPU:    2046,
 						Memory: 2046,
@@ -190,7 +208,10 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			},
 
 			wantedConfig: LBFargateConfig{
-				RoutingRule: RoutingRule{Path: "/frontend*"},
+				RoutingRule: RoutingRule{
+					Path: "/frontend*",
+					HealthCheckPath: "/healthcheck",
+				},
 				ContainersConfig: ContainersConfig{
 					CPU:    2046,
 					Memory: 2046,

@@ -11,7 +11,8 @@
     "TaskCount": "{{.App.Count}}",
     "HTTPSEnabled": "{{.HTTPSEnabled}}",
     "LogRetention": "30",
-    "AddonsTemplateURL": ""
+    "AddonsTemplateURL": "",
+    "HealthCheckPath": "{{.App.HealthCheckPath}}"
   },
   "Tags": {
     "ecs-project": "{{.Env.Project}}",

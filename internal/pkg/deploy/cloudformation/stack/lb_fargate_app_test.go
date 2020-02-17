@@ -293,6 +293,10 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 					ParameterValue: aws.String("frontend"),
 				},
 				{
+					ParameterKey:   aws.String(LBFargateHealthCheckPathKey),
+					ParameterValue: aws.String("/"),
+				},
+				{
 					ParameterKey:   aws.String(LBFargateTaskCPUKey),
 					ParameterValue: aws.String("256"),
 				},
