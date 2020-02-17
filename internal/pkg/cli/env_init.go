@@ -73,7 +73,7 @@ type initEnvOpts struct {
 var initEnvProfileClients = func(o *initEnvOpts) error {
 	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
 	if err != nil {
-		return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
+		return fmt.Errorf("create session from profile %s: %w", o.EnvProfile, err)
 	}
 	o.envIdentity = identity.New(profileSess)
 	o.envDeployer = cloudformation.New(profileSess)
