@@ -61,7 +61,6 @@ type initPipelineVars struct {
 	GitHubURL         string
 	GitHubAccessToken string
 	GitBranch         string
-	PipelineFilename  string
 	*GlobalOpts
 }
 

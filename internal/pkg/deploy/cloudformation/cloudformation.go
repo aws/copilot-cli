@@ -185,9 +185,8 @@ func (cf CloudFormation) describeStackWithClient(describeStackInput *cloudformat
 func (cf CloudFormation) create(stackConfig stackConfiguration) error {
 	describeStackInput := &cloudformation.DescribeStacksInput{StackName: aws.String(stackConfig.StackName())}
 	existingStack, err := cf.describeStack(describeStackInput)
-	// Create the stack if it doesn't already exists.
+	// Create the stack if it doesn't already exist.
 	if err != nil {
-
 		var stackNotFound *ErrStackNotFound
 		if !errors.As(err, &stackNotFound) {
 			return err

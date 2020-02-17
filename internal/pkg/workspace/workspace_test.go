@@ -450,3 +450,67 @@ func TestWorkspace_DeleteApp(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkspace_DeletePipeline(t *testing.T) {
+	projectDir := "/ecs-project"
+	testCases := map[string]struct {
+		fs            func() afero.Fs
+		expectedError error
+	}{
+		"deletes existing pipeline manifest": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir(projectDir, 0755)
+				manifest, _ := fs.Create("/ecs-project/pipeline.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("hello"))
+				return fs
+			},
+			expectedError: nil,
+		},
+		"when no pipeline file exists": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir(projectDir, 0755)
+				return fs
+			},
+			expectedError: &os.PathError{
+				Op:   "remove",
+				Path: filepath.Join(projectDir, "pipeline.yml"),
+				Err:  os.ErrNotExist,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				projectDir: projectDir,
+				fsUtils:    &afero.Afero{Fs: fs},
+			}
+
+			// WHEN
+			err := ws.DeletePipelineManifest()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
+			}
+
+			// There should be no pipeline manifest in the project
+			// directory.
+			if err == nil {
+				path := filepath.Join(projectDir, "pipeline.yml")
+				_, existErr := fs.Stat(path)
+				expectedErr := &os.PathError{
+					Op:   "open",
+					Path: path,
+					Err:  os.ErrNotExist,
+				}
+				require.EqualError(t, existErr, expectedErr.Error())
+			}
+		})
+	}
+}

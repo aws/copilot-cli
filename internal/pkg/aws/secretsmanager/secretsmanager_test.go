@@ -41,6 +41,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
+					Tags:         []*secretsmanager.Tag{},
 				}).Return(nil, mockError)
 			},
 			expectedError: fmt.Errorf("create secret %s: %w", mockSecretName, mockError),
@@ -53,6 +54,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
+					Tags:         []*secretsmanager.Tag{},
 				}).Return(nil, mockAwsErr)
 			},
 			expectedError: &ErrSecretAlreadyExists{
@@ -68,6 +70,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
+					Tags:         []*secretsmanager.Tag{},
 				}).Return(mockOutput, nil)
 			},
 			expectedError: nil,
@@ -89,6 +92,12 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 			tc.callMock(mockSecretsManager)
 
 			// WHEN
+			oldSecretTags := secretTags
+			defer func() { secretTags = oldSecretTags }()
+			secretTags = func() []*secretsmanager.Tag {
+				return []*secretsmanager.Tag{}
+			}
+
 			_, err := sm.CreateSecret(tc.inSecretName, tc.inSecretString)
 
 			// THEN

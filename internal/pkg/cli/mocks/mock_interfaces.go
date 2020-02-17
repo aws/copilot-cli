@@ -1183,6 +1183,58 @@ func (mr *MockwsAppReaderMockRecorder) ReadAppManifest(appName interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadAppManifest", reflect.TypeOf((*MockwsAppReader)(nil).ReadAppManifest), appName)
 }
 
+// MockwsPipelineDeleter is a mock of wsPipelineDeleter interface
+type MockwsPipelineDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsPipelineDeleterMockRecorder
+}
+
+// MockwsPipelineDeleterMockRecorder is the mock recorder for MockwsPipelineDeleter
+type MockwsPipelineDeleterMockRecorder struct {
+	mock *MockwsPipelineDeleter
+}
+
+// NewMockwsPipelineDeleter creates a new mock instance
+func NewMockwsPipelineDeleter(ctrl *gomock.Controller) *MockwsPipelineDeleter {
+	mock := &MockwsPipelineDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsPipelineDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsPipelineDeleter) EXPECT() *MockwsPipelineDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeletePipelineManifest mocks base method
+func (m *MockwsPipelineDeleter) DeletePipelineManifest() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePipelineManifest")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePipelineManifest indicates an expected call of DeletePipelineManifest
+func (mr *MockwsPipelineDeleterMockRecorder) DeletePipelineManifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipelineManifest", reflect.TypeOf((*MockwsPipelineDeleter)(nil).DeletePipelineManifest))
+}
+
+// ReadPipelineManifest mocks base method
+func (m *MockwsPipelineDeleter) ReadPipelineManifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadPipelineManifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadPipelineManifest indicates an expected call of ReadPipelineManifest
+func (mr *MockwsPipelineDeleterMockRecorder) ReadPipelineManifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineDeleter)(nil).ReadPipelineManifest))
+}
+
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller
