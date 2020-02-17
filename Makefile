@@ -133,10 +133,10 @@ tools:
 gen-mocks: tools
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
-	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./mocks/mock_app.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/secret.go -package=mocks -destination=./mocks/mock_secret.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_app.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_env.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_project.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/secret.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_secret.go
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go

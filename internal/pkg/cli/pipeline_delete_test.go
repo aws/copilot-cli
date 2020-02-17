@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
+	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks" // TODO refactor
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/mocks"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
