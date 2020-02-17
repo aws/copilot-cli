@@ -47,7 +47,7 @@ type appDeployOpts struct {
 	appDeployVars
 
 	projectService     projectService
-	workspaceService   archer.Workspace
+	workspaceService   wsAppReader
 	ecrService         ecrService
 	dockerService      dockerService
 	runner             runner
@@ -151,10 +151,6 @@ func (o *appDeployOpts) Execute() error {
 
 	o.dockerService.Login(uri, auth.Username, auth.Password)
 
-	if err != nil {
-		return err
-	}
-
 	if err = o.dockerService.Push(uri, o.ImageTag); err != nil {
 		return err
 	}
@@ -203,9 +199,9 @@ func (o *appDeployOpts) RecommendedActions() []string {
 }
 
 func (o *appDeployOpts) validateAppName() error {
-	names, err := o.workspaceAppNames()
+	names, err := o.workspaceService.AppNames()
 	if err != nil {
-		return err
+		return fmt.Errorf("list applications in the workspace: %w", err)
 	}
 	for _, name := range names {
 		if o.AppName == name {
@@ -230,26 +226,14 @@ func (o *appDeployOpts) targetEnv() (*archer.Environment, error) {
 	return env, nil
 }
 
-func (o *appDeployOpts) workspaceAppNames() ([]string, error) {
-	apps, err := o.workspaceService.Apps()
-	if err != nil {
-		return nil, fmt.Errorf("get applications in the workspace: %w", err)
-	}
-	var names []string
-	for _, app := range apps {
-		names = append(names, app.AppName())
-	}
-	return names, nil
-}
-
 func (o *appDeployOpts) askAppName() error {
 	if o.AppName != "" {
 		return nil
 	}
 
-	names, err := o.workspaceAppNames()
+	names, err := o.workspaceService.AppNames()
 	if err != nil {
-		return err
+		return fmt.Errorf("list applications in workspace: %w", err)
 	}
 	if len(names) == 0 {
 		return errors.New("no applications found in the workspace")
@@ -385,28 +369,9 @@ func (o *appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetNam
 }
 
 func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
-	manifestFileNames, err := o.workspaceService.ListManifestFiles()
+	manifestBytes, err := o.workspaceService.ReadAppManifest(o.AppName)
 	if err != nil {
-		return "", fmt.Errorf("list local manifest files: %w", err)
-	}
-	if len(manifestFileNames) == 0 {
-		return "", errNoLocalManifestsFound
-	}
-
-	var targetManifestFile string
-	for _, f := range manifestFileNames {
-		if strings.Contains(f, o.AppName) {
-			targetManifestFile = f
-			break
-		}
-	}
-	if targetManifestFile == "" {
-		return "", fmt.Errorf("couldn't find local manifest %s", o.AppName)
-	}
-
-	manifestBytes, err := o.workspaceService.ReadFile(targetManifestFile)
-	if err != nil {
-		return "", fmt.Errorf("read manifest file %s: %w", targetManifestFile, err)
+		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
 	}
 
 	mf, err := manifest.UnmarshalApp(manifestBytes)

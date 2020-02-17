@@ -41,7 +41,7 @@ type packageAppOpts struct {
 	packageAppVars
 
 	// Interfaces to interact with dependencies.
-	ws           archer.Workspace
+	ws           wsAppReader
 	store        projectService
 	describer    projectResourcesGetter
 	stackWriter  io.Writer
@@ -83,9 +83,9 @@ func (o *packageAppOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 	if o.AppName != "" {
-		names, err := o.listAppNames()
+		names, err := o.ws.AppNames()
 		if err != nil {
-			return err
+			return fmt.Errorf("list applications in workspace: %w", err)
 		}
 		if !contains(o.AppName, names) {
 			return fmt.Errorf("application '%s' does not exist in the workspace", o.AppName)
@@ -139,9 +139,9 @@ func (o *packageAppOpts) askAppName() error {
 		return nil
 	}
 
-	names, err := o.listAppNames()
+	names, err := o.ws.AppNames()
 	if err != nil {
-		return err
+		return fmt.Errorf("list applications in workspace: %w", err)
 	}
 	if len(names) == 0 {
 		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
@@ -191,18 +191,6 @@ func (o *packageAppOpts) askTag() error {
 	return nil
 }
 
-func (o *packageAppOpts) listAppNames() ([]string, error) {
-	apps, err := o.ws.Apps()
-	if err != nil {
-		return nil, fmt.Errorf("list applications in workspace: %w", err)
-	}
-	names := make([]string, 0, len(apps))
-	for _, app := range apps {
-		names = append(names, app.AppName())
-	}
-	return names, nil
-}
-
 type cfnTemplates struct {
 	stack         string
 	configuration string
@@ -210,7 +198,7 @@ type cfnTemplates struct {
 
 // getTemplates returns the CloudFormation stack's template and its parameters.
 func (o *packageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
-	raw, err := o.ws.ReadFile(o.ws.AppManifestFileName(o.AppName))
+	raw, err := o.ws.ReadAppManifest(o.AppName)
 	if err != nil {
 		return nil, err
 	}

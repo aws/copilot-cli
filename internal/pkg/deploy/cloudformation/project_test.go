@@ -1311,24 +1311,119 @@ func boxWithProjectTemplate() packd.Box {
 func TestDeleteProject(t *testing.T) {
 	tests := map[string]struct {
 		projectName string
-		accounts    []string
-		regions     []string
 
-		mockDeleteStackInstances func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error)
-		mockDeleteStackSet       func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error)
-		mockDeleteStack          func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
+		mockListStackInstances                      func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
+		mockDeleteStackInstances                    func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error)
+		mockDeleteStackSet                          func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error)
+		mockDeleteStack                             func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error)
+		mockDescribeStackSetOperation               func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error)
+		mockWaitUntilStackDeleteCompleteWithContext func(t *testing.T, in *cloudformation.DescribeStacksInput) error
 
 		want error
 	}{
 		"should return nil given happy path": {
+			projectName: "testProject",
+			mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+				return &cloudformation.ListStackInstancesOutput{
+					Summaries: []*cloudformation.StackInstanceSummary{
+						&cloudformation.StackInstanceSummary{
+							Region:  aws.String("us-west-2"),
+							Account: aws.String("12345"),
+						},
+					},
+				}, nil
+			},
 			mockDeleteStackInstances: func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
-				return &cloudformation.DeleteStackInstancesOutput{}, nil
+				require.Equal(t, 1, len(in.Accounts))
+				require.Equal(t, 1, len(in.Regions))
+				require.Equal(t, "12345", aws.StringValue(in.Accounts[0]))
+				require.Equal(t, "us-west-2", aws.StringValue(in.Regions[0]))
+				return &cloudformation.DeleteStackInstancesOutput{
+					OperationId: aws.String("operationId"),
+				}, nil
 			},
 			mockDeleteStackSet: func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
 				return &cloudformation.DeleteStackSetOutput{}, nil
 			},
 			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
 				return &cloudformation.DeleteStackOutput{}, nil
+			},
+			mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+				require.Equal(t, "operationId", aws.StringValue(in.OperationId))
+				return &cloudformation.DescribeStackSetOperationOutput{
+					StackSetOperation: &cloudformation.StackSetOperation{
+						Status: aws.String("SUCCEEDED"),
+					},
+				}, nil
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
+			},
+			want: nil,
+		},
+
+		"should return nil if stackset has already been deleted before running": {
+			projectName: "testProject",
+			mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+				return nil, awserr.New(cloudformation.ErrCodeStackSetNotFoundException, "StackSetNotFoundException", nil)
+			},
+			mockDeleteStackInstances: func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
+				t.FailNow()
+				return nil, nil
+			},
+			mockDeleteStackSet: func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
+				t.FailNow()
+				return nil, nil
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				return &cloudformation.DeleteStackOutput{}, nil
+			},
+			mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+				t.FailNow()
+				return nil, nil
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
+			},
+			want: nil,
+		},
+		"should return nil if stackset is deleted after stack instances are created (edge case)": {
+			projectName: "testProject",
+			mockListStackInstances: func(t *testing.T, in *cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error) {
+				return &cloudformation.ListStackInstancesOutput{
+					Summaries: []*cloudformation.StackInstanceSummary{
+						&cloudformation.StackInstanceSummary{
+							Region:  aws.String("us-west-2"),
+							Account: aws.String("12345"),
+						},
+					},
+				}, nil
+			},
+			mockDeleteStackInstances: func(t *testing.T, in *cloudformation.DeleteStackInstancesInput) (*cloudformation.DeleteStackInstancesOutput, error) {
+				require.Equal(t, 1, len(in.Accounts))
+				require.Equal(t, 1, len(in.Regions))
+				require.Equal(t, "12345", aws.StringValue(in.Accounts[0]))
+				require.Equal(t, "us-west-2", aws.StringValue(in.Regions[0]))
+				return &cloudformation.DeleteStackInstancesOutput{
+					OperationId: aws.String("operationId"),
+				}, nil
+			},
+			mockDeleteStackSet: func(t *testing.T, in *cloudformation.DeleteStackSetInput) (*cloudformation.DeleteStackSetOutput, error) {
+				return nil, awserr.New(cloudformation.ErrCodeStackSetNotFoundException, "StackSetNotFoundException", nil)
+			},
+			mockDeleteStack: func(t *testing.T, in *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
+				return &cloudformation.DeleteStackOutput{}, nil
+			},
+			mockDescribeStackSetOperation: func(t *testing.T, in *cloudformation.DescribeStackSetOperationInput) (*cloudformation.DescribeStackSetOperationOutput, error) {
+				require.Equal(t, "operationId", aws.StringValue(in.OperationId))
+				return &cloudformation.DescribeStackSetOperationOutput{
+					StackSetOperation: &cloudformation.StackSetOperation{
+						Status: aws.String("SUCCEEDED"),
+					},
+				}, nil
+			},
+			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+				return nil
 			},
 			want: nil,
 		},
@@ -1343,10 +1438,13 @@ func TestDeleteProject(t *testing.T) {
 					mockDeleteStackInstances: test.mockDeleteStackInstances,
 					mockDeleteStackSet:       test.mockDeleteStackSet,
 					mockDeleteStack:          test.mockDeleteStack,
+					mockListStackInstances:   test.mockListStackInstances,
+					mockWaitUntilStackDeleteCompleteWithContext: test.mockWaitUntilStackDeleteCompleteWithContext,
+					mockDescribeStackSetOperation:               test.mockDescribeStackSetOperation,
 				},
 			}
 
-			got := cf.DeleteProject(test.projectName, test.accounts, test.regions)
+			got := cf.DeleteProject(test.projectName)
 
 			require.Equal(t, test.want, got)
 		})

@@ -37,7 +37,7 @@ type initProjectOpts struct {
 
 	identity     identityService
 	projectStore archer.ProjectStore
-	ws           archer.Workspace
+	ws           wsProjectManager
 	deployer     projectDeployer
 	prompt       prompter
 	prog         progress

@@ -19,6 +19,7 @@ type pipelineDeployer interface {
 	CreatePipeline(env *deploy.CreatePipelineInput) error
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
+	DeletePipeline(pipelineName string) error
 	AddPipelineResourcesToProject(project *archer.Project, region string) error
 	projectResourcesGetter
 	// TODO: Add StreamPipelineCreation method
@@ -29,7 +30,7 @@ type projectDeployer interface {
 	AddAppToProject(project *archer.Project, appName string) error
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
 	DelegateDNSPermissions(project *archer.Project, accountID string) error
-	DeleteProject(name string, accounts, regions []string) error
+	DeleteProject(name string) error
 }
 
 type projectResourcesGetter interface {

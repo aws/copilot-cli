@@ -9,7 +9,6 @@ import (
 	"io"
 	"sort"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -38,7 +37,7 @@ type showAppOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
-	ws            archer.Workspace
+	ws            wsAppReader
 	initDescriber func(*showAppOpts) error // Overriden in tests.
 }
 
@@ -267,16 +266,12 @@ func (o *showAppOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
-	localApps, err := o.ws.Apps()
+	localAppNames, err := o.ws.AppNames()
 	if err != nil {
 		return nil, err
 	}
-	if len(localApps) == 0 {
+	if len(localAppNames) == 0 {
 		return nil, errors.New("no application found")
-	}
-	localAppNames := make([]string, 0, len(localApps))
-	for _, app := range localApps {
-		localAppNames = append(localAppNames, app.AppName())
 	}
 	return localAppNames, nil
 }

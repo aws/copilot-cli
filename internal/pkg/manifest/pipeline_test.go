@@ -128,7 +128,7 @@ stages:
 	m, err := CreatePipeline(pipelineName, provider, []string{"chicken", "wings"})
 	require.NoError(t, err)
 
-	b, err := m.Marshal()
+	b, err := m.MarshalBinary()
 	require.NoError(t, err)
 	require.Equal(t, wantedContent, strings.Replace(string(b), "\r\n", "\n", -1))
 }

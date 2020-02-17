@@ -55,23 +55,29 @@ type AutoScalingConfig struct {
 	TargetMemory float64 `yaml:"targetMemory"`
 }
 
+// LBFargateManifestProps contains properties for creating a new load balanced fargate application manifest.
+type LBFargateManifestProps struct {
+	*AppManifestProps
+	Path string
+}
+
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
 // all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
-func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargateManifest {
+func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateManifest {
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
-			Name: appName,
+			Name: input.AppName,
 			Type: LoadBalancedWebApplication,
 		},
 		Image: ImageWithPort{
 			AppImage: AppImage{
-				Build: dockerfile,
+				Build: input.Dockerfile,
 			},
 			Port: 80,
 		},
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{
-				Path: "*",
+				Path: input.Path,
 			},
 			ContainersConfig: ContainersConfig{
 				CPU:    256,
@@ -82,8 +88,8 @@ func NewLoadBalancedFargateManifest(appName string, dockerfile string) *LBFargat
 	}
 }
 
-// Marshal serializes the manifest object into a YAML document.
-func (m *LBFargateManifest) Marshal() ([]byte, error) {
+// MarshalBinary serializes the manifest object into a binary YAML document.
+func (m *LBFargateManifest) MarshalBinary() ([]byte, error) {
 	box := templates.Box()
 	content, err := box.FindString("lb-fargate-service/manifest.yml")
 	if err != nil {

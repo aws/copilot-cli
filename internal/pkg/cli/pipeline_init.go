@@ -14,9 +14,9 @@ import (
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -61,15 +61,24 @@ type initPipelineVars struct {
 	GitHubURL         string
 	GitHubAccessToken string
 	GitBranch         string
-	PipelineFilename  string
 	*GlobalOpts
+}
+
+// binaryBuffer is a bytes.Buffer that implements the encoding.BinaryMarshaler interface.
+type binaryBuffer struct {
+	*bytes.Buffer
+}
+
+// MarshalBinary returns the bytes of the underlying buffer.
+func (b binaryBuffer) MarshalBinary() ([]byte, error) {
+	return b.Bytes(), nil
 }
 
 type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace      archer.ManifestIO
+	workspace      wsPipelineWriter
 	secretsmanager archer.SecretsManager
 	box            packd.Box
 	runner         runner
@@ -180,6 +189,8 @@ func (o *initPipelineOpts) Execute() error {
 			return err
 		}
 		log.Successf("Secret already exists for %s! Do nothing.\n", color.HighlightUserInput(o.GitHubRepo))
+	} else {
+		log.Successf("Created the secret %s for pipeline source stage!\n", color.HighlightUserInput(secretName))
 	}
 	o.secretName = secretName
 
@@ -250,13 +261,9 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 		return "", fmt.Errorf("generate a manifest: %w", err)
 	}
 
-	manifestBytes, err := manifest.Marshal()
+	manifestPath, err := o.workspace.WritePipelineManifest(manifest)
 	if err != nil {
-		return "", fmt.Errorf("marshal manifest: %w", err)
-	}
-	manifestPath, err := o.workspace.WriteFile(manifestBytes, workspace.PipelineFileName)
-	if err != nil {
-		return "", fmt.Errorf("write file %s to workspace: %w", workspace.PipelineFileName, err)
+		return "", err
 	}
 
 	return manifestPath, nil
@@ -281,9 +288,10 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		return "", err
 	}
 
-	path, err := o.workspace.WriteFile(buf.Bytes(), workspace.BuildspecFileName)
+	// TODO remove binaryBuffer after https://github.com/aws/amazon-ecs-cli-v2/issues/661
+	path, err := o.workspace.WritePipelineBuildspec(binaryBuffer{Buffer: &buf})
 	if err != nil {
-		return "", fmt.Errorf("write file %s to workspace: %w", workspace.BuildspecFileName, err)
+		return "", fmt.Errorf("write buildspec to workspace: %w", err)
 	}
 	return path, nil
 }
@@ -429,6 +437,7 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 	if err != nil {
 		return fmt.Errorf("get GitHub access token: %w", err)
 	}
+	// TODO use existing secret (pass in name or ARN?)
 
 	o.GitHubAccessToken = token
 

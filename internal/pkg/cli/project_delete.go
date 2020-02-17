@@ -32,8 +32,7 @@ var (
 
 type deleteProjVars struct {
 	skipConfirmation bool
-	profile          string
-
+	envProfiles      map[string]string
 	*GlobalOpts
 }
 
@@ -46,7 +45,7 @@ type deleteProjOpts struct {
 }
 
 type workspaceDeleter interface {
-	Delete() error
+	DeleteAll() error
 }
 
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
@@ -109,60 +108,16 @@ func (o *deleteProjOpts) Execute() error {
 		return err
 	}
 
-	envs, err := o.store.ListEnvironments(o.ProjectName())
-	if err != nil {
+	if err := o.deleteEnvs(); err != nil {
 		return err
 	}
 
-	accounts := newStringSet()
-	regions := newStringSet()
-
-	for _, e := range envs {
-		accounts.put(e.AccountID)
-		regions.put(e.Region)
-	}
-
-	// NOTE: Ordering of project infrastructure stackset and environment deletion is significant.
-	// If the process is cancelled out for any reason before initiating stackset instance deletion
-	// then we're stuck on future rune since we've lost the AccountID and Region information if all the
-	// environments are deleted first.
 	o.spinner.Start("Deleting project resources.")
-	if err := o.deployer.DeleteProject(o.ProjectName(), accounts.items(), regions.items()); err != nil {
+	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project resources."))
-
 		return fmt.Errorf("delete project resources: %w", err)
 	}
 	o.spinner.Stop(log.Ssuccess("Deleted project resources."))
-
-	// TODO: move this dependency configuration into newDeleteEnvOpts() function.
-	cfg, err := profile.NewConfig()
-	if err != nil {
-		return err
-	}
-
-	for _, e := range envs {
-		vars := deleteEnvVars{
-			GlobalOpts: NewGlobalOpts(),
-		}
-		deo, err := newDeleteEnvOpts(vars)
-		if err != nil {
-			return err
-		}
-		deo.EnvName = e.Name
-		// TODO: enable users to specify a profile per environment deletion?
-		// deo.EnvProfile = o.profile
-		deo.profileConfig = cfg
-		deo.SkipConfirmation = true // always skip sub-confirmations
-		deo.storeClient = o.store
-
-		if err := deo.Ask(); err != nil {
-			return err
-		}
-
-		if err := deo.Execute(); err != nil {
-			return err
-		}
-	}
 
 	o.spinner.Start("Deleting project parameters.")
 	if err := o.store.DeleteProject(o.ProjectName()); err != nil {
@@ -173,12 +128,56 @@ func (o *deleteProjOpts) Execute() error {
 	o.spinner.Stop(log.Ssuccess("Deleted project parameters."))
 
 	o.spinner.Start("Deleting local workspace folder.")
-	if err := o.ws.Delete(); err != nil {
+	if err := o.ws.DeleteAll(); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
 
 		return fmt.Errorf("delete workspace: %w", err)
 	}
 	o.spinner.Stop(log.Ssuccess("Deleted local workspace folder."))
+
+	return nil
+}
+
+func (o *deleteProjOpts) deleteEnvs() error {
+	envs, err := o.store.ListEnvironments(o.ProjectName())
+	if err != nil {
+		return err
+	}
+
+	// TODO: move this dependency configuration into newDeleteEnvOpts() function.
+	cfg, err := profile.NewConfig()
+	if err != nil {
+		return err
+	}
+
+	for _, e := range envs {
+		vars := deleteEnvVars{
+			GlobalOpts:       NewGlobalOpts(),
+			EnvName:          e.Name,
+			SkipConfirmation: true,
+		}
+
+		deo, err := newDeleteEnvOpts(vars)
+		if err != nil {
+			return err
+		}
+		deo.profileConfig = cfg
+		deo.storeClient = o.store
+		// Check to see if a profile was passed in for this environment
+		// for deletion - otherwise we won't set it, which triggers
+		// env delete's ask.
+		if envProfile, ok := o.envProfiles[e.Name]; ok {
+			deo.EnvProfile = envProfile
+		}
+
+		if err := deo.Ask(); err != nil {
+			return err
+		}
+
+		if err := deo.Execute(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -216,7 +215,7 @@ func BuildProjectDeleteCommand() *cobra.Command {
 		Use:   "delete",
 		Short: "Delete all resources associated with the local project.",
 		Example: `
-  /code $ ecs-preview project delete --yes`,
+  /code $ ecs-preview project delete --yes --env-profiles test=default,prod=prod-profile`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteProjOpts(vars)
 			if err != nil {
@@ -236,7 +235,7 @@ func BuildProjectDeleteCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
-	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultProfile, profileFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.envProfiles, envProfilesFlag, nil, envProfilesFlagDescription)
 
 	return cmd
 }

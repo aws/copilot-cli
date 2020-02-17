@@ -52,12 +52,15 @@ type initAppOpts struct {
 	initAppVars
 
 	// Interfaces to interact with dependencies.
-	fs             afero.Fs
-	manifestWriter archer.ManifestIO
-	appStore       archer.ApplicationStore
-	projGetter     archer.ProjectGetter
-	projDeployer   projectDeployer
-	prog           progress
+	fs           afero.Fs
+	ws           wsAppManifestWriter
+	appStore     archer.ApplicationStore
+	projGetter   archer.ProjectGetter
+	projDeployer projectDeployer
+	prog         progress
+
+	// Caches variables
+	proj *archer.Project
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -83,12 +86,12 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	return &initAppOpts{
 		initAppVars: vars,
 
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		appStore:       store,
-		projGetter:     store,
-		manifestWriter: ws,
-		projDeployer:   cloudformation.New(sess),
-		prog:           termprogress.NewSpinner(),
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		appStore:     store,
+		projGetter:   store,
+		ws:           ws,
+		projDeployer: cloudformation.New(sess),
+		prog:         termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -135,6 +138,12 @@ func (o *initAppOpts) Execute() error {
 		return err
 	}
 
+	proj, err := o.projGetter.GetProject(o.ProjectName())
+	if err != nil {
+		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+	}
+	o.proj = proj
+
 	manifestPath, err := o.createManifest()
 	if err != nil {
 		return err
@@ -146,12 +155,8 @@ func (o *initAppOpts) Execute() error {
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
-	proj, err := o.projGetter.GetProject(o.ProjectName())
-	if err != nil {
-		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
-	}
 	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
-	if err := o.projDeployer.AddAppToProject(proj, o.AppName); err != nil {
+	if err := o.projDeployer.AddAppToProject(o.proj, o.AppName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
 		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
 	}
@@ -161,18 +166,17 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
-	manifest, err := manifest.CreateApp(o.AppName, o.AppType, o.DockerfilePath)
-	if err != nil {
-		return "", fmt.Errorf("generate a manifest: %w", err)
+	props := &manifest.LBFargateManifestProps{
+		AppManifestProps: &manifest.AppManifestProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
 	}
-	manifestBytes, err := manifest.Marshal()
+	props.Path = o.AppName
+	manifest := manifest.NewLoadBalancedFargateManifest(props)
+	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
 	if err != nil {
-		return "", fmt.Errorf("marshal manifest: %w", err)
-	}
-	filename := o.manifestWriter.AppManifestFileName(o.AppName)
-	manifestPath, err := o.manifestWriter.WriteFile(manifestBytes, filename)
-	if err != nil {
-		return "", fmt.Errorf("write manifest for app %s: %w", o.AppName, err)
+		return "", err
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {

@@ -44,6 +44,7 @@ type initVars struct {
 	appName        string
 	dockerfilePath string
 	profile        string
+	imageTag       string
 }
 
 type initOpts struct {
@@ -108,12 +109,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			DockerfilePath: vars.dockerfilePath,
 			GlobalOpts:     NewGlobalOpts(),
 		},
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-		manifestWriter: ws,
-		appStore:       ssm,
-		projGetter:     ssm,
-		projDeployer:   deployer,
-		prog:           spin,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		ws:           ws,
+		appStore:     ssm,
+		projGetter:   ssm,
+		projDeployer: deployer,
+		prog:         spin,
 	}
 	initEnv := &initEnvOpts{
 		initEnvVars: initEnvVars{
@@ -134,8 +135,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 	appDeploy := &appDeployOpts{
 		appDeployVars: appDeployVars{
-			GlobalOpts: NewGlobalOpts(),
 			EnvName:    defaultEnvironmentName,
+			ImageTag:   vars.imageTag,
+			GlobalOpts: NewGlobalOpts(),
 		},
 
 		projectService:   ssm,
@@ -166,8 +168,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 // Run executes "project init", "env init", "app init" and "app deploy".
 func (o *initOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your Git repository.")
-	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions 
-to help you get set up with a project on ECS. A project is a collection of 
+	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions
+to help you get set up with a project on ECS. A project is a collection of
 containerized applications (or micro-services) that operate together.`)
 	log.Infoln()
 
@@ -286,6 +288,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
