@@ -129,15 +129,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:          spin,
 		identity:      id,
 
-		initProfileClients: func(o *initEnvOpts) error {
-			profileSess, err := session.NewProvider().FromProfile(vars.profile)
-			if err != nil {
-				return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
-			}
-			o.envIdentity = identity.New(profileSess)
-			o.envDeployer = cloudformation.New(profileSess)
-			return nil
-		},
+		initProfileClients: initEnvProfileClients,
 	}
 
 	appDeploy := &appDeployOpts{

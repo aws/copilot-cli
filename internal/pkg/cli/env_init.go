@@ -70,6 +70,16 @@ type initEnvOpts struct {
 	initProfileClients func(*initEnvOpts) error
 }
 
+var initEnvProfileClients = func(o *initEnvOpts) error {
+	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+	if err != nil {
+		return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
+	}
+	o.envIdentity = identity.New(profileSess)
+	o.envDeployer = cloudformation.New(profileSess)
+	return nil
+}
+
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	store, err := store.New()
 	if err != nil {
@@ -86,22 +96,14 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	return &initEnvOpts{
-		initEnvVars:   vars,
-		projectGetter: store,
-		envCreator:    store,
-		projDeployer:  cloudformation.New(defaultSession),
-		identity:      identity.New(defaultSession),
-		profileConfig: cfg,
-		prog:          termprogress.NewSpinner(),
-		initProfileClients: func(o *initEnvOpts) error {
-			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
-			if err != nil {
-				return fmt.Errorf("Cannot create session from profile %s: %w", o.EnvProfile, err)
-			}
-			o.envIdentity = identity.New(profileSess)
-			o.envDeployer = cloudformation.New(profileSess)
-			return nil
-		},
+		initEnvVars:        vars,
+		projectGetter:      store,
+		envCreator:         store,
+		projDeployer:       cloudformation.New(defaultSession),
+		identity:           identity.New(defaultSession),
+		profileConfig:      cfg,
+		prog:               termprogress.NewSpinner(),
+		initProfileClients: initEnvProfileClients,
 	}, nil
 }
 
