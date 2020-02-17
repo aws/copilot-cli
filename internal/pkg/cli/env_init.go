@@ -65,6 +65,19 @@ type initEnvOpts struct {
 	envIdentity   identityService
 	profileConfig profileNames
 	prog          progress
+
+	// initialize profile-specific env clients
+	initProfileClients func(*initEnvOpts) error
+}
+
+var initEnvProfileClients = func(o *initEnvOpts) error {
+	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+	if err != nil {
+		return fmt.Errorf("create session from profile %s: %w", o.EnvProfile, err)
+	}
+	o.envIdentity = identity.New(profileSess)
+	o.envDeployer = cloudformation.New(profileSess)
+	return nil
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -73,10 +86,6 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		return nil, err
 	}
 	sessProvider := session.NewProvider()
-	profileSess, err := sessProvider.FromProfile(vars.EnvProfile)
-	if err != nil {
-		return nil, err
-	}
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -87,15 +96,14 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	return &initEnvOpts{
-		initEnvVars:   vars,
-		projectGetter: store,
-		envCreator:    store,
-		envDeployer:   cloudformation.New(profileSess),
-		projDeployer:  cloudformation.New(defaultSession),
-		identity:      identity.New(defaultSession),
-		envIdentity:   identity.New(profileSess),
-		profileConfig: cfg,
-		prog:          termprogress.NewSpinner(),
+		initEnvVars:        vars,
+		projectGetter:      store,
+		envCreator:         store,
+		projDeployer:       cloudformation.New(defaultSession),
+		identity:           identity.New(defaultSession),
+		profileConfig:      cfg,
+		prog:               termprogress.NewSpinner(),
+		initProfileClients: initEnvProfileClients,
 	}, nil
 }
 
@@ -130,6 +138,10 @@ func (o *initEnvOpts) Execute() error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
+	}
+
+	if err = o.initProfileClients(o); err != nil {
+		return err
 	}
 
 	// 1. Start creating the CloudFormation stack for the environment.
