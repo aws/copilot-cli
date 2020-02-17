@@ -23,6 +23,9 @@ all: build
 .PHONY: build
 build: packr-build compile-local packr-clean
 
+.PHONY: build-e2e
+build-e2e: packr-build compile-linux packr-clean
+
 .PHONY: release
 release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
@@ -99,17 +102,12 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -v -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
-.PHONY: e2e-test
-e2e-test: build
-	# the target assumes the AWS-* environment variables are exported
-	# -p: The number of test binaries that can be run in parallel
-	# -parallel: Within a single test binary, how many test functions can run in parallel
-	env -i PATH="$$PATH" GOCACHE=$$(go env GOCACHE) GOPATH=$$(go env GOPATH) GOPROXY=direct \
-	AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
-	AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
-	AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
-	AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION} \
-	go test -v -p 1 -parallel 1 -tags=e2e ./e2e...
+.PHONY: e2e
+e2e: build-e2e
+	@echo "Building E2E Docker Image" &&\
+	docker build -t ecs-cli-v2/e2e . -f e2e/Dockerfile
+	@echo "Running E2E Tests" &&\
+	docker run --privileged -it -v ${HOME}/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
 
 .PHONY: e2e-test-update-golden-files
 e2e-test-update-golden-files:
