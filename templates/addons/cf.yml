@@ -1,0 +1,13 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: 2010-09-09
+Description: Additional resources for application '{{.AppName}}'
+Parameters:
+{{range $line := .AddonContent.Parameters}}  {{$line}}
+{{end}}
+Resources:
+{{range $line := .AddonContent.Resources}}  {{$line}}
+{{end}}
+Outputs:
+{{range $line := .AddonContent.Outputs}}  {{$line}}
+{{end}}
