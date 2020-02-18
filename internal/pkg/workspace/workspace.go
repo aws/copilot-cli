@@ -39,6 +39,8 @@ const (
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
+	paramsFileName            = "params.yml"
+	outputsFileName           = "outputs.yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -51,6 +53,13 @@ type Workspace struct {
 	workingDir string
 	projectDir string
 	fsUtils    *afero.Afero
+}
+
+// ReadAddonFilesOutput is the output for ReadAddonFiles.
+type ReadAddonFilesOutput struct {
+	Parameters []string
+	Resources  []string
+	Outputs    []string
 }
 
 // New returns a workspace, used for reading and writing to
@@ -207,13 +216,8 @@ func (ws *Workspace) DeleteAll() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
 }
 
-// ReadAddonsFile returns the contents of the addon file of an application.
-func (ws *Workspace) ReadAddonsFile(appName, fileName string) ([]byte, error) {
-	return ws.read(appName, addonsDirName, fileName)
-}
-
-// ListAddonsFiles lists addons file names for an application.
-func (ws *Workspace) ListAddonsFiles(appName string) ([]string, error) {
+// ListAddonFiles lists addon file names for an application.
+func (ws *Workspace) ListAddonFiles(appName string) ([]string, error) {
 	projectDir, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
@@ -230,6 +234,34 @@ func (ws *Workspace) ListAddonsFiles(appName string) ([]string, error) {
 	}
 
 	return addonsFileNames, nil
+}
+
+// ReadAddonFiles reads all addon files.
+func (ws *Workspace) ReadAddonFiles(appName string) (*ReadAddonFilesOutput, error) {
+	addonFiles, err := ws.ListAddonFiles(appName)
+	if err != nil {
+		return nil, fmt.Errorf("list addon files: %w", err)
+	}
+	var resources, params, outputs string
+	for _, fileName := range addonFiles {
+		content, err := ws.read(appName, addonsDirName, fileName)
+		if err != nil {
+			return nil, fmt.Errorf("read addon file %s: %w", fileName, err)
+		}
+		switch fileName {
+		case paramsFileName:
+			params = string(content)
+		case outputsFileName:
+			outputs = string(content)
+		default:
+			resources += string(content)
+		}
+	}
+	return &ReadAddonFilesOutput{
+		Parameters: strings.Split(params, "\n"),
+		Resources:  strings.Split(resources, "\n"),
+		Outputs:    strings.Split(outputs, "\n"),
+	}, nil
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {

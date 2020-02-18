@@ -515,7 +515,7 @@ func TestWorkspace_DeletePipeline(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ListAddonsFiles(t *testing.T) {
+func TestWorkspace_ListAddonFiles(t *testing.T) {
 	testCases := map[string]struct {
 		appName    string
 		projectDir string
@@ -563,13 +563,73 @@ func TestWorkspace_ListAddonsFiles(t *testing.T) {
 			}
 
 			// WHEN
-			actual, actualErr := ws.ListAddonsFiles(tc.appName)
+			actual, actualErr := ws.ListAddonFiles(tc.appName)
 
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
 			} else {
 				require.ElementsMatch(t, tc.wanted, actual, "expected the same file names")
+			}
+		})
+	}
+}
+
+func TestWorkspace_ReadAddonFiles(t *testing.T) {
+	testCases := map[string]struct {
+		appName    string
+		projectDir string
+		fs         func() afero.Fs
+
+		wanted    *ReadAddonFilesOutput
+		wantedErr error
+	}{
+		"read addon files": {
+			appName: "webhook",
+
+			projectDir: "/ecs-project",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
+				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
+				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
+				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
+				other, _ := fs.Create("/ecs-project/webhook/addons/other")
+				defer params.Close()
+				defer policy.Close()
+				defer outputs.Close()
+				defer other.Close()
+				params.Write([]byte("params"))
+				policy.Write([]byte("policy"))
+				outputs.Write([]byte("outputs"))
+				other.Write([]byte("other"))
+				return fs
+			},
+
+			wanted:    &ReadAddonFilesOutput{Parameters: []string{"params"}, Resources: []string{"policy"}, Outputs: []string{"outputs"}},
+			wantedErr: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				projectDir: tc.projectDir,
+				fsUtils: &afero.Afero{
+					Fs: fs,
+				},
+			}
+
+			// WHEN
+			actual, actualErr := ws.ReadAddonFiles(tc.appName)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wanted, actual)
 			}
 		})
 	}

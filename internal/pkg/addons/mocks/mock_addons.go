@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -32,32 +33,17 @@ func (m *MockworkspaceService) EXPECT() *MockworkspaceServiceMockRecorder {
 	return m.recorder
 }
 
-// ReadAddonsFile mocks base method
-func (m *MockworkspaceService) ReadAddonsFile(appName, fileName string) ([]byte, error) {
+// ReadAddonFiles mocks base method
+func (m *MockworkspaceService) ReadAddonFiles(appName string) (*workspace.ReadAddonFilesOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadAddonsFile", appName, fileName)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "ReadAddonFiles", appName)
+	ret0, _ := ret[0].(*workspace.ReadAddonFilesOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadAddonsFile indicates an expected call of ReadAddonsFile
-func (mr *MockworkspaceServiceMockRecorder) ReadAddonsFile(appName, fileName interface{}) *gomock.Call {
+// ReadAddonFiles indicates an expected call of ReadAddonFiles
+func (mr *MockworkspaceServiceMockRecorder) ReadAddonFiles(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadAddonsFile", reflect.TypeOf((*MockworkspaceService)(nil).ReadAddonsFile), appName, fileName)
-}
-
-// ListAddonsFiles mocks base method
-func (m *MockworkspaceService) ListAddonsFiles(appName string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAddonsFiles", appName)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAddonsFiles indicates an expected call of ListAddonsFiles
-func (mr *MockworkspaceServiceMockRecorder) ListAddonsFiles(appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAddonsFiles", reflect.TypeOf((*MockworkspaceService)(nil).ListAddonsFiles), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadAddonFiles", reflect.TypeOf((*MockworkspaceService)(nil).ReadAddonFiles), appName)
 }

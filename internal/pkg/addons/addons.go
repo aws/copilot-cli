@@ -5,29 +5,29 @@
 package addons
 
 import (
+	"bytes"
 	"fmt"
-	"path/filepath"
-	"strings"
+	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/amazon-ecs-cli-v2/templates"
+	"github.com/gobuffalo/packd"
 )
 
 const (
-	paramsFileName  = "params"
-	outputsFileName = "outputs"
-	indent          = "  " // two spaces
+	addonsTemplatePath = "addons/cf.yml"
 )
 
 type workspaceService interface {
-	ReadAddonsFile(appName, fileName string) ([]byte, error)
-	ListAddonsFiles(appName string) ([]string, error)
+	ReadAddonFiles(appName string) (*workspace.ReadAddonFilesOutput, error)
 }
 
 // Addons represent additional resources for an application.
 type Addons struct {
 	appName string
 
-	ws workspaceService
+	box packd.Box
+	ws  workspaceService
 }
 
 // New creates an Addons struct given an application name.
@@ -37,43 +37,37 @@ func New(appName string) (*Addons, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 	return &Addons{
-		appName,
-		ws,
+		appName: appName,
+		box:     templates.Box(),
+		ws:      ws,
 	}, nil
 }
 
-// Template concatenates params.yml, policy.yml, {resource}.yml, and outputs.yml to generate
-// the CloudFormation template.
+// Template parses params.yml, policy.yml, {resource}.yml, and outputs.yml to generate
+// the addons CloudFormation template.
 func (a *Addons) Template() (string, error) {
-	addonFiles, err := a.ws.ListAddonsFiles(a.appName)
+	addonContent, err := a.ws.ReadAddonFiles(a.appName)
 	if err != nil {
-		return "", fmt.Errorf("list addon files: %w", err)
+		return "", err
 	}
-	var resources, params, outputs string
-	for _, fileName := range addonFiles {
-		content, err := a.ws.ReadAddonsFile(a.appName, fileName)
-		if err != nil {
-			return "", fmt.Errorf("read addon file %s: %w", fileName, err)
-		}
-		switch name := strings.TrimSuffix(fileName, filepath.Ext(fileName)); name {
-		case paramsFileName:
-			params += fmt.Sprintf("Parameters:%s", toYAML(content))
-		case outputsFileName:
-			outputs += fmt.Sprintf("Outputs:%s", toYAML(content))
-		default:
-			if resources == "" {
-				resources = "Resources:"
-			}
-			resources += toYAML(content)
-		}
+	content, err := a.box.FindString(addonsTemplatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to find the cloudformation template at %s", addonsTemplatePath)
 	}
-	return fmt.Sprintf("%s%s%s", params, resources, outputs), nil
-}
-
-func toYAML(b []byte) string {
-	strYAML := ""
-	for _, line := range strings.Split(string(b), "\n") {
-		strYAML += fmt.Sprintf("%s%s\n", indent, line)
+	tpl, err := template.New("template").Parse(content)
+	if err != nil {
+		return "", fmt.Errorf("parse CloudFormation template for %s: %w", a.appName, err)
 	}
-	return strYAML
+	var buf bytes.Buffer
+	templateData := struct {
+		AppName      string
+		AddonContent *workspace.ReadAddonFilesOutput
+	}{
+		AppName:      a.appName,
+		AddonContent: addonContent,
+	}
+	if err := tpl.Execute(&buf, templateData); err != nil {
+		return "", fmt.Errorf("execute CloudFormation template for %s: %w", a.appName, err)
+	}
+	return buf.String(), nil
 }
