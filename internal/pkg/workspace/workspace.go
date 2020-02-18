@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package workspace contains functionality to manage a user's local workspace. This includes
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -29,12 +30,17 @@ import (
 const (
 	// ProjectDirectoryName is the name of the directory where generated infrastructure code will be stored.
 	ProjectDirectoryName = "ecs-project"
+	// AddonsFileSuffix is the suffix of the addons files.
+	AddonsFileSuffix = ".yml"
 
+	addonsDirName             = "addons"
 	workspaceSummaryFileName  = ".ecs-workspace"
 	maximumParentDirsToSearch = 5
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
+	paramsFileName            = "params.yml"
+	outputsFileName           = "outputs.yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -47,6 +53,13 @@ type Workspace struct {
 	workingDir string
 	projectDir string
 	fsUtils    *afero.Afero
+}
+
+// ReadAddonFilesOutput is the output for ReadAddonFiles.
+type ReadAddonFilesOutput struct {
+	Parameters []string
+	Resources  []string
+	Outputs    []string
 }
 
 // New returns a workspace, used for reading and writing to
@@ -201,6 +214,54 @@ func (ws *Workspace) DeleteApp(name string) error {
 // DeleteAll removes the local project directory.
 func (ws *Workspace) DeleteAll() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
+}
+
+// ListAddonFiles lists addon file names for an application.
+func (ws *Workspace) ListAddonFiles(appName string) ([]string, error) {
+	projectDir, err := ws.projectDirPath()
+	if err != nil {
+		return nil, err
+	}
+	addonsFiles, err := ws.fsUtils.ReadDir(filepath.Join(projectDir, appName, addonsDirName))
+	if err != nil {
+		return nil, err
+	}
+	var addonsFileNames []string
+	for _, file := range addonsFiles {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), AddonsFileSuffix) {
+			addonsFileNames = append(addonsFileNames, file.Name())
+		}
+	}
+
+	return addonsFileNames, nil
+}
+
+// ReadAddonFiles reads all addon files.
+func (ws *Workspace) ReadAddonFiles(appName string) (*ReadAddonFilesOutput, error) {
+	addonFiles, err := ws.ListAddonFiles(appName)
+	if err != nil {
+		return nil, fmt.Errorf("list addon files: %w", err)
+	}
+	var resources, params, outputs string
+	for _, fileName := range addonFiles {
+		content, err := ws.read(appName, addonsDirName, fileName)
+		if err != nil {
+			return nil, fmt.Errorf("read addon file %s: %w", fileName, err)
+		}
+		switch fileName {
+		case paramsFileName:
+			params = string(content)
+		case outputsFileName:
+			outputs = string(content)
+		default:
+			resources += string(content)
+		}
+	}
+	return &ReadAddonFilesOutput{
+		Parameters: strings.Split(params, "\n"),
+		Resources:  strings.Split(resources, "\n"),
+		Outputs:    strings.Split(outputs, "\n"),
+	}, nil
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {
