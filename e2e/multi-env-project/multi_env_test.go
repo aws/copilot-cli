@@ -103,7 +103,7 @@ var _ = Describe("Multiple Env Project", func() {
 			_, frontEndInitErr = cli.AppInit(&client.AppInitRequest{
 				AppName:    "front-end",
 				AppType:    "Load Balanced Web App",
-				Dockerfile: "./front-end/Dockerfile", //TODO FIX MEH
+				Dockerfile: "./front-end/Dockerfile",
 			})
 		})
 
@@ -112,7 +112,7 @@ var _ = Describe("Multiple Env Project", func() {
 		})
 
 		It("app init should create an app manifest", func() {
-			Expect("./ecs-project/front-end-app.yml").Should(BeAnExistingFile())
+			Expect("./ecs-project/front-end/manifest.yml").Should(BeAnExistingFile())
 		})
 
 		It("app ls should list the app", func() {
@@ -170,8 +170,8 @@ var _ = Describe("Multiple Env Project", func() {
 			for _, env := range []string{"test", "prod"} {
 				route := envRoutes[env]
 				Expect(route.Environment).To(Equal(env))
-				Expect(route.Path).To(Equal("*"))
-				resp, fetchErr := http.Get(fmt.Sprintf("http://%s", route.URL))
+				Expect(route.Path).To(Equal(appName))
+				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/", route.URL, route.Path))
 				Expect(fetchErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
 			}

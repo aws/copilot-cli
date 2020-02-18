@@ -88,8 +88,8 @@ var _ = Describe("Multiple App Project", func() {
 		})
 
 		It("app init should create app manifests", func() {
-			Expect("./ecs-project/front-end-app.yml").Should(BeAnExistingFile())
-			Expect("./ecs-project/back-end-app.yml").Should(BeAnExistingFile())
+			Expect("./ecs-project/front-end/manifest.yml").Should(BeAnExistingFile())
+			Expect("./ecs-project/back-end/manifest.yml").Should(BeAnExistingFile())
 
 		})
 
@@ -150,8 +150,8 @@ var _ = Describe("Multiple App Project", func() {
 				// Call each environment's endpoint and ensure it returns a 200
 				route := app.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
-				Expect(route.Path).To(Equal("*"))
-				resp, fetchErr := http.Get(fmt.Sprintf("http://%s", route.URL))
+				Expect(route.Path).To(Equal(appName))
+				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/", route.URL, route.Path))
 				Expect(fetchErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
 
