@@ -47,6 +47,20 @@ func (mr *MockSecretsManagerMockRecorder) CreateSecret(secretName, secretString 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretsManager)(nil).CreateSecret), secretName, secretString)
 }
 
+// DeleteSecret mocks base method
+func (m *MockSecretsManager) DeleteSecret(secretName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSecret", secretName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSecret indicates an expected call of DeleteSecret
+func (mr *MockSecretsManagerMockRecorder) DeleteSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretsManager)(nil).DeleteSecret), secretName)
+}
+
 // MockSecretCreator is a mock of SecretCreator interface
 type MockSecretCreator struct {
 	ctrl     *gomock.Controller
@@ -83,4 +97,41 @@ func (m *MockSecretCreator) CreateSecret(secretName, secretString string) (strin
 func (mr *MockSecretCreatorMockRecorder) CreateSecret(secretName, secretString interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretCreator)(nil).CreateSecret), secretName, secretString)
+}
+
+// MockSecretDeleter is a mock of SecretDeleter interface
+type MockSecretDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockSecretDeleterMockRecorder
+}
+
+// MockSecretDeleterMockRecorder is the mock recorder for MockSecretDeleter
+type MockSecretDeleterMockRecorder struct {
+	mock *MockSecretDeleter
+}
+
+// NewMockSecretDeleter creates a new mock instance
+func NewMockSecretDeleter(ctrl *gomock.Controller) *MockSecretDeleter {
+	mock := &MockSecretDeleter{ctrl: ctrl}
+	mock.recorder = &MockSecretDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockSecretDeleter) EXPECT() *MockSecretDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteSecret mocks base method
+func (m *MockSecretDeleter) DeleteSecret(secretName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSecret", secretName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSecret indicates an expected call of DeleteSecret
+func (mr *MockSecretDeleterMockRecorder) DeleteSecret(secretName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretDeleter)(nil).DeleteSecret), secretName)
 }

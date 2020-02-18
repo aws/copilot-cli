@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/golang/mock/gomock"

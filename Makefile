@@ -133,10 +133,10 @@ tools:
 gen-mocks: tools
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
-	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./mocks/mock_app.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./mocks/mock_env.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./mocks/mock_project.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/secret.go -package=mocks -destination=./mocks/mock_secret.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_app.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_env.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_project.go
+	${GOBIN}/mockgen -source=./internal/pkg/archer/secret.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_secret.go
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
@@ -145,7 +145,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/deploy.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_deploy.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_iam.go github.com/aws/aws-sdk-go/service/iam/iamiface IAMAPI
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/webapp.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecr/mocks/mock_ecr.go -source=./internal/pkg/aws/ecr/ecr.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecs/mocks/mock_ecs.go -source=./internal/pkg/aws/ecs/ecs.go

@@ -179,6 +179,16 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 	return ws.write(data, pipelineFileName)
 }
 
+// DeletePipelineManifest removes the from the project directory.
+func (ws *Workspace) DeletePipelineManifest() error {
+	projectPath, err := ws.projectDirPath()
+	if err != nil {
+		return err
+	}
+
+	return ws.fsUtils.Remove(filepath.Join(projectPath, pipelineFileName))
+}
+
 // DeleteApp removes the application directory from the project directory.
 func (ws *Workspace) DeleteApp(name string) error {
 	projectPath, err := ws.projectDirPath()

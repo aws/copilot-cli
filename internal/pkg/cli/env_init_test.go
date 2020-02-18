@@ -9,12 +9,12 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -491,6 +491,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				identity:      mockIdentity,
 				envIdentity:   mockIdentity,
 				prog:          mockProgress,
+				initProfileClients: func(o *initEnvOpts) error {
+					return nil
+				},
 			}
 
 			// WHEN
