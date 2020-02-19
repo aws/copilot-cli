@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package profile provides functionality to parse AWS named profiles.
@@ -18,10 +18,14 @@ const (
 	awsConfigFileName = "config"
 )
 
+type sectionsGetter interface {
+	Sections() []string
+}
+
 // Config represents the local AWS config file.
 type Config struct {
 	// f is the ~/.aws/config INI file.
-	f *ini.INI
+	f sectionsGetter
 }
 
 // NewConfig returns a new parsed Config object from $HOME/.aws/config.
