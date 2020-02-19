@@ -4,16 +4,19 @@
 package stack
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/templates"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/gobuffalo/packd"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,31 +26,47 @@ const (
 
 func TestProjTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		box            packd.Box
-		expectedOutput string
-		want           error
+		mockDependencies func(ctrl *gomock.Controller, c *ProjectStackConfig)
+
+		wantedTemplate string
+		wantedError    error
 	}{
 		"should return error given template not found": {
-			box:  emptyProjectBox(),
-			want: fmt.Errorf("failed to find the cloudformation template at %s", projectTemplatePath),
+			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(projectTemplatePath).Return(nil, errors.New("some error"))
+				c.parser = m
+			},
+
+			wantedError: errors.New("some error"),
 		},
 		"should return template body when present": {
-			box:            projectBoxWithTemplateFile(),
-			expectedOutput: mockTemplate,
+			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(projectTemplatePath).Return(&template.Content{
+					Buffer: bytes.NewBufferString("template"),
+				}, nil)
+				c.parser = m
+			},
+
+			wantedTemplate: "template",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, tc.box)
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			projStack := &ProjectStackConfig{}
+			tc.mockDependencies(ctrl, projStack)
+
+			// WHEN
 			got, err := projStack.Template()
 
-			if tc.want != nil {
-				require.EqualError(t, tc.want, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedOutput, got)
-			}
+			// THEN
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedTemplate, got)
 		})
 	}
 }
@@ -81,7 +100,9 @@ func TestDNSDelegationAccounts(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := NewProjectStackConfig(tc.given, emptyProjectBox())
+			projStack := &ProjectStackConfig{
+				CreateProjectInput: tc.given,
+			}
 			got := projStack.dnsDelegationAccounts()
 			require.ElementsMatch(t, tc.want, got)
 		})
@@ -89,74 +110,71 @@ func TestDNSDelegationAccounts(t *testing.T) {
 }
 
 func TestProjResourceTemplate(t *testing.T) {
-	expectedTemplate, err := ioutil.ReadFile("testdata/rendered_project_cfn_template.yml")
-	require.NoError(t, err)
-	properlyEscapedTemplate := `AWSTemplateFormatVersion: '2010-09-09'
-Outputs:
-  KMSKeyARN:
-    Description: KMS Key used by CodePipeline for encrypting artifacts.
-    Value: !GetAtt KMSKey.Arn
-  PipelineBucket:
-    Description: Bucket used for CodePipeline to stage resources in.
-    Value: !Ref PipelineBuiltArtifactBucket
-  ECRRepoappDASH1:
-    Description: ECR Repo used to store images of the app-1 app.
-	Value: !GetAtt ECRRepoappDASH1.Arn`
-
 	testCases := map[string]struct {
-		box            packd.Box
-		expectedOutput string
-		given          *ProjectResourcesConfig
-		want           error
+		given            *ProjectResourcesConfig
+		mockDependencies func(ctrl *gomock.Controller, c *ProjectStackConfig)
+
+		wantedTemplate string
+		wantedError    error
 	}{
-		"should return error given template not found": {
-			box:   emptyProjectBox(),
+		"should return error when template cannot be parsed": {
 			given: &ProjectResourcesConfig{},
-			want:  fmt.Errorf("failed to find the cloudformation template at %s", projectResourcesTemplatePath),
+			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Parse(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				c.parser = m
+			},
+
+			wantedError: errors.New("some error"),
 		},
-		"should return template body when present": {
-			box:            projectBoxWithTemplateFile(),
-			given:          &ProjectResourcesConfig{},
-			expectedOutput: mockTemplate,
-		},
-		"should replace dashes in logical IDs": {
-			box: projectBoxTemplateFileWithSafeLogicalIDs(),
+		"should render template after sorting": {
 			given: &ProjectResourcesConfig{
-				Accounts: []string{"1234"},
-				Apps:     []string{"app-1"},
+				Accounts: []string{"4567", "1234"},
+				Apps:     []string{"app-2", "app-1"},
 				Version:  1,
-				Project:  "testproject"},
-			expectedOutput: properlyEscapedTemplate,
-		},
-		"render actual template": {
-			box:            templates.Box(),
-			expectedOutput: string(expectedTemplate),
-			given: &ProjectResourcesConfig{
-				Accounts: []string{"1234"},
-				Apps:     []string{"app-1"},
-				Version:  1,
-				Project:  "testproject"},
+				Project:  "testproject",
+			},
+			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Parse(projectResourcesTemplatePath, struct {
+					*ProjectResourcesConfig
+					AppTagKey string
+				}{
+					&ProjectResourcesConfig{
+						Accounts: []string{"1234", "4567"},
+						Apps:     []string{"app-1", "app-2"},
+						Version:  1,
+						Project:  "testproject",
+					},
+					AppTagKey,
+				}, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("template"),
+				}, nil)
+				c.parser = m
+			},
+
+			wantedTemplate: "template",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, tc.box)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			projStack := &ProjectStackConfig{
+				CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+			}
+			tc.mockDependencies(ctrl, projStack)
 
 			got, err := projStack.ResourceTemplate(tc.given)
 
-			if tc.want != nil {
-				require.EqualError(t, tc.want, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedOutput, got)
-			}
+			require.Equal(t, tc.wantedError, err)
+			require.Equal(t, tc.wantedTemplate, got)
 		})
 	}
 }
 
 func TestProjectParameters(t *testing.T) {
-	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234", DomainName: "amazon.com"}, emptyProjectBox())
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(projectAdminRoleParamName),
@@ -183,11 +201,16 @@ func TestProjectParameters(t *testing.T) {
 			ParameterValue: aws.String("testproject"),
 		},
 	}
+	proj := &ProjectStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234", DomainName: "amazon.com"},
+	}
 	require.ElementsMatch(t, expectedParams, proj.Parameters())
 }
 
 func TestProjectTags(t *testing.T) {
-	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := &ProjectStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+	}
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
@@ -309,12 +332,16 @@ func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloud
 }
 
 func TestProjectStackName(t *testing.T) {
-	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := &ProjectStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+	}
 	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", proj.Project), proj.StackName())
 }
 
 func TestProjectStackSetName(t *testing.T) {
-	proj := NewProjectStackConfig(&deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"}, emptyProjectBox())
+	proj := &ProjectStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+	}
 	require.Equal(t, fmt.Sprintf("%s-infrastructure", proj.Project), proj.StackSetName())
 }
 
@@ -340,14 +367,6 @@ Metadata:
 
 func emptyProjectBox() packd.Box {
 	return packd.NewMemoryBox()
-}
-
-func projectBoxWithTemplateFile() packd.Box {
-	box := packd.NewMemoryBox()
-
-	box.AddString(projectTemplatePath, mockTemplate)
-	box.AddString(projectResourcesTemplatePath, mockTemplate)
-	return box
 }
 
 func projectBoxTemplateFileWithSafeLogicalIDs() packd.Box {

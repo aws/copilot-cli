@@ -4,20 +4,17 @@
 package stack
 
 import (
-	"bytes"
 	"fmt"
 	"sort"
 	"strings"
-	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"gopkg.in/yaml.v3"
-
-	"github.com/gobuffalo/packd"
 )
 
 // DeployedProjectMetadata wraps the Metadata field of a deployed
@@ -39,7 +36,7 @@ type ProjectResourcesConfig struct {
 // environment stack and to interpret the outputs from it.
 type ProjectStackConfig struct {
 	*deploy.CreateProjectInput
-	box packd.Box
+	parser template.ReadParser
 }
 
 const (
@@ -67,53 +64,39 @@ func ProjectConfigFrom(template *string) (*ProjectResourcesConfig, error) {
 
 // NewProjectStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up an environment.
-func NewProjectStackConfig(in *deploy.CreateProjectInput, box packd.Box) *ProjectStackConfig {
+func NewProjectStackConfig(in *deploy.CreateProjectInput) *ProjectStackConfig {
 	return &ProjectStackConfig{
 		CreateProjectInput: in,
-		box:                box,
+		parser:             template.New(),
 	}
 }
 
 // Template returns the environment CloudFormation template.
 func (c *ProjectStackConfig) Template() (string, error) {
-	template, err := c.box.FindString(projectTemplatePath)
+	content, err := c.parser.Read(projectTemplatePath)
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: projectTemplatePath, parentErr: err}
+		return "", err
 	}
-	return template, nil
+	return content.String(), nil
 }
 
 // ResourceTemplate generates a StackSet template with all the Project-wide resources (ECR Repos, KMS keys, S3 buckets)
 func (c *ProjectStackConfig) ResourceTemplate(config *ProjectResourcesConfig) (string, error) {
-	stackSetTemplate, err := c.box.FindString(projectResourcesTemplatePath)
-	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: projectResourcesTemplatePath, parentErr: err}
-	}
-
-	template, err := template.New("resourcetemplate").
-		Funcs(templateFunctions).
-		Parse(stackSetTemplate)
-	if err != nil {
-		return "", err
-	}
 	// Sort the account IDs and Apps so that the template we generate is deterministic
 	sort.Strings(config.Accounts)
 	sort.Strings(config.Apps)
 
-	templateData := struct {
+	content, err := c.parser.Parse(projectResourcesTemplatePath, struct {
 		*ProjectResourcesConfig
 		AppTagKey string
 	}{
 		config,
 		AppTagKey,
-	}
-
-	var buf bytes.Buffer
-	if err := template.Execute(&buf, templateData); err != nil {
+	}, template.WithFuncs(templateFunctions))
+	if err != nil {
 		return "", err
 	}
-
-	return string(buf.Bytes()), nil
+	return content.String(), err
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.

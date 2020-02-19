@@ -4,53 +4,51 @@
 package addons
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemplate(t *testing.T) {
+func TestAddons_Template(t *testing.T) {
 	testCases := map[string]struct {
-		appName string
+		appName          string
+		mockDependencies func(ctrl *gomock.Controller, a *Addons)
 
-		mockWorkspace func(m *mocks.MockworkspaceService)
-		mockBox       func(box *packd.MemoryBox)
-
-		wantTemplate string
-		wantErr      error
+		wantedTemplate string
+		wantedErr      error
 	}{
 		"should return addon template": {
 			appName: "my-app",
 
-			mockBox: func(box *packd.MemoryBox) {
-				box.AddString(addonsTemplatePath, `Description: Additional resources for application '{{.AppName}}'
-Parameters:
-{{.AddonContent.Parameters}}
-Resources:
-{{.AddonContent.Resources}}
-Outputs:
-{{.AddonContent.Outputs}}`)
-			},
-
-			mockWorkspace: func(m *mocks.MockworkspaceService) {
-				m.EXPECT().ReadAddonFiles("my-app").Return(&workspace.ReadAddonFilesOutput{
+			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
+				ws := mocks.NewMockworkspaceService(ctrl)
+				out := &workspace.ReadAddonFilesOutput{
 					Outputs:    []string{"outputs"},
 					Parameters: []string{"params"},
 					Resources:  []string{"resources"},
-				}, nil)
+				}
+				ws.EXPECT().ReadAddonFiles("my-app").Return(out, nil)
+
+				parser := templatemocks.NewMockParser(ctrl)
+				parser.EXPECT().Parse(addonsTemplatePath, struct {
+					AppName      string
+					AddonContent *workspace.ReadAddonFilesOutput
+				}{
+					AppName:      a.appName,
+					AddonContent: out,
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+
+				a.ws = ws
+				a.parser = parser
 			},
 
-			wantTemplate: `Description: Additional resources for application 'my-app'
-Parameters:
-[params]
-Resources:
-[resources]
-Outputs:
-[outputs]`,
+			wantedTemplate: "hello",
 		},
 	}
 
@@ -59,25 +57,17 @@ Outputs:
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-
-			mockWorkspace := mocks.NewMockworkspaceService(ctrl)
-			tc.mockWorkspace(mockWorkspace)
-			box := packd.NewMemoryBox()
-			tc.mockBox(box)
-
-			service := Addons{
+			addons := &Addons{
 				appName: tc.appName,
-				ws:      mockWorkspace,
-				box:     box,
 			}
+			tc.mockDependencies(ctrl, addons)
 
-			gotTemplate, gotErr := service.Template()
+			// WHEN
+			gotTemplate, gotErr := addons.Template()
 
-			if gotErr != nil {
-				require.Equal(t, tc.wantErr, gotErr)
-			} else {
-				require.Equal(t, tc.wantTemplate, gotTemplate)
-			}
+			// THEN
+			require.Equal(t, tc.wantedErr, gotErr)
+			require.Equal(t, tc.wantedTemplate, gotTemplate)
 		})
 	}
 }

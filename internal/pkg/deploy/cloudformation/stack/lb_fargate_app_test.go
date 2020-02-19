@@ -4,16 +4,18 @@
 package stack
 
 import (
+	"bytes"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/gobuffalo/packd"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,31 +71,50 @@ func TestLBFargateStackConfig_StackName(t *testing.T) {
 
 func TestLBFargateStackConfig_Template(t *testing.T) {
 	testCases := map[string]struct {
-		in *deploy.CreateLBFargateAppInput
-
-		mockBox func(box *packd.MemoryBox)
+		in               *deploy.CreateLBFargateAppInput
+		mockDependencies func(ctrl *gomock.Controller, c *LBFargateStackConfig)
 
 		wantedTemplate string
 		wantedError    error
 	}{
-		"unavailable app template": {
-			mockBox: func(box *packd.MemoryBox) {
-				box.AddString(lbFargateAppRulePriorityGeneratorPath, "javascript")
+		"unavailable rule priority lambda template": {
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
+				c.parser = m
 			},
 			wantedTemplate: "",
-			wantedError: &ErrTemplateNotFound{
-				templateLocation: lbFargateAppTemplatePath,
-				parentErr:        os.ErrNotExist,
-			},
+			wantedError:    errors.New("some error"),
 		},
-		"unavailable custom resource template": {
-			mockBox: func(box *packd.MemoryBox) {},
+		"failed parsing app template": {
+			in: &deploy.CreateLBFargateAppInput{
+				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+					AppManifestProps: &manifest.AppManifestProps{
+						AppName:    "frontend",
+						Dockerfile: "frontend/Dockerfile",
+					},
+					Path: "frontend",
+				}),
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "12345",
+					Prod:      false,
+				},
+				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+				ImageTag:     "manual-bf3678c",
+			},
+
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Parse(lbFargateAppTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
+				c.parser = m
+			},
 
 			wantedTemplate: "",
-			wantedError: &ErrTemplateNotFound{
-				templateLocation: lbFargateAppRulePriorityGeneratorPath,
-				parentErr:        os.ErrNotExist,
-			},
+			wantedError:    errors.New("some error"),
 		},
 		"render default template": {
 			in: &deploy.CreateLBFargateAppInput{
@@ -114,49 +135,38 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
 				ImageTag:     "manual-bf3678c",
 			},
-			mockBox: func(box *packd.MemoryBox) {
-				box.AddString(lbFargateAppRulePriorityGeneratorPath, "javascript")
-				box.AddString(lbFargateAppTemplatePath, `Parameters:
-  ProjectName: {{.Env.Project}}
-  EnvName: {{.Env.Name}}
-  AppName: {{.App.Name}}
-  ContainerImage: {{.Image.URL}}
-  ContainerPort: {{.Image.Port}}
-  RulePath: '{{.App.Path}}'
-  TaskCPU: '{{.App.CPU}}'
-  TaskMemory: '{{.App.Memory}}'
-  TaskCount: {{.App.Count}}`)
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Parse(lbFargateAppTemplatePath, struct {
+					RulePriorityLambda string
+					*lbFargateTemplateParams
+				}{
+					RulePriorityLambda:      "lambda",
+					lbFargateTemplateParams: c.toTemplateParams(),
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				c.parser = m
 			},
 
-			wantedTemplate: `Parameters:
-  ProjectName: phonetool
-  EnvName: test
-  AppName: frontend
-  ContainerImage: 12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c
-  ContainerPort: 80
-  RulePath: 'frontend'
-  TaskCPU: '256'
-  TaskMemory: '512'
-  TaskCount: 1`,
+			wantedTemplate: "template",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			box := packd.NewMemoryBox()
-			tc.mockBox(box)
-
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 			conf := &LBFargateStackConfig{
 				CreateLBFargateAppInput: tc.in,
-				box:                     box,
 			}
+			tc.mockDependencies(ctrl, conf)
 
 			// WHEN
 			template, err := conf.Template()
 
 			// THEN
-			require.True(t, errors.Is(err, tc.wantedError), "expected: %v, got: %v", tc.wantedError, err)
+			require.Equal(t, tc.wantedError, err)
 			require.Equal(t, tc.wantedTemplate, template)
 		})
 	}
@@ -254,143 +264,82 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 
 func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 	testCases := map[string]struct {
-		in *LBFargateStackConfig
-
-		mockBox func(box *packd.MemoryBox)
+		in               *deploy.CreateLBFargateAppInput
+		mockDependencies func(ctrl *gomock.Controller, c *LBFargateStackConfig)
 
 		wantedParams string
 		wantedError  error
 	}{
 		"unavailable template": {
-			mockBox:      func(box *packd.MemoryBox) {}, // empty box where template does not exist
-			in:           &LBFargateStackConfig{},
-			wantedParams: "",
-			wantedError: &ErrTemplateNotFound{
-				templateLocation: lbFargateAppParamsPath,
-				parentErr:        os.ErrNotExist,
+			in: &deploy.CreateLBFargateAppInput{
+				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+					AppManifestProps: &manifest.AppManifestProps{
+						AppName:    "frontend",
+						Dockerfile: "frontend/Dockerfile",
+					},
+					Path: "frontend",
+				}),
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "12345",
+					Prod:      false,
+				},
+				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+				ImageTag:     "manual-bf3678c",
 			},
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any()).Return(nil, errors.New("some error"))
+				c.parser = m
+			},
+			wantedParams: "",
+			wantedError:  errors.New("some error"),
 		},
 		"render params template": {
-			in: &LBFargateStackConfig{
-				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-						AppManifestProps: &manifest.AppManifestProps{
-							AppName:    "frontend",
-							Dockerfile: "frontend/Dockerfile",
-						},
-						Path: "frontend",
-					}),
-					Env: &archer.Environment{
-						Project:   "phonetool",
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "12345",
-						Prod:      false,
+			in: &deploy.CreateLBFargateAppInput{
+				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+					AppManifestProps: &manifest.AppManifestProps{
+						AppName:    "frontend",
+						Dockerfile: "frontend/Dockerfile",
 					},
-					ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-					ImageTag:     "manual-bf3678c",
+					Path: "frontend",
+				}),
+				Env: &archer.Environment{
+					Project:   "phonetool",
+					Name:      "test",
+					Region:    "us-west-2",
+					AccountID: "12345",
+					Prod:      false,
 				},
-				httpsEnabled: false,
+				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+				ImageTag:     "manual-bf3678c",
 			},
-
-			mockBox: func(box *packd.MemoryBox) {
-				box.AddString(lbFargateAppParamsPath, `{
-  "Parameters" : {
-    "ProjectName" : "{{.Env.Project}}",
-    "EnvName": "{{.Env.Name}}",
-    "AppName": "{{.App.Name}}",
-    "ContainerImage": "{{.Image.URL}}",
-    "ContainerPort": "{{.Image.Port}}",
-    "RulePath": "{{.App.Path}}",
-    "TaskCPU": "{{.App.CPU}}",
-    "TaskMemory": "{{.App.Memory}}",
-    "TaskCount": "{{.App.Count}}",
-    "HTTPSEnabled": "{{.HTTPSEnabled}}"
-  }
-}`)
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
+				c.parser = m
 			},
-			wantedParams: `{
-  "Parameters" : {
-    "ProjectName" : "phonetool",
-    "EnvName": "test",
-    "AppName": "frontend",
-    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
-    "ContainerPort": "80",
-    "RulePath": "frontend",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "1",
-    "HTTPSEnabled": "false"
-  }
-}`,
-		},
-		"render params template for https": {
-			in: &LBFargateStackConfig{
-				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-						AppManifestProps: &manifest.AppManifestProps{
-							AppName:    "frontend",
-							Dockerfile: "frontend/Dockerfile",
-						},
-						Path: "frontend",
-					}),
-					Env: &archer.Environment{
-						Project:   "phonetool",
-						Name:      "test",
-						Region:    "us-west-2",
-						AccountID: "12345",
-						Prod:      false,
-					},
-					ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-					ImageTag:     "manual-bf3678c",
-				},
-				httpsEnabled: true,
-			},
-			mockBox: func(box *packd.MemoryBox) {
-				box.AddString(lbFargateAppParamsPath, `{
-  "Parameters" : {
-    "ProjectName" : "{{.Env.Project}}",
-    "EnvName": "{{.Env.Name}}",
-    "AppName": "{{.App.Name}}",
-    "ContainerImage": "{{.Image.URL}}",
-    "ContainerPort": "{{.Image.Port}}",
-    "RulePath": "{{.App.Path}}",
-    "TaskCPU": "{{.App.CPU}}",
-    "TaskMemory": "{{.App.Memory}}",
-    "TaskCount": "{{.App.Count}}",
-    "HTTPSEnabled": "{{.HTTPSEnabled}}"
-  }
-}`)
-			},
-			wantedParams: `{
-  "Parameters" : {
-    "ProjectName" : "phonetool",
-    "EnvName": "test",
-    "AppName": "frontend",
-    "ContainerImage": "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
-    "ContainerPort": "80",
-    "RulePath": "frontend",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "1",
-    "HTTPSEnabled": "true"
-  }
-}`,
+			wantedParams: "params",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			box := packd.NewMemoryBox()
-			tc.mockBox(box)
-			tc.in.box = box
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			c := &LBFargateStackConfig{
+				CreateLBFargateAppInput: tc.in,
+			}
+			tc.mockDependencies(ctrl, c)
 
 			// WHEN
-			params, err := tc.in.SerializedParameters()
+			params, err := c.SerializedParameters()
 
 			// THEN
-			require.True(t, errors.Is(err, tc.wantedError), "expected: %v, got: %v", tc.wantedError, err)
+			require.Equal(t, tc.wantedError, err)
 			require.Equal(t, tc.wantedParams, params)
 		})
 	}

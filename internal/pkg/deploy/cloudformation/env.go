@@ -18,7 +18,7 @@ import (
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	return cf.create(stack.NewEnvStackConfig(env, cf.box))
+	return cf.create(stack.NewEnvStackConfig(env))
 }
 
 // StreamEnvironmentCreation streams resource update events while a deployment is taking place.
@@ -29,7 +29,7 @@ func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironment
 	events := make(chan []deploy.ResourceEvent)
 	resp := make(chan deploy.CreateEnvironmentResponse, 1)
 
-	stack := stack.NewEnvStackConfig(env, cf.box)
+	stack := stack.NewEnvStackConfig(env)
 	go cf.streamResourceEvents(done, events, stack.StackName())
 	go cf.streamEnvironmentResponse(done, resp, stack)
 	return events, resp
@@ -40,7 +40,7 @@ func (cf CloudFormation) DeleteEnvironment(projectName, envName string) error {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 		Project: projectName,
 		Name:    envName,
-	}, cf.box)
+	})
 
 	out, err := cf.describeStack(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(conf.StackName()),

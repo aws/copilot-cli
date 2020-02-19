@@ -4,20 +4,19 @@
 package manifest
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"text/template"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
-
-	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
 const (
 	GithubProviderName    = "GitHub"
 	GithubSecretIdKeyName = "access_token_secret"
+
+	pipelineManifestPath = "cicd/pipeline.yml"
 )
 
 // Provider defines a source of the artifacts
@@ -86,6 +85,8 @@ type PipelineManifest struct {
 	Version PipelineSchemaMajorVersion `yaml:"version"`
 	Source  *Source                    `yaml:"source"`
 	Stages  []PipelineStage            `yaml:"stages"`
+
+	parser template.Parser
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -120,26 +121,19 @@ func CreatePipeline(pipelineName string, provider Provider, stageNames []string)
 			Properties:   provider.Properties(),
 		},
 		Stages: stages,
+
+		parser: template.New(),
 	}, nil
 }
 
 // MarshalBinary serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
 func (m *PipelineManifest) MarshalBinary() ([]byte, error) {
-	box := templates.Box()
-	content, err := box.FindString("cicd/pipeline.yml")
+	content, err := m.parser.Parse(pipelineManifestPath, *m)
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := template.New("pipelineTemplate").Parse(content)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, *m); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return content.Bytes(), nil
 }
 
 // UnmarshalPipeline deserializes the YAML input stream into a pipeline

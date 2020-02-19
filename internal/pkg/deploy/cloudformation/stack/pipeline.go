@@ -4,26 +4,24 @@
 package stack
 
 import (
-	"bytes"
-	"fmt"
-	"text/template"
-
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/templates"
 )
 
 const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
 
 type pipelineStackConfig struct {
 	*deploy.CreatePipelineInput
+	parser template.Parser
 }
 
 func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig {
 	return &pipelineStackConfig{
 		CreatePipelineInput: in,
+		parser:              template.New(),
 	}
 }
 
@@ -32,24 +30,11 @@ func (p *pipelineStackConfig) StackName() string {
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {
-	content, err := templates.Box().FindString(pipelineCfnTemplatePath)
+	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(templateFunctions))
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: pipelineCfnTemplatePath, parentErr: err}
+		return "", err
 	}
-
-	tpl, err := template.New("pipelineCfn").
-		Funcs(templateFunctions).
-		Parse(content)
-	if err != nil {
-		return "", fmt.Errorf("parse CloudFormation template for project %s, pipeline %s, error: %w",
-			p.ProjectName, p.Name, err)
-	}
-	var buf bytes.Buffer
-	if err := tpl.Execute(&buf, p); err != nil {
-		return "", fmt.Errorf("execute CloudFormation template for project: %s, pipeline: %s, error: %w",
-			p.ProjectName, p.Name, err)
-	}
-	return buf.String(), nil
+	return content.String(), nil
 }
 
 func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {

@@ -4,15 +4,16 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 
 	archermocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/gobuffalo/packd"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -260,7 +261,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 		mockSecretsManager func(m *archermocks.MockSecretsManager)
 		mockWsWriter       func(m *climocks.MockwsPipelineWriter)
-		mockBox            func(box *packd.MemoryBox)
+		mockParser         func(m *templatemocks.MockParser)
 		mockFileSystem     func(mockFS afero.Fs)
 
 		expectedSecretName    string
@@ -282,8 +283,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("buildspec.yml", nil)
 			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
 			},
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    "pipeline.yml",
@@ -305,15 +308,17 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("buildspec.yml", nil)
 			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
 			},
 			expectedSecretName:    "github-token-badgoose-goose",
 			expectManifestPath:    "pipeline.yml",
 			expectedBuildspecPath: "buildspec.yml",
 			expectedError:         nil,
 		},
-		"returns an error if buildspec template does not exist": {
+		"returns an error if buildspec cannot be parsed": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
@@ -327,9 +332,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Times(0)
 			},
-			mockBox: func(m *packd.MemoryBox) {
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			expectedError: fmt.Errorf("find template for %s: %w", buildspecTemplatePath, os.ErrNotExist),
+			expectedError: errors.New("some error"),
 		},
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
@@ -345,8 +351,10 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", errors.New("some error"))
 			},
-			mockBox: func(m *packd.MemoryBox) {
-				m.AddString(buildspecTemplatePath, "hello")
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
 			},
 			expectedError: fmt.Errorf("write buildspec to workspace: some error"),
 		},
@@ -360,11 +368,11 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
 			mockWriter := climocks.NewMockwsPipelineWriter(ctrl)
-			mockBox := packd.NewMemoryBox()
+			mockParser := templatemocks.NewMockParser(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockWsWriter(mockWriter)
-			tc.mockBox(mockBox)
+			tc.mockParser(mockParser)
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
 			opts := &initPipelineOpts{
@@ -378,7 +386,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 				secretsmanager: mockSecretsManager,
 				workspace:      mockWriter,
-				box:            mockBox,
+				parser:         mockParser,
 				fsUtils:        memFs,
 			}
 

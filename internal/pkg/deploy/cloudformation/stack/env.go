@@ -1,25 +1,22 @@
 package stack
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
-	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-
-	"github.com/gobuffalo/packd"
 )
 
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
 	*deploy.CreateEnvironmentInput
-	box packd.Box
+	parser template.ReadParser
 }
 
 const (
@@ -49,50 +46,36 @@ const (
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up an environment.
-func NewEnvStackConfig(input *deploy.CreateEnvironmentInput, box packd.Box) *EnvStackConfig {
+func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 	return &EnvStackConfig{
 		CreateEnvironmentInput: input,
-		box:                    box,
+		parser:                 template.New(),
 	}
 }
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
-	environmentTemplate, err := e.box.FindString(EnvTemplatePath)
+	dnsLambda, err := e.parser.Read(dnsDelegationTemplatePath)
 	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: EnvTemplatePath, parentErr: err}
+		return "", err
 	}
-
-	acmValidator, err := e.box.FindString(acmValidationTemplatePath)
-	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: acmValidationTemplatePath, parentErr: err}
-	}
-
-	dnsDelegator, err := e.box.FindString(dnsDelegationTemplatePath)
-	if err != nil {
-		return "", &ErrTemplateNotFound{templateLocation: dnsDelegationTemplatePath, parentErr: err}
-	}
-
-	templ, err := template.New("environmenttemplates").Parse(environmentTemplate)
-
+	acmLambda, err := e.parser.Read(acmValidationTemplatePath)
 	if err != nil {
 		return "", err
 	}
 
-	templateData := struct {
+	content, err := e.parser.Parse(EnvTemplatePath, struct {
 		DNSDelegationLambda string
 		ACMValidationLambda string
 	}{
-		dnsDelegator,
-		acmValidator,
-	}
-
-	var buf bytes.Buffer
-	if err := templ.Execute(&buf, templateData); err != nil {
+		dnsLambda.String(),
+		acmLambda.String(),
+	})
+	if err != nil {
 		return "", err
 	}
 
-	return string(buf.Bytes()), nil
+	return content.String(), nil
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.

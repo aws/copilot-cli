@@ -880,7 +880,7 @@ func TestDeployProjectConfig_ErrWrapping(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			mockProjectResources := stack.ProjectResourcesConfig{}
-			got := tc.cf.deployProjectConfig(stack.NewProjectStackConfig(mockProject, boxWithProjectTemplate()), &mockProjectResources)
+			got := tc.cf.deployProjectConfig(stack.NewProjectStackConfig(mockProject), &mockProjectResources)
 			require.NotNil(t, got)
 			require.True(t, errors.Is(tc.want, got), "Got %v but expected %v", got, tc.want)
 		})

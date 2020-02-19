@@ -29,7 +29,7 @@ const (
 // We deploy project resources through StackSets - that way we can have one
 // template that we update and all regional stacks are updated.
 func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
-	projectConfig := stack.NewProjectStackConfig(in, cf.box)
+	projectConfig := stack.NewProjectStackConfig(in)
 
 	// First deploy the project roles needed by StackSets. These roles
 	// allow the stack set to set up our regional stacks.
@@ -80,7 +80,7 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 		DomainName: project.Domain,
 	}
 
-	projectConfig := stack.NewProjectStackConfig(&deployProject, cf.box)
+	projectConfig := stack.NewProjectStackConfig(&deployProject)
 
 	describeStack := cloudformation.DescribeStacksInput{
 		StackName: aws.String(projectConfig.StackName()),
@@ -93,7 +93,7 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 
 	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(projectStack)
 	deployProject.DNSDelegationAccounts = append(dnsDelegatedAccounts, accountID)
-	updatedProjectConfig := stack.NewProjectStackConfig(&deployProject, cf.box)
+	updatedProjectConfig := stack.NewProjectStackConfig(&deployProject)
 
 	if err := cf.update(updatedProjectConfig); err != nil {
 		return fmt.Errorf("updating project to allow DNS delegation: %w", err)
@@ -127,7 +127,8 @@ func (cf CloudFormation) GetRegionalProjectResources(project *archer.Project) ([
 func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, region *string) ([]*archer.ProjectRegionalResources, error) {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
-		AccountID: project.AccountID}, cf.box)
+		AccountID: project.AccountID,
+	})
 	listStackInstancesInput := &cloudformation.ListStackInstancesInput{
 		StackSetName:         aws.String(projectConfig.StackSetName()),
 		StackInstanceAccount: aws.String(project.AccountID),
@@ -175,7 +176,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
-	}, cf.box)
+	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
 		return fmt.Errorf("adding %s app resources to project %s: %w", appName, project.Name, err)
@@ -217,7 +218,7 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
-	}, cf.box)
+	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
 		return fmt.Errorf("get previous project %s config: %w", project.Name, err)
@@ -259,7 +260,7 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
-	}, cf.box)
+	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
 		return fmt.Errorf("getting previous deployed stackset %w", err)
@@ -315,7 +316,7 @@ func (cf CloudFormation) AddPipelineResourcesToProject(
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
-	}, cf.box)
+	})
 
 	// conditionally create a new stack instance in the project region
 	// if there's no existing stack instance.
