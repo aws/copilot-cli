@@ -70,11 +70,11 @@ type AppDeployInput struct {
 
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get wd: %w", err)
-	}
-	cliPath := filepath.Join(wd, "..", "..", "bin", "local", "ecs-preview")
+	// These tests should be run in a dockerfile so that
+	// your file system and docker image repo isn't polluted
+	// with test data and files. Since this is going to run
+	// from Docker, the binary will localted in the root bin.
+	cliPath := filepath.Join("/", "bin", "ecs-preview")
 	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
 	}
