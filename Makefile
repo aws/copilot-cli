@@ -107,7 +107,7 @@ e2e: build-e2e
 	@echo "Building E2E Docker Image" &&\
 	docker build -t ecs-cli-v2/e2e . -f e2e/Dockerfile
 	@echo "Running E2E Tests" &&\
-	docker run --privileged -it -v ${HOME}/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
+	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
 
 .PHONY: e2e-test-update-golden-files
 e2e-test-update-golden-files:

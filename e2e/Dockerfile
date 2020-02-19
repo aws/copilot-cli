@@ -1,15 +1,14 @@
-FROM golang:1.13
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go get -u github.com/onsi/ginkgo/ginkgo && go get -u github.com/onsi/gomega/...
-
 FROM docker:stable-dind
 # Docker needs somewhere to put creds from docker login.
 RUN wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.0/docker-credential-pass-v0.6.0-amd64.tar.gz && tar -xf docker-credential-pass-v0.6.0-amd64.tar.gz && chmod +x docker-credential-pass &&  mv docker-credential-pass /bin
 ENV DOCKER_HOST=tcp://127.0.0.1:2375
 ENV GOPROXY direct
+ENV GOBIN /go/bin
 
 # Install Go, Git and other dependencies so we can run ginkgo
 RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git
+
+RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 
 # Copy the binary
 ADD bin/local/ecs-preview-amd64 /bin/ecs-preview
