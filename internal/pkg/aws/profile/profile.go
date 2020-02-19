@@ -47,7 +47,7 @@ func (c *Config) Names() []string {
 	var profiles []string
 	for _, section := range c.f.Sections() {
 		// Named profiles created with "aws configure" are formatted as "[profile test]".
-		profiles = append(profiles, strings.TrimSpace(strings.ReplaceAll(section, "profile", "")))
+		profiles = append(profiles, strings.TrimSpace(strings.TrimPrefix(section, "profile")))
 	}
 	return profiles
 }
