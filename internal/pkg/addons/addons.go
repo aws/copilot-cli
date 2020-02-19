@@ -16,7 +16,7 @@ const (
 )
 
 type workspaceService interface {
-	ReadAddonFiles(appName string) (*workspace.ReadAddonFilesOutput, error)
+	ReadAddonFiles(appName string) (*workspace.AddonFiles, error)
 }
 
 // Addons represent additional resources for an application.
@@ -49,7 +49,7 @@ func (a *Addons) Template() (string, error) {
 	}
 	content, err := a.parser.Parse(addonsTemplatePath, struct {
 		AppName      string
-		AddonContent *workspace.ReadAddonFilesOutput
+		AddonContent *workspace.AddonFiles
 	}{
 		AppName:      a.appName,
 		AddonContent: out,

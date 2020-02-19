@@ -39,8 +39,9 @@ const (
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
-	paramsFileName            = "params.yml"
-	outputsFileName           = "outputs.yml"
+	paramsFile                = "params.yml"
+	outputsFile               = "outputs.yml"
+	resourcesFiles            = "{resources}.yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -55,8 +56,8 @@ type Workspace struct {
 	fsUtils    *afero.Afero
 }
 
-// ReadAddonFilesOutput is the output for ReadAddonFiles.
-type ReadAddonFilesOutput struct {
+// AddonFiles is the output for ReadAddonFiles.
+type AddonFiles struct {
 	Parameters []string
 	Resources  []string
 	Outputs    []string
@@ -222,9 +223,12 @@ func (ws *Workspace) ListAddonFiles(appName string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// addons dir could be nonexistent
 	addonsFiles, err := ws.fsUtils.ReadDir(filepath.Join(projectDir, appName, addonsDirName))
 	if err != nil {
-		return nil, err
+		return nil, &ErrAddonsDirNotExist{
+			AppName: appName,
+		}
 	}
 	var addonsFileNames []string
 	for _, file := range addonsFiles {
@@ -236,32 +240,55 @@ func (ws *Workspace) ListAddonFiles(appName string) ([]string, error) {
 	return addonsFileNames, nil
 }
 
-// ReadAddonFiles reads all addon files.
-func (ws *Workspace) ReadAddonFiles(appName string) (*ReadAddonFilesOutput, error) {
-	addonFiles, err := ws.ListAddonFiles(appName)
+// ReadAddonFiles reads addon files for an application.
+func (ws *Workspace) ReadAddonFiles(appName string) (*AddonFiles, error) {
+	addonFileNames, err := ws.ListAddonFiles(appName)
 	if err != nil {
-		return nil, fmt.Errorf("list addon files: %w", err)
+		return nil, err
 	}
-	var resources, params, outputs string
-	for _, fileName := range addonFiles {
+	addonFiles := map[string]string{paramsFile: "", outputsFile: "", resourcesFiles: ""}
+	for _, fileName := range addonFileNames {
 		content, err := ws.read(appName, addonsDirName, fileName)
+		// Trim spaces at the end of the file in case unexpected "\n" to make the template nicer.
+		trimmedContent := strings.TrimSpace(string(content))
 		if err != nil {
 			return nil, fmt.Errorf("read addon file %s: %w", fileName, err)
 		}
 		switch fileName {
-		case paramsFileName:
-			params = string(content)
-		case outputsFileName:
-			outputs = string(content)
+		case paramsFile:
+			addonFiles[paramsFile] = trimmedContent
+		case outputsFile:
+			addonFiles[outputsFile] = trimmedContent
 		default:
-			resources += string(content)
+			addonFiles[resourcesFiles] += trimmedContent + "\n"
 		}
 	}
-	return &ReadAddonFilesOutput{
-		Parameters: strings.Split(params, "\n"),
-		Resources:  strings.Split(resources, "\n"),
-		Outputs:    strings.Split(outputs, "\n"),
+	if err := validateNoMissingFiles(addonFiles); err != nil {
+		return nil, err
+	}
+	return &AddonFiles{
+		Parameters: strings.Split(strings.TrimSpace(addonFiles[paramsFile]), "\n"),
+		Resources:  strings.Split(strings.TrimSpace(addonFiles[resourcesFiles]), "\n"),
+		Outputs:    strings.Split(strings.TrimSpace(addonFiles[outputsFile]), "\n"),
 	}, nil
+}
+
+func validateNoMissingFiles(f map[string]string) error {
+	var missingFiles []string
+	if f[paramsFile] == "" {
+		missingFiles = append(missingFiles, paramsFile)
+	}
+	if f[outputsFile] == "" {
+		missingFiles = append(missingFiles, outputsFile)
+	}
+	if f[resourcesFiles] == "" {
+		missingFiles = append(missingFiles, `at least one resource YAML file such as "s3-bucket.yml"`)
+	}
+
+	if missingFiles != nil {
+		return fmt.Errorf("addons directory has missing file(s): %s", strings.Join(missingFiles, ", "))
+	}
+	return nil
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {
