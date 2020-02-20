@@ -179,13 +179,18 @@ var _ = Describe("Multiple Env Project", func() {
 
 		It("app logs should display logs", func() {
 			for _, envName := range []string{"test", "prod"} {
-				appLogs, appLogsErr := cli.AppLogs(&client.AppLogsRequest{
-					ProjectName: projectName,
-					AppName:     appName,
-					EnvName:     envName,
-					Since:       "1h",
-				})
-				Expect(appLogsErr).NotTo(HaveOccurred())
+				var appLogs []client.AppLogsOutput
+				var appLogsErr error
+				Eventually(func() ([]client.AppLogsOutput, error) {
+					appLogs, appLogsErr = cli.AppLogs(&client.AppLogsRequest{
+						ProjectName: projectName,
+						AppName:     appName,
+						EnvName:     envName,
+						Since:       "1h",
+					})
+					return appLogs, appLogsErr
+				}, "60s", "10s").ShouldNot(BeEmpty())
+
 				for _, logLine := range appLogs {
 					Expect(logLine.Message).NotTo(Equal(""))
 					Expect(logLine.TaskID).NotTo(Equal(""))
