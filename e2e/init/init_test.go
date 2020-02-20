@@ -102,26 +102,20 @@ var _ = Describe("init flow", func() {
 	})
 
 	Context("app logs", func() {
-		var (
-			appLogs    []client.AppLogsOutput
-			appLogsErr error
-		)
-
-		BeforeAll(func() {
-			appLogs, appLogsErr = cli.AppLogs(&client.AppLogsRequest{
-				ProjectName: projectName,
-				AppName:     appName,
-				EnvName:     "test",
-				Since:       "1h",
-			})
-		})
-
-		It("should not return an error", func() {
-			Expect(appLogsErr).NotTo(HaveOccurred())
-		})
 
 		It("should return valid log lines", func() {
-			Expect(len(appLogs)).NotTo(Equal(0))
+			var appLogs []client.AppLogsOutput
+			var appLogsErr error
+			Eventually(func() ([]client.AppLogsOutput, error) {
+				appLogs, appLogsErr = cli.AppLogs(&client.AppLogsRequest{
+					ProjectName: projectName,
+					AppName:     appName,
+					EnvName:     "test",
+					Since:       "1h",
+				})
+				return appLogs, appLogsErr
+			}, "60s", "10s").ShouldNot(BeEmpty())
+
 			for _, logLine := range appLogs {
 				Expect(logLine.Message).NotTo(Equal(""))
 				Expect(logLine.TaskID).NotTo(Equal(""))
