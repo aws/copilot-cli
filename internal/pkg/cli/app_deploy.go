@@ -348,11 +348,13 @@ func (o *appDeployOpts) getAppDeployTemplate() (string, error) {
 			GlobalOpts: o.GlobalOpts,
 		},
 
-		stackWriter:  buffer,
-		paramsWriter: ioutil.Discard,
-		store:        o.projectService,
-		describer:    o.appPackageCfClient,
-		ws:           o.workspaceService,
+		stackWriter:   buffer,
+		paramsWriter:  ioutil.Discard,
+		addonsWriter:  ioutil.Discard,
+		initAddonsSvc: initPackageAddonsSvc,
+		store:         o.projectService,
+		describer:     o.appPackageCfClient,
+		ws:            o.workspaceService,
 	}
 
 	if err := appPackage.Execute(); err != nil {
