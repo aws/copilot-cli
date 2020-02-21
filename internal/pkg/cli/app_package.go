@@ -30,6 +30,16 @@ const (
 	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
+var initPackageAddonsSvc = func(o *packageAppOpts) error {
+	addonsSvc, err := addons.New(o.AppName)
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.addonsSvc = addonsSvc
+
+	return nil
+}
+
 type packageAppVars struct {
 	*GlobalOpts
 	AppName   string
@@ -71,23 +81,15 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 
 	return &packageAppOpts{
 		packageAppVars: vars,
-		initAddonsSvc: func(o *packageAppOpts) error {
-			addonsSvc, err := addons.New(o.AppName)
-			if err != nil {
-				return fmt.Errorf("initiate addons service: %w", err)
-			}
-			o.addonsSvc = addonsSvc
-
-			return nil
-		},
-		ws:           ws,
-		store:        store,
-		describer:    cloudformation.New(sess),
-		runner:       command.New(),
-		stackWriter:  os.Stdout,
-		paramsWriter: ioutil.Discard,
-		addonsWriter: ioutil.Discard,
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		initAddonsSvc:  initPackageAddonsSvc,
+		ws:             ws,
+		store:          store,
+		describer:      cloudformation.New(sess),
+		runner:         command.New(),
+		stackWriter:    os.Stdout,
+		paramsWriter:   ioutil.Discard,
+		addonsWriter:   ioutil.Discard,
+		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
 }
 
