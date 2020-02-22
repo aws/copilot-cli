@@ -1,0 +1,75 @@
+Parameters:
+  Project:
+    Type: String
+    Description: Your project name.
+  Env:
+    Type: String
+    Description: The environment name your application is being deployed to.
+  App:
+    Type: String
+    Description: The name of the application being deployed.
+
+Resources:
+  MyDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Project}-${Env}-${App}'
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  MyRDSInstanceRotationSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: 'This is my rds instance secret'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+
+  MyDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: '20'
+      DBInstanceClass: db.t2.micro
+      Engine: mysql
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSInstanceRotationSecret, ':SecretString:username}}' ]]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSInstanceRotationSecret, ':SecretString:password}}' ]]
+      BackupRetentionPeriod: 0
+      DBInstanceIdentifier: 'rotation-instance'
+
+  SecretRDSInstanceAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref MyRDSInstanceRotationSecret
+      TargetId: !Ref MyDBInstance
+      TargetType: AWS::RDS::DBInstance
+
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:Get*"
+            Resource: "arn:aws:dynamodb:*:*:table/mytable"
+Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: !Ref AdditionalResourcesPolicy
+  MyRDSInstanceRotationSecretArn:
+    Value: !Ref MyRDSInstanceRotationSecret
+  MyDynamoDBTableName:
+    Value: !Ref MyDynamoDBTable
+  MyDynamoDBTableArn:
+    Value: !GetAtt 'MyDynamoDBTable.Arn'
+  TestExport:
+    Value: 'test'
