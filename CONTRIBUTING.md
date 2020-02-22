@@ -40,14 +40,14 @@ There are three different types of testing done on the ECS CLI.
 
 **Integration tests** are rarer and test the CLI's integration with remote services, such as CloudFormation or SSM. Our integration tests ensure that we can call these remote services and get the results we expect.
 
-**End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs). These tests are the most comprehensive and run on both Windows and Linux build fleets. Feel free to run these tests - but they require an AWS account to run in, so be mindful that resources will be created and destroyed.
+**End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs). These tests are the most comprehensive and run on both Windows and Linux build fleets. Feel free to run these tests - but they require an 2 AWS account to run in, so be mindful that resources will be created and destroyed. You'll need three profiles: `default`, `e2etestenv` and `e2eprodenv`. Both e2e profiles need to be configured for different AWS accounts and different regions.
 
 Below are the different commands which can be run in the root of the project directory.
 
 * Run `make` (This creates a standalone executable in the `bin/local` directory).
 * Run `make test` to run the unit tests.
 * Run `make integ-test` to run integration tests against your Default AWS profile. **Warning** - this will create AWS resources in your account.
-* Run `make e2e-test` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account.
+* Run `make e2e` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account. You'll need Docker running for these tests to run.
 
 ### Generating mocks
 Often times it's helpful to generate mocks to make unit-testing easier and more focused. We strongly encourage this and encourage you to generate mocks when appropriate! In order to generate mocks:
