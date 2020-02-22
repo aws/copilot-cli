@@ -28,7 +28,7 @@ func TestAddons_Template(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
 				ws := mocks.NewMockworkspaceService(ctrl)
-				out := &workspace.ReadAddonFilesOutput{
+				out := &workspace.AddonFiles{
 					Outputs:    []string{"outputs"},
 					Parameters: []string{"params"},
 					Resources:  []string{"resources"},
@@ -38,7 +38,7 @@ func TestAddons_Template(t *testing.T) {
 				parser := templatemocks.NewMockParser(ctrl)
 				parser.EXPECT().Parse(addonsTemplatePath, struct {
 					AppName      string
-					AddonContent *workspace.ReadAddonFilesOutput
+					AddonContent *workspace.AddonFiles
 				}{
 					AppName:      a.appName,
 					AddonContent: out,

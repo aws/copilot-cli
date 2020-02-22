@@ -35,3 +35,13 @@ type ErrWorkspaceHasExistingProject struct {
 func (e *ErrWorkspaceHasExistingProject) Error() string {
 	return fmt.Sprintf("this workspace is already registered with project %s", e.ExistingProjectName)
 }
+
+// ErrAddonsDirNotExist means we tried to access in an addons dir for an application
+// but it does not exist.
+type ErrAddonsDirNotExist struct {
+	AppName string
+}
+
+func (e *ErrAddonsDirNotExist) Error() string {
+	return fmt.Sprintf(`"addons" directory does not exist under application %s`, e.AppName)
+}

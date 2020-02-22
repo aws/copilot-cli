@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -29,6 +30,16 @@ const (
 	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
+var initPackageAddonsSvc = func(o *packageAppOpts) error {
+	addonsSvc, err := addons.New(o.AppName)
+	if err != nil {
+		return fmt.Errorf("initiate addons service: %w", err)
+	}
+	o.addonsSvc = addonsSvc
+
+	return nil
+}
+
 type packageAppVars struct {
 	*GlobalOpts
 	AppName   string
@@ -41,13 +52,16 @@ type packageAppOpts struct {
 	packageAppVars
 
 	// Interfaces to interact with dependencies.
-	ws           wsAppReader
-	store        projectService
-	describer    projectResourcesGetter
-	stackWriter  io.Writer
-	paramsWriter io.Writer
-	fs           afero.Fs
-	runner       runner
+	addonsSvc     templater
+	initAddonsSvc func(*packageAppOpts) error // Overriden in tests.
+	ws            wsAppReader
+	store         projectService
+	describer     projectResourcesGetter
+	stackWriter   io.Writer
+	paramsWriter  io.Writer
+	addonsWriter  io.Writer
+	fs            afero.Fs
+	runner        runner
 }
 
 func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
@@ -67,12 +81,14 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 
 	return &packageAppOpts{
 		packageAppVars: vars,
+		initAddonsSvc:  initPackageAddonsSvc,
 		ws:             ws,
 		store:          store,
 		describer:      cloudformation.New(sess),
 		runner:         command.New(),
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,
+		addonsWriter:   ioutil.Discard,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 	}, nil
 }
@@ -118,19 +134,40 @@ func (o *packageAppOpts) Execute() error {
 	}
 
 	if o.OutputDir != "" {
-		if err := o.setFileWriters(); err != nil {
+		if err := o.setAppFileWriters(); err != nil {
 			return err
 		}
 	}
 
-	templates, err := o.getTemplates(env)
+	appTemplates, err := o.getAppTemplates(env)
 	if err != nil {
 		return err
 	}
-	if _, err = o.stackWriter.Write([]byte(templates.stack)); err != nil {
+	if _, err = o.stackWriter.Write([]byte(appTemplates.stack)); err != nil {
 		return err
 	}
-	_, err = o.paramsWriter.Write([]byte(templates.configuration))
+	if _, err = o.paramsWriter.Write([]byte(appTemplates.configuration)); err != nil {
+		return err
+	}
+
+	addonsTemplate, err := o.getAddonsTemplate()
+	// return nil if addons dir doesn't exist.
+	notExistErr := &workspace.ErrAddonsDirNotExist{AppName: o.AppName}
+	if errors.As(err, &notExistErr) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("retrieve addons template: %w", err)
+	}
+
+	// Addons template won't show up without setting --output-dir flag.
+	if o.OutputDir != "" {
+		if err := o.setAddonsFileWriter(); err != nil {
+			return err
+		}
+	}
+
+	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
 	return err
 }
 
@@ -139,18 +176,22 @@ func (o *packageAppOpts) askAppName() error {
 		return nil
 	}
 
-	names, err := o.ws.AppNames()
+	appNames, err := o.ws.AppNames()
 	if err != nil {
 		return fmt.Errorf("list applications in workspace: %w", err)
 	}
-	if len(names) == 0 {
+	if len(appNames) == 0 {
 		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
 	}
-	app, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", names)
+	if len(appNames) == 1 {
+		o.AppName = appNames[0]
+		return nil
+	}
+	appName, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", appNames)
 	if err != nil {
 		return fmt.Errorf("prompt application name: %w", err)
 	}
-	o.AppName = app
+	o.AppName = appName
 	return nil
 }
 
@@ -159,18 +200,22 @@ func (o *packageAppOpts) askEnvName() error {
 		return nil
 	}
 
-	names, err := o.listEnvNames()
+	envNames, err := o.listEnvNames()
 	if err != nil {
 		return err
 	}
-	if len(names) == 0 {
+	if len(envNames) == 0 {
 		return fmt.Errorf("there are no environments in project %s", o.ProjectName())
 	}
-	env, err := o.prompt.SelectOne(appPackageEnvNamePrompt, "", names)
+	if len(envNames) == 1 {
+		o.EnvName = envNames[0]
+		return nil
+	}
+	envName, err := o.prompt.SelectOne(appPackageEnvNamePrompt, "", envNames)
 	if err != nil {
 		return fmt.Errorf("prompt environment name: %w", err)
 	}
-	o.EnvName = env
+	o.EnvName = envName
 	return nil
 }
 
@@ -191,13 +236,20 @@ func (o *packageAppOpts) askTag() error {
 	return nil
 }
 
-type cfnTemplates struct {
+func (o *packageAppOpts) getAddonsTemplate() (string, error) {
+	if err := o.initAddonsSvc(o); err != nil {
+		return "", err
+	}
+	return o.addonsSvc.Template()
+}
+
+type appCfnTemplates struct {
 	stack         string
 	configuration string
 }
 
-// getTemplates returns the CloudFormation stack's template and its parameters.
-func (o *packageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, error) {
+// getAppTemplates returns the CloudFormation stack's template and its parameters for the application.
+func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTemplates, error) {
 	raw, err := o.ws.ReadAppManifest(o.AppName)
 	if err != nil {
 		return nil, err
@@ -250,14 +302,14 @@ func (o *packageAppOpts) getTemplates(env *archer.Environment) (*cfnTemplates, e
 		if err != nil {
 			return nil, err
 		}
-		return &cfnTemplates{stack: tpl, configuration: params}, nil
+		return &appCfnTemplates{stack: tpl, configuration: params}, nil
 	default:
 		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", t)
 	}
 }
 
-// setFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
-func (o *packageAppOpts) setFileWriters() error {
+// setAppFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
+func (o *packageAppOpts) setAppFileWriters() error {
 	if err := o.fs.MkdirAll(o.OutputDir, 0755); err != nil {
 		return fmt.Errorf("create directory %s: %w", o.OutputDir, err)
 	}
@@ -277,6 +329,19 @@ func (o *packageAppOpts) setFileWriters() error {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
 	}
 	o.paramsWriter = paramsFile
+
+	return nil
+}
+
+func (o *packageAppOpts) setAddonsFileWriter() error {
+	addonsPath := filepath.Join(o.OutputDir,
+		fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName))
+	addonsFile, err := o.fs.Create(addonsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", addonsPath, err)
+	}
+	o.addonsWriter = addonsFile
+
 	return nil
 }
 

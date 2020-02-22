@@ -404,6 +404,44 @@ func (mr *MockcwlogServiceMockRecorder) LogGroupExists(logGroupName interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogGroupExists", reflect.TypeOf((*MockcwlogService)(nil).LogGroupExists), logGroupName)
 }
 
+// Mocktemplater is a mock of templater interface
+type Mocktemplater struct {
+	ctrl     *gomock.Controller
+	recorder *MocktemplaterMockRecorder
+}
+
+// MocktemplaterMockRecorder is the mock recorder for Mocktemplater
+type MocktemplaterMockRecorder struct {
+	mock *Mocktemplater
+}
+
+// NewMocktemplater creates a new mock instance
+func NewMocktemplater(ctrl *gomock.Controller) *Mocktemplater {
+	mock := &Mocktemplater{ctrl: ctrl}
+	mock.recorder = &MocktemplaterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mocktemplater) EXPECT() *MocktemplaterMockRecorder {
+	return m.recorder
+}
+
+// Template mocks base method
+func (m *Mocktemplater) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template
+func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
+}
+
 // MockdockerService is a mock of dockerService interface
 type MockdockerService struct {
 	ctrl     *gomock.Controller

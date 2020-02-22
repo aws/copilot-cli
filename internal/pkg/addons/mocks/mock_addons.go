@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockworkspaceService is a mock of workspaceService interface
@@ -34,10 +35,10 @@ func (m *MockworkspaceService) EXPECT() *MockworkspaceServiceMockRecorder {
 }
 
 // ReadAddonFiles mocks base method
-func (m *MockworkspaceService) ReadAddonFiles(appName string) (*workspace.ReadAddonFilesOutput, error) {
+func (m *MockworkspaceService) ReadAddonFiles(appName string) (*workspace.AddonFiles, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadAddonFiles", appName)
-	ret0, _ := ret[0].(*workspace.ReadAddonFilesOutput)
+	ret0, _ := ret[0].(*workspace.AddonFiles)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -46,6 +46,10 @@ type cwlogService interface {
 	LogGroupExists(logGroupName string) (bool, error)
 }
 
+type templater interface {
+	Template() (string, error)
+}
+
 type dockerService interface {
 	Build(uri, tag, path string) error
 	Login(uri, username, password string) error

@@ -46,4 +46,7 @@ const (
 	// file name when `app package` is called. It's also used to render the
 	// pipeline CFN template.
 	AppCfnTemplateConfigurationNameFormat = "%s-%s.params.json"
+	// AddonsCfnTemplateNameFormat is the addons output file name when `app package`
+	// is called.
+	AddonsCfnTemplateNameFormat = "%s.addons.stack.yml"
 )
