@@ -189,7 +189,10 @@ func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
 func (o *deleteAppOpts) sourceProjectEnvironments() error {
 
 	if o.EnvName != "" {
-		env, _ := o.targetEnv()
+		env, err := o.targetEnv()
+		if err != nil {
+			return err
+		}
 		o.projectEnvironments = append(o.projectEnvironments, env)
 	} else {
 		envs, err := o.projectService.ListEnvironments(o.ProjectName())
