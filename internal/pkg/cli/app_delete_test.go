@@ -15,44 +15,58 @@ import (
 )
 
 func TestDeleteAppOpts_Validate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockProjectService := climocks.NewMockprojectService(ctrl)
 	mockError := errors.New("some error")
 
 	tests := map[string]struct {
 		inProjectName string
 		inAppName     string
-		setupMocks    func()
+		inEnvName     string
+		setupMocks    func(m *climocks.MockprojectService)
 
 		want error
 	}{
 		"should return errNoProjectInWorkspace": {
-			setupMocks: func() {},
+			setupMocks: func(m *climocks.MockprojectService) {},
 			inAppName:  "my-app",
 			want:       errNoProjectInWorkspace,
 		},
 		"with no flag set": {
 			inProjectName: "phonetool",
-			setupMocks:    func() {},
+			setupMocks:    func(m *climocks.MockprojectService) {},
 			want:          nil,
 		},
 		"with all flag set": {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
-			setupMocks: func() {
-				mockProjectService.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(&archer.Application{
+			setupMocks: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(&archer.Application{
 					Name: "my-app",
 				}, nil)
 			},
 			want: nil,
 		},
+		"with env flag set": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			setupMocks: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").
+					Return(&archer.Environment{Name: "test"}, nil)
+			},
+			want: nil,
+		},
+		"with unknown environment": {
+			inProjectName: "phonetool",
+			inEnvName:     "test",
+			setupMocks: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("unknown env"))
+			},
+			want: errors.New("get environment test from metadata store: unknown env"),
+		},
 		"should return error if fail to get app name": {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
-			setupMocks: func() {
-				mockProjectService.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(nil, mockError)
+			setupMocks: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(nil, mockError)
 			},
 			want: errors.New("some error"),
 		},
@@ -60,20 +74,30 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			test.setupMocks()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockProjectService := climocks.NewMockprojectService(ctrl)
+
+			test.setupMocks(mockProjectService)
+
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
 					GlobalOpts: &GlobalOpts{
 						projectName: test.inProjectName,
 					},
 					AppName: test.inAppName,
+					EnvName: test.inEnvName,
 				},
 				projectService: mockProjectService,
 			}
 
-			got := opts.Validate()
+			err := opts.Validate()
 
-			require.Equal(t, test.want, got)
+			if test.want != nil {
+				require.EqualError(t, err, test.want.Error())
+			} else {
+				require.Nil(t, err)
+			}
 		})
 	}
 }
@@ -232,14 +256,16 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 
 	mockProjectService := climocks.NewMockprojectService(ctrl)
 	mockProjectName := "mockProjectName"
+	mockEnvName := "mockEnvName"
 	mockError := errors.New("mockError")
+	mockEnvElement := &archer.Environment{Project: mockProjectName, Name: mockEnvName}
 	mockEnvList := []*archer.Environment{
-		&archer.Environment{Project: mockProjectName},
+		mockEnvElement,
 	}
 
 	tests := map[string]struct {
 		setupMocks func()
-
+		inEnvName		string
 		want            error
 		wantOptsEnvList []*archer.Environment
 	}{
@@ -257,6 +283,14 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 			want:            nil,
 			wantOptsEnvList: mockEnvList,
 		},
+		"should set one element to opts environment list": {
+			setupMocks: func() {
+				mockProjectService.EXPECT().GetEnvironment(gomock.Eq(mockProjectName), gomock.Eq(mockEnvName)).Return(mockEnvElement, nil)
+			},
+			inEnvName: mockEnvName,
+			want:            nil,
+			wantOptsEnvList: mockEnvList,
+		},
 	}
 
 	for name, test := range tests {
@@ -267,6 +301,7 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						projectName: mockProjectName,
 					},
+					EnvName: test.inEnvName,
 				},
 				projectService: mockProjectService,
 			}

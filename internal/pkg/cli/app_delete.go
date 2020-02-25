@@ -33,6 +33,7 @@ type deleteAppVars struct {
 	*GlobalOpts
 	SkipConfirmation bool
 	AppName          string
+	EnvName          string
 }
 
 type deleteAppOpts struct {
@@ -76,6 +77,11 @@ func (o *deleteAppOpts) Validate() error {
 	}
 	if o.AppName != "" {
 		if _, err := o.projectService.GetApplication(o.ProjectName(), o.AppName); err != nil {
+			return err
+		}
+	}
+	if o.EnvName != "" {
+		if err := o.validateEnvName(); err != nil {
 			return err
 		}
 	}
@@ -133,6 +139,21 @@ func (o *deleteAppOpts) Execute() error {
 	return nil
 }
 
+func (o *deleteAppOpts) validateEnvName() error {
+	if _, err := o.targetEnv(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *deleteAppOpts) targetEnv() (*archer.Environment, error) {
+	env, err := o.projectService.GetEnvironment(o.ProjectName(), o.EnvName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
+	}
+	return env, nil
+}
+
 func (o *deleteAppOpts) askAppName() error {
 	if o.AppName != "" {
 		return nil
@@ -166,13 +187,22 @@ func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
 }
 
 func (o *deleteAppOpts) sourceProjectEnvironments() error {
-	envs, err := o.projectService.ListEnvironments(o.ProjectName())
 
-	if err != nil {
-		return fmt.Errorf("get environments: %w", err)
+	if o.EnvName != "" {
+		env, err := o.targetEnv()
+		if err != nil {
+			return err
+		}
+		o.projectEnvironments = append(o.projectEnvironments, env)
+	} else {
+		envs, err := o.projectService.ListEnvironments(o.ProjectName())
+
+		if err != nil {
+			return fmt.Errorf("get environments: %w", err)
+		}
+
+		o.projectEnvironments = envs
 	}
-
-	o.projectEnvironments = envs
 
 	return nil
 }
@@ -316,6 +346,7 @@ func BuildAppDeleteCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 
 	return cmd
