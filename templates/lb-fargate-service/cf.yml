@@ -193,32 +193,6 @@ Resources:
                   - 'cloudwatch:ListMetrics'
                 Resource: '*'
 
-  ContainerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName, ContainerSecurityGroup]]
-      VpcId:
-        Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-VpcId"
-
-  ContainerSecurityGroupIngressFromPublicALB:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Ingress from the public ALB
-      GroupId: !Ref 'ContainerSecurityGroup'
-      IpProtocol: -1
-      SourceSecurityGroupId:
-        Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerSecurityGroupId"
-
-  ContainerSecurityGroupIngressFromSelf:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Ingress from other containers in the same security group
-      GroupId: !Ref 'ContainerSecurityGroup'
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
-
   Service:
     Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated
@@ -249,7 +223,7 @@ Resources:
                 - ','
                 - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PublicSubnets'
           SecurityGroups:
-            - !Ref ContainerSecurityGroup
+            - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-EnvironmentSecurityGroup'
       LoadBalancers:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort

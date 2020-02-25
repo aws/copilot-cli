@@ -63,9 +63,16 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -80,6 +87,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-pub0'
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -88,6 +98,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-pub1'
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
@@ -96,6 +109,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-priv0'
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -104,11 +120,17 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: !Select [ 1, !GetAZs '' ]
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-priv1'
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -150,6 +172,35 @@ Resources:
           IpProtocol: tcp
           ToPort: 443
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-lb'
+
+  # Only accept requests coming from the public ALB or other containers in the same security group.
+  EnvironmentSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Join ['', [!Ref ProjectName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-env'
+
+  EnvironmentSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+
+  EnvironmentSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
 
   PublicLoadBalancer:
     Condition: CreatePublicLoadBalancer
@@ -159,7 +210,6 @@ Resources:
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
       Type: application
-
 
   # Assign a dummy target group that with no real services as targets, so that we can create
   # the listeners for the services.
@@ -554,23 +604,16 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 
+  EnvironmentSecurityGroup:
+    Value: !Ref EnvironmentSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-EnvironmentSecurityGroup
+
   PublicLoadBalancerDNSName:
     Condition: CreatePublicLoadBalancer
     Value: !GetAtt PublicLoadBalancer.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-PublicLoadBalancerDNS
-
-  PublicLoadBalancerArn:
-    Condition: CreatePublicLoadBalancer
-    Value: !Ref PublicLoadBalancer
-    Export:
-      Name: !Sub ${AWS::StackName}-PublicLoadBalancerArn
-
-  PublicLoadBalancerSecurityGroupId:
-    Condition: CreatePublicLoadBalancer
-    Value: !GetAtt PublicLoadBalancerSecurityGroup.GroupId
-    Export:
-      Name: !Sub ${AWS::StackName}-PublicLoadBalancerSecurityGroupId
 
   PublicLoadBalancerHostedZone:
     Condition: CreatePublicLoadBalancer

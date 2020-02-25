@@ -118,7 +118,7 @@ e2e-test-update-golden-files:
 	#
 	# make e2e-test-update-golden-files // this is expected to fail but will update the golden files
 	# make e2e-test // this should pass because the golden files were updated
-	go test -v -p 1 -parallel 1 -tags=e2e ./e2e... -update
+	go test -p 1 -parallel 1 -tags=e2e ./e2e... -update
 
 .PHONY: tools
 tools:

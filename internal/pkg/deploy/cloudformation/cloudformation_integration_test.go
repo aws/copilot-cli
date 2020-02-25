@@ -445,16 +445,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"VpcId value should not be nil")
 			},
-			"PublicLoadBalancerSecurityGroupId": func(output *awsCF.Output) {
-				require.Equal(t,
-					fmt.Sprintf("%s-PublicLoadBalancerSecurityGroupId", envStackName),
-					*output.ExportName,
-					"Should export PublicLoadBalancerSecurityGroupId as stackname-PublicLoadBalancerSecurityGroupId")
-
-				require.NotNil(t,
-					output.OutputValue,
-					"PublicLoadBalancerSecurityGroupId value should not be nil")
-			},
 			"PublicSubnets": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-PublicSubnets", envStackName),
@@ -465,15 +455,15 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"PublicSubnets value should not be nil")
 			},
-			"PublicLoadBalancerArn": func(output *awsCF.Output) {
+			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,
-					fmt.Sprintf("%s-PublicLoadBalancerArn", envStackName),
+					fmt.Sprintf("%s-EnvironmentSecurityGroup", envStackName),
 					*output.ExportName,
-					"Should export PublicLoadBalancerArn as stackname-PublicLoadBalancerArn")
+					"Should export EnvironmentSecurityGroup as stackname-EnvironmentSecurityGroup")
 
 				require.NotNil(t,
 					output.OutputValue,
-					"PublicLoadBalancerArn value should not be nil")
+					"EnvironmentSecurityGroup value should not be nil")
 			},
 			"PublicLoadBalancerDNSName": func(output *awsCF.Output) {
 				require.NotNil(t,
