@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockworkspaceService is a mock of workspaceService interface

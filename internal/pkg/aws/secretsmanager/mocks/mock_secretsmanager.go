@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockSecretsManagerAPI is a mock of SecretsManagerAPI interface
-type MockSecretsManagerAPI struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockSecretsManagerAPIMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockSecretsManagerAPIMockRecorder is the mock recorder for MockSecretsManagerAPI
-type MockSecretsManagerAPIMockRecorder struct {
-	mock *MockSecretsManagerAPI
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockSecretsManagerAPI creates a new mock instance
-func NewMockSecretsManagerAPI(ctrl *gomock.Controller) *MockSecretsManagerAPI {
-	mock := &MockSecretsManagerAPI{ctrl: ctrl}
-	mock.recorder = &MockSecretsManagerAPIMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockSecretsManagerAPI) EXPECT() *MockSecretsManagerAPIMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // CreateSecret mocks base method
-func (m *MockSecretsManagerAPI) CreateSecret(arg0 *secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error) {
+func (m *Mockapi) CreateSecret(arg0 *secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSecret", arg0)
 	ret0, _ := ret[0].(*secretsmanager.CreateSecretOutput)
@@ -43,13 +43,13 @@ func (m *MockSecretsManagerAPI) CreateSecret(arg0 *secretsmanager.CreateSecretIn
 }
 
 // CreateSecret indicates an expected call of CreateSecret
-func (mr *MockSecretsManagerAPIMockRecorder) CreateSecret(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) CreateSecret(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).CreateSecret), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*Mockapi)(nil).CreateSecret), arg0)
 }
 
 // DeleteSecret mocks base method
-func (m *MockSecretsManagerAPI) DeleteSecret(arg0 *secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error) {
+func (m *Mockapi) DeleteSecret(arg0 *secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteSecret", arg0)
 	ret0, _ := ret[0].(*secretsmanager.DeleteSecretOutput)
@@ -58,7 +58,7 @@ func (m *MockSecretsManagerAPI) DeleteSecret(arg0 *secretsmanager.DeleteSecretIn
 }
 
 // DeleteSecret indicates an expected call of DeleteSecret
-func (mr *MockSecretsManagerAPIMockRecorder) DeleteSecret(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DeleteSecret(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockSecretsManagerAPI)(nil).DeleteSecret), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*Mockapi)(nil).DeleteSecret), arg0)
 }

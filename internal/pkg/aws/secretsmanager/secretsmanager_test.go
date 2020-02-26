@@ -30,14 +30,14 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 	tests := map[string]struct {
 		inSecretName   string
 		inSecretString string
-		callMock       func(m *mocks.MockSecretsManagerAPI)
+		callMock       func(m *mocks.Mockapi)
 
 		expectedError error
 	}{
 		"should wrap error returned by CreateSecret": {
 			inSecretName:   mockSecretName,
 			inSecretString: mockSecretString,
-			callMock: func(m *mocks.MockSecretsManagerAPI) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
@@ -50,7 +50,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 		"should return no error if secret already exists": {
 			inSecretName:   mockSecretName,
 			inSecretString: mockSecretString,
-			callMock: func(m *mocks.MockSecretsManagerAPI) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
@@ -66,7 +66,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 		"should return no error if successful": {
 			inSecretName:   mockSecretName,
 			inSecretString: mockSecretString,
-			callMock: func(m *mocks.MockSecretsManagerAPI) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().CreateSecret(&secretsmanager.CreateSecretInput{
 					Name:         aws.String(mockSecretName),
 					SecretString: aws.String(mockSecretString),
@@ -83,7 +83,7 @@ func TestSecretsManager_CreateSecret(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSecretsManager := mocks.NewMockSecretsManagerAPI(ctrl)
+			mockSecretsManager := mocks.NewMockapi(ctrl)
 
 			sm := SecretsManager{
 				secretsManager: mockSecretsManager,
