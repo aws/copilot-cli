@@ -37,12 +37,22 @@ Parameters:
   LogRetention:
     Type: Number
     Default: {{.App.LogRetention}}
+  AddonsArtifactURL:
+    Description: 'The URL within the S3 bucket where the addons nested stack template will be stored.'
+    Type: String
+    Default: ""
+  AddonsTemplateName:
+    Description: 'The name of the nested stack template under AddonsArtifactURL.'
+    Type: String
+    Default: '{{.App.Name}}.addons.stack.yml'
 Conditions:
   HTTPLoadBalancer:
     !Not
       - !Condition HTTPSLoadBalancer
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
+  HasAddons: # If a bucket URL is specified, that means the template exists.
+    !Not [!Equals [!Ref AddonsArtifactURL, ""]]
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -399,3 +409,14 @@ Resources:
       Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
       Timeout: "1"
       Count: 0
+
+  AddonsStack:
+    Type: AWS::CloudFormation::Stack
+    Condition: HasAddons
+    Properties:
+      Parameters:
+        Project: !Ref ProjectName
+        Env: !Ref EnvName
+        App: !Ref AppName
+      TemplateURL:
+        !Join ['/', [!Ref AddonsArtifactURL, !Ref AddonsTemplateName]]
