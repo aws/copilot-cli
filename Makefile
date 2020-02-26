@@ -127,7 +127,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
-	${GOBIN}/mockgen -source=./internal/pkg/aws/route53/route53.go -package=mocks -destination=./internal/pkg/aws/mocks/mock_route53.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
@@ -140,3 +139,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addons/mocks/mock_addons.go -source=./internal/pkg/addons/addons.go
 	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/build/docker/docker.go -destination=./internal/pkg/build/docker/mocks/mock_docker.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/store/mocks/mock_store.go -source=./internal/pkg/store/store.go
