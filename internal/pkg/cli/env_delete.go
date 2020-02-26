@@ -256,7 +256,7 @@ func (o *deleteEnvOpts) deleteStack() bool {
 
 func (o *deleteEnvOpts) deleteFromStore() {
 	if err := o.storeClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
-		log.Infof("Failed to remove environment %s from project %s store: %w\n", o.EnvName, o.ProjectName(), err)
+		log.Infof("Failed to remove environment %s from project %s store: %v\n", o.EnvName, o.ProjectName(), err)
 	}
 }
 

@@ -19,7 +19,7 @@ type workspaceService interface {
 	ReadAddonFiles(appName string) (*workspace.AddonFiles, error)
 }
 
-// Addons represent additional resources for an application.
+// Addons represents additional resources for an application.
 type Addons struct {
 	appName string
 
@@ -27,7 +27,7 @@ type Addons struct {
 	ws     workspaceService
 }
 
-// New creates an Addons struct given an application name.
+// New creates an Addons object given an application name.
 func New(appName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -40,8 +40,8 @@ func New(appName string) (*Addons, error) {
 	}, nil
 }
 
-// Template parses params.yml, policy.yml, {resource}.yml, and outputs.yml to generate
-// the addons CloudFormation template.
+// Template merges the files under the "addons/" directory of an application
+// into a single CloudFormation template and returns it.
 func (a *Addons) Template() (string, error) {
 	out, err := a.ws.ReadAddonFiles(a.appName)
 	if err != nil {
