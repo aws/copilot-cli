@@ -103,7 +103,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	}
 	opts.workspace = ws
 
-	secretsmanager, err := secretsmanager.NewStore()
+	secretsmanager, err := secretsmanager.New()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
 	}

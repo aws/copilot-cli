@@ -71,7 +71,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
 	}
 
-	secretsmanager, err := secretsmanager.NewStore()
+	secretsmanager, err := secretsmanager.New()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
 	}

@@ -14,20 +14,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 )
 
-type SecretsManagerAPI interface {
+type api interface {
 	CreateSecret(*secretsmanager.CreateSecretInput) (*secretsmanager.CreateSecretOutput, error)
 	DeleteSecret(*secretsmanager.DeleteSecretInput) (*secretsmanager.DeleteSecretOutput, error)
 }
 
-// SecretsManager is in charge of fetching and creating projects, environment
-// and pipeline configuration in SecretsManager.
+// SecretsManager wraps the AWS SecretManager client.
 type SecretsManager struct {
-	secretsManager SecretsManagerAPI
+	secretsManager api
 	sessionRegion  string
 }
 
-// NewSecretsManager returns a SecretsManager configured with the input session.
-func NewStore() (*SecretsManager, error) {
+// New returns a SecretsManager configured with the default session.
+func New() (*SecretsManager, error) {
 	p := session.NewProvider()
 	sess, err := p.Default()
 
@@ -51,9 +50,7 @@ var secretTags = func() []*secretsmanager.Tag {
 	}
 }
 
-// CreateSecret creates a secret and returns secret ARN
-// NOTE: Currently the default KMS key ("aws/secretsmanager") is used for
-// encrypting the secret.
+// CreateSecret creates a secret using the default KMS key "aws/secretmanager" to encrypt the secret and returns its ARN.
 func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, error) {
 	resp, err := s.secretsManager.CreateSecret(&secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
@@ -78,6 +75,7 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 	return aws.StringValue(resp.ARN), nil
 }
 
+// DeleteSecret force removes the secret from SecretsManager.
 func (s *SecretsManager) DeleteSecret(secretName string) error {
 	_, err := s.secretsManager.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(secretName),
@@ -90,6 +88,7 @@ func (s *SecretsManager) DeleteSecret(secretName string) error {
 	return nil
 }
 
+// ErrSecretAlreadyExists occurs if a secret with the same name already exists.
 type ErrSecretAlreadyExists struct {
 	secretName string
 	parentErr  error
