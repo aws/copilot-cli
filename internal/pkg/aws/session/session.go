@@ -6,7 +6,9 @@ package session
 
 import (
 	"fmt"
+	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 
@@ -17,22 +19,10 @@ import (
 )
 
 const (
-	userAgentHeader   = "User-Agent"
-	awsCredentialsDir = ".aws"
-	awsConfigFileName = "config"
-)
+	userAgentHeader = "User-Agent"
 
-// userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.
-func userAgentHandler() request.NamedHandler {
-	return request.NamedHandler{
-		Name: "UserAgentHandler",
-		Fn: func(r *request.Request) {
-			userAgent := r.HTTPRequest.Header.Get(userAgentHeader)
-			r.HTTPRequest.Header.Set(userAgentHeader,
-				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
-		},
-	}
-}
+	defaultTimeout = 30 * time.Second
+)
 
 // Provider provides methods to create sessions.
 // Once a session is created, it's cached locally so that the same session is not re-created.
@@ -52,9 +42,7 @@ func (p *Provider) Default() (*session.Session, error) {
 	}
 
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			CredentialsChainVerboseErrors: aws.Bool(true),
-		},
+		Config:            *newConfig(),
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
@@ -67,9 +55,10 @@ func (p *Provider) Default() (*session.Session, error) {
 
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
 func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(region),
-	})
+	sess, err := session.NewSession(
+		newConfig().
+			WithRegion(region),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +69,7 @@ func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
 // FromProfile returns a session configured against the input profile name.
 func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			CredentialsChainVerboseErrors: aws.Bool(true),
-		},
+		Config:            *newConfig(),
 		SharedConfigState: session.SharedConfigEnable,
 		Profile:           name,
 	})
@@ -101,14 +88,36 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 	}
 
 	creds := stscreds.NewCredentials(defaultSession, roleARN)
-	sess, err := session.NewSession(&aws.Config{
-		CredentialsChainVerboseErrors: aws.Bool(true),
-		Credentials:                   creds,
-		Region:                        &region,
-	})
+	sess, err := session.NewSession(
+		newConfig().
+			WithCredentials(creds).
+			WithRegion(region),
+	)
 	if err != nil {
 		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
+}
+
+// newConfig returns a config with an end-to-end request timeout and verbose credentials errors.
+func newConfig() *aws.Config {
+	c := &http.Client{
+		Timeout: defaultTimeout,
+	}
+	return aws.NewConfig().
+		WithHTTPClient(c).
+		WithCredentialsChainVerboseErrors(true)
+}
+
+// userAgentHandler returns a http request handler that sets a custom user agent to all aws requests.
+func userAgentHandler() request.NamedHandler {
+	return request.NamedHandler{
+		Name: "UserAgentHandler",
+		Fn: func(r *request.Request) {
+			userAgent := r.HTTPRequest.Header.Get(userAgentHeader)
+			r.HTTPRequest.Header.Set(userAgentHeader,
+				fmt.Sprintf("aws-ecs-cli-v2/%s (%s) %s", version.Version, runtime.GOOS, userAgent))
+		},
+	}
 }
