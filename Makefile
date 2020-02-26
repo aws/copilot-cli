@@ -109,17 +109,6 @@ e2e: build-e2e
 	@echo "Running E2E Tests" &&\
 	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
 
-.PHONY: e2e-test-update-golden-files
-e2e-test-update-golden-files:
-	# CAUTION: only use this target when the archer CLI output changes
-	# (for example, a new command is added) and the golden files
-	# (i.e. the expected responses from CLI) need to be updated.
-	# The normal flow is the following:
-	#
-	# make e2e-test-update-golden-files // this is expected to fail but will update the golden files
-	# make e2e-test // this should pass because the golden files were updated
-	go test -p 1 -parallel 1 -tags=e2e ./e2e... -update
-
 .PHONY: tools
 tools:
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
