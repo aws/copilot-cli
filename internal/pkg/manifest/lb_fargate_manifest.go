@@ -9,6 +9,9 @@ import (
 
 const (
 	lbFargateManifestPath = "lb-fargate-service/manifest.yml"
+
+	// LogRetentionInDays is the default log retention time in days.
+	LogRetentionInDays = 30
 )
 
 // LBFargateManifest holds the configuration to build a container image with an exposed port that receives
@@ -33,6 +36,7 @@ type LBFargateConfig struct {
 	RoutingRule      `yaml:"http,flow"`
 	ContainersConfig `yaml:",inline"`
 	Scaling          *AutoScalingConfig `yaml:",flow"`
+	LogsConfig       `yaml:",flow"`
 }
 
 // ContainersConfig represents the resource boundaries and environment variables for the containers in the service.
@@ -42,6 +46,11 @@ type ContainersConfig struct {
 	Count     int               `yaml:"count"`
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
+}
+
+// LogsConfig is the configuration to the ECS logs.
+type LogsConfig struct {
+	LogRetention int `yaml:"logRetention"`
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -87,6 +96,7 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 				Memory: 512,
 				Count:  1,
 			},
+			LogsConfig: LogsConfig{},
 		},
 
 		parser: template.New(),
