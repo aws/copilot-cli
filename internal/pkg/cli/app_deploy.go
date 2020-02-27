@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -41,6 +42,10 @@ type appDeployVars struct {
 	AppName  string
 	EnvName  string
 	ImageTag string
+
+	// Feature flags -- these flags are not enabled while building the binary.
+	// However, it allows us to test our codebase until the feature is ready.
+	enableAddons bool
 }
 
 type appDeployOpts struct {
@@ -50,6 +55,7 @@ type appDeployOpts struct {
 	workspaceService   wsAppReader
 	ecrService         ecrService
 	dockerService      dockerService
+	s3Service          artifactPutter
 	runner             runner
 	appPackageCfClient projectResourcesGetter
 	appDeployCfClient  cloudformation.CloudFormation
@@ -57,7 +63,13 @@ type appDeployOpts struct {
 
 	spinner progress
 
+	// cached variables
 	targetEnvironment *archer.Environment
+}
+
+type cfnTemplates struct {
+	app    *bytes.Buffer
+	addons *bytes.Buffer
 }
 
 func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
@@ -127,70 +139,26 @@ func (o *appDeployOpts) Execute() error {
 		return err
 	}
 
-	repoName := fmt.Sprintf("%s/%s", o.projectName, o.AppName)
-
-	uri, err := o.ecrService.GetRepository(repoName)
-	if err != nil {
-		return fmt.Errorf("get ECR repository URI: %w", err)
+	if err := o.pushToECRRepo(); err != nil {
+		return err
 	}
 
-	appDockerfilePath, err := o.getAppDockerfilePath()
+	template, err := o.retrieveTemplate()
 	if err != nil {
 		return err
 	}
 
-	if err := o.dockerService.Build(uri, o.ImageTag, appDockerfilePath); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", appDockerfilePath, o.ImageTag, err)
-	}
-
-	auth, err := o.ecrService.GetECRAuth()
-
+	// TODO: delete addons template from S3 bucket when deleting the environment.
+	addonsURL, err := o.pushAddonsTemplateToS3Bucket(template.addons)
 	if err != nil {
-		return fmt.Errorf("get ECR auth data: %w", err)
-	}
-
-	o.dockerService.Login(uri, auth.Username, auth.Password)
-
-	if err = o.dockerService.Push(uri, o.ImageTag); err != nil {
 		return err
 	}
 
-	template, err := o.getAppDeployTemplate()
-
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return fmt.Errorf("failed to generate random id for changeSet: %w", err)
-	}
-	stackName := stack.NameForApp(o.ProjectName(), o.targetEnvironment.Name, o.AppName)
-	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
-
-	o.spinner.Start(
-		fmt.Sprintf("Deploying %s to %s.",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.AppName), color.HighlightUserInput(o.ImageTag)),
-			color.HighlightUserInput(o.targetEnvironment.Name)))
-
-	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
-	tags := map[string]string{
-		stack.ProjectTagKey: o.ProjectName(),
-		stack.EnvTagKey:     o.targetEnvironment.Name,
-		stack.AppTagKey:     o.AppName,
-	}
-	if err := o.applyAppDeployTemplate(template, stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags); err != nil {
-		o.spinner.Stop("Error!")
+	if err := o.deployAppStack(template.app, addonsURL); err != nil {
 		return err
 	}
-	o.spinner.Stop("")
 
-	identifier, err := describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
-	if err != nil {
-		return fmt.Errorf("create identifier for application %s in project %s: %w", o.AppName, o.ProjectName(), err)
-	}
-	loadBalancerURI, err := identifier.URI(o.targetEnvironment.Name)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", o.EnvName, err)
-	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), loadBalancerURI.String())
-	return nil
+	return o.showAppURI()
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -325,6 +293,8 @@ func (o *appDeployOpts) configureClients() error {
 	// ECR client against tools account profile AND target environment region
 	o.ecrService = ecr.New(defaultSessEnvRegion)
 
+	o.s3Service = s3.New(defaultSessEnvRegion)
+
 	// app deploy CF client against env account profile AND target environment region
 	o.appDeployCfClient = cloudformation.New(envSession)
 
@@ -337,37 +307,32 @@ func (o *appDeployOpts) configureClients() error {
 	return nil
 }
 
-func (o *appDeployOpts) getAppDeployTemplate() (string, error) {
-	buffer := &bytes.Buffer{}
+func (o *appDeployOpts) pushToECRRepo() error {
+	repoName := fmt.Sprintf("%s/%s", o.projectName, o.AppName)
 
-	appPackage := packageAppOpts{
-		packageAppVars: packageAppVars{
-			AppName:    o.AppName,
-			EnvName:    o.targetEnvironment.Name,
-			Tag:        o.ImageTag,
-			GlobalOpts: o.GlobalOpts,
-		},
-
-		stackWriter:   buffer,
-		paramsWriter:  ioutil.Discard,
-		addonsWriter:  ioutil.Discard,
-		initAddonsSvc: initPackageAddonsSvc,
-		store:         o.projectService,
-		describer:     o.appPackageCfClient,
-		ws:            o.workspaceService,
+	uri, err := o.ecrService.GetRepository(repoName)
+	if err != nil {
+		return fmt.Errorf("get ECR repository URI: %w", err)
 	}
 
-	if err := appPackage.Execute(); err != nil {
-		return "", fmt.Errorf("package application: %w", err)
+	appDockerfilePath, err := o.getAppDockerfilePath()
+	if err != nil {
+		return err
 	}
-	return buffer.String(), nil
-}
 
-func (o *appDeployOpts) applyAppDeployTemplate(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string) error {
-	if err := o.appDeployCfClient.DeployApp(template, stackName, changeSetName, cfExecutionRole, tags); err != nil {
-		return fmt.Errorf("deploy application: %w", err)
+	if err := o.dockerService.Build(uri, o.ImageTag, appDockerfilePath); err != nil {
+		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", appDockerfilePath, o.ImageTag, err)
 	}
-	return nil
+
+	auth, err := o.ecrService.GetECRAuth()
+
+	if err != nil {
+		return fmt.Errorf("get ECR auth data: %w", err)
+	}
+
+	o.dockerService.Login(uri, auth.Username, auth.Password)
+
+	return o.dockerService.Push(uri, o.ImageTag)
 }
 
 func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
@@ -382,6 +347,100 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 	}
 
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
+}
+
+func (o *appDeployOpts) retrieveTemplate() (*cfnTemplates, error) {
+	appBuffer := &bytes.Buffer{}
+	addonsBuffer := &bytes.Buffer{}
+
+	appPackage := packageAppOpts{
+		packageAppVars: packageAppVars{
+			AppName:    o.AppName,
+			EnvName:    o.targetEnvironment.Name,
+			Tag:        o.ImageTag,
+			GlobalOpts: o.GlobalOpts,
+		},
+
+		stackWriter:   appBuffer,
+		paramsWriter:  ioutil.Discard,
+		addonsWriter:  addonsBuffer,
+		initAddonsSvc: initPackageAddonsSvc,
+		store:         o.projectService,
+		describer:     o.appPackageCfClient,
+		ws:            o.workspaceService,
+	}
+
+	if err := appPackage.Execute(); err != nil {
+		return nil, fmt.Errorf("retrieve template: %w", err)
+	}
+	return &cfnTemplates{
+		addons: addonsBuffer,
+		app:    appBuffer,
+	}, nil
+}
+
+func (o *appDeployOpts) pushAddonsTemplateToS3Bucket(addonsTemplate *bytes.Buffer) (string, error) {
+	if !o.enableAddons || addonsTemplate.String() == "" {
+		return "", nil
+	}
+	proj, err := o.projectService.GetProject(o.ProjectName())
+	if err != nil {
+		return "", fmt.Errorf("get project: %w", err)
+	}
+	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(proj, o.targetEnvironment.Region)
+	if err != nil {
+		return "", fmt.Errorf("get project resources: %w", err)
+	}
+
+	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName), addonsTemplate)
+	if err != nil {
+		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
+	}
+	return url, nil
+}
+
+func (o *appDeployOpts) deployAppStack(appTemplate *bytes.Buffer, addonsURL string) error {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return fmt.Errorf("generate random id for changeSet: %w", err)
+	}
+	stackName := stack.NameForApp(o.ProjectName(), o.targetEnvironment.Name, o.AppName)
+	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
+
+	o.spinner.Start(
+		fmt.Sprintf("Deploying %s to %s.",
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.AppName), color.HighlightUserInput(o.ImageTag)),
+			color.HighlightUserInput(o.targetEnvironment.Name)))
+
+	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
+	tags := map[string]string{
+		stack.ProjectTagKey: o.ProjectName(),
+		stack.EnvTagKey:     o.targetEnvironment.Name,
+		stack.AppTagKey:     o.AppName,
+	}
+	params := make(map[string]string)
+	params["AddonsTemplateURL"] = addonsURL
+	if err := o.appDeployCfClient.DeployApp(appTemplate.String(), stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags, params); err != nil {
+		o.spinner.Stop("Error!")
+		return fmt.Errorf("deploy application: %w", err)
+	}
+	o.spinner.Stop("")
+
+	return nil
+}
+
+func (o *appDeployOpts) showAppURI() error {
+	identifier, err := describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
+	if err != nil {
+		return fmt.Errorf("create identifier for application %s in project %s: %w", o.AppName, o.ProjectName(), err)
+	}
+	loadBalancerURI, err := identifier.URI(o.targetEnvironment.Name)
+	if err != nil {
+		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", o.EnvName, err)
+	}
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), loadBalancerURI.String())
+
+	return nil
 }
 
 // BuildAppDeployCmd builds the `app deploy` subcommand.

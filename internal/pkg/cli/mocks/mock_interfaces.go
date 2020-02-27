@@ -14,6 +14,7 @@ import (
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
+	io "io"
 	reflect "reflect"
 )
 
@@ -1376,4 +1377,42 @@ func (m *MockwsProjectManager) Summary() (*workspace.Summary, error) {
 func (mr *MockwsProjectManagerMockRecorder) Summary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsProjectManager)(nil).Summary))
+}
+
+// MockartifactPutter is a mock of artifactPutter interface
+type MockartifactPutter struct {
+	ctrl     *gomock.Controller
+	recorder *MockartifactPutterMockRecorder
+}
+
+// MockartifactPutterMockRecorder is the mock recorder for MockartifactPutter
+type MockartifactPutterMockRecorder struct {
+	mock *MockartifactPutter
+}
+
+// NewMockartifactPutter creates a new mock instance
+func NewMockartifactPutter(ctrl *gomock.Controller) *MockartifactPutter {
+	mock := &MockartifactPutter{ctrl: ctrl}
+	mock.recorder = &MockartifactPutterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockartifactPutter) EXPECT() *MockartifactPutterMockRecorder {
+	return m.recorder
+}
+
+// PutArtifact mocks base method
+func (m *MockartifactPutter) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutArtifact indicates an expected call of PutArtifact
+func (mr *MockartifactPutterMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactPutter)(nil).PutArtifact), bucket, fileName, data)
 }

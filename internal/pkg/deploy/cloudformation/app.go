@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cloudformation
@@ -14,12 +14,19 @@ import (
 
 // DeployApp wraps the application deployment flow and handles orchestration of
 // creating a stack versus updating a stack.
-func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string) error {
+func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string, parameters map[string]string) error {
 	var cfnTags []*cloudformation.Tag
 	for k, v := range tags {
 		cfnTags = append(cfnTags, &cloudformation.Tag{
 			Key:   aws.String(k),
 			Value: aws.String(v),
+		})
+	}
+	var cfnParams []*cloudformation.Parameter
+	for k, v := range parameters {
+		cfnParams = append(cfnParams, &cloudformation.Parameter{
+			ParameterKey:   aws.String(k),
+			ParameterValue: aws.String(v),
 		})
 	}
 
@@ -28,6 +35,7 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecuti
 		TemplateBody: aws.String(template),
 		Capabilities: aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
 		Tags:         cfnTags,
+		Parameters:   cfnParams,
 		RoleARN:      aws.String(cfExecutionRole),
 	})
 
@@ -45,14 +53,12 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecuti
 	}
 
 	// If error returned from CreateStack is ErrCodeAlreadyExistsException move on to CreateChangeSet flow.
-	if err != nil {
-		awsErr, ok := err.(awserr.Error)
-		if !ok {
-			return fmt.Errorf("create stack: %w", err)
-		}
-		if awsErr.Code() != cloudformation.ErrCodeAlreadyExistsException {
-			return fmt.Errorf("create stack: %w", err)
-		}
+	awsErr, ok := err.(awserr.Error)
+	if !ok {
+		return fmt.Errorf("create stack: %w", err)
+	}
+	if awsErr.Code() != cloudformation.ErrCodeAlreadyExistsException {
+		return fmt.Errorf("create stack: %w", err)
 	}
 
 	_, err = cf.client.CreateChangeSet(&cloudformation.CreateChangeSetInput{
@@ -62,6 +68,7 @@ func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecuti
 		Capabilities:  aws.StringSlice([]string{cloudformation.CapabilityCapabilityIam}),
 		ChangeSetType: aws.String(cloudformation.ChangeSetTypeUpdate),
 		Tags:          cfnTags,
+		Parameters:    cfnParams,
 		RoleARN:       aws.String(cfExecutionRole),
 	})
 

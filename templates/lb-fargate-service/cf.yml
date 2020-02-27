@@ -1,4 +1,4 @@
-# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a load balanced web application on Amazon ECS.
@@ -37,14 +37,10 @@ Parameters:
   LogRetention:
     Type: Number
     Default: {{.App.LogRetention}}
-  AddonsArtifactURL:
-    Description: 'The URL within the S3 bucket where the addons nested stack template will be stored.'
+  AddonsTemplateURL:
+    Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
-  AddonsTemplateName:
-    Description: 'The name of the nested stack template under AddonsArtifactURL.'
-    Type: String
-    Default: '{{.App.Name}}.addons.stack.yml'
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -52,7 +48,7 @@ Conditions:
   HTTPSLoadBalancer:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
-    !Not [!Equals [!Ref AddonsArtifactURL, ""]]
+    !Not [!Equals [!Ref AddonsTemplateURL, ""]]
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -419,4 +415,4 @@ Resources:
         Env: !Ref EnvName
         App: !Ref AppName
       TemplateURL:
-        !Join ['/', [!Ref AddonsArtifactURL, !Ref AddonsTemplateName]]
+        !Ref AddonsTemplateURL

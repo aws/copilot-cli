@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -341,74 +342,161 @@ image:
 	}
 }
 
-func TestAppDeployOpts_askImageTag(t *testing.T) {
-	var mockRunner *climocks.Mockrunner
-	var mockPrompter *climocks.Mockprompter
-
-	mockError := errors.New("mockError")
-
+func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
+	mockError := errors.New("some error")
+	buf := &bytes.Buffer{}
+	fmt.Fprint(buf, "some data")
 	tests := map[string]struct {
-		inputImageTag string
+		addonsTemplate *bytes.Buffer
+		inputApp       string
+		inputProject   string
+		inEnvironment  *archer.Environment
 
-		setupMocks func(controller *gomock.Controller)
+		mockProjectSvc             func(m *climocks.MockprojectService)
+		mockProjectResourcesGetter func(m *climocks.MockprojectResourcesGetter)
+		mockS3Svc                  func(m *climocks.MockartifactPutter)
 
-		wantErr      error
-		wantImageTag string
+		wantPath string
+		wantErr  error
 	}{
-		"should return nil if input image tag is not empty": {
-			inputImageTag: "anythingreally",
-			setupMocks:    func(controller *gomock.Controller) {},
-			wantErr:       nil,
-			wantImageTag:  "anythingreally",
-		},
-		"should wrap error from prompting": {
-			inputImageTag: "",
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = climocks.NewMockrunner(controller)
-				mockPrompter = climocks.NewMockprompter(controller)
-
-				gomock.InOrder(
-					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
-					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("", mockError),
-				)
+		"should push addons template to S3 bucket": {
+			addonsTemplate: buf,
+			inputApp:       "mockApp",
+			inputProject:   "mockProject",
+			inEnvironment: &archer.Environment{
+				Name:   "mockEnv",
+				Region: "us-west-2",
 			},
-			wantErr:      fmt.Errorf("prompt for image tag: %w", mockError),
-			wantImageTag: "",
-		},
-		"should set opts imageTag to user input value": {
-			inputImageTag: "",
-			setupMocks: func(controller *gomock.Controller) {
-				mockRunner = climocks.NewMockrunner(controller)
-				mockPrompter = climocks.NewMockprompter(controller)
 
-				gomock.InOrder(
-					mockRunner.EXPECT().Run("git", []string{"describe", "--always"}, gomock.Any()).Times(1).Return(mockError),
-					mockPrompter.EXPECT().Get(inputImageTagPrompt, "", nil).Times(1).Return("youwotm8", nil),
-				)
+			mockProjectSvc: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
+					Name: "mockProject",
+				}, nil)
 			},
-			wantErr:      nil,
-			wantImageTag: "youwotm8",
+
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+					Name: "mockProject",
+				}, "us-west-2").Return(&archer.ProjectRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+			},
+
+			mockS3Svc: func(m *climocks.MockartifactPutter) {
+				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", buf).Return("https://mockS3DomainName/mockPath", nil)
+			},
+
+			wantErr:  nil,
+			wantPath: "https://mockS3DomainName/mockPath",
+		},
+		"should return error if fail to get project": {
+			addonsTemplate: buf,
+			inputApp:       "mockApp",
+			inputProject:   "mockProject",
+			inEnvironment: &archer.Environment{
+				Name:   "mockEnv",
+				Region: "us-west-2",
+			},
+
+			mockProjectSvc: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetProject("mockProject").Return(nil, mockError)
+			},
+
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {},
+
+			mockS3Svc: func(m *climocks.MockartifactPutter) {},
+
+			wantErr: fmt.Errorf("get project: some error"),
+		},
+		"should return error if fail to get project resources": {
+			addonsTemplate: buf,
+			inputApp:       "mockApp",
+			inputProject:   "mockProject",
+			inEnvironment: &archer.Environment{
+				Name:   "mockEnv",
+				Region: "us-west-2",
+			},
+
+			mockProjectSvc: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
+					Name: "mockProject",
+				}, nil)
+			},
+
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+					Name: "mockProject",
+				}, "us-west-2").Return(nil, mockError)
+			},
+
+			mockS3Svc: func(m *climocks.MockartifactPutter) {},
+
+			wantErr: fmt.Errorf("get project resources: some error"),
+		},
+		"should return error if fail to upload to S3 bucket": {
+			addonsTemplate: buf,
+			inputApp:       "mockApp",
+			inputProject:   "mockProject",
+			inEnvironment: &archer.Environment{
+				Name:   "mockEnv",
+				Region: "us-west-2",
+			},
+
+			mockProjectSvc: func(m *climocks.MockprojectService) {
+				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
+					Name: "mockProject",
+				}, nil)
+			},
+
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+					Name: "mockProject",
+				}, "us-west-2").Return(&archer.ProjectRegionalResources{
+					S3Bucket: "mockBucket",
+				}, nil)
+			},
+
+			mockS3Svc: func(m *climocks.MockartifactPutter) {
+				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", buf).Return("", mockError)
+			},
+
+			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
 		},
 	}
 
-	for name, test := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			test.setupMocks(ctrl)
-			opts := &appDeployOpts{
+			defer ctrl.Finish()
+
+			mockProjectSvc := climocks.NewMockprojectService(ctrl)
+			mockProjectResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
+			mockS3Svc := climocks.NewMockartifactPutter(ctrl)
+			tc.mockProjectSvc(mockProjectSvc)
+			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
+			tc.mockS3Svc(mockS3Svc)
+
+			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
+					AppName:      tc.inputApp,
+					enableAddons: true,
 					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompter,
+						projectName: tc.inputProject,
 					},
-					ImageTag: test.inputImageTag,
 				},
-				runner: mockRunner,
+				projectService:     mockProjectSvc,
+				appPackageCfClient: mockProjectResourcesGetter,
+				s3Service:          mockS3Svc,
+				targetEnvironment:  tc.inEnvironment,
 			}
 
-			got := opts.askImageTag()
+			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket(tc.addonsTemplate)
 
-			require.Equal(t, test.wantErr, got)
-			require.Equal(t, test.wantImageTag, opts.ImageTag)
+			if gotErr != nil {
+				require.EqualError(t, gotErr, tc.wantErr.Error())
+			} else {
+				require.Equal(t, tc.wantPath, gotPath)
+			}
 		})
 	}
 }

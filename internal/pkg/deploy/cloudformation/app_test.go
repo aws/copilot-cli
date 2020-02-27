@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cloudformation
@@ -198,7 +198,7 @@ func TestDeployApp(t *testing.T) {
 				},
 			}
 
-			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName, mockExecutionRole, nil)
+			gotErr := cf.DeployApp(mockTemplate, mockStackName, mockChangeSetName, mockExecutionRole, nil, nil)
 
 			require.Equal(t, tc.wantErr, gotErr)
 		})
