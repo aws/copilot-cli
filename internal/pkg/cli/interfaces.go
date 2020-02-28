@@ -1,10 +1,11 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
 
 import (
 	"encoding"
+	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
@@ -137,4 +138,8 @@ type wsPipelineReader interface {
 type wsProjectManager interface {
 	Create(projectName string) error
 	Summary() (*workspace.Summary, error)
+}
+
+type artifactPutter interface {
+	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
