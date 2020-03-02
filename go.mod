@@ -3,7 +3,7 @@ module github.com/aws/amazon-ecs-cli-v2
 go 1.13
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.5
+	github.com/AlecAivazis/survey/v2 v2.0.7
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/aws/aws-sdk-go v1.29.8
 	github.com/awslabs/goformation/v4 v4.5.1
