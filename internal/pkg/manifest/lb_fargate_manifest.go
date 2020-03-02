@@ -71,6 +71,7 @@ type AutoScalingConfig struct {
 type LBFargateManifestProps struct {
 	*AppManifestProps
 	Path string
+	Port int
 }
 
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
@@ -85,7 +86,7 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 			AppImage: AppImage{
 				Build: input.Dockerfile,
 			},
-			Port: 80,
+			Port: input.Port,
 		},
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{

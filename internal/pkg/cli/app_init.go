@@ -33,6 +33,10 @@ Deployed resources (such as your service, logs) will contain this app's name and
 
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
+
+	fmtAppInitAppPortPrompt     = "What port do you want to expose to internet traffic?"
+	fmtAppInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
+You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
 const (
@@ -41,11 +45,25 @@ const (
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
 
+type appPort struct {
+	port uint16
+}
+
+func (p *appPort) Set(n int) error {
+	if n < 0 || n > 65536 {
+		err := fmt.Errorf("port outside valid range: %d", n)
+		return err
+	}
+	p.port = uint16(n)
+	return nil
+}
+
 type initAppVars struct {
 	*GlobalOpts
 	AppType        string
 	AppName        string
 	DockerfilePath string
+	AppPort        uint16
 }
 
 type initAppOpts struct {
@@ -127,6 +145,9 @@ func (o *initAppOpts) Ask() error {
 		return err
 	}
 	if err := o.askDockerfile(); err != nil {
+		return err
+	}
+	if err := o.askAppPort(); err != nil {
 		return err
 	}
 	return nil
@@ -256,6 +277,12 @@ func (o *initAppOpts) askDockerfile() error {
 	return nil
 }
 
+func (o *initAppOpts) askAppPort() error {
+	if o.AppPort != nil {
+		return nil
+	}
+}
+
 func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
 	_, err := o.appStore.GetApplication(projectName, o.AppName)
 	// If the app doesn't exist - that's perfect, return no error.
@@ -319,5 +346,6 @@ This command is also run as part of "ecs-preview init".`,
 	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
+	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 80, appPortFlagDescription)
 	return cmd
 }
