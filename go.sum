@@ -14,6 +14,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6/go.mod h1:grANhF5doyWs3UAsr3K4I6qtAmlQcZDesFNEHPZAzj8=
 github.com/aws/aws-sdk-go v1.29.8 h1:Kma1ikL7MHs/XH5Q4Aqj53AAhgttW6UFykc8Qj16HGo=
 github.com/aws/aws-sdk-go v1.29.8/go.mod h1:1KvfttTE3SPKMpo8g2c6jL3ZKfXtFvKscTgahTma5Xg=
+github.com/aws/aws-sdk-go v1.29.14 h1:NToqC5ZQ2RaxxSPp9szuQimWQWPG++ITwXbklq/FN7c=
+github.com/aws/aws-sdk-go v1.29.14/go.mod h1:1KvfttTE3SPKMpo8g2c6jL3ZKfXtFvKscTgahTma5Xg=
 github.com/awslabs/goformation/v3 v3.1.0/go.mod h1:hQ5RXo3GNm2laHWKizDzU5DsDy+yNcenSca2UxN0850=
 github.com/awslabs/goformation/v4 v4.5.1 h1:pvn5ORAiJiA6348xK+wj9Gz4c63GBPK4fAw7zUMkvAA=
 github.com/awslabs/goformation/v4 v4.5.1/go.mod h1:MBDN7u1lMNDoehbFuO4uPvgwPeolTMA2TzX1yO6KlxI=
