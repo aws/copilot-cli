@@ -564,9 +564,9 @@ Configurations
 
 Routes
 
-  Environment       URL                                      Path
-  test              my-pr-Publi.us-west-2.elb.amazonaws.com  /frontend
-  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+  Environment       URL
+  test              my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
+  prod              my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
 Variables
 
@@ -828,8 +828,8 @@ Configurations
 
 Routes
 
-  Environment       URL                                      Path
-  prod              my-pr-Publi.us-west-2.elb.amazonaws.com  /backend
+  Environment       URL
+  prod              my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
 Variables
 

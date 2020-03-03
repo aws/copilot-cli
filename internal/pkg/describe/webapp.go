@@ -348,7 +348,7 @@ func (w *WebApp) HumanString() string {
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", route.Environment, route.URL, route.Path)
 	}
