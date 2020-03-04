@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -68,12 +67,12 @@ type initPipelineOpts struct {
 	// TODO add pipeline file (to write to different file than pipeline.yml?)
 	initPipelineVars
 	// Interfaces to interact with dependencies.
-	workspace               wsPipelineWriter
-	secretsmanager          archer.SecretsManager
-	parser                  template.Parser
-	runner                  runner
-	regionalResourcesGetter archer.ProjectResourceStore
-	storeSvc                storeReader
+	workspace      wsPipelineWriter
+	secretsmanager archer.SecretsManager
+	parser         template.Parser
+	runner         runner
+	cfnClient      archer.ProjectResourceStore
+	storeSvc       storeReader
 
 	// Outputs stored on successful actions.
 	manifestPath  string
@@ -90,7 +89,7 @@ type initPipelineOpts struct {
 type artifactBucket struct {
 	BucketName   string
 	Region       string
-	Environments string
+	Environments []string
 }
 
 func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
@@ -144,7 +143,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	opts.regionalResourcesGetter = cloudformation.New(defaultSession)
+	opts.cfnClient = cloudformation.New(defaultSession)
 
 	return opts, nil
 }
@@ -228,8 +227,6 @@ func (o *initPipelineOpts) Execute() error {
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
-	// TODO deploy manifest file
-
 	return nil
 }
 
@@ -282,22 +279,18 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 }
 
 func (o *initPipelineOpts) createBuildspec() (string, error) {
-	artifactBuckets, err := o.getArtifactBucket()
+	artifactBuckets, err := o.artifactBuckets()
 	if err != nil {
 		return "", err
-	}
-	serializedArtifactBuckets, err := json.Marshal(artifactBuckets)
-	if err != nil {
-		return "", fmt.Errorf("marshal artifact buckets: %w", err)
 	}
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
-		ArtifactBuckets    string
+		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
-		ArtifactBuckets:    string(serializedArtifactBuckets),
+		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {
 		return "", err
@@ -309,14 +302,14 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 	return path, nil
 }
 
-func (o *initPipelineOpts) getArtifactBucket() ([]artifactBucket, error) {
+func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
 	proj, err := o.storeSvc.GetProject(o.ProjectName())
 	if err != nil {
-		return nil, fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
 	}
-	regionalResources, err := o.regionalResourcesGetter.GetRegionalProjectResources(proj)
+	regionalResources, err := o.cfnClient.GetRegionalProjectResources(proj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get regional project resources: %w", err)
 	}
 
 	var buckets []artifactBucket
@@ -330,7 +323,7 @@ func (o *initPipelineOpts) getArtifactBucket() ([]artifactBucket, error) {
 		bucket := artifactBucket{
 			BucketName:   resource.S3Bucket,
 			Region:       resource.Region,
-			Environments: strings.Join(envNames, ","),
+			Environments: envNames,
 		}
 		buckets = append(buckets, bucket)
 	}

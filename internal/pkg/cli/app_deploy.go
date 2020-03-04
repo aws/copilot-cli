@@ -446,8 +446,7 @@ func (o *appDeployOpts) showAppURI() error {
 // BuildAppDeployCmd builds the `app deploy` subcommand.
 func BuildAppDeployCmd() *cobra.Command {
 	vars := appDeployVars{
-		GlobalOpts:   NewGlobalOpts(),
-		enableAddons: true,
+		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "deploy",

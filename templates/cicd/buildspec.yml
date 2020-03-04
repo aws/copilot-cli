@@ -36,29 +36,15 @@ phases:
       - ls -lah ./infrastructure
       # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
       - |
-        ADDONSFILE=./infrastructure/$app.addons.stack.yml
-        if [ -f "$ADDONSFILE" ]; then
-          echo "Copying addons stack templates to S3"
-          for app in $apps; do
-            timestamp=$(date +%s)
-            for row in $(echo '{{.ArtifactBuckets}}' | jq -r '.[] | @base64'); do
-              _jq() {
-                echo ${row} | base64 --decode | jq -r ${1}
-              }
-              bucketName=$(_jq '.BucketName')
-              region=$(_jq '.Region')
-              envsTemp=$(_jq '.Environments')
-              IFS=',' read -ra environments <<< "$envsTemp"
-              
-              aws s3 cp "$ADDONSFILE" "s3://$bucketName/manual/$timestamp/$app.addons.stack.yml";
-
-              for envName in "${environments[@]}"; do
-                tmp=$(mktemp)
-                jq --arg a "https://$bucketName.s3-$region.amazonaws.com/manual/$timestamp/$app.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$app-$envName.params.json > "$tmp" && mv "$tmp" ./infrastructure/$app-$envName.params.json
-              done;
-            done;
-          done;
-        fi
+        for app in $apps; do
+          ADDONSFILE=./infrastructure/$app.addons.stack.yml
+          if [ -f "$ADDONSFILE" ]; then
+            tmp=$(mktemp)
+            timestamp=$(date +%s){{range $bucket := .ArtifactBuckets}}
+            aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$app.addons.stack.yml";{{range $envName := $bucket.Environments}}
+            jq --arg a "https://{{$bucket.BucketName}}.s3-{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$app.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$app-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$app-{{$envName}}.params.json{{end}}{{end}}
+          fi
+        done;
       # Build images
       # - For each manifest file:
       #   - Read the path to the Dockerfile by translating the YAML file into JSON
