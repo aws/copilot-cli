@@ -166,6 +166,11 @@ func (o *deleteAppOpts) askAppName() error {
 	if len(names) == 0 {
 		return fmt.Errorf("couldn't find any application in the project %s", o.ProjectName())
 	}
+	if len(names) == 1 {
+		o.AppName = names[0]
+		log.Infof("Only found one application, defaulting to: %s\n", color.HighlightUserInput(o.AppName))
+		return nil
+	}
 	name, err := o.prompt.SelectOne(appDeleteNamePrompt, "", names)
 	if err != nil {
 		return fmt.Errorf("select application to delete: %w", err)
