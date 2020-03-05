@@ -143,6 +143,8 @@ func (o *initAppOpts) Ask() error {
 	if err := o.askAppPort(); err != nil {
 		return err
 	}
+	log.Infoln()
+	log.Infoln(fmt.Sprintf("Okay, we'll use port %s to route traffic to your container.", color.HighlightUserInput(fmt.Sprintf("%d", o.AppPort))))
 	return nil
 }
 
@@ -277,7 +279,7 @@ func (o *initAppOpts) askAppPort() error {
 	}
 
 	port, err := o.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppPortPrompt, color.HighlightUserInput(string(o.AppPort))),
+		fmt.Sprintf(fmtAppInitAppPortPrompt),
 		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
 		validateApplicationPort,
 	)
@@ -287,7 +289,7 @@ func (o *initAppOpts) askAppPort() error {
 
 	portUint, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
-		return fmt.Errorf("failed to set port: %w")
+		return fmt.Errorf("failed to parse port string: %w")
 	}
 
 	o.AppPort = uint16(portUint)
