@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -44,19 +45,6 @@ const (
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
 )
-
-type appPort struct {
-	port uint16
-}
-
-func (p *appPort) Set(n int) error {
-	if n < 0 || n > 65536 {
-		err := fmt.Errorf("port outside valid range: %d", n)
-		return err
-	}
-	p.port = uint16(n)
-	return nil
-}
 
 type initAppVars struct {
 	*GlobalOpts
@@ -133,6 +121,11 @@ func (o *initAppOpts) Validate() error {
 			return err
 		}
 	}
+	if o.AppPort != 0 {
+		if err := validateApplicationPort(o.AppPort); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -192,6 +185,7 @@ func (o *initAppOpts) createManifest() (string, error) {
 			AppName:    o.AppName,
 			Dockerfile: o.DockerfilePath,
 		},
+		Port: o.AppPort,
 	}
 	props.Path = o.AppName
 	manifest := manifest.NewLoadBalancedFargateManifest(props)
@@ -278,9 +272,27 @@ func (o *initAppOpts) askDockerfile() error {
 }
 
 func (o *initAppOpts) askAppPort() error {
-	if o.AppPort != nil {
+	if o.AppPort != 0 {
 		return nil
 	}
+
+	port, err := o.prompt.Get(
+		fmt.Sprintf(fmtAppInitAppPortPrompt, color.HighlightUserInput(string(o.AppPort))),
+		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
+		validateApplicationPort,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get port: %w", err)
+	}
+
+	portUint, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		return fmt.Errorf("failed to set port: %w")
+	}
+
+	o.AppPort = uint16(portUint)
+
+	return nil
 }
 
 func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
@@ -346,6 +358,6 @@ This command is also run as part of "ecs-preview init".`,
 	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
-	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 80, appPortFlagDescription)
+	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 0, appPortFlagDescription)
 	return cmd
 }

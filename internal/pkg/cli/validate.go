@@ -18,6 +18,8 @@ var (
 	errValueBadFormat    = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString   = errors.New("value must be a string")
 	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
+	errPortInvalid       = errors.New("value must be in range 1-65535")
+	errPortNotNumber     = errors.New("value must be a number")
 )
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
@@ -32,6 +34,13 @@ func validateProjectName(val interface{}) error {
 func validateApplicationName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("application name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateApplicationPort(val interface{}) error {
+	if err := basicPortValidation(val); err != nil {
+		return fmt.Errorf("application port %v is invalid: %w", val, err)
 	}
 	return nil
 }
@@ -84,4 +93,24 @@ func isCorrectFormat(s string) bool {
 		return false // bubble up error?
 	}
 	return valid
+}
+
+func basicPortValidation(val interface{}) error {
+	u, ok := val.(uint)
+	if !ok {
+		return errValueNotAString
+	}
+	inRange := portInRange(u)
+	if !inRange {
+		return errPortInvalid
+	}
+
+	return nil
+}
+
+func portInRange(val uint) bool {
+	if val < 1 || val > 65535 {
+		return false
+	}
+	return true
 }
