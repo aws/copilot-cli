@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -34,6 +35,10 @@ const (
 	fmtDeleteEnvStart    = "Deleting environment %s from project %s."
 	fmtDeleteEnvFailed   = "Failed to delete environment %s from project %s: %v."
 	fmtDeleteEnvComplete = "Deleted environment %s from project %s."
+)
+
+var (
+	errEnvDeleteCancelled = errors.New("env delete cancelled - no changes made")
 )
 
 type resourceGetter interface {
@@ -105,6 +110,18 @@ func (o *deleteEnvOpts) Ask() error {
 	if err := o.askProfile(); err != nil {
 		return err
 	}
+
+	if o.SkipConfirmation {
+		return nil
+	}
+	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.EnvName, o.ProjectName()), "")
+	if err != nil {
+		return fmt.Errorf("prompt for environment deletion: %w", err)
+	}
+	if !deleteConfirmed {
+		return errEnvDeleteCancelled
+	}
+
 	return nil
 }
 
@@ -118,15 +135,6 @@ func (o *deleteEnvOpts) Execute() error {
 	}
 	if err := o.validateNoRunningApps(); err != nil {
 		return err
-	}
-
-	shouldDelete, err := o.shouldDelete(o.ProjectName(), o.EnvName)
-	if err != nil {
-		return err
-	}
-	if !shouldDelete {
-		log.Infof("Aborted deletion of environment %s.\n", color.HighlightUserInput(o.EnvName))
-		return nil
 	}
 
 	isStackDeleted := o.deleteStack()
@@ -200,7 +208,11 @@ func (o *deleteEnvOpts) askEnvName() error {
 	}
 	if len(names) == 0 {
 		return fmt.Errorf("couldn't find any environment in the project %s", o.ProjectName())
-
+	}
+	if len(names) == 1 {
+		o.EnvName = names[0]
+		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(o.EnvName))
+		return nil
 	}
 	name, err := o.prompt.SelectOne(envDeleteNamePrompt, "", names)
 	if err != nil {
@@ -218,6 +230,11 @@ func (o *deleteEnvOpts) askProfile() error {
 	names := o.profileConfig.Names()
 	if len(names) == 0 {
 		return errNamedProfilesNotFound
+	}
+	if len(names) == 1 {
+		o.EnvProfile = names[0]
+		log.Infof("Only found one profile, defaulting to: %s\n", color.HighlightUserInput(o.EnvProfile))
+		return nil
 	}
 
 	profile, err := o.prompt.SelectOne(
