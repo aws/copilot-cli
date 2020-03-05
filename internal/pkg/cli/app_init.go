@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -144,7 +145,13 @@ func (o *initAppOpts) Ask() error {
 		return err
 	}
 	log.Infoln()
-	log.Infoln(fmt.Sprintf("Okay, we'll use port %s to route traffic to your container.", color.HighlightUserInput(fmt.Sprintf("%d", o.AppPort))))
+	log.Successf(
+		"Okay, we'll use port %s to route traffic to your container.\n",
+		color.HighlightUserInput(
+			fmt.Sprintf("%d", o.AppPort),
+		),
+	)
+
 	return nil
 }
 
@@ -282,6 +289,7 @@ func (o *initAppOpts) askAppPort() error {
 		fmt.Sprintf(fmtAppInitAppPortPrompt),
 		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
 		validateApplicationPort,
+		prompt.WithDefaultInput("80"),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to get port: %w", err)
@@ -289,7 +297,7 @@ func (o *initAppOpts) askAppPort() error {
 
 	portUint, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
-		return fmt.Errorf("failed to parse port string: %w")
+		return fmt.Errorf("failed to parse port string: %w", err)
 	}
 
 	o.AppPort = uint16(portUint)
