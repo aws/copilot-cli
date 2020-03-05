@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -77,7 +78,7 @@ func (s Service) Push(uri, imageTag string) error {
 // the port to be used when constructing target groups.
 func (s Service) Parse(path string) (uint16, error) {
 	df := newDockerfile()
-	
+
 	file, err := os.Open(path)
 	if err != nil {
 		return 80, fmt.Errorf("opening Dockerfile: %w", err)
@@ -90,13 +91,14 @@ func (s Service) Parse(path string) (uint16, error) {
 		df.parseLine(res)
 	}
 	df.aggregate()
+	return df.exposedPorts[len(df.exposedPorts)-1], nil
 }
 
 type dockerfile struct {
-	ambiguous bool
-	exposedPorts []uint16
+	ambiguous     bool
+	exposedPorts  []uint16
 	exposedTokens []string
-	tokens map[string]string
+	tokens        map[string]string
 }
 
 func newDockerfile() *dockerfile {
@@ -104,16 +106,16 @@ func newDockerfile() *dockerfile {
 	var exposedTokens []string
 
 	d := dockerfile{
-		ambiguous: true,
-		exposedPorts: exposedPorts,
+		ambiguous:     true,
+		exposedPorts:  exposedPorts,
 		exposedTokens: exposedTokens,
-		tokens: make(map[string]string),
+		tokens:        make(map[string]string),
 	}
 	return &d
 }
 
 func (df *dockerfile) parseLine(line []string) {
-	
+
 	switch line[0] {
 	case "ARG":
 		argparts := strings.SplitN(line[1], "=", 2)
@@ -125,7 +127,7 @@ func (df *dockerfile) parseLine(line []string) {
 		}
 	case "EXPOSE":
 		df.exposedTokens = append(df.exposedTokens, line[1])
-	default: 
+	default:
 	}
 }
 
@@ -137,14 +139,32 @@ func recurse(tokenMap map[string]string, token string) (string, bool) {
 		}
 	case '0' <= c && c <= '9':
 		return token, true
-	default:
-		return token, false
+	}
+	return token, false
 }
 
 func (df *dockerfile) aggregate() error {
 	for _, tk := range df.exposedTokens {
-		token, ok := recurse(tokenMap, tk)
+		token, ok := recurse(df.tokens, tk)
+		if ok {
+			tokenUint, err := strconv.ParseUint(token, 10, 16)
+			if err != nil {
+				return err
+			}
+			df.exposedPorts = append(df.exposedPorts, uint16(tokenUint))
+		}
 	}
+	switch len(df.exposedPorts) {
+	case 1:
+		df.ambiguous = false
+	case 0:
+		df.ambiguous = false
+		return fmt.Errorf("could not determine exposed ports in dockerfile")
+	default:
+		df.ambiguous = true
+		return fmt.Errorf("")
+	}
+	return nil
 }
 
 func imageName(uri, tag string) string {
