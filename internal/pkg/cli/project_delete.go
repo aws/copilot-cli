@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -38,10 +39,13 @@ type deleteProjVars struct {
 
 type deleteProjOpts struct {
 	deleteProjVars
-	store    projectService
-	deployer deployer
-	ws       workspaceDeleter
-	spinner  progress
+	store               projectService
+	deployer            deployer
+	projResourcesGetter projectResourcesGetter
+	s3Client            bucketEmptier
+	initBucketEmptySvc  func(*deleteProjOpts, string) error
+	ws                  workspaceDeleter
+	spinner             progress
 }
 
 type workspaceDeleter interface {
@@ -66,11 +70,20 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 	cf := cloudformation.New(s)
 
 	return &deleteProjOpts{
-		deleteProjVars: vars,
-		store:          store,
-		ws:             ws,
-		deployer:       cf,
-		spinner:        termprogress.NewSpinner(),
+		deleteProjVars:      vars,
+		store:               store,
+		ws:                  ws,
+		deployer:            cf,
+		projResourcesGetter: cf,
+		initBucketEmptySvc: func(o *deleteProjOpts, region string) error {
+			sess, err := session.NewProvider().DefaultWithRegion(region)
+			if err != nil {
+				return err
+			}
+			o.s3Client = s3.New(sess)
+			return nil
+		},
+		spinner: termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -112,28 +125,45 @@ func (o *deleteProjOpts) Execute() error {
 		return err
 	}
 
-	o.spinner.Start("Deleting project resources.")
-	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting project resources."))
-		return fmt.Errorf("delete project resources: %w", err)
-	}
-	o.spinner.Stop(log.Ssuccess("Deleted project resources."))
-
-	o.spinner.Start("Deleting project parameters.")
-	if err := o.store.DeleteProject(o.ProjectName()); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting project parameters."))
-
+	if err := o.emptyS3Bucket(); err != nil {
 		return err
 	}
-	o.spinner.Stop(log.Ssuccess("Deleted project parameters."))
 
-	o.spinner.Start("Deleting local workspace folder.")
-	if err := o.ws.DeleteAll(); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
-
-		return fmt.Errorf("delete workspace: %w", err)
+	if err := o.deleteProjectResources(); err != nil {
+		return err
 	}
-	o.spinner.Stop(log.Ssuccess("Deleted local workspace folder."))
+
+	if err := o.deleteProjectParams(); err != nil {
+		return err
+	}
+
+	if err := o.deleteLocalWorkspace(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *deleteProjOpts) deleteApps() error {
+	apps, err := o.store.ListApplications(o.ProjectName())
+	if err != nil {
+		return err
+	}
+
+	for _, a := range apps {
+		ado, err := newDeleteAppOpts(deleteAppVars{
+			GlobalOpts: NewGlobalOpts(),
+		})
+		if err != nil {
+			return err
+		}
+		ado.AppName = a.Name
+		ado.SkipConfirmation = true // always skip sub-confirmations
+
+		if err := ado.Execute(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -182,26 +212,58 @@ func (o *deleteProjOpts) deleteEnvs() error {
 	return nil
 }
 
-func (o *deleteProjOpts) deleteApps() error {
-	apps, err := o.store.ListApplications(o.ProjectName())
+func (o *deleteProjOpts) emptyS3Bucket() error {
+	proj, err := o.store.GetProject(o.ProjectName())
 	if err != nil {
+		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+	}
+	projResources, err := o.projResourcesGetter.GetRegionalProjectResources(proj)
+	if err != nil {
+		return fmt.Errorf("get regional resources for %s: %w", proj.Name, err)
+	}
+	o.spinner.Start("Cleaning up deployment resources.")
+	for _, projResource := range projResources {
+		o.initBucketEmptySvc(o, projResource.Region)
+		if err := o.s3Client.EmptyBucket(projResource.S3Bucket); err != nil {
+			o.spinner.Stop(log.Serror("Error cleaning up deployment resources."))
+			return fmt.Errorf("empty bucket %s: %w", projResource.S3Bucket, err)
+		}
+	}
+	o.spinner.Stop(log.Ssuccess("Cleaning up deployment resources."))
+	return nil
+}
+
+func (o *deleteProjOpts) deleteProjectResources() error {
+	o.spinner.Start("Deleting project resources.")
+	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting project resources."))
+		return fmt.Errorf("delete project resources: %w", err)
+	}
+	o.spinner.Stop(log.Ssuccess("Deleted project resources."))
+
+	return nil
+}
+
+func (o *deleteProjOpts) deleteProjectParams() error {
+	o.spinner.Start("Deleting project metadata.")
+	if err := o.store.DeleteProject(o.ProjectName()); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting project metadata."))
+
 		return err
 	}
+	o.spinner.Stop(log.Ssuccess("Deleted project metadata."))
 
-	for _, a := range apps {
-		ado, err := newDeleteAppOpts(deleteAppVars{
-			GlobalOpts: NewGlobalOpts(),
-		})
-		if err != nil {
-			return err
-		}
-		ado.AppName = a.Name
-		ado.SkipConfirmation = true // always skip sub-confirmations
+	return nil
+}
 
-		if err := ado.Execute(); err != nil {
-			return err
-		}
+func (o *deleteProjOpts) deleteLocalWorkspace() error {
+	o.spinner.Start("Deleting local workspace folder.")
+	if err := o.ws.DeleteAll(); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
+
+		return fmt.Errorf("delete workspace: %w", err)
 	}
+	o.spinner.Stop(log.Ssuccess("Deleted local workspace folder."))
 
 	return nil
 }

@@ -147,3 +147,7 @@ type artifactPutter interface {
 type port interface {
 	Set(number int) error
 }
+
+type bucketEmptier interface {
+	EmptyBucket(bucket string) error
+}
