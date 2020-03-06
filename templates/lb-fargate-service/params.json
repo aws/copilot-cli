@@ -9,7 +9,9 @@
     "TaskCPU": "{{.App.CPU}}",
     "TaskMemory": "{{.App.Memory}}",
     "TaskCount": "{{.App.Count}}",
-    "HTTPSEnabled": "{{.HTTPSEnabled}}"
+    "HTTPSEnabled": "{{.HTTPSEnabled}}",
+    "LogRetention": "30",
+    "AddonsTemplateURL": ""
   },
   "Tags": {
     "ecs-project": "{{.Env.Project}}",
