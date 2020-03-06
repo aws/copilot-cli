@@ -139,6 +139,20 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 
 			wantedApp: testAppName,
 		},
+		"should skip asking for app name if only one app found": {
+			inAppName:        "",
+			skipConfirmation: true,
+			mockProjectService: func(m *climocks.MockprojectService) {
+				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+					&archer.Application{
+						Name: "my-app",
+					},
+				}, nil)
+			},
+			mockPrompt: func(m *climocks.Mockprompter) {},
+
+			wantedApp: testAppName,
+		},
 		"returns error if no application found": {
 			inAppName:        "",
 			skipConfirmation: true,
@@ -264,8 +278,8 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		setupMocks func()
-		inEnvName		string
+		setupMocks      func()
+		inEnvName       string
 		want            error
 		wantOptsEnvList []*archer.Environment
 	}{
@@ -287,7 +301,7 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 			setupMocks: func() {
 				mockProjectService.EXPECT().GetEnvironment(gomock.Eq(mockProjectName), gomock.Eq(mockEnvName)).Return(mockEnvElement, nil)
 			},
-			inEnvName: mockEnvName,
+			inEnvName:       mockEnvName,
 			want:            nil,
 			wantOptsEnvList: mockEnvList,
 		},
