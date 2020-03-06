@@ -152,7 +152,7 @@ func (o *packageAppOpts) Execute() error {
 
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons dir doesn't exist.
-	notExistErr := &workspace.ErrAddonsDirNotExist{AppName: o.AppName}
+	var notExistErr *workspace.ErrAddonsDirNotExist
 	if errors.As(err, &notExistErr) {
 		return nil
 	}
@@ -287,13 +287,10 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 			ImageRepoURL: repoURL,
 			ImageTag:     o.Tag,
 		}
-		var appStack *stack.LBFargateStackConfig
-		// If the project supports DNS Delegation, we'll also
-		// make sure the app supports HTTPS
-		if proj.RequiresDNSDelegation() {
-			appStack = stack.NewHTTPSLBFargateStack(createLBAppInput)
-		} else {
-			appStack = stack.NewLBFargateStack(createLBAppInput)
+
+		appStack, err := initLBFargateStack(createLBAppInput, proj.RequiresDNSDelegation())
+		if err != nil {
+			return nil, err
 		}
 
 		tpl, err := appStack.Template()
@@ -308,6 +305,13 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	default:
 		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", t)
 	}
+}
+
+var initLBFargateStack = func(in *deploy.CreateLBFargateAppInput, isHTTPS bool) (stackSerializer, error) {
+	if isHTTPS {
+		return stack.NewHTTPSLBFargateStack(in)
+	}
+	return stack.NewLBFargateStack(in)
 }
 
 // setAppFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.

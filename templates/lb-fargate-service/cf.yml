@@ -90,10 +90,16 @@ Resources:
               Fn::ImportValue:
                 !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
           - Name: {{$name}}
-            Value: {{$value}}{{end}}{{end}}{{if .App.Secrets}}
+            Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
+          - Name: {{fmtEnvVar $output.Name}}
+            Value:
+              Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if .App.Secrets}}
           Secrets:{{range $name, $valueFrom := .App.Secrets}}
           - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}{{end}}
+            ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if gt (len (filterSecrets .AddonsOutputs)) 0}}{{range $secret := (filterSecrets .AddonsOutputs)}}
+          - Name: {{fmtEnvVar $secret.Name}}
+            ValueFrom:
+              Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}{{end}}
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -129,7 +135,9 @@ Resources:
 
   TaskRole:
     Type: AWS::IAM::Role
-    Properties:
+    Properties:{{if gt (len (filterManagedPolicies .AddonsOutputs)) 0}}
+      ManagedPolicyArns:{{range $managedPolicy := (filterManagedPolicies .AddonsOutputs)}}
+      - Fn::GetAtt: [AddonsStack, Outputs.{{$managedPolicy.Name}}]{{end}}{{end}}
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow

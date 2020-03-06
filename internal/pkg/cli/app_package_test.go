@@ -4,19 +4,16 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -375,441 +372,90 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 }
 
 func TestPackageAppOpts_Execute(t *testing.T) {
-	mockErr := errors.New("some error")
-
 	testCases := map[string]struct {
-		inProjectName string
-		inEnvName     string
-		inAppName     string
-		inTagName     string
-		inOutputDir   string
+		inVars packageAppVars
 
-		expectStore     func(m *climocks.MockprojectService)
-		expectWorkspace func(m *climocks.MockwsAppReader)
-		expectDeployer  func(m *climocks.MockprojectResourcesGetter)
-		expectFS        func(t *testing.T, mockFS *afero.Afero)
-		expectAddonsSvc func(m *climocks.Mocktemplater)
+		mockDependencies func(*gomock.Controller, *packageAppOpts)
 
-		wantedErr error
+		wantedStack  string
+		wantedParams string
+		wantedAddons string
+		wantedErr    error
 	}{
-		"invalid environment": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+		"writes application template without addons": {
+			inVars: packageAppVars{
+				GlobalOpts: &GlobalOpts{
+					projectName: "ecs-kudos",
+				},
+				AppName: "api",
+				EnvName: "test",
+				Tag:     "1234",
+			},
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageAppOpts) {
+				mockStore := climocks.NewMockprojectService(ctrl)
+				mockStore.EXPECT().
+					GetEnvironment("ecs-kudos", "test").
+					Return(&archer.Environment{
+						Project:   "ecs-kudos",
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "1111",
+					}, nil)
+				mockStore.EXPECT().
+					GetProject("ecs-kudos").
+					Return(&archer.Project{
+						Name:      "ecs-kudos",
+						AccountID: "1112",
+					}, nil)
 
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
-					ProjectName:     "phonetool",
-					EnvironmentName: "test",
-				})
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest(gomock.Any()).Times(0)
-			},
-			expectDeployer:  func(m *climocks.MockprojectResourcesGetter) {},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: &store.ErrNoSuchEnvironment{
-				ProjectName:     "phonetool",
-				EnvironmentName: "test",
-			},
-		},
-		"invalid manifest file": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project: "phonetool",
-					Name:    "test",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return(nil, mockErr)
-			},
-			expectDeployer:  func(m *climocks.MockprojectResourcesGetter) {},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: mockErr,
-		},
-		"invalid manifest type": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project: "phonetool",
-					Name:    "test",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte("somecontent"), nil)
-			},
-			expectDeployer:  func(m *climocks.MockprojectResourcesGetter) {},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: &manifest.ErrUnmarshalAppManifest{},
-		},
-		"error while getting project from store": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project: "phonetool",
-					Name:    "test",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(nil, &store.ErrNoSuchProject{ProjectName: "phonetool"})
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App`), nil)
-			},
-			expectDeployer:  func(m *climocks.MockprojectResourcesGetter) {},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: &store.ErrNoSuchProject{ProjectName: "phonetool"},
-		},
-		"error while getting regional resources from describer": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					Region:    "us-west-2",
-					AccountID: "1111",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, "us-west-2").Return(nil, &cloudformation.ErrStackSetOutOfDate{})
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: &cloudformation.ErrStackSetOutOfDate{},
-		},
-		"error if the repository does not exist": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					Region:    "us-west-2",
-					AccountID: "1111",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, "us-west-2").Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {},
-
-			wantedErr: &errRepoNotFound{
-				appName:       "frontend",
-				envRegion:     "us-west-2",
-				projAccountID: "1234",
-			},
-		},
-		"error if fail to get addons template": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-			inTagName:     "latest",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1111",
-					Region:    "us-west-2",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
+				mockWs := climocks.NewMockwsAppReader(ctrl)
+				mockWs.EXPECT().
+					ReadAppManifest("api").
+					Return([]byte(`name: api
 type: Load Balanced Web App
 image:
-  build: frontend/Dockerfile
+  build: ./Dockerfile
   port: 80
 http:
-  path: '*'
+  path: 'api'
 cpu: 256
 memory: 512
 count: 1`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{
-						"frontend": "some url",
-					},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", mockErr)
+
+				mockCfn := climocks.NewMockprojectResourcesGetter(ctrl)
+				mockCfn.EXPECT().
+					GetProjectResourcesByRegion(&archer.Project{
+						Name:      "ecs-kudos",
+						AccountID: "1112",
+					}, "us-west-2").
+					Return(&archer.ProjectRegionalResources{
+						RepositoryURLs: map[string]string{
+							"api": "some url",
+						},
+					}, nil)
+
+				initLBFargateStack = func(in *deploy.CreateLBFargateAppInput, isHTTPS bool) (stackSerializer, error) {
+					m := climocks.NewMockstackSerializer(ctrl)
+					m.EXPECT().Template().Return("mystack", nil)
+					m.EXPECT().SerializedParameters().Return("myparams", nil)
+					return m, nil
+				}
+
+				mockAddons := climocks.NewMocktemplater(ctrl)
+				mockAddons.EXPECT().Template().
+					Return("", &workspace.ErrAddonsDirNotExist{AppName: "api"})
+
+				opts.store = mockStore
+				opts.ws = mockWs
+				opts.describer = mockCfn
+				opts.initAddonsSvc = func(opts *packageAppOpts) error {
+					opts.addonsSvc = mockAddons
+					return nil
+				}
 			},
 
-			wantedErr: mockErr,
-		},
-		"print CFN template": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-			inTagName:     "latest",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1111",
-					Region:    "us-west-2",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App
-image:
-  build: frontend/Dockerfile
-  port: 80
-http:
-  path: '*'
-cpu: 256
-memory: 512
-count: 1`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{
-						"frontend": "some url",
-					},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {
-				m.EXPECT().Template().Return(`AWSTemplateFormatVersion: 2010-09-09
-Description: Additional resources for application 'my-app'
-Parameters:
-	Project:
-		Type: String
-		Description: The project name.
-	Env:
-		Type: String
-		Description: The environment name your application is being deployed to.
-	App:
-		Type: String
-		Description: The name of the application being deployed.`, nil)
-			},
-		},
-		"print CFN template with HTTPS": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-			inTagName:     "latest",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1111",
-					Region:    "us-west-2",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-					Domain:    "ecs.aws",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App
-image:
-  build: frontend/Dockerfile
-  port: 80
-http:
-  path: '*'
-cpu: 256
-memory: 512
-count: 1`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{
-						"frontend": "some url",
-					},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {
-				m.EXPECT().Template().Return(`AWSTemplateFormatVersion: 2010-09-09
-Description: Additional resources for application 'my-app'
-Parameters:
-	Project:
-		Type: String
-		Description: The project name.
-	Env:
-		Type: String
-		Description: The environment name your application is being deployed to.
-	App:
-		Type: String
-		Description: The name of the application being deployed.`, nil)
-			},
-		},
-		"with output directory": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-			inTagName:     "latest",
-			inOutputDir:   "./infrastructure",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1111",
-					Region:    "us-west-2",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App
-image:
-  build: frontend/Dockerfile
-  port: 80
-http:
-  path: '*'
-cpu: 256
-memory: 512
-count: 1`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{
-						"frontend": "some url",
-					},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {
-				m.EXPECT().Template().Return(`AWSTemplateFormatVersion: 2010-09-09
-Description: Additional resources for application 'my-app'
-Parameters:
-	Project:
-		Type: String
-		Description: The project name.
-	Env:
-		Type: String
-		Description: The environment name your application is being deployed to.
-	App:
-		Type: String
-		Description: The name of the application being deployed.`, nil)
-			},
-			expectFS: func(t *testing.T, mockFS *afero.Afero) {
-				stackPath := filepath.Join("infrastructure", "frontend.stack.yml")
-				stackFileExists, _ := mockFS.Exists(stackPath)
-				require.True(t, stackFileExists, "expected file %s to exists", stackPath)
-
-				paramsPath := filepath.Join("infrastructure", "frontend-test.params.json")
-				paramsFileExists, _ := mockFS.Exists(paramsPath)
-				require.True(t, paramsFileExists, "expected file %s to exists", paramsPath)
-
-				addonsPath := filepath.Join("infrastructure", "frontend.addons.stack.yml")
-				addonsFileExists, _ := mockFS.Exists(addonsPath)
-				require.True(t, addonsFileExists, "expected file %s to exists", addonsPath)
-			},
-		},
-		"with output directory and with no addons directory": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inAppName:     "frontend",
-			inTagName:     "latest",
-			inOutputDir:   "./infrastructure",
-
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1111",
-					Region:    "us-west-2",
-				}, nil)
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
-					Name:      "phonetool",
-					AccountID: "1234",
-				}, nil)
-			},
-			expectWorkspace: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().ReadAppManifest("frontend").Return([]byte(`name: frontend
-type: Load Balanced Web App
-image:
-  build: frontend/Dockerfile
-  port: 80
-http:
-  path: '*'
-cpu: 256
-memory: 512
-count: 1`), nil)
-			},
-			expectDeployer: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Return(&archer.ProjectRegionalResources{
-					RepositoryURLs: map[string]string{
-						"frontend": "some url",
-					},
-				}, nil)
-			},
-			expectAddonsSvc: func(m *climocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", &workspace.ErrAddonsDirNotExist{
-					AppName: "frontend",
-				})
-			},
-			expectFS: func(t *testing.T, mockFS *afero.Afero) {
-				stackPath := filepath.Join("infrastructure", "frontend.stack.yml")
-				stackFileExists, _ := mockFS.Exists(stackPath)
-				require.True(t, stackFileExists, "expected file %s to exists", stackPath)
-
-				paramsPath := filepath.Join("infrastructure", "frontend-test.params.json")
-				paramsFileExists, _ := mockFS.Exists(paramsPath)
-				require.True(t, paramsFileExists, "expected file %s to exists", paramsPath)
-
-				addonsPath := filepath.Join("infrastructure", "frontend.addons.stack.yml")
-				addonsFileExists, _ := mockFS.Exists(addonsPath)
-				require.False(t, addonsFileExists, "expected file %s to exists", addonsPath)
-			},
+			wantedStack:  "mystack",
+			wantedParams: "myparams",
 		},
 	}
 
@@ -818,55 +464,31 @@ count: 1`), nil)
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+			oldInitFargateStack := initLBFargateStack
+			defer func() {
+				initLBFargateStack = oldInitFargateStack
+			}()
 
-			mockStore := climocks.NewMockprojectService(ctrl)
-			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
-			mockDeployer := climocks.NewMockprojectResourcesGetter(ctrl)
-			mockAddonSvc := climocks.NewMocktemplater(ctrl)
-			tc.expectStore(mockStore)
-			tc.expectWorkspace(mockWorkspace)
-			tc.expectDeployer(mockDeployer)
-			tc.expectAddonsSvc(mockAddonSvc)
+			stackBuf := new(bytes.Buffer)
+			paramsBuf := new(bytes.Buffer)
+			addonsBuf := new(bytes.Buffer)
+			opts := &packageAppOpts{
+				packageAppVars: tc.inVars,
 
-			templateBuf := &strings.Builder{}
-			paramsBuf := &strings.Builder{}
-			addonsBuf := &strings.Builder{}
-			mockFS := &afero.Afero{Fs: afero.NewMemMapFs()}
-			opts := packageAppOpts{
-				packageAppVars: packageAppVars{
-					EnvName:    tc.inEnvName,
-					AppName:    tc.inAppName,
-					Tag:        tc.inTagName,
-					OutputDir:  tc.inOutputDir,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
-				},
-
-				addonsSvc:     mockAddonSvc,
-				initAddonsSvc: func(*packageAppOpts) error { return nil },
-				store:         mockStore,
-				ws:            mockWorkspace,
-				describer:     mockDeployer,
-				stackWriter:   templateBuf,
-				paramsWriter:  paramsBuf,
-				addonsWriter:  addonsBuf,
-				fs:            mockFS,
+				stackWriter:  stackBuf,
+				paramsWriter: paramsBuf,
+				addonsWriter: addonsBuf,
 			}
+			tc.mockDependencies(ctrl, opts)
 
 			// WHEN
 			err := opts.Execute()
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.True(t, errors.Is(err, tc.wantedErr), "expected %v but got %v", tc.wantedErr, err)
-				return
-			}
-			require.Nil(t, err, "expected no errors but got %v", err)
-			if tc.inOutputDir != "" {
-				tc.expectFS(t, mockFS)
-			} else {
-				require.Greater(t, len(templateBuf.String()), 0, "expected a template to be rendered %s", templateBuf.String())
-				require.Greater(t, len(paramsBuf.String()), 0, "expected parameters to be rendered %s", paramsBuf.String())
-			}
+			require.Equal(t, tc.wantedErr, err)
+			require.Equal(t, tc.wantedStack, stackBuf.String())
+			require.Equal(t, tc.wantedParams, paramsBuf.String())
+			require.Equal(t, tc.wantedAddons, addonsBuf.String())
 		})
 	}
 }
