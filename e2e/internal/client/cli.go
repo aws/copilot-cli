@@ -30,7 +30,7 @@ type InitRequest struct {
 	ImageTag    string
 	Dockerfile  string
 	AppType     string
-	AppPort     uint16
+	AppPort     string
 }
 
 // EnvInitRequest contains the parameters for calling ecs env init
@@ -46,6 +46,7 @@ type AppInitRequest struct {
 	AppName    string
 	AppType    string
 	Dockerfile string
+	AppPort    string
 }
 
 // AppShowRequest contains the parameters for calling ecs app show
@@ -106,6 +107,7 @@ ecs-preview init
 	--app-type $type
 	--tag $t
 	--dockerfile $d
+	--port $port
 	--deploy (optionally)
 */
 func (cli *CLI) Init(opts *InitRequest) (string, error) {
@@ -122,6 +124,7 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 			"--app-type", opts.AppType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
+			"--port", opts.AppPort,
 			deployOption))
 }
 
@@ -130,13 +133,15 @@ ecs-preview app init
 	--name $n
 	--app-type $t
 	--dockerfile $d
+	--port $port
 */
 func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
 	return cli.exec(
 		exec.Command(cli.path, "app", "init",
 			"--name", opts.AppName,
 			"--app-type", opts.AppType,
-			"--dockerfile", opts.Dockerfile))
+			"--dockerfile", opts.Dockerfile,
+			"--port", opts.AppPort))
 }
 
 /*AppShow runs:

@@ -104,6 +104,7 @@ var _ = Describe("Multiple Env Project", func() {
 				AppName:    "front-end",
 				AppType:    "Load Balanced Web App",
 				Dockerfile: "./front-end/Dockerfile",
+				AppPort:    "80",
 			})
 		})
 
