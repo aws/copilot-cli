@@ -20,8 +20,6 @@ var (
 	errValueNotAString   = errors.New("value must be a string")
 	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid       = errors.New("value must be in range 1-65535")
-	errPortNotNumber     = errors.New("value must be a number")
-	errPortInputType     = errors.New("value must be uint16, string, or []byte")
 )
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
@@ -112,7 +110,7 @@ func basicPortValidation(val interface{}) error {
 			err = errPortInvalid
 		}
 	default:
-		err = errPortInputType
+		err = errPortInvalid
 	}
 	return err
 }
@@ -129,7 +127,7 @@ func bytePortValidation(val []byte) error {
 func stringPortValidation(val string) error {
 	port64, err := strconv.ParseUint(val, 10, 64)
 	if err != nil {
-		return errPortNotNumber
+		return errPortInvalid
 	}
 	if port64 < 1 || port64 > 65535 {
 		return errPortInvalid
