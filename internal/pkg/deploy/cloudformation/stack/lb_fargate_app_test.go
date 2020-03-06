@@ -94,6 +94,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 						Dockerfile: "frontend/Dockerfile",
 					},
 					Path: "frontend",
+					Port: 80,
 				}),
 				Env: &archer.Environment{
 					Project:   "phonetool",
@@ -124,6 +125,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 						Dockerfile: "frontend/Dockerfile",
 					},
 					Path: "frontend",
+					Port: 80,
 				}),
 				Env: &archer.Environment{
 					Project:   "phonetool",
@@ -198,6 +200,7 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 							Dockerfile: "frontend/Dockerfile",
 						},
 						Path: "frontend",
+						Port: 80,
 					}),
 					Env: &archer.Environment{
 						Project:   "phonetool",
@@ -278,6 +281,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 						Dockerfile: "frontend/Dockerfile",
 					},
 					Path: "frontend",
+					Port: 80,
 				}),
 				Env: &archer.Environment{
 					Project:   "phonetool",
@@ -305,6 +309,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 						Dockerfile: "frontend/Dockerfile",
 					},
 					Path: "frontend",
+					Port: 80,
 				}),
 				Env: &archer.Environment{
 					Project:   "phonetool",
@@ -355,6 +360,7 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 					Dockerfile: "frontend/Dockerfile",
 				},
 				Path: "frontend",
+				Port: 80,
 			}),
 			Env: &archer.Environment{
 				Project:   "phonetool",

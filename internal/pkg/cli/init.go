@@ -64,6 +64,7 @@ type initOpts struct {
 	projectName    *string
 	appType        *string
 	appName        *string
+	appPort        *uint16
 	dockerfilePath *string
 
 	prompt prompter
@@ -161,6 +162,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
 		appName:        &initApp.AppName,
+		appPort:        &initApp.AppPort,
 		dockerfilePath: &initApp.DockerfilePath,
 
 		prompt: prompt,
@@ -183,7 +185,7 @@ containerized applications (or micro-services) that operate together.`)
 	}
 
 	log.Infof("Ok great, we'll set up a %s named %s in project %s listening on port %s.\n",
-		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName), color.HighlightUserInput(fmt.Sprintf("%d")))
+		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName), color.HighlightUserInput(fmt.Sprintf("%d", *o.appPort)))
 
 	if err := o.initProject.Execute(); err != nil {
 		return fmt.Errorf("execute project init: %w", err)
