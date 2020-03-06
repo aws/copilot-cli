@@ -4,10 +4,7 @@
 package docker
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -71,99 +68,6 @@ func (s Service) Push(uri, imageTag string) error {
 		return fmt.Errorf("docker push: %w", err)
 	}
 
-	return nil
-}
-
-// Parse will scan the dockerfile, generate a list of ARG tokens and EXPOSE values, and attempt to intuit
-// the port to be used when constructing target groups.
-func (s Service) Parse(path string) (uint16, error) {
-	df := newDockerfile()
-
-	file, err := os.Open(path)
-	if err != nil {
-		return 80, fmt.Errorf("opening Dockerfile: %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		res := strings.SplitN(scanner.Text(), " ", 2)
-		df.parseLine(res)
-	}
-	df.aggregate()
-	return df.exposedPorts[len(df.exposedPorts)-1], nil
-}
-
-type dockerfile struct {
-	ambiguous     bool
-	exposedPorts  []uint16
-	exposedTokens []string
-	tokens        map[string]string
-}
-
-func newDockerfile() *dockerfile {
-	var exposedPorts []uint16
-	var exposedTokens []string
-
-	d := dockerfile{
-		ambiguous:     true,
-		exposedPorts:  exposedPorts,
-		exposedTokens: exposedTokens,
-		tokens:        make(map[string]string),
-	}
-	return &d
-}
-
-func (df *dockerfile) parseLine(line []string) {
-
-	switch line[0] {
-	case "ARG":
-		argparts := strings.SplitN(line[1], "=", 2)
-		if len(argparts) == 1 {
-			df.tokens[argparts[0]] = ""
-		} else if len(argparts) == 2 {
-			df.tokens[argparts[0]] = argparts[1]
-		} else {
-		}
-	case "EXPOSE":
-		df.exposedTokens = append(df.exposedTokens, line[1])
-	default:
-	}
-}
-
-func recurse(tokenMap map[string]string, token string) (string, bool) {
-	switch c := token[0]; {
-	case c == '$':
-		for v, ok := recurse(tokenMap, tokenMap[token]); !ok; {
-			return v, false
-		}
-	case '0' <= c && c <= '9':
-		return token, true
-	}
-	return token, false
-}
-
-func (df *dockerfile) aggregate() error {
-	for _, tk := range df.exposedTokens {
-		token, ok := recurse(df.tokens, tk)
-		if ok {
-			tokenUint, err := strconv.ParseUint(token, 10, 16)
-			if err != nil {
-				return err
-			}
-			df.exposedPorts = append(df.exposedPorts, uint16(tokenUint))
-		}
-	}
-	switch len(df.exposedPorts) {
-	case 1:
-		df.ambiguous = false
-	case 0:
-		df.ambiguous = false
-		return fmt.Errorf("could not determine exposed ports in dockerfile")
-	default:
-		df.ambiguous = true
-		return fmt.Errorf("")
-	}
 	return nil
 }
 

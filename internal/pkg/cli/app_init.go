@@ -144,13 +144,6 @@ func (o *initAppOpts) Ask() error {
 	if err := o.askAppPort(); err != nil {
 		return err
 	}
-	log.Infoln()
-	log.Successf(
-		"Okay, we'll use port %s to route traffic to your container.\n",
-		color.HighlightUserInput(
-			fmt.Sprintf("%d", o.AppPort),
-		),
-	)
 
 	return nil
 }

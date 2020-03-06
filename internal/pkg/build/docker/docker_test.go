@@ -4,10 +4,8 @@
 package docker
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker/mocks"
@@ -150,39 +148,6 @@ func TestPush(t *testing.T) {
 			got := s.Push(mockURI, mockImageTag)
 
 			require.Equal(t, test.want, got)
-		})
-	}
-}
-
-func TestParse(t *testing.T) {
-
-	tests := map[string]struct {
-		mockerfile string
-		want       dockerfile
-	}{
-		"dockerfile with single expose": {
-			mockerfile: `
-EXPOSE 80
-ARG myFunVar=50`,
-			want: dockerfile{
-				ambiguous:     false,
-				exposedPorts:  []uint16{80},
-				exposedTokens: []string{"80"},
-				tokens:        map[string]string{"myFunVar": "50"},
-			},
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			r := strings.NewReader(test.mockerfile)
-			scanner := bufio.NewScanner(r)
-			df := newDockerfile()
-			for scanner.Scan() {
-				res := strings
-			}
-
 		})
 	}
 }
