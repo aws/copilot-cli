@@ -25,6 +25,7 @@ var _ = Describe("init flow", func() {
 			Dockerfile:  "./front-end/Dockerfile",
 			AppType:     "Load Balanced Web App",
 			Deploy:      true,
+			AppPort:     80,
 		})
 	})
 

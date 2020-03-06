@@ -30,6 +30,7 @@ type InitRequest struct {
 	ImageTag    string
 	Dockerfile  string
 	AppType     string
+	AppPort     uint16
 }
 
 // EnvInitRequest contains the parameters for calling ecs env init
