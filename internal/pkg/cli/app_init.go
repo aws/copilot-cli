@@ -36,7 +36,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 
-	fmtAppInitAppPortPrompt     = "What port do you want to expose to internet traffic?"
+	fmtAppInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
 	fmtAppInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
@@ -45,6 +45,10 @@ const (
 	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
+)
+
+const (
+	defaultAppPortString = "80"
 )
 
 type initAppVars struct {
@@ -282,15 +286,15 @@ func (o *initAppOpts) askAppPort() error {
 		fmt.Sprintf(fmtAppInitAppPortPrompt),
 		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
 		validateApplicationPort,
-		prompt.WithDefaultInput("80"),
+		prompt.WithDefaultInput(defaultAppPortString),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get port: %w", err)
+		return fmt.Errorf("get port: %w", err)
 	}
 
 	portUint, err := strconv.ParseUint(port, 10, 16)
 	if err != nil {
-		return fmt.Errorf("failed to parse port string: %w", err)
+		return fmt.Errorf("parse port string: %w", err)
 	}
 
 	o.AppPort = uint16(portUint)
