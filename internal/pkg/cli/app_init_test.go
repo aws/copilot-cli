@@ -230,8 +230,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("80", nil)
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(defaultAppPortString, nil)
 			},
 			wantedErr: nil,
 		},
@@ -243,10 +243,10 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("failed to get port: some error"),
+			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
 			inAppType:        wantedAppType,
@@ -256,10 +256,10 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("failed to get port: some error"),
+			wantedErr: fmt.Errorf("get port: some error"),
 		},
 	}
 
