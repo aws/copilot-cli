@@ -194,7 +194,7 @@ func (o *deletePipelineOpts) deleteStack() error {
 func (o *deletePipelineOpts) deletePipelineFile() error {
 	err := o.ws.DeletePipelineManifest()
 	if err == nil {
-		log.Successf("Deleted pipeline manifest from workspace.")
+		log.Successln("Deleted pipeline manifest from workspace.")
 	}
 
 	return err

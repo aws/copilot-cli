@@ -34,6 +34,17 @@ phases:
           done;
         done;
       - ls -lah ./infrastructure
+      # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
+      - |
+        for app in $apps; do
+          ADDONSFILE=./infrastructure/$app.addons.stack.yml
+          if [ -f "$ADDONSFILE" ]; then
+            tmp=$(mktemp)
+            timestamp=$(date +%s){{range $bucket := .ArtifactBuckets}}
+            aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$app.addons.stack.yml";{{range $envName := $bucket.Environments}}
+            jq --arg a "https://{{$bucket.BucketName}}.s3-{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$app.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$app-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$app-{{$envName}}.params.json{{end}}{{end}}
+          fi
+        done;
       # Build images
       # - For each manifest file:
       #   - Read the path to the Dockerfile by translating the YAML file into JSON
