@@ -131,7 +131,7 @@ func stringPortValidation(val string) error {
 	if err != nil {
 		return errPortNotNumber
 	}
-	if port64 < 0 || port64 > 65535 {
+	if port64 < 1 || port64 > 65535 {
 		return errPortInvalid
 	}
 	return nil
