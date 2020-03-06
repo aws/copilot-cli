@@ -222,6 +222,45 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("failed to select Dockerfile: some error"),
 		},
+		"asks for port if not specified": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("80", nil)
+			},
+			wantedErr: nil,
+		},
+		"errors if port not specified": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("failed to get port: some error"),
+		},
+		"errors if port out of range": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq("What port do you want to expose to internet traffic?"), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("100000", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("failed to get port: some error"),
+		},
 	}
 
 	for name, tc := range testCases {
