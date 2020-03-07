@@ -1,0 +1,62 @@
+# Buildspec run in the build stage of your pipeline.
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+      ruby: 2.6
+    commands:
+      - echo "cd into $CODEBUILD_SRC_DIR"
+      - cd $CODEBUILD_SRC_DIR
+      # Download the ecs-cli-v2 linux binary.
+      - wget {{.BinaryS3BucketPath}}/ecs-preview-linux-{{.Version}}
+      - mv ./ecs-preview-linux-{{.Version}} ./ecs-preview
+      - chmod +x ./ecs-preview
+  build:
+    commands:
+      - echo "Run your tests"
+      # - make test
+  post_build:
+    commands:
+      - ls -l
+      - export COLOR="false"
+      # Find all the local applications in the workspace
+      - manifests=$(find ./ecs-project -name '*-app.yml')
+      # Remove forward slashes and the trailing -app.yml to get the names
+      - apps=$(find ./ecs-project -name '*-app.yml' | sed -e 's!.*/!!' -e 's/-app.yml//')
+      - envs=$(./ecs-preview env ls --json | jq '.environments[].name' | sed 's/"//g')
+      # Generate the cloudformation templates.
+      # The tag is the build ID but we replaced the colon ':' with a dash '-'.
+      - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
+      - >
+        for env in $envs; do
+          for app in $apps; do
+          ./ecs-preview app package -n $app -e $env --output-dir './infrastructure' --tag $tag;
+          done;
+        done;
+      - ls -lah ./infrastructure
+      # Build images
+      # - For each manifest file:
+      #   - Read the path to the Dockerfile by translating the YAML file into JSON
+      #   - Run docker build.
+      #   - For each environment:
+      #     - Retrieve the ECR repository.
+      #     - Login and push the image.
+      - >
+        for app in $apps; do
+          for docker_dir in $(cat $CODEBUILD_SRC_DIR/ecs-project/$app-app.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
+          cd $CODEBUILD_SRC_DIR/$docker_dir;
+          docker build -t $app:$tag .;
+          image_id=$(docker images -q $app:$tag);
+            for env in $envs; do
+            repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$app-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
+            region=$(echo $repo | cut -d'.' -f4);
+            $(aws ecr get-login --no-include-email --region $region);
+            docker tag $image_id $repo;
+            docker push $repo;
+            done;
+          done;
+        done;
+artifacts:
+  files:
+    - "infrastructure/*"
