@@ -5,10 +5,54 @@
 package mocks
 
 import (
+	s3 "github.com/aws/aws-sdk-go/service/s3"
 	s3manager "github.com/aws/aws-sdk-go/service/s3/s3manager"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
+
+// Mocks3ManagerClient is a mock of s3ManagerClient interface
+type Mocks3ManagerClient struct {
+	ctrl     *gomock.Controller
+	recorder *Mocks3ManagerClientMockRecorder
+}
+
+// Mocks3ManagerClientMockRecorder is the mock recorder for Mocks3ManagerClient
+type Mocks3ManagerClientMockRecorder struct {
+	mock *Mocks3ManagerClient
+}
+
+// NewMocks3ManagerClient creates a new mock instance
+func NewMocks3ManagerClient(ctrl *gomock.Controller) *Mocks3ManagerClient {
+	mock := &Mocks3ManagerClient{ctrl: ctrl}
+	mock.recorder = &Mocks3ManagerClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mocks3ManagerClient) EXPECT() *Mocks3ManagerClientMockRecorder {
+	return m.recorder
+}
+
+// Upload mocks base method
+func (m *Mocks3ManagerClient) Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{input}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Upload", varargs...)
+	ret0, _ := ret[0].(*s3manager.UploadOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Upload indicates an expected call of Upload
+func (mr *Mocks3ManagerClientMockRecorder) Upload(input interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{input}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mocks3ManagerClient)(nil).Upload), varargs...)
+}
 
 // Mocks3Client is a mock of s3Client interface
 type Mocks3Client struct {
@@ -33,22 +77,32 @@ func (m *Mocks3Client) EXPECT() *Mocks3ClientMockRecorder {
 	return m.recorder
 }
 
-// Upload mocks base method
-func (m *Mocks3Client) Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+// ListObjectVersions mocks base method
+func (m *Mocks3Client) ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{input}
-	for _, a := range options {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Upload", varargs...)
-	ret0, _ := ret[0].(*s3manager.UploadOutput)
+	ret := m.ctrl.Call(m, "ListObjectVersions", input)
+	ret0, _ := ret[0].(*s3.ListObjectVersionsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Upload indicates an expected call of Upload
-func (mr *Mocks3ClientMockRecorder) Upload(input interface{}, options ...interface{}) *gomock.Call {
+// ListObjectVersions indicates an expected call of ListObjectVersions
+func (mr *Mocks3ClientMockRecorder) ListObjectVersions(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{input}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mocks3Client)(nil).Upload), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectVersions", reflect.TypeOf((*Mocks3Client)(nil).ListObjectVersions), input)
+}
+
+// DeleteObjects mocks base method
+func (m *Mocks3Client) DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteObjects", input)
+	ret0, _ := ret[0].(*s3.DeleteObjectsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteObjects indicates an expected call of DeleteObjects
+func (mr *Mocks3ClientMockRecorder) DeleteObjects(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjects", reflect.TypeOf((*Mocks3Client)(nil).DeleteObjects), input)
 }

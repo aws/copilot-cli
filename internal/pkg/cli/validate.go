@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -18,6 +19,7 @@ var (
 	errValueBadFormat    = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString   = errors.New("value must be a string")
 	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
+	errPortInvalid       = errors.New("value must be in range 1-65535")
 )
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
@@ -32,6 +34,14 @@ func validateProjectName(val interface{}) error {
 func validateApplicationName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("application name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateApplicationPort(val interface{}) error {
+
+	if err := basicPortValidation(val); err != nil {
+		return fmt.Errorf("application port %v is invalid: %w", val, err)
 	}
 	return nil
 }
@@ -84,4 +94,43 @@ func isCorrectFormat(s string) bool {
 		return false // bubble up error?
 	}
 	return valid
+}
+
+func basicPortValidation(val interface{}) error {
+
+	var err error
+
+	switch val := val.(type) {
+	case []byte:
+		err = bytePortValidation(val)
+	case string:
+		err = stringPortValidation(val)
+	case uint16:
+		if val == 0 {
+			err = errPortInvalid
+		}
+	default:
+		err = errPortInvalid
+	}
+	return err
+}
+
+func bytePortValidation(val []byte) error {
+	s := string(val)
+	err := stringPortValidation(s)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func stringPortValidation(val string) error {
+	port64, err := strconv.ParseUint(val, 10, 64)
+	if err != nil {
+		return errPortInvalid
+	}
+	if port64 < 1 || port64 > 65535 {
+		return errPortInvalid
+	}
+	return nil
 }

@@ -14,6 +14,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -69,6 +71,8 @@ type initPipelineOpts struct {
 	secretsmanager archer.SecretsManager
 	parser         template.Parser
 	runner         runner
+	cfnClient      archer.ProjectResourceStore
+	storeSvc       storeReader
 
 	// Outputs stored on successful actions.
 	manifestPath  string
@@ -76,10 +80,16 @@ type initPipelineOpts struct {
 	secretName    string
 
 	// Caches variables
-	projectEnvs []string
+	projectEnvs []*archer.Environment
 	repoURLs    []string
 	fsUtils     *afero.Afero
 	buffer      bytes.Buffer
+}
+
+type artifactBucket struct {
+	BucketName   string
+	Region       string
+	Environments []string
 }
 
 func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
@@ -88,7 +98,14 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		runner:           command.New(),
 		fsUtils:          &afero.Afero{Fs: afero.NewOsFs()},
 	}
-	projectEnvs, err := opts.getEnvNames()
+
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+	}
+	opts.storeSvc = ssmStore
+
+	projectEnvs, err := opts.getEnvs()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get environments: %w", err)
 	}
@@ -120,6 +137,13 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	}
 	opts.repoURLs = urls
 	opts.buffer.Reset()
+
+	p := session.NewProvider()
+	defaultSession, err := p.Default()
+	if err != nil {
+		return nil, err
+	}
+	opts.cfnClient = cloudformation.New(defaultSession)
 
 	return opts, nil
 }
@@ -203,8 +227,6 @@ func (o *initPipelineOpts) Execute() error {
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
-	// TODO deploy manifest file
-
 	return nil
 }
 
@@ -257,12 +279,18 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 }
 
 func (o *initPipelineOpts) createBuildspec() (string, error) {
+	artifactBuckets, err := o.artifactBuckets()
+	if err != nil {
+		return "", err
+	}
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
+		ArtifactBuckets    []artifactBucket
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
+		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {
 		return "", err
@@ -272,6 +300,35 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		return "", fmt.Errorf("write buildspec to workspace: %w", err)
 	}
 	return path, nil
+}
+
+func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
+	proj, err := o.storeSvc.GetProject(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
+	}
+	regionalResources, err := o.cfnClient.GetRegionalProjectResources(proj)
+	if err != nil {
+		return nil, fmt.Errorf("get regional project resources: %w", err)
+	}
+
+	var buckets []artifactBucket
+	for _, resource := range regionalResources {
+		var envNames []string
+		for _, env := range o.projectEnvs {
+			if env.Region == resource.Region {
+				envNames = append(envNames, env.Name)
+			}
+		}
+		bucket := artifactBucket{
+			BucketName:   resource.S3Bucket,
+			Region:       resource.Region,
+			Environments: envNames,
+		}
+		buckets = append(buckets, bucket)
+	}
+
+	return buckets, nil
 }
 
 func (o *initPipelineOpts) selectEnvironments() error {
@@ -304,8 +361,8 @@ func (o *initPipelineOpts) listAvailableEnvironments() []string {
 	var envs []string
 	for _, env := range o.projectEnvs {
 		// Check if environment has already been added to pipeline
-		if o.envCanBeAdded(env) {
-			envs = append(envs, env)
+		if o.envCanBeAdded(env.Name) {
+			envs = append(envs, env.Name)
 		}
 	}
 
@@ -422,13 +479,8 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
-func (o *initPipelineOpts) getEnvNames() ([]string, error) {
-	store, err := store.New()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to environment datastore: %w", err)
-	}
-
-	envs, err := store.ListEnvironments(o.ProjectName())
+func (o *initPipelineOpts) getEnvs() ([]*archer.Environment, error) {
+	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("could not list environments for project %s: %w", o.ProjectName(), err)
 	}
@@ -437,12 +489,7 @@ func (o *initPipelineOpts) getEnvNames() ([]string, error) {
 		return nil, errNoEnvsInProject
 	}
 
-	var envNames []string
-	for _, env := range envs {
-		envNames = append(envNames, env.Name)
-	}
-
-	return envNames, nil
+	return envs, nil
 }
 
 // BuildPipelineInitCmd build the command for creating a new pipeline.

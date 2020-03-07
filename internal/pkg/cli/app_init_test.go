@@ -25,6 +25,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		inAppName        string
 		inDockerfilePath string
 		inProjectName    string
+		inAppPort        uint16
 
 		mockFileSystem func(mockFS afero.Fs)
 		wantedErr      error
@@ -69,6 +70,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 					AppType:        tc.inAppType,
 					AppName:        tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
+					AppPort:        tc.inAppPort,
 					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
@@ -94,11 +96,13 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		wantedAppType        = manifest.LoadBalancedWebApplication
 		wantedAppName        = "frontend"
 		wantedDockerfilePath = "frontend/Dockerfile"
+		wantedAppPort        = 80
 	)
 	testCases := map[string]struct {
 		inAppType        string
 		inAppName        string
 		inDockerfilePath string
+		inAppPort        uint16
 
 		mockFileSystem func(mockFS afero.Fs)
 		mockPrompt     func(m *climocks.Mockprompter)
@@ -108,6 +112,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"prompt for app type": {
 			inAppType:        "",
 			inAppName:        wantedAppName,
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockFileSystem: func(mockFS afero.Fs) {},
@@ -120,6 +125,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"return an error if fail to get app type": {
 			inAppType:        "",
 			inAppName:        wantedAppName,
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockFileSystem: func(mockFS afero.Fs) {},
@@ -132,6 +138,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"prompt for app name": {
 			inAppType:        wantedAppType,
 			inAppName:        "",
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockFileSystem: func(mockFS afero.Fs) {},
@@ -144,6 +151,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"returns an error if fail to get application name": {
 			inAppType:        wantedAppType,
 			inAppName:        "",
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: wantedDockerfilePath,
 
 			mockFileSystem: func(mockFS afero.Fs) {},
@@ -156,6 +164,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"choose an existing Dockerfile": {
 			inAppType:        wantedAppType,
 			inAppName:        wantedAppName,
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: "",
 
 			mockFileSystem: func(mockFS afero.Fs) {
@@ -180,6 +189,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 		"returns an error if fail to find Dockerfiles": {
 			inAppType:        wantedAppType,
 			inAppName:        wantedAppName,
+			inAppPort:        wantedAppPort,
 			inDockerfilePath: "",
 
 			mockFileSystem: func(mockFS afero.Fs) {},
@@ -212,6 +222,45 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("failed to select Dockerfile: some error"),
 		},
+		"asks for port if not specified": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(defaultAppPortString, nil)
+			},
+			wantedErr: nil,
+		},
+		"errors if port not specified": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get port: some error"),
+		},
+		"errors if port out of range": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0, //invalid port, default case
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("100000", errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("get port: some error"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -225,6 +274,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
 					AppName:        tc.inAppName,
+					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
 					GlobalOpts: &GlobalOpts{
 						prompt: mockPrompt,
@@ -253,6 +303,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 func TestAppInitOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
+		inAppPort        uint16
 		inAppType        string
 		inAppName        string
 		inDockerfilePath string
@@ -265,6 +316,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
+			inAppPort:        80,
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
@@ -309,6 +361,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inAppType:        manifest.LoadBalancedWebApplication,
 			inProjectName:    "project",
 			inAppName:        "frontend",
+			inAppPort:        80,
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
@@ -330,6 +383,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inAppType:        manifest.LoadBalancedWebApplication,
 			inProjectName:    "project",
 			inAppName:        "frontend",
+			inAppPort:        80,
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
@@ -445,6 +499,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
 					AppName:        tc.inAppName,
+					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
 					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
 				},

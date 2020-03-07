@@ -108,7 +108,7 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(LBFargateParamContainerPortKey),
-			ParameterValue: aws.String(strconv.Itoa(templateParams.Image.Port)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(templateParams.Image.Port), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBFargateRulePathKey),
@@ -169,7 +169,7 @@ type lbFargateTemplateParams struct {
 	// Field types to override.
 	Image struct {
 		URL  string
-		Port int
+		Port uint16
 	}
 }
 
@@ -186,7 +186,7 @@ func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
 		HTTPSEnabled: strconv.FormatBool(c.httpsEnabled),
 		Image: struct {
 			URL  string
-			Port int
+			Port uint16
 		}{
 			URL:  url,
 			Port: c.App.Image.Port,

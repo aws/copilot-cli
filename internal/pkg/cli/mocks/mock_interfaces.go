@@ -1416,3 +1416,40 @@ func (mr *MockartifactPutterMockRecorder) PutArtifact(bucket, fileName, data int
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactPutter)(nil).PutArtifact), bucket, fileName, data)
 }
+
+// MockbucketEmptier is a mock of bucketEmptier interface
+type MockbucketEmptier struct {
+	ctrl     *gomock.Controller
+	recorder *MockbucketEmptierMockRecorder
+}
+
+// MockbucketEmptierMockRecorder is the mock recorder for MockbucketEmptier
+type MockbucketEmptierMockRecorder struct {
+	mock *MockbucketEmptier
+}
+
+// NewMockbucketEmptier creates a new mock instance
+func NewMockbucketEmptier(ctrl *gomock.Controller) *MockbucketEmptier {
+	mock := &MockbucketEmptier{ctrl: ctrl}
+	mock.recorder = &MockbucketEmptierMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockbucketEmptier) EXPECT() *MockbucketEmptierMockRecorder {
+	return m.recorder
+}
+
+// EmptyBucket mocks base method
+func (m *MockbucketEmptier) EmptyBucket(bucket string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EmptyBucket", bucket)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EmptyBucket indicates an expected call of EmptyBucket
+func (mr *MockbucketEmptierMockRecorder) EmptyBucket(bucket interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmptyBucket", reflect.TypeOf((*MockbucketEmptier)(nil).EmptyBucket), bucket)
+}

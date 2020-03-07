@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDeleteProjectOptsValidate(t *testing.T) {
+func TestDeleteProjectOpts_Validate(t *testing.T) {
 	tests := map[string]struct {
 		projectName string
 
@@ -47,7 +47,7 @@ func TestDeleteProjectOptsValidate(t *testing.T) {
 	}
 }
 
-func TestDeleteProjectOptsAsk(t *testing.T) {
+func TestDeleteProjectOpts_Ask(t *testing.T) {
 	mockProjectName := "mockProjectName"
 	mockError := errors.New("mockError)")
 
@@ -123,7 +123,61 @@ func TestDeleteProjectOptsAsk(t *testing.T) {
 	}
 }
 
-func TestDeleteProjectOptsDeleteApps(t *testing.T) {
+func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
+	mockProjectName := "mockProjectName"
+	mockError := errors.New("mockError")
+
+	var mockStore *mocks.MockprojectService
+
+	tests := map[string]struct {
+		setupMocks func(ctrl *gomock.Controller)
+		want       error
+	}{
+		"return error is listing applications fails": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockStore = mocks.NewMockprojectService(ctrl)
+
+				mockStore.EXPECT().
+					ListApplications(mockProjectName).
+					Return(nil, mockError)
+			},
+			want: mockError,
+		},
+		"return nil if no apps returned from listing applications": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockStore = mocks.NewMockprojectService(ctrl)
+
+				mockStore.EXPECT().
+					ListApplications(mockProjectName).
+					Return(nil, nil)
+			},
+			want: nil,
+		},
+		// TODO: add more tests when app deletion workflow is inline mockable (provider pattern?)
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			test.setupMocks(ctrl)
+			opts := deleteProjOpts{
+				deleteProjVars: deleteProjVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: mockProjectName,
+					},
+				},
+				store: mockStore,
+			}
+
+			got := opts.deleteApps()
+
+			require.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 	mockProjectName := "mockProjectName"
 	mockError := errors.New("mockError")
 
