@@ -45,8 +45,8 @@ func Test_SSM_Project_Integration(t *testing.T) {
 func Test_SSM_Environment_Integration(t *testing.T) {
 	s, _ := store.New()
 	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
-	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
-	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
+	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: false}
+	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: true}
 
 	t.Run("Create, Get and List Environments", func(t *testing.T) {
 		// Create our first project
