@@ -20,10 +20,9 @@ phases:
     commands:
       - ls -l
       - export COLOR="false"
-      # Find all the local applications in the workspace
-      - manifests=$(find ./ecs-project -name '*-app.yml')
-      # Remove forward slashes and the trailing -app.yml to get the names
-      - apps=$(find ./ecs-project -name '*-app.yml' | sed -e 's!.*/!!' -e 's/-app.yml//')
+      # Find all the local applications in the workspace.
+      - apps=$(./ecs-preview app ls --local --json | jq '.applications[].name' | sed 's/"//g')
+      # Find all the environments.
       - envs=$(./ecs-preview env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
@@ -55,7 +54,7 @@ phases:
       #     - Login and push the image.
       - >
         for app in $apps; do
-          for docker_dir in $(cat $CODEBUILD_SRC_DIR/ecs-project/$app-app.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
+          for docker_dir in $(cat $CODEBUILD_SRC_DIR/ecs-project/$app/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
           cd $CODEBUILD_SRC_DIR/$docker_dir;
           docker build -t $app:$tag .;
           image_id=$(docker images -q $app:$tag);
