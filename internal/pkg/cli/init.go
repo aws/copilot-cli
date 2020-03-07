@@ -45,6 +45,7 @@ type initVars struct {
 	dockerfilePath string
 	profile        string
 	imageTag       string
+	port           uint16
 }
 
 type initOpts struct {
@@ -63,6 +64,7 @@ type initOpts struct {
 	projectName    *string
 	appType        *string
 	appName        *string
+	appPort        *uint16
 	dockerfilePath *string
 
 	prompt prompter
@@ -107,6 +109,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			AppType:        vars.appType,
 			AppName:        vars.appName,
 			DockerfilePath: vars.dockerfilePath,
+			AppPort:        vars.port,
 			GlobalOpts:     NewGlobalOpts(),
 		},
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
@@ -159,6 +162,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
 		appName:        &initApp.AppName,
+		appPort:        &initApp.AppPort,
 		dockerfilePath: &initApp.DockerfilePath,
 
 		prompt: prompt,
@@ -180,8 +184,8 @@ containerized applications (or micro-services) that operate together.`)
 		return err
 	}
 
-	log.Infof("Ok great, we'll set up a %s named %s in project %s.\n",
-		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName))
+	log.Infof("Ok great, we'll set up a %s named %s in project %s listening on port %s.\n",
+		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName), color.HighlightUserInput(fmt.Sprintf("%d", *o.appPort)))
 
 	if err := o.initProject.Execute(); err != nil {
 		return fmt.Errorf("execute project init: %w", err)
@@ -289,6 +293,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().Uint16Var(&vars.port, appPortFlag, 0, appPortFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,

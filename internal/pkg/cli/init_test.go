@@ -147,7 +147,7 @@ func TestInitOpts_Run(t *testing.T) {
 			defer ctrl.Finish()
 
 			var mockProjectName, mockAppName, mockAppType string
-
+			var mockAppPort uint16
 			opts := &initOpts{
 				ShouldDeploy:          tc.inShouldDeploy,
 				promptForShouldDeploy: tc.inPromptForShouldDeploy,
@@ -163,6 +163,7 @@ func TestInitOpts_Run(t *testing.T) {
 				projectName: &mockProjectName,
 				appName:     &mockAppName,
 				appType:     &mockAppType,
+				appPort:     &mockAppPort,
 			}
 			tc.expect(opts)
 

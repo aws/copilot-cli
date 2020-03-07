@@ -28,7 +28,7 @@ type LBFargateManifest struct {
 // ImageWithPort represents a container image with an exposed port.
 type ImageWithPort struct {
 	AppImage `yaml:",inline"`
-	Port     int `yaml:"port"`
+	Port     uint16 `yaml:"port"`
 }
 
 // LBFargateConfig represents a load balanced web application with AWS Fargate as compute.
@@ -71,6 +71,7 @@ type AutoScalingConfig struct {
 type LBFargateManifestProps struct {
 	*AppManifestProps
 	Path string
+	Port uint16
 }
 
 // NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
@@ -85,7 +86,7 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 			AppImage: AppImage{
 				Build: input.Dockerfile,
 			},
-			Port: 80,
+			Port: input.Port,
 		},
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{

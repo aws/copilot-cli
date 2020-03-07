@@ -35,6 +35,7 @@ const (
 	domainNameFlag        = "domain"
 	localAppFlag          = "local"
 	deleteSecretFlag      = "delete-secret"
+	appPortFlag           = "port"
 )
 
 // Short flag names.
@@ -85,4 +86,5 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localAppFlagDescription          = "Only show applications in the current directory."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
+	appPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
 )

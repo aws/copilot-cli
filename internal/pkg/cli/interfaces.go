@@ -143,3 +143,7 @@ type wsProjectManager interface {
 type artifactPutter interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
+
+type port interface {
+	Set(number int) error
+}
