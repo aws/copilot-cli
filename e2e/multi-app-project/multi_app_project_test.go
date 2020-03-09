@@ -165,6 +165,39 @@ var _ = Describe("Multiple App Project", func() {
 			}
 		})
 
+		It("service discovery should be enabled and working", func() {
+			// The front-end service is set up to have a path called
+			// "/front-end/service-discovery-test" - this route
+			// calls a function which makes a call via the service
+			// discovery endpoint, "back-end.local". If that back-end
+			// call succeeds, the back-end returns a response
+			// "back-end-service-discovery". This should be forwarded
+			// back to us via the front-end api.
+			// [test] -- http req -> [front-end] -- service-discovery -> [back-end]
+			appName := "front-end"
+			app, appShowErr := cli.AppShow(&client.AppShowRequest{
+				ProjectName: projectName,
+				AppName:     appName,
+			})
+			Expect(appShowErr).NotTo(HaveOccurred())
+			Expect(len(app.Routes)).To(Equal(1))
+
+			// Calls the front end's service discovery endpoint - which should connect
+			// to the backend, and pipe the backend response to us.
+			route := app.Routes[0]
+			Expect(route.Environment).To(Equal("test"))
+			Expect(route.Path).To(Equal(appName))
+			resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/service-discovery-test/", route.URL, route.Path))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
+			// Read the response - our deployed apps should return a body with their
+			// name as the value.
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
+		})
+
 		It("app logs should display logs", func() {
 			for _, appName := range []string{"front-end", "back-end"} {
 				var appLogs []client.AppLogsOutput
