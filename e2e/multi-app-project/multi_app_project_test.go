@@ -152,6 +152,7 @@ var _ = Describe("Multiple App Project", func() {
 				// Call each environment's endpoint and ensure it returns a 200
 				route := app.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
+				Expect(route.URL).To(Equal(appName))
 				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", route.URL))
 				Expect(fetchErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
