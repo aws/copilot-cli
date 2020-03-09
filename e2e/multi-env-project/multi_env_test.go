@@ -171,9 +171,8 @@ var _ = Describe("Multiple Env Project", func() {
 			for _, env := range []string{"test", "prod"} {
 				route := envRoutes[env]
 				Expect(route.Environment).To(Equal(env))
-				Expect(route.Path).To(Equal(appName))
 				Eventually(func() (int, error) {
-					resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/", route.URL, route.Path))
+					resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", route.URL))
 					return resp.StatusCode, fetchErr
 				}, "10s", "1s").Should(Equal(200))
 			}

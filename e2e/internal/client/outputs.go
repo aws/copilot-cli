@@ -25,7 +25,6 @@ type AppShowConfigurations struct {
 type AppShowRoutes struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
-	Path        string `json:"path"`
 }
 
 type AppShowVariables struct {
