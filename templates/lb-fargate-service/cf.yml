@@ -79,6 +79,8 @@ Resources:
           Environment:
           - Name: ECS_CLI_PROJECT_NAME
             Value: !Sub '${ProjectName}'
+          - Name: ECS_APP_DISCOVERY_ENDPOINT
+            Value: !Sub '${ProjectName}.local'
           - Name: ECS_CLI_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
           - Name: ECS_CLI_APP_NAME
@@ -202,7 +204,23 @@ Resources:
                   - 'cloudwatch:PutDashboard'
                   - 'cloudwatch:ListMetrics'
                 Resource: '*'
-
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the ECS CLI V2 services
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+          - TTL: 60
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name:  !Ref AppName
+      NamespaceId:
+        Fn::ImportValue:
+          !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
   Service:
     Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated
@@ -238,6 +256,9 @@ Resources:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+          Port: !Ref ContainerPort
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
