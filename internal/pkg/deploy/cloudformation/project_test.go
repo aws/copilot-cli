@@ -1156,6 +1156,49 @@ func TestDelegateDNSPermissions(t *testing.T) {
 				}
 			},
 		},
+
+		"Returns errChangeSetEmpty from deployChangeSet": {
+			project: &archer.Project{
+				AccountID: "1234",
+				Name:      "project",
+				Domain:    "amazon.com",
+			},
+			want: nil,
+			mockCFClient: func() *mockCloudFormation {
+				return &mockCloudFormation{
+					t: t,
+					mockCreateChangeSet: func(t *testing.T, in *cloudformation.CreateChangeSetInput) (*cloudformation.CreateChangeSetOutput, error) {
+						require.Equal(t, 6, len(in.Parameters))
+						return &cloudformation.CreateChangeSetOutput{
+							StackId: aws.String("stackname"),
+						}, nil
+					},
+					mockExecuteChangeSet: func(t *testing.T, in *cloudformation.ExecuteChangeSetInput) (*cloudformation.ExecuteChangeSetOutput, error) {
+						return nil, nil
+					},
+					mockDescribeStacks: func(t *testing.T, in *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error) {
+						stack := mockProjectRolesStack("stackname", map[string]string{
+							"ProjectDNSDelegatedAccounts": "1234",
+						})
+						return &cloudformation.DescribeStacksOutput{Stacks: []*cloudformation.Stack{stack}}, nil
+					},
+					mockDescribeChangeSet: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) (*cloudformation.DescribeChangeSetOutput, error) {
+						return &cloudformation.DescribeChangeSetOutput{
+							ExecutionStatus: aws.String(cloudformation.ExecutionStatusAvailable),
+						}, nil
+					},
+					mockWaitUntilChangeSetCreateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeChangeSetInput) error {
+						return fmt.Errorf("error") // <- this triggers a DescribeChangeSet which will return no change set
+					},
+					mockDeleteChangeSet: func(t *testing.T, in *cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error) {
+						return nil, nil
+					},
+					mockWaitUntilStackUpdateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
+						return nil
+					},
+				}
+			},
+		},
 		"Returns error from Update Stack": {
 			project: &archer.Project{
 				AccountID: "1234",
