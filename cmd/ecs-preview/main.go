@@ -61,7 +61,7 @@ func buildRootCmd() *cobra.Command {
 
 	// "Release" command group.
 	cmd.AddCommand(cli.BuildPipelineCmd())
-
+	cmd.AddCommand(cli.BuildDeployCmd())
 	cmd.SetUsageTemplate(template.RootUsage)
 
 	return cmd

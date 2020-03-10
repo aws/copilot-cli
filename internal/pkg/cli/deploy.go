@@ -4,42 +4,26 @@
 package cli
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/spf13/cobra"
 )
 
-// Interfaces for deploying resources through CloudFormation. Facilitates mocking.
-type environmentDeployer interface {
-	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
-	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
-	DeleteEnvironment(projName, envName string) error
-}
+// BuildDeployCmd is the deploy command - which is
+// an alias for app deploy.
+func BuildDeployCmd() *cobra.Command {
+	deployCmd := BuildAppDeployCmd()
+	deployCmd.Use = "deploy"
+	deployCmd.Short = "Deploy your app."
+	deployCmd.Long = `Command for deploying apps to your environments.`
+	deployCmd.Example = `
+	Deploys an application named "frontend" to a "test" environment.
+	/code $ ecs-preview deploy --name frontend --env test`
 
-type pipelineDeployer interface {
-	CreatePipeline(env *deploy.CreatePipelineInput) error
-	UpdatePipeline(env *deploy.CreatePipelineInput) error
-	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
-	DeletePipeline(pipelineName string) error
-	AddPipelineResourcesToProject(project *archer.Project, region string) error
-	projectResourcesGetter
-	// TODO: Add StreamPipelineCreation method
-}
+	deployCmd.SetUsageTemplate(template.Usage)
 
-type projectDeployer interface {
-	DeployProject(in *deploy.CreateProjectInput) error
-	AddAppToProject(project *archer.Project, appName string) error
-	AddEnvToProject(project *archer.Project, env *archer.Environment) error
-	DelegateDNSPermissions(project *archer.Project, accountID string) error
-	DeleteProject(name string) error
-}
-
-type projectResourcesGetter interface {
-	GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
-	GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
-}
-
-type deployer interface {
-	environmentDeployer
-	projectDeployer
-	pipelineDeployer
+	deployCmd.Annotations = map[string]string{
+		"group": group.Release,
+	}
+	return deployCmd
 }
