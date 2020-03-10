@@ -33,8 +33,8 @@ During preview, we're distributing binaries from our GitHub releases. Instructio
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.5/ecs-preview-darwin-v0.0.5 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
-| Linux | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.5/ecs-preview-linux-v0.0.5 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
+| macOS | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.6/ecs-preview-darwin-v0.0.6 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
+| Linux | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.6/ecs-preview-linux-v0.0.6 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
 
 </details>
 
@@ -52,6 +52,7 @@ ecs-preview init --project demo      \
   --app api                          \
   --app-type 'Load Balanced Web App' \
   --dockerfile './Dockerfile'        \
+  --port 80                          \
   --deploy
 ```
 

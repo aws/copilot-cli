@@ -6,6 +6,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/aws-sdk-go/aws"
@@ -92,6 +93,9 @@ func (s *Store) ListEnvironments(projectName string) ([]*archer.Environment, err
 
 		environments = append(environments, &env)
 	}
+	// non-prod env before prod env. sort by alphabetically if same
+	sort.SliceStable(environments, func(i, j int) bool { return environments[i].Name < environments[i].Name })
+	sort.SliceStable(environments, func(i, j int) bool { return !environments[i].Prod })
 	return environments, nil
 }
 

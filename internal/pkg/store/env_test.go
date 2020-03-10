@@ -16,12 +16,12 @@ import (
 )
 
 func TestStore_ListEnvironments(t *testing.T) {
-	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
+	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s", Prod: false}
 	testEnvironmentString, err := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
 	require.NoError(t, err, "Marshal environment should not fail")
 
-	prodEnvironment := archer.Environment{Name: "prod", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
+	prodEnvironment := archer.Environment{Name: "prod", AccountID: "12345", Project: "chicken", Region: "us-west-2s", Prod: true}
 	prodEnvironmentString, err := marshal(prodEnvironment)
 	prodEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, prodEnvironment.Project, prodEnvironment.Name)
 	require.NoError(t, err, "Marshal environment should not fail")
@@ -42,12 +42,12 @@ func TestStore_ListEnvironments(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(testEnvironmentPath),
-							Value: aws.String(testEnvironmentString),
+							Name:  aws.String(prodEnvironmentPath), // <- return prod before test on purpose to test sorting by Prod
+							Value: aws.String(prodEnvironmentString),
 						},
 						{
-							Name:  aws.String(prodEnvironmentPath),
-							Value: aws.String(prodEnvironmentString),
+							Name:  aws.String(testEnvironmentPath),
+							Value: aws.String(testEnvironmentString),
 						},
 					},
 				}, nil

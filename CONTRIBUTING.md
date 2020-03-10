@@ -28,7 +28,7 @@ This document describes how to set up a development environment and submit your 
 
 From the repository root run:
 
-`git remote add upstream git@github.com:aws/amazon-ecs-cli`
+`git remote add upstream git@github.com:aws/amazon-ecs-cli-v2`
 
 `git fetch upstream`
 
