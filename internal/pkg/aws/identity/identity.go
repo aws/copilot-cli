@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package identity wraps AWS Security Token Service (STS) API functionality.
+// Package identity provides a client to make API requests to AWS Security Token Service.
 package identity
 
 import (

@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package route53 wraps AWS route 53 API functionality.
+// Package route53 provides functionality to manipulate route53 primitives.
 package route53
 
 import (
