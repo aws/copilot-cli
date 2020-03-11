@@ -429,7 +429,7 @@ func TestAppShow_Execute(t *testing.T) {
 					Path:    "/frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "https://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
@@ -476,7 +476,7 @@ func TestAppShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"https://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
 			inputApp:              "my-app",
@@ -503,7 +503,7 @@ func TestAppShow_Execute(t *testing.T) {
 					Path:    "/frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "https://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
@@ -566,7 +566,7 @@ Routes
 
   Environment       URL
   test              http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
-  prod              https://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
+  prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
 Variables
 
@@ -829,7 +829,7 @@ Configurations
 Routes
 
   Environment       URL
-  prod              https://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
+  prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
 Variables
 

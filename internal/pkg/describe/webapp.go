@@ -111,7 +111,7 @@ type ecsService interface {
 
 func (uri *WebAppURI) String() string {
 	if uri.Path != "" {
-		return fmt.Sprintf("%s%s", color.HighlightResource("http://" + uri.DNSName), color.HighlightResource(uri.Path))
+		return fmt.Sprintf("%s%s", color.HighlightResource("http://"+uri.DNSName), color.HighlightResource(uri.Path))
 	}
 	return color.HighlightResource("https://" + uri.DNSName)
 }
