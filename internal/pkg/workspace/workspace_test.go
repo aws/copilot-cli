@@ -515,221 +515,61 @@ func TestWorkspace_DeletePipeline(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ListAddonFiles(t *testing.T) {
+func TestWorkspace_ReadAddonsDir(t *testing.T) {
 	testCases := map[string]struct {
-		appName    string
-		projectDir string
-		fs         func() afero.Fs
+		appName        string
+		projectDirPath string
+		fs             func() afero.Fs
 
-		wanted    []string
-		wantedErr error
+		wantedFileNames []string
+		wantedErr       error
 	}{
-		"list all files": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
+		"dir not exist": {
+			appName:        "webhook",
+			projectDirPath: "/ecs-project",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project/webhook", 0755)
+				return fs
+			},
+			wantedErr: &os.PathError{
+				Op:   "open",
+				Path: "/ecs-project/webhook/addons",
+				Err:  os.ErrNotExist,
+			},
+		},
+		"retrieves file names": {
+			appName:        "webhook",
+			projectDirPath: "/ecs-project",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
 				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
 				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
-				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
 				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
-				other, _ := fs.Create("/ecs-project/webhook/addons/other")
 				defer params.Close()
-				defer policy.Close()
 				defer outputs.Close()
-				defer other.Close()
-				params.Write([]byte("params"))
-				policy.Write([]byte("policy"))
-				outputs.Write([]byte("outputs"))
-				other.Write([]byte("other"))
 				return fs
 			},
-
-			wanted:    []string{"params.yml", "policy.yml", "outputs.yml"},
-			wantedErr: nil,
-		},
-		"returns ErrAddonsDirNotExist if addons folder doesn't exist": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				return fs
-			},
-			wanted: []string{},
-			wantedErr: &ErrAddonsDirNotExist{
-				AppName: "webhook",
-			},
+			wantedFileNames: []string{"outputs.yml", "params.yml"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			fs := tc.fs()
 			ws := &Workspace{
-				projectDir: tc.projectDir,
+				projectDir: tc.projectDirPath,
 				fsUtils: &afero.Afero{
-					Fs: fs,
+					Fs: tc.fs(),
 				},
 			}
 
 			// WHEN
-			actual, actualErr := ws.ListAddonFiles(tc.appName)
+			actualFileNames, actualErr := ws.ReadAddonsDir(tc.appName)
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
-			} else {
-				require.ElementsMatch(t, tc.wanted, actual, "expected the same file names")
-			}
-		})
-	}
-}
-
-func TestWorkspace_ReadAddonFiles(t *testing.T) {
-	testCases := map[string]struct {
-		appName    string
-		projectDir string
-		fs         func() afero.Fs
-
-		wanted    *AddonFiles
-		wantedErr error
-	}{
-		"read addon files": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
-				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
-				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
-				other, _ := fs.Create("/ecs-project/webhook/addons/other")
-				defer params.Close()
-				defer policy.Close()
-				defer outputs.Close()
-				defer other.Close()
-				params.Write([]byte("params"))
-				policy.Write([]byte("policy"))
-				outputs.Write([]byte("outputs"))
-				other.Write([]byte("other"))
-				return fs
-			},
-
-			wanted:    &AddonFiles{Parameters: []string{"params"}, Resources: []string{"policy"}, Outputs: []string{"outputs"}},
-			wantedErr: nil,
-		},
-		"returns error if missing params file": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
-				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
-				defer policy.Close()
-				defer outputs.Close()
-				policy.Write([]byte("policy"))
-				outputs.Write([]byte("outputs"))
-				return fs
-			},
-
-			wanted:    nil,
-			wantedErr: errors.New("addons directory has missing file(s): params.yml"),
-		},
-		"returns error if missing outputs file": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
-				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
-				defer policy.Close()
-				defer params.Close()
-				policy.Write([]byte("policy"))
-				params.Write([]byte("params"))
-				return fs
-			},
-
-			wanted:    nil,
-			wantedErr: errors.New("addons directory has missing file(s): outputs.yml"),
-		},
-		"returns error if missing resources file": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				outputs, _ := fs.Create("/ecs-project/webhook/addons/outputs.yml")
-				params, _ := fs.Create("/ecs-project/webhook/addons/params.yml")
-				defer params.Close()
-				defer outputs.Close()
-				params.Write([]byte("params"))
-				outputs.Write([]byte("outputs"))
-				return fs
-			},
-
-			wanted:    nil,
-			wantedErr: errors.New(`addons directory has missing file(s): at least one resource YAML file such as "s3-bucket.yml"`),
-		},
-		"returns error if missing multiple files": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				policy, _ := fs.Create("/ecs-project/webhook/addons/policy.yml")
-				defer policy.Close()
-				policy.Write([]byte("policy"))
-				return fs
-			},
-
-			wanted:    nil,
-			wantedErr: errors.New(`addons directory has missing file(s): params.yml, outputs.yml`),
-		},
-		"returns error if missing all files": {
-			appName: "webhook",
-
-			projectDir: "/ecs-project",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/ecs-project/webhook/addons", 0755)
-				return fs
-			},
-
-			wanted:    nil,
-			wantedErr: errors.New(`addons directory has missing file(s): params.yml, outputs.yml, at least one resource YAML file such as "s3-bucket.yml"`),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			fs := tc.fs()
-			ws := &Workspace{
-				projectDir: tc.projectDir,
-				fsUtils: &afero.Afero{
-					Fs: fs,
-				},
-			}
-
-			// WHEN
-			actual, actualErr := ws.ReadAddonFiles(tc.appName)
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.Equal(t, tc.wantedErr, actualErr, "expected the same error")
-			} else {
-				require.Equal(t, tc.wanted, actual)
-			}
+			require.Equal(t, tc.wantedErr, actualErr)
+			require.Equal(t, tc.wantedFileNames, actualFileNames)
 		})
 	}
 }
