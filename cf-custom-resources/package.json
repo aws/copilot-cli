@@ -32,7 +32,7 @@
     "eslint-plugin-node": "^10.0.0",
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
-    "jest": "^24.9.0",
+    "jest": "^25.1.0",
     "lambda-tester": "^3.6.0",
     "nock": "^11.3.5",
     "ts-jest": "^24.1.0"

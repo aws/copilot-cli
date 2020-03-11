@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -30,8 +29,6 @@ import (
 const (
 	// ProjectDirectoryName is the name of the directory where generated infrastructure code will be stored.
 	ProjectDirectoryName = "ecs-project"
-	// AddonsFileSuffix is the suffix of the addons files.
-	AddonsFileSuffix = ".yml"
 
 	addonsDirName             = "addons"
 	workspaceSummaryFileName  = ".ecs-workspace"
@@ -39,9 +36,6 @@ const (
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
-	paramsFile                = "params.yml"
-	outputsFile               = "outputs.yml"
-	resourcesFiles            = "{resources}.yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -54,13 +48,6 @@ type Workspace struct {
 	workingDir string
 	projectDir string
 	fsUtils    *afero.Afero
-}
-
-// AddonFiles is the output for ReadAddonFiles.
-type AddonFiles struct {
-	Parameters []string
-	Resources  []string
-	Outputs    []string
 }
 
 // New returns a workspace, used for reading and writing to
@@ -217,78 +204,27 @@ func (ws *Workspace) DeleteAll() error {
 	return ws.fsUtils.RemoveAll(ProjectDirectoryName)
 }
 
-// ListAddonFiles lists addon file names for an application.
-func (ws *Workspace) ListAddonFiles(appName string) ([]string, error) {
+// ReadAddonsDir returns a list of file names under an application's "addons/" directory.
+func (ws *Workspace) ReadAddonsDir(appName string) ([]string, error) {
 	projectDir, err := ws.projectDirPath()
 	if err != nil {
 		return nil, err
 	}
-	// addons dir could be nonexistent
-	addonsFiles, err := ws.fsUtils.ReadDir(filepath.Join(projectDir, appName, addonsDirName))
-	if err != nil {
-		return nil, &ErrAddonsDirNotExist{
-			AppName: appName,
-		}
-	}
-	var addonsFileNames []string
-	for _, file := range addonsFiles {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), AddonsFileSuffix) {
-			addonsFileNames = append(addonsFileNames, file.Name())
-		}
-	}
 
-	return addonsFileNames, nil
-}
-
-// ReadAddonFiles reads addon files for an application.
-func (ws *Workspace) ReadAddonFiles(appName string) (*AddonFiles, error) {
-	addonFileNames, err := ws.ListAddonFiles(appName)
+	var names []string
+	files, err := ws.fsUtils.ReadDir(filepath.Join(projectDir, appName, addonsDirName))
 	if err != nil {
 		return nil, err
 	}
-	addonFiles := map[string]string{paramsFile: "", outputsFile: "", resourcesFiles: ""}
-	for _, fileName := range addonFileNames {
-		content, err := ws.read(appName, addonsDirName, fileName)
-		// Trim spaces at the end of the file in case unexpected "\n" to make the template nicer.
-		trimmedContent := strings.TrimSpace(string(content))
-		if err != nil {
-			return nil, fmt.Errorf("read addon file %s: %w", fileName, err)
-		}
-		switch fileName {
-		case paramsFile:
-			addonFiles[paramsFile] = trimmedContent
-		case outputsFile:
-			addonFiles[outputsFile] = trimmedContent
-		default:
-			addonFiles[resourcesFiles] += trimmedContent + "\n"
-		}
+	for _, f := range files {
+		names = append(names, f.Name())
 	}
-	if err := validateNoMissingFiles(addonFiles); err != nil {
-		return nil, err
-	}
-	return &AddonFiles{
-		Parameters: strings.Split(strings.TrimSpace(addonFiles[paramsFile]), "\n"),
-		Resources:  strings.Split(strings.TrimSpace(addonFiles[resourcesFiles]), "\n"),
-		Outputs:    strings.Split(strings.TrimSpace(addonFiles[outputsFile]), "\n"),
-	}, nil
+	return names, nil
 }
 
-func validateNoMissingFiles(f map[string]string) error {
-	var missingFiles []string
-	if f[paramsFile] == "" {
-		missingFiles = append(missingFiles, paramsFile)
-	}
-	if f[outputsFile] == "" {
-		missingFiles = append(missingFiles, outputsFile)
-	}
-	if f[resourcesFiles] == "" {
-		missingFiles = append(missingFiles, `at least one resource YAML file such as "s3-bucket.yml"`)
-	}
-
-	if missingFiles != nil {
-		return fmt.Errorf("addons directory has missing file(s): %s", strings.Join(missingFiles, ", "))
-	}
-	return nil
+// ReadAddonsFile returns the contents of a file under the application's "addons/" directory.
+func (ws *Workspace) ReadAddonsFile(appName, fileName string) ([]byte, error) {
+	return ws.read(appName, addonsDirName, fileName)
 }
 
 func (ws *Workspace) writeSummary(projectName string) error {

@@ -72,7 +72,6 @@ type WebAppConfig struct {
 type WebAppRoute struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
-	Path        string `json:"path"`
 }
 
 // WebAppEnvVars contains serialized environment variables for a web application.
@@ -348,9 +347,9 @@ func (w *WebApp) HumanString() string {
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Environment", "URL", "Path")
+	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
 	for _, route := range w.Routes {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\n", route.Environment, route.URL, route.Path)
+		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
