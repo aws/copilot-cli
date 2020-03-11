@@ -443,6 +443,59 @@ func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
+// MockstackSerializer is a mock of stackSerializer interface
+type MockstackSerializer struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackSerializerMockRecorder
+}
+
+// MockstackSerializerMockRecorder is the mock recorder for MockstackSerializer
+type MockstackSerializerMockRecorder struct {
+	mock *MockstackSerializer
+}
+
+// NewMockstackSerializer creates a new mock instance
+func NewMockstackSerializer(ctrl *gomock.Controller) *MockstackSerializer {
+	mock := &MockstackSerializer{ctrl: ctrl}
+	mock.recorder = &MockstackSerializerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockstackSerializer) EXPECT() *MockstackSerializerMockRecorder {
+	return m.recorder
+}
+
+// Template mocks base method
+func (m *MockstackSerializer) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template
+func (mr *MockstackSerializerMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackSerializer)(nil).Template))
+}
+
+// SerializedParameters mocks base method
+func (m *MockstackSerializer) SerializedParameters() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SerializedParameters")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SerializedParameters indicates an expected call of SerializedParameters
+func (mr *MockstackSerializerMockRecorder) SerializedParameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializedParameters", reflect.TypeOf((*MockstackSerializer)(nil).SerializedParameters))
+}
+
 // MockdockerService is a mock of dockerService interface
 type MockdockerService struct {
 	ctrl     *gomock.Controller
@@ -1415,6 +1468,43 @@ func (m *MockartifactPutter) PutArtifact(bucket, fileName string, data io.Reader
 func (mr *MockartifactPutterMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactPutter)(nil).PutArtifact), bucket, fileName, data)
+}
+
+// Mockport is a mock of port interface
+type Mockport struct {
+	ctrl     *gomock.Controller
+	recorder *MockportMockRecorder
+}
+
+// MockportMockRecorder is the mock recorder for Mockport
+type MockportMockRecorder struct {
+	mock *Mockport
+}
+
+// NewMockport creates a new mock instance
+func NewMockport(ctrl *gomock.Controller) *Mockport {
+	mock := &Mockport{ctrl: ctrl}
+	mock.recorder = &MockportMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockport) EXPECT() *MockportMockRecorder {
+	return m.recorder
+}
+
+// Set mocks base method
+func (m *Mockport) Set(number int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Set", number)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Set indicates an expected call of Set
+func (mr *MockportMockRecorder) Set(number interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*Mockport)(nil).Set), number)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface

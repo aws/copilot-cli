@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package stack
@@ -6,8 +6,10 @@ package stack
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -18,6 +20,38 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+var mockLBFargateAppInput = &deploy.CreateLBFargateAppInput{
+	App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
+		AppManifestProps: &manifest.AppManifestProps{
+			AppName:    "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	}),
+	Env: &archer.Environment{
+		Project:   "phonetool",
+		Name:      "test",
+		Region:    "us-west-2",
+		AccountID: "12345",
+		Prod:      false,
+	},
+	ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
+	ImageTag:     "manual-bf3678c",
+}
+
+type mockTemplater struct {
+	tpl string
+	err error
+}
+
+func (m mockTemplater) Template() (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	return m.tpl, nil
+}
 
 func TestLBFargateStackConfig_StackName(t *testing.T) {
 	testCases := map[string]struct {
@@ -86,68 +120,82 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 			wantedTemplate: "",
 			wantedError:    errors.New("some error"),
 		},
-		"failed parsing app template": {
-			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-					AppManifestProps: &manifest.AppManifestProps{
-						AppName:    "frontend",
-						Dockerfile: "frontend/Dockerfile",
-					},
-					Path: "frontend",
-					Port: 80,
-				}),
-				Env: &archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					Region:    "us-west-2",
-					AccountID: "12345",
-					Prod:      false,
-				},
-				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-				ImageTag:     "manual-bf3678c",
-			},
-
+		"unexpected addons parsing error": {
+			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Parse(lbFargateAppTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
+				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
+				c.addons = addons
+			},
+			wantedTemplate: "",
+			wantedError:    fmt.Errorf("generate addons template for application %s: %w", mockLBFargateAppInput.App.Name, errors.New("some error")),
+		},
+		"failed parsing app template": {
+			in: mockLBFargateAppInput,
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Parse(lbFargateAppTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				addons := mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+				c.parser = m
+				c.addons = addons
 			},
 
 			wantedTemplate: "",
 			wantedError:    errors.New("some error"),
 		},
-		"render default template": {
-			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-					AppManifestProps: &manifest.AppManifestProps{
-						AppName:    "frontend",
-						Dockerfile: "frontend/Dockerfile",
-					},
-					Path: "frontend",
-					Port: 80,
-				}),
-				Env: &archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					Region:    "us-west-2",
-					AccountID: "12345",
-					Prod:      false,
-				},
-				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
-				ImageTag:     "manual-bf3678c",
-			},
+		"render template without addons": {
+			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Parse(lbFargateAppTemplatePath, struct {
 					RulePriorityLambda string
+					AddonsOutputs      []addons.Output
 					*lbFargateTemplateParams
 				}{
 					RulePriorityLambda:      "lambda",
 					lbFargateTemplateParams: c.toTemplateParams(),
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+
+				addons := mockTemplater{err: &addons.ErrDirNotExist{}}
 				c.parser = m
+				c.addons = addons
+			},
+
+			wantedTemplate: "template",
+		},
+		"render template with addons": {
+			in: mockLBFargateAppInput,
+			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
+				m := mocks.NewMockReadParser(ctrl)
+				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Parse(lbFargateAppTemplatePath, struct {
+					RulePriorityLambda string
+					AddonsOutputs      []addons.Output
+					*lbFargateTemplateParams
+				}{
+					RulePriorityLambda: "lambda",
+					AddonsOutputs: []addons.Output{
+						{
+							Name: "AdditionalResourcesPolicyArn",
+						},
+					},
+					lbFargateTemplateParams: c.toTemplateParams(),
+				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				addons := mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+				c.parser = m
+				c.addons = addons
 			},
 
 			wantedTemplate: "template",
