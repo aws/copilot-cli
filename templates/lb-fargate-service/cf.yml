@@ -91,13 +91,13 @@ Resources:
                 !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
           - Name: {{$name}}
             Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
-          - Name: {{fmtEnvVar $output.Name}}
+          - Name: {{toSnakeCase $output.Name}}
             Value:
               Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
           Secrets:{{range $name, $valueFrom := .App.Secrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
-          - Name: {{fmtEnvVar $secret.Name}}
+          - Name: {{toSnakeCase $secret.Name}}
             ValueFrom:
               Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
           LogConfiguration:

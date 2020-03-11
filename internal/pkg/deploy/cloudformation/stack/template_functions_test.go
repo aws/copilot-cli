@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFmtEnvVar(t *testing.T) {
+func TestToSnakeCase(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -30,7 +30,7 @@ func TestFmtEnvVar(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, fmtEnvVar(tc.in))
+			require.Equal(t, tc.wanted, toSnakeCase(tc.in))
 		})
 	}
 }

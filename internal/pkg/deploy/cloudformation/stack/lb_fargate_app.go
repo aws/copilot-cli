@@ -103,7 +103,7 @@ func (c *LBFargateStackConfig) Template() (string, error) {
 		AddonsOutputs:           outputs,
 		lbFargateTemplateParams: c.toTemplateParams(),
 	}, template.WithFuncs(map[string]interface{}{
-		"fmtEnvVar":             fmtEnvVar,
+		"toSnakeCase":           toSnakeCase,
 		"filterSecrets":         filterSecrets,
 		"filterManagedPolicies": filterManagedPolicies,
 	}))
