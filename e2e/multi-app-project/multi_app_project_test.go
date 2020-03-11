@@ -152,7 +152,7 @@ var _ = Describe("Multiple App Project", func() {
 				// Call each environment's endpoint and ensure it returns a 200
 				route := app.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
-				Expect(route.URL).To(Equal(appName))
+				Expect(route.URL).To(HaveSuffix(appName))
 				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", route.URL))
 				Expect(fetchErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
@@ -186,8 +186,8 @@ var _ = Describe("Multiple App Project", func() {
 			// to the backend, and pipe the backend response to us.
 			route := app.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
-			Expect(route.Path).To(Equal(appName))
-			resp, fetchErr := http.Get(fmt.Sprintf("http://%s/%s/service-discovery-test/", route.URL, route.Path))
+			Expect(route.URL).To(HaveSuffix(appName))
+			resp, fetchErr := http.Get(fmt.Sprintf("http://%s/service-discovery-test/", route.URL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 

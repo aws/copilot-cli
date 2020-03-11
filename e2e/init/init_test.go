@@ -3,6 +3,7 @@ package init_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
@@ -82,19 +83,21 @@ var _ = Describe("init flow", func() {
 		It("should return a valid route", func() {
 			Expect(len(app.Routes)).To(Equal(1))
 			Expect(app.Routes[0].Environment).To(Equal("test"))
-			Expect(app.Routes[0].URL).To(Equal(appName))
-			resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", app.Routes[0].URL))
-			Expect(fetchErr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(200))
+			Expect(app.Routes[0].URL).To(HaveSuffix(appName))
+			Eventually(func() (int, error) {
+				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", app.Routes[0].URL))
+				return resp.StatusCode, fetchErr
+			}, "10s", "1s").Should(Equal(200))
 		})
 
 		It("should return the correct environment variables", func() {
-			Expect(len(app.Variables)).To(Equal(4))
+			Expect(len(app.Variables)).To(Equal(5))
 			expectedVars := map[string]string{
-				"ECS_CLI_APP_NAME":         appName,
-				"ECS_CLI_ENVIRONMENT_NAME": "test",
-				"ECS_CLI_LB_DNS":           app.Routes[0].URL,
-				"ECS_CLI_PROJECT_NAME":     projectName,
+				"ECS_CLI_APP_NAME":           appName,
+				"ECS_CLI_ENVIRONMENT_NAME":   "test",
+				"ECS_CLI_LB_DNS":             strings.TrimSuffix(app.Routes[0].URL, "/front-end"),
+				"ECS_CLI_PROJECT_NAME":       projectName,
+				"ECS_APP_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.local", projectName),
 			}
 			for _, variable := range app.Variables {
 				Expect(variable.Value).To(Equal(expectedVars[variable.Name]))
