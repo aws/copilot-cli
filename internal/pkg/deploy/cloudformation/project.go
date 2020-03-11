@@ -95,8 +95,11 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 	deployProject.DNSDelegationAccounts = append(dnsDelegatedAccounts, accountID)
 	updatedProjectConfig := stack.NewProjectStackConfig(&deployProject)
 
-	// swallow the errChangeSetEmpty error since it just means there were no updates needed.
-	if err := cf.update(updatedProjectConfig); err != nil && err != errChangeSetEmpty {
+	if err := cf.update(updatedProjectConfig); err != nil {
+		// swallow the errChangeSetEmpty error since it just means there were no updates needed.
+		if err == errChangeSetEmpty {
+			return nil
+		}
 		return fmt.Errorf("updating project to allow DNS delegation: %w", err)
 	}
 

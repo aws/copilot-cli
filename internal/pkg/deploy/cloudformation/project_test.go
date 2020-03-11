@@ -1193,9 +1193,6 @@ func TestDelegateDNSPermissions(t *testing.T) {
 					mockDeleteChangeSet: func(t *testing.T, in *cloudformation.DeleteChangeSetInput) (*cloudformation.DeleteChangeSetOutput, error) {
 						return nil, nil
 					},
-					mockWaitUntilStackUpdateCompleteWithContext: func(t *testing.T, in *cloudformation.DescribeStacksInput) error {
-						return nil
-					},
 				}
 			},
 		},
