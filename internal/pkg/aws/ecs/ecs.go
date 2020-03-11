@@ -1,7 +1,7 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package ecs contains utility functions for dealing with ECS repos.
+// Package ecs provides a client to make API requests to Amazon Elastic Container Service.
 package ecs
 
 import (

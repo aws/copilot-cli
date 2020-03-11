@@ -1,7 +1,7 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package cloudwatchlogs contains utility functions for Cloudwatch Logs client.
+// Package cloudwatchlogs provides a client to make API requests to Amazon CloudWatch Logs.
 package cloudwatchlogs
 
 import (
