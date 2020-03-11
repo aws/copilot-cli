@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/golang/mock/gomock"
@@ -165,9 +164,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 					lbFargateTemplateParams: c.toTemplateParams(),
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &workspace.ErrAddonsDirNotExist{
-					AppName: c.App.Name,
-				}}
+				addons := mockTemplater{err: &addons.ErrDirNotExist{}}
 				c.parser = m
 				c.addons = addons
 			},

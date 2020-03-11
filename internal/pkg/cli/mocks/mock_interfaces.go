@@ -1470,6 +1470,43 @@ func (mr *MockartifactPutterMockRecorder) PutArtifact(bucket, fileName, data int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactPutter)(nil).PutArtifact), bucket, fileName, data)
 }
 
+// Mockport is a mock of port interface
+type Mockport struct {
+	ctrl     *gomock.Controller
+	recorder *MockportMockRecorder
+}
+
+// MockportMockRecorder is the mock recorder for Mockport
+type MockportMockRecorder struct {
+	mock *Mockport
+}
+
+// NewMockport creates a new mock instance
+func NewMockport(ctrl *gomock.Controller) *Mockport {
+	mock := &Mockport{ctrl: ctrl}
+	mock.recorder = &MockportMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockport) EXPECT() *MockportMockRecorder {
+	return m.recorder
+}
+
+// Set mocks base method
+func (m *Mockport) Set(number int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Set", number)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Set indicates an expected call of Set
+func (mr *MockportMockRecorder) Set(number interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*Mockport)(nil).Set), number)
+}
+
 // MockbucketEmptier is a mock of bucketEmptier interface
 type MockbucketEmptier struct {
 	ctrl     *gomock.Controller

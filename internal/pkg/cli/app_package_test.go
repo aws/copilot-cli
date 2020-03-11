@@ -8,11 +8,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -443,7 +443,7 @@ count: 1`), nil)
 
 				mockAddons := climocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
-					Return("", &workspace.ErrAddonsDirNotExist{AppName: "api"})
+					Return("", &addons.ErrDirNotExist{})
 
 				opts.store = mockStore
 				opts.ws = mockWs

@@ -8,18 +8,14 @@ require (
 	github.com/aws/aws-sdk-go v1.29.19
 	github.com/awslabs/goformation/v4 v4.7.0
 	github.com/briandowns/spinner v1.9.0
-	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
-	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
-	github.com/gobuffalo/envy v1.7.1 // indirect
 	github.com/gobuffalo/packd v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.0
 	github.com/golang/mock v1.4.1
-	github.com/google/go-github/v29 v29.0.3 // indirect
+	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
-	github.com/julienschmidt/httprouter v1.2.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
@@ -29,7 +25,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.2
 	github.com/stretchr/testify v1.5.1
-	github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	gopkg.in/ini.v1 v1.54.0
 	gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966

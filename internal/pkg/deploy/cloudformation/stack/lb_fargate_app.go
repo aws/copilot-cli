@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -195,7 +194,7 @@ func (c *LBFargateStackConfig) addonsOutputs() ([]addons.Output, error) {
 		return addons.Outputs(stack)
 	}
 
-	var noAddonsErr *workspace.ErrAddonsDirNotExist
+	var noAddonsErr *addons.ErrDirNotExist
 	if !errors.As(err, &noAddonsErr) {
 		return nil, fmt.Errorf("generate addons template for application %s: %w", c.App.Name, err)
 	}

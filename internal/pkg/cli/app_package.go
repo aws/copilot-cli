@@ -152,7 +152,7 @@ func (o *packageAppOpts) Execute() error {
 
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons dir doesn't exist.
-	var notExistErr *workspace.ErrAddonsDirNotExist
+	var notExistErr *addons.ErrDirNotExist
 	if errors.As(err, &notExistErr) {
 		return nil
 	}

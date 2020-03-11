@@ -93,13 +93,13 @@ Resources:
             Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
           - Name: {{fmtEnvVar $output.Name}}
             Value:
-              Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if .App.Secrets}}
+              Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
           Secrets:{{range $name, $valueFrom := .App.Secrets}}
           - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if gt (len (filterSecrets .AddonsOutputs)) 0}}{{range $secret := (filterSecrets .AddonsOutputs)}}
+            ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
           - Name: {{fmtEnvVar $secret.Name}}
             ValueFrom:
-              Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}{{end}}
+              Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
           LogConfiguration:
             LogDriver: awslogs
             Options:
