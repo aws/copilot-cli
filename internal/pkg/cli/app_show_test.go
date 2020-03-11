@@ -425,11 +425,11 @@ func TestAppShow_Execute(t *testing.T) {
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
@@ -499,11 +499,11 @@ func TestAppShow_Execute(t *testing.T) {
 
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "http://my-pr-Publi.us-west-2.elb.amazonaws.com",
+					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
 					Path:    "/backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
