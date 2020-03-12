@@ -1,9 +1,14 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package stack
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+)
 
 const (
 	dashReplacement = "DASH"
@@ -25,4 +30,37 @@ func logicalIDSafe(logicalID string) string {
 // and converts it back to its original form, with dashes.
 func safeLogicalIDToOriginal(safeLogicalID string) string {
 	return strings.ReplaceAll(safeLogicalID, dashReplacement, "-")
+}
+
+// toSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
+// For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
+func toSnakeCase(s string) string {
+	var name string
+	for i, r := range s {
+		if unicode.IsUpper(r) && i != 0 {
+			name += "_"
+		}
+		name += string(unicode.ToUpper(r))
+	}
+	return name
+}
+
+func filterSecrets(outputs []addons.Output) []addons.Output {
+	var secrets []addons.Output
+	for _, out := range outputs {
+		if out.IsSecret {
+			secrets = append(secrets, out)
+		}
+	}
+	return secrets
+}
+
+func filterManagedPolicies(outputs []addons.Output) []addons.Output {
+	var policies []addons.Output
+	for _, out := range outputs {
+		if out.IsManagedPolicy {
+			policies = append(policies, out)
+		}
+	}
+	return policies
 }

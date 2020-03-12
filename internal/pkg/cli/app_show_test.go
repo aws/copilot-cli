@@ -426,11 +426,11 @@ func TestAppShow_Execute(t *testing.T) {
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/frontend",
+					Path:    "frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/backend",
+					Path:    "backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
@@ -500,11 +500,11 @@ func TestAppShow_Execute(t *testing.T) {
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/frontend",
+					Path:    "frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/backend",
+					Path:    "backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
@@ -658,7 +658,7 @@ Resources
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/frontend",
+					Path:    "frontend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(nil, errors.New("some error"))
 			},
@@ -686,7 +686,7 @@ Resources
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/frontend",
+					Path:    "frontend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
@@ -723,11 +723,11 @@ Resources
 			mockWebAppDescriber: func(m *climocks.MockwebAppDescriber) {
 				m.EXPECT().URI("test").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/frontend",
+					Path:    "frontend",
 				}, nil)
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/backend",
+					Path:    "backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
 					ContainerPort: "80",
@@ -787,7 +787,7 @@ Resources
 				m.EXPECT().URI("test").Return(nil, fmt.Errorf("describe stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
 				m.EXPECT().URI("prod").Return(&describe.WebAppURI{
 					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "/backend",
+					Path:    "backend",
 				}, nil)
 				m.EXPECT().ECSParams("test").Times(0)
 				m.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{

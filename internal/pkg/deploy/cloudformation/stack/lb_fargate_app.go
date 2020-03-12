@@ -1,12 +1,14 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -34,32 +36,47 @@ const (
 	LBFargateTaskCountKey           = "TaskCount"
 )
 
+type templater interface {
+	Template() (string, error)
+}
+
 // LBFargateStackConfig represents the configuration needed to create a CloudFormation stack from a
 // load balanced Fargate application.
 type LBFargateStackConfig struct {
 	*deploy.CreateLBFargateAppInput
 	httpsEnabled bool
 	parser       template.ReadParser
+	addons       templater
 }
 
 // NewLBFargateStack creates a new LBFargateStackConfig from a load-balanced AWS Fargate application.
-func NewLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig {
+func NewLBFargateStack(in *deploy.CreateLBFargateAppInput) (*LBFargateStackConfig, error) {
+	addons, err := addons.New(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new addons: %w", err)
+	}
 	return &LBFargateStackConfig{
 		CreateLBFargateAppInput: in,
 		httpsEnabled:            false,
 		parser:                  template.New(),
-	}
+		addons:                  addons,
+	}, nil
 }
 
 // NewHTTPSLBFargateStack creates a new LBFargateStackConfig from a load-balanced AWS Fargate application. It
 // creates an HTTPS listener and assumes that the environment it's being deployed into has an HTTPS configured
 // listener.
-func NewHTTPSLBFargateStack(in *deploy.CreateLBFargateAppInput) *LBFargateStackConfig {
+func NewHTTPSLBFargateStack(in *deploy.CreateLBFargateAppInput) (*LBFargateStackConfig, error) {
+	addons, err := addons.New(in.App.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new addons: %w", err)
+	}
 	return &LBFargateStackConfig{
 		CreateLBFargateAppInput: in,
 		httpsEnabled:            true,
 		parser:                  template.New(),
-	}
+		addons:                  addons,
+	}, nil
 }
 
 // StackName returns the name of the stack.
@@ -73,13 +90,23 @@ func (c *LBFargateStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	outputs, err := c.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
 	content, err := c.parser.Parse(lbFargateAppTemplatePath, struct {
 		RulePriorityLambda string
+		AddonsOutputs      []addons.Output
 		*lbFargateTemplateParams
 	}{
 		RulePriorityLambda:      rulePriorityLambda.String(),
+		AddonsOutputs:           outputs,
 		lbFargateTemplateParams: c.toTemplateParams(),
-	})
+	}, template.WithFuncs(map[string]interface{}{
+		"toSnakeCase":           toSnakeCase,
+		"filterSecrets":         filterSecrets,
+		"filterManagedPolicies": filterManagedPolicies,
+	}))
 	if err != nil {
 		return "", err
 	}
@@ -159,6 +186,19 @@ func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
 			Value: aws.String(c.App.Name),
 		},
 	}
+}
+
+func (c *LBFargateStackConfig) addonsOutputs() ([]addons.Output, error) {
+	stack, err := c.addons.Template()
+	if err == nil {
+		return addons.Outputs(stack)
+	}
+
+	var noAddonsErr *addons.ErrDirNotExist
+	if !errors.As(err, &noAddonsErr) {
+		return nil, fmt.Errorf("generate addons template for application %s: %w", c.App.Name, err)
+	}
+	return nil, nil // Addons directory does not exist, so there are no outputs and error.
 }
 
 // lbFargateTemplateParams holds the data to render the CloudFormation template for an application.
