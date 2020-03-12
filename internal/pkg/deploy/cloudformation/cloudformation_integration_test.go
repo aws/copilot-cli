@@ -455,6 +455,16 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"PublicSubnets value should not be nil")
 			},
+			"ServiceDiscoveryNamespaceID": func(output *awsCF.Output) {
+				require.Equal(t,
+					fmt.Sprintf("%s-ServiceDiscoveryNamespaceID", envStackName),
+					*output.ExportName,
+					"Should export ServiceDiscoveryNamespaceID as stackname-ServiceDiscoveryNamespaceID")
+
+				require.NotNil(t,
+					output.OutputValue,
+					"ServiceDiscoveryNamespaceID value should not be nil")
+			},
 			"EnvironmentSecurityGroup": func(output *awsCF.Output) {
 				require.Equal(t,
 					fmt.Sprintf("%s-EnvironmentSecurityGroup", envStackName),

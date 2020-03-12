@@ -79,6 +79,8 @@ Resources:
           Environment:
           - Name: ECS_CLI_PROJECT_NAME
             Value: !Sub '${ProjectName}'
+          - Name: ECS_APP_DISCOVERY_ENDPOINT
+            Value: !Sub '${ProjectName}.local'
           - Name: ECS_CLI_ENVIRONMENT_NAME
             Value: !Sub '${EnvName}'
           - Name: ECS_CLI_APP_NAME
@@ -88,10 +90,16 @@ Resources:
               Fn::ImportValue:
                 !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
           - Name: {{$name}}
-            Value: {{$value}}{{end}}{{end}}{{if .App.Secrets}}
+            Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
+          - Name: {{toSnakeCase $output.Name}}
+            Value:
+              Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
           Secrets:{{range $name, $valueFrom := .App.Secrets}}
           - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}{{end}}
+            ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
+          - Name: {{toSnakeCase $secret.Name}}
+            ValueFrom:
+              Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -127,7 +135,9 @@ Resources:
 
   TaskRole:
     Type: AWS::IAM::Role
-    Properties:
+    Properties:{{if gt (len (filterManagedPolicies .AddonsOutputs)) 0}}
+      ManagedPolicyArns:{{range $managedPolicy := (filterManagedPolicies .AddonsOutputs)}}
+      - Fn::GetAtt: [AddonsStack, Outputs.{{$managedPolicy.Name}}]{{end}}{{end}}
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -202,7 +212,23 @@ Resources:
                   - 'cloudwatch:PutDashboard'
                   - 'cloudwatch:ListMetrics'
                 Resource: '*'
-
+  DiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the ECS CLI V2 services
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+          - TTL: 60
+            Type: SRV
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+      Name:  !Ref AppName
+      NamespaceId:
+        Fn::ImportValue:
+          !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
   Service:
     Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated
@@ -238,6 +264,9 @@ Resources:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt DiscoveryService.Arn
+          Port: !Ref ContainerPort
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup

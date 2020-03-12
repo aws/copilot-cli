@@ -3,11 +3,11 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Additional resources for application '{{.AppName}}'
 Parameters:
-{{range $line := .AddonContent.Parameters}}  {{$line}}
+{{range $line := .Parameters}}  {{$line}}
 {{end}}
 Resources:
-{{range $line := .AddonContent.Resources}}  {{$line}}
+{{range $line := .Resources}}  {{$line}}
 {{end}}
 Outputs:
-{{range $line := .AddonContent.Outputs}}  {{$line}}
+{{range $line := .Outputs}}  {{$line}}
 {{end}}

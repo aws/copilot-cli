@@ -5,12 +5,12 @@ package addons
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -23,25 +23,64 @@ func TestAddons_Template(t *testing.T) {
 		wantedTemplate string
 		wantedErr      error
 	}{
-		"should return addon template": {
+		"return ErrDirNotExist if ReadAddonsDir fails": {
+			appName: "my-app",
+			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
+				ws := mocks.NewMockworkspaceService(ctrl)
+				ws.EXPECT().ReadAddonsDir("my-app").
+					Return(nil, errors.New("some error"))
+				a.ws = ws
+			},
+			wantedErr: &ErrDirNotExist{
+				AppName:   "my-app",
+				ParentErr: errors.New("some error"),
+			},
+		},
+		"return error if missing required files": {
+			appName: "my-app",
+			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
+				ws := mocks.NewMockworkspaceService(ctrl)
+				ws.EXPECT().ReadAddonsDir("my-app").
+					Return([]string{
+						"README.md",
+					}, nil)
+				ws.EXPECT().ReadAddonsFile("my-app", "params.yaml").Times(0)
+
+				a.ws = ws
+			},
+
+			wantedErr: errors.New(`addons directory has missing file(s): params.yaml, outputs.yaml, at least one resource YAML file such as "s3-bucket.yaml"`),
+		},
+		"return addon template": {
 			appName: "my-app",
 
 			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
 				ws := mocks.NewMockworkspaceService(ctrl)
-				out := &workspace.AddonFiles{
-					Outputs:    []string{"outputs"},
-					Parameters: []string{"params"},
-					Resources:  []string{"resources"},
-				}
-				ws.EXPECT().ReadAddonFiles("my-app").Return(out, nil)
+				ws.EXPECT().ReadAddonsDir("my-app").
+					Return([]string{
+						"params.yaml",
+						"outputs.yml",
+						"policy.yaml",
+						"README.md",
+					}, nil)
+				ws.EXPECT().ReadAddonsFile("my-app", "params.yaml").
+					Return([]byte("hello"), nil)
+				ws.EXPECT().ReadAddonsFile("my-app", "outputs.yml").
+					Return([]byte("hello"), nil)
+				ws.EXPECT().ReadAddonsFile("my-app", "policy.yaml").
+					Return([]byte("hello"), nil)
 
 				parser := templatemocks.NewMockParser(ctrl)
 				parser.EXPECT().Parse(addonsTemplatePath, struct {
-					AppName      string
-					AddonContent *workspace.AddonFiles
+					AppName    string
+					Parameters []string
+					Resources  []string
+					Outputs    []string
 				}{
-					AppName:      a.appName,
-					AddonContent: out,
+					AppName:    a.appName,
+					Parameters: []string{"hello"},
+					Resources:  []string{"hello"},
+					Outputs:    []string{"hello"},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 				a.ws = ws

@@ -152,6 +152,14 @@ Resources:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
 
+  # Creates a service discovery namespace with the form:
+  # {app}.{projectname}.local
+  ServiceDiscoveryNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+        Name: !Sub ${ProjectName}.local
+        Vpc: !Ref VPC
+
   Cluster:
     Type: AWS::ECS::Cluster
 
@@ -603,6 +611,11 @@ Outputs:
     Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
+
+  ServiceDiscoveryNamespaceID:
+    Value: !GetAtt ServiceDiscoveryNamespace.Id
+    Export:
+      Name: !Sub ${AWS::StackName}-ServiceDiscoveryNamespaceID
 
   EnvironmentSecurityGroup:
     Value: !Ref EnvironmentSecurityGroup

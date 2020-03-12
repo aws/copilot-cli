@@ -51,6 +51,11 @@ type templater interface {
 	Template() (string, error)
 }
 
+type stackSerializer interface {
+	templater
+	SerializedParameters() (string, error)
+}
+
 type dockerService interface {
 	Build(uri, tag, path string) error
 	Login(uri, username, password string) error
