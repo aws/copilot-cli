@@ -85,7 +85,7 @@ var _ = Describe("init flow", func() {
 			Expect(app.Routes[0].Environment).To(Equal("test"))
 			Expect(app.Routes[0].URL).To(HaveSuffix(appName))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Get(fmt.Sprintf("%s", app.Routes[0].URL))
+				resp, fetchErr := http.Get(app.Routes[0].URL)
 				return resp.StatusCode, fetchErr
 			}, "10s", "1s").Should(Equal(200))
 		})
