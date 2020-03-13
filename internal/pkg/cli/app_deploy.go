@@ -42,10 +42,6 @@ type appDeployVars struct {
 	AppName  string
 	EnvName  string
 	ImageTag string
-
-	// Feature flags -- these flags are not enabled while building the binary.
-	// However, it allows us to test our codebase until the feature is ready.
-	enableAddons bool
 }
 
 type appDeployOpts struct {
@@ -380,7 +376,7 @@ func (o *appDeployOpts) retrieveTemplate() (*cfnTemplates, error) {
 }
 
 func (o *appDeployOpts) pushAddonsTemplateToS3Bucket(addonsTemplate *bytes.Buffer) (string, error) {
-	if !o.enableAddons || addonsTemplate.String() == "" {
+	if addonsTemplate.String() == "" {
 		return "", nil
 	}
 	proj, err := o.projectService.GetProject(o.ProjectName())
