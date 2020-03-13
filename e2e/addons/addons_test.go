@@ -159,7 +159,7 @@ var _ = Describe("addons flow", func() {
 			Expect(route.Environment).To(Equal("test"))
 			Expect(route.URL).To(HaveSuffix(appName))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Post(fmt.Sprintf("http://%s/%s", route.URL, projectName), "application/json", nil)
+				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s", route.URL, projectName), "application/json", nil)
 				return resp.StatusCode, fetchErr
 			}, "10s", "1s").Should(Equal(201))
 		})
@@ -179,7 +179,7 @@ var _ = Describe("addons flow", func() {
 			var resp *http.Response
 			var fetchErr error
 			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(fmt.Sprintf("http://%s", route.URL))
+				resp, fetchErr = http.Get(route.URL))
 				return resp.StatusCode, fetchErr
 			}, "10s", "1s").Should(Equal(200))
 
