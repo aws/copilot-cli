@@ -478,8 +478,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
-					AppName:      tc.inputApp,
-					enableAddons: true,
+					AppName: tc.inputApp,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inputProject,
 					},

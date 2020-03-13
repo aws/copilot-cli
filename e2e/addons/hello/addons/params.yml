@@ -1,0 +1,9 @@
+Project:
+  Type: String
+  Description: Your project name.
+Env:
+  Type: String
+  Description: The environment name your application is being deployed to.
+App:
+  Type: String
+  Description: The name of the application being deployed.

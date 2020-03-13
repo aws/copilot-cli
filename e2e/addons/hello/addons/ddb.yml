@@ -1,0 +1,13 @@
+HelloTable:
+  Type: AWS::DynamoDB::Table
+  Properties: 
+    TableName: !Sub hello
+    AttributeDefinitions: 
+      - AttributeName: Name
+        AttributeType: S
+    KeySchema: 
+      - AttributeName: Name
+        KeyType: HASH
+    ProvisionedThroughput: 
+      ReadCapacityUnits: 5
+      WriteCapacityUnits: 5
