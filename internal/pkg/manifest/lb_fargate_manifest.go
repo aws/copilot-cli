@@ -56,6 +56,7 @@ type LogsConfig struct {
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path string `yaml:"path"`
+	HealthCheckPath string `yaml:"healthcheck"`
 }
 
 // AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
@@ -74,8 +75,10 @@ type LBFargateManifestProps struct {
 	Port uint16
 }
 
-// NewLoadBalancedFargateManifest creates a new public load balanced web service with an exposed port of 80, receives
-// all the requests from the load balancer and has a single task with minimal CPU and Memory thresholds.
+// NewLoadBalancedFargateManifest creates a new public load balanced web
+// service, receives all the requests from the load balancer, has a single task
+// with minimal CPU and Memory thresholds, and sets the default health check
+// path to "/"
 func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateManifest {
 	return &LBFargateManifest{
 		AppManifest: AppManifest{
@@ -91,6 +94,7 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{
 				Path: input.Path,
+				HealthCheckPath: "/",
 			},
 			ContainersConfig: ContainersConfig{
 				CPU:    256,
@@ -146,6 +150,7 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 	conf := LBFargateConfig{
 		RoutingRule: RoutingRule{
 			Path: m.Path,
+			HealthCheckPath: m.HealthCheckPath,
 		},
 		ContainersConfig: ContainersConfig{
 			CPU:       m.CPU,
@@ -161,6 +166,9 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 	target := m.Environments[envName]
 	if target.RoutingRule.Path != "" {
 		conf.RoutingRule.Path = target.RoutingRule.Path
+	}
+	if target.RoutingRule.HealthCheckPath != "" {
+		conf.RoutingRule.HealthCheckPath = target.RoutingRule.HealthCheckPath
 	}
 	if target.CPU != 0 {
 		conf.CPU = target.CPU

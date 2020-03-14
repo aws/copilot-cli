@@ -41,6 +41,9 @@ Parameters:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
+  HealthCheckPath:
+    Type: String
+    Default: '{{.App.HealthCheckPath}}'
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -275,6 +278,7 @@ Resources:
       HealthCheckIntervalSeconds: 10 # Default is 30.
       HealthyThresholdCount: 2       # Default is 5.
       HealthCheckTimeoutSeconds: 5
+      HealthCheckPath: !Ref HealthCheckPath
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
