@@ -31,6 +31,7 @@ const (
 	LBFargateParamContainerImageKey = "ContainerImage"
 	LBFargateParamContainerPortKey  = "ContainerPort"
 	LBFargateRulePathKey            = "RulePath"
+	LBFargateHealthCheckPathKey     = "HealthCheckPath"
 	LBFargateTaskCPUKey             = "TaskCPU"
 	LBFargateTaskMemoryKey          = "TaskMemory"
 	LBFargateTaskCountKey           = "TaskCount"
@@ -140,6 +141,10 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(LBFargateRulePathKey),
 			ParameterValue: aws.String(templateParams.App.Path),
+		},
+		{
+			ParameterKey:   aws.String(LBFargateHealthCheckPathKey),
+			ParameterValue: aws.String(templateParams.App.HealthCheckPath),
 		},
 		{
 			ParameterKey:   aws.String(LBFargateTaskCPUKey),

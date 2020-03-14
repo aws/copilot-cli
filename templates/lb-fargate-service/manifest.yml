@@ -16,6 +16,8 @@ image:
 http:
   # Requests to this path will be forwarded to your service.
   path: '{{.Path}}'
+  # # You can specify a custom health check path. The default is "/"
+  # healthcheck: '{{.HealthCheckPath}}'
 
 # Number of CPU units for the task.
 cpu: {{.CPU}}
