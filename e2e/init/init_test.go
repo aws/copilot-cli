@@ -85,7 +85,7 @@ var _ = Describe("init flow", func() {
 			Expect(app.Routes[0].Environment).To(Equal("test"))
 			Expect(app.Routes[0].URL).To(HaveSuffix(appName))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", app.Routes[0].URL))
+				resp, fetchErr := http.Get(app.Routes[0].URL)
 				return resp.StatusCode, fetchErr
 			}, "10s", "1s").Should(Equal(200))
 		})
@@ -95,7 +95,7 @@ var _ = Describe("init flow", func() {
 			expectedVars := map[string]string{
 				"ECS_CLI_APP_NAME":           appName,
 				"ECS_CLI_ENVIRONMENT_NAME":   "test",
-				"ECS_CLI_LB_DNS":             strings.TrimSuffix(app.Routes[0].URL, "/front-end"),
+				"ECS_CLI_LB_DNS":             strings.TrimPrefix(app.Routes[0].URL, "http://"),
 				"ECS_CLI_PROJECT_NAME":       projectName,
 				"ECS_APP_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.local", projectName),
 			}

@@ -138,7 +138,7 @@ func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
 		if err == nil {
 			routes = append(routes, &describe.WebAppRoute{
 				Environment: env.Name,
-				URL:         fmt.Sprintf("%s/%s", webAppURI.DNSName, webAppURI.Path),
+				URL:         webAppURI.String(),
 			})
 
 			webAppECSParams, err := o.describer.ECSParams(env.Name)

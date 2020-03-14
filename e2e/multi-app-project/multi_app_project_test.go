@@ -153,7 +153,7 @@ var _ = Describe("Multiple App Project", func() {
 				route := app.Routes[0]
 				Expect(route.Environment).To(Equal("test"))
 				Expect(route.URL).To(HaveSuffix(appName))
-				resp, fetchErr := http.Get(fmt.Sprintf("http://%s/", route.URL))
+				resp, fetchErr := http.Get(route.URL)
 				Expect(fetchErr).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(200))
 

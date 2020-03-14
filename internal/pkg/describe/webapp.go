@@ -111,9 +111,9 @@ type ecsService interface {
 
 func (uri *WebAppURI) String() string {
 	if uri.Path != "" {
-		return fmt.Sprintf("%s and path %s", color.HighlightResource("http://"+uri.DNSName), color.HighlightResource(uri.Path))
+		return fmt.Sprintf("http://%s/%s", uri.DNSName, uri.Path)
 	}
-	return color.HighlightResource("https://" + uri.DNSName)
+	return "https://" + uri.DNSName
 }
 
 // WebAppDescriber retrieves information about a load balanced web application.
