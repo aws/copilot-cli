@@ -110,10 +110,21 @@ type ecsService interface {
 }
 
 func (uri *WebAppURI) String() string {
-	if uri.Path != "" {
+	switch uri.Path {
+	// When the app is using host based routing, the app
+	// is included in the DNS name (app.myenv.myproj.dns.com)
+	case "":
+		return fmt.Sprintf("https://%s", uri.DNSName)
+	// When the app is using the root path, there is no "path"
+	// (for example http://lb.us-west-2.amazon.com/)
+	case "/":
+		return fmt.Sprintf("http://%s", uri.DNSName)
+	// Otherwise, if there is a path for the app, link to the
+	// LoadBalancer DNS name and the path
+	// (for example http://lb.us-west-2.amazon.com/app)
+	default:
 		return fmt.Sprintf("http://%s/%s", uri.DNSName, uri.Path)
 	}
-	return "https://" + uri.DNSName
 }
 
 // WebAppDescriber retrieves information about a load balanced web application.

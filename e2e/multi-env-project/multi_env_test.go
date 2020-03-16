@@ -170,7 +170,6 @@ var _ = Describe("Multiple Env Project", func() {
 			for _, env := range []string{"test", "prod"} {
 				route := envRoutes[env]
 				Expect(route.Environment).To(Equal(env))
-				Expect(route.URL).To(HaveSuffix(appName))
 				Eventually(func() (int, error) {
 					resp, fetchErr := http.Get(route.URL)
 					return resp.StatusCode, fetchErr

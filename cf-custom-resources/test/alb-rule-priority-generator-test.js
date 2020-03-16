@@ -134,6 +134,46 @@ describe('ALB Rule Priority Generator', () => {
       });
   });
 
+  test('Create operation returns rule priority 1 when the MAX rule is present', () => {
+
+    const describeRulesFake = sinon.fake.resolves(
+        {
+            "Rules": [
+                {
+                    "Priority": "50000",
+                    "Conditions": [],
+                    "RuleArn": "arn:aws:elasticloadbalancing:us-west-2:000000000:listener-rule/app/rule",
+                    "IsDefault": false,
+                    "Actions": [
+                        {
+                            "TargetGroupArn": "arn:aws:elasticloadbalancing:us-west-2:000000000:targetgroup/tg",
+                            "Type": "forward"
+                        }
+                    ]
+                }
+            ]
+    });
+
+    AWS.mock('ELBv2', 'describeRules', describeRulesFake);
+    const request = nock(ResponseURL).put('/', body => {
+      return body.Status === 'SUCCESS' && body.Data.Priority == 1;
+    }).reply(200);
+
+    return LambdaTester(albRulePriorityHandler.nextAvailableRulePriorityHandler)
+      .event({
+        RequestType: 'Create',
+        RequestId: testRequestId,
+        ResourceProperties: {
+          ListenerArn: testALBListenerArn
+        }
+      })
+      .expectResolve(() => {
+        sinon.assert.calledWith(describeRulesFake, sinon.match({
+            ListenerArn: testALBListenerArn,
+        }));
+        expect(request.isDone()).toBe(true);
+      });
+  });
 
   test('Create operation returns rule priority max + 1', () => {
     // This set of rules has the default, 3 and 5 rule priorities. We don't try to fill

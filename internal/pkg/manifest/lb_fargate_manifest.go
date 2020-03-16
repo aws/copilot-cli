@@ -55,7 +55,7 @@ type LogsConfig struct {
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path string `yaml:"path"`
+	Path            string `yaml:"path"`
 	HealthCheckPath string `yaml:"healthcheck"`
 }
 
@@ -80,20 +80,31 @@ type LBFargateManifestProps struct {
 // with minimal CPU and Memory thresholds, and sets the default health check
 // path to "/"
 func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateManifest {
+
+	defaultLbManifest := NewEmptyLoadBalancedFargateManifest()
+	defaultLbManifest.AppManifest = AppManifest{
+		Name: input.AppName,
+		Type: LoadBalancedWebApplication,
+	}
+	defaultLbManifest.Image = ImageWithPort{
+		AppImage: AppImage{
+			Build: input.Dockerfile,
+		},
+		Port: input.Port,
+	}
+	defaultLbManifest.LBFargateConfig.RoutingRule.Path = input.Path
+	defaultLbManifest.parser = template.New()
+	return defaultLbManifest
+}
+
+// NewEmptyLoadBalancedFargateManifest returns an empty LBFargateManifest
+// with only the default values set.
+func NewEmptyLoadBalancedFargateManifest() *LBFargateManifest {
 	return &LBFargateManifest{
-		AppManifest: AppManifest{
-			Name: input.AppName,
-			Type: LoadBalancedWebApplication,
-		},
-		Image: ImageWithPort{
-			AppImage: AppImage{
-				Build: input.Dockerfile,
-			},
-			Port: input.Port,
-		},
+		AppManifest: AppManifest{},
+		Image:       ImageWithPort{},
 		LBFargateConfig: LBFargateConfig{
 			RoutingRule: RoutingRule{
-				Path: input.Path,
 				HealthCheckPath: "/",
 			},
 			ContainersConfig: ContainersConfig{
@@ -101,10 +112,10 @@ func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateMan
 				Memory: 512,
 				Count:  1,
 			},
-			LogsConfig: LogsConfig{},
+			LogsConfig: LogsConfig{
+				LogRetention: LogRetentionInDays,
+			},
 		},
-
-		parser: template.New(),
 	}
 }
 
@@ -149,7 +160,7 @@ func (m *LBFargateManifest) EnvConf(envName string) LBFargateConfig {
 	}
 	conf := LBFargateConfig{
 		RoutingRule: RoutingRule{
-			Path: m.Path,
+			Path:            m.Path,
 			HealthCheckPath: m.HealthCheckPath,
 		},
 		ContainersConfig: ContainersConfig{

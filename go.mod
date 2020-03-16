@@ -12,7 +12,7 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v1.0.0
 	github.com/gobuffalo/packr/v2 v2.8.0
-	github.com/golang/mock v1.4.2
+	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect

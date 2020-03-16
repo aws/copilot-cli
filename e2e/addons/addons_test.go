@@ -157,11 +157,10 @@ var _ = Describe("addons flow", func() {
 			// Make a POST request to the API to store the user name in DynamoDB.
 			route := app.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
-			Expect(route.URL).To(HaveSuffix(appName))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s", route.URL, projectName), "application/json", nil)
+				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s/%s", route.URL, appName, projectName), "application/json", nil)
 				return resp.StatusCode, fetchErr
-			}, "10s", "1s").Should(Equal(201))
+			}, "30s", "1s").Should(Equal(201))
 		})
 
 		It("should be able to retrieve the results", func() {
@@ -175,11 +174,10 @@ var _ = Describe("addons flow", func() {
 			// Make a GET request to the API to retrieve the list of user names from DynamoDB.
 			route := app.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
-			Expect(route.URL).To(HaveSuffix(appName))
 			var resp *http.Response
 			var fetchErr error
 			Eventually(func() (int, error) {
-				resp, fetchErr = http.Get(route.URL))
+				resp, fetchErr = http.Get(fmt.Sprintf("%s/hello", route.URL))
 				return resp.StatusCode, fetchErr
 			}, "10s", "1s").Should(Equal(200))
 
