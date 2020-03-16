@@ -28,9 +28,15 @@ func TestWebAppURI_String(t *testing.T) {
 	}{
 		"http": {
 			dnsName: "abc.us-west-1.elb.amazonaws.com",
-			path:    "*",
+			path:    "app",
 
-			wanted: "http://abc.us-west-1.elb.amazonaws.com/*",
+			wanted: "http://abc.us-west-1.elb.amazonaws.com/app",
+		},
+		"http with / path": {
+			dnsName: "jobs.test.phonetool.com",
+			path:    "/",
+
+			wanted: "http://jobs.test.phonetool.com",
 		},
 		"https": {
 			dnsName: "jobs.test.phonetool.com",

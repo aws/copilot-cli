@@ -323,6 +323,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
 					Do(func(app *archer.Application) {
@@ -391,6 +392,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
@@ -464,6 +466,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
 				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
 					Return(fmt.Errorf("oops"))
@@ -511,6 +514,114 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.Nil(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
+	testCases := map[string]struct {
+		inAppPort        uint16
+		inAppName        string
+		inDockerfilePath string
+		inProjectName    string
+		mockDependencies func(*gomock.Controller, *initAppOpts)
+		wantedErr        error
+		wantedPath       string
+	}{
+		"creates manifest with / as the path when there are no other apps": {
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inAppPort:        80,
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedPath:       "/",
+			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
+				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
+				opts.appStore = mockAppStore
+			},
+		},
+		"creates manifest with / as the path when it's the only app": {
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inAppPort:        80,
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedPath:       "/",
+			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
+				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+					&archer.Application{
+						Name: "frontend",
+						Type: manifest.LoadBalancedWebApplication,
+					},
+				}, nil)
+				opts.appStore = mockAppStore
+			},
+		},
+		"creates manifest with / as the path when it's the only LBWebApp": {
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inAppPort:        80,
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedPath:       "/",
+			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
+				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+					&archer.Application{
+						Name: "another-app",
+						Type: "backend",
+					},
+				}, nil)
+				opts.appStore = mockAppStore
+			},
+		},
+		"creates manifest with {app name} as the path if there's another LBWebApp": {
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inAppPort:        80,
+			inDockerfilePath: "frontend/Dockerfile",
+			wantedPath:       "frontend",
+			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
+				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+					&archer.Application{
+						Name: "another-app",
+						Type: manifest.LoadBalancedWebApplication,
+					},
+				}, nil)
+				opts.appStore = mockAppStore
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := initAppOpts{
+				initAppVars: initAppVars{
+					AppType:        manifest.LoadBalancedWebApplication,
+					AppName:        tc.inAppName,
+					AppPort:        tc.inAppPort,
+					DockerfilePath: tc.inDockerfilePath,
+					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+				},
+			}
+			tc.mockDependencies(ctrl, &opts)
+			// WHEN
+			manifest, err := opts.createLoadBalancedAppManifest()
+
+			// THEN
+			if tc.wantedErr == nil {
+				require.Nil(t, err)
+				require.Equal(t, tc.inAppName, manifest.AppManifest.Name)
+				require.Equal(t, tc.inAppPort, manifest.Image.Port)
+				require.Equal(t, tc.inDockerfilePath, manifest.Image.AppImage.Build)
+				require.Equal(t, tc.wantedPath, manifest.LBFargateConfig.RoutingRule.Path)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

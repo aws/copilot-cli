@@ -280,7 +280,6 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	switch t := mft.(type) {
 	case *manifest.LBFargateManifest:
 		appLBFargateManifest := mft.(*manifest.LBFargateManifest)
-		appLBFargateManifest.LogRetention = manifest.LogRetentionInDays
 		createLBAppInput := &deploy.CreateLBFargateAppInput{
 			App:          appLBFargateManifest,
 			Env:          env,

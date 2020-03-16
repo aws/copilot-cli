@@ -52,11 +52,11 @@ func UnmarshalApp(in []byte) (archer.Manifest, error) {
 
 	switch am.Type {
 	case LoadBalancedWebApplication:
-		m := LBFargateManifest{}
-		if err := yaml.Unmarshal(in, &m); err != nil {
+		m := NewEmptyLoadBalancedFargateManifest()
+		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, &ErrUnmarshalLBFargateManifest{parent: err}
 		}
-		return &m, nil
+		return m, nil
 	default:
 		return nil, &ErrInvalidAppManifestType{Type: am.Type}
 	}

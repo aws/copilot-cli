@@ -186,15 +186,10 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
-	props := &manifest.LBFargateManifestProps{
-		AppManifestProps: &manifest.AppManifestProps{
-			AppName:    o.AppName,
-			Dockerfile: o.DockerfilePath,
-		},
-		Port: o.AppPort,
+	manifest, err := o.createLoadBalancedAppManifest()
+	if err != nil {
+		return "", err
 	}
-	props.Path = o.AppName
-	manifest := manifest.NewLoadBalancedFargateManifest(props)
 	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
 	if err != nil {
 		return "", err
@@ -208,6 +203,30 @@ func (o *initAppOpts) createManifest() (string, error) {
 		return "", fmt.Errorf("relative path of manifest file: %w", err)
 	}
 	return relPath, nil
+}
+
+func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManifest, error) {
+	props := &manifest.LBFargateManifestProps{
+		AppManifestProps: &manifest.AppManifestProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
+		Port: o.AppPort,
+		Path: "/",
+	}
+	existingApps, err := o.appStore.ListApplications(o.ProjectName())
+	if err != nil {
+		return nil, err
+	}
+	// We default to "/" for the first app, but if there's another
+	// load balanced web app, we use the app name as the default, instead.
+	for _, existingApp := range existingApps {
+		if existingApp.Type == manifest.LoadBalancedWebApplication && existingApp.Name != o.AppName {
+			props.Path = o.AppName
+			break
+		}
+	}
+	return manifest.NewLoadBalancedFargateManifest(props), nil
 }
 
 func (o *initAppOpts) createAppInProject(projectName string) error {

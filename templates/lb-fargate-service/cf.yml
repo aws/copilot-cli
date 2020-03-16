@@ -52,6 +52,8 @@ Conditions:
     !Equals [!Ref HTTPSEnabled, true]
   HasAddons: # If a bucket URL is specified, that means the template exists.
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
+  HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
+    !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -402,12 +404,21 @@ Resources:
         - Field: 'path-pattern'
           PathPatternConfig:
             Values:
-            - !Sub "/${RulePath}"
-            - !Sub "/${RulePath}/*"
+              !If
+                - HTTPRootPath
+                -
+                  - "/*"
+                -
+                  - !Sub "/${RulePath}"
+                  - !Sub "/${RulePath}/*"
       ListenerArn:
         Fn::ImportValue:
           !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
-      Priority: !GetAtt HTTPRulePriorityAction.Priority
+      Priority: 
+        !If
+          - HTTPRootPath
+          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
+          - !GetAtt HTTPRulePriorityAction.Priority
 
   # Force a conditional dependency from the ECS service on the listener rules.
   # Our service depends on our HTTP/S listener to be set up before it can
