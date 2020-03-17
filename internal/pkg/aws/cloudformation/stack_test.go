@@ -23,19 +23,19 @@ func TestNewStack(t *testing.T) {
 		WithRoleARN("arn"))
 
 	// THEN
-	require.Equal(t, "hello", s.name)
-	require.Equal(t, "world", s.template)
+	require.Equal(t, "hello", s.Name)
+	require.Equal(t, "world", s.Template)
 	require.Equal(t, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String("Port"),
 			ParameterValue: aws.String("80"),
 		},
-	}, s.parameters)
+	}, s.Parameters)
 	require.Equal(t, []*cloudformation.Tag{
 		{
 			Key:   aws.String("ecs-project"),
 			Value: aws.String("phonetool"),
 		},
-	}, s.tags)
-	require.Equal(t, aws.String("arn"), s.roleARN)
+	}, s.Tags)
+	require.Equal(t, aws.String("arn"), s.RoleARN)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -221,12 +222,13 @@ func (o *deleteAppOpts) deleteStacks() error {
 
 		cfClient := cloudformation.New(sess)
 
-		stackName := fmt.Sprintf("%s-%s-%s", o.projectName, env.Name, o.AppName)
-
 		o.spinner.Start(fmt.Sprintf("Deleting app %s from env %s.", o.AppName, env.Name))
-		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
+		if err := cfClient.DeleteApp(deploy.DeleteAppInput{
+			AppName:     o.AppName,
+			EnvName:     env.Name,
+			ProjectName: o.projectName,
+		}); err != nil {
 			o.spinner.Stop(log.Serrorf("Deleting app %s from env %s.", o.AppName, env.Name))
-
 			return err
 		}
 		o.spinner.Stop(log.Ssuccessf("Deleted app %s from env %s.", o.AppName, env.Name))

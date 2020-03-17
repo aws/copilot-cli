@@ -1,7 +1,6 @@
 HelloTable:
   Type: AWS::DynamoDB::Table
   Properties: 
-    TableName: !Sub hello
     AttributeDefinitions: 
       - AttributeName: Name
         AttributeType: S

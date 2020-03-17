@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // ErrChangeSetEmpty occurs when the change set does not contain any new or updated resources.
@@ -23,7 +22,7 @@ func (e *ErrChangeSetEmpty) Error() string {
 // ErrStackAlreadyExists occurs when a CloudFormation stack already exists with a given name.
 type ErrStackAlreadyExists struct {
 	Name  string
-	Stack *cloudformation.Stack
+	Stack *StackDescription
 }
 
 func (e *ErrStackAlreadyExists) Error() string {

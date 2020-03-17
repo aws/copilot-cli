@@ -36,7 +36,7 @@ func New(s *session.Session) *CloudFormation {
 // Create deploys a new CloudFormation stack using Change Sets.
 // If the stack already exists in a failed state, deletes the stack and re-creates it.
 func (c *CloudFormation) Create(stack *Stack) error {
-	descr, err := c.describe(stack.name)
+	descr, err := c.Describe(stack.Name)
 	if err != nil {
 		var stackNotFound *ErrStackNotFound
 		if !errors.As(err, &stackNotFound) {
@@ -48,33 +48,37 @@ func (c *CloudFormation) Create(stack *Stack) error {
 	status := stackStatus(aws.StringValue(descr.StackStatus))
 	if status.requiresCleanup() {
 		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
-		if err := c.Delete(stack.name); err != nil {
-			return fmt.Errorf("cleanup previously failed stack %s: %w", stack.name, err)
+		if err := c.Delete(stack.Name); err != nil {
+			return fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
 		}
 		return c.create(stack)
 	}
 	if status.inProgress() {
 		return &errStackUpdateInProgress{
-			name: stack.name,
+			name: stack.Name,
 		}
 	}
 	return &ErrStackAlreadyExists{
-		Name:  stack.name,
+		Name:  stack.Name,
 		Stack: descr,
 	}
 }
 
-// CreateAndWait calls Create and then blocks until the stack is created or until the max attempt window expires.
+// CreateAndWait calls Create and then WaitForCreate.
 func (c *CloudFormation) CreateAndWait(stack *Stack) error {
 	if err := c.Create(stack); err != nil {
 		return err
 	}
+	return c.WaitForCreate(stack.Name)
+}
 
+// WaitForCreate blocks until the stack is created or until the max attempt window expires.
+func (c *CloudFormation) WaitForCreate(stackName string) error {
 	err := c.client.WaitUntilStackCreateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stack.name),
+		StackName: aws.String(stackName),
 	}, waiters...)
 	if err != nil {
-		return fmt.Errorf("wait until stack %s create is complete: %w", stack.name, err)
+		return fmt.Errorf("wait until stack %s create is complete: %w", stackName, err)
 	}
 	return nil
 }
@@ -82,14 +86,14 @@ func (c *CloudFormation) CreateAndWait(stack *Stack) error {
 // Update updates an existing CloudFormation with the new configuration.
 // If there are no changes for the stack, deletes the empty change set and returns ErrChangeSetEmpty.
 func (c *CloudFormation) Update(stack *Stack) error {
-	descr, err := c.describe(stack.name)
+	descr, err := c.Describe(stack.Name)
 	if err != nil {
 		return err
 	}
 	status := stackStatus(aws.StringValue(descr.StackStatus))
 	if status.inProgress() {
 		return &errStackUpdateInProgress{
-			name: stack.name,
+			name: stack.Name,
 		}
 	}
 	return c.update(stack)
@@ -102,10 +106,10 @@ func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
 	}
 
 	err := c.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stack.name),
+		StackName: aws.String(stack.Name),
 	}, waiters...)
 	if err != nil {
-		return fmt.Errorf("wait until stack %s update is complete: %w", stack.name, err)
+		return fmt.Errorf("wait until stack %s update is complete: %w", stack.Name, err)
 	}
 	return nil
 }
@@ -146,7 +150,9 @@ func (c *CloudFormation) DeleteAndWait(stackName string) error {
 	return nil
 }
 
-func (c *CloudFormation) describe(name string) (*cloudformation.Stack, error) {
+// Describe returns a description of an existing stack.
+// If the stack does not exist, returns ErrStackNotFound.
+func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
 	out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(name),
 	})
@@ -159,7 +165,37 @@ func (c *CloudFormation) describe(name string) (*cloudformation.Stack, error) {
 	if len(out.Stacks) == 0 {
 		return nil, &ErrStackNotFound{name: name}
 	}
-	return out.Stacks[0], nil
+	descr := StackDescription(*out.Stacks[0])
+	return &descr, nil
+}
+
+// Events returns the list of stack events in **chronological** order.
+func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
+	var nextToken *string
+	var events []StackEvent
+	for {
+		out, err := c.client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+			NextToken: nextToken,
+			StackName: aws.String(stackName),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("desribe stack events for stack %s: %w", stackName, err)
+		}
+		for _, event := range out.StackEvents {
+			events = append(events, StackEvent(*event))
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	// Reverse the events so that they're returned in chronological order.
+	// Taken from https://github.com/golang/go/wiki/SliceTricks#reversing.
+	for i := len(events)/2 - 1; i >= 0; i-- {
+		opp := len(events) - 1 - i
+		events[i], events[opp] = events[opp], events[i]
+	}
+	return events, nil
 }
 
 func (c *CloudFormation) create(stack *Stack) error {
@@ -171,7 +207,7 @@ func (c *CloudFormation) update(stack *Stack) error {
 }
 
 func (c *CloudFormation) deployChangeSet(stack *Stack, changeSetType string) error {
-	cs, err := newChangeSet(c.client, stack.name)
+	cs, err := newChangeSet(c.client, stack.Name)
 	if err != nil {
 		return err
 	}

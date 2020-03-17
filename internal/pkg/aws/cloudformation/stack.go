@@ -10,15 +10,15 @@ import (
 
 // Stack represents a AWS CloudFormation stack.
 type Stack struct {
-	name string
+	Name string
 	*stackConfig
 }
 
 type stackConfig struct {
-	template   string
-	parameters []*cloudformation.Parameter
-	tags       []*cloudformation.Tag
-	roleARN    *string
+	Template   string
+	Parameters []*cloudformation.Parameter
+	Tags       []*cloudformation.Tag
+	RoleARN    *string
 }
 
 // StackOption allows you to initialize a Stack with additional properties.
@@ -27,9 +27,9 @@ type StackOption func(s *Stack)
 // NewStack creates a stack with the given name and template body.
 func NewStack(name, template string, opts ...StackOption) *Stack {
 	s := &Stack{
-		name: name,
+		Name: name,
 		stackConfig: &stackConfig{
-			template: template,
+			Template: template,
 		},
 	}
 	for _, opt := range opts {
@@ -48,7 +48,7 @@ func WithParameters(params map[string]string) StackOption {
 				ParameterValue: aws.String(v),
 			})
 		}
-		s.parameters = flatParams
+		s.Parameters = flatParams
 	}
 }
 
@@ -62,13 +62,25 @@ func WithTags(tags map[string]string) StackOption {
 				Value: aws.String(v),
 			})
 		}
-		s.tags = flatTags
+		s.Tags = flatTags
 	}
 }
 
 // WithRoleARN specifies the role that CloudFormation will assume when creating the stack.
 func WithRoleARN(roleARN string) StackOption {
 	return func(s *Stack) {
-		s.roleARN = aws.String(roleARN)
+		s.RoleARN = aws.String(roleARN)
 	}
+}
+
+// StackEvent represents a stack event for a resource.
+type StackEvent cloudformation.StackEvent
+
+// StackDescription represents an existing AWS CloudFormation stack.
+type StackDescription cloudformation.Stack
+
+// SDK returns the underlying struct from the AWS SDK.
+func (d *StackDescription) SDK() *cloudformation.Stack {
+	raw := cloudformation.Stack(*d)
+	return &raw
 }

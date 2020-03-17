@@ -231,6 +231,21 @@ func (mr *MockapiMockRecorder) DescribeStacks(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStacks", reflect.TypeOf((*Mockapi)(nil).DescribeStacks), arg0)
 }
 
+// DescribeStackEvents mocks base method
+func (m *Mockapi) DescribeStackEvents(arg0 *cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeStackEvents", arg0)
+	ret0, _ := ret[0].(*cloudformation.DescribeStackEventsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeStackEvents indicates an expected call of DescribeStackEvents
+func (mr *MockapiMockRecorder) DescribeStackEvents(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStackEvents", reflect.TypeOf((*Mockapi)(nil).DescribeStackEvents), arg0)
+}
+
 // DeleteStack mocks base method
 func (m *Mockapi) DeleteStack(arg0 *cloudformation.DeleteStackInput) (*cloudformation.DeleteStackOutput, error) {
 	m.ctrl.T.Helper()

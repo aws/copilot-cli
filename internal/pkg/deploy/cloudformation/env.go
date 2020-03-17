@@ -7,8 +7,6 @@ package cloudformation
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
@@ -18,7 +16,11 @@ import (
 // If the change set to create the stack cannot be executed, returns a ErrNotExecutableChangeSet.
 // Otherwise, returns a wrapped error.
 func (cf CloudFormation) DeployEnvironment(env *deploy.CreateEnvironmentInput) error {
-	return cf.create(stack.NewEnvStackConfig(env))
+	s, err := toStack(stack.NewEnvStackConfig(env))
+	if err != nil {
+		return err
+	}
+	return cf.cfnClient.Create(s)
 }
 
 // StreamEnvironmentCreation streams resource update events while a deployment is taking place.
@@ -41,26 +43,23 @@ func (cf CloudFormation) DeleteEnvironment(projectName, envName string) error {
 		Project: projectName,
 		Name:    envName,
 	})
-
-	out, err := cf.describeStack(&cloudformation.DescribeStacksInput{
-		StackName: aws.String(conf.StackName()),
-	})
-	if err != nil {
-		return err
-	}
-	return cf.delete(*out.StackId)
+	return cf.cfnClient.DeleteAndWait(conf.StackName())
 }
 
 // streamEnvironmentResponse sends a CreateEnvironmentResponse to the response channel once the stack creation halts.
 // The done channel is closed once this method exits to notify other streams that they should stop working.
 func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan deploy.CreateEnvironmentResponse, stack *stack.EnvStackConfig) {
 	defer close(done)
-	deployed, err := cf.waitForStackCreation(stack)
+	if err := cf.cfnClient.WaitForCreate(stack.StackName()); err != nil {
+		resp <- deploy.CreateEnvironmentResponse{Err: err}
+		return
+	}
+	descr, err := cf.cfnClient.Describe(stack.StackName())
 	if err != nil {
 		resp <- deploy.CreateEnvironmentResponse{Err: err}
 		return
 	}
-	env, err := stack.ToEnv(deployed)
+	env, err := stack.ToEnv(descr.SDK())
 	resp <- deploy.CreateEnvironmentResponse{
 		Env: env,
 		Err: err,
