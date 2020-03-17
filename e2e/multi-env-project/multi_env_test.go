@@ -173,7 +173,7 @@ var _ = Describe("Multiple Env Project", func() {
 				Eventually(func() (int, error) {
 					resp, fetchErr := http.Get(route.URL)
 					return resp.StatusCode, fetchErr
-				}, "10s", "1s").Should(Equal(200))
+				}, "30s", "1s").Should(Equal(200))
 			}
 		})
 

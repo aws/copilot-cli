@@ -86,7 +86,7 @@ var _ = Describe("init flow", func() {
 			Eventually(func() (int, error) {
 				resp, fetchErr := http.Get(app.Routes[0].URL)
 				return resp.StatusCode, fetchErr
-			}, "10s", "1s").Should(Equal(200))
+			}, "30s", "1s").Should(Equal(200))
 		})
 
 		It("should return the correct environment variables", func() {
