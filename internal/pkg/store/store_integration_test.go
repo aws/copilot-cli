@@ -115,10 +115,6 @@ func Test_SSM_Application_Integration(t *testing.T) {
 		err = s.CreateApplication(&feApplication)
 		require.NoError(t, err)
 
-		// Make sure we can't add a duplicate apps
-		err = s.CreateApplication(&apiApplication)
-		require.EqualError(t, &store.ErrApplicationAlreadyExists{ProjectName: projectToCreate.Name, ApplicationName: apiApplication.Name}, err.Error())
-
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
 

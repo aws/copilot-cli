@@ -35,3 +35,12 @@ type ErrWorkspaceHasExistingProject struct {
 func (e *ErrWorkspaceHasExistingProject) Error() string {
 	return fmt.Sprintf("this workspace is already registered with project %s", e.ExistingProjectName)
 }
+
+// ErrFileExists means we tried to create an existing file.
+type ErrFileExists struct {
+	FileName string
+}
+
+func (e *ErrFileExists) Error() string {
+	return fmt.Sprintf("file %s already exists", e.FileName)
+}

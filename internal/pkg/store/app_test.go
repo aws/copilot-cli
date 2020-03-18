@@ -264,10 +264,7 @@ func TestStore_CreateApplication(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: &ErrApplicationAlreadyExists{
-				ApplicationName: testApplication.Name,
-				ProjectName:     testApplication.Project,
-			},
+			wantedErr: nil,
 		},
 		"with SSM error": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {

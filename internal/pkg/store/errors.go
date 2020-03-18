@@ -89,27 +89,6 @@ func (e *ErrNoSuchEnvironment) Error() string {
 		e.EnvironmentName, e.ProjectName)
 }
 
-// ErrApplicationAlreadyExists means that an application is already created in a specific project.
-type ErrApplicationAlreadyExists struct {
-	ApplicationName string
-	ProjectName     string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrApplicationAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrApplicationAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName &&
-		e.ApplicationName == t.ApplicationName
-}
-
-func (e *ErrApplicationAlreadyExists) Error() string {
-	return fmt.Sprintf("application %s already exists in project %s",
-		e.ApplicationName, e.ProjectName)
-}
-
 // ErrNoSuchApplication means a specific application couldn't be found in a specific project.
 type ErrNoSuchApplication struct {
 	ProjectName     string
