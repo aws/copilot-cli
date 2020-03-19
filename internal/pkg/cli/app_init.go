@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -154,10 +153,6 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	if err := o.ensureNoExistingApp(o.ProjectName(), o.AppName); err != nil {
-		return err
-	}
-
 	proj, err := o.projGetter.GetProject(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
@@ -170,11 +165,6 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.manifestPath = manifestPath
 
-	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(o.manifestPath))
-	log.Infoln("Your manifest contains configurations like your container size and ports.")
-	log.Infoln()
-
 	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
 	if err := o.projDeployer.AddAppToProject(o.proj, o.AppName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
@@ -182,7 +172,14 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	return o.createAppInProject(o.ProjectName())
+	if err := o.appStore.CreateApplication(&archer.Application{
+		Project: o.ProjectName(),
+		Name:    o.AppName,
+		Type:    o.AppType,
+	}); err != nil {
+		return fmt.Errorf("saving application %s: %w", o.AppName, err)
+	}
+	return nil
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
@@ -190,9 +187,15 @@ func (o *initAppOpts) createManifest() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var manifestExists bool
 	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
 	if err != nil {
-		return "", err
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", err
+		}
+		manifestExists = true
+		manifestPath = e.FileName
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {
@@ -200,8 +203,18 @@ func (o *initAppOpts) createManifest() (string, error) {
 	}
 	relPath, err := filepath.Rel(wkdir, manifestPath)
 	if err != nil {
-		return "", fmt.Errorf("relative path of manifest file: %w", err)
+		return "", fmt.Errorf("get relative path of manifest file: %w", err)
 	}
+
+	log.Infoln()
+	manifestMsgFmt := "Wrote the manifest for %s app at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for %s app already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.AppName), color.HighlightResource(relPath))
+	log.Infoln("Your manifest contains configurations like your container size and ports.")
+	log.Infoln()
+
 	return relPath, nil
 }
 
@@ -227,17 +240,6 @@ func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManife
 		}
 	}
 	return manifest.NewLoadBalancedFargateManifest(props), nil
-}
-
-func (o *initAppOpts) createAppInProject(projectName string) error {
-	if err := o.appStore.CreateApplication(&archer.Application{
-		Project: projectName,
-		Name:    o.AppName,
-		Type:    o.AppType,
-	}); err != nil {
-		return fmt.Errorf("saving application %s: %w", o.AppName, err)
-	}
-	return nil
 }
 
 func (o *initAppOpts) askAppType() error {
@@ -319,21 +321,6 @@ func (o *initAppOpts) askAppPort() error {
 	o.AppPort = uint16(portUint)
 
 	return nil
-}
-
-func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
-	_, err := o.appStore.GetApplication(projectName, o.AppName)
-	// If the app doesn't exist - that's perfect, return no error.
-	var existsErr *store.ErrNoSuchApplication
-	if errors.As(err, &existsErr) {
-		return nil
-	}
-	// If there's no error, that means we were able to fetch an existing app
-	if err == nil {
-		return fmt.Errorf("application %s already exists under project %s", appName, projectName)
-	}
-	// Otherwise, there was an error calling the store
-	return fmt.Errorf("couldn't check if application %s exists in project %s: %w", appName, projectName, err)
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.

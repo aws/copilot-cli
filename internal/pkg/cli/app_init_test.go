@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -324,7 +323,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
 					Do(func(app *archer.Application) {
 						require.Equal(t, &archer.Application{
@@ -358,6 +356,38 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				opts.prog = mockProg
 			},
 		},
+		"write manifest error": {
+			inAppType:        manifest.LoadBalancedWebApplication,
+			inProjectName:    "project",
+			inAppName:        "frontend",
+			inDockerfilePath: "frontend/Dockerfile",
+			inAppPort:        80,
+
+			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
+				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
+
+				mockAppStore := mocks.NewMockApplicationStore(ctrl)
+				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
+
+				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
+				mockProjGetter.EXPECT().GetProject("project").Return(&archer.Project{
+					Name:      "project",
+					AccountID: "1234",
+				}, nil)
+
+				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
+
+				mockProg := climocks.NewMockprogress(ctrl)
+
+				opts.ws = mockWriter
+				opts.appStore = mockAppStore
+				opts.projGetter = mockProjGetter
+				opts.projDeployer = mockProjDeployer
+				opts.prog = mockProg
+			},
+			wantedErr: errors.New("some error"),
+		},
 		"project error": {
 			inAppType:        manifest.LoadBalancedWebApplication,
 			inProjectName:    "project",
@@ -369,7 +399,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
 				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(nil, errors.New("some error"))
@@ -393,7 +422,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
 				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(&archer.Project{
@@ -417,44 +445,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			wantedErr: errors.New("add app frontend to project project: some error"),
 		},
-		"app already exists": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(&archer.Application{}, nil)
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
-					Return(nil).
-					Times(0)
-
-				opts.appStore = mockAppStore
-			},
-
-			wantedErr: fmt.Errorf("application frontend already exists under project project"),
-		},
-
-		"error calling app store": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, fmt.Errorf("oops"))
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
-					Return(nil).
-					Times(0)
-
-				opts.appStore = mockAppStore
-			},
-
-			wantedErr: fmt.Errorf("couldn't check if application frontend exists in project project: oops"),
-		},
-
 		"error saving app": {
 			inAppType:        manifest.LoadBalancedWebApplication,
 			inProjectName:    "project",
@@ -467,7 +457,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().GetApplication("project", "frontend").Return(nil, &store.ErrNoSuchApplication{})
 				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
 					Return(fmt.Errorf("oops"))
 

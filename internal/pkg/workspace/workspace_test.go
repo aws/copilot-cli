@@ -361,19 +361,25 @@ func TestWorkspace_Write(t *testing.T) {
 			elems:      []string{pipelineFileName},
 			wantedPath: "/ecs-project/pipeline.yml",
 		},
+		"return ErrFileExists if file already exists": {
+			elems:     []string{"manifest.yml"},
+			wantedErr: &ErrFileExists{FileName: "/ecs-project/manifest.yml"},
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			fs := afero.NewMemMapFs()
-			fs.MkdirAll("/ecs-project", 0755)
+			utils := &afero.Afero{
+				Fs: fs,
+			}
+			utils.MkdirAll("/ecs-project", 0755)
+			utils.WriteFile("/ecs-project/manifest.yml", []byte{}, 0644)
 			ws := &Workspace{
 				workingDir: "/",
 				projectDir: "/ecs-project",
-				fsUtils: &afero.Afero{
-					Fs: fs,
-				},
+				fsUtils:    utils,
 			}
 
 			// WHEN

@@ -164,34 +164,3 @@ func TestErrNoSuchApplication_Is(t *testing.T) {
 		})
 	}
 }
-
-func TestErrApplicationAlreadyExists(t *testing.T) {
-	err := &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"}
-	require.EqualError(t, err, "application api already exists in project chicken")
-}
-
-func TestErrApplicationAlreadyExists_Is(t *testing.T) {
-	err := &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"}
-	testCases := map[string]struct {
-		wantedSame bool
-		otherError error
-	}{
-		"errors are same": {
-			wantedSame: true,
-			otherError: &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "chicken"},
-		},
-		"errors have different values": {
-			wantedSame: false,
-			otherError: &ErrApplicationAlreadyExists{ApplicationName: "api", ProjectName: "rooster"},
-		},
-		"errors are different type": {
-			wantedSame: false,
-			otherError: errors.New("different error"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
-		})
-	}
-}
