@@ -65,10 +65,6 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 		err = s.CreateEnvironment(&prodEnvironment)
 		require.NoError(t, err)
 
-		// Make sure we can't add a duplicate environment
-		err = s.CreateEnvironment(&prodEnvironment)
-		require.EqualError(t, &store.ErrEnvironmentAlreadyExists{ProjectName: projectToCreate.Name, EnvironmentName: prodEnvironment.Name}, err.Error())
-
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
 

@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// CreateEnvironment instantiates a new environment within an existing project. Returns ErrEnvironmentAlreadyExists
-// if the environment already exists in the project.
+// CreateEnvironment instantiates a new environment within an existing project. Skip if
+// the environment already exists in the project.
 func (s *Store) CreateEnvironment(environment *archer.Environment) error {
 	if _, err := s.GetProject(environment.Project); err != nil {
 		return err
@@ -37,9 +37,7 @@ func (s *Store) CreateEnvironment(environment *archer.Environment) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &ErrEnvironmentAlreadyExists{
-					EnvironmentName: environment.Name,
-					ProjectName:     environment.Project}
+				return nil
 			}
 		}
 		return fmt.Errorf("create environment %s in project %s: %w", environment.Name, environment.Project, err)

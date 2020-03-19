@@ -47,27 +47,6 @@ func (e *ErrProjectAlreadyExists) Error() string {
 		e.ProjectName)
 }
 
-// ErrEnvironmentAlreadyExists means that an environment is already created in a specific project.
-type ErrEnvironmentAlreadyExists struct {
-	EnvironmentName string
-	ProjectName     string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrEnvironmentAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrEnvironmentAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName &&
-		e.EnvironmentName == t.EnvironmentName
-}
-
-func (e *ErrEnvironmentAlreadyExists) Error() string {
-	return fmt.Sprintf("environment %s already exists in project %s",
-		e.EnvironmentName, e.ProjectName)
-}
-
 // ErrNoSuchEnvironment means a specific environment couldn't be found in a specific project.
 type ErrNoSuchEnvironment struct {
 	ProjectName     string

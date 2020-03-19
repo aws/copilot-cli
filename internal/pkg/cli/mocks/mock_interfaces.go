@@ -14,6 +14,7 @@ import (
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
+	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	reflect "reflect"
@@ -1611,6 +1612,21 @@ func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(projName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), projName, envName)
 }
 
+// EnvStack mocks base method
+func (m *MockenvironmentDeployer) EnvStack(projectName, envName string) (*cloudformation.Stack, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvStack", projectName, envName)
+	ret0, _ := ret[0].(*cloudformation.Stack)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvStack indicates an expected call of EnvStack
+func (mr *MockenvironmentDeployerMockRecorder) EnvStack(projectName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvStack", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvStack), projectName, envName)
+}
+
 // MockpipelineDeployer is a mock of pipelineDeployer interface
 type MockpipelineDeployer struct {
 	ctrl     *gomock.Controller
@@ -1945,6 +1961,21 @@ func (m *Mockdeployer) DeleteEnvironment(projName, envName string) error {
 func (mr *MockdeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), projName, envName)
+}
+
+// EnvStack mocks base method
+func (m *Mockdeployer) EnvStack(projectName, envName string) (*cloudformation.Stack, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvStack", projectName, envName)
+	ret0, _ := ret[0].(*cloudformation.Stack)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvStack indicates an expected call of EnvStack
+func (mr *MockdeployerMockRecorder) EnvStack(projectName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvStack", reflect.TypeOf((*Mockdeployer)(nil).EnvStack), projectName, envName)
 }
 
 // DeployProject mocks base method

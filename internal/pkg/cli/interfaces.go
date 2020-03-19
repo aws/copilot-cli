@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // actionCommand is the interface that every command that creates a resource implements.
@@ -163,6 +164,7 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(projName, envName string) error
+	EnvStack(projectName, envName string) (*sdkcloudformation.Stack, error)
 }
 
 type pipelineDeployer interface {

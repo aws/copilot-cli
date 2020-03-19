@@ -7,6 +7,7 @@ package cloudformation
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
@@ -64,4 +65,17 @@ func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan
 		Env: env,
 		Err: err,
 	}
+}
+
+// EnvStack returns the CloudFormation stack of the environment.
+func (cf CloudFormation) EnvStack(projectName, envName string) (*sdkcloudformation.Stack, error) {
+	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+		Project: projectName,
+		Name:    envName,
+	})
+	descr, err := cf.cfnClient.Describe(conf.StackName())
+	if err != nil {
+		return nil, err
+	}
+	return descr.SDK(), nil
 }
