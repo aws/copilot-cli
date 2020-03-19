@@ -199,35 +199,17 @@ func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
 }
 
 func (c *CloudFormation) create(stack *Stack) error {
-	return c.deployChangeSet(stack, cloudformation.ChangeSetTypeCreate)
-}
-
-func (c *CloudFormation) update(stack *Stack) error {
-	return c.deployChangeSet(stack, cloudformation.ChangeSetTypeUpdate)
-}
-
-func (c *CloudFormation) deployChangeSet(stack *Stack, changeSetType string) error {
-	cs, err := newChangeSet(c.client, stack.Name)
+	cs, err := newCreateChangeSet(c.client, stack.Name)
 	if err != nil {
 		return err
 	}
-	if err := cs.create(stack.stackConfig, changeSetType); err != nil {
-		// It's possible that there are no changes between the previous and proposed stack change sets.
-		// We make a call to describe the change set to see if that is indeed the case and handle it gracefully.
-		descr, descrErr := cs.describe()
-		if descrErr != nil {
-			return descrErr
-		}
-		// The change set was empty - so we clean it up.
-		// We have to clean up the change set because there's a limit on the number
-		// of failed change sets a customer can have on a particular stack.
-		if len(descr.changes) == 0 {
-			cs.delete()
-			return &ErrChangeSetEmpty{
-				cs: cs,
-			}
-		}
+	return cs.createAndExecute(stack.stackConfig)
+}
+
+func (c *CloudFormation) update(stack *Stack) error {
+	cs, err := newUpdateChangeSet(c.client, stack.Name)
+	if err != nil {
 		return err
 	}
-	return cs.execute()
+	return cs.createAndExecute(stack.stackConfig)
 }
