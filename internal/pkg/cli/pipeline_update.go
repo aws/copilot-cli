@@ -8,9 +8,10 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -80,7 +81,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 
 	return &updatePipelineOpts{
 		project:            project,
-		pipelineDeployer:   cloudformation.New(defaultSession),
+		pipelineDeployer:   deploycfn.New(defaultSession),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		updatePipelineVars: vars,
 		envStore:           store,

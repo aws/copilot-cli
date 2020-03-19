@@ -9,11 +9,12 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -76,7 +77,7 @@ var initEnvProfileClients = func(o *initEnvOpts) error {
 		return fmt.Errorf("create session from profile %s: %w", o.EnvProfile, err)
 	}
 	o.envIdentity = identity.New(profileSess)
-	o.envDeployer = cloudformation.New(profileSess)
+	o.envDeployer = deploycfn.New(profileSess)
 	return nil
 }
 
@@ -99,7 +100,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		initEnvVars:        vars,
 		projectGetter:      store,
 		envCreator:         store,
-		projDeployer:       cloudformation.New(defaultSession),
+		projDeployer:       deploycfn.New(defaultSession),
 		identity:           identity.New(defaultSession),
 		profileConfig:      cfg,
 		prog:               termprogress.NewSpinner(),

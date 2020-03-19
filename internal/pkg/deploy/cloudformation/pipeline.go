@@ -6,26 +6,20 @@
 package cloudformation
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // PipelineExists checks if the pipeline with the provided config exists.
 func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, error) {
 	stackConfig := stack.NewPipelineStackConfig(in)
-	// TODO refactor to use cf.describeStack?
-	describeStackInput := &cloudformation.DescribeStacksInput{
-		StackName: aws.String(stackConfig.StackName()),
-	}
-	_, err := cf.describeStack(describeStackInput)
+	_, err := cf.cfnClient.Describe(stackConfig.StackName())
 	if err != nil {
-		var stackNotFound *ErrStackNotFound
+		var stackNotFound *cloudformation.ErrStackNotFound
 		if !errors.As(err, &stackNotFound) {
 			return false, err
 		}
@@ -36,37 +30,30 @@ func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, e
 
 // CreatePipeline sets up a new CodePipeline for deploying applications.
 func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
-	pipelineConfig := stack.NewPipelineStackConfig(in)
-
-	// First attempt to create the pipeline stack
-	err := cf.create(pipelineConfig)
-	if err == nil {
-		_, err := cf.waitForStackCreation(pipelineConfig)
-		if err != nil {
-			return err
-		}
-		return nil
+	s, err := toStack(stack.NewPipelineStackConfig(in))
+	if err != nil {
+		return err
 	}
-	return err
+	return cf.cfnClient.CreateAndWait(s)
 }
 
 // UpdatePipeline updates an existing CodePipeline for deploying applications.
 func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
-	pipelineConfig := stack.NewPipelineStackConfig(in)
-	if err := cf.update(pipelineConfig); err != nil {
-		if err == errChangeSetEmpty {
-			// If there are no updates, then exit successfully.
+	s, err := toStack(stack.NewPipelineStackConfig(in))
+	if err != nil {
+		return err
+	}
+	if err := cf.cfnClient.UpdateAndWait(s); err != nil {
+		var errNoUpdates *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &errNoUpdates) {
 			return nil
 		}
-		return fmt.Errorf("updating pipeline: %w", err)
+		return fmt.Errorf("update pipeline: %w", err)
 	}
-
-	return cf.client.WaitUntilStackUpdateCompleteWithContext(context.Background(),
-		&cloudformation.DescribeStacksInput{
-			StackName: aws.String(pipelineConfig.StackName()),
-		}, cf.waiters...)
+	return nil
 }
 
+// DeletePipeline removes the CodePipeline stack.
 func (cf CloudFormation) DeletePipeline(stackName string) error {
-	return cf.delete(stackName)
+	return cf.cfnClient.Delete(stackName)
 }

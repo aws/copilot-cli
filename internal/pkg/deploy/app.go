@@ -17,3 +17,10 @@ type CreateLBFargateAppInput struct {
 	ImageRepoURL string
 	ImageTag     string
 }
+
+// DeleteAppInput holds the fields required to delete an application.
+type DeleteAppInput struct {
+	AppName     string
+	EnvName     string
+	ProjectName string
+}

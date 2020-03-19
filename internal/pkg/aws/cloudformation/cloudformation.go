@@ -1,0 +1,233 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+// Package cloudformation provides a client to make API requests to AWS CloudFormation.
+package cloudformation
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+)
+
+var waiters = []request.WaiterOption{
+	request.WithWaiterDelay(request.ConstantWaiterDelay(3 * time.Second)), // Poll for cfn updates every 3 seconds.
+	request.WithWaiterMaxAttempts(1800),                                   // Wait for at most 90 mins for any cfn action.
+}
+
+// CloudFormation represents a client to make requests to AWS CloudFormation.
+type CloudFormation struct {
+	client api
+}
+
+// New creates a new CloudFormation client.
+func New(s *session.Session) *CloudFormation {
+	return &CloudFormation{
+		client: cloudformation.New(s),
+	}
+}
+
+// Create deploys a new CloudFormation stack using Change Sets.
+// If the stack already exists in a failed state, deletes the stack and re-creates it.
+func (c *CloudFormation) Create(stack *Stack) error {
+	descr, err := c.Describe(stack.Name)
+	if err != nil {
+		var stackNotFound *ErrStackNotFound
+		if !errors.As(err, &stackNotFound) {
+			return err
+		}
+		// If the stack does not exist, create it.
+		return c.create(stack)
+	}
+	status := stackStatus(aws.StringValue(descr.StackStatus))
+	if status.requiresCleanup() {
+		// If the stack exists, but failed to create, we'll clean it up and then re-create it.
+		if err := c.Delete(stack.Name); err != nil {
+			return fmt.Errorf("cleanup previously failed stack %s: %w", stack.Name, err)
+		}
+		return c.create(stack)
+	}
+	if status.inProgress() {
+		return &errStackUpdateInProgress{
+			name: stack.Name,
+		}
+	}
+	return &ErrStackAlreadyExists{
+		Name:  stack.Name,
+		Stack: descr,
+	}
+}
+
+// CreateAndWait calls Create and then WaitForCreate.
+func (c *CloudFormation) CreateAndWait(stack *Stack) error {
+	if err := c.Create(stack); err != nil {
+		return err
+	}
+	return c.WaitForCreate(stack.Name)
+}
+
+// WaitForCreate blocks until the stack is created or until the max attempt window expires.
+func (c *CloudFormation) WaitForCreate(stackName string) error {
+	err := c.client.WaitUntilStackCreateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	}, waiters...)
+	if err != nil {
+		return fmt.Errorf("wait until stack %s create is complete: %w", stackName, err)
+	}
+	return nil
+}
+
+// Update updates an existing CloudFormation with the new configuration.
+// If there are no changes for the stack, deletes the empty change set and returns ErrChangeSetEmpty.
+func (c *CloudFormation) Update(stack *Stack) error {
+	descr, err := c.Describe(stack.Name)
+	if err != nil {
+		return err
+	}
+	status := stackStatus(aws.StringValue(descr.StackStatus))
+	if status.inProgress() {
+		return &errStackUpdateInProgress{
+			name: stack.Name,
+		}
+	}
+	return c.update(stack)
+}
+
+// UpdateAndWait calls Update and then blocks until the stack is updated or until the max attempt window expires.
+func (c *CloudFormation) UpdateAndWait(stack *Stack) error {
+	if err := c.Update(stack); err != nil {
+		return err
+	}
+
+	err := c.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stack.Name),
+	}, waiters...)
+	if err != nil {
+		return fmt.Errorf("wait until stack %s update is complete: %w", stack.Name, err)
+	}
+	return nil
+}
+
+// Delete removes an existing CloudFormation stack.
+// If the stack doesn't exist then do nothing.
+func (c *CloudFormation) Delete(stackName string) error {
+	_, err := c.client.DeleteStack(&cloudformation.DeleteStackInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		if !stackDoesNotExist(err) {
+			return fmt.Errorf("delete stack %s: %w", stackName, err)
+		}
+		// Move on if stack is already deleted.
+	}
+	return nil
+}
+
+// DeleteAndWait calls Delete then blocks until the stack is deleted or until the max attempt window expires.
+func (c *CloudFormation) DeleteAndWait(stackName string) error {
+	_, err := c.client.DeleteStack(&cloudformation.DeleteStackInput{
+		StackName: aws.String(stackName),
+	})
+	if err != nil {
+		if !stackDoesNotExist(err) {
+			return fmt.Errorf("delete stack %s: %w", stackName, err)
+		}
+		return nil // If the stack is already deleted, don't wait for it.
+	}
+
+	err = c.client.WaitUntilStackDeleteCompleteWithContext(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	}, waiters...)
+	if err != nil {
+		return fmt.Errorf("wait until stack %s delete is complete: %w", stackName, err)
+	}
+	return nil
+}
+
+// Describe returns a description of an existing stack.
+// If the stack does not exist, returns ErrStackNotFound.
+func (c *CloudFormation) Describe(name string) (*StackDescription, error) {
+	out, err := c.client.DescribeStacks(&cloudformation.DescribeStacksInput{
+		StackName: aws.String(name),
+	})
+	if err != nil {
+		if stackDoesNotExist(err) {
+			return nil, &ErrStackNotFound{name: name}
+		}
+		return nil, fmt.Errorf("describe stack %s: %w", name, err)
+	}
+	if len(out.Stacks) == 0 {
+		return nil, &ErrStackNotFound{name: name}
+	}
+	descr := StackDescription(*out.Stacks[0])
+	return &descr, nil
+}
+
+// Events returns the list of stack events in **chronological** order.
+func (c *CloudFormation) Events(stackName string) ([]StackEvent, error) {
+	var nextToken *string
+	var events []StackEvent
+	for {
+		out, err := c.client.DescribeStackEvents(&cloudformation.DescribeStackEventsInput{
+			NextToken: nextToken,
+			StackName: aws.String(stackName),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("desribe stack events for stack %s: %w", stackName, err)
+		}
+		for _, event := range out.StackEvents {
+			events = append(events, StackEvent(*event))
+		}
+		nextToken = out.NextToken
+		if nextToken == nil {
+			break
+		}
+	}
+	// Reverse the events so that they're returned in chronological order.
+	// Taken from https://github.com/golang/go/wiki/SliceTricks#reversing.
+	for i := len(events)/2 - 1; i >= 0; i-- {
+		opp := len(events) - 1 - i
+		events[i], events[opp] = events[opp], events[i]
+	}
+	return events, nil
+}
+
+func (c *CloudFormation) create(stack *Stack) error {
+	return c.deployChangeSet(stack, cloudformation.ChangeSetTypeCreate)
+}
+
+func (c *CloudFormation) update(stack *Stack) error {
+	return c.deployChangeSet(stack, cloudformation.ChangeSetTypeUpdate)
+}
+
+func (c *CloudFormation) deployChangeSet(stack *Stack, changeSetType string) error {
+	cs, err := newChangeSet(c.client, stack.Name)
+	if err != nil {
+		return err
+	}
+	if err := cs.create(stack.stackConfig, changeSetType); err != nil {
+		// It's possible that there are no changes between the previous and proposed stack change sets.
+		// We make a call to describe the change set to see if that is indeed the case and handle it gracefully.
+		descr, descrErr := cs.describe()
+		if descrErr != nil {
+			return descrErr
+		}
+		// The change set was empty - so we clean it up.
+		// We have to clean up the change set because there's a limit on the number
+		// of failed change sets a customer can have on a particular stack.
+		if len(descr.changes) == 0 {
+			cs.delete()
+			return &ErrChangeSetEmpty{
+				cs: cs,
+			}
+		}
+		return err
+	}
+	return cs.execute()
+}
