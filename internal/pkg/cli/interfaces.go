@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/route53"
 )
 
 // actionCommand is the interface that every command that creates a resource implements.
@@ -193,4 +194,8 @@ type deployer interface {
 	environmentDeployer
 	projectDeployer
 	pipelineDeployer
+}
+
+type hostedZonesByNameLister interface {
+	ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
 }

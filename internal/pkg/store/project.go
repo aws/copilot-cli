@@ -8,10 +8,8 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/route53"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	route53API "github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
@@ -23,32 +21,6 @@ func (s *Store) CreateProject(project *archer.Project) error {
 	data, err := marshal(project)
 	if err != nil {
 		return fmt.Errorf("serializing project %s: %w", project.Name, err)
-	}
-
-	if project.Domain != "" {
-		domainExist := false
-		in := &route53API.ListHostedZonesByNameInput{DNSName: aws.String(project.Domain)}
-		resp, err := s.route53Svc.ListHostedZonesByName(in)
-		if err != nil {
-			return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
-		}
-		for {
-			if route53.HostedZoneExists(resp.HostedZones, project.Domain) {
-				domainExist = true
-				break
-			}
-			if !aws.BoolValue(resp.IsTruncated) {
-				break
-			}
-			in = &route53API.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
-			resp, err = s.route53Svc.ListHostedZonesByName(in)
-			if err != nil {
-				return fmt.Errorf("list hosted zone for %s: %w", project.Domain, err)
-			}
-		}
-		if !domainExist {
-			return fmt.Errorf("no hosted zone found for %s", project.Domain)
-		}
 	}
 
 	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
