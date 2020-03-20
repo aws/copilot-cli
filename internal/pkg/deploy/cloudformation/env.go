@@ -5,6 +5,7 @@
 package cloudformation
 
 import (
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 )
@@ -64,4 +65,17 @@ func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan
 		Env: env,
 		Err: err,
 	}
+}
+
+// GetEnvironment returns the Environment metadata from the CloudFormation stack.
+func (cf CloudFormation) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
+	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+		Project: projectName,
+		Name:    envName,
+	})
+	descr, err := cf.cfnClient.Describe(conf.StackName())
+	if err != nil {
+		return nil, err
+	}
+	return conf.ToEnv(descr.SDK())
 }

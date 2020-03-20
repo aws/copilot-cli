@@ -13,7 +13,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
@@ -249,35 +248,6 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 						AccountID: "12345",
 					}).Return(mockError)
 				mockProgress.EXPECT().Stop(log.Serrorf(fmtDeployProjectFailed, "project"))
-			},
-		},
-		"should ignore ErrProjectAlreadyExists from CreateProject": {
-			mocking: func(t *testing.T, mockProjectStore *mocks.MockProjectStore, mockWorkspace *climocks.MockwsProjectManager,
-				mockIdentityService *climocks.MockidentityService, mockDeployer *climocks.MockprojectDeployer,
-				mockProgress *climocks.Mockprogress) {
-				mockIdentityService.
-					EXPECT().
-					Get().
-					Return(identity.Caller{
-						Account: "12345",
-					}, nil)
-				mockProjectStore.
-					EXPECT().
-					CreateProject(gomock.Any()).
-					Do(func(project *archer.Project) {
-						require.Equal(t, project.Name, "project")
-					}).
-					Return(&store.ErrProjectAlreadyExists{ProjectName: "project"})
-				mockWorkspace.
-					EXPECT().
-					Create(gomock.Any())
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
-				mockDeployer.EXPECT().
-					DeployProject(&deploy.CreateProjectInput{
-						Project:   "project",
-						AccountID: "12345",
-					}).Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
 		},
 

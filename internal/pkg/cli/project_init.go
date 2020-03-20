@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -135,11 +134,7 @@ func (o *initProjectOpts) Execute() error {
 		Domain:    o.DomainName,
 	})
 	if err != nil {
-		// If the project already exists, move on - otherwise return the error.
-		var projectAlreadyExistsError *store.ErrProjectAlreadyExists
-		if !errors.As(err, &projectAlreadyExistsError) {
-			return err
-		}
+		return err
 	}
 	err = o.ws.Create(o.ProjectName)
 	if err != nil {

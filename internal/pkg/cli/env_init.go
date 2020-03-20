@@ -35,6 +35,7 @@ const (
 	fmtDeployEnvFailed         = "Failed to accept changes for the %s environment."
 	fmtDNSDelegationStart      = "Sharing DNS permissions for this project to account %s."
 	fmtDNSDelegationFailed     = "Failed to grant DNS permissions to account %s."
+	fmtDNSDelegationComplete   = "Shared DNS permissions for this project to account %s."
 	fmtStreamEnvStart          = "Creating the infrastructure for the %s environment."
 	fmtStreamEnvFailed         = "Failed to create the infrastructure for the %s environment."
 	fmtStreamEnvComplete       = "Created the infrastructure for the %s environment."
@@ -136,16 +137,45 @@ func (o *initEnvOpts) Execute() error {
 		// Ensure the project actually exists before we do a deployment.
 		return err
 	}
-	caller, err := o.identity.Get()
-	if err != nil {
-		return fmt.Errorf("get identity: %w", err)
+	if project.RequiresDNSDelegation() {
+		if err := o.delegateDNSFromProject(project); err != nil {
+			return fmt.Errorf("granting DNS permissions: %w", err)
+		}
 	}
-
 	if err = o.initProfileClients(o); err != nil {
 		return err
 	}
 
 	// 1. Start creating the CloudFormation stack for the environment.
+	if err := o.deployEnv(project); err != nil {
+		return err
+	}
+
+	// 2. Get the environment
+	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
+	if err != nil {
+		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
+	}
+
+	// 3. Add the stack set instance to the project stackset.
+	if err := o.addToStackset(project, env); err != nil {
+		return err
+	}
+
+	// 4. Store the environment in SSM.
+	if err := o.envCreator.CreateEnvironment(env); err != nil {
+		return fmt.Errorf("store environment: %w", err)
+	}
+	log.Successf("Created environment %s in region %s under project %s.\n",
+		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.Project))
+	return nil
+}
+
+func (o *initEnvOpts) deployEnv(project *archer.Project) error {
+	caller, err := o.identity.Get()
+	if err != nil {
+		return fmt.Errorf("get identity: %w", err)
+	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     o.EnvName,
 		Project:                  o.ProjectName(),
@@ -155,20 +185,13 @@ func (o *initEnvOpts) Execute() error {
 		ProjectDNSName:           project.Domain,
 	}
 
-	if project.RequiresDNSDelegation() {
-		if err := o.delegateDNSFromProject(project); err != nil {
-			return fmt.Errorf("granting DNS permissions: %w", err)
-		}
-	}
-
 	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.EnvName)))
-
 	if err := o.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			o.prog.Stop("")
-			log.Successf("Environment %s already exists under project %s! Do nothing.\n",
+			log.Successf("CloudFormation stack for env %s already exists under project %s! Do nothing.\n",
 				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.ProjectName()))
 			return nil
 		}
@@ -176,7 +199,7 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	// 2. Display updates while the deployment is happening.
+	// Display updates while the deployment is happening.
 	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.EnvName)))
 	stackEvents, responses := o.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
@@ -189,20 +212,17 @@ func (o *initEnvOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.EnvName)))
 
-	// 3. Add the stack set instance to the project stackset.
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(o.ProjectName())))
-	if err := o.projDeployer.AddEnvToProject(project, resp.Env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(o.ProjectName())))
-		return fmt.Errorf("deploy env %s to project %s: %w", resp.Env.Name, project.Name, err)
-	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(resp.Env.AccountID), color.HighlightResource(resp.Env.Region), color.HighlightUserInput(o.ProjectName())))
+	return nil
+}
 
-	// 4. Store the environment in SSM.
-	if err := o.envCreator.CreateEnvironment(resp.Env); err != nil {
-		return fmt.Errorf("store environment: %w", err)
+func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environment) error {
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+	if err := o.projDeployer.AddEnvToProject(project, env); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+		return fmt.Errorf("deploy env %s to project %s: %w", env.Name, project.Name, err)
 	}
-	log.Successf("Created environment %s in region %s under project %s.\n",
-		color.HighlightUserInput(resp.Env.Name), color.HighlightResource(resp.Env.Region), color.HighlightResource(resp.Env.Project))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+
 	return nil
 }
 
@@ -218,11 +238,11 @@ func (o *initEnvOpts) delegateDNSFromProject(project *archer.Project) error {
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(envAccount.Account)))
-
 	if err := o.projDeployer.DelegateDNSPermissions(project, envAccount.Account); err != nil {
 		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(envAccount.Account)))
 		return err
 	}
+	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(envAccount.Account)))
 	return nil
 }
 

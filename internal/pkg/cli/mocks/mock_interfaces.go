@@ -1611,6 +1611,21 @@ func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(projName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), projName, envName)
 }
 
+// GetEnvironment mocks base method
+func (m *MockenvironmentDeployer) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret0, _ := ret[0].(*archer.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), projectName, envName)
+}
+
 // MockpipelineDeployer is a mock of pipelineDeployer interface
 type MockpipelineDeployer struct {
 	ctrl     *gomock.Controller
@@ -1945,6 +1960,21 @@ func (m *Mockdeployer) DeleteEnvironment(projName, envName string) error {
 func (mr *MockdeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), projName, envName)
+}
+
+// GetEnvironment mocks base method
+func (m *Mockdeployer) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret0, _ := ret[0].(*archer.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockdeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*Mockdeployer)(nil).GetEnvironment), projectName, envName)
 }
 
 // DeployProject mocks base method

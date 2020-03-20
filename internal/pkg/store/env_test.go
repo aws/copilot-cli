@@ -264,10 +264,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: &ErrEnvironmentAlreadyExists{
-				EnvironmentName: testEnvironment.Name,
-				ProjectName:     testEnvironment.Project,
-			},
+			wantedErr: nil,
 		},
 		"with SSM error": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
