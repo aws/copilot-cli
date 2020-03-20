@@ -364,9 +364,7 @@ func TestStore_CreateProject(t *testing.T) {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
-			wantedErr: &ErrProjectAlreadyExists{
-				ProjectName: "phonetool",
-			},
+			wantedErr: nil,
 		},
 		"with SSM error": {
 			inProject:   &archer.Project{Name: "phonetool", AccountID: "1234"},

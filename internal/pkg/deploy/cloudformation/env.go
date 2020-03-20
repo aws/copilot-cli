@@ -5,9 +5,9 @@
 package cloudformation
 
 import (
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.
@@ -67,8 +67,8 @@ func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan
 	}
 }
 
-// EnvStack returns the CloudFormation stack of the environment.
-func (cf CloudFormation) EnvStack(projectName, envName string) (*sdkcloudformation.Stack, error) {
+// GetEnvironment returns the Environment metadata from the CloudFormation stack.
+func (cf CloudFormation) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 		Project: projectName,
 		Name:    envName,
@@ -77,5 +77,5 @@ func (cf CloudFormation) EnvStack(projectName, envName string) (*sdkcloudformati
 	if err != nil {
 		return nil, err
 	}
-	return descr.SDK(), nil
+	return conf.ToEnv(descr.SDK())
 }

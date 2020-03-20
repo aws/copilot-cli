@@ -15,8 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/aws-sdk-go/aws"
-	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
@@ -285,12 +283,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().EnvStack("phonetool", "test").Return(nil, errors.New("some error"))
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("some error"))
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 			},
-			wantedErrorS: "retrieve CloudFormation stack for env test: some error",
+			wantedErrorS: "get environment struct for test: some error",
 		},
 		"failed to create stack set instance": {
 			inProjectName: "phonetool",
@@ -326,8 +324,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().EnvStack("phonetool", "test").Return(&sdkcloudformation.Stack{
-					StackId: aws.String("arn:aws:ecs:mars-1:1234:environment/My App/MyEnvironment"),
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					AccountID: "1234",
+					Region:    "mars-1",
+					Name:      "test",
+					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(&archer.Project{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
 			},
@@ -369,8 +370,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().EnvStack("phonetool", "test").Return(&sdkcloudformation.Stack{
-					StackId: aws.String("arn:aws:ecs:mars-1:1234:environment/My App/MyEnvironment"),
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					AccountID: "1234",
+					Region:    "mars-1",
+					Name:      "test",
+					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -417,8 +421,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().EnvStack("phonetool", "test").Return(&sdkcloudformation.Stack{
-					StackId: aws.String("arn:aws:ecs:mars-1:1234:environment/My App/MyEnvironment"),
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					AccountID: "1234",
+					Region:    "mars-1",
+					Name:      "test",
+					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -454,8 +461,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					PublicLoadBalancer:       true,
 					ToolsAccountPrincipalARN: "some arn",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
-				m.EXPECT().EnvStack("phonetool", "test").Return(&sdkcloudformation.Stack{
-					StackId: aws.String("arn:aws:ecs:mars-1:1234:environment/My App/MyEnvironment"),
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					AccountID: "1234",
+					Region:    "mars-1",
+					Name:      "test",
+					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -524,8 +534,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().EnvStack("phonetool", "test").Return(&sdkcloudformation.Stack{
-					StackId: aws.String("arn:aws:ecs:mars-1:1234:environment/My App/MyEnvironment"),
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+					AccountID: "1234",
+					Region:    "mars-1",
+					Name:      "test",
+					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
 			},

@@ -62,9 +62,7 @@ func (s *Store) CreateProject(project *archer.Project) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &ErrProjectAlreadyExists{
-					ProjectName: project.Name,
-				}
+				return nil
 			}
 		}
 		return fmt.Errorf("create project %s: %w", project.Name, err)

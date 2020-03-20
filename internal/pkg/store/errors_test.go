@@ -40,38 +40,6 @@ func TestErrNoSuchProject_Is(t *testing.T) {
 		})
 	}
 }
-
-func TestErrProjectAlreadyExists(t *testing.T) {
-	err := &ErrProjectAlreadyExists{ProjectName: "chicken"}
-	require.EqualError(t, err, "a project named chicken already exists")
-}
-
-func TestErrProjectAlreadyExists_Is(t *testing.T) {
-	err := &ErrProjectAlreadyExists{ProjectName: "chicken"}
-	testCases := map[string]struct {
-		wantedSame bool
-		otherError error
-	}{
-		"errors are same": {
-			wantedSame: true,
-			otherError: &ErrProjectAlreadyExists{ProjectName: "chicken"},
-		},
-		"errors have different values": {
-			wantedSame: false,
-			otherError: &ErrProjectAlreadyExists{ProjectName: "rooster"},
-		},
-		"errors are different type": {
-			wantedSame: false,
-			otherError: errors.New("different error"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, err.Is(tc.otherError), tc.wantedSame)
-		})
-	}
-}
-
 func TestErrNoSuchEnvironment(t *testing.T) {
 	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"}
 	require.EqualError(t, err, "couldn't find environment test in the project chicken")

@@ -14,7 +14,6 @@ import (
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
-	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	reflect "reflect"
@@ -1612,19 +1611,19 @@ func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(projName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), projName, envName)
 }
 
-// EnvStack mocks base method
-func (m *MockenvironmentDeployer) EnvStack(projectName, envName string) (*cloudformation.Stack, error) {
+// GetEnvironment mocks base method
+func (m *MockenvironmentDeployer) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvStack", projectName, envName)
-	ret0, _ := ret[0].(*cloudformation.Stack)
+	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret0, _ := ret[0].(*archer.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvStack indicates an expected call of EnvStack
-func (mr *MockenvironmentDeployerMockRecorder) EnvStack(projectName, envName interface{}) *gomock.Call {
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvStack", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvStack), projectName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), projectName, envName)
 }
 
 // MockpipelineDeployer is a mock of pipelineDeployer interface
@@ -1963,19 +1962,19 @@ func (mr *MockdeployerMockRecorder) DeleteEnvironment(projName, envName interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), projName, envName)
 }
 
-// EnvStack mocks base method
-func (m *Mockdeployer) EnvStack(projectName, envName string) (*cloudformation.Stack, error) {
+// GetEnvironment mocks base method
+func (m *Mockdeployer) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvStack", projectName, envName)
-	ret0, _ := ret[0].(*cloudformation.Stack)
+	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret0, _ := ret[0].(*archer.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvStack indicates an expected call of EnvStack
-func (mr *MockdeployerMockRecorder) EnvStack(projectName, envName interface{}) *gomock.Call {
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockdeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvStack", reflect.TypeOf((*Mockdeployer)(nil).EnvStack), projectName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*Mockdeployer)(nil).GetEnvironment), projectName, envName)
 }
 
 // DeployProject mocks base method

@@ -28,25 +28,6 @@ func (e *ErrNoSuchProject) Error() string {
 		e.ProjectName, e.AccountID, e.Region)
 }
 
-// ErrProjectAlreadyExists means a project already exists and can't be created again.
-type ErrProjectAlreadyExists struct {
-	ProjectName string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrProjectAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrProjectAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName
-}
-
-func (e *ErrProjectAlreadyExists) Error() string {
-	return fmt.Sprintf("a project named %s already exists",
-		e.ProjectName)
-}
-
 // ErrNoSuchEnvironment means a specific environment couldn't be found in a specific project.
 type ErrNoSuchEnvironment struct {
 	ProjectName     string

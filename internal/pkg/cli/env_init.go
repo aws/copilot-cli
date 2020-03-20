@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -153,9 +152,9 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.retrieveEnvironment()
+	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
-		return err
+		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
 	}
 
 	// 3. Add the stack set instance to the project stackset.
@@ -214,22 +213,6 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.EnvName)))
 
 	return nil
-}
-
-func (o *initEnvOpts) retrieveEnvironment() (*archer.Environment, error) {
-	envStack, err := o.envDeployer.EnvStack(o.ProjectName(), o.EnvName)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve CloudFormation stack for env %s: %w", o.EnvName, err)
-	}
-	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
-		Project: o.ProjectName(),
-		Name:    o.EnvName,
-	})
-	env, err := conf.ToEnv(envStack)
-	if err != nil {
-		return nil, fmt.Errorf("construct env struct out of CloudFormation stack: %w", err)
-	}
-	return env, nil
 }
 
 func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environment) error {
