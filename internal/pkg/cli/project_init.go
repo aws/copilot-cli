@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -19,8 +19,6 @@ import (
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/aws/aws-sdk-go/aws"
-	route53API "github.com/aws/aws-sdk-go/service/route53"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +38,7 @@ type initProjectOpts struct {
 
 	identity     identityService
 	projectStore archer.ProjectStore
-	route53Svc   hostedZonesByNameLister
+	route53Svc   domainValidator
 	ws           wsProjectManager
 	deployer     projectDeployer
 	prompt       prompter
@@ -68,7 +66,7 @@ func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
 		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
 		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
-		route53Svc: route53API.New(sess, aws.NewConfig().WithRegion("us-east-1")),
+		route53Svc: route53.New(sess),
 		ws:         ws,
 		deployer:   cloudformation.New(sess),
 		prompt:     prompt.New(),
@@ -104,8 +102,15 @@ func (o *initProjectOpts) Ask() error {
 			return nil
 		}
 		if o.ProjectName != summary.ProjectName {
-			// Error out if project name specified by flag is different from the one in workspace.
-			return fmt.Errorf("project init cancelled - name conflict between %s and local project name %s", o.ProjectName, summary.ProjectName)
+			log.Errorf(`Workspace is already registered with project %s instead of %s.
+			If you'd like to delete the project locally, you can remove the %s directory.
+			If you'd like to delete project and all of its resources, run %s.
+`,
+				summary.ProjectName,
+				o.ProjectName,
+				workspace.ProjectDirectoryName,
+				color.HighlightCode("ecs-preview project delete"))
+			return fmt.Errorf("workspace already registered with %s", summary.ProjectName)
 		}
 	}
 
@@ -188,25 +193,9 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 }
 
 func (o *initProjectOpts) validateDomain(domainName string) error {
-	domainExist := false
-	in := &route53API.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
-	resp, err := o.route53Svc.ListHostedZonesByName(in)
+	domainExist, err := o.route53Svc.DomainExists(domainName)
 	if err != nil {
-		return fmt.Errorf("list hosted zone for %s: %w", domainName, err)
-	}
-	for {
-		if route53.HostedZoneExists(resp.HostedZones, domainName) {
-			domainExist = true
-			break
-		}
-		if !aws.BoolValue(resp.IsTruncated) {
-			break
-		}
-		in = &route53API.ListHostedZonesByNameInput{DNSName: resp.NextDNSName, HostedZoneId: resp.NextHostedZoneId}
-		resp, err = o.route53Svc.ListHostedZonesByName(in)
-		if err != nil {
-			return fmt.Errorf("list hosted zone for %s: %w", domainName, err)
-		}
+		return err
 	}
 	if !domainExist {
 		return fmt.Errorf("no hosted zone found for %s", domainName)
