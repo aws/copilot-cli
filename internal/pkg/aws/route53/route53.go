@@ -12,6 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 )
 
+const (
+	// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
+	// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
+	// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
+	route53Region = "us-east-1"
+)
+
 type route53Client interface {
 	ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
 }
@@ -24,10 +31,7 @@ type Route53 struct {
 // New returns a Route53 struct configured against the input session.
 func New(s *session.Session) *Route53 {
 	return &Route53{
-		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
-		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
-		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
-		client: route53.New(s, aws.NewConfig().WithRegion("us-east-1")),
+		client: route53.New(s, aws.NewConfig().WithRegion(route53Region)),
 	}
 }
 
