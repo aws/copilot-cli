@@ -152,7 +152,7 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName, o.IsProduction)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
 	}

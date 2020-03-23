@@ -68,10 +68,11 @@ func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan
 }
 
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
-func (cf CloudFormation) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
+func (cf CloudFormation) GetEnvironment(projectName, envName string, isProd bool) (*archer.Environment, error) {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 		Project: projectName,
 		Name:    envName,
+		Prod:    isProd,
 	})
 	descr, err := cf.cfnClient.Describe(conf.StackName())
 	if err != nil {

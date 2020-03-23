@@ -283,7 +283,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("some error"))
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(nil, errors.New("some error"))
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
@@ -324,7 +324,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(&archer.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
@@ -370,7 +370,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(&archer.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
@@ -421,7 +421,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(&archer.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
@@ -461,7 +461,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					PublicLoadBalancer:       true,
 					ToolsAccountPrincipalARN: "some arn",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(&archer.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
@@ -534,7 +534,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test", false).Return(&archer.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
