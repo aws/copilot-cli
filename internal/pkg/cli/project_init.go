@@ -179,7 +179,7 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 		if errors.As(err, &noSuchProjectErr) {
 			return nil
 		}
-		return err
+		return fmt.Errorf("get project %s: %w", projectName, err)
 	}
 	confirm, err := o.prompt.Confirm(fmt.Sprintf("Project %s already exists, would you like to use it?", projectName), "", prompt.WithTrueDefault())
 	if err != nil {

@@ -31,17 +31,6 @@ func New(s *session.Session) *Route53 {
 	}
 }
 
-// hostedZoneExists checks if certain domain exists in any of the hosted zones.
-func (r *Route53) hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
-	for _, hostedZone := range hostedZones {
-		// example.com. should match example.com
-		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
-			return true
-		}
-	}
-	return false
-}
-
 // DomainExists returns if a domain exists under a certain AWS account.
 func (r *Route53) DomainExists(domainName string) (bool, error) {
 	in := &route53.ListHostedZonesByNameInput{DNSName: aws.String(domainName)}
@@ -50,7 +39,7 @@ func (r *Route53) DomainExists(domainName string) (bool, error) {
 		return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 	}
 	for {
-		if r.hostedZoneExists(resp.HostedZones, domainName) {
+		if hostedZoneExists(resp.HostedZones, domainName) {
 			return true, nil
 		}
 		if !aws.BoolValue(resp.IsTruncated) {
@@ -62,4 +51,15 @@ func (r *Route53) DomainExists(domainName string) (bool, error) {
 			return false, fmt.Errorf("list hosted zone for %s: %w", domainName, err)
 		}
 	}
+}
+
+// hostedZoneExists checks if certain domain exists in any of the hosted zones.
+func hostedZoneExists(hostedZones []*route53.HostedZone, domain string) bool {
+	for _, hostedZone := range hostedZones {
+		// example.com. should match example.com
+		if domain == aws.StringValue(hostedZone.Name) || domain+"." == aws.StringValue(hostedZone.Name) {
+			return true
+		}
+	}
+	return false
 }
