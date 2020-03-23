@@ -151,14 +151,12 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 		inDomainName   string
 		mockRoute53Svc func(m *climocks.MockdomainValidator)
 		mockStore      func(m *mocks.MockProjectStore)
-		mockPrompter   func(m *climocks.Mockprompter)
 
 		wantedError string
 	}{
 		"skip everything": {
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {},
 			mockStore:      func(m *mocks.MockProjectStore) {},
-			mockPrompter:   func(m *climocks.Mockprompter) {},
 
 			wantedError: "",
 		},
@@ -170,7 +168,6 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 					ProjectName: "metrics",
 				})
 			},
-			mockPrompter: func(m *climocks.Mockprompter) {},
 
 			wantedError: "",
 		},
@@ -178,23 +175,21 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			inProjectName:  "123chicken",
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {},
 			mockStore:      func(m *mocks.MockProjectStore) {},
-			mockPrompter:   func(m *climocks.Mockprompter) {},
 
 			wantedError: "project name 123chicken is invalid: value must start with a letter and contain only lower-case letters, numbers, and hyphens",
 		},
-		"prompt if project already exists": {
+		"errors if project with different domain already exists": {
 			inProjectName:  "metrics",
+			inDomainName:   "badDomain.com",
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {},
 			mockStore: func(m *mocks.MockProjectStore) {
 				m.EXPECT().GetProject("metrics").Return(&archer.Project{
-					Name: "metrics",
+					Name:   "metrics",
+					Domain: "domain.com",
 				}, nil)
 			},
-			mockPrompter: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm("Project metrics already exists, would you like to use it?", "", gomock.Any()).Return(true, nil)
-			},
 
-			wantedError: "",
+			wantedError: "project named metrics already exists with a different domain name domain.com",
 		},
 		"errors if failed to get project": {
 			inProjectName:  "metrics",
@@ -202,45 +197,15 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			mockStore: func(m *mocks.MockProjectStore) {
 				m.EXPECT().GetProject("metrics").Return(nil, errors.New("some error"))
 			},
-			mockPrompter: func(m *climocks.Mockprompter) {},
 
 			wantedError: "get project metrics: some error",
-		},
-		"errors if failed to confirm": {
-			inProjectName:  "metrics",
-			mockRoute53Svc: func(m *climocks.MockdomainValidator) {},
-			mockStore: func(m *mocks.MockProjectStore) {
-				m.EXPECT().GetProject("metrics").Return(&archer.Project{
-					Name: "metrics",
-				}, nil)
-			},
-			mockPrompter: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm("Project metrics already exists, would you like to use it?", "", gomock.Any()).Return(false, errors.New("some error"))
-			},
-
-			wantedError: "prompt to confirm using existing project: some error",
-		},
-		"errors if do not confirm when project already exists": {
-			inProjectName:  "metrics",
-			mockRoute53Svc: func(m *climocks.MockdomainValidator) {},
-			mockStore: func(m *mocks.MockProjectStore) {
-				m.EXPECT().GetProject("metrics").Return(&archer.Project{
-					Name: "metrics",
-				}, nil)
-			},
-			mockPrompter: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm("Project metrics already exists, would you like to use it?", "", gomock.Any()).Return(false, nil)
-			},
-
-			wantedError: "project init cancelled - no changes made",
 		},
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {
 				m.EXPECT().DomainExists("mockDomain.com").Return(true, nil)
 			},
-			mockStore:    func(m *mocks.MockProjectStore) {},
-			mockPrompter: func(m *climocks.Mockprompter) {},
+			mockStore: func(m *mocks.MockProjectStore) {},
 
 			wantedError: "",
 		},
@@ -249,8 +214,7 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {
 				m.EXPECT().DomainExists("badMockDomain.com").Return(false, nil)
 			},
-			mockStore:    func(m *mocks.MockProjectStore) {},
-			mockPrompter: func(m *climocks.Mockprompter) {},
+			mockStore: func(m *mocks.MockProjectStore) {},
 
 			wantedError: "no hosted zone found for badMockDomain.com",
 		},
@@ -259,8 +223,7 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			mockRoute53Svc: func(m *climocks.MockdomainValidator) {
 				m.EXPECT().DomainExists("mockDomain.com").Return(false, errors.New("some error"))
 			},
-			mockStore:    func(m *mocks.MockProjectStore) {},
-			mockPrompter: func(m *climocks.Mockprompter) {},
+			mockStore: func(m *mocks.MockProjectStore) {},
 
 			wantedError: "some error",
 		},
@@ -273,14 +236,11 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 			mockRoute53Svc := climocks.NewMockdomainValidator(ctrl)
 			mockStore := mocks.NewMockProjectStore(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
 			tc.mockRoute53Svc(mockRoute53Svc)
 			tc.mockStore(mockStore)
-			tc.mockPrompter(mockPrompter)
 			opts := &initProjectOpts{
 				route53Svc:   mockRoute53Svc,
 				projectStore: mockStore,
-				prompt:       mockPrompter,
 				initProjectVars: initProjectVars{
 					ProjectName: tc.inProjectName,
 					DomainName:  tc.inDomainName,

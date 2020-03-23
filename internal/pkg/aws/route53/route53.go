@@ -21,7 +21,7 @@ type Route53 struct {
 	client route53Client
 }
 
-// New returns a Route53 strict configured against the input session.
+// New returns a Route53 struct configured against the input session.
 func New(s *session.Session) *Route53 {
 	return &Route53{
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas

@@ -173,20 +173,16 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 	if err := validateProjectName(projectName); err != nil {
 		return err
 	}
-	// Alert users if the project already exists.
-	if _, err := o.projectStore.GetProject(projectName); err != nil {
+	proj, err := o.projectStore.GetProject(projectName)
+	if err != nil {
 		var noSuchProjectErr *store.ErrNoSuchProject
 		if errors.As(err, &noSuchProjectErr) {
 			return nil
 		}
 		return fmt.Errorf("get project %s: %w", projectName, err)
 	}
-	confirm, err := o.prompt.Confirm(fmt.Sprintf("Project %s already exists, would you like to use it?", projectName), "", prompt.WithTrueDefault())
-	if err != nil {
-		return fmt.Errorf("prompt to confirm using existing project: %w", err)
-	}
-	if !confirm {
-		return fmt.Errorf("project init cancelled - no changes made")
+	if proj.Domain != o.DomainName {
+		return fmt.Errorf("project named %s already exists with a different domain name %s", projectName, proj.Domain)
 	}
 
 	return nil
