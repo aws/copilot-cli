@@ -49,6 +49,7 @@ func buildRootCmd() *cobra.Command {
 	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.
 	// "Getting Started" command group.
 	cmd.AddCommand(cli.BuildInitCmd())
+	cmd.AddCommand(cli.BuildWikiCmd())
 
 	// "Develop" command group.
 	cmd.AddCommand(cli.BuildProjCmd())
