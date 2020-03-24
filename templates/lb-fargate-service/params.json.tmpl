@@ -13,10 +13,8 @@
     "LogRetention": "30",
     "AddonsTemplateURL": "",
     "HealthCheckPath": "{{.App.HealthCheckPath}}"
-  },
-  "Tags": {
-    "ecs-project": "{{.Env.Project}}",
-    "ecs-environment": "{{.Env.Name}}",
-    "ecs-application": "{{.App.Name}}"
-  }
+  },{{$n := len .Tags}}{{if gt $n 0}}
+  "Tags": { {{range $i, $t := .Tags}}
+    {{if eq (inc $i) $n}}"{{$t.Key}}": "{{$t.Value}}"{{else}}"{{$t.Key}}": "{{$t.Value}}",{{end}}{{end}}
+  }{{end}}
 }

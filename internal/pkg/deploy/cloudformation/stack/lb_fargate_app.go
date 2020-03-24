@@ -18,7 +18,7 @@ import (
 
 const (
 	lbFargateAppTemplatePath              = "lb-fargate-service/cf.yml"
-	lbFargateAppParamsPath                = "lb-fargate-service/params.json"
+	lbFargateAppParamsPath                = "lb-fargate-service/params.json.tmpl"
 	lbFargateAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
@@ -168,7 +168,15 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
-	params, err := c.parser.Parse(lbFargateAppParamsPath, c.toTemplateParams())
+	params, err := c.parser.Parse(lbFargateAppParamsPath, struct {
+		*lbFargateTemplateParams
+		Tags []*cloudformation.Tag
+	}{
+		lbFargateTemplateParams: c.toTemplateParams(),
+		Tags:                    c.Tags(),
+	}, template.WithFuncs(map[string]interface{}{
+		"inc": func(i int) int { return i + 1 },
+	}))
 	if err != nil {
 		return "", err
 	}
@@ -177,7 +185,7 @@ func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
 func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
+	tags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(c.Env.Project),
@@ -191,6 +199,13 @@ func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
 			Value: aws.String(c.App.Name),
 		},
 	}
+	for k, v := range c.AdditionalTags {
+		tags = append(tags, &cloudformation.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+	return tags
 }
 
 func (c *LBFargateStackConfig) addonsOutputs() ([]addons.Output, error) {
