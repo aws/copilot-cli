@@ -152,10 +152,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName, o.IsProduction)
+	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
 	}
+	env.Prod = o.IsProduction
 
 	// 3. Add the stack set instance to the project stackset.
 	if err := o.addToStackset(project, env); err != nil {

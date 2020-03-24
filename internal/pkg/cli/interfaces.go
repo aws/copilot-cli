@@ -163,7 +163,7 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(projName, envName string) error
-	GetEnvironment(projectName, envName string, isProd bool) (*archer.Environment, error)
+	GetEnvironment(projectName, envName string) (*archer.Environment, error)
 }
 
 type pipelineDeployer interface {
