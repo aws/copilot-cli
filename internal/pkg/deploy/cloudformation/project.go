@@ -161,8 +161,9 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 // to pull from it.
 func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
-		Project:   project.Name,
-		AccountID: project.AccountID,
+		Project:        project.Name,
+		AccountID:      project.AccountID,
+		AdditionalTags: project.Tags,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
@@ -245,8 +246,9 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 // sets up a new stack instance if the environment is in a new region.
 func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
-		Project:   project.Name,
-		AccountID: project.AccountID,
+		Project:        project.Name,
+		AccountID:      project.AccountID,
+		AdditionalTags: project.Tags,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {

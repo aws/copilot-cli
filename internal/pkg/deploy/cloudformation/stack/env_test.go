@@ -218,6 +218,10 @@ func TestEnvTags(t *testing.T) {
 			Key:   aws.String(EnvTagKey),
 			Value: aws.String(deploymentInput.Name),
 		},
+		{
+			Key:   aws.String("owner"),
+			Value: aws.String("boss"),
+		},
 	}
 	require.ElementsMatch(t, expectedTags, env.Tags())
 }
@@ -298,5 +302,8 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 		Prod:                     true,
 		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",
+		AdditionalTags: map[string]string{
+			"owner": "boss",
+		},
 	}
 }

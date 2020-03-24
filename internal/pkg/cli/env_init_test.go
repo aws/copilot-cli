@@ -343,7 +343,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+					Name: "phonetool",
+				}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
