@@ -232,6 +232,7 @@ func (o *updatePipelineOpts) Execute() error {
 		Source:          source,
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
+		AdditionalTags:  o.project.Tags,
 	}
 
 	if err := o.deployPipeline(deployPipelineInput); err != nil {

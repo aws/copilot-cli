@@ -41,6 +41,9 @@ type CreatePipelineInput struct {
 	// A list of artifact buckets and corresponding KMS keys that will
 	// be used in this pipeline.
 	ArtifactBuckets []ArtifactBucket
+
+	// AdditionalTags are labels applied to resources under the project.
+	AdditionalTags map[string]string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store

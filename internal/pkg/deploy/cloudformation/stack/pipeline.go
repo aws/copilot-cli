@@ -42,10 +42,17 @@ func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {
 }
 
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
+	tags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(p.ProjectName),
 		},
 	}
+	for k, v := range p.AdditionalTags {
+		tags = append(tags, &cloudformation.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+	return tags
 }

@@ -45,6 +45,10 @@ func TestPipelineTags(t *testing.T) {
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(projectName),
 		},
+		{
+			Key:   aws.String("owner"),
+			Value: aws.String("boss"),
+		},
 	}
 	require.ElementsMatch(t, expectedTags, pipeline.Tags())
 }
@@ -153,6 +157,9 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 				BucketName: "chicken-us-west-1",
 				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),
 			},
+		},
+		AdditionalTags: map[string]string{
+			"owner": "boss",
 		},
 	}
 }
