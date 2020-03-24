@@ -31,6 +31,7 @@ const (
 type initProjectVars struct {
 	ProjectName string
 	DomainName  string
+	Tags        map[string]string
 }
 
 type initProjectOpts struct {
@@ -152,9 +153,10 @@ func (o *initProjectOpts) Execute() error {
 	}
 	o.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(o.ProjectName)))
 	err = o.deployer.DeployProject(&deploy.CreateProjectInput{
-		Project:    o.ProjectName,
-		AccountID:  caller.Account,
-		DomainName: o.DomainName,
+		Project:        o.ProjectName,
+		AccountID:      caller.Account,
+		DomainName:     o.DomainName,
+		AdditionalTags: o.Tags,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(o.ProjectName)))
@@ -166,6 +168,7 @@ func (o *initProjectOpts) Execute() error {
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
+		Tags:      o.Tags,
 	})
 }
 
@@ -237,7 +240,12 @@ func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*arche
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	vars := initProjectVars{}
+	vars := initProjectVars{
+		Tags: map[string]string{
+			"firstname": "efe",
+			"lastname":  "karakus",
+		},
+	}
 	cmd := &cobra.Command{
 		Use:   "init [name]",
 		Short: "Creates a new empty project.",

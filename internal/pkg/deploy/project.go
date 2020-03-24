@@ -9,8 +9,9 @@ package deploy
 
 // CreateProjectInput holds the fields required to create a project stack set.
 type CreateProjectInput struct {
-	Project               string   // Name of the project that needs to be created.
-	AccountID             string   // AWS account ID to administrate the project.
-	DNSDelegationAccounts []string // Accounts to grant DNS access to for this project
-	DomainName            string   // DNS Name used for this project
+	Project               string            // Name of the project that needs to be created.
+	AccountID             string            // AWS account ID to administrate the project.
+	DNSDelegationAccounts []string          // Accounts to grant DNS access to for this project.
+	DomainName            string            // DNS Name used for this project.
+	AdditionalTags        map[string]string // AdditionalTags are labels applied to resources under the project.
 }
