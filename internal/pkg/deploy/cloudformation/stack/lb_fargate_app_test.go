@@ -426,7 +426,10 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 			},
 			ImageTag: "manual-bf3678c",
 			AdditionalTags: map[string]string{
-				"owner": "boss",
+				"owner":       "boss",
+				ProjectTagKey: "overrideproject",
+				EnvTagKey:     "overrideenv",
+				AppTagKey:     "overrideapp",
 			},
 		},
 	}
@@ -435,7 +438,7 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	tags := conf.Tags()
 
 	// THEN
-	require.Equal(t, []*cloudformation.Tag{
+	require.ElementsMatch(t, []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String("phonetool"),

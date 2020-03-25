@@ -215,6 +215,7 @@ func TestProjectTags(t *testing.T) {
 			AdditionalTags: map[string]string{
 				"confidentiality": "public",
 				"owner":           "finance",
+				ProjectTagKey:     "overrideproject",
 			},
 		},
 	}

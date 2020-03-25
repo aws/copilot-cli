@@ -110,23 +110,10 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
-	tags := []*cloudformation.Tag{
-		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(e.Project),
-		},
-		{
-			Key:   aws.String(EnvTagKey),
-			Value: aws.String(e.Name),
-		},
-	}
-	for k, v := range e.AdditionalTags {
-		tags = append(tags, &cloudformation.Tag{
-			Key:   aws.String(k),
-			Value: aws.String(v),
-		})
-	}
-	return tags
+	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
+		ProjectTagKey: e.Project,
+		EnvTagKey:     e.Name,
+	})
 }
 
 func (e *EnvStackConfig) dnsDelegationRole() string {

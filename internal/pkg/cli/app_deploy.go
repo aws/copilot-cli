@@ -412,14 +412,13 @@ func (o *appDeployOpts) deployAppStack(appTemplate *bytes.Buffer, addonsURL stri
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
-	tags := map[string]string{
-		stack.ProjectTagKey: o.ProjectName(),
-		stack.EnvTagKey:     o.targetEnvironment.Name,
-		stack.AppTagKey:     o.AppName,
-	}
+	tags := make(map[string]string)
 	for k, v := range o.targetProject.Tags {
 		tags[k] = v
 	}
+	tags[stack.ProjectTagKey] = o.ProjectName()
+	tags[stack.EnvTagKey] = o.targetEnvironment.Name
+	tags[stack.AppTagKey] = o.AppName
 	params := make(map[string]string)
 	params["AddonsTemplateURL"] = addonsURL
 	if err := o.appDeployCfClient.DeployApp(appTemplate.String(), stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags, params); err != nil {

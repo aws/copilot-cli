@@ -185,27 +185,11 @@ func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
 func (c *LBFargateStackConfig) Tags() []*cloudformation.Tag {
-	tags := []*cloudformation.Tag{
-		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(c.Env.Project),
-		},
-		{
-			Key:   aws.String(EnvTagKey),
-			Value: aws.String(c.Env.Name),
-		},
-		{
-			Key:   aws.String(AppTagKey),
-			Value: aws.String(c.App.Name),
-		},
-	}
-	for k, v := range c.AdditionalTags {
-		tags = append(tags, &cloudformation.Tag{
-			Key:   aws.String(k),
-			Value: aws.String(v),
-		})
-	}
-	return tags
+	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{
+		ProjectTagKey: c.Env.Project,
+		EnvTagKey:     c.Env.Name,
+		AppTagKey:     c.App.Name,
+	})
 }
 
 func (c *LBFargateStackConfig) addonsOutputs() ([]addons.Output, error) {
