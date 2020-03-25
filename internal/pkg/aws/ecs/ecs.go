@@ -52,12 +52,17 @@ type ServiceStatus struct {
 type TaskStatus struct {
 	DesiredStatus string
 	ID            string
-	Images        []string
-	ImageDigests  []string
+	Images        []Image
 	LastStatus    string
 	StartedAt     int64
 	StoppedAt     int64
 	StoppedReason string
+}
+
+// Image contains very basic info of a container image.
+type Image struct {
+	ID     string
+	Digest string
 }
 
 // New returns a Service configured against the input session.
@@ -131,7 +136,7 @@ func (e *ECS) Tasks(clusterName, serviceName string) ([]*Task, error) {
 
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
-	taskID, err := taskIDParser(aws.StringValue(t.TaskArn))
+	taskID, err := shortTaskID(aws.StringValue(t.TaskArn))
 	if err != nil {
 		return nil, err
 	}
@@ -143,16 +148,17 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	if t.StoppedReason != nil {
 		stoppedReason = aws.StringValue(t.StoppedReason)
 	}
-	var images, imageDigests []string
+	var images []Image
 	for _, container := range t.Containers {
-		images = append(images, aws.StringValue(container.Image))
-		imageDigests = append(imageDigests, imageDigestParser(aws.StringValue(container.ImageDigest)))
+		images = append(images, Image{
+			ID:     aws.StringValue(container.Image),
+			Digest: shortImageDigest(aws.StringValue(container.ImageDigest)),
+		})
 	}
 	return &TaskStatus{
 		DesiredStatus: aws.StringValue(t.DesiredStatus),
 		ID:            taskID,
 		Images:        images,
-		ImageDigests:  imageDigests,
 		LastStatus:    aws.StringValue(t.LastStatus),
 		StartedAt:     t.StartedAt.Unix(),
 		StoppedAt:     stoppedAt,
@@ -178,10 +184,10 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 	return envs
 }
 
-// taskIDParser parses the task ARN and returns the short task ID.
+// shortTaskID parses the task ARN and returns the short task ID.
 // For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
 // becomes 4082490.
-func taskIDParser(taskArn string) (string, error) {
+func shortTaskID(taskArn string) (string, error) {
 	parsedArn, err := arn.Parse(taskArn)
 	if err != nil {
 		return "", err
@@ -191,9 +197,9 @@ func taskIDParser(taskArn string) (string, error) {
 	return taskID[:shortTaskIDLength], nil
 }
 
-// imageDigestParser returns the short image digest.
+// shortImageDigest returns the short image digest.
 // For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
 // becomes 18f7eb6c.
-func imageDigestParser(imageDigest string) string {
+func shortImageDigest(imageDigest string) string {
 	return strings.TrimPrefix(imageDigest, imageDigestPrefix)[:shortImageDigestLength]
 }

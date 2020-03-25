@@ -409,10 +409,14 @@ func TestTask_TaskStatus(t *testing.T) {
 			wantTaskStatus: &TaskStatus{
 				DesiredStatus: "ACTIVE",
 				ID:            "4082490",
-				Images:        []string{"mockImageArn"},
-				ImageDigests:  []string{"18f7eb6"},
-				LastStatus:    "UNKNOWN",
-				StartedAt:     1136214245,
+				Images: []Image{
+					Image{
+						Digest: "18f7eb6",
+						ID:     "mockImageArn",
+					},
+				},
+				LastStatus: "UNKNOWN",
+				StartedAt:  1136214245,
 			},
 		},
 		"success with a stopped task": {
@@ -432,8 +436,12 @@ func TestTask_TaskStatus(t *testing.T) {
 			wantTaskStatus: &TaskStatus{
 				DesiredStatus: "ACTIVE",
 				ID:            "4082490",
-				Images:        []string{"mockImageArn"},
-				ImageDigests:  []string{"18f7eb6"},
+				Images: []Image{
+					Image{
+						Digest: "18f7eb6",
+						ID:     "mockImageArn",
+					},
+				},
 				LastStatus:    "UNKNOWN",
 				StartedAt:     1136214245,
 				StoppedAt:     1136217845,
