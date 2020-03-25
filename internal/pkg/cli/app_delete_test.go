@@ -264,7 +264,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
+func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -320,7 +320,7 @@ func TestDeleteAppOpts_sourceProjectEnvironments(t *testing.T) {
 				projectService: mockProjectService,
 			}
 
-			got := opts.sourceProjectEnvironments()
+			got := opts.getProjectEnvironments()
 
 			require.Equal(t, test.want, got)
 			require.Equal(t, test.wantOptsEnvList, opts.projectEnvironments)

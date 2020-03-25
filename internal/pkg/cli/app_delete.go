@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -116,7 +116,7 @@ func (o *deleteAppOpts) Ask() error {
 
 // Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
 func (o *deleteAppOpts) Execute() error {
-	if err := o.sourceProjectEnvironments(); err != nil {
+	if err := o.getProjectEnvironments(); err != nil {
 		return err
 	}
 
@@ -192,8 +192,7 @@ func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
 	return names, nil
 }
 
-func (o *deleteAppOpts) sourceProjectEnvironments() error {
-
+func (o *deleteAppOpts) getProjectEnvironments() error {
 	if o.EnvName != "" {
 		env, err := o.targetEnv()
 		if err != nil {
