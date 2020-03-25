@@ -194,3 +194,7 @@ type deployer interface {
 	projectDeployer
 	pipelineDeployer
 }
+
+type domainValidator interface {
+	DomainExists(domainName string) (bool, error)
+}

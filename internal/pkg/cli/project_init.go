@@ -1,13 +1,15 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/route53"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -36,6 +38,7 @@ type initProjectOpts struct {
 
 	identity     identityService
 	projectStore archer.ProjectStore
+	route53Svc   domainValidator
 	ws           wsProjectManager
 	deployer     projectDeployer
 	prompt       prompter
@@ -60,17 +63,26 @@ func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
 		initProjectVars: vars,
 		identity:        identity.New(sess),
 		projectStore:    store,
-		ws:              ws,
-		deployer:        cloudformation.New(sess),
-		prompt:          prompt.New(),
-		prog:            termprogress.NewSpinner(),
+		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
+		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
+		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
+		route53Svc: route53.New(sess),
+		ws:         ws,
+		deployer:   cloudformation.New(sess),
+		prompt:     prompt.New(),
+		prog:       termprogress.NewSpinner(),
 	}, nil
 }
 
 // Validate returns an error if the user's input is invalid.
 func (o *initProjectOpts) Validate() error {
 	if o.ProjectName != "" {
-		if err := validateProjectName(o.ProjectName); err != nil {
+		if err := o.validateProject(o.ProjectName); err != nil {
+			return err
+		}
+	}
+	if o.DomainName != "" {
+		if err := o.validateDomain(o.DomainName); err != nil {
 			return err
 		}
 	}
@@ -79,25 +91,31 @@ func (o *initProjectOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initProjectOpts) Ask() error {
-	// If there's a local project, we'll use that over anything else.
+	// When there's a local project
 	summary, err := o.ws.Summary()
 	if err == nil {
-		msg := fmt.Sprintf(
-			"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project.",
-			color.HighlightResource(summary.ProjectName))
-		if o.ProjectName != "" && o.ProjectName != summary.ProjectName {
-			msg = fmt.Sprintf(
-				"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project instead of %s.",
-				color.HighlightResource(summary.ProjectName),
-				color.HighlightUserInput(o.ProjectName))
+		if o.ProjectName == "" {
+			log.Infoln(fmt.Sprintf(
+				"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project.",
+				color.HighlightResource(summary.ProjectName)))
+			o.ProjectName = summary.ProjectName
+			return nil
 		}
-		log.Infoln(msg)
-		o.ProjectName = summary.ProjectName
-		return nil
+		if o.ProjectName != summary.ProjectName {
+			log.Errorf(`Workspace is already registered with project %s instead of %s.
+			If you'd like to delete the project locally, you can remove the %s directory.
+			If you'd like to delete project and all of its resources, run %s.
+`,
+				summary.ProjectName,
+				o.ProjectName,
+				workspace.ProjectDirectoryName,
+				color.HighlightCode("ecs-preview project delete"))
+			return fmt.Errorf("workspace already registered with %s", summary.ProjectName)
+		}
 	}
 
+	// Flag is set by user.
 	if o.ProjectName != "" {
-		// Flag is set by user.
 		return nil
 	}
 
@@ -128,14 +146,6 @@ func (o *initProjectOpts) Execute() error {
 		return err
 	}
 
-	err = o.projectStore.CreateProject(&archer.Project{
-		AccountID: caller.Account,
-		Name:      o.ProjectName,
-		Domain:    o.DomainName,
-	})
-	if err != nil {
-		return err
-	}
 	err = o.ws.Create(o.ProjectName)
 	if err != nil {
 		return err
@@ -151,6 +161,42 @@ func (o *initProjectOpts) Execute() error {
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(o.ProjectName)))
+
+	return o.projectStore.CreateProject(&archer.Project{
+		AccountID: caller.Account,
+		Name:      o.ProjectName,
+		Domain:    o.DomainName,
+	})
+}
+
+func (o *initProjectOpts) validateProject(projectName string) error {
+	if err := validateProjectName(projectName); err != nil {
+		return err
+	}
+	proj, err := o.projectStore.GetProject(projectName)
+	if err != nil {
+		var noSuchProjectErr *store.ErrNoSuchProject
+		if errors.As(err, &noSuchProjectErr) {
+			return nil
+		}
+		return fmt.Errorf("get project %s: %w", projectName, err)
+	}
+	if proj.Domain != o.DomainName {
+		return fmt.Errorf("project named %s already exists with a different domain name %s", projectName, proj.Domain)
+	}
+
+	return nil
+}
+
+func (o *initProjectOpts) validateDomain(domainName string) error {
+	domainExist, err := o.route53Svc.DomainExists(domainName)
+	if err != nil {
+		return err
+	}
+	if !domainExist {
+		return fmt.Errorf("no hosted zone found for %s", domainName)
+	}
+
 	return nil
 }
 
