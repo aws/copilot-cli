@@ -251,8 +251,8 @@ A project is a collection of containerized applications (or micro-services) that
   /code $ ecs-preview project init test
   Create a new project with an existing domain name in Amazon Route53
   /code $ ecs-preview project init --domain example.com
-  Create a new project with tags
-  /code $ ecs-preview project init --tags department=MyDept,team=MyTeam`,
+  Create a new project with resource tags
+  /code $ ecs-preview project init --resource-tags department=MyDept,team=MyTeam`,
 		Args: reservedArgs,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitProjectOpts(vars)
@@ -281,6 +281,6 @@ A project is a collection of containerized applications (or micro-services) that
 		}),
 	}
 	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.Tags, awsTagsFlag, nil, awsTagsFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.Tags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }
