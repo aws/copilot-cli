@@ -153,6 +153,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		inProjectName string
 		inEnvName     string
+		inProd        bool
 
 		expectProjectGetter func(m *mocks.MockProjectGetter)
 		expectEnvCreator    func(m *mocks.MockEnvironmentCreator)
@@ -391,6 +392,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		"success": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
+			inProd:        true,
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
 				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
@@ -415,6 +417,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						Project:   "phonetool",
 						Name:      "test",
 						AccountID: "1234",
+						Prod:      true,
 						Region:    "mars-1",
 					},
 					Err: nil,
@@ -425,6 +428,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
+					Prod:      false,
 					Project:   "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
@@ -434,6 +438,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Project:   "phonetool",
 					Name:      "test",
 					AccountID: "1234",
+					Prod:      true,
 					Region:    "mars-1",
 				}).Return(nil)
 			},
@@ -582,8 +587,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					EnvName:    tc.inEnvName,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					EnvName:      tc.inEnvName,
+					GlobalOpts:   &GlobalOpts{projectName: tc.inProjectName},
+					IsProduction: tc.inProd,
 				},
 				projectGetter: mockProjectGetter,
 				envCreator:    mockEnvCreator,

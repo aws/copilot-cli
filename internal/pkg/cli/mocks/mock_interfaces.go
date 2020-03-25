@@ -2147,3 +2147,41 @@ func (mr *MockdeployerMockRecorder) GetRegionalProjectResources(project interfac
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalProjectResources", reflect.TypeOf((*Mockdeployer)(nil).GetRegionalProjectResources), project)
 }
+
+// MockdomainValidator is a mock of domainValidator interface
+type MockdomainValidator struct {
+	ctrl     *gomock.Controller
+	recorder *MockdomainValidatorMockRecorder
+}
+
+// MockdomainValidatorMockRecorder is the mock recorder for MockdomainValidator
+type MockdomainValidatorMockRecorder struct {
+	mock *MockdomainValidator
+}
+
+// NewMockdomainValidator creates a new mock instance
+func NewMockdomainValidator(ctrl *gomock.Controller) *MockdomainValidator {
+	mock := &MockdomainValidator{ctrl: ctrl}
+	mock.recorder = &MockdomainValidatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdomainValidator) EXPECT() *MockdomainValidatorMockRecorder {
+	return m.recorder
+}
+
+// DomainExists mocks base method
+func (m *MockdomainValidator) DomainExists(domainName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DomainExists", domainName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DomainExists indicates an expected call of DomainExists
+func (mr *MockdomainValidatorMockRecorder) DomainExists(domainName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainExists", reflect.TypeOf((*MockdomainValidator)(nil).DomainExists), domainName)
+}
