@@ -240,12 +240,7 @@ func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*arche
 
 // BuildProjectInitCommand builds the command for creating a new project.
 func BuildProjectInitCommand() *cobra.Command {
-	vars := initProjectVars{
-		Tags: map[string]string{
-			"firstname": "efe",
-			"lastname":  "karakus",
-		},
-	}
+	vars := initProjectVars{}
 	cmd := &cobra.Command{
 		Use:   "init [name]",
 		Short: "Creates a new empty project.",
@@ -253,7 +248,11 @@ func BuildProjectInitCommand() *cobra.Command {
 A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `
   Create a new project named test
-  /code $ ecs-preview project init test`,
+  /code $ ecs-preview project init test
+  Create a new project with an existing domain name in Amazon Route53
+  /code $ ecs-preview project init --domain example.com
+  Create a new project with tags
+  /code $ ecs-preview project init --tags department=MyDept,team=MyTeam`,
 		Args: reservedArgs,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitProjectOpts(vars)
@@ -282,5 +281,6 @@ A project is a collection of containerized applications (or micro-services) that
 		}),
 	}
 	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.Tags, awsTagsFlag, nil, awsTagsFlagDescription)
 	return cmd
 }

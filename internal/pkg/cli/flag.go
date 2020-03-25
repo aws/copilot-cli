@@ -18,6 +18,7 @@ const (
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	imageTagFlag          = "tag"
+	awsTagsFlag           = "tags"
 	stackOutputDirFlag    = "output-dir"
 	limitFlag             = "limit"
 	followFlag            = "follow"
@@ -66,6 +67,7 @@ const (
 
 	dockerFileFlagDescription     = "Path to the Dockerfile."
 	imageTagFlagDescription       = `Optional. The application's image tag.`
+	awsTagsFlagDescription        = "Optional. Labels to categorize resources."
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
 	limitFlagDescription          = "Optional. The maximum number of log events returned."
