@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package ecs provides a client to make API requests to Amazon Elastic Container Service.
@@ -48,12 +48,12 @@ type ServiceStatus struct {
 	Status       string
 }
 
-// TaskStatus contains the status info of a task
+// TaskStatus contains the status info of a task.
 type TaskStatus struct {
 	DesiredStatus string
 	ID            string
-	Image         string
-	ImageDigest   string
+	Images        []string
+	ImageDigests  []string
 	LastStatus    string
 	StartedAt     int64
 	StoppedAt     int64
@@ -100,9 +100,10 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 // Tasks calls ECS API and returns ECS tasks running in the cluster.
 func (e *ECS) Tasks(clusterName, serviceName string) ([]*Task, error) {
 	var tasks []*Task
+	var err error
 	listTaskResp := &ecs.ListTasksOutput{}
 	for {
-		listTaskResp, err := e.client.ListTasks(&ecs.ListTasksInput{
+		listTaskResp, err = e.client.ListTasks(&ecs.ListTasksInput{
 			Cluster:     aws.String(clusterName),
 			ServiceName: aws.String(serviceName),
 			NextToken:   listTaskResp.NextToken,
@@ -142,12 +143,16 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	if t.StoppedReason != nil {
 		stoppedReason = aws.StringValue(t.StoppedReason)
 	}
+	var images, imageDigests []string
+	for _, container := range t.Containers {
+		images = append(images, aws.StringValue(container.Image))
+		imageDigests = append(imageDigests, imageDigestParser(aws.StringValue(container.ImageDigest)))
+	}
 	return &TaskStatus{
 		DesiredStatus: aws.StringValue(t.DesiredStatus),
 		ID:            taskID,
-		// assume only have one container
-		Image:         aws.StringValue(t.Containers[0].Image),
-		ImageDigest:   imageDigestParser(aws.StringValue(t.Containers[0].ImageDigest)),
+		Images:        images,
+		ImageDigests:  imageDigests,
 		LastStatus:    aws.StringValue(t.LastStatus),
 		StartedAt:     t.StartedAt.Unix(),
 		StoppedAt:     stoppedAt,
@@ -179,7 +184,7 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 func taskIDParser(taskArn string) (string, error) {
 	parsedArn, err := arn.Parse(taskArn)
 	if err != nil {
-		return "", fmt.Errorf("parse task ARN %s: %w", taskArn, err)
+		return "", err
 	}
 	resources := strings.Split(parsedArn.Resource, "/")
 	taskID := resources[len(resources)-1]
