@@ -9,7 +9,11 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	awsSession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -324,6 +328,189 @@ func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 
 			require.Equal(t, test.want, got)
 			require.Equal(t, test.wantOptsEnvList, opts.projectEnvironments)
+		})
+	}
+}
+
+type deleteAppMocks struct {
+	projectService *climocks.MockprojectService
+	secretsmanager *awsmocks.MockSecretsManager
+	sessProvider   *session.Provider
+	deployer       *climocks.MockappDeployer
+	ws             *climocks.MockwsAppDeleter
+	spinner        *climocks.Mockprogress
+	appRemover     *climocks.MockappRemover
+	imageRemover   *climocks.MockimageRemover
+}
+
+func TestDeleteAppOpts_Execute(t *testing.T) {
+	mockEnvName := "test"
+	mockAppName := "backend"
+	mockProjectName := "badgoose"
+	mockEnv := &archer.Environment{
+		Project:        mockProjectName,
+		Name:           mockEnvName,
+		ManagerRoleARN: "some-arn",
+		Region:         "us-west-2",
+	}
+	mockEnvs := []*archer.Environment{mockEnv}
+	mockProject := &archer.Project{
+		Name: mockProjectName,
+	}
+
+	mockRepo := fmt.Sprintf("%s/%s", mockProjectName, mockAppName)
+	testError := errors.New("some error")
+
+	tests := map[string]struct {
+		inProjectName string
+		inAppName     string
+		inEnvName     string
+
+		setupMocks func(mocks deleteAppMocks)
+
+		wantedError error
+	}{
+		"happy path with no environment passed in as flag": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			setupMocks: func(mocks deleteAppMocks) {
+				gomock.InOrder(
+					// getProjectEnvironments
+					mocks.projectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil),
+					// deleteStacks
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
+					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
+					// emptyECRRepos
+					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
+
+					// removeAppProjectResources
+					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
+					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
+
+					// deleteSSMParam
+					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+
+					// deleteWorkspaceFile
+					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+				)
+			},
+			wantedError: nil,
+		},
+		"happy path with environment passed in as flag": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			inEnvName:     mockEnvName,
+			setupMocks: func(mocks deleteAppMocks) {
+				gomock.InOrder(
+					// getProjectEnvironments
+					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
+					// deleteStacks
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
+					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
+					// emptyECRRepos
+					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
+
+					// removeAppProjectResources
+					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
+					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
+
+					// deleteSSMParam
+					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+
+					// deleteWorkspaceFile
+					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+				)
+			},
+			wantedError: nil,
+		},
+		"errors when deleting stack": {
+			inProjectName: mockProjectName,
+			inAppName:     mockAppName,
+			inEnvName:     mockEnvName,
+			setupMocks: func(mocks deleteAppMocks) {
+				gomock.InOrder(
+					// getProjectEnvironments
+					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
+					// deleteStacks
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
+					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(testError),
+					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtDeleteAppFailed, mockAppName, mockEnvName, testError)),
+				)
+			},
+			wantedError: testError,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			mockProjectService := climocks.NewMockprojectService(ctrl)
+			mockSecretsManager := awsmocks.NewMockSecretsManager(ctrl)
+			mockWorkspace := climocks.NewMockwsAppDeleter(ctrl)
+			mockSession := session.NewProvider()
+			mockAppDeployer := climocks.NewMockappDeployer(ctrl)
+			mockAppRemover := climocks.NewMockappRemover(ctrl)
+			mockSpinner := climocks.NewMockprogress(ctrl)
+			mockImageRemover := climocks.NewMockimageRemover(ctrl)
+
+			oldGetAppDeployer := getAppDeployer
+			defer func() { getAppDeployer = oldGetAppDeployer }()
+			getAppDeployer = func(session *awsSession.Session) appDeployer {
+				return mockAppDeployer
+			}
+
+			oldGetImageRemover := getImageRemover
+			defer func() { getImageRemover = oldGetImageRemover }()
+			getImageRemover = func(session *awsSession.Session) imageRemover {
+				return mockImageRemover
+			}
+
+			mocks := deleteAppMocks{
+				projectService: mockProjectService,
+				secretsmanager: mockSecretsManager,
+				ws:             mockWorkspace,
+				sessProvider:   mockSession,
+				deployer:       mockAppDeployer,
+				spinner:        mockSpinner,
+				appRemover:     mockAppRemover,
+				imageRemover:   mockImageRemover,
+			}
+
+			test.setupMocks(mocks)
+
+			opts := deleteAppOpts{
+				deleteAppVars: deleteAppVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: test.inProjectName,
+					},
+					AppName: test.inAppName,
+					EnvName: test.inEnvName,
+				},
+				projectService:   mockProjectService,
+				workspaceService: mockWorkspace,
+				sessProvider:     mockSession,
+				spinner:          mockSpinner,
+				appRemover:       mockAppRemover,
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if test.wantedError != nil {
+				require.EqualError(t, err, test.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+			}
 		})
 	}
 }

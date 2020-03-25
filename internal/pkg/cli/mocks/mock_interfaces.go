@@ -1626,6 +1626,117 @@ func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(projectName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), projectName, envName)
 }
 
+// MockappDeployer is a mock of appDeployer interface
+type MockappDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockappDeployerMockRecorder
+}
+
+// MockappDeployerMockRecorder is the mock recorder for MockappDeployer
+type MockappDeployerMockRecorder struct {
+	mock *MockappDeployer
+}
+
+// NewMockappDeployer creates a new mock instance
+func NewMockappDeployer(ctrl *gomock.Controller) *MockappDeployer {
+	mock := &MockappDeployer{ctrl: ctrl}
+	mock.recorder = &MockappDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappDeployer) EXPECT() *MockappDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeleteApp mocks base method
+func (m *MockappDeployer) DeleteApp(in deploy.DeleteAppInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApp", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApp indicates an expected call of DeleteApp
+func (mr *MockappDeployerMockRecorder) DeleteApp(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockappDeployer)(nil).DeleteApp), in)
+}
+
+// MockappRemover is a mock of appRemover interface
+type MockappRemover struct {
+	ctrl     *gomock.Controller
+	recorder *MockappRemoverMockRecorder
+}
+
+// MockappRemoverMockRecorder is the mock recorder for MockappRemover
+type MockappRemoverMockRecorder struct {
+	mock *MockappRemover
+}
+
+// NewMockappRemover creates a new mock instance
+func NewMockappRemover(ctrl *gomock.Controller) *MockappRemover {
+	mock := &MockappRemover{ctrl: ctrl}
+	mock.recorder = &MockappRemoverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappRemover) EXPECT() *MockappRemoverMockRecorder {
+	return m.recorder
+}
+
+// RemoveAppFromProject mocks base method
+func (m *MockappRemover) RemoveAppFromProject(project *archer.Project, appName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveAppFromProject", project, appName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveAppFromProject indicates an expected call of RemoveAppFromProject
+func (mr *MockappRemoverMockRecorder) RemoveAppFromProject(project, appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAppFromProject", reflect.TypeOf((*MockappRemover)(nil).RemoveAppFromProject), project, appName)
+}
+
+// MockimageRemover is a mock of imageRemover interface
+type MockimageRemover struct {
+	ctrl     *gomock.Controller
+	recorder *MockimageRemoverMockRecorder
+}
+
+// MockimageRemoverMockRecorder is the mock recorder for MockimageRemover
+type MockimageRemoverMockRecorder struct {
+	mock *MockimageRemover
+}
+
+// NewMockimageRemover creates a new mock instance
+func NewMockimageRemover(ctrl *gomock.Controller) *MockimageRemover {
+	mock := &MockimageRemover{ctrl: ctrl}
+	mock.recorder = &MockimageRemoverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockimageRemover) EXPECT() *MockimageRemoverMockRecorder {
+	return m.recorder
+}
+
+// ClearRepository mocks base method
+func (m *MockimageRemover) ClearRepository(repoName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClearRepository", repoName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ClearRepository indicates an expected call of ClearRepository
+func (mr *MockimageRemoverMockRecorder) ClearRepository(repoName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRepository", reflect.TypeOf((*MockimageRemover)(nil).ClearRepository), repoName)
+}
+
 // MockpipelineDeployer is a mock of pipelineDeployer interface
 type MockpipelineDeployer struct {
 	ctrl     *gomock.Controller
