@@ -131,12 +131,9 @@ func (c *ProjectStackConfig) Parameters() []*cloudformation.Parameter {
 
 // Tags returns the tags that should be applied to the project CloudFormation stack.
 func (c *ProjectStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
-		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(c.Project),
-		},
-	}
+	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{
+		ProjectTagKey: c.Project,
+	})
 }
 
 // StackName returns the name of the CloudFormation stack (based on the project name).

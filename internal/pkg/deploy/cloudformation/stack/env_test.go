@@ -205,18 +205,28 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 }
 
 func TestEnvTags(t *testing.T) {
-	deploymentInput := mockDeployEnvironmentInput()
 	env := &EnvStackConfig{
-		CreateEnvironmentInput: deploymentInput,
+		CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
+			Name:    "env",
+			Project: "project",
+			AdditionalTags: map[string]string{
+				"owner":       "boss",
+				ProjectTagKey: "overrideproject",
+			},
+		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(deploymentInput.Project),
+			Value: aws.String("project"), // Ignore user's overrides.
 		},
 		{
 			Key:   aws.String(EnvTagKey),
-			Value: aws.String(deploymentInput.Name),
+			Value: aws.String("env"),
+		},
+		{
+			Key:   aws.String("owner"),
+			Value: aws.String("boss"),
 		},
 	}
 	require.ElementsMatch(t, expectedTags, env.Tags())

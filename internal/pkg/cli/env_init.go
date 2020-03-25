@@ -184,6 +184,7 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		ProjectDNSName:           project.Domain,
+		AdditionalTags:           project.Tags,
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.EnvName)))

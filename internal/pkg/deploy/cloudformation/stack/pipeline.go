@@ -5,7 +5,6 @@ package stack
 
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -42,10 +41,7 @@ func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {
 }
 
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
-		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(p.ProjectName),
-		},
-	}
+	return mergeAndFlattenTags(p.AdditionalTags, map[string]string{
+		ProjectTagKey: p.ProjectName,
+	})
 }

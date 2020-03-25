@@ -286,10 +286,13 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					}, nil)
 				mockProjectStore.
 					EXPECT().
-					CreateProject(gomock.Any()).
-					Do(func(project *archer.Project) {
-						require.Equal(t, project.Name, "project")
-						require.Equal(t, project.Domain, "amazon.com")
+					CreateProject(&archer.Project{
+						AccountID: "12345",
+						Name:      "project",
+						Domain:    "amazon.com",
+						Tags: map[string]string{
+							"owner": "boss",
+						},
 					})
 				mockWorkspace.
 					EXPECT().
@@ -300,6 +303,9 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 						Project:    "project",
 						AccountID:  "12345",
 						DomainName: "amazon.com",
+						AdditionalTags: map[string]string{
+							"owner": "boss",
+						},
 					}).Return(nil)
 				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
@@ -319,8 +325,6 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					EXPECT().
 					Create(gomock.Eq("project")).
 					Return(mockError)
-				mockProgress.EXPECT().Start(gomock.Any()).Times(0)
-				mockDeployer.EXPECT().DeployProject(gomock.Any()).Times(0)
 			},
 		},
 		"with an error while deploying project": {
@@ -339,10 +343,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(&deploy.CreateProjectInput{
-						Project:   "project",
-						AccountID: "12345",
-					}).Return(mockError)
+					DeployProject(gomock.Any()).Return(mockError)
 				mockProgress.EXPECT().Stop(log.Serrorf(fmtDeployProjectFailed, "project"))
 			},
 		},
@@ -366,10 +367,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(&deploy.CreateProjectInput{
-						Project:   "project",
-						AccountID: "12345",
-					}).Return(nil)
+					DeployProject(gomock.Any()).Return(nil)
 				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
 		},
@@ -389,6 +387,9 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 				initProjectVars: initProjectVars{
 					ProjectName: "project",
 					DomainName:  tc.inDomainName,
+					Tags: map[string]string{
+						"owner": "boss",
+					},
 				},
 				projectStore: mockProjectStore,
 				identity:     mockIdentityService,

@@ -61,6 +61,7 @@ type appDeployOpts struct {
 
 	// cached variables
 	targetEnvironment *archer.Environment
+	targetProject     *archer.Project
 }
 
 type cfnTemplates struct {
@@ -130,6 +131,12 @@ func (o *appDeployOpts) Execute() error {
 		return err
 	}
 	o.targetEnvironment = env
+
+	proj, err := o.projectService.GetProject(o.ProjectName())
+	if err != nil {
+		return err
+	}
+	o.targetProject = proj
 
 	if err := o.configureClients(); err != nil {
 		return err
@@ -379,11 +386,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket(addonsTemplate *bytes.Buffe
 	if addonsTemplate.String() == "" {
 		return "", nil
 	}
-	proj, err := o.projectService.GetProject(o.ProjectName())
-	if err != nil {
-		return "", fmt.Errorf("get project: %w", err)
-	}
-	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(proj, o.targetEnvironment.Region)
+	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
 	if err != nil {
 		return "", fmt.Errorf("get project resources: %w", err)
 	}
@@ -409,11 +412,13 @@ func (o *appDeployOpts) deployAppStack(appTemplate *bytes.Buffer, addonsURL stri
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
-	tags := map[string]string{
-		stack.ProjectTagKey: o.ProjectName(),
-		stack.EnvTagKey:     o.targetEnvironment.Name,
-		stack.AppTagKey:     o.AppName,
+	tags := make(map[string]string)
+	for k, v := range o.targetProject.Tags {
+		tags[k] = v
 	}
+	tags[stack.ProjectTagKey] = o.ProjectName()
+	tags[stack.EnvTagKey] = o.targetEnvironment.Name
+	tags[stack.AppTagKey] = o.AppName
 	params := make(map[string]string)
 	params["AddonsTemplateURL"] = addonsURL
 	if err := o.appDeployCfClient.DeployApp(appTemplate.String(), stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags, params); err != nil {

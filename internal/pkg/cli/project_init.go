@@ -31,6 +31,7 @@ const (
 type initProjectVars struct {
 	ProjectName string
 	DomainName  string
+	Tags        map[string]string
 }
 
 type initProjectOpts struct {
@@ -152,9 +153,10 @@ func (o *initProjectOpts) Execute() error {
 	}
 	o.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(o.ProjectName)))
 	err = o.deployer.DeployProject(&deploy.CreateProjectInput{
-		Project:    o.ProjectName,
-		AccountID:  caller.Account,
-		DomainName: o.DomainName,
+		Project:        o.ProjectName,
+		AccountID:      caller.Account,
+		DomainName:     o.DomainName,
+		AdditionalTags: o.Tags,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(o.ProjectName)))
@@ -166,6 +168,7 @@ func (o *initProjectOpts) Execute() error {
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
+		Tags:      o.Tags,
 	})
 }
 
@@ -245,7 +248,11 @@ func BuildProjectInitCommand() *cobra.Command {
 A project is a collection of containerized applications (or micro-services) that operate together.`,
 		Example: `
   Create a new project named test
-  /code $ ecs-preview project init test`,
+  /code $ ecs-preview project init test
+  Create a new project with an existing domain name in Amazon Route53
+  /code $ ecs-preview project init --domain example.com
+  Create a new project with resource tags
+  /code $ ecs-preview project init --resource-tags department=MyDept,team=MyTeam`,
 		Args: reservedArgs,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitProjectOpts(vars)
@@ -274,5 +281,6 @@ A project is a collection of containerized applications (or micro-services) that
 		}),
 	}
 	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.Tags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }

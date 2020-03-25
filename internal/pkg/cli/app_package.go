@@ -281,10 +281,11 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	case *manifest.LBFargateManifest:
 		appLBFargateManifest := mft.(*manifest.LBFargateManifest)
 		createLBAppInput := &deploy.CreateLBFargateAppInput{
-			App:          appLBFargateManifest,
-			Env:          env,
-			ImageRepoURL: repoURL,
-			ImageTag:     o.Tag,
+			App:            appLBFargateManifest,
+			Env:            env,
+			ImageRepoURL:   repoURL,
+			ImageTag:       o.Tag,
+			AdditionalTags: proj.Tags,
 		}
 
 		appStack, err := initLBFargateStack(createLBAppInput, proj.RequiresDNSDelegation())

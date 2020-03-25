@@ -251,10 +251,10 @@ func TestStore_CreateProject(t *testing.T) {
 		wantedErr        error
 	}{
 		"with no existing project": {
-			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com"},
+			inProject: &archer.Project{Name: "phonetool", AccountID: "1234", Domain: "phonetool.com", Tags: map[string]string{"owner": "boss"}},
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
 				require.Equal(t, fmt.Sprintf(fmtProjectPath, "phonetool"), *param.Name)
-				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","version":"%s"}`, schemaVersion), *param.Value)
+				require.Equal(t, fmt.Sprintf(`{"name":"phonetool","account":"1234","domain":"phonetool.com","version":"%s","tags":{"owner":"boss"}}`, schemaVersion), *param.Value)
 
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
