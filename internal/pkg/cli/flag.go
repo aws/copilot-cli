@@ -65,9 +65,10 @@ const (
 	yesFlagDescription     = "Skips confirmation prompt."
 	jsonFlagDescription    = "Optional. Outputs in JSON format."
 
-	dockerFileFlagDescription     = "Path to the Dockerfile."
-	imageTagFlagDescription       = `Optional. The application's image tag.`
-	awsTagsFlagDescription        = "Optional. Labels to categorize resources."
+	dockerFileFlagDescription = "Path to the Dockerfile."
+	imageTagFlagDescription   = `Optional. The application's image tag.`
+	awsTagsFlagDescription    = `Optional. Labels with a key and value separated with commas.
+Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
 	limitFlagDescription          = "Optional. The maximum number of log events returned."
