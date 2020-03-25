@@ -86,8 +86,8 @@ func TestService_TaskDefinition(t *testing.T) {
 			mockECSClient := mocks.NewMockecsClient(ctrl)
 			tc.mockECSClient(mockECSClient)
 
-			service := Service{
-				ecs: mockECSClient,
+			service := ECS{
+				client: mockECSClient,
 			}
 
 			gotTaskDef, gotErr := service.TaskDefinition(tc.taskDefinitionName)
