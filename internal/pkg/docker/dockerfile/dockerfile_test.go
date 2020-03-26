@@ -1,7 +1,7 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package docker
+package dockerfile
 
 import (
 	"bufio"
@@ -16,12 +16,12 @@ func TestParseDockerfile(t *testing.T) {
 	testCases := map[string]struct {
 		mockDockerfile string
 		err            error
-		wantedConfig   DockerfileConfig
+		wantedConfig   Config
 	}{
 		"correctly parses directly exposed port": {
 			mockDockerfile: `EXPOSE 5000`,
 			err:            nil,
-			wantedConfig: DockerfileConfig{
+			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
 						Port:      5000,
@@ -34,7 +34,7 @@ func TestParseDockerfile(t *testing.T) {
 		"correctly parses exposed port and protocol": {
 			mockDockerfile: `EXPOSE 5000/tcp`,
 			err:            nil,
-			wantedConfig: DockerfileConfig{
+			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
 						Port:      5000,
@@ -47,7 +47,7 @@ func TestParseDockerfile(t *testing.T) {
 		"multiple ports with one expose line": {
 			mockDockerfile: `EXPOSE 5000/tcp 8080/tcp 6000`,
 			err:            nil,
-			wantedConfig: DockerfileConfig{
+			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
 						Port:      5000,
@@ -74,7 +74,7 @@ func TestParseDockerfile(t *testing.T) {
 			methods := getLineParseMethods()
 			r := strings.NewReader(tc.mockDockerfile)
 			scanner := bufio.NewScanner(r)
-			got, err := parseDockerfileFromScanner(scanner, methods)
+			got, err := parseFromScanner(scanner, methods)
 
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
@@ -136,9 +136,9 @@ EXPOSE 80`),
 		t.Run(name, func(t *testing.T) {
 			fs := afero.Afero{Fs: afero.NewMemMapFs()}
 			err := fs.WriteFile("./Dockerfile", tc.mockDockerfile, 0644)
-			df := NewDockerfileConfig(fs, "./Dockerfile")
+			df := NewConfig(fs, "./Dockerfile")
 
-			err = df.parseDockerfile()
+			err = df.parse()
 
 			require.NoError(t, err)
 

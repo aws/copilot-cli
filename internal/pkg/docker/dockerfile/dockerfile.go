@@ -1,7 +1,7 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package docker
+package dockerfile
 
 import (
 	"bufio"
@@ -30,7 +30,7 @@ type PortConfig struct {
 	RawString string
 }
 
-type DockerfileConfig struct {
+type Config struct {
 	ExposedPorts []PortConfig
 	parsed       bool
 	path         string
@@ -38,17 +38,17 @@ type DockerfileConfig struct {
 	fs afero.Fs
 }
 
-func NewDockerfileConfig(fs afero.Fs, path string) *DockerfileConfig {
-	return &DockerfileConfig{
+func NewConfig(fs afero.Fs, path string) *Config {
+	return &Config{
 		fs:     fs,
 		path:   path,
 		parsed: false,
 	}
 }
 
-func (df *DockerfileConfig) GetExposedPorts() []uint16 {
+func (df *Config) GetExposedPorts() []uint16 {
 	if !df.parsed {
-		df.parseDockerfile()
+		df.parse()
 	}
 
 	ports := []uint16{}
@@ -60,7 +60,7 @@ func (df *DockerfileConfig) GetExposedPorts() []uint16 {
 
 // ParseDockerfile takes a Dockerfile and struct of methods and returns a json representation
 // of all lines matching any method passed in
-func (df *DockerfileConfig) parseDockerfile() error {
+func (df *Config) parse() error {
 	file, err := df.fs.Open(df.path)
 	if err != nil {
 		return fmt.Errorf("read dockerfile: %w", err)
@@ -69,7 +69,7 @@ func (df *DockerfileConfig) parseDockerfile() error {
 
 	scanner := bufio.NewScanner(file)
 	methods := getLineParseMethods()
-	parsedDockerfile, err := parseDockerfileFromScanner(scanner, methods)
+	parsedDockerfile, err := parseFromScanner(scanner, methods)
 	if err != nil {
 		return fmt.Errorf("parse dockerfile: %w", err)
 	}
@@ -79,9 +79,9 @@ func (df *DockerfileConfig) parseDockerfile() error {
 	return nil
 }
 
-func parseDockerfileFromScanner(scanner *bufio.Scanner, methods lineParseMethods) (DockerfileConfig, error) {
+func parseFromScanner(scanner *bufio.Scanner, methods lineParseMethods) (Config, error) {
 	var line = ""
-	var df DockerfileConfig
+	var df Config
 	var currentPorts []PortConfig
 	for scanner.Scan() {
 		line = scanner.Text()
@@ -123,7 +123,7 @@ func parseExpose(line string) []PortConfig {
 	// TODO implement arg parser regex
 	if len(matches) == 0 {
 		return []PortConfig{
-			PortConfig{
+			{
 				RawString: line,
 			},
 		}

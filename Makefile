@@ -139,8 +139,8 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/s3/mocks/mock_s3.go -source=./internal/pkg/aws/s3/s3.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/aws/cloudformation/interfaces.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addons/mocks/mock_addons.go -source=./internal/pkg/addons/addons.go
-	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/build/docker/docker.go -destination=./internal/pkg/build/docker/mocks/mock_docker.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/build/docker/mocks/mock_dockerfile.go -source=./internal/pkg/build/docker/dockerfile.go
+	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/docker/docker.go -destination=./internal/pkg/docker/mocks/mock_docker.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/docker/dockerfile/mocks/mock_dockerfile.go -source=./internal/pkg/docker/dockerfile/dockerfile.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/store/mocks/mock_store.go -source=./internal/pkg/store/store.go
