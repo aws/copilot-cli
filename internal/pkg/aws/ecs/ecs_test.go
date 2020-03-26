@@ -43,13 +43,13 @@ func TestECS_TaskDefinition(t *testing.T) {
 				}).Return(&ecs.DescribeTaskDefinitionOutput{
 					TaskDefinition: &ecs.TaskDefinition{
 						ContainerDefinitions: []*ecs.ContainerDefinition{
-							&ecs.ContainerDefinition{
+							{
 								Environment: []*ecs.KeyValuePair{
-									&ecs.KeyValuePair{
+									{
 										Name:  aws.String("ECS_CLI_APP_NAME"),
 										Value: aws.String("my-app"),
 									},
-									&ecs.KeyValuePair{
+									{
 										Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
 										Value: aws.String("prod"),
 									},
@@ -61,13 +61,13 @@ func TestECS_TaskDefinition(t *testing.T) {
 			},
 			wantTaskDef: &TaskDefinition{
 				ContainerDefinitions: []*ecs.ContainerDefinition{
-					&ecs.ContainerDefinition{
+					{
 						Environment: []*ecs.KeyValuePair{
-							&ecs.KeyValuePair{
+							{
 								Name:  aws.String("ECS_CLI_APP_NAME"),
 								Value: aws.String("my-app"),
 							},
-							&ecs.KeyValuePair{
+							{
 								Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
 								Value: aws.String("prod"),
 							},
@@ -121,7 +121,7 @@ func TestECS_Service(t *testing.T) {
 					Services: aws.StringSlice([]string{"mockService"}),
 				}).Return(&ecs.DescribeServicesOutput{
 					Services: []*ecs.Service{
-						&ecs.Service{
+						{
 							ServiceName: aws.String("mockService"),
 						},
 					},
@@ -151,7 +151,7 @@ func TestECS_Service(t *testing.T) {
 					Services: aws.StringSlice([]string{"mockService"}),
 				}).Return(&ecs.DescribeServicesOutput{
 					Services: []*ecs.Service{
-						&ecs.Service{
+						{
 							ServiceName: aws.String("badMockService"),
 						},
 					},
@@ -240,14 +240,14 @@ func TestECS_Tasks(t *testing.T) {
 					Tasks:   aws.StringSlice([]string{"mockTaskArn"}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
-						&ecs.Task{
+						{
 							TaskArn: aws.String("mockTaskArn"),
 						},
 					},
 				}, nil)
 			},
 			wantTasks: []*Task{
-				&Task{
+				{
 					TaskArn: aws.String("mockTaskArn"),
 				},
 			},
@@ -268,7 +268,7 @@ func TestECS_Tasks(t *testing.T) {
 					Tasks:   aws.StringSlice([]string{"mockTaskArn1"}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
-						&ecs.Task{
+						{
 							TaskArn: aws.String("mockTaskArn1"),
 						},
 					},
@@ -286,17 +286,17 @@ func TestECS_Tasks(t *testing.T) {
 					Tasks:   aws.StringSlice([]string{"mockTaskArn2"}),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
-						&ecs.Task{
+						{
 							TaskArn: aws.String("mockTaskArn2"),
 						},
 					},
 				}, nil)
 			},
 			wantTasks: []*Task{
-				&Task{
+				{
 					TaskArn: aws.String("mockTaskArn1"),
 				},
-				&Task{
+				{
 					TaskArn: aws.String("mockTaskArn2"),
 				},
 			},
@@ -336,13 +336,13 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 	}{
 		"should return wrapped error given error": {
 			inContainers: []*ecs.ContainerDefinition{
-				&ecs.ContainerDefinition{
+				{
 					Environment: []*ecs.KeyValuePair{
-						&ecs.KeyValuePair{
+						{
 							Name:  aws.String("ECS_CLI_APP_NAME"),
 							Value: aws.String("my-app"),
 						},
-						&ecs.KeyValuePair{
+						{
 							Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
 							Value: aws.String("prod"),
 						},
@@ -397,7 +397,7 @@ func TestTask_TaskStatus(t *testing.T) {
 		"success with a running task": {
 			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
 			containers: []*ecs.Container{
-				&ecs.Container{
+				{
 					Image:       aws.String("mockImageArn"),
 					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
 				},
@@ -410,7 +410,7 @@ func TestTask_TaskStatus(t *testing.T) {
 				DesiredStatus: "ACTIVE",
 				ID:            "4082490",
 				Images: []Image{
-					Image{
+					{
 						Digest: "18f7eb6",
 						ID:     "mockImageArn",
 					},
@@ -422,7 +422,7 @@ func TestTask_TaskStatus(t *testing.T) {
 		"success with a stopped task": {
 			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
 			containers: []*ecs.Container{
-				&ecs.Container{
+				{
 					Image:       aws.String("mockImageArn"),
 					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
 				},
@@ -437,7 +437,7 @@ func TestTask_TaskStatus(t *testing.T) {
 				DesiredStatus: "ACTIVE",
 				ID:            "4082490",
 				Images: []Image{
-					Image{
+					{
 						Digest: "18f7eb6",
 						ID:     "mockImageArn",
 					},
