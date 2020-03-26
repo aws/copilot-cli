@@ -316,7 +316,7 @@ func TestECS_Tasks(t *testing.T) {
 				client: mockECSClient,
 			}
 
-			gotTasks, gotErr := service.Tasks(tc.clusterName, tc.serviceName)
+			gotTasks, gotErr := service.ServiceTasks(tc.clusterName, tc.serviceName)
 
 			if gotErr != nil {
 				require.EqualError(t, tc.wantErr, gotErr.Error())

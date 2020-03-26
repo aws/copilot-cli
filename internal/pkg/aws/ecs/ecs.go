@@ -102,8 +102,8 @@ func (e *ECS) Service(clusterName, serviceName string) (*Service, error) {
 	return nil, fmt.Errorf("cannot find service %s", serviceName)
 }
 
-// Tasks calls ECS API and returns ECS tasks running in the cluster.
-func (e *ECS) Tasks(clusterName, serviceName string) ([]*Task, error) {
+// ServiceTasks calls ECS API and returns ECS tasks running in the cluster.
+func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 	var tasks []*Task
 	var err error
 	listTaskResp := &ecs.ListTasksOutput{}
@@ -136,7 +136,7 @@ func (e *ECS) Tasks(clusterName, serviceName string) ([]*Task, error) {
 
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
-	taskID, err := shortTaskID(aws.StringValue(t.TaskArn))
+	taskID, err := t.shortTaskID(aws.StringValue(t.TaskArn))
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	for _, container := range t.Containers {
 		images = append(images, Image{
 			ID:     aws.StringValue(container.Image),
-			Digest: shortImageDigest(aws.StringValue(container.ImageDigest)),
+			Digest: t.shortImageDigest(aws.StringValue(container.ImageDigest)),
 		})
 	}
 	return &TaskStatus{
@@ -164,6 +164,26 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
+}
+
+// shortTaskID parses the task ARN and returns the short task ID.
+// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
+// becomes 4082490.
+func (t *Task) shortTaskID(taskArn string) (string, error) {
+	parsedArn, err := arn.Parse(taskArn)
+	if err != nil {
+		return "", err
+	}
+	resources := strings.Split(parsedArn.Resource, "/")
+	taskID := resources[len(resources)-1]
+	return taskID[:shortTaskIDLength], nil
+}
+
+// shortImageDigest returns the short image digest.
+// For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
+// becomes 18f7eb6c.
+func (t *Task) shortImageDigest(imageDigest string) string {
+	return strings.TrimPrefix(imageDigest, imageDigestPrefix)[:shortImageDigestLength]
 }
 
 // ServiceStatus returns the status of the running service.
@@ -182,24 +202,4 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 		envs[aws.StringValue(env.Name)] = aws.StringValue(env.Value)
 	}
 	return envs
-}
-
-// shortTaskID parses the task ARN and returns the short task ID.
-// For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
-// becomes 4082490.
-func shortTaskID(taskArn string) (string, error) {
-	parsedArn, err := arn.Parse(taskArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	taskID := resources[len(resources)-1]
-	return taskID[:shortTaskIDLength], nil
-}
-
-// shortImageDigest returns the short image digest.
-// For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
-// becomes 18f7eb6c.
-func shortImageDigest(imageDigest string) string {
-	return strings.TrimPrefix(imageDigest, imageDigestPrefix)[:shortImageDigestLength]
 }
