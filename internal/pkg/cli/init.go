@@ -118,6 +118,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		projGetter:   ssm,
 		projDeployer: deployer,
 		prog:         spin,
+		setupParser: func(o *initAppOpts) {
+			o.df = docker.NewDockerfileConfig(o.fs, o.DockerfilePath)
+		},
 	}
 	initEnv := &initEnvOpts{
 		initEnvVars: initEnvVars{

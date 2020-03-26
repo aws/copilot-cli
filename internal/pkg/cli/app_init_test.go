@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
+	dockermocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -105,6 +106,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 		mockFileSystem func(mockFS afero.Fs)
 		mockPrompt     func(m *climocks.Mockprompter)
+		mockDockerfile func(m *dockermocks.MockDockerfile)
 
 		wantedErr error
 	}{
@@ -229,8 +231,11 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultAppPortString, nil)
+			},
+			mockDockerfile: func(m *dockermocks.MockDockerfile) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{wantedAppPort})
 			},
 			wantedErr: nil,
 		},
@@ -242,7 +247,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get port: some error"),
@@ -255,7 +260,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmtAppInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 			},
 			wantedErr: fmt.Errorf("get port: some error"),
@@ -279,7 +284,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 						prompt: mockPrompt,
 					},
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
+				setupParser: func(o *initAppOpts) {},
+				df:          &tc.mockDockerfile,
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)

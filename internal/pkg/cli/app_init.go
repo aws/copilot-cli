@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -35,8 +36,8 @@ Deployed resources (such as your service, logs) will contain this app's name and
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 
-	fmtAppInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
-	fmtAppInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
+	appInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
+	appInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
@@ -44,6 +45,13 @@ const (
 	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
+)
+
+const (
+	fmtParsePortFromDockerfileStart        = "Parsing dockerfile at path %s for application %s..."
+	parsePortFromDockerfileFailedTooMany   = "It looks like your Dockerfile exposes more than one port."
+	fmtParsePortFromDockerfileFailedNoPort = "Couldn't find an exposed port in dockerfile for application %s."
+	fmtParsePortFromDockerfileComplete     = "It looks like your Dockerfile exposes port %d. We'll use that to route traffic to your container from your load balancer."
 )
 
 const (
@@ -68,12 +76,20 @@ type initAppOpts struct {
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
 	prog         progress
+	df           docker.Dockerfile
 
 	// Caches variables
 	proj *archer.Project
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	// sets up Dockerfile parser using fs and input path
+	setupParser func(*initAppOpts)
+}
+
+func initDockerfileFsFromOpts(o *initAppOpts) {
+	o.df = docker.NewDockerfileConfig(o.fs, o.DockerfilePath)
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -102,6 +118,8 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		ws:           ws,
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
+
+		setupParser: initDockerfileFsFromOpts,
 	}, nil
 }
 
@@ -299,15 +317,36 @@ func (o *initAppOpts) askDockerfile() error {
 }
 
 func (o *initAppOpts) askAppPort() error {
+	// Use flag before anything else
 	if o.AppPort != 0 {
 		return nil
 	}
 
+	o.prog.Start(fmt.Sprintf(fmtParsePortFromDockerfileStart, o.DockerfilePath, o.AppName))
+
+	o.setupParser(o)
+	ports := o.df.GetExposedPorts()
+
+	var defaultPort = defaultAppPortString
+	switch len(ports) {
+	case 0:
+		o.prog.Stop(fmt.Sprintf(fmtParsePortFromDockerfileFailedNoPort, o.AppName))
+	case 1:
+		o.AppPort = ports[0]
+		o.prog.Stop(fmt.Sprintf(fmtParsePortFromDockerfileComplete, o.AppPort))
+	default:
+		defaultPort = strconv.Itoa(int(ports[0]))
+		o.prog.Stop(parsePortFromDockerfileFailedTooMany)
+	}
+
+	if o.AppPort != 0 {
+		return nil
+	}
 	port, err := o.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppPortPrompt),
-		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
+		fmt.Sprintf(appInitAppPortPrompt),
+		fmt.Sprintf(appInitAppPortHelpPrompt),
 		validateApplicationPort,
-		prompt.WithDefaultInput(defaultAppPortString),
+		prompt.WithDefaultInput(defaultPort),
 	)
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
