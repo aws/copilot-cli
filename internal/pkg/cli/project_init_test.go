@@ -387,7 +387,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 				initProjectVars: initProjectVars{
 					ProjectName: "project",
 					DomainName:  tc.inDomainName,
-					Tags: map[string]string{
+					ResourceTags: map[string]string{
 						"owner": "boss",
 					},
 				},

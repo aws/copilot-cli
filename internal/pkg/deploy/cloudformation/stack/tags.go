@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -16,17 +17,8 @@ const (
 )
 
 func mergeAndFlattenTags(additionalTags map[string]string, cliTags map[string]string) []*cloudformation.Tag {
-	tags := make(map[string]string)
-	for k, v := range additionalTags {
-		tags[k] = v
-	}
-	// Ignore user overrides for reserved tags so that we can still detect resources created with the CLI.
-	for k, v := range cliTags {
-		tags[k] = v
-	}
-
 	var flatTags []*cloudformation.Tag
-	for k, v := range tags {
+	for k, v := range tags.Merge(additionalTags, cliTags) {
 		flatTags = append(flatTags, &cloudformation.Tag{
 			Key:   aws.String(k),
 			Value: aws.String(v),
