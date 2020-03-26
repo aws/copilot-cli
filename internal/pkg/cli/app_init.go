@@ -11,8 +11,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -76,7 +76,7 @@ type initAppOpts struct {
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
 	prog         progress
-	df           docker.Dockerfile
+	df           dockerfile.Dockerfile
 
 	// Caches variables
 	proj *archer.Project
@@ -86,10 +86,6 @@ type initAppOpts struct {
 
 	// sets up Dockerfile parser using fs and input path
 	setupParser func(*initAppOpts)
-}
-
-func initDockerfileFsFromOpts(o *initAppOpts) {
-	o.df = docker.NewDockerfileConfig(o.fs, o.DockerfilePath)
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -119,7 +115,9 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
 
-		setupParser: initDockerfileFsFromOpts,
+		setupParser: func(o *initAppOpts) {
+			o.df = dockerfile.NewConfig(o.fs, o.DockerfilePath)
+		},
 	}, nil
 }
 
@@ -322,7 +320,7 @@ func (o *initAppOpts) askAppPort() error {
 		return nil
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtParsePortFromDockerfileStart, o.DockerfilePath, o.AppName))
+	log.Infof(fmtParsePortFromDockerfileStart, o.DockerfilePath, o.AppName)
 
 	o.setupParser(o)
 	ports := o.df.GetExposedPorts()
@@ -330,13 +328,13 @@ func (o *initAppOpts) askAppPort() error {
 	var defaultPort = defaultAppPortString
 	switch len(ports) {
 	case 0:
-		o.prog.Stop(fmt.Sprintf(fmtParsePortFromDockerfileFailedNoPort, o.AppName))
+		log.Infof(fmtParsePortFromDockerfileFailedNoPort, o.AppName)
 	case 1:
 		o.AppPort = ports[0]
-		o.prog.Stop(fmt.Sprintf(fmtParsePortFromDockerfileComplete, o.AppPort))
+		log.Successf(fmtParsePortFromDockerfileComplete, o.AppPort)
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
-		o.prog.Stop(parsePortFromDockerfileFailedTooMany)
+		log.Infoln(parsePortFromDockerfileFailedTooMany)
 	}
 
 	if o.AppPort != 0 {

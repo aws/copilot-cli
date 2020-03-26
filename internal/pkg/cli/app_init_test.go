@@ -10,8 +10,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
-	dockermocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	dfmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
@@ -106,7 +106,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 		mockFileSystem func(mockFS afero.Fs)
 		mockPrompt     func(m *climocks.Mockprompter)
-		mockDockerfile func(m *dockermocks.MockDockerfile)
+		mockDockerfile func(m *dfmocks.MockDockerfile)
 
 		wantedErr error
 	}{
@@ -121,7 +121,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), appInitAppTypeHelpPrompt, gomock.Eq(manifest.AppTypes)).
 					Return(wantedAppType, nil)
 			},
-			wantedErr: nil,
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      nil,
 		},
 		"return an error if fail to get app type": {
 			inAppType:        "",
@@ -134,7 +135,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.AppTypes)).
 					Return("", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("failed to get type selection: some error"),
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      fmt.Errorf("failed to get type selection: some error"),
 		},
 		"prompt for app name": {
 			inAppType:        wantedAppType,
@@ -147,7 +149,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedAppType)), gomock.Any(), gomock.Any()).
 					Return(wantedAppName, nil)
 			},
-			wantedErr: nil,
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      nil,
 		},
 		"returns an error if fail to get application name": {
 			inAppType:        wantedAppType,
@@ -160,7 +163,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("failed to get application name: some error"),
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      fmt.Errorf("failed to get application name: some error"),
 		},
 		"choose an existing Dockerfile": {
 			inAppType:        wantedAppType,
@@ -185,7 +189,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 					})).
 					Return("frontend/Dockerfile", nil)
 			},
-			wantedErr: nil,
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      nil,
 		},
 		"returns an error if fail to find Dockerfiles": {
 			inAppType:        wantedAppType,
@@ -197,7 +202,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
 		},
 		"returns an error if fail to select Dockerfile": {
 			inAppType:        wantedAppType,
@@ -221,7 +227,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 					})).
 					Return("", errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("failed to select Dockerfile: some error"),
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
+			wantedErr:      fmt.Errorf("failed to select Dockerfile: some error"),
 		},
 		"asks for port if not specified": {
 			inAppType:        wantedAppType,
@@ -234,8 +241,8 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultAppPortString, nil)
 			},
-			mockDockerfile: func(m *dockermocks.MockDockerfile) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{wantedAppPort})
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{})
 			},
 			wantedErr: nil,
 		},
@@ -250,6 +257,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{})
+			},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 		"errors if port out of range": {
@@ -263,6 +273,9 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 			},
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{})
+			},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
 	}
@@ -274,6 +287,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockDockerfile := dfmocks.NewMockDockerfile(ctrl)
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
@@ -286,10 +300,11 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				},
 				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
 				setupParser: func(o *initAppOpts) {},
-				df:          &tc.mockDockerfile,
+				df:          mockDockerfile,
 			}
 			tc.mockFileSystem(opts.fs)
 			tc.mockPrompt(mockPrompt)
+			tc.mockDockerfile(mockDockerfile)
 
 			// WHEN
 			err := opts.Ask()

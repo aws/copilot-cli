@@ -11,9 +11,10 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -119,7 +120,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		projDeployer: deployer,
 		prog:         spin,
 		setupParser: func(o *initAppOpts) {
-			o.df = docker.NewDockerfileConfig(o.fs, o.DockerfilePath)
+			o.df = dockerfile.NewConfig(o.fs, o.DockerfilePath)
 		},
 	}
 	initEnv := &initEnvOpts{
