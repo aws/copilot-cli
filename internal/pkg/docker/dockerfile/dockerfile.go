@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+// Package dockerfile provides simple Dockerfile parsing functionality
 package dockerfile
 
 import (
