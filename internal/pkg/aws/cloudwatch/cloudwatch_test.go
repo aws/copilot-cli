@@ -37,7 +37,7 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 				}).Return(nil, mockError)
 			},
 
-			wantErr: fmt.Errorf("get CloudWatch alarms for app mockApp: some error"),
+			wantErr: fmt.Errorf("describe CloudWatch alarms: some error"),
 		},
 		"errors if failed to validate CloudWatch alarms": {
 			mockcwClient: func(m *mocks.MockcwClient) {
@@ -47,8 +47,11 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 					NextToken: nil,
 					CompositeAlarms: []*cloudwatch.CompositeAlarm{
 						{
-							AlarmArn:  aws.String("mockArn"),
-							AlarmName: aws.String("mockAlarmName"),
+							AlarmArn:              aws.String("mockArn"),
+							AlarmName:             aws.String("mockAlarmName"),
+							StateReason:           aws.String("mockReason"),
+							StateValue:            aws.String("mockState"),
+							StateUpdatedTimestamp: &mockTime,
 						},
 					},
 				}, nil)
@@ -76,8 +79,11 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 					},
 					MetricAlarms: []*cloudwatch.MetricAlarm{
 						{
-							AlarmArn:  aws.String("mockArn2"),
-							AlarmName: aws.String("mockAlarmName2"),
+							AlarmArn:              aws.String("mockArn2"),
+							AlarmName:             aws.String("mockAlarmName2"),
+							StateReason:           aws.String("mockReason"),
+							StateValue:            aws.String("mockState"),
+							StateUpdatedTimestamp: &mockTime,
 						},
 					},
 				}, nil)
@@ -232,10 +238,10 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 				client: mockcwClient,
 			}
 
-			gotAlarmStatus, gotErr := cwSvc.GetAlarms(App{
-				AppName:     appName,
-				EnvName:     envName,
-				ProjectName: projectName,
+			gotAlarmStatus, gotErr := cwSvc.GetAlarmsWithTags(map[string]string{
+				"ecs-project":     projectName,
+				"ecs-environment": envName,
+				"ecs-application": appName,
 			})
 
 			if gotErr != nil {

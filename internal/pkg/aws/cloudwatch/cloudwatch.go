@@ -7,7 +7,6 @@ package cloudwatch
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -28,13 +27,6 @@ type CloudWatch struct {
 	client cwClient
 }
 
-// App contains basic info for an application.
-type App struct {
-	AppName     string
-	EnvName     string
-	ProjectName string
-}
-
 // AlarmStatus contains CloudWatch alarm status.
 type AlarmStatus struct {
 	Arn          string
@@ -52,8 +44,8 @@ func New(s *session.Session) *CloudWatch {
 	}
 }
 
-// GetAlarms returns all CloudWatch alarms associated with the app.
-func (c *CloudWatch) GetAlarms(app App) ([]AlarmStatus, error) {
+// GetAlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
+func (c *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
 	var alarmStatus []AlarmStatus
 	var err error
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
@@ -62,42 +54,18 @@ func (c *CloudWatch) GetAlarms(app App) ([]AlarmStatus, error) {
 			NextToken: alarmResp.NextToken,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("get CloudWatch alarms for app %s: %w", app.AppName, err)
+			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
 		}
-		for _, alarm := range alarmResp.CompositeAlarms {
-			exist, err := c.validateAlarm(app, alarm.AlarmArn)
-			if err != nil {
-				return nil, fmt.Errorf("validate CloudWatch alarm %s: %w", *alarm.AlarmName, err)
-			}
-			if !exist {
-				continue
-			}
-			alarmStatus = append(alarmStatus, AlarmStatus{
-				Arn:          aws.StringValue(alarm.AlarmArn),
-				Name:         aws.StringValue(alarm.AlarmName),
-				Reason:       aws.StringValue(alarm.StateReason),
-				Status:       aws.StringValue(alarm.StateValue),
-				Type:         compositeAlarmType,
-				UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
-			})
+		compositeAlarmStatus, err := c.filterCompositeAlarmsByTags(alarmResp.CompositeAlarms, tags)
+		if err != nil {
+			return nil, err
 		}
-		for _, alarm := range alarmResp.MetricAlarms {
-			exist, err := c.validateAlarm(app, alarm.AlarmArn)
-			if err != nil {
-				return nil, fmt.Errorf("validate CloudWatch alarm %s, %w", *alarm.AlarmName, err)
-			}
-			if !exist {
-				continue
-			}
-			alarmStatus = append(alarmStatus, AlarmStatus{
-				Arn:          aws.StringValue(alarm.AlarmArn),
-				Name:         aws.StringValue(alarm.AlarmName),
-				Reason:       aws.StringValue(alarm.StateReason),
-				Status:       aws.StringValue(alarm.StateValue),
-				Type:         metricAlarmType,
-				UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
-			})
+		alarmStatus = append(alarmStatus, compositeAlarmStatus...)
+		metricAlarmStatus, err := c.filterMetricAlarmsByTags(alarmResp.MetricAlarms, tags)
+		if err != nil {
+			return nil, err
 		}
+		alarmStatus = append(alarmStatus, metricAlarmStatus...)
 		if alarmResp.NextToken == nil {
 			break
 		}
@@ -105,24 +73,63 @@ func (c *CloudWatch) GetAlarms(app App) ([]AlarmStatus, error) {
 	return alarmStatus, nil
 }
 
-// validateAlarm validate if the CloudWatch alarm is associated with the given app.
-func (c *CloudWatch) validateAlarm(app App, arn *string) (bool, error) {
+func (c *CloudWatch) filterAlarmsByTags(alarms []AlarmStatus, tags map[string]string) ([]AlarmStatus, error) {
+	var alarmStatusList []AlarmStatus
+	for _, alarm := range alarms {
+		exist, err := c.isAlarmTagged(alarm.Arn, tags)
+		if err != nil {
+			return nil, fmt.Errorf("validate CloudWatch alarm %s: %w", alarm.Name, err)
+		}
+		if !exist {
+			continue
+		}
+		alarmStatusList = append(alarmStatusList, alarm)
+	}
+	return alarmStatusList, nil
+}
+
+func (c *CloudWatch) filterCompositeAlarmsByTags(alarms []*cloudwatch.CompositeAlarm, tags map[string]string) ([]AlarmStatus, error) {
+	var alarmStatusList []AlarmStatus
+	for _, alarm := range alarms {
+		alarmStatusList = append(alarmStatusList, AlarmStatus{
+			Arn:          aws.StringValue(alarm.AlarmArn),
+			Name:         aws.StringValue(alarm.AlarmName),
+			Reason:       aws.StringValue(alarm.StateReason),
+			Status:       aws.StringValue(alarm.StateValue),
+			Type:         compositeAlarmType,
+			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
+		})
+	}
+	return c.filterAlarmsByTags(alarmStatusList, tags)
+}
+
+func (c *CloudWatch) filterMetricAlarmsByTags(alarms []*cloudwatch.MetricAlarm, tags map[string]string) ([]AlarmStatus, error) {
+	var alarmStatusList []AlarmStatus
+	for _, alarm := range alarms {
+		alarmStatusList = append(alarmStatusList, AlarmStatus{
+			Arn:          aws.StringValue(alarm.AlarmArn),
+			Name:         aws.StringValue(alarm.AlarmName),
+			Reason:       aws.StringValue(alarm.StateReason),
+			Status:       aws.StringValue(alarm.StateValue),
+			Type:         metricAlarmType,
+			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
+		})
+	}
+	return c.filterAlarmsByTags(alarmStatusList, tags)
+}
+
+// isAlarmTagged validate if the CloudWatch alarm has the given tags.
+func (c *CloudWatch) isAlarmTagged(alarmARN string, tags map[string]string) (bool, error) {
 	tagResp, err := c.client.ListTagsForResource(&cloudwatch.ListTagsForResourceInput{
-		ResourceARN: arn,
+		ResourceARN: aws.String(alarmARN),
 	})
 	if err != nil {
 		return false, err
 	}
-	m := map[string]map[string]bool{
-		stack.AppTagKey: map[string]bool{
-			app.AppName: false,
-		},
-		stack.EnvTagKey: map[string]bool{
-			app.EnvName: false,
-		},
-		stack.ProjectTagKey: map[string]bool{
-			app.ProjectName: false,
-		},
+	m := make(map[string]map[string]bool)
+	for k, v := range tags {
+		m[k] = make(map[string]bool)
+		m[k][v] = false
 	}
 	for _, tag := range tagResp.Tags {
 		if _, ok := m[*tag.Key][*tag.Value]; ok {
