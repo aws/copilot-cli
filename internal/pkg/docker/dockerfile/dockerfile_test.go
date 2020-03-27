@@ -15,13 +15,13 @@ func TestParseDockerfile(t *testing.T) {
 	testCases := map[string]struct {
 		dockerfile   string
 		err          error
-		wantedConfig Config
+		wantedConfig Dockerfile
 	}{
 		"correctly parses directly exposed port": {
 			dockerfile: `EXPOSE 5000`,
 			err:        nil,
-			wantedConfig: Config{
-				ExposedPorts: []PortConfig{
+			wantedConfig: Dockerfile{
+				ExposedPorts: []portConfig{
 					{
 						Port:      5000,
 						Protocol:  "",
@@ -33,8 +33,8 @@ func TestParseDockerfile(t *testing.T) {
 		"correctly parses exposed port and protocol": {
 			dockerfile: `EXPOSE 5000/tcp`,
 			err:        nil,
-			wantedConfig: Config{
-				ExposedPorts: []PortConfig{
+			wantedConfig: Dockerfile{
+				ExposedPorts: []portConfig{
 					{
 						Port:      5000,
 						Protocol:  "tcp",
@@ -46,8 +46,8 @@ func TestParseDockerfile(t *testing.T) {
 		"multiple ports with one expose line": {
 			dockerfile: `EXPOSE 5000/tcp 8080/tcp 6000`,
 			err:        nil,
-			wantedConfig: Config{
-				ExposedPorts: []PortConfig{
+			wantedConfig: Dockerfile{
+				ExposedPorts: []portConfig{
 					{
 						Port:      5000,
 						Protocol:  "tcp",
@@ -70,19 +70,18 @@ func TestParseDockerfile(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			methods := getLineParseMethods()
 			r := strings.NewReader(tc.dockerfile)
 			scanner := bufio.NewScanner(r)
-			got := parseFromScanner(scanner, methods)
+			got := parseFromScanner(scanner)
 			require.Equal(t, tc.wantedConfig, got)
 		})
 	}
 
 }
 
-func getUintPorts(inPorts []PortConfig) []uint16 {
+func getUintPorts(inPorts []portConfig) []uint16 {
 	if len(inPorts) == 0 {
-		return []uint16{}
+		return []uint16(nil)
 	}
 	var ports []uint16
 	for _, p := range inPorts {
@@ -96,7 +95,7 @@ func TestDockerfileInterface(t *testing.T) {
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte
-		wantedPorts    []PortConfig
+		wantedPorts    []portConfig
 		wantedErr      error
 	}{
 		"no exposed ports": {
@@ -104,12 +103,12 @@ func TestDockerfileInterface(t *testing.T) {
 			dockerfile: []byte(`
 	FROM nginx
 	ARG arg=80`),
-			wantedPorts: []PortConfig{},
+			wantedPorts: []portConfig{},
 		},
 		"one exposed port": {
 			dockerfilePath: wantedPath,
 			dockerfile:     []byte("EXPOSE 8080"),
-			wantedPorts: []PortConfig{
+			wantedPorts: []portConfig{
 				{
 					Port:      8080,
 					RawString: "8080",
@@ -121,7 +120,7 @@ func TestDockerfileInterface(t *testing.T) {
 			dockerfile: []byte(`
 EXPOSE 8080
 EXPOSE 80`),
-			wantedPorts: []PortConfig{
+			wantedPorts: []portConfig{
 				{
 					Port:      8080,
 					RawString: "8080",
@@ -135,7 +134,7 @@ EXPOSE 80`),
 		"two exposed ports one line": {
 			dockerfilePath: wantedPath,
 			dockerfile:     []byte("EXPOSE 80/tcp 3000"),
-			wantedPorts: []PortConfig{
+			wantedPorts: []portConfig{
 				{
 					Port:      80,
 					Protocol:  "tcp",
@@ -153,7 +152,7 @@ EXPOSE 80`),
 EXPOSE 80
 EXPOSE $arg
 EXPOSE 8080/tcp 5000`),
-			wantedPorts: []PortConfig{
+			wantedPorts: []portConfig{
 				{
 					Port:      80,
 					RawString: "80",
@@ -185,7 +184,7 @@ EXPOSE 8080/tcp 5000`),
 			} else {
 				require.NoError(t, err)
 			}
-			df := NewConfig(fs, "./Dockerfile")
+			df := New(fs, "./Dockerfile")
 
 			ports := df.GetExposedPorts()
 

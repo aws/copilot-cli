@@ -47,10 +47,10 @@ const (
 )
 
 const (
-	fmtParsePortFromDockerfileStart        = "Parsing dockerfile at path %s for application %s..."
-	parsePortFromDockerfileFailedTooMany   = "It looks like your Dockerfile exposes more than one port."
-	fmtParsePortFromDockerfileFailedNoPort = "Couldn't find an exposed port in dockerfile for application %s."
-	fmtParsePortFromDockerfileComplete     = "It looks like your Dockerfile exposes port %d. We'll use that to route traffic to your container from your load balancer."
+	fmtParsePortFromDockerfileStart    = "Parsing dockerfile at path %s for application %s...\n"
+	parseFromDockerfileTooManyPorts    = "It looks like your Dockerfile exposes more than one port.\n"
+	fmtParseFromDockerfileNoPort       = "Couldn't find an exposed port in dockerfile for application %s.\n"
+	fmtParsePortFromDockerfileComplete = "It looks like your Dockerfile exposes port %s. We'll use that to route traffic to your container from your load balancer.\n"
 )
 
 const (
@@ -75,7 +75,7 @@ type initAppOpts struct {
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
 	prog         progress
-	df           dockerfile.Dockerfile
+	df           dockerfileParser
 
 	// Caches variables
 	proj *archer.Project
@@ -115,7 +115,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		prog:         termprogress.NewSpinner(),
 
 		setupParser: func(o *initAppOpts) {
-			o.df = dockerfile.NewConfig(o.fs, o.DockerfilePath)
+			o.df = dockerfile.New(o.fs, o.DockerfilePath)
 		},
 	}, nil
 }
@@ -319,7 +319,10 @@ func (o *initAppOpts) askAppPort() error {
 		return nil
 	}
 
-	log.Infof(fmtParsePortFromDockerfileStart, o.DockerfilePath, o.AppName)
+	log.Infof(fmtParsePortFromDockerfileStart,
+		color.HighlightUserInput(o.DockerfilePath),
+		color.HighlightUserInput(o.AppName),
+	)
 
 	o.setupParser(o)
 	ports := o.df.GetExposedPorts()
@@ -327,18 +330,24 @@ func (o *initAppOpts) askAppPort() error {
 	var defaultPort = defaultAppPortString
 	switch len(ports) {
 	case 0:
-		log.Infof(fmtParsePortFromDockerfileFailedNoPort, o.AppName)
+		log.Infof(fmtParseFromDockerfileNoPort,
+			color.HighlightUserInput(o.AppName),
+		)
 	case 1:
 		// catch the case where we couldn't validate a port from dockerfile (0 or invalid)
 		if ports[0] == 0 {
-			log.Infof(fmtParsePortFromDockerfileFailedNoPort, o.AppName)
+			log.Infof(fmtParseFromDockerfileNoPort,
+				color.HighlightUserInput(o.AppName),
+			)
 		} else {
 			o.AppPort = ports[0]
-			log.Successf(fmtParsePortFromDockerfileComplete, o.AppPort)
+			log.Successf(fmtParsePortFromDockerfileComplete,
+				color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
+			)
 		}
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
-		log.Infoln(parsePortFromDockerfileFailedTooMany)
+		log.Infoln(parseFromDockerfileTooManyPorts)
 	}
 
 	if o.AppPort != 0 {

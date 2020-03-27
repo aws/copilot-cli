@@ -198,3 +198,7 @@ type deployer interface {
 type domainValidator interface {
 	DomainExists(domainName string) (bool, error)
 }
+
+type dockerfileParser interface {
+	GetExposedPorts() []uint16
+}
