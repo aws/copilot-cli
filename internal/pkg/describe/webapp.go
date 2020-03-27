@@ -19,7 +19,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	clientSession "github.com/aws/aws-sdk-go/aws/session"
+	clientsession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
@@ -91,7 +91,7 @@ type stackDescriber interface {
 }
 
 type sessionFromRoleProvider interface {
-	FromRole(roleARN string, region string) (*clientSession.Session, error)
+	FromRole(roleARN string, region string) (*clientsession.Session, error)
 }
 
 type envGetter interface {
@@ -198,7 +198,7 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 	}, nil
 }
 
-// GetServiceArn returns the ECS service arn of the application.
+// GetServiceArn returns the ECS service ARN of the application in an environment.
 func (d *WebAppDescriber) GetServiceArn(envName string) (*ServiceArn, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
 	if err != nil {
