@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -17,7 +18,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws"
-	clientSession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/arn"
+	clientsession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
@@ -33,6 +35,8 @@ const (
 	rulePriorityFunction = "Custom::RulePriorityFunction"
 	waitCondition        = "AWS::CloudFormation::WaitCondition"
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
+
+	serviceLogicalID = "Service"
 )
 
 // WebAppURI represents the unique identifier to access a web application.
@@ -81,24 +85,13 @@ type WebAppEnvVars struct {
 	Value       string `json:"value"`
 }
 
-// WebApp contains serialized parameters for a web application.
-type WebApp struct {
-	AppName        string                    `json:"appName"`
-	Type           string                    `json:"type"`
-	Project        string                    `json:"project"`
-	Configurations []*WebAppConfig           `json:"configurations"`
-	Routes         []*WebAppRoute            `json:"routes"`
-	Variables      []*WebAppEnvVars          `json:"variables"`
-	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
-}
-
 type stackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)
 }
 
 type sessionFromRoleProvider interface {
-	FromRole(roleARN string, region string) (*clientSession.Session, error)
+	FromRole(roleARN string, region string) (*clientsession.Session, error)
 }
 
 type envGetter interface {
@@ -203,6 +196,25 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 		},
 		TaskCount: appParams[stack.LBFargateTaskCountKey],
 	}, nil
+}
+
+// GetServiceArn returns the ECS service ARN of the application in an environment.
+func (d *WebAppDescriber) GetServiceArn(envName string) (*ServiceArn, error) {
+	env, err := d.store.GetEnvironment(d.app.Project, envName)
+	if err != nil {
+		return nil, err
+	}
+	appResources, err := d.describeStackResources(env.ManagerRoleARN, env.Region, stack.NameForApp(d.app.Project, env.Name, d.app.Name))
+	if err != nil {
+		return nil, err
+	}
+	for _, appResource := range appResources {
+		if aws.StringValue(appResource.LogicalResourceId) == serviceLogicalID {
+			serviceArn := ServiceArn(aws.StringValue(appResource.PhysicalResourceId))
+			return &serviceArn, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find service arn in app stack resource")
 }
 
 // StackResources returns the physical ID of stack resources created by cloudformation.
@@ -330,6 +342,46 @@ func (d *WebAppDescriber) stackDescriber(roleARN, region string) (stackDescriber
 		d.stackDescribers[roleARN] = cloudformation.New(sess)
 	}
 	return d.stackDescribers[roleARN], nil
+}
+
+// ServiceArn is the arn of an ECS service.
+type ServiceArn string
+
+// ClusterName returns the cluster name.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
+// will return my-project-test-Cluster-9F7Y0RLP60R7
+func (s *ServiceArn) ClusterName() (string, error) {
+	serviceArn := string(*s)
+	parsedArn, err := arn.Parse(serviceArn)
+	if err != nil {
+		return "", err
+	}
+	resources := strings.Split(parsedArn.Resource, "/")
+	return resources[1], nil
+}
+
+// ServiceName returns the service name.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
+// will return my-project-test-my-app-Service-JSOH5GYBFAIB
+func (s *ServiceArn) ServiceName() (string, error) {
+	serviceArn := string(*s)
+	parsedArn, err := arn.Parse(serviceArn)
+	if err != nil {
+		return "", err
+	}
+	resources := strings.Split(parsedArn.Resource, "/")
+	return resources[2], nil
+}
+
+// WebApp contains serialized parameters for a web application.
+type WebApp struct {
+	AppName        string                    `json:"appName"`
+	Type           string                    `json:"type"`
+	Project        string                    `json:"project"`
+	Configurations []*WebAppConfig           `json:"configurations"`
+	Routes         []*WebAppRoute            `json:"routes"`
+	Variables      []*WebAppEnvVars          `json:"variables"`
+	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
 }
 
 // JSONString returns the stringified WebApp struct with json format.
