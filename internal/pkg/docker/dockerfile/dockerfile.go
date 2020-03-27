@@ -1,5 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package dockerfile
 
@@ -40,9 +39,10 @@ type Config struct {
 
 func NewConfig(fs afero.Fs, path string) *Config {
 	return &Config{
-		fs:     fs,
-		path:   path,
-		parsed: false,
+		ExposedPorts: []PortConfig{},
+		fs:           fs,
+		path:         path,
+		parsed:       false,
 	}
 }
 
@@ -69,19 +69,17 @@ func (df *Config) parse() error {
 
 	scanner := bufio.NewScanner(file)
 	methods := getLineParseMethods()
-	parsedDockerfile, err := parseFromScanner(scanner, methods)
-	if err != nil {
-		return fmt.Errorf("parse dockerfile: %w", err)
-	}
+	parsedDockerfile := parseFromScanner(scanner, methods)
 
 	df.ExposedPorts = parsedDockerfile.ExposedPorts
 	df.parsed = true
 	return nil
 }
 
-func parseFromScanner(scanner *bufio.Scanner, methods lineParseMethods) (Config, error) {
+func parseFromScanner(scanner *bufio.Scanner, methods lineParseMethods) Config {
 	var line = ""
 	var df Config
+	df.ExposedPorts = []PortConfig{}
 	var currentPorts []PortConfig
 	for scanner.Scan() {
 		line = scanner.Text()
@@ -93,7 +91,7 @@ func parseFromScanner(scanner *bufio.Scanner, methods lineParseMethods) (Config,
 		}
 	}
 
-	return df, nil
+	return df
 }
 
 type lineParseMethods struct {
@@ -129,7 +127,7 @@ func parseExpose(line string) []PortConfig {
 		}
 	}
 	var port PortConfig
-	var ports []PortConfig
+	ports := []PortConfig{}
 	for _, match := range matches {
 		port = PortConfig{
 			RawString: match[0],
@@ -140,12 +138,9 @@ func parseExpose(line string) []PortConfig {
 		// convert the matched port to int and validate
 		// We don't use the validate func in the cli package to avoid a circular dependency
 		extractedPort, err := strconv.Atoi(match[1])
-		if err != nil || extractedPort < 1 || extractedPort > 65535 {
-			ports = append(ports, port)
-			continue
+		if err == nil && extractedPort >= 1 && extractedPort <= 65535 {
+			port.Port = uint16(extractedPort)
 		}
-
-		port.Port = uint16(extractedPort)
 		ports = append(ports, port)
 	}
 	return ports

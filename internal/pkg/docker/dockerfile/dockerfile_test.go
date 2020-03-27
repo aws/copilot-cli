@@ -1,5 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package dockerfile
 
@@ -14,13 +13,13 @@ import (
 
 func TestParseDockerfile(t *testing.T) {
 	testCases := map[string]struct {
-		mockDockerfile string
-		err            error
-		wantedConfig   Config
+		dockerfile   string
+		err          error
+		wantedConfig Config
 	}{
 		"correctly parses directly exposed port": {
-			mockDockerfile: `EXPOSE 5000`,
-			err:            nil,
+			dockerfile: `EXPOSE 5000`,
+			err:        nil,
 			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
@@ -32,8 +31,8 @@ func TestParseDockerfile(t *testing.T) {
 			},
 		},
 		"correctly parses exposed port and protocol": {
-			mockDockerfile: `EXPOSE 5000/tcp`,
-			err:            nil,
+			dockerfile: `EXPOSE 5000/tcp`,
+			err:        nil,
 			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
@@ -45,8 +44,8 @@ func TestParseDockerfile(t *testing.T) {
 			},
 		},
 		"multiple ports with one expose line": {
-			mockDockerfile: `EXPOSE 5000/tcp 8080/tcp 6000`,
-			err:            nil,
+			dockerfile: `EXPOSE 5000/tcp 8080/tcp 6000`,
+			err:        nil,
 			wantedConfig: Config{
 				ExposedPorts: []PortConfig{
 					{
@@ -72,61 +71,105 @@ func TestParseDockerfile(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			methods := getLineParseMethods()
-			r := strings.NewReader(tc.mockDockerfile)
+			r := strings.NewReader(tc.dockerfile)
 			scanner := bufio.NewScanner(r)
-			got, err := parseFromScanner(scanner, methods)
-
-			if tc.err != nil {
-				require.EqualError(t, err, tc.err.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantedConfig, got)
-			}
+			got := parseFromScanner(scanner, methods)
+			require.Equal(t, tc.wantedConfig, got)
 		})
 	}
 
 }
 
+func getUintPorts(inPorts []PortConfig) []uint16 {
+	if len(inPorts) == 0 {
+		return []uint16{}
+	}
+	var ports []uint16
+	for _, p := range inPorts {
+		ports = append(ports, p.Port)
+	}
+	return ports
+}
+
 func TestDockerfileInterface(t *testing.T) {
+	wantedPath := "./Dockerfile"
 	testCases := map[string]struct {
-		mockDockerfile []byte
+		dockerfilePath string
+		dockerfile     []byte
 		wantedPorts    []PortConfig
+		wantedErr      error
 	}{
+		"no exposed ports": {
+			dockerfilePath: wantedPath,
+			dockerfile: []byte(`
+	FROM nginx
+	ARG arg=80`),
+			wantedPorts: []PortConfig{},
+		},
 		"one exposed port": {
-			mockDockerfile: []byte("EXPOSE 8080"),
+			dockerfilePath: wantedPath,
+			dockerfile:     []byte("EXPOSE 8080"),
 			wantedPorts: []PortConfig{
-				PortConfig{
+				{
 					Port:      8080,
 					RawString: "8080",
 				},
 			},
 		},
 		"two exposed ports": {
-			mockDockerfile: []byte(`
+			dockerfilePath: wantedPath,
+			dockerfile: []byte(`
 EXPOSE 8080
 EXPOSE 80`),
 			wantedPorts: []PortConfig{
-				PortConfig{
+				{
 					Port:      8080,
 					RawString: "8080",
 				},
-				PortConfig{
+				{
 					Port:      80,
 					RawString: "80",
 				},
 			},
 		},
 		"two exposed ports one line": {
-			mockDockerfile: []byte("EXPOSE 80/tcp 3000"),
+			dockerfilePath: wantedPath,
+			dockerfile:     []byte("EXPOSE 80/tcp 3000"),
 			wantedPorts: []PortConfig{
-				PortConfig{
+				{
 					Port:      80,
 					Protocol:  "tcp",
 					RawString: "80/tcp",
 				},
-				PortConfig{
+				{
 					Port:      3000,
 					RawString: "3000",
+				},
+			},
+		},
+		"bad expose token": {
+			dockerfilePath: wantedPath,
+			dockerfile: []byte(`
+EXPOSE 80
+EXPOSE $arg
+EXPOSE 8080/tcp 5000`),
+			wantedPorts: []PortConfig{
+				{
+					Port:      80,
+					RawString: "80",
+				},
+				{
+					Port:      0,
+					RawString: "EXPOSE $arg",
+				},
+				{
+					Port:      8080,
+					Protocol:  "tcp",
+					RawString: "8080/tcp",
+				},
+				{
+					Port:      5000,
+					RawString: "5000",
 				},
 			},
 		},
@@ -134,13 +177,19 @@ EXPOSE 80`),
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			wantedUintPorts := getUintPorts(tc.wantedPorts)
 			fs := afero.Afero{Fs: afero.NewMemMapFs()}
-			err := fs.WriteFile("./Dockerfile", tc.mockDockerfile, 0644)
+			err := fs.WriteFile("./Dockerfile", tc.dockerfile, 0644)
+			if tc.wantedErr != nil {
+				require.EqualError(t, tc.wantedErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			df := NewConfig(fs, "./Dockerfile")
 
-			err = df.parse()
+			ports := df.GetExposedPorts()
 
-			require.NoError(t, err)
+			require.Equal(t, wantedUintPorts, ports)
 
 			require.Equal(t, tc.wantedPorts, df.ExposedPorts)
 

@@ -1,5 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package cli
 
@@ -332,7 +331,7 @@ func (o *initAppOpts) askAppPort() error {
 	case 1:
 		// catch the case where we couldn't validate a port from dockerfile (0 or invalid)
 		if ports[0] == 0 {
-			log.Infof(fmtParsePortFromDockerfileFailedNoPort)
+			log.Infof(fmtParsePortFromDockerfileFailedNoPort, o.AppName)
 		} else {
 			o.AppPort = ports[0]
 			log.Successf(fmtParsePortFromDockerfileComplete, o.AppPort)

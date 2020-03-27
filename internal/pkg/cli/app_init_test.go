@@ -1,5 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package cli
 
@@ -277,6 +276,30 @@ func TestAppInitOpts_Ask(t *testing.T) {
 				m.EXPECT().GetExposedPorts().Return([]uint16{})
 			},
 			wantedErr: fmt.Errorf("get port: some error"),
+		},
+		"don't ask if dockerfile has port": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        0,
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+			},
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {
+				m.EXPECT().GetExposedPorts().Return([]uint16{80})
+			},
+		},
+		"don't use dockerfile port if flag specified": {
+			inAppType:        wantedAppType,
+			inAppName:        wantedAppName,
+			inDockerfilePath: wantedDockerfilePath,
+			inAppPort:        wantedAppPort,
+
+			mockFileSystem: func(mockFS afero.Fs) {},
+			mockPrompt: func(m *climocks.Mockprompter) {
+			},
+			mockDockerfile: func(m *dfmocks.MockDockerfile) {},
 		},
 	}
 
