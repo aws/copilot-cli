@@ -13,7 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	awsSession "github.com/aws/aws-sdk-go/aws/session"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -464,13 +464,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 			oldGetAppDeployer := getAppDeployer
 			defer func() { getAppDeployer = oldGetAppDeployer }()
-			getAppDeployer = func(session *awsSession.Session) appDeployer {
+			getAppDeployer = func(session *awssession.Session) appDeployer {
 				return mockAppDeployer
 			}
 
 			oldGetImageRemover := getImageRemover
 			defer func() { getImageRemover = oldGetImageRemover }()
-			getImageRemover = func(session *awsSession.Session) imageRemover {
+			getImageRemover = func(session *awssession.Session) imageRemover {
 				return mockImageRemover
 			}
 

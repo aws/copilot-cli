@@ -18,7 +18,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	awsSession "github.com/aws/aws-sdk-go/aws/session"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
 
@@ -231,7 +231,7 @@ func (o *deleteAppOpts) getProjectEnvironments() error {
 }
 
 // This is to make mocking easier in unit tests
-var getAppDeployer = func(session *awsSession.Session) appDeployer {
+var getAppDeployer = func(session *awssession.Session) appDeployer {
 	return cloudformation.New(session)
 }
 
@@ -260,7 +260,7 @@ func (o *deleteAppOpts) deleteStacks() error {
 }
 
 // This is to make mocking easier in unit tests
-var getImageRemover = func(session *awsSession.Session) imageRemover {
+var getImageRemover = func(session *awssession.Session) imageRemover {
 	return ecr.New(session)
 }
 
