@@ -56,6 +56,8 @@ type deleteAppOpts struct {
 	sessProvider     sessionProvider
 	spinner          progress
 	appRemover       appRemover
+	getAppDeployer   func(session *awssession.Session) appDeployer
+        getImageRemover  func(session *awssession.Session) imageRemover
 
 	// Internal state.
 	projectEnvironments []*archer.Environment
@@ -86,6 +88,12 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		spinner:          termprogress.NewSpinner(),
 		sessProvider:     provider,
 		appRemover:       cloudformation.New(defaultSession),
+		getAppDeployer:   func(session *awssession.Session) appDeployer {
+			return cloudformation.New(session)
+		},
+		getImageRemover: func(session *awssession.Session) imageRemover {
+			return ecr.New(session)
+		},
 	}, nil
 }
 
@@ -230,11 +238,6 @@ func (o *deleteAppOpts) getProjectEnvironments() error {
 	return nil
 }
 
-// This is to make mocking easier in unit tests
-var getAppDeployer = func(session *awssession.Session) appDeployer {
-	return cloudformation.New(session)
-}
-
 func (o *deleteAppOpts) deleteStacks() error {
 	for _, env := range o.projectEnvironments {
 		sess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
@@ -242,7 +245,7 @@ func (o *deleteAppOpts) deleteStacks() error {
 			return err
 		}
 
-		cfClient := getAppDeployer(sess)
+		cfClient := o.getAppDeployer(sess)
 
 		o.spinner.Start(fmt.Sprintf(fmtDeleteAppStart, o.AppName, env.Name))
 		if err := cfClient.DeleteApp(deploy.DeleteAppInput{
@@ -260,10 +263,6 @@ func (o *deleteAppOpts) deleteStacks() error {
 }
 
 // This is to make mocking easier in unit tests
-var getImageRemover = func(session *awssession.Session) imageRemover {
-	return ecr.New(session)
-}
-
 func (o *deleteAppOpts) emptyECRRepos() error {
 	var uniqueRegions []string
 	for _, env := range o.projectEnvironments {
@@ -281,7 +280,7 @@ func (o *deleteAppOpts) emptyECRRepos() error {
 			return err
 		}
 
-		ecrService := getImageRemover(sess)
+		ecrService := o.getImageRemover(sess)
 
 		if err := ecrService.ClearRepository(repoName); err != nil {
 			return err

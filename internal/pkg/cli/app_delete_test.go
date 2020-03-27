@@ -461,16 +461,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockAppRemover := climocks.NewMockappRemover(ctrl)
 			mockSpinner := climocks.NewMockprogress(ctrl)
 			mockImageRemover := climocks.NewMockimageRemover(ctrl)
-
-			oldGetAppDeployer := getAppDeployer
-			defer func() { getAppDeployer = oldGetAppDeployer }()
-			getAppDeployer = func(session *awssession.Session) appDeployer {
+			mockGetAppDeployer := func(session *awssession.Session) appDeployer {
 				return mockAppDeployer
 			}
 
-			oldGetImageRemover := getImageRemover
-			defer func() { getImageRemover = oldGetImageRemover }()
-			getImageRemover = func(session *awssession.Session) imageRemover {
+			mockGetImageRemover := func(session *awssession.Session) imageRemover {
 				return mockImageRemover
 			}
 
@@ -500,6 +495,8 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 				sessProvider:     mockSession,
 				spinner:          mockSpinner,
 				appRemover:       mockAppRemover,
+				getAppDeployer:   mockGetAppDeployer,
+				getImageRemover:  mockGetImageRemover,
 			}
 
 			// WHEN
