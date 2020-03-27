@@ -330,8 +330,13 @@ func (o *initAppOpts) askAppPort() error {
 	case 0:
 		log.Infof(fmtParsePortFromDockerfileFailedNoPort, o.AppName)
 	case 1:
-		o.AppPort = ports[0]
-		log.Successf(fmtParsePortFromDockerfileComplete, o.AppPort)
+		// catch the case where we couldn't validate a port from dockerfile (0 or invalid)
+		if ports[0] == 0 {
+			log.Infof(fmtParsePortFromDockerfileFailedNoPort)
+		} else {
+			o.AppPort = ports[0]
+			log.Successf(fmtParsePortFromDockerfileComplete, o.AppPort)
+		}
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
 		log.Infoln(parsePortFromDockerfileFailedTooMany)
