@@ -10,12 +10,12 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/golang/mock/gomock"
@@ -29,77 +29,48 @@ func TestCloudFormation_DeployProject(t *testing.T) {
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		mockCF  func(ctrl *gomock.Controller) cfnClient
-		mockSDK func() *mockCloudFormation
-		want    error
+		mockStack    func(ctrl *gomock.Controller) cfnClient
+		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
+		want         error
 	}{
 		"Infrastructure Roles Stack Fails": {
-			mockCF: func(ctrl *gomock.Controller) cfnClient {
+			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("error creating stack"))
 				return m
 			},
-			mockSDK: func() *mockCloudFormation {
-				return &mockCloudFormation{
-					t: t,
-				}
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				return nil
 			},
 			want: errors.New("error creating stack"),
 		},
 		"Infrastructure Roles Stack Already Exists": {
-			mockCF: func(ctrl *gomock.Controller) cfnClient {
+			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
 				return m
 			},
-			mockSDK: func() *mockCloudFormation {
-				return &mockCloudFormation{
-					t: t,
-					mockCreateStackSet: func(t *testing.T, in *sdkcloudformation.CreateStackSetInput) (*sdkcloudformation.CreateStackSetOutput, error) {
-						return nil, nil
-					},
-				}
-			},
-		},
-		"StackSet Already Exists": {
-			mockCF: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 				return m
-			},
-			mockSDK: func() *mockCloudFormation {
-				client := &mockCloudFormation{
-					t: t,
-					mockCreateStackSet: func(t *testing.T, in *sdkcloudformation.CreateStackSetInput) (*sdkcloudformation.CreateStackSetOutput, error) {
-						return nil, awserr.New(sdkcloudformation.ErrCodeNameAlreadyExistsException, "StackSetAlreadyExists", nil)
-					},
-				}
-				return client
 			},
 		},
 		"Infrastructure Roles StackSet Created": {
-			mockCF: func(ctrl *gomock.Controller) cfnClient {
+			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
 				return m
 			},
-			mockSDK: func() *mockCloudFormation {
-				client := &mockCloudFormation{
-					t: t,
-					mockCreateStackSet: func(t *testing.T, in *sdkcloudformation.CreateStackSetInput) (*sdkcloudformation.CreateStackSetOutput, error) {
-						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
-						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
-						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
-						require.Equal(t, "ecs-project", *in.Tags[0].Key)
-						require.Equal(t, mockProject.Project, *in.Tags[0].Value)
-
-						return nil, nil
-					},
-				}
-				return client
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(name, _ string, _, _, _, _ stackset.CreateOrUpdateOption) {
+						require.Equal(t, "testproject-infrastructure", name)
+					})
+				return m
 			},
 		},
 	}
@@ -110,9 +81,9 @@ func TestCloudFormation_DeployProject(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			cf := CloudFormation{
-				cfnClient: tc.mockCF(ctrl),
-				sdkClient: tc.mockSDK(),
-				box:       templates.Box(),
+				cfnClient:       tc.mockStack(ctrl),
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             templates.Box(),
 			}
 
 			// WHEN
@@ -134,202 +105,102 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		cf      CloudFormation
-		project *archer.Project
-		env     *archer.Environment
-		want    error
+		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
+		project      *archer.Project
+		env          *archer.Environment
+		want         error
 	}{
 		"with no existing deployments and adding an env": {
 			project: &mockProject,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
-						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
-						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
-						require.Equal(t, "ecs-project", *in.Tags[0].Key)
-						require.Equal(t, mockProject.Name, *in.Tags[0].Value)
-
-						require.Equal(t, "1", *in.OperationId)
-
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
-						require.NoError(t, err)
-						require.ElementsMatch(t, []string{mockProject.AccountID}, configToDeploy.Accounts)
-						require.Empty(t, configToDeploy.Apps, "There should be no new apps to deploy")
-						require.Equal(t, 1, configToDeploy.Version)
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
-						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						return &sdkcloudformation.CreateStackInstancesOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
+						actual := &sdkcloudformation.UpdateStackSetInput{}
+						op(actual)
+						wanted := &sdkcloudformation.UpdateStackSetInput{}
+						stackset.WithOperationID("1")(wanted)
+						require.Equal(t, actual, wanted)
+					})
+				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
+				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"})
+				return m
 			},
 		},
-
 		"with no new account ID added": {
 			project: &mockProject,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-							Metadata: stack.ProjectResourcesConfig{
-								Accounts: []string{"1234"},
-							},
-						})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{
+					Metadata: stack.ProjectResourcesConfig{
+						Accounts: []string{"1234"},
 					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
-						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
-						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
-						require.Equal(t, "ecs-project", *in.Tags[0].Key)
-						require.Equal(t, mockProject.Name, *in.Tags[0].Value)
-
-						require.Equal(t, "1", *in.OperationId)
-
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
-						require.NoError(t, err)
-						// Ensure there are no duplicate accounts
-						require.ElementsMatch(t, []string{mockProject.AccountID}, configToDeploy.Accounts)
-						require.Empty(t, configToDeploy.Apps, "There should be no new apps to deploy")
-						require.Equal(t, 1, configToDeploy.Version)
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
-						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						return &sdkcloudformation.CreateStackInstancesOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
+				})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
+				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				return m
 			},
 		},
-
 		"with existing stack instances in same region but different account (no new stack instances, but update stackset)": {
 			project: &mockProject,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-							Accounts: []string{"4567"},
-							Version:  1,
-						}})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{
+					Metadata: stack.ProjectResourcesConfig{
+						Accounts: []string{"1234"},
+						Version:  1,
 					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
-						require.NoError(t, err)
-						require.ElementsMatch(t, []string{mockProject.AccountID, "4567"}, configToDeploy.Accounts)
-						require.Empty(t, configToDeploy.Apps, "There should be no new apps to deploy")
-						require.Equal(t, 2, configToDeploy.Version)
-
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("2"),
-						}, nil
+				})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(_, _ string, op, _, _, _, _ stackset.CreateOrUpdateOption) {
+						actual := &sdkcloudformation.UpdateStackSetInput{}
+						op(actual)
+						wanted := &sdkcloudformation.UpdateStackSetInput{}
+						stackset.WithOperationID("2")(wanted)
+						require.Equal(t, actual, wanted)
+					})
+				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						Account: "1234",
 					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{
-								{
-									Region:  aws.String("us-west-2"),
-									Account: aws.String(mockProject.AccountID),
-								},
-							},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						t.FailNow()
-						return nil, nil
-					},
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
+				}, nil)
+				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				return m
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.AddEnvToProject(tc.project, tc.env)
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := CloudFormation{
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             templates.Box(),
+			}
+			got := cf.AddEnvToProject(tc.project, tc.env)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())
@@ -346,182 +217,38 @@ func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		cf                  CloudFormation
 		project             *archer.Project
+		mockStackSet        func(t *testing.T, ctrl *gomock.Controller) stackSetClient
 		getRegionFromClient func(client cloudformationiface.CloudFormationAPI) (string, error)
 		expectedErr         error
 	}{
 		"with no existing account nor environment, add pipeline supporting resources": {
 			project: &mockProject,
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
+				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				return m
+			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
 				return "us-west-2", nil
 			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-							// no existing account used for this project
-						})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
-						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
-						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
-						require.Equal(t, "ecs-project", *in.Tags[0].Key)
-						require.Equal(t, mockProject.Name, *in.Tags[0].Value)
-
-						require.Equal(t, "1", *in.OperationId)
-
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
-						require.NoError(t, err)
-						require.ElementsMatch(t, []string{mockProject.AccountID}, configToDeploy.Accounts)
-						require.Empty(t, configToDeploy.Apps, "There should be no new apps to deploy")
-						require.Equal(t, 1, configToDeploy.Version)
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						// no existing environment in this region, which implies there's no stack instance in this region,
-						// so return an empty slice.
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
-						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						return &sdkcloudformation.CreateStackInstancesOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
-			},
 		},
-
-		"with existing account, no existing environment in a region, add pipeline supporting resources to that region": {
-			project: &mockProject,
-			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
-				return "us-west-2", nil
-			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-							Metadata: stack.ProjectResourcesConfig{
-								// one accountId is associated with this project
-								Accounts: []string{"1234"},
-							},
-						})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Fail(t, "UpdateStackSet should not be called because there's no nwe account")
-						return nil, errors.New("should not get here")
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							// even though this account has been used with this project,
-							// in the particular region we are provisioning the pipeline supporting
-							// resources, there's no existing archer environment.
-							Summaries: []*sdkcloudformation.StackInstanceSummary{},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						require.ElementsMatch(t, []*string{aws.String(mockProject.AccountID)}, in.Accounts)
-						require.ElementsMatch(t, []*string{aws.String("us-west-2")}, in.Regions)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						return &sdkcloudformation.CreateStackInstancesOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
-			},
-		},
-
 		"with existing account and existing environment in a region, should not add pipeline supporting resources": {
 			project: &mockProject,
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						Region:  "us-west-2",
+						Account: mockProject.AccountID,
+					},
+				}, nil)
+				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				return m
+			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
 				return "us-west-2", nil
-			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-							Metadata: stack.ProjectResourcesConfig{
-								// one accountId is associated with this project
-								Accounts: []string{"1234"},
-							},
-						})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Fail(t, "UpdateStackSet should not be called because there's no nwe account")
-						return nil, errors.New("should not get here")
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						// this region happened to already has an environment deployed to it
-						// so there's an exsiting stack instance
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{
-								{
-									Region:  aws.String("us-west-2"),
-									Account: aws.String(mockProject.AccountID),
-								},
-							},
-						}, nil
-					},
-					mockCreateStackInstances: func(t *testing.T, in *sdkcloudformation.CreateStackInstancesInput) (*sdkcloudformation.CreateStackInstancesOutput, error) {
-						require.Fail(t, "CreateStackInstances should not be called because there's an existing stack instance in this region")
-						return nil, errors.New("should not get here")
-					},
-
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						require.Fail(t, "DescribeStackSetOperation should not be called because there's an existing stack instance in this region")
-						return nil, errors.New("should not get here")
-					},
-				},
-				box: templates.Box(),
 			},
 		},
 	}
@@ -529,8 +256,15 @@ func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
 	actual := getRegionFromClient // FIXME refactor using defer func
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := CloudFormation{
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             templates.Box(),
+			}
 			getRegionFromClient = tc.getRegionFromClient
-			got := tc.cf.AddPipelineResourcesToProject(tc.project, "us-west-2")
+
+			got := cf.AddPipelineResourcesToProject(tc.project, "us-west-2")
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, got, tc.expectedErr.Error())
@@ -548,138 +282,89 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		cf      CloudFormation
-		project *archer.Project
-		app     string
-		want    error
+		project      *archer.Project
+		app          string
+		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
+		want         error
 	}{
 		"with no existing deployments and adding an app": {
 			project: &mockProject,
 			app:     "TestApp",
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.Equal(t, "ECS CLI Project Resources (ECR repos, KMS keys, S3 buckets)", *in.Description)
-						require.Equal(t, "testproject-infrastructure", *in.StackSetName)
-						require.Equal(t, "testproject-executionrole", *in.ExecutionRoleName)
-						require.Equal(t, "arn:aws:iam::1234:role/testproject-adminrole", *in.AdministrationRoleARN)
-						require.True(t, len(in.Tags) == 1, "There should be one tag for the project")
-						require.Equal(t, "ecs-project", *in.Tags[0].Key)
-						require.Equal(t, mockProject.Name, *in.Tags[0].Value)
-						// We should increment the version
-						require.Equal(t, "1", *in.OperationId)
-
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+						configToDeploy, err := stack.ProjectConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"TestApp"}, configToDeploy.Apps)
-						require.Empty(t, configToDeploy.Accounts, "There should be no new accounts to deploy")
+						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 1, configToDeploy.Version)
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("1"),
-						}, nil
-					},
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{},
-						}, nil
-					},
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
+					})
+				return m
 			},
 		},
 		"with new app to existing project with existing apps": {
 			project: &mockProject,
 			app:     "test",
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-							Apps:    []string{"firsttest"},
-							Version: 1,
-						}})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-						configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
+					Apps:    []string{"firsttest"},
+					Version: 1,
+				}})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+						configToDeploy, err := stack.ProjectConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"test", "firsttest"}, configToDeploy.Apps)
-						require.Empty(t, configToDeploy.Accounts, "There should be no new apps to deploy")
+						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 2, configToDeploy.Version)
 
-						return &sdkcloudformation.UpdateStackSetOutput{
-							OperationId: aws.String("2"),
-						}, nil
-					},
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: templates.Box(),
+					})
+				return m
 			},
 		},
-		"with ewxisting app to existing project with existing apps": {
+		"with existing app to existing project with existing apps": {
 			project: &mockProject,
 			app:     "test",
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					// Given there hasn't been a StackSet update - the metadata in the stack body will be empty.
-					mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
-						body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-							Apps:    []string{"test"},
-							Version: 1,
-						}})
-						require.NoError(t, err)
-						return &sdkcloudformation.DescribeStackSetOutput{
-							StackSet: &sdkcloudformation.StackSet{
-								TemplateBody: aws.String(string(body)),
-							},
-						}, nil
-					},
-					mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-						t.FailNow()
-						return nil, nil
-					},
-				},
-				box: templates.Box(),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
+					Apps:    []string{"test"},
+					Version: 1,
+				}})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+				return m
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.cf.AddAppToProject(tc.project, tc.app)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := CloudFormation{
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             templates.Box(),
+			}
+
+			got := cf.AddAppToProject(tc.project, tc.app)
 
 			if tc.want != nil {
 				require.EqualError(t, got, tc.want.Error())
@@ -697,155 +382,49 @@ func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		app string
-
-		mockDescribeStackSet          func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error)
-		mockUpdateStackSet            func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error)
-		mockDescribeStackSetOperation func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error)
-
-		want error
+		app          string
+		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
+		want         error
 	}{
 		"should remove input app from the stack set": {
 			app: "test",
-			mockDescribeStackSet: func(t *testing.T, in *sdkcloudformation.DescribeStackSetInput) (*sdkcloudformation.DescribeStackSetOutput, error) {
+
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
 				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
 					Apps:    []string{"test", "firsttest"},
 					Version: 1,
 				}})
 				require.NoError(t, err)
-				return &sdkcloudformation.DescribeStackSetOutput{
-					StackSet: &sdkcloudformation.StackSet{
-						TemplateBody: aws.String(string(body)),
-					},
-				}, nil
-			},
-			mockUpdateStackSet: func(t *testing.T, in *sdkcloudformation.UpdateStackSetInput) (*sdkcloudformation.UpdateStackSetOutput, error) {
-				require.NotZero(t, *in.TemplateBody, "TemplateBody should not be empty")
-				configToDeploy, err := stack.ProjectConfigFrom(in.TemplateBody)
-				require.NoError(t, err)
-				require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Apps)
-				require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
-				require.Equal(t, 2, configToDeploy.Version)
-
-				return &sdkcloudformation.UpdateStackSetOutput{
-					OperationId: aws.String("2"),
-				}, nil
-			},
-			mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-				return &sdkcloudformation.DescribeStackSetOperationOutput{
-					StackSetOperation: &sdkcloudformation.StackSetOperation{
-						Status: aws.String(sdkcloudformation.StackSetOperationStatusSucceeded),
-					},
-				}, nil
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil).
+					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
+						configToDeploy, err := stack.ProjectConfigFrom(&template)
+						require.NoError(t, err)
+						require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Apps)
+						require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
+						require.Equal(t, 2, configToDeploy.Version)
+					})
+				return m
 			},
 		},
 	}
 
-	for name, test := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 			cf := CloudFormation{
-				sdkClient: mockCloudFormation{
-					t: t,
-
-					mockDescribeStackSet:          test.mockDescribeStackSet,
-					mockUpdateStackSet:            test.mockUpdateStackSet,
-					mockDescribeStackSetOperation: test.mockDescribeStackSetOperation,
-				},
-				box: templates.Box(),
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             templates.Box(),
 			}
 
-			got := cf.RemoveAppFromProject(mockProject, test.app)
+			got := cf.RemoveAppFromProject(mockProject, tc.app)
 
-			require.Equal(t, test.want, got)
-		})
-	}
-}
-
-func TestWaitForStackSetOperation(t *testing.T) {
-	waitingForOperation := true
-	testCases := map[string]struct {
-		cf   CloudFormation
-		want error
-	}{
-		"operation succeeded": {
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("SUCCEEDED"),
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
-			},
-		},
-		"operation failed": {
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("FAILED"),
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
-			},
-			want: fmt.Errorf("project operation operation in stack set stackset failed"),
-		},
-		"operation stopped": {
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String("STOPPED"),
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
-			},
-			want: fmt.Errorf("project operation operation in stack set stackset was manually stopped"),
-		},
-		"operation non-terminal to succeeded": {
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-						// First, say the status is running. Then during the next call, set the status to succeeded.
-						status := "RUNNING"
-						if !waitingForOperation {
-							status = "SUCCEEDED"
-						}
-						waitingForOperation = false
-						return &sdkcloudformation.DescribeStackSetOperationOutput{
-							StackSetOperation: &sdkcloudformation.StackSetOperation{
-								Status: aws.String(status),
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := tc.cf.waitForStackSetOperation("stackset", "operation")
-
-			if tc.want != nil {
-				require.EqualError(t, got, tc.want.Error())
-			} else {
-				require.NoError(t, got)
-			}
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -854,8 +433,8 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 	mockProject := archer.Project{Name: "project", AccountID: "12345"}
 
 	testCases := map[string]struct {
-		cf                       CloudFormation
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
+		mockStackSet             func(t *testing.T, ctrl *gomock.Controller) stackSetClient
 		wantedResource           archer.ProjectRegionalResources
 		want                     error
 	}{
@@ -871,24 +450,26 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 				m.EXPECT().Describe("cross-region-stack").Return(mockValidProjectResourceStack(), nil)
 				return m
 			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{
-								{
-									StackId: aws.String("cross-region-stack"),
-									Region:  aws.String("us-east-9"),
-								},
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any()).
+					Return([]stackset.InstanceSummary{
+						{
+							StackID: "cross-region-stack",
+							Region:  "us-east-9",
+						},
+					}, nil).
+					Do(func(_ string, opt stackset.InstanceSummariesOption) {
+						wanted := &sdkcloudformation.ListStackInstancesInput{
+							StackInstanceAccount: aws.String("12345"),
+						}
+						actual := &sdkcloudformation.ListStackInstancesInput{}
+						opt(actual)
+						require.Equal(t, wanted, actual)
+					})
+				return m
 			},
 		},
-
 		"should propagate describe errors": {
 			want: fmt.Errorf("describing project resources: getting outputs for stack cross-region-stack in region us-east-9: error calling cloudformation"),
 			createRegionalMockClient: func(ctrl *gomock.Controller) cfnClient {
@@ -896,34 +477,24 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 				m.EXPECT().Describe("cross-region-stack").Return(nil, errors.New("error calling cloudformation"))
 				return m
 			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{
-								{
-									StackId: aws.String("cross-region-stack"),
-									Region:  aws.String("us-east-9"),
-								},
-							},
-						}, nil
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						StackID: "cross-region-stack",
+						Region:  "us-east-9",
 					},
-				},
-				box: boxWithTemplateFile(),
+				}, nil)
+				return m
 			},
 		},
 
 		"should propagate list stack instances errors": {
-			want: fmt.Errorf("describing project resources: listing stack instances: error"),
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return nil, fmt.Errorf("error")
-					},
-				},
-				box: boxWithTemplateFile(),
+			want: fmt.Errorf("describing project resources: error"),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any()).Return(nil, errors.New("error"))
+				return m
 			},
 		},
 	}
@@ -933,12 +504,16 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			tc.cf.regionalClient = func(region string) cfnClient {
-				return tc.createRegionalMockClient(ctrl)
+			cf := CloudFormation{
+				regionalClient: func(region string) cfnClient {
+					return tc.createRegionalMockClient(ctrl)
+				},
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             boxWithTemplateFile(),
 			}
 
 			// WHEN
-			got, err := tc.cf.GetRegionalProjectResources(&mockProject)
+			got, err := cf.GetRegionalProjectResources(&mockProject)
 
 			// THEN
 			if tc.want != nil {
@@ -957,8 +532,8 @@ func TestCloudFormation_GetProjectResourcesByRegion(t *testing.T) {
 	mockProject := archer.Project{Name: "project", AccountID: "12345"}
 
 	testCases := map[string]struct {
-		cf                       CloudFormation
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
+		mockStackSet             func(t *testing.T, ctrl *gomock.Controller) stackSetClient
 		wantedResource           archer.ProjectRegionalResources
 		region                   string
 		want                     error
@@ -976,35 +551,35 @@ func TestCloudFormation_GetProjectResourcesByRegion(t *testing.T) {
 				m.EXPECT().Describe("cross-region-stack").Return(mockValidProjectResourceStack(), nil)
 				return m
 			},
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						require.Equal(t, "us-east-9", *in.StackInstanceRegion)
-						return &sdkcloudformation.ListStackInstancesOutput{
-							Summaries: []*sdkcloudformation.StackInstanceSummary{
-								{
-									StackId: aws.String("cross-region-stack"),
-									Region:  aws.String("us-east-9"),
-								},
-							},
-						}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return([]stackset.InstanceSummary{
+						{
+							StackID: "cross-region-stack",
+							Region:  "us-east-9",
+						},
+					}, nil).
+					Do(func(_ string, optAcc, optRegion stackset.InstanceSummariesOption) {
+						wanted := &sdkcloudformation.ListStackInstancesInput{
+							StackInstanceAccount: aws.String("12345"),
+							StackInstanceRegion:  aws.String("us-east-9"),
+						}
+						actual := &sdkcloudformation.ListStackInstancesInput{}
+						optAcc(actual)
+						optRegion(actual)
+						require.Equal(t, wanted, actual)
+					})
+				return m
 			},
 		},
 		"should error when resources are found": {
 			want:   fmt.Errorf("no regional resources for project project in region us-east-9 found"),
 			region: "us-east-9",
-			cf: CloudFormation{
-				sdkClient: &mockCloudFormation{
-					t: t,
-					mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-						return &sdkcloudformation.ListStackInstancesOutput{}, nil
-					},
-				},
-				box: boxWithTemplateFile(),
+			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
+				return m
 			},
 		},
 	}
@@ -1014,12 +589,16 @@ func TestCloudFormation_GetProjectResourcesByRegion(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			tc.cf.regionalClient = func(region string) cfnClient {
-				return tc.createRegionalMockClient(ctrl)
+			cf := CloudFormation{
+				regionalClient: func(region string) cfnClient {
+					return tc.createRegionalMockClient(ctrl)
+				},
+				projectStackSet: tc.mockStackSet(t, ctrl),
+				box:             boxWithTemplateFile(),
 			}
 
 			// WHEN
-			got, err := tc.cf.GetProjectResourcesByRegion(&mockProject, tc.region)
+			got, err := cf.GetProjectResourcesByRegion(&mockProject, tc.region)
 
 			// THEN
 			if tc.want != nil {
@@ -1167,153 +746,43 @@ func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloud
 
 func TestCloudFormation_DeleteProject(t *testing.T) {
 	tests := map[string]struct {
-		projectName string
-		createMock  func(ctrl *gomock.Controller) cfnClient
-
-		mockListStackInstances                      func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error)
-		mockDeleteStackInstances                    func(t *testing.T, in *sdkcloudformation.DeleteStackInstancesInput) (*sdkcloudformation.DeleteStackInstancesOutput, error)
-		mockDeleteStackSet                          func(t *testing.T, in *sdkcloudformation.DeleteStackSetInput) (*sdkcloudformation.DeleteStackSetOutput, error)
-		mockDescribeStackSetOperation               func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error)
-		mockWaitUntilStackDeleteCompleteWithContext func(t *testing.T, in *sdkcloudformation.DescribeStacksInput) error
+		projectName  string
+		createMock   func(ctrl *gomock.Controller) cfnClient
+		mockStackSet func(ctrl *gomock.Controller) stackSetClient
 
 		want error
 	}{
-		"should return nil given happy path": {
+		"should delete stackset and then infrastructure roles": {
 			projectName: "testProject",
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().DeleteAndWait("testProject-infrastructure-roles").Return(nil)
 				return m
 			},
-			mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-				return &sdkcloudformation.ListStackInstancesOutput{
-					Summaries: []*sdkcloudformation.StackInstanceSummary{
-						{
-							Region:  aws.String("us-west-2"),
-							Account: aws.String("12345"),
-						},
-					},
-				}, nil
-			},
-			mockDeleteStackInstances: func(t *testing.T, in *sdkcloudformation.DeleteStackInstancesInput) (*sdkcloudformation.DeleteStackInstancesOutput, error) {
-				require.Equal(t, 1, len(in.Accounts))
-				require.Equal(t, 1, len(in.Regions))
-				require.Equal(t, "12345", aws.StringValue(in.Accounts[0]))
-				require.Equal(t, "us-west-2", aws.StringValue(in.Regions[0]))
-				return &sdkcloudformation.DeleteStackInstancesOutput{
-					OperationId: aws.String("operationId"),
-				}, nil
-			},
-			mockDeleteStackSet: func(t *testing.T, in *sdkcloudformation.DeleteStackSetInput) (*sdkcloudformation.DeleteStackSetOutput, error) {
-				return &sdkcloudformation.DeleteStackSetOutput{}, nil
-			},
-			mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-				require.Equal(t, "operationId", aws.StringValue(in.OperationId))
-				return &sdkcloudformation.DescribeStackSetOperationOutput{
-					StackSetOperation: &sdkcloudformation.StackSetOperation{
-						Status: aws.String("SUCCEEDED"),
-					},
-				}, nil
-			},
-			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *sdkcloudformation.DescribeStacksInput) error {
-				return nil
-			},
-			want: nil,
-		},
-		"should return nil if stackset has already been deleted before running": {
-			projectName: "testProject",
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().DeleteAndWait("testProject-infrastructure-roles").Return(nil)
+			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().Delete(gomock.Any()).Return(nil)
 				return m
 			},
-			mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-				return nil, awserr.New(sdkcloudformation.ErrCodeStackSetNotFoundException, "StackSetNotFoundException", nil)
-			},
-			mockDeleteStackInstances: func(t *testing.T, in *sdkcloudformation.DeleteStackInstancesInput) (*sdkcloudformation.DeleteStackInstancesOutput, error) {
-				t.FailNow()
-				return nil, nil
-			},
-			mockDeleteStackSet: func(t *testing.T, in *sdkcloudformation.DeleteStackSetInput) (*sdkcloudformation.DeleteStackSetOutput, error) {
-				t.FailNow()
-				return nil, nil
-			},
-			mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-				t.FailNow()
-				return nil, nil
-			},
-			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *sdkcloudformation.DescribeStacksInput) error {
-				return nil
-			},
-			want: nil,
-		},
-		"should return nil if stackset is deleted after stack instances are created (edge case)": {
-			projectName: "testProject",
-			createMock: func(ctrl *gomock.Controller) cfnClient {
-				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().DeleteAndWait("testProject-infrastructure-roles").Return(nil)
-				return m
-			},
-			mockListStackInstances: func(t *testing.T, in *sdkcloudformation.ListStackInstancesInput) (*sdkcloudformation.ListStackInstancesOutput, error) {
-				return &sdkcloudformation.ListStackInstancesOutput{
-					Summaries: []*sdkcloudformation.StackInstanceSummary{
-						{
-							Region:  aws.String("us-west-2"),
-							Account: aws.String("12345"),
-						},
-					},
-				}, nil
-			},
-			mockDeleteStackInstances: func(t *testing.T, in *sdkcloudformation.DeleteStackInstancesInput) (*sdkcloudformation.DeleteStackInstancesOutput, error) {
-				require.Equal(t, 1, len(in.Accounts))
-				require.Equal(t, 1, len(in.Regions))
-				require.Equal(t, "12345", aws.StringValue(in.Accounts[0]))
-				require.Equal(t, "us-west-2", aws.StringValue(in.Regions[0]))
-				return &sdkcloudformation.DeleteStackInstancesOutput{
-					OperationId: aws.String("operationId"),
-				}, nil
-			},
-			mockDeleteStackSet: func(t *testing.T, in *sdkcloudformation.DeleteStackSetInput) (*sdkcloudformation.DeleteStackSetOutput, error) {
-				return nil, awserr.New(sdkcloudformation.ErrCodeStackSetNotFoundException, "StackSetNotFoundException", nil)
-			},
-			mockDescribeStackSetOperation: func(t *testing.T, in *sdkcloudformation.DescribeStackSetOperationInput) (*sdkcloudformation.DescribeStackSetOperationOutput, error) {
-				require.Equal(t, "operationId", aws.StringValue(in.OperationId))
-				return &sdkcloudformation.DescribeStackSetOperationOutput{
-					StackSetOperation: &sdkcloudformation.StackSetOperation{
-						Status: aws.String("SUCCEEDED"),
-					},
-				}, nil
-			},
-			mockWaitUntilStackDeleteCompleteWithContext: func(t *testing.T, in *sdkcloudformation.DescribeStacksInput) error {
-				return nil
-			},
-			want: nil,
 		},
 	}
 
-	for name, test := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			cf := CloudFormation{
-				// TODO: replace this custom mock client with gomock.
-				sdkClient: &mockCloudFormation{
-					t:                             t,
-					mockDeleteStackInstances:      test.mockDeleteStackInstances,
-					mockDeleteStackSet:            test.mockDeleteStackSet,
-					mockListStackInstances:        test.mockListStackInstances,
-					mockDescribeStackSetOperation: test.mockDescribeStackSetOperation,
-				},
-				cfnClient: test.createMock(ctrl),
+				cfnClient:       tc.createMock(ctrl),
+				projectStackSet: tc.mockStackSet(ctrl),
 			}
 
 			// WHEN
-			got := cf.DeleteProject(test.projectName)
+			got := cf.DeleteProject(tc.projectName)
 
 			// THEN
-			require.Equal(t, test.want, got)
+			require.Equal(t, tc.want, got)
 		})
 	}
 }
