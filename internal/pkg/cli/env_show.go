@@ -1,10 +1,12 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 
 package cli
 
 import (
+	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/spf13/cobra"
 )
 
@@ -17,16 +19,35 @@ type showEnvVars struct {
 
 type showEnvOpts struct {
 	showEnvVars
+
+	storeSvc      storeReader
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+	}
+
 	return &showEnvOpts{
 		showEnvVars: 	vars,
+		storeSvc:       ssmStore,
 	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
+	if o.ProjectName() != "" {
+		if _, err := o.storeSvc.GetProject(o.ProjectName()); err != nil {
+			return err
+		}
+	}
+	if o.envName != "" {
+		if _, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
