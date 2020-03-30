@@ -166,6 +166,19 @@ type environmentDeployer interface {
 	GetEnvironment(projectName, envName string) (*archer.Environment, error)
 }
 
+type appDeployer interface {
+	// DeployApp // TODO ADD
+	DeleteApp(in deploy.DeleteAppInput) error
+}
+
+type appRemover interface {
+	RemoveAppFromProject(project *archer.Project, appName string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error // implemented by ECR Service
+}
+
 type pipelineDeployer interface {
 	CreatePipeline(env *deploy.CreatePipelineInput) error
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
