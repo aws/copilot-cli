@@ -325,7 +325,7 @@ func (o *initAppOpts) askAppPort() error {
 	)
 
 	o.setupParser(o)
-	ports := o.df.GetExposedPorts()
+	ports, err := o.df.GetExposedPorts()
 
 	var defaultPort = defaultAppPortString
 	switch len(ports) {

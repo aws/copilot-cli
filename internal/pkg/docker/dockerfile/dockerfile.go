@@ -14,7 +14,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-const exposeRegexPattern = `(\d+)(\/(\w+))?` // port and optional protocol, at least 1 time on a line
+var exposeRegexPattern = regexp.MustCompile(`(<port>\d+)(\/(<protocol>\w+))?`) // port and optional protocol, at least 1 time on a line
+
 const (
 	exposeRegexpWholeMatch = 0
 	exposeRegexpPort       = 1
@@ -30,6 +31,7 @@ type portConfig struct {
 	Port      uint16
 	Protocol  string
 	RawString string
+	err       error
 }
 
 // Dockerfile represents a parsed dockerfile
@@ -37,31 +39,46 @@ type Dockerfile struct {
 	ExposedPorts []portConfig
 	parsed       bool
 	path         string
+	portParseErr bool
 
 	fs afero.Fs
 }
 
-// New() returns an empty Dockerfile
+// New returns an empty Dockerfile
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
 		fs:           fs,
 		path:         path,
 		parsed:       false,
+		portParseErr: false,
 	}
 }
 
 // GetExposedPorts returns a uint16 slice of exposed ports found in the Dockerfile
-func (df *Dockerfile) GetExposedPorts() []uint16 {
+func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	if !df.parsed {
-		df.parse()
+		err := df.parse()
+		if err != nil {
+			return []uint16{}, err
+		}
 	}
 
 	var ports []uint16
+	switch {
+	case len(df.ExposedPorts) == 0:
+		return []portConfig{}, ErrNoExpose{
+			Dockerfile: df.path,
+		}
+	}  {
+		
+	}
 	for _, port := range df.ExposedPorts {
 		ports = append(ports, port.Port)
+
 	}
-	return ports
+
+	return ports, err
 }
 
 // parse takes a Dockerfile and fills in struct members based on
@@ -85,16 +102,23 @@ func parseFromScanner(scanner *bufio.Scanner) Dockerfile {
 	var line = ""
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
+	df.ArgMap = make(map[string]string)
 	for scanner.Scan() {
 		line = scanner.Text()
-		prefix := strings.SplitN(line, " ", 2)[0]
-		switch prefix {
-		case "EXPOSE":
+		switch {
+		case strings.HasPrefix(line, "EXPOSE"):
 			currentPorts, _ := parseExpose(line)
+			err
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
+		case strings.HasPrefix(line, "ARG"):
+
 		}
 	}
 	return df
+}
+
+func parseArg(line string) (map[string]string, error) {
+
 }
 
 func parseExpose(line string) ([]portConfig, error) {

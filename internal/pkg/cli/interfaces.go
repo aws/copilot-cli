@@ -200,5 +200,5 @@ type domainValidator interface {
 }
 
 type dockerfileParser interface {
-	GetExposedPorts() []uint16
+	GetExposedPorts() ([]uint16, error)
 }

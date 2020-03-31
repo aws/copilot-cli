@@ -186,7 +186,7 @@ EXPOSE 8080/tcp 5000`),
 			}
 			df := New(fs, "./Dockerfile")
 
-			ports := df.GetExposedPorts()
+			ports, err := df.GetExposedPorts()
 
 			require.Equal(t, wantedUintPorts, ports)
 
