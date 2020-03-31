@@ -71,6 +71,9 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 				Query: aws.String(string(query)),
 			},
 		})
+		if err != nil {
+			return nil, fmt.Errorf("search CloudWatch alarm resources: %w", err)
+		}
 		for _, identifier := range resourceResp.ResourceIdentifiers {
 			name, err := cw.getAlarmName(*identifier.ResourceArn)
 			if err != nil {
