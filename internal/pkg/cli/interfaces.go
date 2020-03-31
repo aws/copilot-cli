@@ -131,6 +131,10 @@ type wsAppReader interface {
 	wsAppManifestReader
 }
 
+type wsEnvReader interface {
+	EnvNames() ([]string, error)
+}
+
 type wsPipelineDeleter interface {
 	DeletePipelineManifest() error
 	wsPipelineManifestReader
