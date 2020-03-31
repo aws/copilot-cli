@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -293,6 +294,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 }
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
+	fileExistsErr := &workspace.ErrFileExists{ FileName: "buildspec.yml" }
 	testCases := map[string]struct {
 		inEnvironments []string
 		inGitHubToken  string
@@ -488,6 +490,45 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			expectedError: errors.New("some error"),
+		},
+		"does not return an error if buildspec already exists": {
+			inEnvironments: []string{"test"},
+			inGitHubToken:  "hunter2",
+			inGitHubRepo:   "goose",
+			inGitBranch:    "dev",
+			inProjectName:  "badgoose",
+
+			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
+			},
+			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", fileExistsErr)
+			},
+			mockParser: func(m *templatemocks.MockParser) {
+				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
+			},
+			mockStoreSvc: func(m *climocks.MockstoreReader) {
+				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+					Name: "badgoose",
+				}, nil)
+			},
+			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
+				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+					Name: "badgoose",
+				}).Return([]*archer.ProjectRegionalResources{
+					&archer.ProjectRegionalResources{
+						Region:   "us-west-2",
+						S3Bucket: "gooseBucket",
+					},
+				}, nil)
+			},
+			expectedSecretName:    "github-token-badgoose-goose",
+			expectManifestPath:    "pipeline.yml",
+			expectedBuildspecPath: "buildspec.yml",
+			expectedError:         nil,
 		},
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
