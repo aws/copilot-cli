@@ -5,26 +5,36 @@
 package cloudwatch
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go/service/resourcegroups"
 )
 
 const (
-	compositeAlarmType = "Composite"
-	metricAlarmType    = "Metric"
+	resourceQueryType      = "TAG_FILTERS_1_0"
+	cloudwatchResourceType = "AWS::CloudWatch::Alarm"
+	compositeAlarmType     = "Composite"
+	metricAlarmType        = "Metric"
 )
 
 type cwClient interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
-	ListTagsForResource(input *cloudwatch.ListTagsForResourceInput) (*cloudwatch.ListTagsForResourceOutput, error)
+}
+
+type resourceGroupClient interface {
+	SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error)
 }
 
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	client cwClient
+	cwClient
+	resourceGroupClient
 }
 
 // AlarmStatus contains CloudWatch alarm status.
@@ -40,32 +50,50 @@ type AlarmStatus struct {
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
 	return &CloudWatch{
-		client: cloudwatch.New(s),
+		cwClient:            cloudwatch.New(s),
+		resourceGroupClient: resourcegroups.New(s),
 	}
 }
 
 // GetAlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
-func (c *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
+func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
+	var alarmNames []*string
+	resourceResp := &resourcegroups.SearchResourcesOutput{}
+	query, err := cw.searchResourceQuery(tags)
+	if err != nil {
+		return nil, fmt.Errorf("construct search resource query: %w", err)
+	}
+	for {
+		resourceResp, err = cw.SearchResources(&resourcegroups.SearchResourcesInput{
+			NextToken: resourceResp.NextToken,
+			ResourceQuery: &resourcegroups.ResourceQuery{
+				Type:  aws.String(resourceQueryType),
+				Query: aws.String(string(query)),
+			},
+		})
+		for _, identifier := range resourceResp.ResourceIdentifiers {
+			name, err := cw.getAlarmName(*identifier.ResourceArn)
+			if err != nil {
+				return nil, err
+			}
+			alarmNames = append(alarmNames, name)
+		}
+		if resourceResp.NextToken == nil {
+			break
+		}
+	}
 	var alarmStatus []AlarmStatus
-	var err error
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
 	for {
-		alarmResp, err = c.client.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
-			NextToken: alarmResp.NextToken,
+		alarmResp, err = cw.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			AlarmNames: alarmNames,
+			NextToken:  alarmResp.NextToken,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("describe CloudWatch alarms: %w", err)
 		}
-		compositeAlarmStatus, err := c.filterCompositeAlarmsByTags(alarmResp.CompositeAlarms, tags)
-		if err != nil {
-			return nil, err
-		}
-		alarmStatus = append(alarmStatus, compositeAlarmStatus...)
-		metricAlarmStatus, err := c.filterMetricAlarmsByTags(alarmResp.MetricAlarms, tags)
-		if err != nil {
-			return nil, err
-		}
-		alarmStatus = append(alarmStatus, metricAlarmStatus...)
+		alarmStatus = append(alarmStatus, cw.compositeAlarmsStatus(alarmResp.CompositeAlarms)...)
+		alarmStatus = append(alarmStatus, cw.metricAlarmsStatus(alarmResp.MetricAlarms)...)
 		if alarmResp.NextToken == nil {
 			break
 		}
@@ -73,22 +101,45 @@ func (c *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, e
 	return alarmStatus, nil
 }
 
-func (c *CloudWatch) filterAlarmsByTags(alarms []AlarmStatus, tags map[string]string) ([]AlarmStatus, error) {
-	var alarmStatusList []AlarmStatus
-	for _, alarm := range alarms {
-		exist, err := c.isAlarmTagged(alarm.Arn, tags)
-		if err != nil {
-			return nil, fmt.Errorf("validate CloudWatch alarm %s: %w", alarm.Name, err)
-		}
-		if !exist {
-			continue
-		}
-		alarmStatusList = append(alarmStatusList, alarm)
+func (cw *CloudWatch) searchResourceQuery(tags map[string]string) ([]byte, error) {
+	type keyVal struct {
+		Key    string
+		Values []string
 	}
-	return alarmStatusList, nil
+	type query struct {
+		ResourceTypeFilters []string
+		TagFilters          []keyVal
+	}
+	var keyVals []keyVal
+	for k, v := range tags {
+		keyVals = append(keyVals, keyVal{
+			Key:    k,
+			Values: []string{v},
+		})
+	}
+	queryStruct := query{
+		ResourceTypeFilters: []string{cloudwatchResourceType},
+		TagFilters:          keyVals,
+	}
+	return json.Marshal(queryStruct)
 }
 
-func (c *CloudWatch) filterCompositeAlarmsByTags(alarms []*cloudwatch.CompositeAlarm, tags map[string]string) ([]AlarmStatus, error) {
+// getAlarmName gets the alarm name given a specific alarm ARN.
+// For example: arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm
+// returns SDc-ReadCapacityUnitsLimit-BasicAlarm
+func (cw *CloudWatch) getAlarmName(alarmArn string) (*string, error) {
+	resp, err := arn.Parse(alarmArn)
+	if err != nil {
+		return nil, fmt.Errorf("parse alarm ARN %s: %w", alarmArn, err)
+	}
+	alarmNameList := strings.Split(resp.Resource, ":")
+	if len(alarmNameList) != 2 {
+		return nil, fmt.Errorf("cannot parse alarm ARN resource %s", resp.Resource)
+	}
+	return aws.String(alarmNameList[1]), nil
+}
+
+func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
@@ -100,10 +151,10 @@ func (c *CloudWatch) filterCompositeAlarmsByTags(alarms []*cloudwatch.CompositeA
 			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
 		})
 	}
-	return c.filterAlarmsByTags(alarmStatusList, tags)
+	return alarmStatusList
 }
 
-func (c *CloudWatch) filterMetricAlarmsByTags(alarms []*cloudwatch.MetricAlarm, tags map[string]string) ([]AlarmStatus, error) {
+func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []AlarmStatus {
 	var alarmStatusList []AlarmStatus
 	for _, alarm := range alarms {
 		alarmStatusList = append(alarmStatusList, AlarmStatus{
@@ -115,33 +166,5 @@ func (c *CloudWatch) filterMetricAlarmsByTags(alarms []*cloudwatch.MetricAlarm, 
 			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
 		})
 	}
-	return c.filterAlarmsByTags(alarmStatusList, tags)
-}
-
-// isAlarmTagged validate if the CloudWatch alarm has the given tags.
-func (c *CloudWatch) isAlarmTagged(alarmARN string, tags map[string]string) (bool, error) {
-	tagResp, err := c.client.ListTagsForResource(&cloudwatch.ListTagsForResourceInput{
-		ResourceARN: aws.String(alarmARN),
-	})
-	if err != nil {
-		return false, err
-	}
-	m := make(map[string]map[string]bool)
-	for k, v := range tags {
-		m[k] = make(map[string]bool)
-		m[k][v] = false
-	}
-	for _, tag := range tagResp.Tags {
-		if _, ok := m[*tag.Key][*tag.Value]; ok {
-			m[*tag.Key][*tag.Value] = true
-		}
-	}
-	for _, existMap := range m {
-		for _, exist := range existMap {
-			if !exist {
-				return false, nil
-			}
-		}
-	}
-	return true, nil
+	return alarmStatusList
 }
