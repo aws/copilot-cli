@@ -347,7 +347,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 			wantedParams: "",
@@ -372,10 +372,13 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 				},
 				ImageRepoURL: "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend",
 				ImageTag:     "manual-bf3678c",
+				AdditionalTags: map[string]string{
+					"owner": "boss",
+				},
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
+				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
 				c.parser = m
 			},
 			wantedParams: "params",
@@ -422,6 +425,12 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 				Prod:      false,
 			},
 			ImageTag: "manual-bf3678c",
+			AdditionalTags: map[string]string{
+				"owner":       "boss",
+				ProjectTagKey: "overrideproject",
+				EnvTagKey:     "overrideenv",
+				AppTagKey:     "overrideapp",
+			},
 		},
 	}
 
@@ -429,7 +438,7 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	tags := conf.Tags()
 
 	// THEN
-	require.Equal(t, []*cloudformation.Tag{
+	require.ElementsMatch(t, []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String("phonetool"),
@@ -441,6 +450,10 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 		{
 			Key:   aws.String(AppTagKey),
 			Value: aws.String("frontend"),
+		},
+		{
+			Key:   aws.String("owner"),
+			Value: aws.String("boss"),
 		},
 	}, tags)
 }

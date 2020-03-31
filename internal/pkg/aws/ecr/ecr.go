@@ -1,7 +1,7 @@
 // Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package ecr contains utility functions for dealing with ECR repos
+// Package ecr provides a client to make API requests to Amazon EC2 Container Registry.
 package ecr
 
 import (

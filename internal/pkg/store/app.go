@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// CreateApplication instantiates a new application within an existing project. Returns ErrApplicationAlreadyExists
-// if the application already exists in the project.
+// CreateApplication instantiates a new application within an existing project. Skip if
+// the application already exists in the project.
 func (s *Store) CreateApplication(app *archer.Application) error {
 	if _, err := s.GetProject(app.Project); err != nil {
 		return err
@@ -36,9 +36,7 @@ func (s *Store) CreateApplication(app *archer.Application) error {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterAlreadyExists:
-				return &ErrApplicationAlreadyExists{
-					ApplicationName: app.Name,
-					ProjectName:     app.Project}
+				return nil
 			}
 		}
 		return fmt.Errorf("create application %s in project %s: %w", app.Name, app.Project, err)

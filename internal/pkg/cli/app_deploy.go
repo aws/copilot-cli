@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -39,9 +40,10 @@ var (
 
 type appDeployVars struct {
 	*GlobalOpts
-	AppName  string
-	EnvName  string
-	ImageTag string
+	AppName      string
+	EnvName      string
+	ImageTag     string
+	ResourceTags map[string]string
 }
 
 type appDeployOpts struct {
@@ -61,6 +63,7 @@ type appDeployOpts struct {
 
 	// cached variables
 	targetEnvironment *archer.Environment
+	targetProject     *archer.Project
 }
 
 type cfnTemplates struct {
@@ -130,6 +133,12 @@ func (o *appDeployOpts) Execute() error {
 		return err
 	}
 	o.targetEnvironment = env
+
+	proj, err := o.projectService.GetProject(o.ProjectName())
+	if err != nil {
+		return err
+	}
+	o.targetProject = proj
 
 	if err := o.configureClients(); err != nil {
 		return err
@@ -379,11 +388,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket(addonsTemplate *bytes.Buffe
 	if addonsTemplate.String() == "" {
 		return "", nil
 	}
-	proj, err := o.projectService.GetProject(o.ProjectName())
-	if err != nil {
-		return "", fmt.Errorf("get project: %w", err)
-	}
-	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(proj, o.targetEnvironment.Region)
+	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
 	if err != nil {
 		return "", fmt.Errorf("get project resources: %w", err)
 	}
@@ -409,11 +414,11 @@ func (o *appDeployOpts) deployAppStack(appTemplate *bytes.Buffer, addonsURL stri
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
-	tags := map[string]string{
+	tags := tags.Merge(o.targetProject.Tags, o.ResourceTags, map[string]string{
 		stack.ProjectTagKey: o.ProjectName(),
 		stack.EnvTagKey:     o.targetEnvironment.Name,
 		stack.AppTagKey:     o.AppName,
-	}
+	})
 	params := make(map[string]string)
 	params["AddonsTemplateURL"] = addonsURL
 	if err := o.appDeployCfClient.DeployApp(appTemplate.String(), stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags, params); err != nil {
@@ -450,7 +455,9 @@ func BuildAppDeployCmd() *cobra.Command {
 		Long:  `Deploys an application to an environment.`,
 		Example: `
   Deploys an application named "frontend" to a "test" environment.
-  /code $ ecs-preview app deploy --name frontend --env test`,
+  /code $ ecs-preview app deploy --name frontend --env test
+  Deploys an application with additional resource tags.
+  /code $ ecs-preview app deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newAppDeployOpts(vars)
 			if err != nil {
@@ -471,6 +478,7 @@ func BuildAppDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.ImageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	return cmd
 }

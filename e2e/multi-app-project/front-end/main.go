@@ -10,12 +10,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// HealthCheck just returns true if the service is up.
-func HealthCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	log.Println("🚑 healthcheck ok!")
-	w.WriteHeader(http.StatusOK)
-}
-
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get Succeeded")
@@ -45,11 +39,7 @@ func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter
 
 func main() {
 	router := httprouter.New()
-	router.GET("/front-end/", SimpleGet)
-	router.GET("/front-end/service-discovery-test", ServiceDiscoveryGet)
-
-	// Health Check
-	router.GET("/", HealthCheck)
-
+	router.GET("/", SimpleGet)
+	router.GET("/service-discovery-test", ServiceDiscoveryGet)
 	log.Fatal(http.ListenAndServe(":80", router))
 }

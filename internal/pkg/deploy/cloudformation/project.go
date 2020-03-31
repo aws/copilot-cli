@@ -4,23 +4,16 @@
 package cloudformation
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
-)
-
-const (
-	maxDeleteStackSetAttempts   = 10
-	deleteStackSetSleepDuration = 30 * time.Second
+	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 )
 
 // DeployProject sets up everything required for our project-wide resources.
@@ -30,18 +23,13 @@ const (
 // template that we update and all regional stacks are updated.
 func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 	projectConfig := stack.NewProjectStackConfig(in)
-
-	// First deploy the project roles needed by StackSets. These roles
-	// allow the stack set to set up our regional stacks.
-	if err := cf.create(projectConfig); err == nil {
-		_, err := cf.waitForStackCreation(projectConfig)
-		if err != nil {
-			return err
-		}
-	} else {
-		// If the stack already exists - we can move on
-		// to creating the StackSet.
-		var alreadyExists *ErrStackAlreadyExists
+	s, err := toStack(projectConfig)
+	if err != nil {
+		return err
+	}
+	if err := cf.cfnClient.CreateAndWait(s); err != nil {
+		// If the stack already exists - we can move on to creating the StackSet.
+		var alreadyExists *cloudformation.ErrStackAlreadyExists
 		if !errors.As(err, &alreadyExists) {
 			return err
 		}
@@ -50,25 +38,15 @@ func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 	blankProjectTemplate, err := projectConfig.ResourceTemplate(&stack.ProjectResourcesConfig{
 		Project: projectConfig.Project,
 	})
-
 	if err != nil {
 		return err
 	}
 
-	_, err = cf.client.CreateStackSet(&cloudformation.CreateStackSetInput{
-		Description:           aws.String(projectConfig.StackSetDescription()),
-		StackSetName:          aws.String(projectConfig.StackSetName()),
-		TemplateBody:          aws.String(blankProjectTemplate),
-		ExecutionRoleName:     aws.String(projectConfig.StackSetExecutionRoleName()),
-		AdministrationRoleARN: aws.String(projectConfig.StackSetAdminRoleARN()),
-		Tags:                  projectConfig.Tags(),
-	})
-
-	if err != nil && !stackSetExists(err) {
-		return err
-	}
-
-	return nil
+	return cf.projectStackSet.Create(projectConfig.StackSetName(), blankProjectTemplate,
+		stackset.WithDescription(projectConfig.StackSetDescription()),
+		stackset.WithExecutionRoleName(projectConfig.StackSetExecutionRoleName()),
+		stackset.WithAdministrationRoleARN(projectConfig.StackSetAdminRoleARN()),
+		stackset.WithTags(toMap(projectConfig.Tags())))
 }
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this project's
@@ -81,29 +59,26 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 	}
 
 	projectConfig := stack.NewProjectStackConfig(&deployProject)
-
-	describeStack := cloudformation.DescribeStacksInput{
-		StackName: aws.String(projectConfig.StackName()),
-	}
-	projectStack, err := cf.describeStack(&describeStack)
-
+	projectStack, err := cf.cfnClient.Describe(projectConfig.StackName())
 	if err != nil {
 		return fmt.Errorf("getting existing project infrastructure stack: %w", err)
 	}
 
-	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(projectStack)
+	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(projectStack.SDK())
 	deployProject.DNSDelegationAccounts = append(dnsDelegatedAccounts, accountID)
-	updatedProjectConfig := stack.NewProjectStackConfig(&deployProject)
 
-	if err := cf.update(updatedProjectConfig); err != nil {
-		// swallow the errChangeSetEmpty error since it just means there were no updates needed.
-		if err == errChangeSetEmpty {
+	s, err := toStack(stack.NewProjectStackConfig(&deployProject))
+	if err != nil {
+		return err
+	}
+	if err := cf.cfnClient.UpdateAndWait(s); err != nil {
+		var errNoUpdates *cloudformation.ErrChangeSetEmpty
+		if errors.As(err, &errNoUpdates) {
 			return nil
 		}
 		return fmt.Errorf("updating project to allow DNS delegation: %w", err)
 	}
-
-	return cf.client.WaitUntilStackUpdateCompleteWithContext(context.Background(), &describeStack, cf.waiters...)
+	return nil
 }
 
 // GetProjectResourcesByRegion fetches all the regional resources for a particular region.
@@ -133,40 +108,32 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	})
-	listStackInstancesInput := &cloudformation.ListStackInstancesInput{
-		StackSetName:         aws.String(projectConfig.StackSetName()),
-		StackInstanceAccount: aws.String(project.AccountID),
+	opts := []stackset.InstanceSummariesOption{
+		stackset.FilterSummariesByAccountID(project.AccountID),
 	}
-
 	if region != nil {
-		listStackInstancesInput.StackInstanceRegion = region
+		opts = append(opts, stackset.FilterSummariesByRegion(*region))
 	}
 
-	stackInstances, err := cf.client.ListStackInstances(listStackInstancesInput)
-
+	summaries, err := cf.projectStackSet.InstanceSummaries(projectConfig.StackSetName(), opts...)
 	if err != nil {
-		return nil, fmt.Errorf("listing stack instances: %w", err)
+		return nil, err
 	}
-
-	regionalResources := []*archer.ProjectRegionalResources{}
-	for _, stackInstance := range stackInstances.Summaries {
+	var regionalResources []*archer.ProjectRegionalResources
+	for _, summary := range summaries {
 		// Since these stacks will likely be in another region, we can't use
 		// the default cf client. Instead, we'll have to create a new client
 		// configured with the stack's region.
-		regionAwareCFClient := cf.regionalClientProvider.Client(*stackInstance.Region)
-		cfStack, err := cf.describeStackWithClient(&cloudformation.DescribeStacksInput{
-			StackName: stackInstance.StackId,
-		}, regionAwareCFClient)
-
+		regionalCFClient := cf.regionalClient(summary.Region)
+		cfStack, err := regionalCFClient.Describe(summary.StackID)
 		if err != nil {
-			return nil, fmt.Errorf("getting outputs for stack %s in region %s: %w", *stackInstance.StackId, *stackInstance.Region, err)
+			return nil, fmt.Errorf("getting outputs for stack %s in region %s: %w", summary.StackID, summary.Region, err)
 		}
-
-		regionalResource, err := stack.ToProjectRegionalResources(cfStack)
+		regionalResource, err := stack.ToProjectRegionalResources(cfStack.SDK())
 		if err != nil {
 			return nil, err
 		}
-		regionalResource.Region = *stackInstance.Region
+		regionalResource.Region = summary.Region
 		regionalResources = append(regionalResources, regionalResource)
 	}
 
@@ -178,8 +145,9 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 // to pull from it.
 func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
-		Project:   project.Name,
-		AccountID: project.AccountID,
+		Project:        project.Name,
+		AccountID:      project.AccountID,
+		AdditionalTags: project.Tags,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
@@ -262,8 +230,9 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 // sets up a new stack instance if the environment is in a new region.
 func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
 	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
-		Project:   project.Name,
-		AccountID: project.AccountID,
+		Project:        project.Name,
+		AccountID:      project.AccountID,
+		AdditionalTags: project.Tags,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedProjectConfig(projectConfig)
 	if err != nil {
@@ -304,8 +273,8 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 	return nil
 }
 
-var getRegionFromClient = func(client cloudformationiface.CloudFormationAPI) (string, error) {
-	concrete, ok := client.(*cloudformation.CloudFormation)
+var getRegionFromClient = func(client sdkcloudformationiface.CloudFormationAPI) (string, error) {
+	concrete, ok := client.(*sdkcloudformation.CloudFormation)
 	if !ok {
 		return "", errors.New("failed to retrieve the region")
 	}
@@ -347,46 +316,27 @@ func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackCo
 	//  * We update the StackSet with Version 2, the update completes.
 	//  * Someone else tries to update the StackSet with their stale version 2.
 	//  * "2" has already been used as an operation ID, and the stale write fails.
-	input := cloudformation.UpdateStackSetInput{
-		TemplateBody:          aws.String(newTemplateToDeploy),
-		OperationId:           aws.String(fmt.Sprintf("%d", resources.Version)),
-		StackSetName:          aws.String(projectConfig.StackSetName()),
-		Description:           aws.String(projectConfig.StackSetDescription()),
-		ExecutionRoleName:     aws.String(projectConfig.StackSetExecutionRoleName()),
-		AdministrationRoleARN: aws.String(projectConfig.StackSetAdminRoleARN()),
-		Tags:                  projectConfig.Tags(),
-	}
-	output, err := cf.client.UpdateStackSet(&input)
-
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case cloudformation.ErrCodeOperationIdAlreadyExistsException, cloudformation.ErrCodeOperationInProgressException, cloudformation.ErrCodeStaleRequestException:
-				return &ErrStackSetOutOfDate{projectName: projectConfig.Project, parentErr: err}
-			}
-		}
-		return fmt.Errorf("updating project resources: %w", err)
-	}
-
-	return cf.waitForStackSetOperation(projectConfig.StackSetName(), *output.OperationId)
+	return cf.projectStackSet.UpdateAndWait(projectConfig.StackSetName(), newTemplateToDeploy,
+		stackset.WithOperationID(fmt.Sprintf("%d", resources.Version)),
+		stackset.WithDescription(projectConfig.StackSetDescription()),
+		stackset.WithExecutionRoleName(projectConfig.StackSetExecutionRoleName()),
+		stackset.WithAdministrationRoleARN(projectConfig.StackSetAdminRoleARN()),
+		stackset.WithTags(toMap(projectConfig.Tags())))
 }
 
 // addNewStackInstances takes an environment and determines if we need to create a new
 // stack instance. We only spin up a new stack instance if the env is in a new region.
 func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.ProjectStackConfig, region string) error {
-	stackInstances, err := cf.client.ListStackInstances(&cloudformation.ListStackInstancesInput{
-		StackSetName: aws.String(projectConfig.StackSetName()),
-	})
-
+	summaries, err := cf.projectStackSet.InstanceSummaries(projectConfig.StackSetName())
 	if err != nil {
-		return fmt.Errorf("fetching existing project stack instances: %w", err)
+		return err
 	}
 
 	// We only want to deploy a new StackInstance if we're
 	// adding an environment in a new region.
 	shouldDeployNewStackInstance := true
-	for _, stackInstance := range stackInstances.Summaries {
-		if *stackInstance.Region == region {
+	for _, summary := range summaries {
+		if summary.Region == region {
 			shouldDeployNewStackInstance = false
 		}
 	}
@@ -395,133 +345,28 @@ func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.Projec
 		return nil
 	}
 
-	// Set up a new Stack Instance for the new region. The Stack Instance will inherit
-	// the latest StackSet template.
-	createStacksOutput, err := cf.client.CreateStackInstances(&cloudformation.CreateStackInstancesInput{
-		Accounts:     []*string{aws.String(projectConfig.AccountID)},
-		Regions:      []*string{aws.String(region)},
-		StackSetName: aws.String(projectConfig.StackSetName()),
-	})
-
-	if err != nil {
-		return fmt.Errorf("creating new project stack instances: %w", err)
-	}
-
-	return cf.waitForStackSetOperation(projectConfig.StackSetName(), *createStacksOutput.OperationId)
+	// Set up a new Stack Instance for the new region. The Stack Instance will inherit the latest StackSet template.
+	return cf.projectStackSet.CreateInstancesAndWait(projectConfig.StackSetName(), []string{projectConfig.AccountID}, []string{region})
 }
 
 func (cf CloudFormation) getLastDeployedProjectConfig(projectConfig *stack.ProjectStackConfig) (*stack.ProjectResourcesConfig, error) {
 	// Check the existing deploy stack template. From that template, we'll parse out the list of apps and accounts that
 	// are deployed in the stack.
-	describeOutput, err := cf.client.DescribeStackSet(&cloudformation.DescribeStackSetInput{
-		StackSetName: aws.String(projectConfig.StackSetName()),
-	})
+	descr, err := cf.projectStackSet.Describe(projectConfig.StackSetName())
 	if err != nil {
-		return nil, fmt.Errorf("describe stack set: %w", err)
+		return nil, err
 	}
-	previouslyDeployedConfig, err := stack.ProjectConfigFrom(describeOutput.StackSet.TemplateBody)
+	previouslyDeployedConfig, err := stack.ProjectConfigFrom(&descr.Template)
 	if err != nil {
 		return nil, fmt.Errorf("parse previous deployed stackset %w", err)
 	}
 	return previouslyDeployedConfig, nil
 }
 
-func (cf CloudFormation) waitForStackSetOperation(stackSetName, operationID string) error {
-	for {
-		response, err := cf.client.DescribeStackSetOperation(&cloudformation.DescribeStackSetOperationInput{
-			OperationId:  aws.String(operationID),
-			StackSetName: aws.String(stackSetName),
-		})
-
-		if err != nil {
-			return fmt.Errorf("fetching stack set operation status: %w", err)
-		}
-
-		if *response.StackSetOperation.Status == "STOPPED" {
-			return fmt.Errorf("project operation %s in stack set %s was manually stopped", operationID, stackSetName)
-		}
-
-		if *response.StackSetOperation.Status == "FAILED" {
-			return fmt.Errorf("project operation %s in stack set %s failed", operationID, stackSetName)
-		}
-
-		if *response.StackSetOperation.Status == "SUCCEEDED" {
-			return nil
-		}
-
-		time.Sleep(3 * time.Second)
-	}
-}
-
 // DeleteProject deletes all project specific StackSet and Stack resources.
 func (cf CloudFormation) DeleteProject(projectName string) error {
-	stackSetName := fmt.Sprintf("%s-infrastructure", projectName)
-	if err := cf.deleteProjectStackSet(stackSetName); err != nil {
+	if err := cf.projectStackSet.Delete(fmt.Sprintf("%s-infrastructure", projectName)); err != nil {
 		return err
 	}
-	return cf.delete(fmt.Sprintf("%s-infrastructure-roles", projectName))
-}
-
-func (cf CloudFormation) deleteProjectStackSet(stackSetName string) error {
-	stackInstances, err := cf.client.ListStackInstances(&cloudformation.ListStackInstancesInput{
-		StackSetName: aws.String(stackSetName),
-	})
-
-	if err != nil {
-		// If the stackset doesn't exist - just move on.
-		if stackSetDoesNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("fetching existing project stack instances: %w", err)
-	}
-
-	// We want to delete all the stack instances, so we create
-	// a set of account ids and regions.
-	accountSet := map[string]bool{}
-	regionSet := map[string]bool{}
-	for _, summary := range stackInstances.Summaries {
-		accountSet[*summary.Account] = true
-		regionSet[*summary.Region] = true
-	}
-
-	var regions []string
-	var accounts []string
-	for key := range accountSet {
-		accounts = append(accounts, key)
-	}
-
-	for key := range regionSet {
-		regions = append(regions, key)
-	}
-
-	// Delete the Stack Instances for those accounts and regions.
-	if len(stackInstances.Summaries) > 0 {
-		operation, err := cf.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
-			Accounts:     aws.StringSlice(accounts),
-			RetainStacks: aws.Bool(false),
-			Regions:      aws.StringSlice(regions),
-			StackSetName: aws.String(stackSetName),
-		})
-
-		if err != nil {
-			return fmt.Errorf("DeleteStackInstances for stackset %s, accounts %s, and regions %s: %w",
-				stackSetName, accounts, regions, err)
-		}
-
-		if err := cf.waitForStackSetOperation(stackSetName, *operation.OperationId); err != nil {
-			return fmt.Errorf("Waiting for stackset %s to be deleted: %w", stackSetName, err)
-		}
-	}
-
-	// Delete the StackSet now that the stack set instances are deleted.
-	if _, err := cf.client.DeleteStackSet(&cloudformation.DeleteStackSetInput{
-		StackSetName: aws.String(stackSetName),
-	}); err != nil {
-		// If the StackSet doesn't exist, that's fine, move on.
-		if !stackSetDoesNotExist(err) {
-			return err
-		}
-	}
-
-	return nil
+	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-infrastructure-roles", projectName))
 }

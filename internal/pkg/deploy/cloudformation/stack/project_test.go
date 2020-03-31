@@ -209,12 +209,28 @@ func TestProjectParameters(t *testing.T) {
 
 func TestProjectTags(t *testing.T) {
 	proj := &ProjectStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+		CreateProjectInput: &deploy.CreateProjectInput{
+			Project:   "testproject",
+			AccountID: "1234",
+			AdditionalTags: map[string]string{
+				"confidentiality": "public",
+				"owner":           "finance",
+				ProjectTagKey:     "overrideproject",
+			},
+		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(ProjectTagKey),
 			Value: aws.String(proj.Project),
+		},
+		{
+			Key:   aws.String("confidentiality"),
+			Value: aws.String("public"),
+		},
+		{
+			Key:   aws.String("owner"),
+			Value: aws.String("finance"),
 		},
 	}
 	require.ElementsMatch(t, expectedTags, proj.Tags())

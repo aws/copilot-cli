@@ -21,9 +21,10 @@ type EnvStackConfig struct {
 
 const (
 	// EnvTemplatePath is the path where the cloudformation for the environment is written.
-	EnvTemplatePath           = "environment/cf.yml"
-	acmValidationTemplatePath = "custom-resources/dns-cert-validator.js"
-	dnsDelegationTemplatePath = "custom-resources/dns-delegation.js"
+	EnvTemplatePath            = "environment/cf.yml"
+	acmValidationTemplatePath  = "custom-resources/dns-cert-validator.js"
+	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
+	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
 )
 
 // Parameter keys.
@@ -63,13 +64,19 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	enableLongARNsLambda, err := e.parser.Read(enableLongARNsTemplatePath)
+	if err != nil {
+		return "", err
+	}
 
 	content, err := e.parser.Parse(EnvTemplatePath, struct {
-		DNSDelegationLambda string
-		ACMValidationLambda string
+		DNSDelegationLambda       string
+		ACMValidationLambda       string
+		EnableLongARNFormatLambda string
 	}{
 		dnsLambda.String(),
 		acmLambda.String(),
+		enableLongARNsLambda.String(),
 	})
 	if err != nil {
 		return "", err
@@ -110,16 +117,10 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
-	return []*cloudformation.Tag{
-		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(e.Project),
-		},
-		{
-			Key:   aws.String(EnvTagKey),
-			Value: aws.String(e.Name),
-		},
-	}
+	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
+		ProjectTagKey: e.Project,
+		EnvTagKey:     e.Name,
+	})
 }
 
 func (e *EnvStackConfig) dnsDelegationRole() string {

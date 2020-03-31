@@ -147,14 +147,14 @@ func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
 /*AppShow runs:
 ecs-preview app show
 	--project $p
-	--app $a
+	--name $n
 	--json
 */
 func (cli *CLI) AppShow(opts *AppShowRequest) (*AppShowOutput, error) {
 	appJSON, appShowErr := cli.exec(
 		exec.Command(cli.path, "app", "show",
 			"--project", opts.ProjectName,
-			"--app", opts.AppName,
+			"--name", opts.AppName,
 			"--json"))
 
 	if appShowErr != nil {
@@ -291,13 +291,13 @@ func (cli *CLI) ProjectInit(opts *ProjectInitRequest) (string, error) {
 
 /*ProjectShow runs:
 ecs-preview project show
-	--project $p
+	--name $n
 	--json
 */
 func (cli *CLI) ProjectShow(projectName string) (*ProjectShowOutput, error) {
 	output, err := cli.exec(
 		exec.Command(cli.path, "project", "show",
-			"--project", projectName,
+			"--name", projectName,
 			"--json"))
 	if err != nil {
 		return nil, err

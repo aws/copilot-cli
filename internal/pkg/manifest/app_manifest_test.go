@@ -28,7 +28,7 @@ cpu: 512
 memory: 1024
 count: 1
 http:
-  path: "*"
+  path: "app"
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -49,7 +49,11 @@ environments:
 					Image:       ImageWithPort{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
 					LBFargateConfig: LBFargateConfig{
 						RoutingRule: RoutingRule{
-							Path: "*",
+							Path:            "app",
+							HealthCheckPath: "/",
+						},
+						LogsConfig: LogsConfig{
+							LogRetention: 30,
 						},
 						ContainersConfig: ContainersConfig{
 							CPU:    512,

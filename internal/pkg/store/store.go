@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
@@ -44,14 +43,9 @@ type identityService interface {
 	Get() (identity.Caller, error)
 }
 
-type hostedZonesByNameLister interface {
-	ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
-}
-
 // Store is in charge of fetching and creating projects, environment and pipeline configuration in SSM.
 type Store struct {
 	idClient      identityService
-	route53Svc    hostedZonesByNameLister
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }
@@ -66,11 +60,7 @@ func New() (*Store, error) {
 	}
 
 	return &Store{
-		idClient: identity.New(sess),
-		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
-		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
-		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
-		route53Svc:    route53.New(sess, aws.NewConfig().WithRegion("us-east-1")),
+		idClient:      identity.New(sess),
 		ssmClient:     ssm.New(sess),
 		sessionRegion: *sess.Config.Region,
 	}, nil

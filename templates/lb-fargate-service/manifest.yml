@@ -14,9 +14,10 @@ image:
   port: {{.Image.Port}}
 
 http:
-  # Requests to this path will be forwarded to your service.
+  # Requests to this path will be forwarded to your service. 
+  # To match all requests you can use the "/" path. 
   path: '{{.Path}}'
-  # # You can specify a custom health check path. The default is "/"
+  # You can specify a custom health check path. The default is "/"
   # healthcheck: '{{.HealthCheckPath}}'
 
 # Number of CPU units for the task.

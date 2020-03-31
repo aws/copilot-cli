@@ -167,6 +167,20 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(projName, envName string) error
+	GetEnvironment(projectName, envName string) (*archer.Environment, error)
+}
+
+type appDeployer interface {
+	// DeployApp // TODO ADD
+	DeleteApp(in deploy.DeleteAppInput) error
+}
+
+type appRemover interface {
+	RemoveAppFromProject(project *archer.Project, appName string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error // implemented by ECR Service
 }
 
 type pipelineDeployer interface {
@@ -196,4 +210,8 @@ type deployer interface {
 	environmentDeployer
 	projectDeployer
 	pipelineDeployer
+}
+
+type domainValidator interface {
+	DomainExists(domainName string) (bool, error)
 }

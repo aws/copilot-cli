@@ -349,10 +349,9 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 	tests := map[string]struct {
 		addonsTemplate *bytes.Buffer
 		inputApp       string
-		inputProject   string
 		inEnvironment  *archer.Environment
+		inProject      *archer.Project
 
-		mockProjectSvc             func(m *climocks.MockprojectService)
 		mockProjectResourcesGetter func(m *climocks.MockprojectResourcesGetter)
 		mockS3Svc                  func(m *climocks.MockartifactPutter)
 
@@ -362,18 +361,13 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		"should push addons template to S3 bucket": {
 			addonsTemplate: buf,
 			inputApp:       "mockApp",
-			inputProject:   "mockProject",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-
-			mockProjectSvc: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
-					Name: "mockProject",
-				}, nil)
+			inProject: &archer.Project{
+				Name: "mockProject",
 			},
-
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
 					Name: "mockProject",
@@ -389,38 +383,15 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			wantErr:  nil,
 			wantPath: "https://mockS3DomainName/mockPath",
 		},
-		"should return error if fail to get project": {
-			addonsTemplate: buf,
-			inputApp:       "mockApp",
-			inputProject:   "mockProject",
-			inEnvironment: &archer.Environment{
-				Name:   "mockEnv",
-				Region: "us-west-2",
-			},
-
-			mockProjectSvc: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetProject("mockProject").Return(nil, mockError)
-			},
-
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {},
-
-			mockS3Svc: func(m *climocks.MockartifactPutter) {},
-
-			wantErr: fmt.Errorf("get project: some error"),
-		},
 		"should return error if fail to get project resources": {
 			addonsTemplate: buf,
 			inputApp:       "mockApp",
-			inputProject:   "mockProject",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-
-			mockProjectSvc: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
-					Name: "mockProject",
-				}, nil)
+			inProject: &archer.Project{
+				Name: "mockProject",
 			},
 
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
@@ -436,16 +407,12 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		"should return error if fail to upload to S3 bucket": {
 			addonsTemplate: buf,
 			inputApp:       "mockApp",
-			inputProject:   "mockProject",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-
-			mockProjectSvc: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetProject("mockProject").Return(&archer.Project{
-					Name: "mockProject",
-				}, nil)
+			inProject: &archer.Project{
+				Name: "mockProject",
 			},
 
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
@@ -472,21 +439,18 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockProjectSvc := climocks.NewMockprojectService(ctrl)
 			mockProjectResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
 			mockS3Svc := climocks.NewMockartifactPutter(ctrl)
-			tc.mockProjectSvc(mockProjectSvc)
 			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
 			tc.mockS3Svc(mockS3Svc)
 
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
 					AppName: tc.inputApp,
-					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
-					},
 				},
 				projectService:     mockProjectSvc,
 				appPackageCfClient: mockProjectResourcesGetter,
 				s3Service:          mockS3Svc,
 				targetEnvironment:  tc.inEnvironment,
+				targetProject:      tc.inProject,
 			}
 
 			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket(tc.addonsTemplate)

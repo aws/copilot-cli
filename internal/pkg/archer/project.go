@@ -5,10 +5,11 @@ package archer
 
 // Project is a named collection of environments and apps.
 type Project struct {
-	Name      string `json:"name"`    // Name of a project. Must be unique amongst other projects in the same account.
-	AccountID string `json:"account"` // AccountID this project is mastered in.
-	Domain    string `json:"domain"`  // Existing domain name in Route53. An empty domain name means the user does not have one.
-	Version   string `json:"version"` // The version of the project layout in the underlying datastore (e.g. SSM).
+	Name      string            `json:"name"`           // Name of a project. Must be unique amongst other projects in the same account.
+	AccountID string            `json:"account"`        // AccountID this project is mastered in.
+	Domain    string            `json:"domain"`         // Existing domain name in Route53. An empty domain name means the user does not have one.
+	Version   string            `json:"version"`        // The version of the project layout in the underlying datastore (e.g. SSM).
+	Tags      map[string]string `json:"tags,omitempty"` // Labels to apply to resources created within the project.
 }
 
 // RequiresDNSDelegation returns true if we have to set up DNS Delegation resources
