@@ -236,7 +236,7 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return o.Run()
+			return opts.Run()
 		}),
 	}
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)

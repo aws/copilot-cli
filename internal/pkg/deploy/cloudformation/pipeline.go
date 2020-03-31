@@ -55,5 +55,5 @@ func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 
 // DeletePipeline removes the CodePipeline stack.
 func (cf CloudFormation) DeletePipeline(stackName string) error {
-	return cf.cfnClient.Delete(stackName)
+	return cf.cfnClient.DeleteAndWait(stackName)
 }
