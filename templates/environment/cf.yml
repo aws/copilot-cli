@@ -329,6 +329,12 @@ Resources:
               "logs:GetLogDelivery"
             ]
             Resource: "*"
+          - Sid: Cloudwatch
+            Effect: Allow
+            Action: [
+              "cloudwatch:DescribeAlarms"
+            ]
+            Resource: "*"
           - Sid: ECS
             Effect: Allow
             Action: [
@@ -399,7 +405,8 @@ Resources:
               "resource-groups:GetGroupQuery",
               "resource-groups:GetTags",
               "resource-groups:ListGroupResources",
-              "resource-groups:ListGroups"
+              "resource-groups:ListGroups",
+              "resource-groups:SearchResources"
             ]
             Resource: "*"
           - Sid: SSM

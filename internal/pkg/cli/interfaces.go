@@ -8,8 +8,10 @@ import (
 	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -210,4 +212,17 @@ type deployer interface {
 
 type domainValidator interface {
 	DomainExists(domainName string) (bool, error)
+}
+
+type ecsServiceGetter interface {
+	ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error)
+	Service(clusterName, serviceName string) (*ecs.Service, error)
+}
+
+type alarmStatusGetter interface {
+	GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
+}
+
+type serviceArnGetter interface {
+	GetServiceArn(envName string) (*describe.ServiceArn, error)
 }
