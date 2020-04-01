@@ -300,7 +300,7 @@ func BuildAppShowCmd() *cobra.Command {
 
 		Example: `
   Shows info about the application "my-app"
-  /code $ ecs-preview app show -a my-app`,
+  /code $ ecs-preview app show -n my-app`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowAppOpts(vars)
 			if err != nil {

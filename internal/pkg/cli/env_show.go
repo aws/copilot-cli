@@ -316,7 +316,7 @@ func BuildEnvShowCmd() *cobra.Command {
 
 		Example: `
   Shows info about the environment "test"
-  /code $ ecs-preview env show --name test`,
+  /code $ ecs-preview env show -n test`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowEnvOpts(vars)
 			if err != nil {
