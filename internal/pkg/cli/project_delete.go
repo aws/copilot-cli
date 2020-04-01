@@ -23,8 +23,9 @@ import (
 const (
 	defaultProfile = "default"
 
-	fmtConfirmProjectDeletePrompt = "Are you sure you want to delete project %s? This will delete your project as well as any apps, environments, and pipelines."
-	confirmProjectDeleteHelp      = "Deleting a project will remove all associated resources. (apps, envs, pipelines, etc.)"
+	fmtConfirmProjectDeletePrompt = `Are you sure you want to delete project %s?
+	This will delete your project as well as any apps, environments, and pipelines.`
+	confirmProjectDeleteHelp = "Deleting a project will remove all associated resources. (apps, envs, pipelines, etc.)"
 )
 
 var (
@@ -129,6 +130,9 @@ func (o *deleteProjOpts) Execute() error {
 		return err
 	}
 
+	// deleteProjectPipeline must happen before deleteProjectResources and
+	// deleteLocalWorkspace, since the pipeline delete command relies on the
+	// project stackset as well as the workspace directory to still exist.
 	if err := o.deleteProjectPipeline(); err != nil {
 		return err
 	}
