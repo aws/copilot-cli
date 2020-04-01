@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +37,7 @@ type showEnvOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
-	ws            wsEnvReader
+	ws 				wsAppReader
 	initDescriber func(*showEnvOpts) error // Overriden in tests.
 }
 
@@ -47,15 +46,14 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, err
-	}
+	//ws, err := workspace.New()
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	return &showEnvOpts{
 		showEnvVars: 	vars,
 		storeSvc:       ssmStore,
-		ws:         	ws,
 		w:              log.OutputWriter,
 		initDescriber: func(o *showEnvOpts) error {
 			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.envName)
@@ -102,11 +100,11 @@ func (o *showEnvOpts) Execute() error {
 	if err := o.initDescriber(o); err != nil {
 		return err
 	}
-	env, err := o.retrieveData()
-	if err != nil {
-		return err
-	}
-
+	//env, err := o.retrieveData()
+	//if err != nil {
+	//	return err
+	//}
+	//
 	//if o.shouldOutputJSON {
 	//	data, err := env.JSONString()
 	//	if err != nil {
@@ -126,10 +124,10 @@ func (o *showEnvOpts) retrieveData() (*describe.WebAppEnvVars, error) {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
 
-	applications, err := o.storeSvc.ListApplications(o.ProjectName())
-	if err != nil {
-		return nil, fmt.Errorf("list applications: %w", err)
-	}
+	//applications, err := o.storeSvc.ListApplications(o.ProjectName())
+	//if err != nil {
+	//	return nil, fmt.Errorf("list applications: %w", err)
+	//}
 
 	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
 	if err != nil {
@@ -137,42 +135,42 @@ func (o *showEnvOpts) retrieveData() (*describe.WebAppEnvVars, error) {
 	}
 
 	var envVars []*describe.WebAppEnvVars
-	var apps []*describe.WebApp
+	//var apps []*describe.WebApp
 	//var tags
 	//var routes []*describe.WebAppRoute
 	//var configs []*describe.WebAppConfig
-	for _, app := range applications {
-		webAppURI, err := o.describer.URI(app.Name)
-		if err == nil {
-			apps = append(apps, &describe.WebApp{
-				AppName: app.Name,
-				Type:    app.Type,
-			})
-
-			//webAppECSParams, err := o.describer.ECSParams(env.Name)
-			//if err != nil {
-			//	return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
-			//}
-			//configs = append(configs, &describe.WebAppConfig{
-			//	Environment: env.Name,
-			//	Port:        webAppECSParams.ContainerPort,
-			//	Tasks:       webAppECSParams.TaskCount,
-			//	CPU:         webAppECSParams.CPU,
-			//	Memory:      webAppECSParams.Memory,
-			//})
-
-			webAppEnvVars, err := o.describer.EnvVars(env)
-			if err != nil {
-				return nil, fmt.Errorf("retrieve environment variables: %w", err)
-			}
-			envVars = append(envVars, webAppEnvVars...)
-
-			continue
-		}
-		if !isStackNotExistsErr(err) {
-			return nil, fmt.Errorf("retrieve application URI: %w", err)
-		}
-	}
+	//for _, app := range applications {
+	//	webAppURI, err := o.describer.URI(app.Name)
+	//	if err == nil {
+	//		apps = append(apps, &describe.WebApp{
+	//			AppName: app.Name,
+	//			Type:    app.Type,
+	//		})
+	//
+	//		//webAppECSParams, err := o.describer.ECSParams(env.Name)
+	//		//if err != nil {
+	//		//	return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
+	//		//}
+	//		//configs = append(configs, &describe.WebAppConfig{
+	//		//	Environment: env.Name,
+	//		//	Port:        webAppECSParams.ContainerPort,
+	//		//	Tasks:       webAppECSParams.TaskCount,
+	//		//	CPU:         webAppECSParams.CPU,
+	//		//	Memory:      webAppECSParams.Memory,
+	//		//})
+	//
+	//		webAppEnvVars, err := o.describer.EnvVars(env)
+	//		if err != nil {
+	//			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+	//		}
+	//		envVars = append(envVars, webAppEnvVars...)
+	//
+	//		continue
+	//	}
+	//	if !isStackNotExistsErr(err) {
+	//		return nil, fmt.Errorf("retrieve application URI: %w", err)
+	//	}
+	//}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
@@ -273,15 +271,25 @@ func (o *showEnvOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showEnvOpts) retrieveLocalEnvironment() ([]string, error) {
-	localEnvNames, err := o.ws.EnvNames()
+	localAppNames, err := o.ws.AppNames()
 	if err != nil {
 		return nil, err
 	}
-	if len(localEnvNames) == 0 {
+	if len(localAppNames) == 0 {
 		return nil, errors.New("no application found")
 	}
-	return localEnvNames, nil
+	return localAppNames, nil
 }
+//func (o *showEnvOpts) retrieveLocalEnvironment() ([]string, error) {
+//	localEnvNames, err := o.ws.EnvNames()
+//	if err != nil {
+//		return nil, err
+//	}
+//	if len(localEnvNames) == 0 {
+//		return nil, errors.New("no application found")
+//	}
+//	return localEnvNames, nil
+//}
 
 func (o *showEnvOpts) retrieveAllEnvironments() ([]string, error) {
 	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
@@ -324,7 +332,7 @@ func BuildEnvShowCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVarP(&vars.envName, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
