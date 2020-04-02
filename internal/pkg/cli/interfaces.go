@@ -107,6 +107,10 @@ type storeReader interface {
 	archer.ApplicationGetter
 }
 
+type workspaceDeleter interface {
+	DeleteAll() error
+}
+
 type wsAppManifestReader interface {
 	ReadAppManifest(appName string) ([]byte, error)
 }

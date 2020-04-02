@@ -1021,6 +1021,43 @@ func (mr *MockstoreReaderMockRecorder) GetApplication(projectName, applicationNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockstoreReader)(nil).GetApplication), projectName, applicationName)
 }
 
+// MockworkspaceDeleter is a mock of workspaceDeleter interface
+type MockworkspaceDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkspaceDeleterMockRecorder
+}
+
+// MockworkspaceDeleterMockRecorder is the mock recorder for MockworkspaceDeleter
+type MockworkspaceDeleterMockRecorder struct {
+	mock *MockworkspaceDeleter
+}
+
+// NewMockworkspaceDeleter creates a new mock instance
+func NewMockworkspaceDeleter(ctrl *gomock.Controller) *MockworkspaceDeleter {
+	mock := &MockworkspaceDeleter{ctrl: ctrl}
+	mock.recorder = &MockworkspaceDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockworkspaceDeleter) EXPECT() *MockworkspaceDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteAll mocks base method
+func (m *MockworkspaceDeleter) DeleteAll() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAll")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAll indicates an expected call of DeleteAll
+func (mr *MockworkspaceDeleterMockRecorder) DeleteAll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteAll))
+}
+
 // MockwsAppManifestReader is a mock of wsAppManifestReader interface
 type MockwsAppManifestReader struct {
 	ctrl     *gomock.Controller

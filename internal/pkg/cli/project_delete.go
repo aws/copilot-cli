@@ -49,10 +49,6 @@ type deleteProjOpts struct {
 	spinner             progress
 }
 
-type workspaceDeleter interface {
-	DeleteAll() error
-}
-
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 	store, err := store.New()
 	if err != nil {
