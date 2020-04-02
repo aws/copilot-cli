@@ -357,6 +357,9 @@ func (s *ServiceArn) ClusterName() (string, error) {
 		return "", err
 	}
 	resources := strings.Split(parsedArn.Resource, "/")
+	if len(resources) != 3 {
+		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
+	}
 	return resources[1], nil
 }
 
@@ -370,6 +373,9 @@ func (s *ServiceArn) ServiceName() (string, error) {
 		return "", err
 	}
 	resources := strings.Split(parsedArn.Resource, "/")
+	if len(resources) != 3 {
+		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
+	}
 	return resources[2], nil
 }
 

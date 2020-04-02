@@ -25,11 +25,6 @@ const (
 	appStatusProjectNameHelpPrompt = "A project groups all of your applications together."
 	appStatusAppNamePrompt         = "Which application's status would you like to show?"
 	appStatusAppNameHelpPrompt     = "Displays the service's, tasks and CloudWatch alarms status."
-
-	shortTaskIDLength      = 8
-	shortImageDigestLength = 8
-
-	hoursPerDay = 24
 )
 
 type appStatusVars struct {
@@ -199,7 +194,7 @@ func (o *appStatusOpts) askProject() error {
 		projNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select projects: %w", err)
+		return fmt.Errorf("select project: %w", err)
 	}
 	o.projectName = proj
 
@@ -279,7 +274,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 	}
 
 	appEnvName, err := o.prompt.SelectOne(
-		fmt.Sprintf(applicationLogAppNamePrompt),
+		applicationLogAppNamePrompt,
 		applicationLogAppNameHelpPrompt,
 		appEnvNames,
 	)
@@ -324,7 +319,7 @@ func (o *appStatusOpts) configSvc() error {
 	}
 	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
 	if err != nil {
-		return fmt.Errorf("get environment: %w", err)
+		return fmt.Errorf("get environment %s: %w", o.envName, err)
 	}
 	if err := o.initcwSvc(o, env); err != nil {
 		return err

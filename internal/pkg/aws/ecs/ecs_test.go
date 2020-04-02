@@ -408,10 +408,10 @@ func TestTask_TaskStatus(t *testing.T) {
 
 			wantTaskStatus: &TaskStatus{
 				DesiredStatus: "ACTIVE",
-				ID:            "4082490",
+				ID:            "4082490ee6c245e09d2145010aa1ba8d",
 				Images: []Image{
 					{
-						Digest: "18f7eb6",
+						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
 						ID:     "mockImageArn",
 					},
 				},
@@ -435,10 +435,10 @@ func TestTask_TaskStatus(t *testing.T) {
 
 			wantTaskStatus: &TaskStatus{
 				DesiredStatus: "ACTIVE",
-				ID:            "4082490",
+				ID:            "4082490ee6c245e09d2145010aa1ba8d",
 				Images: []Image{
 					{
-						Digest: "18f7eb6",
+						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
 						ID:     "mockImageArn",
 					},
 				},
