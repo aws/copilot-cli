@@ -162,7 +162,7 @@ func BuildProjectShowCmd() *cobra.Command {
 		Long:  "Shows configuration, environments and applications for a project.",
 		Example: `
   Shows info about the project "my-project"
-  /code $ ecs-preview project show -p my-project`,
+  /code $ ecs-preview project show -n my-project`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowProjectOpts(vars)
 			if err != nil {
