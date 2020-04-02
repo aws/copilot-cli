@@ -67,7 +67,7 @@ func BuildPipelineShowCmd() *cobra.Command {
 		Long:   "Shows info about a deployed pipeline for a project, including information about each stage.",
 		Example: `
   Shows info about the pipeline pipeline-myproject-mycompany-myrepo"
-  /code $ ecs-preview pipeline show`,
+  /code $ ecs-preview pipeline show --project myproject --resources`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowPipelineOpts(vars)
 			if err != nil {
@@ -82,6 +82,7 @@ func BuildPipelineShowCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
+	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
 
