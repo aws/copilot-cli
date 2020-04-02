@@ -37,6 +37,7 @@ type showEnvOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     webAppDescriber
+	// Note: ws will be removed; put it back in for now so code would compile.
 	ws 				wsAppReader
 	initDescriber func(*showEnvOpts) error // Overriden in tests.
 }
