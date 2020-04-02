@@ -63,19 +63,25 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 			return []uint16{}, err
 		}
 	}
-
 	var ports []uint16
 	switch {
 	case len(df.ExposedPorts) == 0:
-		return []portConfig{}, ErrNoExpose{
+		return ports, ErrNoExpose{
 			Dockerfile: df.path,
 		}
-	}  {
-		
+	case len(df.ExposedPorts) == 1:
+		return []uint16{df.ExposedPorts[0].Port}, df.ExposedPorts[0].err
 	}
-	for _, port := range df.ExposedPorts {
-		ports = append(ports, port.Port)
 
+	var err error
+	for _, port := range df.ExposedPorts {
+		// Skip adding unparseable ports to output
+		if port.Port != 0 {
+			ports = append(ports, port.Port)
+		}
+		// ensure we register that there is an error (will only be ErrNoExpose) if
+		// any ports were unparseable or invalid
+		err = port.err
 	}
 
 	return ports, err
@@ -102,26 +108,18 @@ func parseFromScanner(scanner *bufio.Scanner) Dockerfile {
 	var line = ""
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
-	df.ArgMap = make(map[string]string)
 	for scanner.Scan() {
 		line = scanner.Text()
 		switch {
 		case strings.HasPrefix(line, "EXPOSE"):
-			currentPorts, _ := parseExpose(line)
-			err
+			currentPorts := parseExpose(line)
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
-		case strings.HasPrefix(line, "ARG"):
-
 		}
 	}
 	return df
 }
 
-func parseArg(line string) (map[string]string, error) {
-
-}
-
-func parseExpose(line string) ([]portConfig, error) {
+func parseExpose(line string) []portConfig {
 	// group 0: whole match
 	// group 1: port
 	// group 2: /protocol
@@ -129,12 +127,8 @@ func parseExpose(line string) ([]portConfig, error) {
 	// matches strings of form <digits>(/<string>)?
 	// for any number of digits and optional protocol string
 	// separated by forward slash
-	re, err := regexp.Compile(exposeRegexPattern)
-	if err != nil {
-		return []portConfig{}, err
-	}
+	matches := exposeRegexPattern.FindAllStringSubmatch(line, reFindAllMatches)
 
-	matches := re.FindAllStringSubmatch(line, reFindAllMatches)
 	// check that there are matches, if not return port with only raw data
 	// there will only ever be length 0 or 4 arrays
 	// TODO implement arg parser regex
@@ -142,25 +136,38 @@ func parseExpose(line string) ([]portConfig, error) {
 		return []portConfig{
 			{
 				RawString: line,
+				err: ErrInvalidPort{
+					Match: line,
+				},
 			},
-		}, nil
+		}
 	}
 	var ports []portConfig
 	for _, match := range matches {
+		var err error
 		// convert the matched port to int and validate
 		// We don't use the validate func in the cli package to avoid a circular dependency
 		extractedPort, err := strconv.Atoi(match[exposeRegexpPort])
+		if err != nil {
+			ports = append(ports, portConfig{
+				err: ErrInvalidPort{
+					Match: match[0],
+				},
+			})
+			continue
+		}
 		var extractedPortUint uint16 = 0
-		if err == nil && extractedPort >= 1 && extractedPort <= 65535 {
+		if extractedPort >= 1 && extractedPort <= 65535 {
 			extractedPortUint = uint16(extractedPort)
 		} else {
-			err = errors.New("invalid port in Dockerfile")
+			err = ErrInvalidPort{Match: match[0]}
 		}
 		ports = append(ports, portConfig{
 			RawString: match[exposeRegexpWholeMatch],
 			Protocol:  match[exposeRegexpProtocol],
 			Port:      extractedPortUint,
+			err:       err,
 		})
 	}
-	return ports, err
+	return ports
 }
