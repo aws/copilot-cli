@@ -199,64 +199,7 @@ func (o *showEnvOpts) retrieveData() (*describe.WebAppEnvVars, error) {
 	}, nil
 }
 
-func (o *showEnvOpts) askProject() error {
-	if o.ProjectName() != "" {
-		return nil
-	}
-	projNames, err := o.retrieveProjects()
-	if err != nil {
-		return err
-	}
-	if len(projNames) == 0 {
-		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
-	}
-	proj, err := o.prompt.SelectOne(
-		environmentShowProjectNamePrompt,
-		environmentShowProjectNameHelpPrompt,
-		projNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select projects: %w", err)
-	}
-	o.projectName = proj
 
-	return nil
-}
-
-func (o *showEnvOpts) askEnvName() error {
-	// return if env name is set by flag
-	if o.envName != "" {
-		return nil
-	}
-
-	envNames, err := o.retrieveLocalEnvironment()
-	if err != nil {
-		envNames, err = o.retrieveAllEnvironments()
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(envNames) == 0 {
-		log.Infof("No environments found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
-		return nil
-	}
-	if len(envNames) == 1 {
-		o.envName = envNames[0]
-		return nil
-	}
-	envName, err := o.prompt.SelectOne(
-		fmt.Sprintf(environmentShowEnvNamePrompt, color.HighlightUserInput(o.ProjectName())),
-		environmentShowEnvNameHelpPrompt,
-		envNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select environments for project %s: %w", o.ProjectName(), err)
-	}
-	o.envName = envName
-
-	return nil
-}
 
 func (o *showEnvOpts) retrieveProjects() ([]string, error) {
 	projs, err := o.storeSvc.ListProjects()
