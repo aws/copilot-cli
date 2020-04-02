@@ -344,7 +344,7 @@ func BuildAppStatusCmd() *cobra.Command {
 
 		Example: `
   Shows status of the deployed application "my-app"
-  /code $ ecs-preview app status -a my-app`,
+  /code $ ecs-preview app status -n my-app`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newAppStatusOpts(vars)
 			if err != nil {
@@ -360,7 +360,7 @@ func BuildAppStatusCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
