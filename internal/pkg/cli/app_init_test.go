@@ -240,7 +240,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 					Return(defaultAppPortString, nil)
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{})
+				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
 			wantedErr: nil,
 		},
@@ -256,7 +256,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{})
+				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
 			},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
@@ -272,7 +272,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 					Return("100000", errors.New("some error"))
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{})
+				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
 			},
 			wantedErr: fmt.Errorf("get port: some error"),
 		},
@@ -286,7 +286,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *climocks.Mockprompter) {
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{80})
+				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
 			},
 		},
 		"don't use dockerfile port if flag specified": {

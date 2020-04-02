@@ -85,7 +85,9 @@ func getUintPorts(inPorts []portConfig) []uint16 {
 	}
 	var ports []uint16
 	for _, p := range inPorts {
-		ports = append(ports, p.Port)
+		if p.Port != 0 {
+			ports = append(ports, p.Port)
+		}
 	}
 	return ports
 }
@@ -104,6 +106,7 @@ func TestDockerfileInterface(t *testing.T) {
 	FROM nginx
 	ARG arg=80`),
 			wantedPorts: []portConfig{},
+			wantedErr:   ErrNoExpose{Dockerfile: wantedPath},
 		},
 		"one exposed port": {
 			dockerfilePath: wantedPath,
@@ -146,7 +149,20 @@ EXPOSE 80`),
 				},
 			},
 		},
-		"bad expose token": {
+		"bad expose token single port": {
+			dockerfilePath: wantedPath,
+			dockerfile:     []byte(`EXPOSE $arg`),
+			wantedPorts: []portConfig{
+				{
+					RawString: "EXPOSE $arg",
+					err: ErrInvalidPort{
+						Match: "EXPOSE $arg",
+					},
+				},
+			},
+			wantedErr: ErrInvalidPort{Match: "EXPOSE $arg"},
+		},
+		"bad expose token multiple ports": {
 			dockerfilePath: wantedPath,
 			dockerfile: []byte(`
 EXPOSE 80
@@ -160,6 +176,9 @@ EXPOSE 8080/tcp 5000`),
 				{
 					Port:      0,
 					RawString: "EXPOSE $arg",
+					err: ErrInvalidPort{
+						Match: "EXPOSE $arg",
+					},
 				},
 				{
 					Port:      8080,
@@ -171,6 +190,7 @@ EXPOSE 8080/tcp 5000`),
 					RawString: "5000",
 				},
 			},
+			wantedErr: ErrInvalidPort{Match: "EXPOSE $arg"},
 		},
 	}
 
@@ -179,14 +199,18 @@ EXPOSE 8080/tcp 5000`),
 			wantedUintPorts := getUintPorts(tc.wantedPorts)
 			fs := afero.Afero{Fs: afero.NewMemMapFs()}
 			err := fs.WriteFile("./Dockerfile", tc.dockerfile, 0644)
-			if tc.wantedErr != nil {
-				require.EqualError(t, tc.wantedErr, err.Error())
-			} else {
-				require.NoError(t, err)
+			if err != nil {
+				t.FailNow()
 			}
+
 			df := New(fs, "./Dockerfile")
 
 			ports, err := df.GetExposedPorts()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
 
 			require.Equal(t, wantedUintPorts, ports)
 

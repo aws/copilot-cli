@@ -326,7 +326,9 @@ func (o *initAppOpts) askAppPort() error {
 
 	o.setupParser(o)
 	ports, err := o.df.GetExposedPorts()
-
+	if err != nil {
+		log.Debugln(err.Error())
+	}
 	var defaultPort = defaultAppPortString
 	switch len(ports) {
 	case 0:
@@ -334,8 +336,8 @@ func (o *initAppOpts) askAppPort() error {
 			color.HighlightUserInput(o.AppName),
 		)
 	case 1:
-		// catch the case where we couldn't validate a port from dockerfile (0 or invalid)
-		if ports[0] == 0 {
+		// catch the case where we had an Expose but couldn't parse a port from dockerfile
+		if err != nil {
 			log.Infof(fmtParseFromDockerfileNoPort,
 				color.HighlightUserInput(o.AppName),
 			)

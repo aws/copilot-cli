@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-var exposeRegexPattern = regexp.MustCompile(`(<port>\d+)(\/(<protocol>\w+))?`) // port and optional protocol, at least 1 time on a line
+var exposeRegexPattern = regexp.MustCompile(`(?P<port>\d+)(\/(?P<protocol>\w+))?`) // port and optional protocol, at least 1 time on a line
 
 const (
 	exposeRegexpWholeMatch = 0
@@ -39,7 +39,6 @@ type Dockerfile struct {
 	ExposedPorts []portConfig
 	parsed       bool
 	path         string
-	portParseErr bool
 
 	fs afero.Fs
 }
@@ -51,7 +50,6 @@ func New(fs afero.Fs, path string) *Dockerfile {
 		fs:           fs,
 		path:         path,
 		parsed:       false,
-		portParseErr: false,
 	}
 }
 
@@ -64,13 +62,11 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 		}
 	}
 	var ports []uint16
-	switch {
-	case len(df.ExposedPorts) == 0:
+
+	if len(df.ExposedPorts) == 0 {
 		return ports, ErrNoExpose{
 			Dockerfile: df.path,
 		}
-	case len(df.ExposedPorts) == 1:
-		return []uint16{df.ExposedPorts[0].Port}, df.ExposedPorts[0].err
 	}
 
 	var err error
@@ -81,7 +77,9 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 		}
 		// ensure we register that there is an error (will only be ErrNoExpose) if
 		// any ports were unparseable or invalid
-		err = port.err
+		if port.err != nil {
+			err = port.err
+		}
 	}
 
 	return ports, err
