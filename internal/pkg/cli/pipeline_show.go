@@ -61,9 +61,10 @@ func BuildPipelineShowCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:   "show",
-		Short: "Shows info about a deployed pipeline for a project.",
-		Long:  "Shows info about a deployed pipeline for a project, including information about each stage.",
+		Hidden: true, // TODO remove when ready for production!
+		Use:    "show",
+		Short:  "Shows info about a deployed pipeline for a project.",
+		Long:   "Shows info about a deployed pipeline for a project, including information about each stage.",
 		Example: `
   Shows info about the pipeline pipeline-myproject-mycompany-myrepo"
   /code $ ecs-preview pipeline show`,
