@@ -335,6 +335,10 @@ Resources:
               "cloudwatch:DescribeAlarms"
             ]
             Resource: "*"
+            Condition: 
+              StringEquals:
+                'aws:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                'aws:ResourceTag/ecs-environment': !Sub '${EnvironmentName}'
           - Sid: ECS
             Effect: Allow
             Action: [

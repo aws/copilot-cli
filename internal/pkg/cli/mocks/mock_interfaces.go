@@ -7,7 +7,6 @@ package mocks
 import (
 	encoding "encoding"
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	cloudwatch "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
@@ -2299,97 +2298,6 @@ func (mr *MockdomainValidatorMockRecorder) DomainExists(domainName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainExists", reflect.TypeOf((*MockdomainValidator)(nil).DomainExists), domainName)
 }
 
-// MockecsServiceGetter is a mock of ecsServiceGetter interface
-type MockecsServiceGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockecsServiceGetterMockRecorder
-}
-
-// MockecsServiceGetterMockRecorder is the mock recorder for MockecsServiceGetter
-type MockecsServiceGetterMockRecorder struct {
-	mock *MockecsServiceGetter
-}
-
-// NewMockecsServiceGetter creates a new mock instance
-func NewMockecsServiceGetter(ctrl *gomock.Controller) *MockecsServiceGetter {
-	mock := &MockecsServiceGetter{ctrl: ctrl}
-	mock.recorder = &MockecsServiceGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockecsServiceGetter) EXPECT() *MockecsServiceGetterMockRecorder {
-	return m.recorder
-}
-
-// ServiceTasks mocks base method
-func (m *MockecsServiceGetter) ServiceTasks(clusterName, serviceName string) ([]*ecs.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceTasks", clusterName, serviceName)
-	ret0, _ := ret[0].([]*ecs.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ServiceTasks indicates an expected call of ServiceTasks
-func (mr *MockecsServiceGetterMockRecorder) ServiceTasks(clusterName, serviceName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceTasks", reflect.TypeOf((*MockecsServiceGetter)(nil).ServiceTasks), clusterName, serviceName)
-}
-
-// Service mocks base method
-func (m *MockecsServiceGetter) Service(clusterName, serviceName string) (*ecs.Service, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Service", clusterName, serviceName)
-	ret0, _ := ret[0].(*ecs.Service)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Service indicates an expected call of Service
-func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
-}
-
-// MockalarmStatusGetter is a mock of alarmStatusGetter interface
-type MockalarmStatusGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockalarmStatusGetterMockRecorder
-}
-
-// MockalarmStatusGetterMockRecorder is the mock recorder for MockalarmStatusGetter
-type MockalarmStatusGetterMockRecorder struct {
-	mock *MockalarmStatusGetter
-}
-
-// NewMockalarmStatusGetter creates a new mock instance
-func NewMockalarmStatusGetter(ctrl *gomock.Controller) *MockalarmStatusGetter {
-	mock := &MockalarmStatusGetter{ctrl: ctrl}
-	mock.recorder = &MockalarmStatusGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockalarmStatusGetter) EXPECT() *MockalarmStatusGetterMockRecorder {
-	return m.recorder
-}
-
-// GetAlarmsWithTags mocks base method
-func (m *MockalarmStatusGetter) GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAlarmsWithTags", tags)
-	ret0, _ := ret[0].([]cloudwatch.AlarmStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAlarmsWithTags indicates an expected call of GetAlarmsWithTags
-func (mr *MockalarmStatusGetterMockRecorder) GetAlarmsWithTags(tags interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlarmsWithTags", reflect.TypeOf((*MockalarmStatusGetter)(nil).GetAlarmsWithTags), tags)
-}
-
 // MockserviceArnGetter is a mock of serviceArnGetter interface
 type MockserviceArnGetter struct {
 	ctrl     *gomock.Controller
@@ -2414,10 +2322,10 @@ func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
 }
 
 // GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn(envName string) (*describe.ServiceArn, error) {
+func (m *MockserviceArnGetter) GetServiceArn(envName string) (*ecs.ServiceArn, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetServiceArn", envName)
-	ret0, _ := ret[0].(*describe.ServiceArn)
+	ret0, _ := ret[0].(*ecs.ServiceArn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2426,4 +2334,42 @@ func (m *MockserviceArnGetter) GetServiceArn(envName string) (*describe.ServiceA
 func (mr *MockserviceArnGetterMockRecorder) GetServiceArn(envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn), envName)
+}
+
+// MockstatusDescriber is a mock of statusDescriber interface
+type MockstatusDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockstatusDescriberMockRecorder
+}
+
+// MockstatusDescriberMockRecorder is the mock recorder for MockstatusDescriber
+type MockstatusDescriberMockRecorder struct {
+	mock *MockstatusDescriber
+}
+
+// NewMockstatusDescriber creates a new mock instance
+func NewMockstatusDescriber(ctrl *gomock.Controller) *MockstatusDescriber {
+	mock := &MockstatusDescriber{ctrl: ctrl}
+	mock.recorder = &MockstatusDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockstatusDescriber) EXPECT() *MockstatusDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method
+func (m *MockstatusDescriber) Describe() (*describe.WebAppStatusDesc, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(*describe.WebAppStatusDesc)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe
+func (mr *MockstatusDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockstatusDescriber)(nil).Describe))
 }

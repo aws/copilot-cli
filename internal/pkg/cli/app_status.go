@@ -7,16 +7,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -37,15 +31,12 @@ type appStatusVars struct {
 type appStatusOpts struct {
 	appStatusVars
 
-	w             io.Writer
-	storeSvc      storeReader
-	describer     serviceArnGetter
-	ecsSvc        ecsServiceGetter
-	cwSvc         alarmStatusGetter
-	ws            wsAppReader
-	initecsSvc    func(*appStatusOpts, *archer.Environment) error
-	initcwSvc     func(*appStatusOpts, *archer.Environment) error
-	initDescriber func(*appStatusOpts, string) error
+	w                   io.Writer
+	storeSvc            storeReader
+	appDescriber        serviceArnGetter
+	statusDescriber     statusDescriber
+	initAppDescriber    func(*appStatusOpts, string) error
+	initStatusDescriber func(*appStatusOpts) error
 }
 
 func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
@@ -53,38 +44,25 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, err
-	}
 
 	return &appStatusOpts{
 		appStatusVars: vars,
 		storeSvc:      ssmStore,
-		ws:            ws,
 		w:             log.OutputWriter,
-		initecsSvc: func(o *appStatusOpts, env *archer.Environment) error {
-			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-			o.ecsSvc = ecs.New(sess)
-			return nil
-		},
-		initcwSvc: func(o *appStatusOpts, env *archer.Environment) error {
-			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-			o.cwSvc = cloudwatch.New(sess)
-			return nil
-		},
-		initDescriber: func(o *appStatusOpts, appName string) error {
+		initAppDescriber: func(o *appStatusOpts, appName string) error {
 			d, err := describe.NewWebAppDescriber(o.ProjectName(), appName)
 			if err != nil {
-				return fmt.Errorf("creating describer for application %s in project %s: %w", appName, o.ProjectName(), err)
+				return fmt.Errorf("creating app describer for application %s in project %s: %w", appName, o.ProjectName(), err)
 			}
-			o.describer = d
+			o.appDescriber = d
+			return nil
+		},
+		initStatusDescriber: func(o *appStatusOpts) error {
+			d, err := describe.NewWebAppStatus(o.ProjectName(), o.envName, o.appName)
+			if err != nil {
+				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+			}
+			o.statusDescriber = d
 			return nil
 		},
 	}, nil
@@ -120,49 +98,13 @@ func (o *appStatusOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *appStatusOpts) Execute() error {
-	if err := o.configSvc(); err != nil {
+	err := o.initStatusDescriber(o)
+	if err != nil {
 		return err
 	}
-	serviceArn, err := o.describer.GetServiceArn(o.envName)
+	appStatus, err := o.statusDescriber.Describe()
 	if err != nil {
-		return fmt.Errorf("get service ARN: %w", err)
-	}
-	clusterName, err := serviceArn.ClusterName()
-	if err != nil {
-		return fmt.Errorf("get cluster name: %w", err)
-	}
-	serviceName, err := serviceArn.ServiceName()
-	if err != nil {
-		return fmt.Errorf("get service name: %w", err)
-	}
-	service, err := o.ecsSvc.Service(clusterName, serviceName)
-	if err != nil {
-		return fmt.Errorf("get ECS service %s: %w", serviceName, err)
-	}
-	tasks, err := o.ecsSvc.ServiceTasks(clusterName, serviceName)
-	if err != nil {
-		return fmt.Errorf("get ECS tasks for service %s: %w", serviceName, err)
-	}
-	var taskStatus []ecs.TaskStatus
-	for _, task := range tasks {
-		status, err := task.TaskStatus()
-		if err != nil {
-			return fmt.Errorf("get status for task %s: %w", *task.TaskArn, err)
-		}
-		taskStatus = append(taskStatus, *status)
-	}
-	metrics, err := o.cwSvc.GetAlarmsWithTags(map[string]string{
-		stack.ProjectTagKey: o.ProjectName(),
-		stack.EnvTagKey:     o.envName,
-		stack.AppTagKey:     o.appName,
-	})
-	if err != nil {
-		return fmt.Errorf("get CloudWatch alarms: %w", err)
-	}
-	appStatus := describe.WebAppStatus{
-		Service: service.ServiceStatus(),
-		Tasks:   taskStatus,
-		Metrics: metrics,
+		return fmt.Errorf("describe status of application %s: %w", o.appName, err)
 	}
 	if o.shouldOutputJSON {
 		data, err := appStatus.JSONString()
@@ -240,11 +182,11 @@ func (o *appStatusOpts) askAppEnvName() error {
 	appEnvs := make(map[string]appEnv)
 	var appEnvNames []string
 	for _, appName := range appNames {
-		if err := o.initDescriber(o, appName); err != nil {
+		if err := o.initAppDescriber(o, appName); err != nil {
 			return err
 		}
 		for _, envName := range envNames {
-			_, err := o.describer.GetServiceArn(envName)
+			_, err := o.appDescriber.GetServiceArn(envName)
 			if err != nil {
 				if isStackNotExistsErr(err) {
 					continue
@@ -311,20 +253,6 @@ func (o *appStatusOpts) retrieveAllEnvNames() ([]string, error) {
 	}
 
 	return envNames, nil
-}
-
-func (o *appStatusOpts) configSvc() error {
-	if err := o.initDescriber(o, o.appName); err != nil {
-		return err
-	}
-	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
-	if err != nil {
-		return fmt.Errorf("get environment %s: %w", o.envName, err)
-	}
-	if err := o.initcwSvc(o, env); err != nil {
-		return err
-	}
-	return o.initecsSvc(o, env)
 }
 
 // BuildAppStatusCmd builds the command for showing the status of a deployed application.

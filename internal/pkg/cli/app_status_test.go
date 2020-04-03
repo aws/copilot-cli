@@ -16,9 +16,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	ECSAPI "github.com/aws/aws-sdk-go/service/ecs"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -119,7 +118,7 @@ func TestAppStatus_Validate(t *testing.T) {
 }
 
 func TestAppStatus_Ask(t *testing.T) {
-	mockServiceArn := describe.ServiceArn("mockArn")
+	mockServiceArn := ecs.ServiceArn("mockArn")
 	mockError := errors.New("some error")
 	mockStackNotFoundErr := fmt.Errorf("describe stack my-project-test-my-app: %w",
 		awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))
@@ -307,9 +306,9 @@ func TestAppStatus_Ask(t *testing.T) {
 						prompt:      mockPrompt,
 					},
 				},
-				describer:     mockWebAppDescriber,
-				initDescriber: func(*appStatusOpts, string) error { return nil },
-				storeSvc:      mockStoreReader,
+				appDescriber:     mockWebAppDescriber,
+				initAppDescriber: func(*appStatusOpts, string) error { return nil },
+				storeSvc:         mockStoreReader,
 			}
 
 			// WHEN
@@ -326,307 +325,96 @@ func TestAppStatus_Ask(t *testing.T) {
 }
 
 func TestAppStatus_Execute(t *testing.T) {
-	badMockServiceArn := describe.ServiceArn("badMockArn")
-	mockServiceArn := describe.ServiceArn("arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService")
 	mockError := errors.New("some error")
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	updateTime := time.Unix(1584129030, 0)
+	mockAppStatus := &describe.WebAppStatusDesc{
+		Service: ecs.ServiceStatus{
+			DesiredCount:   1,
+			RunningCount:   1,
+			Status:         "ACTIVE",
+			LastDeployment: startTime.Unix(),
+			TaskDefinition: "mockTaskDefinition",
+		},
+		Alarms: []cloudwatch.AlarmStatus{
+			{
+				Arn:          "mockAlarmArn",
+				Name:         "mockAlarm",
+				Reason:       "Threshold Crossed",
+				Status:       "OK",
+				Type:         "Metric",
+				UpdatedTimes: updateTime.Unix(),
+			},
+		},
+		Tasks: []ecs.TaskStatus{
+			{
+				DesiredStatus: "RUNNING",
+				LastStatus:    "RUNNING",
+				ID:            "1234567890123456789",
+				Images: []ecs.Image{
+					{
+						Digest: "69671a968e8ec3648e2697417750e",
+						ID:     "mockImageID1",
+					},
+					{
+						ID:     "mockImageID2",
+						Digest: "ca27a44e25ce17fea7b07940ad793",
+					},
+				},
+				StartedAt:     startTime.Unix(),
+				StoppedAt:     stopTime.Unix(),
+				StoppedReason: "some reason",
+			},
+		},
+	}
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
-		inputEnvironment string
 		shouldOutputJSON bool
 
-		mockStoreReader     func(m *climocks.MockstoreReader)
-		mockecsSvc          func(m *climocks.MockecsServiceGetter)
-		mockcwSvc           func(m *climocks.MockalarmStatusGetter)
-		mockWebAppDescriber func(m *climocks.MockserviceArnGetter)
+		mockStatusDescriber func(m *climocks.MockstatusDescriber)
 
 		wantedContent string
 		wantedError   error
 	}{
-		"errors if failed to get environment": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(nil, mockError)
+		"errors if failed to describe the status of the app": {
+			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
+				m.EXPECT().Describe().Return(nil, mockError)
 			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {},
-			mockcwSvc:  func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-			},
-
-			wantedError: fmt.Errorf("get environment mockEnv: some error"),
-		},
-		"errors if failed to get service ARN": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {},
-			mockcwSvc:  func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockError)
-			},
-
-			wantedError: fmt.Errorf("get service ARN: some error"),
-		},
-		"errors if failed to get cluster name": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {},
-			mockcwSvc:  func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&badMockServiceArn, nil)
-			},
-
-			wantedError: fmt.Errorf("get cluster name: arn: invalid prefix"),
-		},
-		"errors if failed to get ECS service info": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(nil, mockError)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
-			},
-
-			wantedError: fmt.Errorf("get ECS service mockService: some error"),
-		},
-		"errors if failed to get ECS running tasks info": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
-				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return(nil, mockError)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
-			},
-
-			wantedError: fmt.Errorf("get ECS tasks for service mockService: some error"),
-		},
-		"errors if failed to get ECS running tasks status": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
-				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
-					{
-						TaskArn: aws.String("badMockTaskArn"),
-					},
-				}, nil)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
-			},
-
-			wantedError: fmt.Errorf("get status for task badMockTaskArn: arn: invalid prefix"),
-		},
-		"errors if failed to get CloudWatch alarms": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
-				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
-					{
-						TaskArn:   aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
-						StartedAt: &startTime,
-					},
-				}, nil)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {
-				m.EXPECT().GetAlarmsWithTags(map[string]string{
-					"ecs-project":     "mockProject",
-					"ecs-environment": "mockEnv",
-					"ecs-application": "mockApp",
-				}).Return(nil, mockError)
-			},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
-			},
-
-			wantedError: fmt.Errorf("get CloudWatch alarms: some error"),
+			wantedError: fmt.Errorf("describe status of application mockApp: some error"),
 		},
 		"success with JSON output": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
 			shouldOutputJSON: true,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{
-					Status:       aws.String("ACTIVE"),
-					DesiredCount: aws.Int64(1),
-					RunningCount: aws.Int64(1),
-				}, nil)
-				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
-					{
-						TaskArn:       aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
-						StartedAt:     &startTime,
-						DesiredStatus: aws.String("RUNNING"),
-						LastStatus:    aws.String("RUNNING"),
-						Containers: []*ECSAPI.Container{
-							{
-								Image:       aws.String("mockImageID1"),
-								ImageDigest: aws.String("69671a968e8ec3648e2697417750e"),
-							},
-							{
-								Image:       aws.String("mockImageID2"),
-								ImageDigest: aws.String("ca27a44e25ce17fea7b07940ad793"),
-							},
-						},
-						StoppedAt:     &stopTime,
-						StoppedReason: aws.String("some reason"),
-					},
-				}, nil)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {
-				m.EXPECT().GetAlarmsWithTags(map[string]string{
-					"ecs-project":     "mockProject",
-					"ecs-environment": "mockEnv",
-					"ecs-application": "mockApp",
-				}).Return([]cloudwatch.AlarmStatus{
-					{
-						Arn:          "mockAlarmArn",
-						Name:         "mockAlarm",
-						Reason:       "Threshold Crossed",
-						Status:       "OK",
-						Type:         "Metric",
-						UpdatedTimes: 1584129030,
-					},
-				}, nil)
-			},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
+				m.EXPECT().Describe().Return(mockAppStatus, nil)
 			},
 
-			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\"},\"tasks\":[{\"desiredStatus\":\"RUNNING\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"metrics\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
+			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeployment\":1136214245,\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"desiredStatus\":\"RUNNING\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
 		},
 		"success with human output": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
-			inputEnvironment: "mockEnv",
-
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
-			mockecsSvc: func(m *climocks.MockecsServiceGetter) {
-				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{
-					Status:       aws.String("ACTIVE"),
-					DesiredCount: aws.Int64(1),
-					RunningCount: aws.Int64(1),
-				}, nil)
-				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
-					{
-						TaskArn:       aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
-						StartedAt:     &startTime,
-						DesiredStatus: aws.String("RUNNING"),
-						LastStatus:    aws.String("RUNNING"),
-						Containers: []*ECSAPI.Container{
-							{
-								Image:       aws.String("mockImageID1"),
-								ImageDigest: aws.String("69671a968e8ec3648e2697417750e"),
-							},
-							{
-								Image:       aws.String("mockImageID2"),
-								ImageDigest: aws.String("ca27a44e25ce17fea7b07940ad793"),
-							},
-						},
-						StoppedAt:     &stopTime,
-						StoppedReason: aws.String("some reason"),
-					},
-				}, nil)
-			},
-			mockcwSvc: func(m *climocks.MockalarmStatusGetter) {
-				m.EXPECT().GetAlarmsWithTags(map[string]string{
-					"ecs-project":     "mockProject",
-					"ecs-environment": "mockEnv",
-					"ecs-application": "mockApp",
-				}).Return([]cloudwatch.AlarmStatus{
-					{
-						Arn:          "mockAlarmArn",
-						Name:         "mockAlarm",
-						Reason:       "Threshold Crossed",
-						Status:       "OK",
-						Type:         "Metric",
-						UpdatedTimes: 1584129030,
-					},
-				}, nil)
-			},
-			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
+				m.EXPECT().Describe().Return(mockAppStatus, nil)
 			},
 
-			wantedContent: `Service Status
+			wantedContent: fmt.Sprintf(`Service Status
 
-  Status            ACTIVE
-  DesiredCount      1
-  RunningCount      1
+  ACTIVE 1 / 1 running tasks (0 pending)
+
+Last Deployment
+
+  Updated At        %s
+  Task Definition   mockTaskDefinition
 
 Task Status
 
-  ID                ImageDigest         LastStatus          DesiredStatus       StartedAt           StoppedAt
-  12345678          69671a96,ca27a44e   RUNNING             RUNNING             14 years ago        14 years ago
+  ID                Image Digest        Last Status         Desired Status      Started At          Stopped At
+  12345678          69671a96,ca27a44e   RUNNING             RUNNING             %s        %s
 
-Metrics
+Alarms
 
-  Name              Health              UpdatedTimes        Reason
-  mockAlarm         OK                  2 weeks ago         Threshold Crossed
-`,
+  Name              Health              Last Updated        Reason
+  mockAlarm         OK                  %s         Threshold Crossed
+`, humanize.Time(startTime), humanize.Time(startTime), humanize.Time(stopTime), humanize.Time(updateTime)),
 		},
 	}
 
@@ -636,32 +424,21 @@ Metrics
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockecsSvc := climocks.NewMockecsServiceGetter(ctrl)
-			mockcwSvc := climocks.NewMockalarmStatusGetter(ctrl)
-			mockWebAppDescriber := climocks.NewMockserviceArnGetter(ctrl)
-			tc.mockStoreReader(mockStoreReader)
-			tc.mockecsSvc(mockecsSvc)
-			tc.mockcwSvc(mockcwSvc)
-			tc.mockWebAppDescriber(mockWebAppDescriber)
+			mockStatusDescriber := climocks.NewMockstatusDescriber(ctrl)
+			tc.mockStatusDescriber(mockStatusDescriber)
 
 			appStatus := &appStatusOpts{
 				appStatusVars: appStatusVars{
-					appName:          tc.inputApplication,
-					envName:          tc.inputEnvironment,
+					appName:          "mockApp",
+					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						projectName: "mockProject",
 					},
 				},
-				cwSvc:         mockcwSvc,
-				ecsSvc:        mockecsSvc,
-				describer:     mockWebAppDescriber,
-				initDescriber: func(*appStatusOpts, string) error { return nil },
-				initcwSvc:     func(*appStatusOpts, *archer.Environment) error { return nil },
-				initecsSvc:    func(*appStatusOpts, *archer.Environment) error { return nil },
-				storeSvc:      mockStoreReader,
-				w:             b,
+				statusDescriber:     mockStatusDescriber,
+				initStatusDescriber: func(*appStatusOpts) error { return nil },
+				w:                   b,
 			}
 
 			// WHEN
