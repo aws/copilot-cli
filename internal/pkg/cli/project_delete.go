@@ -17,6 +17,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
+	awssession "github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/spf13/cobra"
 )
 
@@ -40,13 +42,13 @@ type deleteProjVars struct {
 
 type deleteProjOpts struct {
 	deleteProjVars
-	store               projectService
-	deployer            deployer
-	projResourcesGetter projectResourcesGetter
-	s3Client            bucketEmptier
-	initBucketEmptySvc  func(*deleteProjOpts, string) error
-	ws                  workspaceDeleter
-	spinner             progress
+	spinner progress
+
+	store            projectService
+	ws               workspaceDeleter
+	sessProvider     sessionProvider
+	deployer         deployer
+	getBucketEmptier func(session *awssession.Session) bucketEmptier
 }
 
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
@@ -60,27 +62,24 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 		return nil, err
 	}
 
-	s, err := session.NewProvider().Default()
+	provider := session.NewProvider()
+	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err
 	}
-	cf := cloudformation.New(s)
+
+	cf := cloudformation.New(defaultSession)
 
 	return &deleteProjOpts{
-		deleteProjVars:      vars,
-		store:               store,
-		ws:                  ws,
-		deployer:            cf,
-		projResourcesGetter: cf,
-		initBucketEmptySvc: func(o *deleteProjOpts, region string) error {
-			sess, err := session.NewProvider().DefaultWithRegion(region)
-			if err != nil {
-				return err
-			}
-			o.s3Client = s3.New(sess)
-			return nil
+		deleteProjVars: vars,
+		spinner:        termprogress.NewSpinner(),
+		store:          store,
+		ws:             ws,
+		sessProvider:   provider,
+		deployer:       cf,
+		getBucketEmptier: func(session *awssession.Session) bucketEmptier {
+			return s3.New(session)
 		},
-		spinner: termprogress.NewSpinner(),
 	}, nil
 }
 
@@ -221,14 +220,20 @@ func (o *deleteProjOpts) emptyS3Bucket() error {
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
-	projResources, err := o.projResourcesGetter.GetRegionalProjectResources(proj)
+	projResources, err := o.deployer.GetRegionalProjectResources(proj)
 	if err != nil {
 		return fmt.Errorf("get regional resources for %s: %w", proj.Name, err)
 	}
 	o.spinner.Start("Cleaning up deployment resources.")
 	for _, projResource := range projResources {
-		o.initBucketEmptySvc(o, projResource.Region)
-		if err := o.s3Client.EmptyBucket(projResource.S3Bucket); err != nil {
+		sess, err := o.sessProvider.DefaultWithRegion(projResource.Region)
+		if err != nil {
+			return err
+		}
+
+		s3Client := o.getBucketEmptier(sess)
+
+		if err := s3Client.EmptyBucket(projResource.S3Bucket); err != nil {
 			o.spinner.Stop(log.Serror("Error cleaning up deployment resources."))
 			return fmt.Errorf("empty bucket %s: %w", projResource.S3Bucket, err)
 		}
