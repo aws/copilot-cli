@@ -19,6 +19,12 @@ type showEnvOpts struct {
 	showEnvVars
 }
 
+func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
+	return &showEnvOpts{
+		showEnvVars: 	vars,
+	}, nil
+}
+
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
 	return nil
