@@ -233,3 +233,16 @@ type statusDescriber interface {
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 }
+
+type deleteAppExecutor interface {
+	Execute() error
+}
+
+type deletePipelineRunner interface {
+	Run() error
+}
+
+type deleteEnvRunner interface {
+	Ask() error
+	Execute() error
+}
