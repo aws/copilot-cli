@@ -1,6 +1,6 @@
 bin/
 coverage.out
-.idea/*
+**/.idea
 .vscode/*
 *.swp
 node_modules/
