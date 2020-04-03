@@ -6,6 +6,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,11 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
-	// TODO Placeholder
+	if o.ProjectName() != "" {
+		if _, err := o.store.GetProject(o.ProjectName()); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
