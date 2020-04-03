@@ -205,6 +205,20 @@ func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil
 }
 
+
+func (o *deletePipelineOpts) Run() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	if err := o.Ask(); err != nil {
+		return err
+	}
+	if err := o.Execute(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // BuildPipelineDeleteCmd build the command for deleting an existing pipeline.
 func BuildPipelineDeleteCmd() *cobra.Command {
 	vars := deletePipelineVars{
@@ -222,17 +236,7 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			return nil
+			return opts.Run()
 		}),
 	}
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
