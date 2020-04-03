@@ -20,6 +20,7 @@ func BuildPipelineCmd() *cobra.Command {
 	cmd.AddCommand(BuildPipelineInitCmd())
 	cmd.AddCommand(BuildPipelineUpdateCmd())
 	cmd.AddCommand(BuildPipelineDeleteCmd())
+	cmd.AddCommand(BuildPipelineShowCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
