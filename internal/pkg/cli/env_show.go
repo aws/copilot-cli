@@ -75,7 +75,7 @@ func (o *showEnvOpts) Validate() error {
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
