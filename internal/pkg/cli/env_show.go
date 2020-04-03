@@ -40,13 +40,13 @@ func (o *showEnvOpts) Execute() error {
 	return nil
 }
 
-
 // BuildEnvShowCmd builds the command for showing environments in a project.
 func BuildEnvShowCmd() *cobra.Command {
 	vars := showEnvVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
+		Hidden: true, //TODO remove when ready for production!
 		Use:   "show",
 		Short: "Shows info about a deployed environment.",
 		Long:  "Shows info about a deployed environment, including region, account ID, and apps.",
