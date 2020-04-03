@@ -37,7 +37,7 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
-		return nil
+	return nil
 }
 
 
