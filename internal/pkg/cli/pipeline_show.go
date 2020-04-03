@@ -20,7 +20,27 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
-	ws wsPipelineReader // NOTE The "show" command should probably read the pipeline.yml file, which is in my workspace directory (./ecs-project)
+	ws    wsPipelineReader
+	store storeReader
+}
+
+func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
+	ssmStore, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+	}
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+	}
+
+	opts := &showPipelineOpts{
+		showPipelineVars: vars,
+		ws:               ws,
+		store:            ssmStore,
+	}
+
+	return opts, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -39,20 +59,6 @@ func (o *showPipelineOpts) Ask() error {
 func (o *showPipelineOpts) Execute() error {
 	// TODO Placeholder
 	return nil
-}
-
-func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
-	}
-
-	opts := &showPipelineOpts{
-		showPipelineVars: vars,
-		ws:               ws,
-	}
-
-	return opts, nil
 }
 
 // BuildPipelineShowCmd build the command for deploying a new pipeline or updating an existing pipeline.
