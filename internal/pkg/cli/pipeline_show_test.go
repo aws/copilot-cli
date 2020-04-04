@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -19,22 +21,64 @@ type showPipelineMocks struct {
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
+	mockError := errors.New("mock error")
+	mockProjectName := "dinder"
+	pipelineData := `
+name: pipeline-dinder-badgoose-repo
+version: 1
+
+source:
+  provider: GitHub
+  properties:
+    repository: badgoose/repo
+    access_token_secret: "github-token-badgoose-repo"
+    branch: master
+
+stages:
+    -
+      name: test
+    -
+      name: prod
+`
+
 	testCases := map[string]struct {
-		inputProject string
-		setupMocks   func(mocks showPipelineMocks)
+		inProjectName string
+		setupMocks    func(mocks showPipelineMocks)
 
 		wantedError error
 	}{
-		"with valid project name": {
-			inputProject: "dinder",
+		"with valid project name and pipeline name": {
+			inProjectName: mockProjectName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
 						Name: "dinder",
 					}, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil),
 				)
 			},
 			wantedError: nil,
+		},
+		"with invalid project name": {
+			inProjectName: mockProjectName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetProject("dinder").Return(nil, mockError),
+				)
+			},
+			wantedError: mockError,
+		},
+		"with no pipeline in workspace": {
+			inProjectName: "dinder",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
+						Name: "dinder",
+					}, nil),
+					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(""), mockError),
+				)
+			},
+			wantedError: fmt.Errorf("read pipeline manifest: %w", mockError),
 		},
 	}
 
@@ -66,11 +110,11 @@ func TestPipelineShow_Validate(t *testing.T) {
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						projectName: tc.inProjectName,
 					},
 				},
-				ws:    mockWorkspace,
 				store: mockStoreReader,
+				ws:    mockWorkspace,
 			}
 
 			// WHEN
