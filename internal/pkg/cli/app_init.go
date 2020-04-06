@@ -345,7 +345,7 @@ func BuildAppInitCmd() *cobra.Command {
 This command is also run as part of "ecs-preview init".`,
 		Example: `
   Create a "frontend" web application.
-	/code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitAppOpts(vars)
 			if err != nil {
