@@ -331,11 +331,11 @@ func TestAppStatus_Execute(t *testing.T) {
 	updateTime := time.Unix(1584129030, 0)
 	mockAppStatus := &describe.WebAppStatusDesc{
 		Service: ecs.ServiceStatus{
-			DesiredCount:   1,
-			RunningCount:   1,
-			Status:         "ACTIVE",
-			LastDeployment: startTime.Unix(),
-			TaskDefinition: "mockTaskDefinition",
+			DesiredCount:     1,
+			RunningCount:     1,
+			Status:           "ACTIVE",
+			LastDeploymentAt: startTime.Unix(),
+			TaskDefinition:   "mockTaskDefinition",
 		},
 		Alarms: []cloudwatch.AlarmStatus{
 			{
@@ -389,7 +389,7 @@ func TestAppStatus_Execute(t *testing.T) {
 				m.EXPECT().Describe().Return(mockAppStatus, nil)
 			},
 
-			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeployment\":1136214245,\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"desiredStatus\":\"RUNNING\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
+			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":1136214245,\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"desiredStatus\":\"RUNNING\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
 		},
 		"success with human output": {
 			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {

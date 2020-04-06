@@ -215,11 +215,11 @@ func TestWebAppStatus_Describe(t *testing.T) {
 
 			wantedContent: &WebAppStatusDesc{
 				Service: ecs.ServiceStatus{
-					DesiredCount:   1,
-					RunningCount:   1,
-					Status:         "ACTIVE",
-					LastDeployment: startTime.Unix(),
-					TaskDefinition: "mockTaskDefinition",
+					DesiredCount:     1,
+					RunningCount:     1,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime.Unix(),
+					TaskDefinition:   "mockTaskDefinition",
 				},
 				Alarms: []cloudwatch.AlarmStatus{
 					{

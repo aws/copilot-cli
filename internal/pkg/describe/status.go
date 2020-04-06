@@ -179,7 +179,7 @@ func (w *WebAppStatusDesc) HumanString() string {
 		w.Service.RunningCount, w.Service.DesiredCount, w.Service.DesiredCount-w.Service.RunningCount)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanize.Time(time.Unix(w.Service.LastDeployment, 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanize.Time(time.Unix(w.Service.LastDeploymentAt, 0)))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", w.Service.TaskDefinition)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
