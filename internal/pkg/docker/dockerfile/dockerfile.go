@@ -91,6 +91,9 @@ func (df *Dockerfile) parse() error {
 	if df.parsed {
 		return nil
 	}
+
+	file, err := df.fs.Open(df.path)
+
 	if err != nil {
 		return fmt.Errorf("read dockerfile: %w", err)
 	}
