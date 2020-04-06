@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-// Package dockerfile provides simple Dockerfile parsing functionality
+// Package dockerfile provides simple Dockerfile parsing functionality.
 package dockerfile
 
 import (
@@ -34,7 +34,7 @@ type portConfig struct {
 	err       error
 }
 
-// Dockerfile represents a parsed dockerfile
+// Dockerfile represents a parsed dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
 	parsed       bool
@@ -43,7 +43,7 @@ type Dockerfile struct {
 	fs afero.Fs
 }
 
-// New returns an empty Dockerfile
+// New returns an empty Dockerfile.
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
@@ -53,7 +53,7 @@ func New(fs afero.Fs, path string) *Dockerfile {
 	}
 }
 
-// GetExposedPorts returns a uint16 slice of exposed ports found in the Dockerfile
+// GetExposedPorts returns a uint16 slice of exposed ports found in the Dockerfile.
 func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	if !df.parsed {
 		err := df.parse()
@@ -85,8 +85,7 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	return ports, err
 }
 
-// parse takes a Dockerfile and fills in struct members based on
-// methods like parseExpose and (TODO) parseHealthcheck
+// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and (TODO) parseHealthcheck
 func (df *Dockerfile) parse() error {
 	if df.parsed {
 		return nil
