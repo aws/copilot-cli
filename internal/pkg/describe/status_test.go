@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
@@ -26,7 +25,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		mockStoreReader     func(m *mocks.MockenvGetter)
 		mockecsSvc          func(m *mocks.MockecsServiceGetter)
 		mockcwSvc           func(m *mocks.MockalarmStatusGetter)
 		mockWebAppDescriber func(m *mocks.MockserviceArnGetter)
@@ -34,22 +32,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 		wantedError   error
 		wantedContent *WebAppStatusDesc
 	}{
-		"error if failed to get environment": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(nil, mockError)
-			},
-			mockecsSvc:          func(m *mocks.MockecsServiceGetter) {},
-			mockcwSvc:           func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-
-			wantedError: fmt.Errorf("get environment mockEnv: some error"),
-		},
 		"errors if failed to get service ARN": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
@@ -59,11 +42,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get service ARN: some error"),
 		},
 		"errors if failed to get cluster name": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
@@ -73,11 +51,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get cluster name: arn: invalid prefix"),
 		},
 		"errors if failed to get ECS service info": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(nil, mockError)
 			},
@@ -89,11 +62,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get ECS service mockService: some error"),
 		},
 		"errors if failed to get ECS running tasks info": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return(nil, mockError)
@@ -106,11 +74,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get ECS tasks for service mockService: some error"),
 		},
 		"errors if failed to get ECS running tasks status": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
@@ -127,11 +90,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get status for task badMockTaskArn: arn: invalid prefix"),
 		},
 		"errors if failed to get CloudWatch alarms": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
@@ -155,11 +113,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("get CloudWatch alarms: some error"),
 		},
 		"success": {
-			mockStoreReader: func(m *mocks.MockenvGetter) {
-				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
-					Name: "mockEnv",
-				}, nil)
-			},
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{
 					Status:       aws.String("ACTIVE"),
@@ -260,26 +213,23 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockenvGetter(ctrl)
 			mockecsSvc := mocks.NewMockecsServiceGetter(ctrl)
 			mockcwSvc := mocks.NewMockalarmStatusGetter(ctrl)
 			mockWebAppDescriber := mocks.NewMockserviceArnGetter(ctrl)
-			tc.mockStoreReader(mockStoreReader)
 			tc.mockecsSvc(mockecsSvc)
 			tc.mockcwSvc(mockcwSvc)
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			appStatus := &WebAppStatus{
-				appName:       "mockApp",
-				envName:       "mockEnv",
-				projectName:   "mockProject",
-				cwSvc:         mockcwSvc,
-				ecsSvc:        mockecsSvc,
-				describer:     mockWebAppDescriber,
-				initDescriber: func(*WebAppStatus, string) error { return nil },
-				initcwSvc:     func(*WebAppStatus, *archer.Environment) error { return nil },
-				initecsSvc:    func(*WebAppStatus, *archer.Environment) error { return nil },
-				storeSvc:      mockStoreReader,
+				AppName:     "mockApp",
+				EnvName:     "mockEnv",
+				ProjectName: "mockProject",
+				CwSvc:       mockcwSvc,
+				EcsSvc:      mockecsSvc,
+				Describer:   mockWebAppDescriber,
+				// initDescriber: func(*WebAppStatus, string) error { return nil },
+				// initcwSvc:     func(*WebAppStatus, *archer.Environment) error { return nil },
+				// initecsSvc:    func(*WebAppStatus, *archer.Environment) error { return nil },
 			}
 
 			// WHEN

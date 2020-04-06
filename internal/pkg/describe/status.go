@@ -11,12 +11,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	humanize "github.com/dustin/go-humanize"
 )
@@ -41,16 +38,13 @@ type serviceArnGetter interface {
 
 // WebAppStatus retrieves status of a web app application.
 type WebAppStatus struct {
-	projectName   string
-	envName       string
-	appName       string
-	storeSvc      envGetter
-	describer     serviceArnGetter
-	ecsSvc        ecsServiceGetter
-	cwSvc         alarmStatusGetter
-	initecsSvc    func(*WebAppStatus, *archer.Environment) error
-	initcwSvc     func(*WebAppStatus, *archer.Environment) error
-	initDescriber func(*WebAppStatus, string) error
+	ProjectName string
+	EnvName     string
+	AppName     string
+
+	Describer serviceArnGetter
+	EcsSvc    ecsServiceGetter
+	CwSvc     alarmStatusGetter
 }
 
 // WebAppStatusDesc contains the status for a web application.
@@ -62,48 +56,16 @@ type WebAppStatusDesc struct {
 
 // NewWebAppStatus initinstantiatesiate a new WebAppStatus struct.
 func NewWebAppStatus(projectName, envName, appName string) (*WebAppStatus, error) {
-	ssmStore, err := store.New()
-	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
-	}
 	return &WebAppStatus{
-		projectName: projectName,
-		envName:     envName,
-		appName:     appName,
-		storeSvc:    ssmStore,
-		initecsSvc: func(w *WebAppStatus, env *archer.Environment) error {
-			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-			w.ecsSvc = ecs.New(sess)
-			return nil
-		},
-		initcwSvc: func(w *WebAppStatus, env *archer.Environment) error {
-			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-			w.cwSvc = cloudwatch.New(sess)
-			return nil
-		},
-		initDescriber: func(w *WebAppStatus, appName string) error {
-			d, err := NewWebAppDescriber(projectName, appName)
-			if err != nil {
-				return fmt.Errorf("creating describer for application %s in project %s: %w", appName, projectName, err)
-			}
-			w.describer = d
-			return nil
-		},
+		ProjectName: projectName,
+		EnvName:     envName,
+		AppName:     appName,
 	}, nil
 }
 
 // Describe returns status of a web app application.
 func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
-	if err := w.configSvc(); err != nil {
-		return nil, err
-	}
-	serviceArn, err := w.describer.GetServiceArn(w.envName)
+	serviceArn, err := w.Describer.GetServiceArn(w.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get service ARN: %w", err)
 	}
@@ -115,11 +77,11 @@ func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get service name: %w", err)
 	}
-	service, err := w.ecsSvc.Service(clusterName, serviceName)
+	service, err := w.EcsSvc.Service(clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS service %s: %w", serviceName, err)
 	}
-	tasks, err := w.ecsSvc.ServiceTasks(clusterName, serviceName)
+	tasks, err := w.EcsSvc.ServiceTasks(clusterName, serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("get ECS tasks for service %s: %w", serviceName, err)
 	}
@@ -131,10 +93,10 @@ func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
 		}
 		taskStatus = append(taskStatus, *status)
 	}
-	alarms, err := w.cwSvc.GetAlarmsWithTags(map[string]string{
-		stack.ProjectTagKey: w.projectName,
-		stack.EnvTagKey:     w.envName,
-		stack.AppTagKey:     w.appName,
+	alarms, err := w.CwSvc.GetAlarmsWithTags(map[string]string{
+		stack.ProjectTagKey: w.ProjectName,
+		stack.EnvTagKey:     w.EnvName,
+		stack.AppTagKey:     w.AppName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)
@@ -144,20 +106,6 @@ func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
 		Tasks:   taskStatus,
 		Alarms:  alarms,
 	}, nil
-}
-
-func (w *WebAppStatus) configSvc() error {
-	if err := w.initDescriber(w, w.appName); err != nil {
-		return err
-	}
-	env, err := w.storeSvc.GetEnvironment(w.projectName, w.envName)
-	if err != nil {
-		return fmt.Errorf("get environment %s: %w", w.envName, err)
-	}
-	if err := w.initcwSvc(w, env); err != nil {
-		return err
-	}
-	return w.initecsSvc(w, env)
 }
 
 // JSONString returns the stringified webAppStatus struct with json format.

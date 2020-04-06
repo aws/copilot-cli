@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -62,6 +65,22 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 			if err != nil {
 				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
 			}
+			env, err := ssmStore.GetEnvironment(o.ProjectName(), o.envName)
+			if err != nil {
+				return fmt.Errorf("get environment %s: %w", o.envName, err)
+			}
+			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			if err != nil {
+				return fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+			}
+			d.CwSvc = cloudwatch.New(sess)
+			d.EcsSvc = ecs.New(sess)
+			describer, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			if err != nil {
+				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+			}
+			d.Describer = describer
+
 			o.statusDescriber = d
 			return nil
 		},
