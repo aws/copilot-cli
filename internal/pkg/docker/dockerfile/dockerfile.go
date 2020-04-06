@@ -156,7 +156,7 @@ func parseExpose(line string) []portConfig {
 			})
 			continue
 		}
-		var extractedPortUint uint16 = 0
+		var extractedPortUint uint16
 		if extractedPort >= 1 && extractedPort <= 65535 {
 			extractedPortUint = uint16(extractedPort)
 		} else {
