@@ -88,7 +88,9 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 // parse takes a Dockerfile and fills in struct members based on
 // methods like parseExpose and (TODO) parseHealthcheck
 func (df *Dockerfile) parse() error {
-	file, err := df.fs.Open(df.path)
+	if df.parsed {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("read dockerfile: %w", err)
 	}
