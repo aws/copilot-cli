@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.0.7
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
 	github.com/aws/aws-sdk-go v1.30.4
-	github.com/awslabs/goformation/v4 v4.7.0
+	github.com/awslabs/goformation/v4 v4.8.0
 	github.com/briandowns/spinner v1.10.0
 	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
