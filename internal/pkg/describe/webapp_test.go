@@ -615,12 +615,12 @@ func TestWebAppDescriber_GetServiceArn(t *testing.T) {
 		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
 		testApp            = "jobs"
 	)
-	mockServiceArn := ServiceArn("mockServiceArn")
+	mockServiceArn := ecs.ServiceArn("mockServiceArn")
 	testCases := map[string]struct {
 		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvGetter
 		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
 
-		wantedServiceArn *ServiceArn
+		wantedServiceArn *ecs.ServiceArn
 		wantedError      error
 	}{
 		"success": {

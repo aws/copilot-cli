@@ -23,7 +23,7 @@ const (
 	metricAlarmType        = "Metric"
 )
 
-type cwClient interface {
+type cloudWatchClient interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
 }
 
@@ -33,25 +33,25 @@ type resourceGroupClient interface {
 
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	cwClient
-	resourceGroupClient
+	cwClient cloudWatchClient
+	rgClient resourceGroupClient
 }
 
 // AlarmStatus contains CloudWatch alarm status.
 type AlarmStatus struct {
-	Arn          string
-	Name         string
-	Reason       string
-	Status       string
-	Type         string
-	UpdatedTimes int64
+	Arn          string `json:"arn"`
+	Name         string `json:"name"`
+	Reason       string `json:"reason"`
+	Status       string `json:"status"`
+	Type         string `json:"type"`
+	UpdatedTimes int64  `json:"updatedTimes"`
 }
 
 // New returns a CloudWatch struct configured against the input session.
 func New(s *session.Session) *CloudWatch {
 	return &CloudWatch{
-		cwClient:            cloudwatch.New(s),
-		resourceGroupClient: resourcegroups.New(s),
+		cwClient: cloudwatch.New(s),
+		rgClient: resourcegroups.New(s),
 	}
 }
 
@@ -64,7 +64,7 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 		return nil, fmt.Errorf("construct search resource query: %w", err)
 	}
 	for {
-		resourceResp, err = cw.SearchResources(&resourcegroups.SearchResourcesInput{
+		resourceResp, err = cw.rgClient.SearchResources(&resourcegroups.SearchResourcesInput{
 			NextToken: resourceResp.NextToken,
 			ResourceQuery: &resourcegroups.ResourceQuery{
 				Type:  aws.String(resourceQueryType),
@@ -85,10 +85,14 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 			break
 		}
 	}
+	// Return an empty array since DescribeAlarms will return all alarms if "AlarmNames" is an empty array.
+	if len(alarmNames) == 0 {
+		return []AlarmStatus{}, nil
+	}
 	var alarmStatus []AlarmStatus
 	alarmResp := &cloudwatch.DescribeAlarmsOutput{}
 	for {
-		alarmResp, err = cw.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+		alarmResp, err = cw.cwClient.DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 			AlarmNames: alarmNames,
 			NextToken:  alarmResp.NextToken,
 		})

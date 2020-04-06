@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.30.4
 	github.com/awslabs/goformation/v4 v4.8.0
 	github.com/briandowns/spinner v1.10.0
+	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0
 	github.com/gobuffalo/packd v1.0.0
