@@ -17,24 +17,26 @@ import (
 )
 
 const (
-	lbFargateAppTemplatePath              = "lb-fargate-service/cf.yml"
-	lbFargateAppParamsPath                = "lb-fargate-service/params.json.tmpl"
+	lbFargateAppTemplatePath              = "applications/lb-web-app/cf.yml"
+	lbFargateAppParamsPath                = "applications/params.json.tmpl"
 	lbFargateAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
 // Parameter logical IDs for a load balanced Fargate service.
 const (
-	LBFargateParamProjectNameKey    = "ProjectName"
-	LBFargateParamHTTPSKey          = "HTTPSEnabled"
-	LBFargateParamEnvNameKey        = "EnvName"
-	LBFargateParamAppNameKey        = "AppName"
-	LBFargateParamContainerImageKey = "ContainerImage"
-	LBFargateParamContainerPortKey  = "ContainerPort"
-	LBFargateRulePathKey            = "RulePath"
-	LBFargateHealthCheckPathKey     = "HealthCheckPath"
-	LBFargateTaskCPUKey             = "TaskCPU"
-	LBFargateTaskMemoryKey          = "TaskMemory"
-	LBFargateTaskCountKey           = "TaskCount"
+	LBFargateProjectNameParamKey       = "ProjectName"
+	LBFargateHTTPSParamKey             = "HTTPSEnabled"
+	LBFargateEnvNameParamKey           = "EnvName"
+	LBFargateAppNameParamKey           = "AppName"
+	LBFargateContainerImageParamKey    = "ContainerImage"
+	LBFargateContainerPortParamKey     = "ContainerPort"
+	LBFargateRulePathParamKey          = "RulePath"
+	LBFargateHealthCheckPathParamKey   = "HealthCheckPath"
+	LBFargateTaskCPUParamKey           = "TaskCPU"
+	LBFargateTaskMemoryParamKey        = "TaskMemory"
+	LBFargateTaskCountParamKey         = "TaskCount"
+	LBFargateLogRetentionParamKey      = "LogRetention"
+	LBFargateAddonsTemplateURLParamKey = "AddonsTemplateURL"
 )
 
 type templater interface {
@@ -119,48 +121,56 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 	templateParams := c.toTemplateParams()
 	return []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(LBFargateParamProjectNameKey),
+			ParameterKey:   aws.String(LBFargateProjectNameParamKey),
 			ParameterValue: aws.String(templateParams.Env.Project),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateParamEnvNameKey),
+			ParameterKey:   aws.String(LBFargateEnvNameParamKey),
 			ParameterValue: aws.String(templateParams.Env.Name),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateParamAppNameKey),
+			ParameterKey:   aws.String(LBFargateAppNameParamKey),
 			ParameterValue: aws.String(templateParams.App.Name),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateParamContainerImageKey),
+			ParameterKey:   aws.String(LBFargateContainerImageParamKey),
 			ParameterValue: aws.String(templateParams.Image.URL),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateParamContainerPortKey),
+			ParameterKey:   aws.String(LBFargateContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(templateParams.Image.Port), 10)),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateRulePathKey),
+			ParameterKey:   aws.String(LBFargateRulePathParamKey),
 			ParameterValue: aws.String(templateParams.App.Path),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateHealthCheckPathKey),
+			ParameterKey:   aws.String(LBFargateHealthCheckPathParamKey),
 			ParameterValue: aws.String(templateParams.App.HealthCheckPath),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateTaskCPUKey),
+			ParameterKey:   aws.String(LBFargateTaskCPUParamKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.CPU)),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateTaskMemoryKey),
+			ParameterKey:   aws.String(LBFargateTaskMemoryParamKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Memory)),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateTaskCountKey),
+			ParameterKey:   aws.String(LBFargateTaskCountParamKey),
 			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Count)),
 		},
 		{
-			ParameterKey:   aws.String(LBFargateParamHTTPSKey),
+			ParameterKey:   aws.String(LBFargateHTTPSParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(c.httpsEnabled)),
+		},
+		{
+			ParameterKey:   aws.String(LBFargateLogRetentionParamKey),
+			ParameterValue: aws.String("30"),
+		},
+		{
+			ParameterKey:   aws.String(LBFargateAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(""),
 		},
 	}
 }
@@ -168,19 +178,19 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (c *LBFargateStackConfig) SerializedParameters() (string, error) {
-	params, err := c.parser.Parse(lbFargateAppParamsPath, struct {
-		*lbFargateTemplateParams
-		Tags []*cloudformation.Tag
+	doc, err := c.parser.Parse(lbFargateAppParamsPath, struct {
+		Parameters []*cloudformation.Parameter
+		Tags       []*cloudformation.Tag
 	}{
-		lbFargateTemplateParams: c.toTemplateParams(),
-		Tags:                    c.Tags(),
+		Parameters: c.Parameters(),
+		Tags:       c.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": func(i int) int { return i + 1 },
 	}))
 	if err != nil {
 		return "", err
 	}
-	return params.String(), nil
+	return doc.String(), nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.

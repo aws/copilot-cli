@@ -164,7 +164,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateRulePathKey),
+									ParameterKey:   aws.String(stack.LBFargateRulePathParamKey),
 									ParameterValue: aws.String(testAppPath),
 								},
 							},
@@ -213,7 +213,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateRulePathKey),
+									ParameterKey:   aws.String(stack.LBFargateRulePathParamKey),
 									ParameterValue: aws.String(testAppPath),
 								},
 							},
@@ -298,19 +298,19 @@ func TestWebAppDescriber_ECSParams(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskCPUKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskCPUParamKey),
 									ParameterValue: aws.String(testCPU),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskMemoryKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskMemoryParamKey),
 									ParameterValue: aws.String(testMemory),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateParamContainerPortKey),
+									ParameterKey:   aws.String(stack.LBFargateContainerPortParamKey),
 									ParameterValue: aws.String(testPort),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskCountKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskCountParamKey),
 									ParameterValue: aws.String(testTasks),
 								},
 							},
