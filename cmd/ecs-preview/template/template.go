@@ -51,4 +51,6 @@ func init() {
 	cobra.AddTemplateFunc("h2", h2)
 	cobra.AddTemplateFunc("code", code)
 	cobra.AddTemplateFunc("mkSlice", mkSlice)
+	cobra.AddTemplateFunc("split", split)
+	cobra.AddTemplateFunc("inc", inc)
 }

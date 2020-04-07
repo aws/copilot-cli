@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -21,6 +22,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -372,5 +374,34 @@ This command is also run as part of "ecs-preview init".`,
 	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 0, appPortFlagDescription)
+
+	// Bucket flags by application type.
+	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
+	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(appTypeFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+
+	lbWebAppFlags := pflag.NewFlagSet(manifest.LoadBalancedWebApplication, pflag.ContinueOnError)
+	lbWebAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
+
+	cmd.Annotations = map[string]string{
+		// The order of the sections we want to display.
+		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.AppTypes, ",")),
+		"Required":                          requiredFlags.FlagUsages(),
+		manifest.LoadBalancedWebApplication: lbWebAppFlags.FlagUsages(),
+	}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
+  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
+
+{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
+{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
+
+{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+{{h1 "Global Flags"}}
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
+
+{{h1 "Examples"}}{{code .Example}}{{end}}
+`)
 	return cmd
 }
