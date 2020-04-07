@@ -43,20 +43,22 @@ type Task ecs.Task
 
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount int64
-	RunningCount int64
-	Status       string
+	DesiredCount     int64  `json:"desiredCount"`
+	RunningCount     int64  `json:"runningCount"`
+	Status           string `json:"status"`
+	LastDeploymentAt int64  `json:"lastDeploymentAt"`
+	TaskDefinition   string `json:"taskDefinition"`
 }
 
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
-	DesiredStatus string
-	ID            string
-	Images        []Image
-	LastStatus    string
-	StartedAt     int64
-	StoppedAt     int64
-	StoppedReason string
+	DesiredStatus string  `json:"desiredStatus"`
+	ID            string  `json:"id"`
+	Images        []Image `json:"images"`
+	LastStatus    string  `json:"lastStatus"`
+	StartedAt     int64   `json:"startedAt"`
+	StoppedAt     int64   `json:"stoppedAt"`
+	StoppedReason string  `json:"stoppedReason"`
 }
 
 // Image contains very basic info of a container image.
@@ -136,7 +138,7 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
-	taskID, err := t.shortTaskID(aws.StringValue(t.TaskArn))
+	taskID, err := t.taskID(aws.StringValue(t.TaskArn))
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +154,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	for _, container := range t.Containers {
 		images = append(images, Image{
 			ID:     aws.StringValue(container.Image),
-			Digest: t.shortImageDigest(aws.StringValue(container.ImageDigest)),
+			Digest: t.imageDigest(aws.StringValue(container.ImageDigest)),
 		})
 	}
 	return &TaskStatus{
@@ -166,32 +168,34 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	}, nil
 }
 
-// shortTaskID parses the task ARN and returns the short task ID.
+// taskID parses the task ARN and returns the task ID.
 // For example: arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d
-// becomes 4082490.
-func (t *Task) shortTaskID(taskArn string) (string, error) {
+// becomes 4082490ee6c245e09d2145010aa1ba8d.
+func (t *Task) taskID(taskArn string) (string, error) {
 	parsedArn, err := arn.Parse(taskArn)
 	if err != nil {
 		return "", err
 	}
 	resources := strings.Split(parsedArn.Resource, "/")
 	taskID := resources[len(resources)-1]
-	return taskID[:shortTaskIDLength], nil
+	return taskID, nil
 }
 
-// shortImageDigest returns the short image digest.
+// imageDigest returns the short image digest.
 // For example: sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7
-// becomes 18f7eb6c.
-func (t *Task) shortImageDigest(imageDigest string) string {
-	return strings.TrimPrefix(imageDigest, imageDigestPrefix)[:shortImageDigestLength]
+// becomes 18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7.
+func (t *Task) imageDigest(imageDigest string) string {
+	return strings.TrimPrefix(imageDigest, imageDigestPrefix)
 }
 
 // ServiceStatus returns the status of the running service.
 func (s *Service) ServiceStatus() ServiceStatus {
 	return ServiceStatus{
-		Status:       aws.StringValue(s.Status),
-		DesiredCount: aws.Int64Value(s.DesiredCount),
-		RunningCount: aws.Int64Value(s.RunningCount),
+		Status:           aws.StringValue(s.Status),
+		DesiredCount:     aws.Int64Value(s.DesiredCount),
+		RunningCount:     aws.Int64Value(s.RunningCount),
+		LastDeploymentAt: s.Deployments[0].UpdatedAt.Unix(),
+		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
 	}
 }
 
@@ -202,4 +206,39 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 		envs[aws.StringValue(env.Name)] = aws.StringValue(env.Value)
 	}
 	return envs
+}
+
+// ServiceArn is the arn of an ECS service.
+type ServiceArn string
+
+// ClusterName returns the cluster name.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
+// will return my-project-test-Cluster-9F7Y0RLP60R7
+func (s *ServiceArn) ClusterName() (string, error) {
+	serviceArn := string(*s)
+	parsedArn, err := arn.Parse(serviceArn)
+	if err != nil {
+		return "", err
+	}
+	resources := strings.Split(parsedArn.Resource, "/")
+	if len(resources) != 3 {
+		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
+	}
+	return resources[1], nil
+}
+
+// ServiceName returns the service name.
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
+// will return my-project-test-my-app-Service-JSOH5GYBFAIB
+func (s *ServiceArn) ServiceName() (string, error) {
+	serviceArn := string(*s)
+	parsedArn, err := arn.Parse(serviceArn)
+	if err != nil {
+		return "", err
+	}
+	resources := strings.Split(parsedArn.Resource, "/")
+	if len(resources) != 3 {
+		return "", fmt.Errorf("cannot parse resource for ARN %s", serviceArn)
+	}
+	return resources[2], nil
 }

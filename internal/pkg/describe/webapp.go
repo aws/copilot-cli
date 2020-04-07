@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -18,7 +17,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	clientsession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -199,7 +197,7 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 }
 
 // GetServiceArn returns the ECS service ARN of the application in an environment.
-func (d *WebAppDescriber) GetServiceArn(envName string) (*ServiceArn, error) {
+func (d *WebAppDescriber) GetServiceArn(envName string) (*ecs.ServiceArn, error) {
 	env, err := d.store.GetEnvironment(d.app.Project, envName)
 	if err != nil {
 		return nil, err
@@ -210,7 +208,7 @@ func (d *WebAppDescriber) GetServiceArn(envName string) (*ServiceArn, error) {
 	}
 	for _, appResource := range appResources {
 		if aws.StringValue(appResource.LogicalResourceId) == serviceLogicalID {
-			serviceArn := ServiceArn(aws.StringValue(appResource.PhysicalResourceId))
+			serviceArn := ecs.ServiceArn(aws.StringValue(appResource.PhysicalResourceId))
 			return &serviceArn, nil
 		}
 	}
@@ -342,35 +340,6 @@ func (d *WebAppDescriber) stackDescriber(roleARN, region string) (stackDescriber
 		d.stackDescribers[roleARN] = cloudformation.New(sess)
 	}
 	return d.stackDescribers[roleARN], nil
-}
-
-// ServiceArn is the arn of an ECS service.
-type ServiceArn string
-
-// ClusterName returns the cluster name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
-// will return my-project-test-Cluster-9F7Y0RLP60R7
-func (s *ServiceArn) ClusterName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	return resources[1], nil
-}
-
-// ServiceName returns the service name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
-// will return my-project-test-my-app-Service-JSOH5GYBFAIB
-func (s *ServiceArn) ServiceName() (string, error) {
-	serviceArn := string(*s)
-	parsedArn, err := arn.Parse(serviceArn)
-	if err != nil {
-		return "", err
-	}
-	resources := strings.Split(parsedArn.Resource, "/")
-	return resources[2], nil
 }
 
 // WebApp contains serialized parameters for a web application.

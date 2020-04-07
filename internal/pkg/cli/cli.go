@@ -142,3 +142,12 @@ func isStackNotExistsErr(err error) bool {
 		return true
 	}
 }
+
+type appEnv struct {
+	appName string
+	envName string
+}
+
+func (a *appEnv) String() string {
+	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
+}

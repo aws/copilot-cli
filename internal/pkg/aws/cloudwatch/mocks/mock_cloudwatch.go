@@ -11,31 +11,31 @@ import (
 	reflect "reflect"
 )
 
-// MockcwClient is a mock of cwClient interface
-type MockcwClient struct {
+// MockcloudWatchClient is a mock of cloudWatchClient interface
+type MockcloudWatchClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockcwClientMockRecorder
+	recorder *MockcloudWatchClientMockRecorder
 }
 
-// MockcwClientMockRecorder is the mock recorder for MockcwClient
-type MockcwClientMockRecorder struct {
-	mock *MockcwClient
+// MockcloudWatchClientMockRecorder is the mock recorder for MockcloudWatchClient
+type MockcloudWatchClientMockRecorder struct {
+	mock *MockcloudWatchClient
 }
 
-// NewMockcwClient creates a new mock instance
-func NewMockcwClient(ctrl *gomock.Controller) *MockcwClient {
-	mock := &MockcwClient{ctrl: ctrl}
-	mock.recorder = &MockcwClientMockRecorder{mock}
+// NewMockcloudWatchClient creates a new mock instance
+func NewMockcloudWatchClient(ctrl *gomock.Controller) *MockcloudWatchClient {
+	mock := &MockcloudWatchClient{ctrl: ctrl}
+	mock.recorder = &MockcloudWatchClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcwClient) EXPECT() *MockcwClientMockRecorder {
+func (m *MockcloudWatchClient) EXPECT() *MockcloudWatchClientMockRecorder {
 	return m.recorder
 }
 
 // DescribeAlarms mocks base method
-func (m *MockcwClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error) {
+func (m *MockcloudWatchClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeAlarms", input)
 	ret0, _ := ret[0].(*cloudwatch.DescribeAlarmsOutput)
@@ -44,9 +44,9 @@ func (m *MockcwClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*c
 }
 
 // DescribeAlarms indicates an expected call of DescribeAlarms
-func (mr *MockcwClientMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
+func (mr *MockcloudWatchClientMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*MockcwClient)(nil).DescribeAlarms), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*MockcloudWatchClient)(nil).DescribeAlarms), input)
 }
 
 // MockresourceGroupClient is a mock of resourceGroupClient interface
