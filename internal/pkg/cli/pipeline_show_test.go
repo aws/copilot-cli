@@ -5,7 +5,7 @@ package cli
 
 import (
 	"errors"
-	"fmt"
+	// "fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -15,14 +15,84 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	mockError        = errors.New("mock error")
+	mockProjectName  = "dinder"
+	mockPipelineName = "pipeline-dinder-badgoose-repo"
+)
+
 type showPipelineMocks struct {
-	store *mocks.MockstoreReader
-	ws    *mocks.MockwsPipelineReader
+	store  *mocks.MockstoreReader
+	ws     *mocks.MockwsPipelineReader
+	prompt *mocks.Mockprompter
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
-	mockError := errors.New("mock error")
-	mockProjectName := "dinder"
+	testCases := map[string]struct {
+		inProjectName string
+		setupMocks    func(mocks showPipelineMocks)
+
+		expectedErr error
+	}{
+		"with valid project name and pipeline name": {
+			inProjectName: mockProjectName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
+						Name: "dinder",
+					}, nil),
+				)
+			},
+			expectedErr: nil,
+		},
+		"with invalid project name": {
+			inProjectName: mockProjectName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetProject("dinder").Return(nil, mockError),
+				)
+			},
+			expectedErr: mockError,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStoreReader := mocks.NewMockstoreReader(ctrl)
+
+			mocks := showPipelineMocks{
+				store: mockStoreReader,
+			}
+
+			tc.setupMocks(mocks)
+
+			opts := &showPipelineOpts{
+				showPipelineVars: showPipelineVars{
+					GlobalOpts: &GlobalOpts{
+						projectName: tc.inProjectName,
+					},
+				},
+				store: mockStoreReader,
+			}
+
+			// WHEN
+			err := opts.Validate()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestPipelineShow_Ask(t *testing.T) {
 	pipelineData := `
 name: pipeline-dinder-badgoose-repo
 version: 1
@@ -42,43 +112,35 @@ stages:
 `
 
 	testCases := map[string]struct {
-		inProjectName string
-		setupMocks    func(mocks showPipelineMocks)
+		inProjectName  string
+		inPipelineName string
+		setupMocks     func(mocks showPipelineMocks)
 
-		wantedError error
+		expectedProject  string
+		expectedPipeline string
+		expectedErr      error
 	}{
-		"with valid project name and pipeline name": {
+		"happy path with project and pipeline flags": {
+			inProjectName:  mockProjectName,
+			inPipelineName: mockPipelineName,
+
+			setupMocks: func(mocks showPipelineMocks) {},
+
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      nil,
+		},
+
+		"reads pipeline name from manifest": {
 			inProjectName: mockProjectName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
-						Name: "dinder",
-					}, nil),
 					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil),
 				)
 			},
-			wantedError: nil,
-		},
-		"with invalid project name": {
-			inProjectName: mockProjectName,
-			setupMocks: func(mocks showPipelineMocks) {
-				gomock.InOrder(
-					mocks.store.EXPECT().GetProject("dinder").Return(nil, mockError),
-				)
-			},
-			wantedError: mockError,
-		},
-		"with no pipeline in workspace": {
-			inProjectName: "dinder",
-			setupMocks: func(mocks showPipelineMocks) {
-				gomock.InOrder(
-					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
-						Name: "dinder",
-					}, nil),
-					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(""), mockError),
-				)
-			},
-			wantedError: fmt.Errorf("read pipeline manifest: %w", mockError),
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      nil,
 		},
 	}
 
@@ -88,43 +150,40 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			// NOTE: we don't want to actually make network (in the
-			// case of the store, which calls SSM) or system calls
-			// (in the case of the workspace, which reads a file on
-			// disc) so we create these mocks which we use when
-			// creating the &showPipelineOpts. The
-			// deletePipelineMocks struct is there to make the
-			// tests cases cleaner when we assert expectations on
-			// what they're supposed to do within the method we are
-			// testing.
 			mockStoreReader := mocks.NewMockstoreReader(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 
 			mocks := showPipelineMocks{
-				store: mockStoreReader,
-				ws:    mockWorkspace,
+				store:  mockStoreReader,
+				ws:     mockWorkspace,
+				prompt: mockPrompt,
 			}
 
-			tc.setupMocks(mocks) // NOTE: this function call is where we make the actual assertions on what we expect the mock objects to do
+			tc.setupMocks(mocks)
 
 			opts := &showPipelineOpts{
 				showPipelineVars: showPipelineVars{
 					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompt,
 						projectName: tc.inProjectName,
 					},
+					pipelineName: tc.inPipelineName,
 				},
 				store: mockStoreReader,
 				ws:    mockWorkspace,
 			}
 
 			// WHEN
-			err := opts.Validate()
+			err := opts.Ask()
 
 			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.Nil(t, err)
+				require.Equal(t, tc.expectedProject, opts.ProjectName(), "expected project name to match")
+				require.Equal(t, tc.expectedPipeline, opts.pipelineName, "expected pipeline name to match")
 			}
 		})
 	}
