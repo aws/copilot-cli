@@ -3,6 +3,14 @@
 
 package cli
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+)
+
 // Long flag names.
 const (
 	// Common flags.
@@ -56,11 +64,15 @@ const (
 )
 
 // Descriptions for flags.
+var (
+	appTypeFlagDescription = fmt.Sprintf(`Type of application to create. Must be one of:
+%s`, strings.Join(quoteAll(manifest.AppTypes), ", "))
+)
+
 const (
 	projectFlagDescription = "Name of the project."
 	appFlagDescription     = "Name of the application."
 	envFlagDescription     = "Name of the environment."
-	appTypeFlagDescription = "Type of application to create."
 	profileFlagDescription = "Name of the profile."
 	yesFlagDescription     = "Skips confirmation prompt."
 	jsonFlagDescription    = "Optional. Outputs in JSON format."
@@ -91,3 +103,11 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	appPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
 )
+
+func quoteAll(elems []string) []string {
+	quotedElems := make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(el)
+	}
+	return quotedElems
+}
