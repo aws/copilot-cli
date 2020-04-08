@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	lbFargateManifestPath = "lb-fargate-service/manifest.yml"
+	lbFargateManifestPath = "applications/lb-web-app/manifest.yml"
 
 	// LogRetentionInDays is the default log retention time in days.
 	LogRetentionInDays = 30
@@ -80,7 +80,6 @@ type LBFargateManifestProps struct {
 // with minimal CPU and Memory thresholds, and sets the default health check
 // path to "/"
 func NewLoadBalancedFargateManifest(input *LBFargateManifestProps) *LBFargateManifest {
-
 	defaultLbManifest := NewEmptyLoadBalancedFargateManifest()
 	defaultLbManifest.AppManifest = AppManifest{
 		Name: input.AppName,
