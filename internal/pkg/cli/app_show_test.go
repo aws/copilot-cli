@@ -37,12 +37,14 @@ func TestAppShow_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-					Name: "my-project",
-				}, nil)
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+						Name: "my-project",
+					}, nil),
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+						Name: "my-app",
+					}, nil),
+				)
 			},
 
 			wantedError: nil,
@@ -62,10 +64,12 @@ func TestAppShow_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-					Name: "my-project",
-				}, nil)
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+						Name: "my-project",
+					}, nil),
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error")),
+				)
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -133,19 +137,22 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{Name: "my-app"},
-					{Name: "archer-app"},
-				}, nil)
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
-
-				m.ws.EXPECT().AppNames().Return(nil, errors.New("some error"))
+					// askAppName
+					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						{Name: "my-app"},
+						{Name: "archer-app"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -157,19 +164,23 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{Name: "my-app"},
-					{Name: "archer-app"},
-				}, nil)
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
+					// askAppName
+					m.ws.EXPECT().AppNames().Return([]string{}, nil),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						{Name: "my-app"},
+						{Name: "archer-app"},
+					}, nil),
 
-				m.ws.EXPECT().AppNames().Return([]string{}, nil)
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -181,15 +192,18 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1)
-
-				m.ws.EXPECT().AppNames().Return([]string{"my-app", "archer-app"}, nil)
+					// askAppName
+					m.ws.EXPECT().AppNames().Return([]string{"my-app", "archer-app"}, nil),
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -201,13 +215,14 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{
-						Name: "my-app",
-					},
-				}, nil)
-
-				m.ws.EXPECT().AppNames().Return(nil, errors.New("some error"))
+				gomock.InOrder(
+					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						{
+							Name: "my-app",
+						},
+					}, nil),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -243,12 +258,14 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -260,15 +277,18 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error"))
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-
-				m.ws.EXPECT().AppNames().Return(nil, errors.New("some error"))
+					// askAskName
+					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error")),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -280,19 +300,23 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-					{Name: "my-project"},
-					{Name: "archer-project"},
-				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-					{Name: "my-app"},
-					{Name: "archer-app"},
-				}, nil)
+				gomock.InOrder(
+					// askProject
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "my-project"},
+						{Name: "archer-project"},
+					}, nil),
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
-				m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-				m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1)
+					// askAppName
+					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						{Name: "my-app"},
+						{Name: "archer-app"},
+					}, nil),
 
-				m.ws.EXPECT().AppNames().Return(nil, errors.New("some error"))
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1),
+				)
 			},
 
 			wantedProject: "my-project",
@@ -369,64 +393,68 @@ func TestAppShow_Execute(t *testing.T) {
 			shouldOutputResources: true,
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+						Name: "my-app",
+					}, nil),
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						{Name: "test"},
+						{Name: "prod"},
+					}, nil),
 
-				m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "frontend",
-				}, nil)
-				m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "backend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-					ContainerPort: "80",
-					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
-					},
-					TaskCount: "1",
-				}, nil)
-				m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-					ContainerPort: "5000",
-					TaskSize: describe.TaskSize{
-						CPU:    "512",
-						Memory: "1024",
-					},
-					TaskCount: "3",
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "test",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "test",
-					},
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "prod",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "prod",
-					},
-				}, nil)
-				m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-					{
-						Type:       "AWS::EC2::SecurityGroup",
-						PhysicalID: "sg-0758ed6b233743530",
-					},
-				}, nil)
-				m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					{
-						Type:       "AWS::EC2::SecurityGroupIngress",
-						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-					},
-				}, nil)
+					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "frontend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+						ContainerPort: "80",
+						TaskSize: describe.TaskSize{
+							CPU:    "256",
+							Memory: "512",
+						},
+						TaskCount: "1",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "test",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "test",
+						},
+					}, nil),
+					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "backend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+						ContainerPort: "5000",
+						TaskSize: describe.TaskSize{
+							CPU:    "512",
+							Memory: "1024",
+						},
+						TaskCount: "3",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "prod",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "prod",
+						},
+					}, nil),
+
+					// describer#StackResources
+					m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
+						{
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-0758ed6b233743530",
+						},
+					}, nil),
+					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+						{
+							Type:       "AWS::EC2::SecurityGroupIngress",
+							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+						},
+					}, nil),
+				)
 			},
 
 			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
@@ -437,64 +465,67 @@ func TestAppShow_Execute(t *testing.T) {
 			shouldOutputResources: true,
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+						Name: "my-app",
+					}, nil),
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						{Name: "test"},
+						{Name: "prod"},
+					}, nil),
 
-				m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "frontend",
-				}, nil)
-				m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "backend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-					ContainerPort: "80",
-					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
-					},
-					TaskCount: "1",
-				}, nil)
-				m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-					ContainerPort: "5000",
-					TaskSize: describe.TaskSize{
-						CPU:    "512",
-						Memory: "1024",
-					},
-					TaskCount: "3",
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "test",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "test",
-					},
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "prod",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "prod",
-					},
-				}, nil)
-				m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-					{
-						Type:       "AWS::EC2::SecurityGroup",
-						PhysicalID: "sg-0758ed6b233743530",
-					},
-				}, nil)
-				m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					{
-						Type:       "AWS::EC2::SecurityGroupIngress",
-						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-					},
-				}, nil)
+					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "frontend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+						ContainerPort: "80",
+						TaskSize: describe.TaskSize{
+							CPU:    "256",
+							Memory: "512",
+						},
+						TaskCount: "1",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "test",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "test",
+						},
+					}, nil),
+					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "backend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+						ContainerPort: "5000",
+						TaskSize: describe.TaskSize{
+							CPU:    "512",
+							Memory: "1024",
+						},
+						TaskCount: "3",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "prod",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "prod",
+						},
+					}, nil),
+
+					m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
+						{
+							Type:       "AWS::EC2::SecurityGroup",
+							PhysicalID: "sg-0758ed6b233743530",
+						},
+					}, nil),
+					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+						{
+							Type:       "AWS::EC2::SecurityGroupIngress",
+							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+						},
+					}, nil),
+				)
 			},
 
 			wantedContent: `About
@@ -632,53 +663,55 @@ Resources
 			shouldOutputResources: true,
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+						Name: "my-app",
+					}, nil),
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						{Name: "test"},
+						{Name: "prod"},
+					}, nil),
 
-				m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "frontend",
-				}, nil)
-				m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "backend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-					ContainerPort: "80",
-					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
-					},
-					TaskCount: "1",
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "test",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "test",
-					},
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "prod",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "prod",
-					},
-				}, nil)
-				m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-					ContainerPort: "5000",
-					TaskSize: describe.TaskSize{
-						CPU:    "512",
-						Memory: "1024",
-					},
-					TaskCount: "3",
-				}, nil)
-				m.describer.EXPECT().StackResources("test").Return(nil, errors.New("some error"))
+					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "frontend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
+						ContainerPort: "80",
+						TaskSize: describe.TaskSize{
+							CPU:    "256",
+							Memory: "512",
+						},
+						TaskCount: "1",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "test",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "test",
+						},
+					}, nil),
+					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "backend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+						ContainerPort: "5000",
+						TaskSize: describe.TaskSize{
+							CPU:    "512",
+							Memory: "1024",
+						},
+						TaskCount: "3",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "prod",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "prod",
+						},
+					}, nil),
+					m.describer.EXPECT().StackResources("test").Return(nil, errors.New("some error")),
+				)
 			},
 
 			wantedError: fmt.Errorf("retrieve application resources: some error"),
@@ -689,43 +722,45 @@ Resources
 			shouldOutputResources: true,
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
+				gomock.InOrder(
+					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+						Name: "my-app",
+					}, nil),
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						{Name: "test"},
+						{Name: "prod"},
+					}, nil),
 
-				m.describer.EXPECT().URI("test").Return(nil, fmt.Errorf("describe stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
-				m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "backend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Times(0)
-				m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-					ContainerPort: "5000",
-					TaskSize: describe.TaskSize{
-						CPU:    "512",
-						Memory: "1024",
-					},
-					TaskCount: "3",
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Times(0)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-					&describe.WebAppEnvVars{
-						Environment: "prod",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
-						Value:       "prod",
-					},
-				}, nil)
-				m.describer.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil)))
-				m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-					{
-						Type:       "AWS::EC2::SecurityGroupIngress",
-						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-					},
-				}, nil)
+					m.describer.EXPECT().URI("test").Return(nil, fmt.Errorf("describe stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))),
+					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
+						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
+						Path:    "backend",
+					}, nil),
+					m.describer.EXPECT().ECSParams("test").Times(0),
+					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
+						ContainerPort: "5000",
+						TaskSize: describe.TaskSize{
+							CPU:    "512",
+							Memory: "1024",
+						},
+						TaskCount: "3",
+					}, nil),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Times(0),
+					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
+						&describe.WebAppEnvVars{
+							Environment: "prod",
+							Name:        "ECS_CLI_ENVIRONMENT_NAME",
+							Value:       "prod",
+						},
+					}, nil),
+					m.describer.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))),
+					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
+						{
+							Type:       "AWS::EC2::SecurityGroupIngress",
+							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+						},
+					}, nil),
+				)
 			},
 
 			wantedContent: `About
