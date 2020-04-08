@@ -168,29 +168,8 @@ EXPOSE 80`),
 EXPOSE 80
 EXPOSE $arg
 EXPOSE 8080/tcp 5000`),
-			wantedPorts: []portConfig{
-				{
-					Port:      80,
-					RawString: "80",
-				},
-				{
-					Port:      0,
-					RawString: "EXPOSE $arg",
-					err: ErrInvalidPort{
-						Match: "EXPOSE $arg",
-					},
-				},
-				{
-					Port:      8080,
-					Protocol:  "tcp",
-					RawString: "8080/tcp",
-				},
-				{
-					Port:      5000,
-					RawString: "5000",
-				},
-			},
-			wantedErr: ErrInvalidPort{Match: "EXPOSE $arg"},
+			wantedPorts: nil,
+			wantedErr:   ErrInvalidPort{Match: "EXPOSE $arg"},
 		},
 	}
 
@@ -213,8 +192,6 @@ EXPOSE 8080/tcp 5000`),
 			}
 
 			require.Equal(t, wantedUintPorts, ports)
-
-			require.Equal(t, tc.wantedPorts, df.ExposedPorts)
 
 		})
 	}

@@ -337,17 +337,10 @@ func (o *initAppOpts) askAppPort() error {
 			color.HighlightUserInput(o.AppName),
 		)
 	case 1:
-		// catch the case where we had an Expose but couldn't parse a port from dockerfile
-		if err != nil {
-			log.Infof(fmtParseFromDockerfileNoPort,
-				color.HighlightUserInput(o.AppName),
-			)
-		} else {
-			o.AppPort = ports[0]
-			log.Successf(fmtParsePortFromDockerfileComplete,
-				color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
-			)
-		}
+		o.AppPort = ports[0]
+		log.Successf(fmtParsePortFromDockerfileComplete,
+			color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
+		)
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
 		log.Infoln(parseFromDockerfileTooManyPorts)

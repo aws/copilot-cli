@@ -73,10 +73,9 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 		// ensure we register that there is an error (will only be ErrNoExpose) if
 		// any ports were unparseable or invalid
 		if port.err != nil {
-			err = port.err
-		} else {
-			ports = append(ports, port.Port)
+			return nil, port.err
 		}
+		ports = append(ports, port.Port)
 	}
 	return ports, err
 }
