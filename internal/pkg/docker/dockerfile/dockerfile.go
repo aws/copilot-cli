@@ -56,32 +56,28 @@ func New(fs afero.Fs, path string) *Dockerfile {
 // GetExposedPorts returns a uint16 slice of exposed ports found in the Dockerfile.
 func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	if !df.parsed {
-		err := df.parse()
-		if err != nil {
-			return []uint16{}, err
+		if err := df.parse(); err != nil {
+			return nil, err
 		}
 	}
 	var ports []uint16
 
 	if len(df.ExposedPorts) == 0 {
-		return ports, ErrNoExpose{
+		return nil, ErrNoExpose{
 			Dockerfile: df.path,
 		}
 	}
 
 	var err error
 	for _, port := range df.ExposedPorts {
-		// Skip adding unparseable ports to output
-		if port.Port != 0 {
-			ports = append(ports, port.Port)
-		}
 		// ensure we register that there is an error (will only be ErrNoExpose) if
 		// any ports were unparseable or invalid
 		if port.err != nil {
 			err = port.err
+		} else {
+			ports = append(ports, port.Port)
 		}
 	}
-
 	return ports, err
 }
 
@@ -134,6 +130,7 @@ func parseExpose(line string) []portConfig {
 	// check that there are matches, if not return port with only raw data
 	// there will only ever be length 0 or 4 arrays
 	// TODO implement arg parser regex
+	// https://github.com/aws/amazon-ecs-cli-v2/issues/827
 	if len(matches) == 0 {
 		return []portConfig{
 			{

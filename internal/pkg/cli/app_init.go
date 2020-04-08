@@ -35,7 +35,7 @@ Deployed resources (such as your service, logs) will contain this app's name and
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 
-	appInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
+	appInitAppPortPrompt     = "Which port do you want customer traffic sent to?"
 	appInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
@@ -326,6 +326,7 @@ func (o *initAppOpts) askAppPort() error {
 
 	o.setupParser(o)
 	ports, err := o.df.GetExposedPorts()
+	// Ignore any errors in dockerfile parsing--we'll use the default instead.
 	if err != nil {
 		log.Debugln(err.Error())
 	}
