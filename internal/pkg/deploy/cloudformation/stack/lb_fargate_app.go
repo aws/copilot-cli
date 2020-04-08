@@ -231,9 +231,9 @@ func (c *LBFargateStackConfig) toTemplateParams() *lbFargateTemplateParams {
 	url := fmt.Sprintf("%s:%s", c.ImageRepoURL, c.ImageTag)
 	return &lbFargateTemplateParams{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-			App: &manifest.LBFargateManifest{
-				AppManifest:     c.App.AppManifest,
-				LBFargateConfig: c.CreateLBFargateAppInput.App.EnvConf(c.Env.Name), // Get environment specific app configuration.
+			App: &manifest.LoadBalancedWebApp{
+				App:                      c.App.App,
+				LoadBalancedWebAppConfig: c.CreateLBFargateAppInput.App.ApplyEnv(c.Env.Name), // Get environment specific app configuration.
 			},
 			Env: c.Env,
 		},

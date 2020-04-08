@@ -235,9 +235,9 @@ func (o *initAppOpts) createManifest() (string, error) {
 	return relPath, nil
 }
 
-func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManifest, error) {
-	props := &manifest.LBFargateManifestProps{
-		AppManifestProps: &manifest.AppManifestProps{
+func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWebApp, error) {
+	props := &manifest.LoadBalancedWebAppProps{
+		AppProps: &manifest.AppProps{
 			AppName:    o.AppName,
 			Dockerfile: o.DockerfilePath,
 		},
@@ -256,7 +256,7 @@ func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManife
 			break
 		}
 	}
-	return manifest.NewLoadBalancedFargateManifest(props), nil
+	return manifest.NewLoadBalancedWebApp(props), nil
 }
 
 func (o *initAppOpts) askAppType() error {
