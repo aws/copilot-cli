@@ -394,6 +394,29 @@ func TestTask_TaskStatus(t *testing.T) {
 			taskArn: aws.String("badTaskArn"),
 			wantErr: fmt.Errorf("arn: invalid prefix"),
 		},
+		"success with a provisioning task": {
+			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
+			containers: []*ecs.Container{
+				{
+					Image:       aws.String("mockImageArn"),
+					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
+				},
+			},
+			desiredStatus: aws.String("ACTIVE"),
+			lastStatus:    aws.String("UNKNOWN"),
+
+			wantTaskStatus: &TaskStatus{
+				DesiredStatus: "ACTIVE",
+				ID:            "4082490ee6c245e09d2145010aa1ba8d",
+				Images: []Image{
+					{
+						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
+						ID:     "mockImageArn",
+					},
+				},
+				LastStatus: "UNKNOWN",
+			},
+		},
 		"success with a running task": {
 			taskArn: aws.String("arn:aws:ecs:us-west-2:123456789:task/my-project-test-Cluster-9F7Y0RLP60R7/4082490ee6c245e09d2145010aa1ba8d"),
 			containers: []*ecs.Container{
