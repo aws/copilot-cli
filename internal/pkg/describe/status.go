@@ -134,15 +134,29 @@ func (w *WebAppStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Desired Status", "Started At", "Stopped At")
 	for _, task := range w.Tasks {
 		var digest []string
+		imageDigest := "-"
 		for _, image := range task.Images {
+			if len(image.Digest) < shortImageDigestLength {
+				continue
+			}
 			digest = append(digest, image.Digest[:shortImageDigestLength])
 		}
-		startedSince := humanize.Time(time.Unix(task.StartedAt, 0))
+		if len(digest) != 0 {
+			imageDigest = strings.Join(digest, ",")
+		}
+		startedSince := "-"
+		if task.StartedAt != 0 {
+			startedSince = humanize.Time(time.Unix(task.StartedAt, 0))
+		}
 		stoppedSince := "-"
 		if task.StoppedAt != 0 {
 			stoppedSince = humanize.Time(time.Unix(task.StoppedAt, 0))
 		}
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", task.ID[:shortTaskIDLength], strings.Join(digest, ","), task.LastStatus, task.DesiredStatus, startedSince, stoppedSince)
+		shortTaskID := "-"
+		if len(task.ID) >= shortTaskIDLength {
+			shortTaskID = task.ID[:shortTaskIDLength]
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, task.LastStatus, task.DesiredStatus, startedSince, stoppedSince)
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()

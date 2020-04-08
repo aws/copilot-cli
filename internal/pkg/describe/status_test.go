@@ -227,9 +227,6 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				CwSvc:       mockcwSvc,
 				EcsSvc:      mockecsSvc,
 				Describer:   mockWebAppDescriber,
-				// initDescriber: func(*WebAppStatus, string) error { return nil },
-				// initcwSvc:     func(*WebAppStatus, *archer.Environment) error { return nil },
-				// initecsSvc:    func(*WebAppStatus, *archer.Environment) error { return nil },
 			}
 
 			// WHEN

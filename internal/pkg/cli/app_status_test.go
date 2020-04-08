@@ -329,6 +329,32 @@ func TestAppStatus_Execute(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime := time.Unix(1584129030, 0)
+	mockProvisionningAppStatus := &describe.WebAppStatusDesc{
+		Service: ecs.ServiceStatus{
+			DesiredCount:     1,
+			RunningCount:     0,
+			Status:           "ACTIVE",
+			LastDeploymentAt: startTime.Unix(),
+			TaskDefinition:   "mockTaskDefinition",
+		},
+		Alarms: []cloudwatch.AlarmStatus{
+			{
+				Arn:          "mockAlarmArn",
+				Name:         "mockAlarm",
+				Reason:       "Threshold Crossed",
+				Status:       "OK",
+				Type:         "Metric",
+				UpdatedTimes: updateTime.Unix(),
+			},
+		},
+		Tasks: []ecs.TaskStatus{
+			{
+				DesiredStatus: "RUNNING",
+				LastStatus:    "PROVISIONING",
+				ID:            "1234567890123456789",
+			},
+		},
+	}
 	mockAppStatus := &describe.WebAppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
@@ -415,6 +441,31 @@ Alarms
   Name              Health              Last Updated        Reason
   mockAlarm         OK                  %s         Threshold Crossed
 `, humanize.Time(startTime), humanize.Time(startTime), humanize.Time(stopTime), humanize.Time(updateTime)),
+		},
+		"success with human output when task is provisioning": {
+			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
+				m.EXPECT().Describe().Return(mockProvisionningAppStatus, nil)
+			},
+
+			wantedContent: fmt.Sprintf(`Service Status
+
+  ACTIVE 0 / 1 running tasks (1 pending)
+
+Last Deployment
+
+  Updated At        %s
+  Task Definition   mockTaskDefinition
+
+Task Status
+
+  ID                Image Digest        Last Status         Desired Status      Started At          Stopped At
+  12345678          -                   PROVISIONING        RUNNING             -                   -
+
+Alarms
+
+  Name              Health              Last Updated        Reason
+  mockAlarm         OK                  %s         Threshold Crossed
+`, humanize.Time(startTime), humanize.Time(updateTime)),
 		},
 	}
 
