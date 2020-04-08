@@ -183,7 +183,11 @@ func (o *deleteProjOpts) Execute() error {
 	// deleteLocalWorkspace, since the pipeline delete command relies on the
 	// project stackset as well as the workspace directory to still exist.
 	if err := o.deleteProjectPipeline(); err != nil {
-		return err
+		if _, ok := err.(*workspace.ErrNoPipelineInWorkspace); ok {
+			log.Infof("No pipeline manifest found, skipping deletion of pipeline.\n")
+		} else {
+			return err
+		}
 	}
 
 	if err := o.deleteProjectResources(); err != nil {

@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -12,15 +11,11 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	mockProjectName = "mockProjectName"
-	mockError       = errors.New("mockError)")
 )
 
 func TestDeleteProjectOpts_Validate(t *testing.T) {
@@ -264,6 +259,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			S3Bucket: "goose-bucket",
 		},
 	}
+	noPipelineManifestError := &workspace.ErrNoPipelineInWorkspace{}
 	tests := map[string]struct {
 		projectName string
 		setupMocks  func(mocks deleteProjectMocks)
@@ -293,6 +289,48 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// deleteProjectPipline
 					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
+
+					// deleteProjectResources
+					mocks.spinner.EXPECT().Start(fmtDeleteProjectResourcesStart),
+					mocks.deployer.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectResourcesStop)),
+
+					// deleteProjectParams
+					mocks.spinner.EXPECT().Start(fmtDeleteProjectParamsStart),
+					mocks.store.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectParamsStop)),
+
+					// deleteLocalWorkspace
+					mocks.spinner.EXPECT().Start(fmtDeleteLocalWsStart),
+					mocks.ws.EXPECT().DeleteAll().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteLocalWsStop)),
+				)
+			},
+			wantedError: nil,
+		},
+		"when pipeline manifest does not exist": {
+
+			projectName: mockProjectName,
+			setupMocks: func(mocks deleteProjectMocks) {
+				gomock.InOrder(
+					// deleteApps
+					mocks.store.EXPECT().ListApplications(mockProjectName).Return(mockApps, nil),
+					mocks.appDeleter.EXPECT().Execute().Return(nil),
+
+					// deleteEnvs
+					mocks.store.EXPECT().ListEnvironments(mockProjectName).Return(mockEnvs, nil),
+					mocks.envDeleter.EXPECT().Ask().Return(nil),
+					mocks.envDeleter.EXPECT().Execute().Return(nil),
+
+					// emptyS3bucket
+					mocks.store.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
+					mocks.spinner.EXPECT().Start(fmtCleanResourcesStart),
+					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtCleanResourcesStop)),
+
+					// deleteProjectPipline
+					mocks.pipelineDeleter.EXPECT().Run().Return(noPipelineManifestError),
 
 					// deleteProjectResources
 					mocks.spinner.EXPECT().Start(fmtDeleteProjectResourcesStart),

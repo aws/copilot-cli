@@ -579,3 +579,53 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 		})
 	}
 }
+
+func TestWorkspace_ReadPipelineManifest(t *testing.T) {
+	projectDir := "/ecs-project"
+	testCases := map[string]struct {
+		fs            func() afero.Fs
+		expectedError error
+	}{
+		"reads existing pipeline manifest": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/ecs-project", 0755)
+				manifest, _ := fs.Create("/ecs-project/pipeline.yml")
+				defer manifest.Close()
+				manifest.Write([]byte("hello"))
+				return fs
+			},
+			expectedError: nil,
+		},
+
+		"when no pipeline file exists": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir(projectDir, 0755)
+				return fs
+			},
+			expectedError: &ErrNoPipelineInWorkspace{},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := tc.fs()
+			ws := &Workspace{
+				projectDir: projectDir,
+				fsUtils:    &afero.Afero{Fs: fs},
+			}
+
+			// WHEN
+			_, err := ws.ReadPipelineManifest()
+
+			// THEN
+			if tc.expectedError != nil {
+				require.Equal(t, tc.expectedError.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

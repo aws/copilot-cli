@@ -44,3 +44,10 @@ type ErrFileExists struct {
 func (e *ErrFileExists) Error() string {
 	return fmt.Sprintf("file %s already exists", e.FileName)
 }
+
+// ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
+type ErrNoPipelineInWorkspace struct{}
+
+func (e *ErrNoPipelineInWorkspace) Error() string {
+	return fmt.Sprint("there was no pipeline manifest found in your workspace.")
+}
