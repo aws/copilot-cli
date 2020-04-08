@@ -269,48 +269,56 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 			// THEN
 			require.Equal(t, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBFargateParamProjectNameKey),
+					ParameterKey:   aws.String(LBFargateProjectNameParamKey),
 					ParameterValue: aws.String("phonetool"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateParamEnvNameKey),
+					ParameterKey:   aws.String(LBFargateEnvNameParamKey),
 					ParameterValue: aws.String("test"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateParamAppNameKey),
+					ParameterKey:   aws.String(LBFargateAppNameParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateParamContainerImageKey),
+					ParameterKey:   aws.String(LBFargateContainerImageParamKey),
 					ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateParamContainerPortKey),
+					ParameterKey:   aws.String(LBFargateContainerPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateRulePathKey),
+					ParameterKey:   aws.String(LBFargateRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateHealthCheckPathKey),
+					ParameterKey:   aws.String(LBFargateHealthCheckPathParamKey),
 					ParameterValue: aws.String("/"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateTaskCPUKey),
+					ParameterKey:   aws.String(LBFargateTaskCPUParamKey),
 					ParameterValue: aws.String("256"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateTaskMemoryKey),
+					ParameterKey:   aws.String(LBFargateTaskMemoryParamKey),
 					ParameterValue: aws.String("512"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateTaskCountKey),
+					ParameterKey:   aws.String(LBFargateTaskCountParamKey),
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBFargateParamHTTPSKey),
+					ParameterKey:   aws.String(LBFargateHTTPSParamKey),
 					ParameterValue: aws.String(tc.expectedHTTP),
+				},
+				{
+					ParameterKey:   aws.String(LBFargateLogRetentionParamKey),
+					ParameterValue: aws.String("30"),
+				},
+				{
+					ParameterKey:   aws.String(LBFargateAddonsTemplateURLParamKey),
+					ParameterValue: aws.String(""),
 				},
 			}, params)
 		})
