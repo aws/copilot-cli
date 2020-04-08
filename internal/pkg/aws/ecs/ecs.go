@@ -142,10 +142,13 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	var stoppedAt int64
+	var startedAt, stoppedAt int64
 	var stoppedReason string
 	if t.StoppedAt != nil {
 		stoppedAt = t.StoppedAt.Unix()
+	}
+	if t.StartedAt != nil {
+		startedAt = t.StartedAt.Unix()
 	}
 	if t.StoppedReason != nil {
 		stoppedReason = aws.StringValue(t.StoppedReason)
@@ -162,7 +165,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		ID:            taskID,
 		Images:        images,
 		LastStatus:    aws.StringValue(t.LastStatus),
-		StartedAt:     t.StartedAt.Unix(),
+		StartedAt:     startedAt,
 		StoppedAt:     stoppedAt,
 		StoppedReason: stoppedReason,
 	}, nil
