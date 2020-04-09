@@ -136,11 +136,11 @@ func (o *appLogsOpts) Ask() error {
 func (o *appLogsOpts) Execute() error {
 	logGroupName := fmt.Sprintf(logGroupNamePattern, o.ProjectName(), o.envName, o.appName)
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		NextTokens: nil,
+		LastEventTime: make(map[string]int64),
 	}
 	var err error
 	for {
-		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.NextTokens, o.generateGetLogEventOpts()...)
+		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.LastEventTime, o.generateGetLogEventOpts()...)
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (o *appLogsOpts) Execute() error {
 			return nil
 		}
 		// for unit test.
-		if logEventsOutput.NextTokens == nil {
+		if logEventsOutput.LastEventTime == nil {
 			return nil
 		}
 		time.Sleep(cloudwatchlogs.SleepDuration)

@@ -64,8 +64,8 @@ func WithEndTime(endTime int64) GetLogEventsOpts {
 type LogEventsOutput struct {
 	// Retrieved log events.
 	Events []*Event
-	// Next tokens for each log stream.
-	NextTokens map[string]*string
+	// Timestamp for the last event
+	LastEventTime map[string]int64
 }
 
 // New returns a Service configured against the input session.
@@ -96,10 +96,9 @@ func (s *Service) logStreams(logGroupName string) ([]*string, error) {
 }
 
 // TaskLogEvents returns an array of Cloudwatch Logs events.
-func (s *Service) TaskLogEvents(logGroupName string, streamTokens map[string]*string, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
+func (s *Service) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	var in *cloudwatchlogs.GetLogEventsInput
-	nextForwardTokens := make(map[string]*string)
 	logStreamNames, err := s.logStreams(logGroupName)
 	if err != nil {
 		return nil, err
@@ -109,10 +108,12 @@ func (s *Service) TaskLogEvents(logGroupName string, streamTokens map[string]*st
 			LogGroupName:  aws.String(logGroupName),
 			LogStreamName: logStreamName,
 			Limit:         aws.Int64(10), // default to be 10
-			NextToken:     streamTokens[*logStreamName],
 		}
 		for _, opt := range opts {
 			opt(in)
+		}
+		if streamLastEventTime[*logStreamName] != 0 {
+			in.SetStartTime(streamLastEventTime[*logStreamName] + 1)
 		}
 		// TODO: https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374291068 and https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374294362
 		resp, err := s.cwlogs.GetLogEvents(in)
@@ -133,8 +134,9 @@ func (s *Service) TaskLogEvents(logGroupName string, streamTokens map[string]*st
 			}
 			events = append(events, log)
 		}
-
-		nextForwardTokens[*logStreamName] = resp.NextForwardToken
+		if len(resp.Events) != 0 {
+			streamLastEventTime[*logStreamName] = *resp.Events[len(resp.Events)-1].Timestamp
+		}
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Timestamp < events[j].Timestamp })
 	var truncatedEvents []*Event
@@ -144,8 +146,8 @@ func (s *Service) TaskLogEvents(logGroupName string, streamTokens map[string]*st
 		truncatedEvents = events
 	}
 	return &LogEventsOutput{
-		Events:     truncatedEvents,
-		NextTokens: nextForwardTokens,
+		Events:        truncatedEvents,
+		LastEventTime: streamLastEventTime,
 	}, nil
 }
 
