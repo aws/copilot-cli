@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -204,7 +204,6 @@ func (o *deletePipelineOpts) deletePipelineFile() error {
 func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil
 }
-
 
 func (o *deletePipelineOpts) Run() error {
 	if err := o.Validate(); err != nil {
