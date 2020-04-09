@@ -22,34 +22,52 @@ var (
 )
 
 type showPipelineMocks struct {
-	store  *mocks.MockstoreReader
-	ws     *mocks.MockwsPipelineReader
-	prompt *mocks.Mockprompter
+	store       *mocks.MockstoreReader
+	ws          *mocks.MockwsPipelineReader
+	prompt      *mocks.Mockprompter
+	pipelineSvc *mocks.MockpipelineGetter
 }
 
 func TestPipelineShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
-		setupMocks    func(mocks showPipelineMocks)
+		inProjectName  string
+		inPipelineName string
+		setupMocks     func(mocks showPipelineMocks)
 
 		expectedErr error
 	}{
 		"with valid project name and pipeline name": {
-			inProjectName: mockProjectName,
+			inProjectName:  mockProjectName,
+			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject("dinder").Return(&archer.Project{
+					mocks.store.EXPECT().GetProject(mockProjectName).Return(&archer.Project{
 						Name: "dinder",
 					}, nil),
+					mocks.pipelineSvc.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil),
 				)
 			},
 			expectedErr: nil,
 		},
 		"with invalid project name": {
-			inProjectName: mockProjectName,
+			inProjectName:  mockProjectName,
+			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject("dinder").Return(nil, mockError),
+					mocks.store.EXPECT().GetProject(mockProjectName).Return(nil, mockError),
+				)
+			},
+			expectedErr: mockError,
+		},
+		"with invalid pipeline name": {
+			inProjectName:  mockProjectName,
+			inPipelineName: "bad-pipeline",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().GetProject(mockProjectName).Return(&archer.Project{
+						Name: "dinder",
+					}, nil),
+					mocks.pipelineSvc.EXPECT().GetPipeline("bad-pipeline").Return(nil, mockError),
 				)
 			},
 			expectedErr: mockError,
@@ -63,9 +81,11 @@ func TestPipelineShow_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstoreReader(ctrl)
+			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showPipelineMocks{
-				store: mockStoreReader,
+				store:       mockStoreReader,
+				pipelineSvc: mockPipelineGetter,
 			}
 
 			tc.setupMocks(mocks)
@@ -75,8 +95,10 @@ func TestPipelineShow_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
 					},
+					pipelineName: tc.inPipelineName,
 				},
-				store: mockStoreReader,
+				store:       mockStoreReader,
+				pipelineSvc: mockPipelineGetter,
 			}
 
 			// WHEN

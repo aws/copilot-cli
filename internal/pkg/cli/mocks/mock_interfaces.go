@@ -2399,16 +2399,16 @@ func (m *MockpipelineGetter) EXPECT() *MockpipelineGetterMockRecorder {
 }
 
 // GetPipeline mocks base method
-func (m *MockpipelineGetter) GetPipeline() (*codepipeline.Pipeline, error) {
+func (m *MockpipelineGetter) GetPipeline(pipelineName string) (*codepipeline.Pipeline, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPipeline")
+	ret := m.ctrl.Call(m, "GetPipeline", pipelineName)
 	ret0, _ := ret[0].(*codepipeline.Pipeline)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPipeline indicates an expected call of GetPipeline
-func (mr *MockpipelineGetterMockRecorder) GetPipeline() *gomock.Call {
+func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
 }

@@ -72,7 +72,9 @@ func (o *showPipelineOpts) Validate() error {
 		}
 	}
 	if o.pipelineName != "" {
-		// TODO check codepipeline if pipelineName is valid
+		if _, err := o.pipelineSvc.GetPipeline(o.pipelineName); err != nil {
+			return err
+		}
 	}
 
 	return nil
