@@ -329,7 +329,7 @@ func TestAppStatus_Execute(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime := time.Unix(1584129030, 0)
-	mockProvisionningAppStatus := &describe.WebAppStatusDesc{
+	mockProvisioningAppStatus := &describe.WebAppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
 			RunningCount:     0,
@@ -349,9 +349,9 @@ func TestAppStatus_Execute(t *testing.T) {
 		},
 		Tasks: []ecs.TaskStatus{
 			{
-				DesiredStatus: "RUNNING",
-				LastStatus:    "PROVISIONING",
-				ID:            "1234567890123456789",
+				Health:     "HEALTHY",
+				LastStatus: "PROVISIONING",
+				ID:         "1234567890123456789",
 			},
 		},
 	}
@@ -375,9 +375,9 @@ func TestAppStatus_Execute(t *testing.T) {
 		},
 		Tasks: []ecs.TaskStatus{
 			{
-				DesiredStatus: "RUNNING",
-				LastStatus:    "RUNNING",
-				ID:            "1234567890123456789",
+				Health:     "HEALTHY",
+				LastStatus: "RUNNING",
+				ID:         "1234567890123456789",
 				Images: []ecs.Image{
 					{
 						Digest: "69671a968e8ec3648e2697417750e",
@@ -415,7 +415,7 @@ func TestAppStatus_Execute(t *testing.T) {
 				m.EXPECT().Describe().Return(mockAppStatus, nil)
 			},
 
-			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":1136214245,\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"desiredStatus\":\"RUNNING\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
+			wantedContent: "{\"Service\":{\"desiredCount\":1,\"runningCount\":1,\"status\":\"ACTIVE\",\"lastDeploymentAt\":1136214245,\"taskDefinition\":\"mockTaskDefinition\"},\"tasks\":[{\"health\":\"HEALTHY\",\"id\":\"1234567890123456789\",\"images\":[{\"ID\":\"mockImageID1\",\"Digest\":\"69671a968e8ec3648e2697417750e\"},{\"ID\":\"mockImageID2\",\"Digest\":\"ca27a44e25ce17fea7b07940ad793\"}],\"lastStatus\":\"RUNNING\",\"startedAt\":1136214245,\"stoppedAt\":1136217845,\"stoppedReason\":\"some reason\"}],\"alarms\":[{\"arn\":\"mockAlarmArn\",\"name\":\"mockAlarm\",\"reason\":\"Threshold Crossed\",\"status\":\"OK\",\"type\":\"Metric\",\"updatedTimes\":1584129030}]}\n",
 		},
 		"success with human output": {
 			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
@@ -433,8 +433,8 @@ Last Deployment
 
 Task Status
 
-  ID                Image Digest        Last Status         Desired Status      Started At          Stopped At
-  12345678          69671a96,ca27a44e   RUNNING             RUNNING             %s        %s
+  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
+  12345678          69671a96,ca27a44e   RUNNING             HEALTHY             %s        %s
 
 Alarms
 
@@ -444,7 +444,7 @@ Alarms
 		},
 		"success with human output when task is provisioning": {
 			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
-				m.EXPECT().Describe().Return(mockProvisionningAppStatus, nil)
+				m.EXPECT().Describe().Return(mockProvisioningAppStatus, nil)
 			},
 
 			wantedContent: fmt.Sprintf(`Service Status
@@ -458,8 +458,8 @@ Last Deployment
 
 Task Status
 
-  ID                Image Digest        Last Status         Desired Status      Started At          Stopped At
-  12345678          -                   PROVISIONING        RUNNING             -                   -
+  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
+  12345678          -                   PROVISIONING        HEALTHY             -                   -
 
 Alarms
 

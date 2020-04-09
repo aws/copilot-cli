@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -16,11 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	humanize "github.com/dustin/go-humanize"
-)
-
-const (
-	shortTaskIDLength      = 8
-	shortImageDigestLength = 8
 )
 
 type alarmStatusGetter interface {
@@ -108,7 +102,7 @@ func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
 	}, nil
 }
 
-// JSONString returns the stringified webAppStatus struct with json format.
+// JSONString returns the stringified WebAppStatusDesc struct with json format.
 func (w *WebAppStatusDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
@@ -117,7 +111,7 @@ func (w *WebAppStatusDesc) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified webAppStatus struct with human readable format.
+// HumanString returns the stringified WebAppStatusDesc struct with human readable format.
 func (w *WebAppStatusDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
@@ -131,32 +125,9 @@ func (w *WebAppStatusDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", w.Service.TaskDefinition)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Desired Status", "Started At", "Stopped At")
+	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Health Status", "Started At", "Stopped At")
 	for _, task := range w.Tasks {
-		var digest []string
-		imageDigest := "-"
-		for _, image := range task.Images {
-			if len(image.Digest) < shortImageDigestLength {
-				continue
-			}
-			digest = append(digest, image.Digest[:shortImageDigestLength])
-		}
-		if len(digest) != 0 {
-			imageDigest = strings.Join(digest, ",")
-		}
-		startedSince := "-"
-		if task.StartedAt != 0 {
-			startedSince = humanize.Time(time.Unix(task.StartedAt, 0))
-		}
-		stoppedSince := "-"
-		if task.StoppedAt != 0 {
-			stoppedSince = humanize.Time(time.Unix(task.StoppedAt, 0))
-		}
-		shortTaskID := "-"
-		if len(task.ID) >= shortTaskIDLength {
-			shortTaskID = task.ID[:shortTaskIDLength]
-		}
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, task.LastStatus, task.DesiredStatus, startedSince, stoppedSince)
+		fmt.Fprintf(writer, task.HumanString())
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()

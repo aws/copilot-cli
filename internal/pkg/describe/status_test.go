@@ -127,10 +127,10 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
 					{
-						TaskArn:       aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
-						StartedAt:     &startTime,
-						DesiredStatus: aws.String("RUNNING"),
-						LastStatus:    aws.String("RUNNING"),
+						TaskArn:      aws.String("arn:aws:ecs:us-west-2:123456789012:task/mockCluster/1234567890123456789"),
+						StartedAt:    &startTime,
+						HealthStatus: aws.String("HEALTHY"),
+						LastStatus:   aws.String("RUNNING"),
 						Containers: []*ECSAPI.Container{
 							{
 								Image:       aws.String("mockImageID1"),
@@ -186,9 +186,9 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				},
 				Tasks: []ecs.TaskStatus{
 					{
-						DesiredStatus: "RUNNING",
-						LastStatus:    "RUNNING",
-						ID:            "1234567890123456789",
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
 						Images: []ecs.Image{
 							{
 								Digest: "69671a968e8ec3648e2697417750e",

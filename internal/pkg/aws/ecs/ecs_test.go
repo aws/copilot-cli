@@ -378,8 +378,9 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 func TestTask_TaskStatus(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
 	testCases := map[string]struct {
-		desiredStatus *string
+		health        *string
 		taskArn       *string
 		containers    []*ecs.Container
 		lastStatus    *string
@@ -399,18 +400,18 @@ func TestTask_TaskStatus(t *testing.T) {
 			containers: []*ecs.Container{
 				{
 					Image:       aws.String("mockImageArn"),
-					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
+					ImageDigest: aws.String("sha256:" + mockImageDigest),
 				},
 			},
-			desiredStatus: aws.String("ACTIVE"),
-			lastStatus:    aws.String("UNKNOWN"),
+			health:     aws.String("HEALTHY"),
+			lastStatus: aws.String("UNKNOWN"),
 
 			wantTaskStatus: &TaskStatus{
-				DesiredStatus: "ACTIVE",
-				ID:            "4082490ee6c245e09d2145010aa1ba8d",
+				Health: "HEALTHY",
+				ID:     "4082490ee6c245e09d2145010aa1ba8d",
 				Images: []Image{
 					{
-						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
+						Digest: mockImageDigest,
 						ID:     "mockImageArn",
 					},
 				},
@@ -422,19 +423,19 @@ func TestTask_TaskStatus(t *testing.T) {
 			containers: []*ecs.Container{
 				{
 					Image:       aws.String("mockImageArn"),
-					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
+					ImageDigest: aws.String("sha256:" + mockImageDigest),
 				},
 			},
-			desiredStatus: aws.String("ACTIVE"),
-			lastStatus:    aws.String("UNKNOWN"),
-			startedAt:     &startTime,
+			health:     aws.String("HEALTHY"),
+			lastStatus: aws.String("UNKNOWN"),
+			startedAt:  &startTime,
 
 			wantTaskStatus: &TaskStatus{
-				DesiredStatus: "ACTIVE",
-				ID:            "4082490ee6c245e09d2145010aa1ba8d",
+				Health: "HEALTHY",
+				ID:     "4082490ee6c245e09d2145010aa1ba8d",
 				Images: []Image{
 					{
-						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
+						Digest: mockImageDigest,
 						ID:     "mockImageArn",
 					},
 				},
@@ -447,21 +448,21 @@ func TestTask_TaskStatus(t *testing.T) {
 			containers: []*ecs.Container{
 				{
 					Image:       aws.String("mockImageArn"),
-					ImageDigest: aws.String("sha256:18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"),
+					ImageDigest: aws.String("sha256:" + mockImageDigest),
 				},
 			},
-			desiredStatus: aws.String("ACTIVE"),
+			health:        aws.String("HEALTHY"),
 			lastStatus:    aws.String("UNKNOWN"),
 			startedAt:     &startTime,
 			stoppedAt:     &stopTime,
 			stoppedReason: aws.String("some reason"),
 
 			wantTaskStatus: &TaskStatus{
-				DesiredStatus: "ACTIVE",
-				ID:            "4082490ee6c245e09d2145010aa1ba8d",
+				Health: "HEALTHY",
+				ID:     "4082490ee6c245e09d2145010aa1ba8d",
 				Images: []Image{
 					{
-						Digest: "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7",
+						Digest: mockImageDigest,
 						ID:     "mockImageArn",
 					},
 				},
@@ -480,7 +481,7 @@ func TestTask_TaskStatus(t *testing.T) {
 			defer ctrl.Finish()
 
 			task := Task{
-				DesiredStatus: tc.desiredStatus,
+				HealthStatus:  tc.health,
 				TaskArn:       tc.taskArn,
 				Containers:    tc.containers,
 				LastStatus:    tc.lastStatus,
@@ -496,6 +497,65 @@ func TestTask_TaskStatus(t *testing.T) {
 			} else {
 				require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
 			}
+		})
+
+	}
+}
+
+func TestTaskStatus_HumanString(t *testing.T) {
+	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	mockImageDigest := "18f7eb6cff6e63e5f5273fb53f672975fe6044580f66c354f55d2de8dd28aec7"
+	testCases := map[string]struct {
+		id          string
+		health      string
+		lastStatus  string
+		imageDigest string
+		startedAt   int64
+		stoppedAt   int64
+
+		wantTaskStatus string
+	}{
+		"all params": {
+			health:      "HEALTHY",
+			id:          "aslhfnqo39j8qomimvoiqm89349",
+			lastStatus:  "RUNNING",
+			startedAt:   startTime.Unix(),
+			stoppedAt:   stopTime.Unix(),
+			imageDigest: mockImageDigest,
+
+			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\tHEALTHY\t14 years ago\t14 years ago\n",
+		},
+		"missing params": {
+			health:     "HEALTHY",
+			lastStatus: "RUNNING",
+
+			wantTaskStatus: "  -\t-\tRUNNING\tHEALTHY\t-\t-\n",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			task := TaskStatus{
+				Health: tc.health,
+				ID:     tc.id,
+				Images: []Image{
+					{
+						Digest: tc.imageDigest,
+					},
+				},
+				LastStatus: tc.lastStatus,
+				StartedAt:  tc.startedAt,
+				StoppedAt:  tc.stoppedAt,
+			}
+
+			gotTaskStatus := task.HumanString()
+
+			require.Equal(t, tc.wantTaskStatus, gotTaskStatus)
 		})
 
 	}
