@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -649,8 +648,8 @@ func TestAppLogs_Ask(t *testing.T) {
 }
 
 func TestAppLogs_Execute(t *testing.T) {
-	mockNextToken := map[string]*string{
-		"mockLogStreamName": aws.String("mockNextToken"),
+	mockLastEventTime := map[string]int64{
+		"mockLogStreamName": 123456,
 	}
 	logEvents := []*cloudwatchlogs.Event{
 		&cloudwatchlogs.Event{
@@ -697,10 +696,9 @@ func TestAppLogs_Execute(t *testing.T) {
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := climocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), nil, gomock.Any()).
+				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), make(map[string]int64), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{
-						Events:     logEvents,
-						NextTokens: nil,
+						Events: logEvents,
 					}, nil)
 
 				cwlogServices["mockEnv"] = m
@@ -719,7 +717,7 @@ func TestAppLogs_Execute(t *testing.T) {
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := climocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), nil, gomock.Any()).
+				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), make(map[string]int64), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{
 						Events: logEvents,
 					}, nil)
@@ -740,13 +738,13 @@ func TestAppLogs_Execute(t *testing.T) {
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := climocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), nil, gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
-					Events:     logEvents,
-					NextTokens: mockNextToken,
+				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), make(map[string]int64), gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
+					Events:        logEvents,
+					LastEventTime: mockLastEventTime,
 				}, nil)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), mockNextToken, gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
-					Events:     moreLogEvents,
-					NextTokens: nil,
+				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), mockLastEventTime, gomock.Any()).Return(&cloudwatchlogs.LogEventsOutput{
+					Events:        moreLogEvents,
+					LastEventTime: nil,
 				}, nil)
 				cwlogServices["mockEnv"] = m
 				return cwlogServices
@@ -767,7 +765,7 @@ func TestAppLogs_Execute(t *testing.T) {
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := climocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), nil, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().TaskLogEvents(fmt.Sprintf(logGroupNamePattern, "mockProject", "mockEnv", "mockApp"), make(map[string]int64), gomock.Any()).Return(nil, errors.New("some error"))
 				cwlogServices["mockEnv"] = m
 				return cwlogServices
 			},
