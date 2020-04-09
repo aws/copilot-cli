@@ -2313,6 +2313,29 @@ type MockdockerfileParserMockRecorder struct {
 func NewMockdockerfileParser(ctrl *gomock.Controller) *MockdockerfileParser {
 	mock := &MockdockerfileParser{ctrl: ctrl}
 	mock.recorder = &MockdockerfileParserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdockerfileParser) EXPECT() *MockdockerfileParserMockRecorder {
+	return m.recorder
+}
+
+// GetExposedPorts mocks base method
+func (m *MockdockerfileParser) GetExposedPorts() ([]uint16, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExposedPorts")
+	ret0, _ := ret[0].([]uint16)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExposedPorts indicates an expected call of GetExposedPorts
+func (mr *MockdockerfileParserMockRecorder) GetExposedPorts() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExposedPorts", reflect.TypeOf((*MockdockerfileParser)(nil).GetExposedPorts))
+}
+
 // MockserviceArnGetter is a mock of serviceArnGetter interface
 type MockserviceArnGetter struct {
 	ctrl     *gomock.Controller
@@ -2332,15 +2355,6 @@ func NewMockserviceArnGetter(ctrl *gomock.Controller) *MockserviceArnGetter {
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockdockerfileParser) EXPECT() *MockdockerfileParserMockRecorder {
-	return m.recorder
-}
-
-// GetExposedPorts mocks base method
-func (m *MockdockerfileParser) GetExposedPorts() ([]uint16, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExposedPorts")
-	ret0, _ := ret[0].([]uint16)
 func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
 	return m.recorder
 }
@@ -2354,10 +2368,6 @@ func (m *MockserviceArnGetter) GetServiceArn(envName string) (*ecs.ServiceArn, e
 	return ret0, ret1
 }
 
-// GetExposedPorts indicates an expected call of GetExposedPorts
-func (mr *MockdockerfileParserMockRecorder) GetExposedPorts() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExposedPorts", reflect.TypeOf((*MockdockerfileParser)(nil).GetExposedPorts))
 // GetServiceArn indicates an expected call of GetServiceArn
 func (mr *MockserviceArnGetterMockRecorder) GetServiceArn(envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

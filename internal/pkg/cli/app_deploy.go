@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
