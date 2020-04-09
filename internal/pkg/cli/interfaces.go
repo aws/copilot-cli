@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -223,4 +224,8 @@ type serviceArnGetter interface {
 
 type statusDescriber interface {
 	Describe() (*describe.WebAppStatusDesc, error)
+}
+
+type pipelineGetter interface {
+	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 }
