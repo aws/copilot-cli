@@ -6,6 +6,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -30,8 +32,9 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
-	ws    wsPipelineReader
-	store storeReader
+	ws          wsPipelineReader
+	store       storeReader
+	pipelineSvc pipelineGetter
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
@@ -45,10 +48,17 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
+	p := session.NewProvider()
+	defaultSession, err := p.Default()
+	if err != nil {
+		return nil, err
+	}
+
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
 		ws:               ws,
 		store:            ssmStore,
+		pipelineSvc:      codepipeline.New(defaultSession),
 	}
 
 	return opts, nil
