@@ -214,6 +214,10 @@ type domainValidator interface {
 	DomainExists(domainName string) (bool, error)
 }
 
+type dockerfileParser interface {
+	GetExposedPorts() ([]uint16, error)
+}
+
 type serviceArnGetter interface {
 	GetServiceArn(envName string) (*ecs.ServiceArn, error)
 }
