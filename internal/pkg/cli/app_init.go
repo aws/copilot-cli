@@ -341,14 +341,12 @@ func (o *initAppOpts) askAppPort() error {
 		log.Successf(fmtParsePortFromDockerfileComplete,
 			color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
 		)
+		return nil
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
 		log.Infoln(parseFromDockerfileTooManyPorts)
 	}
 
-	if o.AppPort != 0 {
-		return nil
-	}
 	port, err := o.prompt.Get(
 		fmt.Sprintf(appInitAppPortPrompt),
 		fmt.Sprintf(appInitAppPortHelpPrompt),
