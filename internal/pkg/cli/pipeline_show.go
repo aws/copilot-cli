@@ -132,7 +132,6 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	pipelineName, err := o.getPipelineNameFromManifest()
-	fmt.Println(pipelineName)
 	if err != nil {
 		return err
 	}

@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package codepipeline provides a client to make API requests to Amazon Elastic Container Service.
 package codepipeline
 

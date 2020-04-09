@@ -5,7 +5,6 @@ package cli
 
 import (
 	"errors"
-	// "fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
