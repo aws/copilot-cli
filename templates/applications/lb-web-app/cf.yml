@@ -246,6 +246,7 @@ Resources:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
       DesiredCount: !Ref TaskCount
+      PropagateTags: SERVICE
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LaunchType: FARGATE

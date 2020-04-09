@@ -29,15 +29,6 @@ const (
 	cwGetLogEventsLimitMax = 10000
 )
 
-type appEnv struct {
-	appName string
-	envName string
-}
-
-func (a *appEnv) String() string {
-	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
-}
-
 type appLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool

@@ -39,10 +39,13 @@ func TestEnvTemplate(t *testing.T) {
 				m := mocks.NewMockReadParser(ctrl)
 				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
+				m.EXPECT().Read(enableLongARNsTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Parse(EnvTemplatePath, struct {
-					DNSDelegationLambda string
-					ACMValidationLambda string
+					DNSDelegationLambda       string
+					ACMValidationLambda       string
+					EnableLongARNFormatLambda string
 				}{
+					"customresources",
 					"customresources",
 					"customresources",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)

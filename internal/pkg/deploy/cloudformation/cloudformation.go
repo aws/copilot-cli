@@ -9,13 +9,12 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
-	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/gobuffalo/packd"
 )
 
@@ -38,25 +37,34 @@ type cfnClient interface {
 	Events(stackName string) ([]cloudformation.StackEvent, error)
 }
 
+type stackSetClient interface {
+	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
+	CreateInstancesAndWait(name string, accounts, regions []string) error
+	UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error
+	Describe(name string) (stackset.Description, error)
+	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
+	Delete(name string) error
+}
+
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
-	sdkClient      sdkcloudformationiface.CloudFormationAPI
-	cfnClient      cfnClient
-	regionalClient func(region string) cfnClient
-	box            packd.Box
+	cfnClient       cfnClient
+	regionalClient  func(region string) cfnClient
+	projectStackSet stackSetClient
+	box             packd.Box
 }
 
 // New returns a configured CloudFormation client.
 func New(sess *session.Session) CloudFormation {
 	return CloudFormation{
-		sdkClient: sdkcloudformation.New(sess),
 		cfnClient: cloudformation.New(sess),
 		regionalClient: func(region string) cfnClient {
 			return cloudformation.New(sess.Copy(&aws.Config{
 				Region: aws.String(region),
 			}))
 		},
-		box: templates.Box(),
+		projectStackSet: stackset.New(sess),
+		box:             templates.Box(),
 	}
 }
 
@@ -97,29 +105,6 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 	}
 }
 
-// stackSetExists returns true if the underlying error is a stack already exists error.
-func stackSetExists(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case sdkcloudformation.ErrCodeNameAlreadyExistsException:
-			// An ErrCodeNameAlreadyExistsException occurs when a stack set already exists.
-			return true
-		}
-	}
-	return false
-}
-
-func stackSetDoesNotExist(err error) bool {
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case sdkcloudformation.ErrCodeStackSetNotFoundException:
-			// An ErrCodeStackSetNotFoundException occurs when a stack set doesn't exist.
-			return true
-		}
-	}
-	return false
-}
-
 func toStack(config stackConfiguration) (*cloudformation.Stack, error) {
 	template, err := config.Template()
 	if err != nil {
@@ -129,4 +114,12 @@ func toStack(config stackConfiguration) (*cloudformation.Stack, error) {
 	stack.Parameters = config.Parameters()
 	stack.Tags = config.Tags()
 	return stack, nil
+}
+
+func toMap(tags []*sdkcloudformation.Tag) map[string]string {
+	m := make(map[string]string)
+	for _, t := range tags {
+		m[aws.StringValue(t.Key)] = aws.StringValue(t.Value)
+	}
+	return m
 }

@@ -164,7 +164,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateRulePathKey),
+									ParameterKey:   aws.String(stack.LBFargateRulePathParamKey),
 									ParameterValue: aws.String(testAppPath),
 								},
 							},
@@ -213,7 +213,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateRulePathKey),
+									ParameterKey:   aws.String(stack.LBFargateRulePathParamKey),
 									ParameterValue: aws.String(testAppPath),
 								},
 							},
@@ -298,19 +298,19 @@ func TestWebAppDescriber_ECSParams(t *testing.T) {
 						{
 							Parameters: []*cloudformation.Parameter{
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskCPUKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskCPUParamKey),
 									ParameterValue: aws.String(testCPU),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskMemoryKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskMemoryParamKey),
 									ParameterValue: aws.String(testMemory),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateParamContainerPortKey),
+									ParameterKey:   aws.String(stack.LBFargateContainerPortParamKey),
 									ParameterValue: aws.String(testPort),
 								},
 								{
-									ParameterKey:   aws.String(stack.LBFargateTaskCountKey),
+									ParameterKey:   aws.String(stack.LBFargateTaskCountParamKey),
 									ParameterValue: aws.String(testTasks),
 								},
 							},
@@ -603,6 +603,142 @@ func TestWebAppDescriber_StackResources(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedResources, actual)
+			}
+		})
+	}
+}
+
+func TestWebAppDescriber_GetServiceArn(t *testing.T) {
+	const (
+		testProject        = "phonetool"
+		testEnv            = "test"
+		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
+		testApp            = "jobs"
+	)
+	mockServiceArn := ecs.ServiceArn("mockServiceArn")
+	testCases := map[string]struct {
+		mockStore           func(ctrl *gomock.Controller) *mocks.MockenvGetter
+		mockStackDescribers func(ctrl *gomock.Controller) map[string]stackDescriber
+
+		wantedServiceArn *ecs.ServiceArn
+		wantedError      error
+	}{
+		"success": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(&cloudformation.DescribeStackResourcesOutput{
+					StackResources: []*cloudformation.StackResource{
+						{
+							LogicalResourceId:  aws.String("Service"),
+							PhysicalResourceId: aws.String("mockServiceArn"),
+						},
+					},
+				}, nil)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedServiceArn: &mockServiceArn,
+		},
+		"errors if cannot find service arn": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(&cloudformation.DescribeStackResourcesOutput{
+					StackResources: []*cloudformation.StackResource{},
+				}, nil)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedError: fmt.Errorf("cannot find service arn in app stack resource"),
+		},
+		"errors if failed to describe stack resources": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(&archer.Environment{
+					Project:        testProject,
+					Name:           testEnv,
+					ManagerRoleARN: testManagerRoleARN,
+				}, nil)
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				m.EXPECT().DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
+					StackName: aws.String(stack.NameForApp(testProject, testEnv, testApp)),
+				}).Return(nil, errors.New("some error"))
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedError: fmt.Errorf("describe resources for stack phonetool-test-jobs: some error"),
+		},
+		"errors if failed to get environment": {
+			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvGetter {
+				m := mocks.NewMockenvGetter(ctrl)
+				m.EXPECT().GetEnvironment(testProject, testEnv).Return(nil, errors.New("some error"))
+				return m
+			},
+			mockStackDescribers: func(ctrl *gomock.Controller) map[string]stackDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				describers := make(map[string]stackDescriber)
+				describers[testManagerRoleARN] = m
+				return describers
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			d := &WebAppDescriber{
+				app: &archer.Application{
+					Project: testProject,
+					Name:    testApp,
+				},
+				store:           tc.mockStore(ctrl),
+				stackDescribers: tc.mockStackDescribers(ctrl),
+			}
+
+			// WHEN
+			actual, err := d.GetServiceArn(testEnv)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedServiceArn, actual)
 			}
 		})
 	}

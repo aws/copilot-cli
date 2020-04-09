@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -166,6 +167,19 @@ type environmentDeployer interface {
 	GetEnvironment(projectName, envName string) (*archer.Environment, error)
 }
 
+type appDeployer interface {
+	// DeployApp // TODO ADD
+	DeleteApp(in deploy.DeleteAppInput) error
+}
+
+type appRemover interface {
+	RemoveAppFromProject(project *archer.Project, appName string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error // implemented by ECR Service
+}
+
 type pipelineDeployer interface {
 	CreatePipeline(env *deploy.CreatePipelineInput) error
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
@@ -201,4 +215,12 @@ type domainValidator interface {
 
 type dockerfileParser interface {
 	GetExposedPorts() ([]uint16, error)
+}
+
+type serviceArnGetter interface {
+	GetServiceArn(envName string) (*ecs.ServiceArn, error)
+}
+
+type statusDescriber interface {
+	Describe() (*describe.WebAppStatusDesc, error)
 }

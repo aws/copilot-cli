@@ -29,9 +29,9 @@ const (
 )
 
 type initProjectVars struct {
-	ProjectName string
-	DomainName  string
-	Tags        map[string]string
+	ProjectName  string
+	DomainName   string
+	ResourceTags map[string]string
 }
 
 type initProjectOpts struct {
@@ -156,7 +156,7 @@ func (o *initProjectOpts) Execute() error {
 		Project:        o.ProjectName,
 		AccountID:      caller.Account,
 		DomainName:     o.DomainName,
-		AdditionalTags: o.Tags,
+		AdditionalTags: o.ResourceTags,
 	})
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtDeployProjectFailed, color.HighlightUserInput(o.ProjectName)))
@@ -168,7 +168,7 @@ func (o *initProjectOpts) Execute() error {
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
-		Tags:      o.Tags,
+		Tags:      o.ResourceTags,
 	})
 }
 
@@ -281,6 +281,6 @@ A project is a collection of containerized applications (or micro-services) that
 		}),
 	}
 	cmd.Flags().StringVar(&vars.DomainName, domainNameFlag, "", domainNameFlagDescription)
-	cmd.Flags().StringToStringVar(&vars.Tags, resourceTagsFlag, nil, resourceTagsFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }

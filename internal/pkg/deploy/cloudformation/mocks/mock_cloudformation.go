@@ -6,6 +6,7 @@ package mocks
 
 import (
 	cloudformation "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
+	stackset "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
 	cloudformation0 "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -240,4 +241,128 @@ func (m *MockcfnClient) Events(stackName string) ([]cloudformation.StackEvent, e
 func (mr *MockcfnClientMockRecorder) Events(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Events", reflect.TypeOf((*MockcfnClient)(nil).Events), stackName)
+}
+
+// MockstackSetClient is a mock of stackSetClient interface
+type MockstackSetClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackSetClientMockRecorder
+}
+
+// MockstackSetClientMockRecorder is the mock recorder for MockstackSetClient
+type MockstackSetClientMockRecorder struct {
+	mock *MockstackSetClient
+}
+
+// NewMockstackSetClient creates a new mock instance
+func NewMockstackSetClient(ctrl *gomock.Controller) *MockstackSetClient {
+	mock := &MockstackSetClient{ctrl: ctrl}
+	mock.recorder = &MockstackSetClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockstackSetClient) EXPECT() *MockstackSetClientMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method
+func (m *MockstackSetClient) Create(name, template string, opts ...stackset.CreateOrUpdateOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name, template}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Create", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create
+func (mr *MockstackSetClientMockRecorder) Create(name, template interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name, template}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockstackSetClient)(nil).Create), varargs...)
+}
+
+// CreateInstancesAndWait mocks base method
+func (m *MockstackSetClient) CreateInstancesAndWait(name string, accounts, regions []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstancesAndWait", name, accounts, regions)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateInstancesAndWait indicates an expected call of CreateInstancesAndWait
+func (mr *MockstackSetClientMockRecorder) CreateInstancesAndWait(name, accounts, regions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstancesAndWait", reflect.TypeOf((*MockstackSetClient)(nil).CreateInstancesAndWait), name, accounts, regions)
+}
+
+// UpdateAndWait mocks base method
+func (m *MockstackSetClient) UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name, template}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateAndWait", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAndWait indicates an expected call of UpdateAndWait
+func (mr *MockstackSetClientMockRecorder) UpdateAndWait(name, template interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name, template}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockstackSetClient)(nil).UpdateAndWait), varargs...)
+}
+
+// Describe mocks base method
+func (m *MockstackSetClient) Describe(name string) (stackset.Description, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe", name)
+	ret0, _ := ret[0].(stackset.Description)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe
+func (mr *MockstackSetClientMockRecorder) Describe(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockstackSetClient)(nil).Describe), name)
+}
+
+// InstanceSummaries mocks base method
+func (m *MockstackSetClient) InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "InstanceSummaries", varargs...)
+	ret0, _ := ret[0].([]stackset.InstanceSummary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InstanceSummaries indicates an expected call of InstanceSummaries
+func (mr *MockstackSetClientMockRecorder) InstanceSummaries(name interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceSummaries", reflect.TypeOf((*MockstackSetClient)(nil).InstanceSummaries), varargs...)
+}
+
+// Delete mocks base method
+func (m *MockstackSetClient) Delete(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockstackSetClientMockRecorder) Delete(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockstackSetClient)(nil).Delete), name)
 }

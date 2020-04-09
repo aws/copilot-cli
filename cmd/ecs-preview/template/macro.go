@@ -43,3 +43,11 @@ func code(text string) string {
 func mkSlice(args ...interface{}) []interface{} {
 	return args
 }
+
+func split(s string, sep string) []string {
+	return strings.Split(s, sep)
+}
+
+func inc(n int) int {
+	return n + 1
+}
