@@ -113,6 +113,8 @@ func (s *Service) TaskLogEvents(logGroupName string, streamLastEventTime map[str
 			opt(in)
 		}
 		if streamLastEventTime[*logStreamName] != 0 {
+			// If last event for this log stream exists, increment last log event timestamp
+			// by one to get logs after the last event.
 			in.SetStartTime(streamLastEventTime[*logStreamName] + 1)
 		}
 		// TODO: https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374291068 and https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374294362
