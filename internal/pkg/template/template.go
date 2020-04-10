@@ -7,15 +7,34 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/aws/amazon-ecs-cli-v2/templates"
 	"github.com/gobuffalo/packd"
 )
 
+// Paths for application cloudformation templates under templates/applications/.
+const (
+	fmtAppCFTemplatePath    = "applications/%s/cf.yml"
+	fmtCommonCFTemplatePath = "applications/common/cf/%s.yml"
+)
+
+var (
+	// Template names under "applications/common/cf/".
+	commonCFTemplateNames = []string{
+		"loggroup",
+		"envvars",
+		"executionrole",
+		"taskrole",
+		"service-base-properties",
+		"addons",
+	}
+)
+
 var box = templates.Box()
 
-// Parser is the interface that wraps the Parse method.
+// Parser is the interface that wraps the generic Parse method.
 type Parser interface {
 	Parse(path string, data interface{}, options ...ParseOption) (*Content, error)
 }
@@ -24,6 +43,12 @@ type Parser interface {
 type ReadParser interface {
 	Read(path string) (*Content, error)
 	Parser
+}
+
+// AppTemplateReadParser is the interface that wraps the ParseAppTemplate method.
+type AppTemplateReadParser interface {
+	ReadParser
+	ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error)
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -59,23 +84,36 @@ func (t *Template) Read(path string) (*Content, error) {
 
 // Parse parses the template under "/templates/{path}" with the specified data object and returns its content.
 func (t *Template) Parse(path string, data interface{}, options ...ParseOption) (*Content, error) {
-	content, err := t.read(path)
+	tpl, err := t.parseTemplate("template", path, options...)
 	if err != nil {
 		return nil, err
 	}
-
-	tpl := template.New("template")
-	for _, opt := range options {
-		tpl = opt(tpl)
-	}
-	parsedTpl, err := tpl.Parse(content)
-	if err != nil {
-		return nil, fmt.Errorf("parse template %s: %w", path, err)
-	}
-
 	buf := &bytes.Buffer{}
-	if err := parsedTpl.Execute(buf, data); err != nil {
+	if err := tpl.Execute(buf, data); err != nil {
 		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
+	}
+	return &Content{buf}, nil
+}
+
+// ParseAppTemplate parses an application's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error) {
+	tpl, err := t.parseTemplate("base", fmt.Sprintf(fmtAppCFTemplatePath, name), options...)
+	if err != nil {
+		return nil, err
+	}
+	for _, templateName := range commonCFTemplateNames {
+		nestedTpl, err := t.parseTemplate(templateName, fmt.Sprintf(fmtCommonCFTemplatePath, templateName), options...)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tpl.AddParseTree(templateName, nestedTpl.Tree)
+		if err != nil {
+			return nil, fmt.Errorf("add parse tree of %s to base template: %w", templateName, err)
+		}
+	}
+	buf := &bytes.Buffer{}
+	if err := tpl.Execute(buf, data); err != nil {
+		return nil, fmt.Errorf("execute app template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
 }
@@ -92,10 +130,48 @@ func (c *Content) MarshalBinary() ([]byte, error) {
 	return c.Bytes(), nil
 }
 
+// newTemplate returns a named template with the "indent" function.
+func newTemplate(name string) *template.Template {
+	t := template.New(name)
+	t.Funcs(map[string]interface{}{
+		"include": func(name string, data interface{}) (string, error) {
+			// Taken from https://github.com/helm/helm/blob/8648ccf5d35d682dcd5f7a9c2082f0aaf071e817/pkg/engine/engine.go#L147-L154
+			buf := bytes.NewBuffer(nil)
+			if err := t.ExecuteTemplate(buf, name, data); err != nil {
+				return "", err
+			}
+			return buf.String(), nil
+		},
+		"indent": func(spaces int, s string) string {
+			// Taken from https://github.com/Masterminds/sprig/blob/48e6b77026913419ba1a4694dde186dc9c4ad74d/strings.go#L109-L112
+			pad := strings.Repeat(" ", spaces)
+			return pad + strings.Replace(s, "\n", "\n"+pad, -1)
+		},
+	})
+	return t
+}
+
 func (t *Template) read(path string) (string, error) {
 	s, err := t.box.FindString(path)
 	if err != nil {
 		return "", fmt.Errorf("read template %s: %w", path, err)
 	}
 	return s, nil
+}
+
+func (t *Template) parseTemplate(name, path string, options ...ParseOption) (*template.Template, error) {
+	content, err := t.read(path)
+	if err != nil {
+		return nil, err
+	}
+
+	tpl := newTemplate(name)
+	for _, opt := range options {
+		tpl = opt(tpl)
+	}
+	parsedTpl, err := tpl.Parse(content)
+	if err != nil {
+		return nil, fmt.Errorf("parse template %s: %w", path, err)
+	}
+	return parsedTpl, nil
 }

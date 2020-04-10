@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	lbFargateAppTemplatePath              = "applications/lb-web-app/cf.yml"
+	lbFargateAppTemplateName              = "lb-web-app"
 	lbFargateAppParamsPath                = "applications/params.json.tmpl"
 	lbFargateAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
@@ -48,7 +48,7 @@ type templater interface {
 type LBFargateStackConfig struct {
 	*deploy.CreateLBFargateAppInput
 	httpsEnabled bool
-	parser       template.ReadParser
+	parser       template.AppTemplateReadParser
 	addons       templater
 }
 
@@ -97,7 +97,7 @@ func (c *LBFargateStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.Parse(lbFargateAppTemplatePath, struct {
+	content, err := c.parser.ParseAppTemplate("lb-web-app", struct {
 		RulePriorityLambda string
 		AddonsOutputs      []addons.Output
 		*lbFargateTemplateParams

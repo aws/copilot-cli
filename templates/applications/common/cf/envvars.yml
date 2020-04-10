@@ -1,0 +1,27 @@
+# We pipe certain environment variables directly into the task definition.
+# This lets customers have access to, for example, their LB endpoint - which they'd
+# have no way of otherwise determining.
+Environment:
+- Name: ECS_CLI_PROJECT_NAME
+  Value: !Sub '${ProjectName}'
+- Name: ECS_APP_DISCOVERY_ENDPOINT
+  Value: !Sub '${ProjectName}.local'
+- Name: ECS_CLI_ENVIRONMENT_NAME
+  Value: !Sub '${EnvName}'
+- Name: ECS_CLI_APP_NAME
+  Value: !Sub '${AppName}'
+- Name: ECS_CLI_LB_DNS
+  Value:
+    Fn::ImportValue:
+      !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
+- Name: {{$name}}
+  Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
+- Name: {{toSnakeCase $output.Name}}
+  Value:
+    Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
+Secrets:{{range $name, $valueFrom := .App.Secrets}}
+- Name: {{$name}}
+  ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
+- Name: {{toSnakeCase $secret.Name}}
+  ValueFrom:
+    Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
