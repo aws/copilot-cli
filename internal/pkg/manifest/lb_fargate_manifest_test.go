@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package manifest
@@ -71,7 +71,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 		"with no existing environments": {
 			inDefaultConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
 				ContainersConfig: ContainersConfig{
@@ -84,7 +84,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 
 			wantedConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
 				ContainersConfig: ContainersConfig{
@@ -97,7 +97,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 		"with partial overrides": {
 			inDefaultConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
 				ContainersConfig: ContainersConfig{
@@ -137,7 +137,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 
 			wantedConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
 				ContainersConfig: ContainersConfig{
@@ -163,7 +163,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 		"with complete override": {
 			inDefaultConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
 				ContainersConfig: ContainersConfig{
@@ -182,7 +182,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			inEnvOverride: map[string]LBFargateConfig{
 				"prod-iad": {
 					RoutingRule: RoutingRule{
-						Path: "/frontend*",
+						Path:            "/frontend*",
 						HealthCheckPath: "/healthcheck",
 					},
 					ContainersConfig: ContainersConfig{
@@ -209,7 +209,7 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 
 			wantedConfig: LBFargateConfig{
 				RoutingRule: RoutingRule{
-					Path: "/frontend*",
+					Path:            "/frontend*",
 					HealthCheckPath: "/healthcheck",
 				},
 				ContainersConfig: ContainersConfig{
