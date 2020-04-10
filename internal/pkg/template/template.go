@@ -84,7 +84,7 @@ func (t *Template) Read(path string) (*Content, error) {
 
 // Parse parses the template under "/templates/{path}" with the specified data object and returns its content.
 func (t *Template) Parse(path string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parseTemplate("template", path, options...)
+	tpl, err := t.parse("template", path, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +97,12 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 
 // ParseAppTemplate parses an application's CloudFormation template with the specified data object and returns its content.
 func (t *Template) ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parseTemplate("base", fmt.Sprintf(fmtAppCFTemplatePath, name), options...)
+	tpl, err := t.parse("base", fmt.Sprintf(fmtAppCFTemplatePath, name), options...)
 	if err != nil {
 		return nil, err
 	}
 	for _, templateName := range commonCFTemplateNames {
-		nestedTpl, err := t.parseTemplate(templateName, fmt.Sprintf(fmtCommonCFTemplatePath, templateName), options...)
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtCommonCFTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
 		}
@@ -130,8 +130,8 @@ func (c *Content) MarshalBinary() ([]byte, error) {
 	return c.Bytes(), nil
 }
 
-// newTemplate returns a named text template with the "indent" and "include" functions.
-func newTemplate(name string) *template.Template {
+// newTextTemplate returns a named text/template with the "indent" and "include" functions.
+func newTextTemplate(name string) *template.Template {
 	t := template.New(name)
 	t.Funcs(map[string]interface{}{
 		"include": func(name string, data interface{}) (string, error) {
@@ -159,17 +159,18 @@ func (t *Template) read(path string) (string, error) {
 	return s, nil
 }
 
-func (t *Template) parseTemplate(name, path string, options ...ParseOption) (*template.Template, error) {
+// parse reads the file at path and returns a parsed text/template object with the given name.
+func (t *Template) parse(name, path string, options ...ParseOption) (*template.Template, error) {
 	content, err := t.read(path)
 	if err != nil {
 		return nil, err
 	}
 
-	tpl := newTemplate(name)
+	emptyTextTpl := newTextTemplate(name)
 	for _, opt := range options {
-		tpl = opt(tpl)
+		emptyTextTpl = opt(emptyTextTpl)
 	}
-	parsedTpl, err := tpl.Parse(content)
+	parsedTpl, err := emptyTextTpl.Parse(content)
 	if err != nil {
 		return nil, fmt.Errorf("parse template %s: %w", path, err)
 	}
