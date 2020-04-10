@@ -34,7 +34,7 @@ var (
 
 var box = templates.Box()
 
-// Parser is the interface that wraps the generic Parse method.
+// Parser is the interface that wraps the Parse method.
 type Parser interface {
 	Parse(path string, data interface{}, options ...ParseOption) (*Content, error)
 }
@@ -45,7 +45,7 @@ type ReadParser interface {
 	Parser
 }
 
-// AppTemplateReadParser is the interface that wraps the ParseAppTemplate method.
+// AppTemplateReadParser is the interface that wraps the methods needed to parse all application templates.
 type AppTemplateReadParser interface {
 	ReadParser
 	ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error)
@@ -130,7 +130,7 @@ func (c *Content) MarshalBinary() ([]byte, error) {
 	return c.Bytes(), nil
 }
 
-// newTemplate returns a named template with the "indent" function.
+// newTemplate returns a named text template with the "indent" and "include" functions.
 func newTemplate(name string) *template.Template {
 	t := template.New(name)
 	t.Funcs(map[string]interface{}{
