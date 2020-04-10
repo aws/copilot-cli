@@ -64,6 +64,8 @@ type TaskStatus struct {
 }
 
 // HumanString returns the stringified TaskStatus struct with human readable format.
+// Example output:
+//   6ca7a60d          f884127d            RUNNING             UNKNOWN             19 hours ago        -
 func (t TaskStatus) HumanString() string {
 	var digest []string
 	imageDigest := "-"
