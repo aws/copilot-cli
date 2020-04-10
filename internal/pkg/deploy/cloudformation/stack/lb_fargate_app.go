@@ -97,7 +97,7 @@ func (c *LBFargateStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.ParseAppTemplate("lb-web-app", struct {
+	content, err := c.parser.ParseAppTemplate(lbFargateAppTemplateName, struct {
 		RulePriorityLambda string
 		AddonsOutputs      []addons.Output
 		*lbFargateTemplateParams
