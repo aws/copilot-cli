@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-
 package cli
 
 import (
@@ -31,7 +30,7 @@ type showEnvVars struct {
 type showEnvOpts struct {
 	showEnvVars
 
-	w 		 io.Writer
+	w        io.Writer
 	storeSvc storeReader
 }
 
@@ -43,8 +42,8 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 
 	return &showEnvOpts{
 		showEnvVars: vars,
-		storeSvc:        ssmStore,
-		w:               log.OutputWriter,
+		storeSvc:    ssmStore,
+		w:           log.OutputWriter,
 		// initDescriber: make EnvDescriber here
 	}, nil
 }
@@ -88,6 +87,10 @@ func (o *showEnvOpts) askProject() error {
 	}
 	if len(projNames) == 0 {
 		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
+	}
+	if len(projNames) == 1 {
+		o.projectName = projNames[0]
+		return nil
 	}
 	proj, err := o.prompt.SelectOne(
 		environmentShowProjectNamePrompt,
@@ -164,9 +167,9 @@ func BuildEnvShowCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Hidden: true, //TODO remove when ready for production!
-		Use:   "show",
-		Short: "Shows info about a deployed environment.",
-		Long:  "Shows info about a deployed environment, including region, account ID, and apps.",
+		Use:    "show",
+		Short:  "Shows info about a deployed environment.",
+		Long:   "Shows info about a deployed environment, including region, account ID, and apps.",
 
 		Example: `
   Shows info about the environment "test"
