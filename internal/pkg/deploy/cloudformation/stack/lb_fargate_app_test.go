@@ -113,7 +113,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 	}{
 		"unavailable rule priority lambda template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -123,7 +123,7 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		"unexpected addons parsing error": {
 			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
@@ -135,9 +135,9 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		"failed parsing app template": {
 			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Parse(lbFargateAppTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ParseAppTemplate(lbFargateAppTemplateName, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -153,9 +153,9 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		"render template without addons": {
 			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().Parse(lbFargateAppTemplatePath, struct {
+				m.EXPECT().ParseAppTemplate(lbFargateAppTemplateName, struct {
 					RulePriorityLambda string
 					AddonsOutputs      []addons.Output
 					*lbFargateTemplateParams
@@ -174,9 +174,9 @@ func TestLBFargateStackConfig_Template(t *testing.T) {
 		"render template with addons": {
 			in: mockLBFargateAppInput,
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbFargateAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().Parse(lbFargateAppTemplatePath, struct {
+				m.EXPECT().ParseAppTemplate(lbFargateAppTemplateName, struct {
 					RulePriorityLambda string
 					AddonsOutputs      []addons.Output
 					*lbFargateTemplateParams
@@ -354,7 +354,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 				ImageTag:     "manual-bf3678c",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -385,7 +385,7 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 				},
 			},
 			mockDependencies: func(ctrl *gomock.Controller, c *LBFargateStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Parse(lbFargateAppParamsPath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
 				c.parser = m
 			},
