@@ -61,14 +61,7 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:
-      Family: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-      Cpu: !Ref TaskCPU
-      Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+{{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
         - Name: !Ref AppName
           Image: !Ref ContainerImage
