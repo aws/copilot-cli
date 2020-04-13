@@ -234,7 +234,7 @@ type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 }
 
-type deleteAppExecutor interface {
+type executor interface {
 	Execute() error
 }
 
@@ -242,7 +242,7 @@ type deletePipelineRunner interface {
 	Run() error
 }
 
-type deleteEnvRunner interface {
+type askExecutor interface {
 	Ask() error
-	Execute() error
+	executor
 }

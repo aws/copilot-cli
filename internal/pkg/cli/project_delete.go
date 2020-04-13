@@ -56,8 +56,8 @@ type deleteProjOpts struct {
 	sessProvider                 sessionProvider
 	deployer                     deployer
 	getBucketEmptier             func(session *awssession.Session) bucketEmptier
-	deleteAppExecutorProvider    func(appName string) (deleteAppExecutor, error)
-	deleteEnvRunnerProvider      func(envName, envProfile string) (deleteEnvRunner, error)
+	executorProvider             func(appName string) (executor, error)
+	askExecutorProvider          func(envName, envProfile string) (askExecutor, error)
 	deletePipelineRunnerProvider func() (deletePipelineRunner, error)
 }
 
@@ -90,7 +90,7 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 		getBucketEmptier: func(session *awssession.Session) bucketEmptier {
 			return s3.New(session)
 		},
-		deleteAppExecutorProvider: func(appName string) (deleteAppExecutor, error) {
+		executorProvider: func(appName string) (executor, error) {
 			vars := deleteAppVars{
 				SkipConfirmation: true, // always skip sub-confirmations
 				GlobalOpts:       NewGlobalOpts(),
@@ -104,7 +104,7 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 
 			return deleteAppOpts, nil
 		},
-		deleteEnvRunnerProvider: func(envName, envProfile string) (deleteEnvRunner, error) {
+		askExecutorProvider: func(envName, envProfile string) (askExecutor, error) {
 			vars := deleteEnvVars{
 				SkipConfirmation: true,
 				GlobalOpts:       NewGlobalOpts(),
@@ -212,7 +212,7 @@ func (o *deleteProjOpts) deleteApps() error {
 	}
 
 	for _, a := range apps {
-		deleter, err := o.deleteAppExecutorProvider(a.Name)
+		deleter, err := o.executorProvider(a.Name)
 		if err != nil {
 			return err
 		}
@@ -236,7 +236,7 @@ func (o *deleteProjOpts) deleteEnvs() error {
 		// string, which triggers env delete's ask.
 		envProfile, _ := o.envProfiles[e.Name]
 
-		deleter, err := o.deleteEnvRunnerProvider(e.Name, envProfile)
+		deleter, err := o.askExecutorProvider(e.Name, envProfile)
 		if err != nil {
 			return err
 		}

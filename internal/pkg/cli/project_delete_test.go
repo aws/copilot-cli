@@ -233,8 +233,8 @@ type deleteProjectMocks struct {
 	ws              *mocks.MockworkspaceDeleter
 	sessProvider    *session.Provider
 	deployer        *mocks.Mockdeployer
-	appDeleter      *mocks.MockdeleteAppExecutor
-	envDeleter      *mocks.MockdeleteEnvRunner
+	appDeleter      *mocks.Mockexecutor
+	envDeleter      *mocks.MockaskExecutor
 	bucketEmptier   *mocks.MockbucketEmptier
 	pipelineDeleter *mocks.MockdeletePipelineRunner
 }
@@ -373,19 +373,19 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			// mocking all the intermediary steps in calling Execute on DeleteAppOpts,
 			// DeleteEnvOpts, and DeletePipelineOpts. It allows us to instead simply
 			// test if the deletion of those resources succeeded or failed.
-			mockDeleteAppExecutor := mocks.NewMockdeleteAppExecutor(ctrl)
-			mockDeleteAppExecutorProvider := func(appName string) (deleteAppExecutor, error) {
-				return mockDeleteAppExecutor, nil
+			mockExecutor := mocks.NewMockexecutor(ctrl)
+			mockExecutorProvider := func(appName string) (executor, error) {
+				return mockExecutor, nil
 			}
 
-			mockDeleteEnvRunner := mocks.NewMockdeleteEnvRunner(ctrl)
-			mockDeleteEnvRunnerProvider := func(envName, envProfile string) (deleteEnvRunner, error) {
-				return mockDeleteEnvRunner, nil
+			mockAskExecutor := mocks.NewMockaskExecutor(ctrl)
+			mockAskExecutorProvider := func(envName, envProfile string) (askExecutor, error) {
+				return mockAskExecutor, nil
 			}
 
-			mockDeletePipelineRunner := mocks.NewMockdeletePipelineRunner(ctrl)
-			mockDeletePipelineRunnerProvider := func() (deletePipelineRunner, error) {
-				return mockDeletePipelineRunner, nil
+			mockRunner := mocks.NewMockdeletePipelineRunner(ctrl)
+			mockRunnerProvider := func() (deletePipelineRunner, error) {
+				return mockRunner, nil
 			}
 
 			mocks := deleteProjectMocks{
@@ -394,10 +394,10 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 				ws:              mockWorkspace,
 				sessProvider:    mockSession,
 				deployer:        mockDeployer,
-				appDeleter:      mockDeleteAppExecutor,
-				envDeleter:      mockDeleteEnvRunner,
+				appDeleter:      mockExecutor,
+				envDeleter:      mockAskExecutor,
 				bucketEmptier:   mockBucketEmptier,
-				pipelineDeleter: mockDeletePipelineRunner,
+				pipelineDeleter: mockRunner,
 			}
 			test.setupMocks(mocks)
 
@@ -413,9 +413,9 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 				sessProvider:                 mockSession,
 				deployer:                     mockDeployer,
 				getBucketEmptier:             mockGetBucketEmptier,
-				deleteAppExecutorProvider:    mockDeleteAppExecutorProvider,
-				deleteEnvRunnerProvider:      mockDeleteEnvRunnerProvider,
-				deletePipelineRunnerProvider: mockDeletePipelineRunnerProvider,
+				executorProvider:             mockExecutorProvider,
+				askExecutorProvider:          mockAskExecutorProvider,
+				deletePipelineRunnerProvider: mockRunnerProvider,
 			}
 
 			// WHEN
