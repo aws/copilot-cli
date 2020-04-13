@@ -88,7 +88,7 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 	if err != nil {
 		return nil, err
 	}
-	buf := &bytes.Buffer{}
+	buf := new(bytes.Buffer)
 	if err := tpl.Execute(buf, data); err != nil {
 		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
 	}
