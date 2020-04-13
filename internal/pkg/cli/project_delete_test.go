@@ -282,27 +282,27 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					// emptyS3bucket
 					mocks.store.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
 					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
-					mocks.spinner.EXPECT().Start(fmtCleanResourcesStart),
+					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtCleanResourcesStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),
 
 					// deleteProjectPipline
 					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
 
 					// deleteProjectResources
-					mocks.spinner.EXPECT().Start(fmtDeleteProjectResourcesStart),
+					mocks.spinner.EXPECT().Start(deleteProjectResourcesStartMsg),
 					mocks.deployer.EXPECT().DeleteProject(mockProjectName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectResourcesStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectResourcesStopMsg)),
 
 					// deleteProjectParams
-					mocks.spinner.EXPECT().Start(fmtDeleteProjectParamsStart),
+					mocks.spinner.EXPECT().Start(deleteProjectParamsStartMsg),
 					mocks.store.EXPECT().DeleteProject(mockProjectName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectParamsStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectParamsStopMsg)),
 
 					// deleteLocalWorkspace
-					mocks.spinner.EXPECT().Start(fmtDeleteLocalWsStart),
+					mocks.spinner.EXPECT().Start(deleteLocalWsStartMsg),
 					mocks.ws.EXPECT().DeleteAll().Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteLocalWsStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteLocalWsStopMsg)),
 				)
 			},
 			wantedError: nil,
@@ -324,27 +324,27 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					// emptyS3bucket
 					mocks.store.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
 					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
-					mocks.spinner.EXPECT().Start(fmtCleanResourcesStart),
+					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtCleanResourcesStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),
 
 					// deleteProjectPipline
 					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
 
 					// deleteProjectResources
-					mocks.spinner.EXPECT().Start(fmtDeleteProjectResourcesStart),
+					mocks.spinner.EXPECT().Start(deleteProjectResourcesStartMsg),
 					mocks.deployer.EXPECT().DeleteProject(mockProjectName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectResourcesStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectResourcesStopMsg)),
 
 					// deleteProjectParams
-					mocks.spinner.EXPECT().Start(fmtDeleteProjectParamsStart),
+					mocks.spinner.EXPECT().Start(deleteProjectParamsStartMsg),
 					mocks.store.EXPECT().DeleteProject(mockProjectName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteProjectParamsStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectParamsStopMsg)),
 
 					// deleteLocalWorkspace
-					mocks.spinner.EXPECT().Start(fmtDeleteLocalWsStart),
+					mocks.spinner.EXPECT().Start(deleteLocalWsStartMsg),
 					mocks.ws.EXPECT().DeleteAll().Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtDeleteLocalWsStop)),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteLocalWsStopMsg)),
 				)
 			},
 			wantedError: nil,

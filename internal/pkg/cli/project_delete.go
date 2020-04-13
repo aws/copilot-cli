@@ -27,14 +27,14 @@ const (
 	fmtConfirmProjectDeletePrompt = `Are you sure you want to delete project %s?
 	This will delete your project as well as any apps, environments, and pipelines.`
 	confirmProjectDeleteHelp       = "Deleting a project will remove all associated resources. (apps, envs, pipelines, etc.)"
-	fmtCleanResourcesStart         = "Cleaning up deployment resources."
-	fmtCleanResourcesStop          = "Cleaned up deployment resources."
-	fmtDeleteProjectResourcesStart = "Deleting project resources."
-	fmtDeleteProjectResourcesStop  = "Deleted project resources."
-	fmtDeleteProjectParamsStart    = "Deleting project metadata."
-	fmtDeleteProjectParamsStop     = "Deleted project metadata."
-	fmtDeleteLocalWsStart          = "Deleting local workspace folder."
-	fmtDeleteLocalWsStop           = "Deleted local workspace folder."
+	cleanResourcesStartMsg         = "Cleaning up deployment resources."
+	cleanResourcesStopMsg          = "Cleaned up deployment resources."
+	deleteProjectResourcesStartMsg = "Deleting project resources."
+	deleteProjectResourcesStopMsg  = "Deleted project resources."
+	deleteProjectParamsStartMsg    = "Deleting project metadata."
+	deleteProjectParamsStopMsg     = "Deleted project metadata."
+	deleteLocalWsStartMsg          = "Deleting local workspace folder."
+	deleteLocalWsStopMsg           = "Deleted local workspace folder."
 )
 
 var (
@@ -259,7 +259,7 @@ func (o *deleteProjOpts) emptyS3Bucket() error {
 	if err != nil {
 		return fmt.Errorf("get regional resources for %s: %w", proj.Name, err)
 	}
-	o.spinner.Start(fmtCleanResourcesStart)
+	o.spinner.Start(cleanResourcesStartMsg)
 	for _, projResource := range projResources {
 		sess, err := o.sessProvider.DefaultWithRegion(projResource.Region)
 		if err != nil {
@@ -273,7 +273,7 @@ func (o *deleteProjOpts) emptyS3Bucket() error {
 			return fmt.Errorf("empty bucket %s: %w", projResource.S3Bucket, err)
 		}
 	}
-	o.spinner.Stop(log.Ssuccess(fmtCleanResourcesStop))
+	o.spinner.Stop(log.Ssuccess(cleanResourcesStopMsg))
 	return nil
 }
 
@@ -287,36 +287,36 @@ func (o *deleteProjOpts) deleteProjectPipeline() error {
 }
 
 func (o *deleteProjOpts) deleteProjectResources() error {
-	o.spinner.Start(fmtDeleteProjectResourcesStart)
+	o.spinner.Start(deleteProjectResourcesStartMsg)
 	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project resources."))
 		return fmt.Errorf("delete project resources: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess(fmtDeleteProjectResourcesStop))
+	o.spinner.Stop(log.Ssuccess(deleteProjectResourcesStopMsg))
 
 	return nil
 }
 
 func (o *deleteProjOpts) deleteProjectParams() error {
-	o.spinner.Start(fmtDeleteProjectParamsStart)
+	o.spinner.Start(deleteProjectParamsStartMsg)
 	if err := o.store.DeleteProject(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project metadata."))
 
 		return err
 	}
-	o.spinner.Stop(log.Ssuccess(fmtDeleteProjectParamsStop))
+	o.spinner.Stop(log.Ssuccess(deleteProjectParamsStopMsg))
 
 	return nil
 }
 
 func (o *deleteProjOpts) deleteLocalWorkspace() error {
-	o.spinner.Start(fmtDeleteLocalWsStart)
+	o.spinner.Start(deleteLocalWsStartMsg)
 	if err := o.ws.DeleteAll(); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
 
 		return fmt.Errorf("delete workspace: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess(fmtDeleteLocalWsStop))
+	o.spinner.Stop(log.Ssuccess(deleteLocalWsStopMsg))
 
 	return nil
 }
