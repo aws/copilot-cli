@@ -28,6 +28,7 @@ var (
 		"executionrole",
 		"taskrole",
 		"service-base-properties",
+		"servicediscovery",
 		"addons",
 	}
 )
