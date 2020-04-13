@@ -109,10 +109,10 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 				SkipConfirmation: true,
 				GlobalOpts:       NewGlobalOpts(),
 				EnvName:          envName,
+				EnvProfile:       envProfile,
 			}
 
 			deleteEnvOpts, err := newDeleteEnvOpts(vars)
-			deleteEnvOpts.EnvProfile = envProfile
 
 			if err != nil {
 				return nil, err
