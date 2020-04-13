@@ -32,7 +32,6 @@ type deletePipelineMocks struct {
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
-	noManifestError := &workspace.ErrNoPipelineInWorkspace{}
 	pipelineData := `
 name: pipeline-badgoose-honker-repo
 version: 1
@@ -68,10 +67,10 @@ stages:
 		"pipeline manifest does not exist": {
 			inProjectName: testProjName,
 			callMocks: func(m deletePipelineMocks) {
-				m.ws.EXPECT().ReadPipelineManifest().Return(nil, noManifestError)
+				m.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace)
 			},
 
-			wantedError: noManifestError,
+			wantedError: workspace.ErrNoPipelineInWorkspace,
 		},
 
 		"project does not exist": {

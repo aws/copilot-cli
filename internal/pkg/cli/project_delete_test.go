@@ -259,7 +259,6 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			S3Bucket: "goose-bucket",
 		},
 	}
-	noPipelineManifestError := &workspace.ErrNoPipelineInWorkspace{}
 	tests := map[string]struct {
 		projectName string
 		setupMocks  func(mocks deleteProjectMocks)
@@ -330,7 +329,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmtCleanResourcesStop)),
 
 					// deleteProjectPipline
-					mocks.pipelineDeleter.EXPECT().Run().Return(noPipelineManifestError),
+					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
 
 					// deleteProjectResources
 					mocks.spinner.EXPECT().Start(fmtDeleteProjectResourcesStart),

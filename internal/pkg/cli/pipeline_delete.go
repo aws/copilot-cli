@@ -118,7 +118,7 @@ func (o *deletePipelineOpts) Validate() error {
 func (o *deletePipelineOpts) readPipelineManifest() error {
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
-		if _, ok := err.(*workspace.ErrNoPipelineInWorkspace); ok {
+		if err == workspace.ErrNoPipelineInWorkspace {
 			return err
 		}
 		return fmt.Errorf("read pipeline manifest: %w", err)

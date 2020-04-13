@@ -157,7 +157,7 @@ func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
 		return nil, err
 	}
 	if !manifestExists {
-		return nil, &ErrNoPipelineInWorkspace{}
+		return nil, ErrNoPipelineInWorkspace
 	}
 	return ws.read(pipelineFileName)
 }

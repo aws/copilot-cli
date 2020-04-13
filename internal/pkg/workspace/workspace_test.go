@@ -604,7 +604,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 				fs.Mkdir(projectDir, 0755)
 				return fs
 			},
-			expectedError: &ErrNoPipelineInWorkspace{},
+			expectedError: ErrNoPipelineInWorkspace,
 		},
 	}
 
