@@ -147,7 +147,7 @@ func TestEnvShow_Ask(t *testing.T) {
 						{Name: "my-env"},
 						{Name: "archer-env"},
 					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(environmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("my-env", nil).Times(1),
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("my-env", nil).Times(1),
 				)
 			},
 
@@ -271,7 +271,7 @@ func TestEnvShow_Ask(t *testing.T) {
 						{Name: "my-env"},
 						{Name: "archer-env"},
 					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(environmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("", fmt.Errorf("some error")).Times(1),
+					m.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("", fmt.Errorf("some error")).Times(1),
 				)
 			},
 			wantedProject: "my-project",

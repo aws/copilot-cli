@@ -16,7 +16,7 @@ import (
 const (
 	environmentShowProjectNamePrompt     = "Which project's environments would you like to show?"
 	environmentShowProjectNameHelpPrompt = "A project groups all of your applications together."
-	environmentShowEnvNamePrompt         = "Which environment of %s would you like to show?"
+	fmtEnvironmentShowEnvNamePrompt      = "Which environment of %s would you like to show?"
 	environmentShowEnvNameHelpPrompt     = "The detail of an environment will be shown (e.g., region, account ID, apps)."
 )
 
@@ -125,7 +125,7 @@ func (o *showEnvOpts) askEnvName() error {
 		return nil
 	}
 	envName, err := o.prompt.SelectOne(
-		fmt.Sprintf(environmentShowEnvNamePrompt, color.HighlightUserInput(o.ProjectName())), environmentShowEnvNameHelpPrompt, envNames,
+		fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, color.HighlightUserInput(o.ProjectName())), environmentShowEnvNameHelpPrompt, envNames,
 	)
 	if err != nil {
 		return fmt.Errorf("select environment for project %s: %w", o.ProjectName(), err)
