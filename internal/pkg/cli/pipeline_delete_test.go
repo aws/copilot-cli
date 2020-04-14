@@ -11,6 +11,7 @@ import (
 	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks" // TODO refactor
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -22,42 +23,84 @@ const (
 	testPipelineSecret = "honkhonkhonk"
 )
 
+type deletePipelineMocks struct {
+	prompt         *climocks.Mockprompter
+	prog           *climocks.Mockprogress
+	secretsmanager *awsmocks.MockSecretsManager
+	deployer       *climocks.MockpipelineDeployer
+	ws             *climocks.MockwsPipelineDeleter
+}
+
 func TestDeletePipelineOpts_Validate(t *testing.T) {
+	pipelineData := `
+name: pipeline-badgoose-honker-repo
+version: 1
+
+source:
+  provider: GitHub
+  properties:
+    repository: badgoose/repo
+    access_token_secret: "github-token-badgoose-repo"
+    branch: master
+
+stages:
+    -
+      name: test
+    -
+      name: prod
+`
+
 	testCases := map[string]struct {
-		inProjectName  string
-		inPipelineName string
+		inProjectName string
+		callMocks     func(m deletePipelineMocks)
 
 		wantedError error
 	}{
 		"happy path": {
-			inProjectName:  testProjName,
-			inPipelineName: testPipelineName,
-			wantedError:    nil,
+			inProjectName: testProjName,
+			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil)
+			},
+			wantedError: nil,
 		},
 
 		"pipeline manifest does not exist": {
-			inProjectName:  testProjName,
-			inPipelineName: "",
-			wantedError:    errNoPipelineInWorkspace,
+			inProjectName: testProjName,
+			callMocks: func(m deletePipelineMocks) {
+				m.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace)
+			},
+
+			wantedError: workspace.ErrNoPipelineInWorkspace,
 		},
 
 		"project does not exist": {
-			inProjectName:  "",
-			inPipelineName: testPipelineName,
-			wantedError:    errNoProjectInWorkspace,
+			inProjectName: "",
+			callMocks:     func(m deletePipelineMocks) {},
+
+			wantedError: errNoProjectInWorkspace,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
+			mocks := deletePipelineMocks{
+				ws: mockWorkspace,
+			}
+
+			tc.callMocks(mocks)
+
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
 					},
 				},
-				PipelineName: tc.inPipelineName,
+				ws: mockWorkspace,
 			}
 
 			// WHEN
@@ -77,7 +120,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 		inProjectName    string
 		inPipelineName   string
 
-		mockPrompt func(m *climocks.Mockprompter)
+		callMocks func(m deletePipelineMocks)
 
 		wantedError error
 	}{
@@ -86,7 +129,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			inProjectName:    testProjName,
 			inPipelineName:   testPipelineName,
 
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			callMocks: func(m deletePipelineMocks) {},
 
 			wantedError: nil,
 		},
@@ -95,8 +138,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			skipConfirmation: false,
 			inProjectName:    testProjName,
 			inPipelineName:   testPipelineName,
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(
+			callMocks: func(m deletePipelineMocks) {
+				m.prompt.EXPECT().Confirm(
 					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testProjName),
 					pipelineDeleteConfirmHelp,
 				).Times(1).Return(true, nil)
@@ -110,15 +153,21 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			tc.mockPrompt(mockPrompter)
+
+			mockPrompt := climocks.NewMockprompter(ctrl)
+
+			mocks := deletePipelineMocks{
+				prompt: mockPrompt,
+			}
+
+			tc.callMocks(mocks)
 
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					SkipConfirmation: tc.skipConfirmation,
 					GlobalOpts: &GlobalOpts{
 						projectName: tc.inProjectName,
-						prompt:      mockPrompter,
+						prompt:      mockPrompt,
 					},
 				},
 				PipelineName: tc.inPipelineName,
@@ -133,14 +182,6 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			}
 		})
 	}
-}
-
-type deletePipelineMocks struct {
-	prompt         *climocks.Mockprompter
-	prog           *climocks.Mockprogress
-	secretsmanager *awsmocks.MockSecretsManager
-	deployer       *climocks.MockpipelineDeployer
-	ws             *climocks.MockwsPipelineDeleter
 }
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {

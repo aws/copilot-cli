@@ -136,12 +136,19 @@ ecs-preview app init
 	--port $port
 */
 func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
+	args := []string{
+		"app",
+		"init",
+		"--name", opts.AppName,
+		"--app-type", opts.AppType,
+		"--dockerfile", opts.Dockerfile,
+	}
+	// Apply optional flags only if a value is provided.
+	if opts.AppPort != "" {
+		args = append(args, "--port", opts.AppPort)
+	}
 	return cli.exec(
-		exec.Command(cli.path, "app", "init",
-			"--name", opts.AppName,
-			"--app-type", opts.AppType,
-			"--dockerfile", opts.Dockerfile,
-			"--port", opts.AppPort))
+		exec.Command(cli.path, args...))
 }
 
 /*AppShow runs:

@@ -1021,6 +1021,43 @@ func (mr *MockstoreReaderMockRecorder) GetApplication(projectName, applicationNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockstoreReader)(nil).GetApplication), projectName, applicationName)
 }
 
+// MockworkspaceDeleter is a mock of workspaceDeleter interface
+type MockworkspaceDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkspaceDeleterMockRecorder
+}
+
+// MockworkspaceDeleterMockRecorder is the mock recorder for MockworkspaceDeleter
+type MockworkspaceDeleterMockRecorder struct {
+	mock *MockworkspaceDeleter
+}
+
+// NewMockworkspaceDeleter creates a new mock instance
+func NewMockworkspaceDeleter(ctrl *gomock.Controller) *MockworkspaceDeleter {
+	mock := &MockworkspaceDeleter{ctrl: ctrl}
+	mock.recorder = &MockworkspaceDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockworkspaceDeleter) EXPECT() *MockworkspaceDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteAll mocks base method
+func (m *MockworkspaceDeleter) DeleteAll() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAll")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAll indicates an expected call of DeleteAll
+func (mr *MockworkspaceDeleterMockRecorder) DeleteAll() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteAll))
+}
+
 // MockwsAppManifestReader is a mock of wsAppManifestReader interface
 type MockwsAppManifestReader struct {
 	ctrl     *gomock.Controller
@@ -2449,4 +2486,129 @@ func (m *MockpipelineGetter) GetPipeline(pipelineName string) (*codepipeline.Pip
 func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
+}
+
+// Mockexecutor is a mock of executor interface
+type Mockexecutor struct {
+	ctrl     *gomock.Controller
+	recorder *MockexecutorMockRecorder
+}
+
+// MockexecutorMockRecorder is the mock recorder for Mockexecutor
+type MockexecutorMockRecorder struct {
+	mock *Mockexecutor
+}
+
+// NewMockexecutor creates a new mock instance
+func NewMockexecutor(ctrl *gomock.Controller) *Mockexecutor {
+	mock := &Mockexecutor{ctrl: ctrl}
+	mock.recorder = &MockexecutorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockexecutor) EXPECT() *MockexecutorMockRecorder {
+	return m.recorder
+}
+
+// Execute mocks base method
+func (m *Mockexecutor) Execute() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute
+func (mr *MockexecutorMockRecorder) Execute() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*Mockexecutor)(nil).Execute))
+}
+
+// MockdeletePipelineRunner is a mock of deletePipelineRunner interface
+type MockdeletePipelineRunner struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeletePipelineRunnerMockRecorder
+}
+
+// MockdeletePipelineRunnerMockRecorder is the mock recorder for MockdeletePipelineRunner
+type MockdeletePipelineRunnerMockRecorder struct {
+	mock *MockdeletePipelineRunner
+}
+
+// NewMockdeletePipelineRunner creates a new mock instance
+func NewMockdeletePipelineRunner(ctrl *gomock.Controller) *MockdeletePipelineRunner {
+	mock := &MockdeletePipelineRunner{ctrl: ctrl}
+	mock.recorder = &MockdeletePipelineRunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdeletePipelineRunner) EXPECT() *MockdeletePipelineRunnerMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method
+func (m *MockdeletePipelineRunner) Run() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run
+func (mr *MockdeletePipelineRunnerMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockdeletePipelineRunner)(nil).Run))
+}
+
+// MockaskExecutor is a mock of askExecutor interface
+type MockaskExecutor struct {
+	ctrl     *gomock.Controller
+	recorder *MockaskExecutorMockRecorder
+}
+
+// MockaskExecutorMockRecorder is the mock recorder for MockaskExecutor
+type MockaskExecutorMockRecorder struct {
+	mock *MockaskExecutor
+}
+
+// NewMockaskExecutor creates a new mock instance
+func NewMockaskExecutor(ctrl *gomock.Controller) *MockaskExecutor {
+	mock := &MockaskExecutor{ctrl: ctrl}
+	mock.recorder = &MockaskExecutorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockaskExecutor) EXPECT() *MockaskExecutorMockRecorder {
+	return m.recorder
+}
+
+// Ask mocks base method
+func (m *MockaskExecutor) Ask() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ask")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ask indicates an expected call of Ask
+func (mr *MockaskExecutorMockRecorder) Ask() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ask", reflect.TypeOf((*MockaskExecutor)(nil).Ask))
+}
+
+// Execute mocks base method
+func (m *MockaskExecutor) Execute() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Execute indicates an expected call of Execute
+func (mr *MockaskExecutorMockRecorder) Execute() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockaskExecutor)(nil).Execute))
 }
