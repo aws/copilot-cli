@@ -5,15 +5,18 @@ package describe
 
 import (
 	"encoding/json"
+	//"encoding/json"
 	"fmt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+
 	//"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 )
 
 type Environment struct {
 	Name       string `json:"name"`
-	Production bool   `json:"production"`
+	Production bool   `json:"production"` // add to instances used elsewhere (ie project_show)?
 	Region     string `json:"region"`
 	AccountID  string `json:"accountID"`
 }
@@ -38,10 +41,10 @@ type Env struct {
 type EnvDescriber struct {
 	env *archer.Environment
 
-	//store           envGetter
-	//ecsClient       map[string]ecsService
-	//stackDescribers map[string]stackDescriber
-	//sessProvider    sessionFromRoleProvider
+	store           envGetter
+	ecsClient       map[string]ecsService
+	stackDescribers map[string]stackDescriber
+	sessProvider    sessionFromRoleProvider
 }
 
 // NewEnvDescriber instantiates an environment.
@@ -56,21 +59,24 @@ func NewEnvDescriber(project, env string) (*EnvDescriber, error) {
 	}
 	return &EnvDescriber{
 		env: meta,
-		//store:           svc,
-		//stackDescribers: make(map[string]stackDescriber),
-		//ecsClient:       make(map[string]ecsService),
-		//sessProvider:    session.NewProvider(),
+		store:           svc,
+		stackDescribers: make(map[string]stackDescriber),
+		ecsClient:       make(map[string]ecsService),
+		sessProvider:    session.NewProvider(),
 	}, nil
 }
 
 // JSONString returns the stringified WebApp struct with json format.
-func (w *Environment) JSONString() (string, error) {
-	// TODO
-	return nil
+func (w *Env) JSONString() (string, error) {
+	b, err := json.Marshal(w)
+	if err != nil {
+		return "", fmt.Errorf("marshal applications: %w", err)
+	}
+	return fmt.Sprintf("%s\n", b), nil
 }
 
 // HumanString returns the stringified WebApp struct with human readable format.
-func (w *Environment) HumanString() string {
+func (w *Env) HumanString() string {
 	// TODO
-	return nil
+	return ""
 }
