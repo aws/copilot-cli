@@ -12,12 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
 
-type Environment struct {
-	Name      string `json:"name"`
-	AccountID string `json:"accountID"`
-	Region    string `json:"region"`
-}
-
 type Application struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
