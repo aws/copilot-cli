@@ -22,8 +22,8 @@ import (
 )
 
 var mockLBFargateAppInput = &deploy.CreateLBFargateAppInput{
-	App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-		AppManifestProps: &manifest.AppManifestProps{
+	App: manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
+		AppProps: &manifest.AppProps{
 			AppName:    "frontend",
 			Dockerfile: "frontend/Dockerfile",
 		},
@@ -82,8 +82,8 @@ func TestLBFargateStackConfig_StackName(t *testing.T) {
 			// GIVEN
 			conf := &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: &manifest.LBFargateManifest{
-						AppManifest: manifest.AppManifest{
+					App: &manifest.LoadBalancedWebApp{
+						App: manifest.App{
 							Name: tc.inAppName,
 						},
 					},
@@ -242,8 +242,8 @@ func TestLBFargateStackConfig_Parameters(t *testing.T) {
 			// GIVEN
 			conf := &LBFargateStackConfig{
 				CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-					App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-						AppManifestProps: &manifest.AppManifestProps{
+					App: manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
+						AppProps: &manifest.AppProps{
 							AppName:    "frontend",
 							Dockerfile: "frontend/Dockerfile",
 						},
@@ -335,8 +335,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 	}{
 		"unavailable template": {
 			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-					AppManifestProps: &manifest.AppManifestProps{
+				App: manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
+					AppProps: &manifest.AppProps{
 						AppName:    "frontend",
 						Dockerfile: "frontend/Dockerfile",
 					},
@@ -363,8 +363,8 @@ func TestLBFargateStackConfig_SerializedParameters(t *testing.T) {
 		},
 		"render params template": {
 			in: &deploy.CreateLBFargateAppInput{
-				App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-					AppManifestProps: &manifest.AppManifestProps{
+				App: manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
+					AppProps: &manifest.AppProps{
 						AppName:    "frontend",
 						Dockerfile: "frontend/Dockerfile",
 					},
@@ -417,8 +417,8 @@ func TestLBFargateStackConfig_Tags(t *testing.T) {
 	// GIVEN
 	conf := &LBFargateStackConfig{
 		CreateLBFargateAppInput: &deploy.CreateLBFargateAppInput{
-			App: manifest.NewLoadBalancedFargateManifest(&manifest.LBFargateManifestProps{
-				AppManifestProps: &manifest.AppManifestProps{
+			App: manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
+				AppProps: &manifest.AppProps{
 					AppName:    "frontend",
 					Dockerfile: "frontend/Dockerfile",
 				},

@@ -12,7 +12,7 @@ import (
 
 // CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
 type CreateLBFargateAppInput struct {
-	App            *manifest.LBFargateManifest
+	App            *manifest.LoadBalancedWebApp
 	Env            *archer.Environment
 	ImageRepoURL   string
 	ImageTag       string
