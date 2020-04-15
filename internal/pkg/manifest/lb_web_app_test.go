@@ -113,12 +113,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						"TWILIO_TOKEN": "1111",
 					},
 				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     1,
-					MaxCount:     2,
-					TargetCPU:    75.0,
-					TargetMemory: 0,
-				},
 			},
 			inEnvNameToQuery: "prod-iad",
 			inEnvOverride: map[string]LoadBalancedWebAppConfig{
@@ -128,9 +122,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						Variables: map[string]string{
 							"DDB_TABLE_NAME": "awards-prod",
 						},
-					},
-					Scaling: &AutoScalingConfig{
-						MaxCount: 5,
 					},
 				},
 			},
@@ -153,11 +144,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						"TWILIO_TOKEN": "1111",
 					},
 				},
-				Scaling: &AutoScalingConfig{
-					MinCount:  1,
-					MaxCount:  5,
-					TargetCPU: 75.0,
-				},
 			},
 		},
 		"with complete override": {
@@ -170,12 +156,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					CPU:    1024,
 					Memory: 1024,
 					Count:  intp(1),
-				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     1,
-					MaxCount:     2,
-					TargetCPU:    75.0,
-					TargetMemory: 0,
 				},
 			},
 			inEnvNameToQuery: "prod-iad",
@@ -198,12 +178,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 							"TWILIO_TOKEN": "2222",
 						},
 					},
-					Scaling: &AutoScalingConfig{
-						MinCount:     2,
-						MaxCount:     5,
-						TargetCPU:    75.0,
-						TargetMemory: 75.0,
-					},
 				},
 			},
 
@@ -224,12 +198,6 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						"GITHUB_TOKEN": "2222",
 						"TWILIO_TOKEN": "2222",
 					},
-				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     2,
-					MaxCount:     5,
-					TargetCPU:    75.0,
-					TargetMemory: 75.0,
 				},
 			},
 		},

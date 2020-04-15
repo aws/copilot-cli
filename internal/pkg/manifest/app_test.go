@@ -33,10 +33,6 @@ variables:
   LOG_LEVEL: "WARN"
 secrets:
   DB_PASSWORD: MYSQL_DB_PASSWORD
-scaling:
-  minCount: 1
-  maxCount: 50
-  targetMemory: 60
 environments:
   test:
     count: 3
@@ -65,11 +61,6 @@ environments:
 							Secrets: map[string]string{
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
-						},
-						Scaling: &AutoScalingConfig{
-							MinCount:     1,
-							MaxCount:     50,
-							TargetMemory: 60.0,
 						},
 					},
 					Environments: map[string]LoadBalancedWebAppConfig{

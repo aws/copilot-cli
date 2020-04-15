@@ -29,7 +29,6 @@ type LoadBalancedWebApp struct {
 type LoadBalancedWebAppConfig struct {
 	RoutingRule `yaml:"http,flow"`
 	taskConfig  `yaml:",inline"`
-	Scaling     *AutoScalingConfig `yaml:",flow"`
 	LogsConfig  `yaml:",flow"`
 }
 
@@ -44,13 +43,14 @@ type RoutingRule struct {
 	HealthCheckPath string `yaml:"healthcheck"`
 }
 
-// AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
-type AutoScalingConfig struct {
-	MinCount int `yaml:"minCount"`
-	MaxCount int `yaml:"maxCount"`
-
-	TargetCPU    float64 `yaml:"targetCPU"`
-	TargetMemory float64 `yaml:"targetMemory"`
+func (r RoutingRule) apply(other RoutingRule) RoutingRule {
+	if other.Path != "" {
+		r.Path = other.Path
+	}
+	if other.HealthCheckPath != "" {
+		r.HealthCheckPath = other.HealthCheckPath
+	}
+	return r
 }
 
 // LoadBalancedWebAppProps contains properties for creating a new load balanced fargate application manifest.
@@ -122,48 +122,10 @@ func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
 		return a.LoadBalancedWebAppConfig
 	}
 
-	var scaling *AutoScalingConfig
-	if a.Scaling != nil {
-		scaling = &AutoScalingConfig{
-			MinCount:     a.Scaling.MinCount,
-			MaxCount:     a.Scaling.MaxCount,
-			TargetCPU:    a.Scaling.TargetCPU,
-			TargetMemory: a.Scaling.TargetMemory,
-		}
-	}
-
 	// Override with fields set in the environment.
 	target := a.Environments[envName]
-	conf := LoadBalancedWebAppConfig{
-		RoutingRule: RoutingRule{
-			Path:            a.Path,
-			HealthCheckPath: a.HealthCheckPath,
-		},
-		taskConfig: a.taskConfig.apply(target.taskConfig),
-		Scaling:    scaling,
+	return LoadBalancedWebAppConfig{
+		RoutingRule: a.RoutingRule.apply(target.RoutingRule),
+		taskConfig:  a.taskConfig.apply(target.taskConfig),
 	}
-	if target.RoutingRule.Path != "" {
-		conf.RoutingRule.Path = target.RoutingRule.Path
-	}
-	if target.RoutingRule.HealthCheckPath != "" {
-		conf.RoutingRule.HealthCheckPath = target.RoutingRule.HealthCheckPath
-	}
-	if target.Scaling != nil {
-		if conf.Scaling == nil {
-			conf.Scaling = &AutoScalingConfig{}
-		}
-		if target.Scaling.MinCount != 0 {
-			conf.Scaling.MinCount = target.Scaling.MinCount
-		}
-		if target.Scaling.MaxCount != 0 {
-			conf.Scaling.MaxCount = target.Scaling.MaxCount
-		}
-		if target.Scaling.TargetCPU != 0 {
-			conf.Scaling.TargetCPU = target.Scaling.TargetCPU
-		}
-		if target.Scaling.TargetMemory != 0 {
-			conf.Scaling.TargetMemory = target.Scaling.TargetMemory
-		}
-	}
-	return conf
 }
