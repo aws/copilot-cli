@@ -17,7 +17,7 @@ import (
 )
 
 func TestCodePipeline_GetPipeline(t *testing.T) {
-	mockPipelineName := "pieline-dinder-badgoose-repo"
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
 	mockError := errors.New("mockError")
 	mockOutput := &codepipeline.GetPipelineOutput{
 		Pipeline: &codepipeline.PipelineDeclaration{
@@ -29,6 +29,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 		inPipelineName string
 		callMock       func(m *mocks.MockcodepipelineClient)
 
+		expectedOut   *Pipeline
 		expectedError error
 	}{
 		"happy path": {
@@ -39,6 +40,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 				}).Return(mockOutput, nil)
 
 			},
+			expectedOut:   &Pipeline{Name: mockPipelineName},
 			expectedError: nil,
 		},
 		"should wrap error": {
@@ -49,6 +51,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 				}).Return(nil, mockError)
 
 			},
+			expectedOut:   nil,
 			expectedError: fmt.Errorf("get pipeline %s: %w", mockPipelineName, mockError),
 		},
 	}
@@ -68,11 +71,70 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			tc.callMock(mockClient)
 
 			// WHEN
-
-			_, err := cp.GetPipeline(tc.inPipelineName)
+			actualOut, err := cp.GetPipeline(tc.inPipelineName)
 
 			// THEN
 			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedOut, actualOut)
+		})
+	}
+}
+
+func TestCodePipeline_ListPipelines(t *testing.T) {
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockError := errors.New("mockError")
+	mockInput := &codepipeline.ListPipelinesInput{}
+	mockOutput := &codepipeline.ListPipelinesOutput{
+		Pipelines: []*codepipeline.PipelineSummary{
+			{
+				Name: aws.String(mockPipelineName),
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		callMock    func(m *mocks.MockcodepipelineClient)
+		expectedOut []string
+
+		expectedError error
+	}{
+		"happy path": {
+			callMock: func(m *mocks.MockcodepipelineClient) {
+				m.EXPECT().ListPipelines(mockInput).Return(mockOutput, nil)
+			},
+			expectedOut:   []string{mockPipelineName},
+			expectedError: nil,
+		},
+		"should wrap error": {
+			callMock: func(m *mocks.MockcodepipelineClient) {
+				m.EXPECT().ListPipelines(mockInput).Return(nil, mockError)
+
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("list pipelines: %w", mockError),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mocks.NewMockcodepipelineClient(ctrl)
+
+			cp := CodePipeline{
+				client: mockClient,
+			}
+
+			tc.callMock(mockClient)
+
+			// WHEN
+			actualOut, err := cp.ListPipelines()
+
+			// THEN
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedOut, actualOut)
 		})
 	}
 }
