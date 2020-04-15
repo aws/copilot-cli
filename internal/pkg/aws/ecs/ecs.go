@@ -7,16 +7,18 @@ package ecs
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/dustin/go-humanize"
 )
 
 const (
-	shortTaskIDLength      = 7
-	shortImageDigestLength = 7
+	shortTaskIDLength      = 8
+	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
 )
 
@@ -52,13 +54,43 @@ type ServiceStatus struct {
 
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
-	DesiredStatus string  `json:"desiredStatus"`
+	Health        string  `json:"health"`
 	ID            string  `json:"id"`
 	Images        []Image `json:"images"`
 	LastStatus    string  `json:"lastStatus"`
 	StartedAt     int64   `json:"startedAt"`
 	StoppedAt     int64   `json:"stoppedAt"`
 	StoppedReason string  `json:"stoppedReason"`
+}
+
+// HumanString returns the stringified TaskStatus struct with human readable format.
+// Example output:
+//   6ca7a60d          f884127d            RUNNING             UNKNOWN             19 hours ago        -
+func (t TaskStatus) HumanString() string {
+	var digest []string
+	imageDigest := "-"
+	for _, image := range t.Images {
+		if len(image.Digest) < shortImageDigestLength {
+			continue
+		}
+		digest = append(digest, image.Digest[:shortImageDigestLength])
+	}
+	if len(digest) != 0 {
+		imageDigest = strings.Join(digest, ",")
+	}
+	startedSince := "-"
+	if t.StartedAt != 0 {
+		startedSince = humanize.Time(time.Unix(t.StartedAt, 0))
+	}
+	stoppedSince := "-"
+	if t.StoppedAt != 0 {
+		stoppedSince = humanize.Time(time.Unix(t.StoppedAt, 0))
+	}
+	shortTaskID := "-"
+	if len(t.ID) >= shortTaskIDLength {
+		shortTaskID = t.ID[:shortTaskIDLength]
+	}
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\t%s\t%s\n", shortTaskID, imageDigest, t.LastStatus, t.Health, startedSince, stoppedSince)
 }
 
 // Image contains very basic info of a container image.
@@ -161,7 +193,7 @@ func (t *Task) TaskStatus() (*TaskStatus, error) {
 		})
 	}
 	return &TaskStatus{
-		DesiredStatus: aws.StringValue(t.DesiredStatus),
+		Health:        aws.StringValue(t.HealthStatus),
 		ID:            taskID,
 		Images:        images,
 		LastStatus:    aws.StringValue(t.LastStatus),
