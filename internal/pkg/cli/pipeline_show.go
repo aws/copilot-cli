@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
@@ -17,8 +18,10 @@ import (
 )
 
 const (
-	pipelineShowProjectNamePrompt     = "Which project's pipelines would you like to show?"
-	pipelineShowProjectNameHelpPrompt = "A project groups all of your pipelines together."
+	pipelineShowProjectNamePrompt      = "Which project's pipelines would you like to show?"
+	pipelineShowProjectNameHelpPrompt  = "A project groups all of your pipelines together."
+	fmtPipelineShowPipelineNamePrompt  = "Which pipeline of %s would you like to show?"
+	pipelineShowPipelineNameHelpPrompt = "The details of a pipeline will be shown (e.g., region, account ID, stages)."
 )
 
 type showPipelineVars struct {
@@ -100,6 +103,12 @@ func (o *showPipelineOpts) askProject() error {
 	if len(projNames) == 0 {
 		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
 	}
+
+	if len(projNames) == 1 {
+		o.projectName = projNames[0]
+		return nil
+	}
+
 	proj, err := o.prompt.SelectOne(
 		pipelineShowProjectNamePrompt,
 		pipelineShowProjectNameHelpPrompt,
@@ -131,26 +140,58 @@ func (o *showPipelineOpts) askPipelineName() error {
 		return nil
 	}
 
+	// return pipelineName from manifest if found
 	pipelineName, err := o.getPipelineNameFromManifest()
+	if err == nil {
+		o.pipelineName = pipelineName
+		return nil
+	}
+
+	if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
+		log.Infof("No pipeline manifest in workspace for project %s\n, looking for deployed pipelines", color.HighlightUserInput(o.ProjectName()))
+	}
+
+	// find deployed pipelines
+	pipelineNames, err := o.retrieveAllPipelines()
 	if err != nil {
 		return err
 	}
 
+	if len(pipelineNames) == 0 {
+		log.Infof("No pipelines found for project %s\n.", color.HighlightUserInput(o.ProjectName()))
+		return nil
+	}
+
+	if len(pipelineNames) == 1 {
+		o.pipelineName = pipelineNames[0]
+		return nil
+	}
+
+	// select from list of deployed pipelines
+	pipelineName, err = o.prompt.SelectOne(
+		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.ProjectName())), pipelineShowPipelineNameHelpPrompt, pipelineNames,
+	)
+	if err != nil {
+		return fmt.Errorf("select pipeline for project %s: %w", o.ProjectName(), err)
+	}
 	o.pipelineName = pipelineName
-	// if pipelineName == "" {
-	// get pipeline name from remote
-	// }
 
 	return nil
+
+}
+
+func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
+	pipelines, err := o.pipelineSvc.ListPipelines()
+	if err != nil {
+		return nil, fmt.Errorf("list pipelines: %w", err)
+	}
+	return pipelines, nil
 }
 
 func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
-	// try to read pipelinename from from manifest
-
 	data, err := o.ws.ReadPipelineManifest()
 	if err != nil {
-		log.Infof("No pipeline manifest in workspace for project %s\n.", color.HighlightUserInput(o.ProjectName()))
-		return "", nil
+		return "", err
 	}
 
 	pipeline, err := manifest.UnmarshalPipeline(data)
