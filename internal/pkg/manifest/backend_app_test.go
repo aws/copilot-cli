@@ -40,10 +40,10 @@ func TestNewBackendApp(t *testing.T) {
 						Port: 8080,
 					},
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -72,16 +72,16 @@ func TestNewBackendApp(t *testing.T) {
 					},
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-						Interval:    durationPointer(10 * time.Second),
-						Retries:     intPointer(2),
-						Timeout:     durationPointer(5 * time.Second),
-						StartPeriod: durationPointer(0 * time.Second),
+						Interval:    durationp(10 * time.Second),
+						Retries:     intp(2),
+						Timeout:     durationp(5 * time.Second),
+						StartPeriod: durationp(0 * time.Second),
 					},
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -126,10 +126,10 @@ func TestBackendApp_MarshalBinary(t *testing.T) {
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
-					Interval:    durationPointer(6 * time.Second),
-					Retries:     intPointer(0),
-					Timeout:     durationPointer(20 * time.Second),
-					StartPeriod: durationPointer(15 * time.Second),
+					Interval:    durationp(6 * time.Second),
+					Retries:     intp(0),
+					Timeout:     durationp(20 * time.Second),
+					StartPeriod: durationp(15 * time.Second),
 				},
 				Port: 8080,
 			},
@@ -166,11 +166,4 @@ func TestBackendApp_DockerfilePath(t *testing.T) {
 	})
 
 	require.Equal(t, "./subscribers/Dockerfile", manifest.DockerfilePath())
-}
-
-func durationPointer(dur time.Duration) *time.Duration {
-	return &dur
-}
-func intPointer(i int) *int {
-	return &i
 }

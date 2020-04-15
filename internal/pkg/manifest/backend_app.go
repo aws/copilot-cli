@@ -27,8 +27,8 @@ type BackendAppProps struct {
 type BackendApp struct {
 	App          `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
-	TaskConfig   `yaml:",inline"`
-	Environments map[string]TaskConfig `yaml:",flow"`
+	taskConfig   `yaml:",inline"`
+	Environments map[string]taskConfig `yaml:",flow"`
 
 	parser template.Parser
 }
@@ -99,10 +99,10 @@ func newDefaultBackendApp() *BackendApp {
 		App: App{
 			Type: BackendApplication,
 		},
-		TaskConfig: TaskConfig{
+		taskConfig: taskConfig{
 			CPU:    256,
 			Memory: 512,
-			Count:  1,
+			Count:  intp(1),
 		},
 	}
 }
@@ -110,14 +110,12 @@ func newDefaultBackendApp() *BackendApp {
 // newDefaultContainerHealthCheck returns container health check configuration
 // that's identical to a load balanced web application's defaults.
 func newDefaultContainerHealthCheck() *ContainerHealthCheck {
-	interval, timeout, startPeriod := 10*time.Second, 5*time.Second, 0*time.Second
-	retries := 2
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    &interval,
-		Retries:     &retries,
-		Timeout:     &timeout,
-		StartPeriod: &startPeriod,
+		Interval:    durationp(10 * time.Second),
+		Retries:     intp(2),
+		Timeout:     durationp(5 * time.Second),
+		StartPeriod: durationp(0 * time.Second),
 	}
 }
 

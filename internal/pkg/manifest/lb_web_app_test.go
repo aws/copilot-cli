@@ -74,10 +74,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 			inEnvNameToQuery: "prod-iad",
@@ -87,10 +87,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -100,10 +100,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  1,
+					Count:  intp(1),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
 						"DDB_TABLE_NAME": "awards",
@@ -123,7 +123,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 			inEnvNameToQuery: "prod-iad",
 			inEnvOverride: map[string]LoadBalancedWebAppConfig{
 				"prod-iad": {
-					TaskConfig: TaskConfig{
+					taskConfig: taskConfig{
 						CPU: 2046,
 						Variables: map[string]string{
 							"DDB_TABLE_NAME": "awards-prod",
@@ -140,10 +140,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    2046,
 					Memory: 1024,
-					Count:  1,
+					Count:  intp(1),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
 						"DDB_TABLE_NAME": "awards-prod",
@@ -166,10 +166,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  1,
+					Count:  intp(1),
 				},
 				Scaling: &AutoScalingConfig{
 					MinCount:     1,
@@ -185,10 +185,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						Path:            "/frontend*",
 						HealthCheckPath: "/healthcheck",
 					},
-					TaskConfig: TaskConfig{
+					taskConfig: taskConfig{
 						CPU:    2046,
 						Memory: 2046,
-						Count:  3,
+						Count:  intp(3),
 						Variables: map[string]string{
 							"LOG_LEVEL":      "WARN",
 							"DDB_TABLE_NAME": "awards-prod",
@@ -212,10 +212,10 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/frontend*",
 					HealthCheckPath: "/healthcheck",
 				},
-				TaskConfig: TaskConfig{
+				taskConfig: taskConfig{
 					CPU:    2046,
 					Memory: 2046,
-					Count:  3,
+					Count:  intp(3),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "WARN",
 						"DDB_TABLE_NAME": "awards-prod",

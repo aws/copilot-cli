@@ -55,10 +55,10 @@ environments:
 						LogsConfig: LogsConfig{
 							LogRetention: 30,
 						},
-						TaskConfig: TaskConfig{
+						taskConfig: taskConfig{
 							CPU:    512,
 							Memory: 1024,
-							Count:  1,
+							Count:  intp(1),
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
@@ -74,8 +74,8 @@ environments:
 					},
 					Environments: map[string]LoadBalancedWebAppConfig{
 						"test": {
-							TaskConfig: TaskConfig{
-								Count: 3,
+							taskConfig: taskConfig{
+								Count: intp(3),
 							},
 						},
 					},

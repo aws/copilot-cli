@@ -5,6 +5,8 @@
 package manifest
 
 import (
+	"time"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,13 +39,51 @@ type AppImageWithPort struct {
 	Port     uint16 `yaml:"port"`
 }
 
-// TaskConfig represents the resource boundaries and environment variables for the containers in the task.
-type TaskConfig struct {
+// taskConfig represents the resource boundaries and environment variables for the containers in the task.
+type taskConfig struct {
 	CPU       int               `yaml:"cpu"`
 	Memory    int               `yaml:"memory"`
-	Count     int               `yaml:"count"`
+	Count     *int              `yaml:"count"` // 0 is a valid value, so we want the default value to be nil.
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
+}
+
+func (tc taskConfig) apply(other taskConfig) taskConfig {
+	override := tc.deepcopy()
+	if other.CPU != 0 {
+		override.CPU = other.CPU
+	}
+	if other.Memory != 0 {
+		override.Memory = other.Memory
+	}
+	if other.Count != nil {
+		override.Count = intp(*other.Count)
+	}
+	for k, v := range other.Variables {
+		override.Variables[k] = v
+	}
+	for k, v := range other.Secrets {
+		override.Secrets[k] = v
+	}
+	return override
+}
+
+func (tc taskConfig) deepcopy() taskConfig {
+	vars := make(map[string]string, len(tc.Variables))
+	for k, v := range tc.Variables {
+		vars[k] = v
+	}
+	secrets := make(map[string]string, len(tc.Secrets))
+	for k, v := range tc.Secrets {
+		secrets[k] = v
+	}
+	return taskConfig{
+		CPU:       tc.CPU,
+		Memory:    tc.Memory,
+		Count:     intp(*tc.Count),
+		Variables: vars,
+		Secrets:   secrets,
+	}
 }
 
 // AppProps contains properties for creating a new manifest.
@@ -71,4 +111,12 @@ func UnmarshalApp(in []byte) (interface{}, error) {
 	default:
 		return nil, &ErrInvalidAppManifestType{Type: am.Type}
 	}
+}
+
+func intp(v int) *int {
+	return &v
+}
+
+func durationp(v time.Duration) *time.Duration {
+	return &v
 }

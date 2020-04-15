@@ -28,7 +28,7 @@ type LoadBalancedWebApp struct {
 // LoadBalancedWebAppConfig represents a load balanced web application with AWS Fargate as compute.
 type LoadBalancedWebAppConfig struct {
 	RoutingRule `yaml:"http,flow"`
-	TaskConfig  `yaml:",inline"`
+	taskConfig  `yaml:",inline"`
 	Scaling     *AutoScalingConfig `yaml:",flow"`
 	LogsConfig  `yaml:",flow"`
 }
@@ -88,10 +88,10 @@ func newDefaultLoadBalancedWebApp() *LoadBalancedWebApp {
 			RoutingRule: RoutingRule{
 				HealthCheckPath: "/",
 			},
-			TaskConfig: TaskConfig{
+			taskConfig: taskConfig{
 				CPU:    256,
 				Memory: 512,
-				Count:  1,
+				Count:  intp(1),
 			},
 			LogsConfig: LogsConfig{
 				LogRetention: LogRetentionInDays,
@@ -122,15 +122,6 @@ func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
 		return a.LoadBalancedWebAppConfig
 	}
 
-	// We don't want to modify the default settings, so deep copy into a "conf" variable.
-	envVars := make(map[string]string, len(a.Variables))
-	for k, v := range a.Variables {
-		envVars[k] = v
-	}
-	secrets := make(map[string]string, len(a.Secrets))
-	for k, v := range a.Secrets {
-		secrets[k] = v
-	}
 	var scaling *AutoScalingConfig
 	if a.Scaling != nil {
 		scaling = &AutoScalingConfig{
@@ -140,43 +131,22 @@ func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
 			TargetMemory: a.Scaling.TargetMemory,
 		}
 	}
+
+	// Override with fields set in the environment.
+	target := a.Environments[envName]
 	conf := LoadBalancedWebAppConfig{
 		RoutingRule: RoutingRule{
 			Path:            a.Path,
 			HealthCheckPath: a.HealthCheckPath,
 		},
-		TaskConfig: TaskConfig{
-			CPU:       a.CPU,
-			Memory:    a.Memory,
-			Count:     a.Count,
-			Variables: envVars,
-			Secrets:   secrets,
-		},
-		Scaling: scaling,
+		taskConfig: a.taskConfig.apply(target.taskConfig),
+		Scaling:    scaling,
 	}
-
-	// Override with fields set in the environment.
-	target := a.Environments[envName]
 	if target.RoutingRule.Path != "" {
 		conf.RoutingRule.Path = target.RoutingRule.Path
 	}
 	if target.RoutingRule.HealthCheckPath != "" {
 		conf.RoutingRule.HealthCheckPath = target.RoutingRule.HealthCheckPath
-	}
-	if target.CPU != 0 {
-		conf.CPU = target.CPU
-	}
-	if target.Memory != 0 {
-		conf.Memory = target.Memory
-	}
-	if target.Count != 0 {
-		conf.Count = target.Count
-	}
-	for k, v := range target.Variables {
-		conf.Variables[k] = v
-	}
-	for k, v := range target.Secrets {
-		conf.Secrets[k] = v
 	}
 	if target.Scaling != nil {
 		if conf.Scaling == nil {
