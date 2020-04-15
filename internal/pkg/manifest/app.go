@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"fmt"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -48,7 +49,7 @@ type TaskConfig struct {
 	Secrets   map[string]string `yaml:"secrets"`
 }
 
-func (tc TaskConfig) apply(other TaskConfig) TaskConfig {
+func (tc TaskConfig) copyAndApply(other TaskConfig) TaskConfig {
 	override := tc.deepcopy()
 	if other.CPU != 0 {
 		override.CPU = other.CPU
@@ -98,14 +99,24 @@ type AppProps struct {
 func UnmarshalApp(in []byte) (interface{}, error) {
 	am := App{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, &ErrUnmarshalAppManifest{parent: err}
+		return nil, fmt.Errorf("unmarshal to application manifest: %w", err)
 	}
 
 	switch am.Type {
 	case LoadBalancedWebApplication:
 		m := newDefaultLoadBalancedWebApp()
 		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, &ErrUnmarshalLBFargateManifest{parent: err}
+			return nil, fmt.Errorf("unmarshal to load balanced web application: %w", err)
+		}
+		return m, nil
+	case BackendApplication:
+		m := newDefaultBackendApp()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to backend application: %w", err)
+		}
+		if m.Image.HealthCheck != nil {
+			// Make sure that unset fields in the healthcheck gets a default value.
+			m.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
 		}
 		return m, nil
 	default:

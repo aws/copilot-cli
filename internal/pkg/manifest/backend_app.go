@@ -34,8 +34,8 @@ type BackendApp struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	AppImageWithPort
-	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"`
+	AppImageWithPort `yaml:",inline"`
+	HealthCheck      *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ContainerHealthCheck holds the configuration to determine if the application container is healthy.
@@ -100,7 +100,7 @@ func (a *BackendApp) ApplyEnv(envName string) TaskConfig {
 	if !ok {
 		return a.TaskConfig
 	}
-	return a.TaskConfig.apply(target)
+	return a.TaskConfig.copyAndApply(target)
 }
 
 // newDefaultBackendApp returns a backend application with minimal task sizes and a single replica.
@@ -129,6 +129,7 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	}
 }
 
+// apply overrides the healthcheck's fields if other has them set.
 func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
 	if other.Command != nil {
 		hc.Command = other.Command
@@ -143,6 +144,25 @@ func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
 		hc.Timeout = other.Timeout
 	}
 	if other.StartPeriod != nil {
+		hc.StartPeriod = other.StartPeriod
+	}
+}
+
+// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+	if hc.Command == nil && other.Command != nil {
+		hc.Command = other.Command
+	}
+	if hc.Interval == nil && other.Interval != nil {
+		hc.Interval = other.Interval
+	}
+	if hc.Retries == nil && other.Retries != nil {
+		hc.Retries = other.Retries
+	}
+	if hc.Timeout == nil && other.Timeout != nil {
+		hc.Timeout = other.Timeout
+	}
+	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
 }

@@ -43,7 +43,7 @@ type RoutingRule struct {
 	HealthCheckPath string `yaml:"healthcheck"`
 }
 
-func (r RoutingRule) apply(other RoutingRule) RoutingRule {
+func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
 	if other.Path != "" {
 		r.Path = other.Path
 	}
@@ -125,7 +125,7 @@ func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
 
 	// Override with fields set in the environment.
 	return LoadBalancedWebAppConfig{
-		RoutingRule: a.RoutingRule.apply(target.RoutingRule),
-		TaskConfig:  a.TaskConfig.apply(target.TaskConfig),
+		RoutingRule: a.RoutingRule.copyAndApply(target.RoutingRule),
+		TaskConfig:  a.TaskConfig.copyAndApply(target.TaskConfig),
 	}
 }
