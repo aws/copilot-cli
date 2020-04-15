@@ -26,15 +26,15 @@ type EnvApp struct {
 	Description string `json:"description"`
 }
 
-type EnvTags struct {
+type EnvTag struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-type Env struct {
-	About []*Environment `json:"about"`
-	Applications []*EnvApp `json:"applications"`
-	Tags []*EnvTags `json:"tags"`
+type EnvSummary struct {
+	Environment  []*Environment `json:"environment"`
+	Applications []*EnvApp      `json:"applications"`
+	Tags         []*EnvTag      `json:"tags"`
 }
 
 // EnvDescriber retrieves information about an environment.
@@ -58,7 +58,7 @@ func NewEnvDescriber(project, env string) (*EnvDescriber, error) {
 		return nil, err
 	}
 	return &EnvDescriber{
-		env: meta,
+		env:             meta,
 		store:           svc,
 		stackDescribers: make(map[string]stackDescriber),
 		ecsClient:       make(map[string]ecsService),
@@ -67,7 +67,7 @@ func NewEnvDescriber(project, env string) (*EnvDescriber, error) {
 }
 
 // JSONString returns the stringified WebApp struct with json format.
-func (w *Env) JSONString() (string, error) {
+func (w *EnvSummary) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -76,7 +76,7 @@ func (w *Env) JSONString() (string, error) {
 }
 
 // HumanString returns the stringified WebApp struct with human readable format.
-func (w *Env) HumanString() string {
+func (w *EnvSummary) HumanString() string {
 	// TODO
 	return ""
 }

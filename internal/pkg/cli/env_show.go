@@ -31,10 +31,10 @@ type showEnvVars struct {
 type showEnvOpts struct {
 	showEnvVars
 
-	w        io.Writer
-	storeSvc storeReader
-	describer envDescriber
-	initDescriber  func(opts *showEnvOpts) error
+	w             io.Writer
+	storeSvc      storeReader
+	describer     envDescriber
+	initDescriber func(opts *showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -99,14 +99,14 @@ func (o *showEnvOpts) Execute() error {
 		fmt.Fprintf(o.w, data)
 	} else {
 		fmt.Println(env)
-	//} else {
-	//	fmt.Fprintf(o.w, env.HumanString())
+		//} else {
+		//	fmt.Fprintf(o.w, env.HumanString())
 	}
 
 	return nil
 }
 
-func (o *showEnvOpts) retrieveData() (*describe.Env, error) {
+func (o *showEnvOpts) retrieveData() (*describe.EnvSummary, error) {
 	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment: #{err}")
@@ -126,15 +126,15 @@ func (o *showEnvOpts) retrieveData() (*describe.Env, error) {
 	var appsToSerialize []*describe.EnvApp
 	for _, app := range apps {
 		appsToSerialize = append(appsToSerialize, &describe.EnvApp{
-			Name: app.Name,
+			Name:        app.Name,
 			Description: app.Type,
 		})
 	}
-	var tags []*describe.EnvTags
-	return &describe.Env{
-		About: envToSerialize,
+	var tags []*describe.EnvTag
+	return &describe.EnvSummary{
+		Environment:  envToSerialize,
 		Applications: appsToSerialize,
-		Tags: tags,
+		Tags:         tags,
 	}, nil
 }
 
