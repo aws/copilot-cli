@@ -107,6 +107,10 @@ type storeReader interface {
 	archer.ApplicationGetter
 }
 
+type workspaceDeleter interface {
+	DeleteAll() error
+}
+
 type wsAppManifestReader interface {
 	ReadAppManifest(appName string) ([]byte, error)
 }
@@ -232,4 +236,17 @@ type envDescriber interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
+}
+
+type executor interface {
+	Execute() error
+}
+
+type deletePipelineRunner interface {
+	Run() error
+}
+
+type askExecutor interface {
+	Ask() error
+	executor
 }

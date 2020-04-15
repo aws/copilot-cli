@@ -651,10 +651,10 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.inAppName, manifest.AppManifest.Name)
+				require.Equal(t, tc.inAppName, manifest.App.Name)
 				require.Equal(t, tc.inAppPort, manifest.Image.Port)
 				require.Equal(t, tc.inDockerfilePath, manifest.Image.AppImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.LBFargateConfig.RoutingRule.Path)
+				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebAppConfig.RoutingRule.Path)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

@@ -55,11 +55,7 @@ Conditions:
   HTTPRootPath: # If we're using path based routing and use the root path, we have some special logic
     !Equals [!Ref RulePath, "/"]
 Resources:
-  LogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Join ['', [/ecs/, !Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
-      RetentionInDays: !Ref LogRetention
+{{include "loggroup" . | indent 2}}
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -78,33 +74,7 @@ Resources:
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-          # We pipe certain environment variables directly into the task definition.
-          # This lets customers have access to, for example, their LB endpoint - which they'd
-          # have no way of otherwise determining.
-          Environment:
-          - Name: ECS_CLI_PROJECT_NAME
-            Value: !Sub '${ProjectName}'
-          - Name: ECS_APP_DISCOVERY_ENDPOINT
-            Value: !Sub '${ProjectName}.local'
-          - Name: ECS_CLI_ENVIRONMENT_NAME
-            Value: !Sub '${EnvName}'
-          - Name: ECS_CLI_APP_NAME
-            Value: !Sub '${AppName}'
-          - Name: ECS_CLI_LB_DNS
-            Value:
-              Fn::ImportValue:
-                !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
-          - Name: {{$name}}
-            Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
-          - Name: {{toSnakeCase $output.Name}}
-            Value:
-              Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
-          Secrets:{{range $name, $valueFrom := .App.Secrets}}
-          - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
-          - Name: {{toSnakeCase $secret.Name}}
-            ValueFrom:
-              Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
+{{include "envvars" . | indent 10}}
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -112,111 +82,10 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: ecs
 
-  ExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName, SecretsPolicy]]
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'ssm:GetParameters'
-                  - 'secretsmanager:GetSecretValue'
-                  - 'kms:Decrypt'
-                Resource:
-                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
-                  - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
-                  - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+{{include "executionrole" . | indent 2}}
 
-  TaskRole:
-    Type: AWS::IAM::Role
-    Properties:{{if gt (len (filterManagedPolicies .AddonsOutputs)) 0}}
-      ManagedPolicyArns:{{range $managedPolicy := (filterManagedPolicies .AddonsOutputs)}}
-      - Fn::GetAtt: [AddonsStack, Outputs.{{$managedPolicy.Name}}]{{end}}{{end}}
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Policies:
-        - PolicyName: 'DenyIAMExceptTaggedRoles'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Deny'
-                Action: 'iam:*'
-                Resource: '*'
-              - Effect: 'Allow'
-                Action: 'sts:AssumeRole'
-                Resource:
-                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
-                Condition:
-                  StringEquals:
-                    'iam:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                    'iam:ResourceTag/ecs-environment': !Sub '${EnvName}'
-        - PolicyName: 'AllowPrefixedResources'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action: '*'
-                Resource:
-                  - !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:redshift:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+{{include "taskrole" . | indent 2}}
 
-                  - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:kinesis:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                  - !Sub 'arn:aws:kinesisanalytics:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-        - PolicyName: 'AllowTaggedResources' # See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action: '*'
-                Resource: '*'
-                Condition:
-                  StringEquals:
-                    'aws:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                    'aws:ResourceTag/ecs-environment': !Sub '${EnvName}'
-              - Effect: 'Allow'
-                Action: '*'
-                Resource: '*'
-                Condition:
-                  StringEquals:
-                    'secretsmanager:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                    'secretsmanager:ResourceTag/ecs-environment': !Sub '${EnvName}'
-        - PolicyName: 'CloudWatchMetricsAndDashboard'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'cloudwatch:PutMetricData'
-                Resource: '*'
-              - Effect: 'Allow'
-                Action:
-                  - 'cloudwatch:GetDashboard'
-                  - 'cloudwatch:ListDashboards'
-                  - 'cloudwatch:PutDashboard'
-                  - 'cloudwatch:ListMetrics'
-                Resource: '*'
   DiscoveryService:
     Type: AWS::ServiceDiscovery::Service
     Properties:
@@ -238,34 +107,12 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated
     Properties:
-      Cluster:
-        Fn::ImportValue:
-          !Sub '${ProjectName}-${EnvName}-ClusterId'
-      TaskDefinition: !Ref TaskDefinition
+{{include "service-base-properties" . | indent 6}}
       DeploymentConfiguration:
         MinimumHealthyPercent: 100
         MaximumPercent: 200
-      DesiredCount: !Ref TaskCount
-      PropagateTags: SERVICE
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
-      LaunchType: FARGATE
-      NetworkConfiguration:
-        AwsvpcConfiguration:
-          AssignPublicIp: ENABLED
-          Subnets:
-            - Fn::Select:
-              - 0
-              - Fn::Split:
-                - ','
-                - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PublicSubnets'
-            - Fn::Select:
-              - 1
-              - Fn::Split:
-                - ','
-                - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PublicSubnets'
-          SecurityGroups:
-            - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-EnvironmentSecurityGroup'
       LoadBalancers:
         - ContainerName: !Ref AppName
           ContainerPort: !Ref ContainerPort
@@ -451,13 +298,4 @@ Resources:
       Timeout: "1"
       Count: 0
 
-  AddonsStack:
-    Type: AWS::CloudFormation::Stack
-    Condition: HasAddons
-    Properties:
-      Parameters:
-        Project: !Ref ProjectName
-        Env: !Ref EnvName
-        App: !Ref AppName
-      TemplateURL:
-        !Ref AddonsTemplateURL
+{{include "addons" . | indent 2}}
