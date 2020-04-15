@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -32,6 +33,8 @@ type showEnvOpts struct {
 
 	w        io.Writer
 	storeSvc storeReader
+	describer envDescriber
+	initDescriber  func(opts *showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -44,7 +47,14 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		showEnvVars: vars,
 		storeSvc:    ssmStore,
 		w:           log.OutputWriter,
-		// initDescriber: make EnvDescriber here
+		initDescriber: func(o *showEnvOpts) error {
+			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
+			if err != nil {
+				return fmt.Errorf("creating describer for environment %s in project %s: %w", o.envName, o.ProjectName(), err)
+			}
+			o.describer = d
+			return nil
+		},
 	}, nil
 }
 
@@ -74,7 +84,58 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
+	if err := o.initDescriber(o); err != nil {
+		return err
+	}
+	env, err := o.retrieveData()
+	if err != nil {
+		return err
+	}
+	if o.shouldOutputJSON {
+		data, err := env.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(o.w, data)
+	} else {
+		fmt.Println(env)
+	//} else {
+	//	fmt.Fprintf(o.w, env.HumanString())
+	}
+
 	return nil
+}
+
+func (o *showEnvOpts) retrieveData() (*describe.Env, error) {
+	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: #{err}")
+	}
+
+	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("list applications: #{err}")
+	}
+	var envToSerialize []*describe.Environment
+	envToSerialize = append(envToSerialize, &describe.Environment{
+		Name:       env.Name,
+		Production: false,
+		Region:     "",
+		AccountID:  "",
+	})
+	var appsToSerialize []*describe.EnvApp
+	for _, app := range apps {
+		appsToSerialize = append(appsToSerialize, &describe.EnvApp{
+			Name: app.Name,
+			Description: app.Type,
+		})
+	}
+	var tags []*describe.EnvTags
+	return &describe.Env{
+		About: envToSerialize,
+		Applications: appsToSerialize,
+		Tags: tags,
+	}, nil
 }
 
 func (o *showEnvOpts) askProject() error {
