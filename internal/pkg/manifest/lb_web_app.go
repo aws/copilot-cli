@@ -28,7 +28,7 @@ type LoadBalancedWebApp struct {
 // LoadBalancedWebAppConfig represents a load balanced web application with AWS Fargate as compute.
 type LoadBalancedWebAppConfig struct {
 	RoutingRule `yaml:"http,flow"`
-	taskConfig  `yaml:",inline"`
+	TaskConfig  `yaml:",inline"`
 	LogsConfig  `yaml:",flow"`
 }
 
@@ -88,7 +88,7 @@ func newDefaultLoadBalancedWebApp() *LoadBalancedWebApp {
 			RoutingRule: RoutingRule{
 				HealthCheckPath: "/",
 			},
-			taskConfig: taskConfig{
+			TaskConfig: TaskConfig{
 				CPU:    256,
 				Memory: 512,
 				Count:  intp(1),
@@ -118,14 +118,14 @@ func (a *LoadBalancedWebApp) DockerfilePath() string {
 // ApplyEnv returns the application configuration with environment overrides.
 // If the environment passed in does not have any overrides then we return the default values.
 func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
-	if _, ok := a.Environments[envName]; !ok {
+	target, ok := a.Environments[envName]
+	if !ok {
 		return a.LoadBalancedWebAppConfig
 	}
 
 	// Override with fields set in the environment.
-	target := a.Environments[envName]
 	return LoadBalancedWebAppConfig{
 		RoutingRule: a.RoutingRule.apply(target.RoutingRule),
-		taskConfig:  a.taskConfig.apply(target.taskConfig),
+		TaskConfig:  a.TaskConfig.apply(target.TaskConfig),
 	}
 }

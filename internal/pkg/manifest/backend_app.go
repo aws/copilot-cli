@@ -27,8 +27,8 @@ type BackendAppProps struct {
 type BackendApp struct {
 	App          `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
-	taskConfig   `yaml:",inline"`
-	Environments map[string]taskConfig `yaml:",flow"`
+	TaskConfig   `yaml:",inline"`
+	Environments map[string]TaskConfig `yaml:",flow"`
 
 	parser template.Parser
 }
@@ -93,13 +93,23 @@ func (a *BackendApp) DockerfilePath() string {
 	return a.Image.Build
 }
 
+// ApplyEnv returns the application configuration with environment overrides.
+// If the environment passed in does not have any overrides then we return the default values.
+func (a *BackendApp) ApplyEnv(envName string) TaskConfig {
+	target, ok := a.Environments[envName]
+	if !ok {
+		return a.TaskConfig
+	}
+	return a.TaskConfig.apply(target)
+}
+
 // newDefaultBackendApp returns a backend application with minimal task sizes and a single replica.
 func newDefaultBackendApp() *BackendApp {
 	return &BackendApp{
 		App: App{
 			Type: BackendApplication,
 		},
-		taskConfig: taskConfig{
+		TaskConfig: TaskConfig{
 			CPU:    256,
 			Memory: 512,
 			Count:  intp(1),

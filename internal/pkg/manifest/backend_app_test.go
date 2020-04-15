@@ -40,7 +40,7 @@ func TestNewBackendApp(t *testing.T) {
 						Port: 8080,
 					},
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
 					Count:  intp(1),
@@ -78,7 +78,7 @@ func TestNewBackendApp(t *testing.T) {
 						StartPeriod: durationp(0 * time.Second),
 					},
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
 					Count:  intp(1),
@@ -166,4 +166,66 @@ func TestBackendApp_DockerfilePath(t *testing.T) {
 	})
 
 	require.Equal(t, "./subscribers/Dockerfile", manifest.DockerfilePath())
+}
+
+func TestBackendApp_ApplyEnv(t *testing.T) {
+	testCases := map[string]struct {
+		app       *BackendApp
+		inEnvName string
+
+		wanted TaskConfig
+	}{
+		"environment doesn't exist": {
+			app: &BackendApp{
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(1),
+				},
+			},
+			inEnvName: "test",
+
+			wanted: TaskConfig{
+				CPU:    256,
+				Memory: 256,
+				Count:  intp(1),
+			},
+		},
+		"uses env overrides": {
+			app: &BackendApp{
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(1),
+				},
+				Environments: map[string]TaskConfig{
+					"test": {
+						Count: intp(0),
+						Variables: map[string]string{
+							"LOG_LEVEL": "DEBUG",
+						},
+					},
+				},
+			},
+			inEnvName: "test",
+
+			wanted: TaskConfig{
+				CPU:    256,
+				Memory: 256,
+				Count:  intp(0),
+				Variables: map[string]string{
+					"LOG_LEVEL": "DEBUG",
+				},
+				Secrets: map[string]string{},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.app.ApplyEnv(tc.inEnvName)
+
+			require.Equal(t, tc.wanted, got)
+		})
+	}
 }

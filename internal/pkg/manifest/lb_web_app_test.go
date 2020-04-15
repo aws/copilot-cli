@@ -74,7 +74,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  intp(1),
@@ -87,7 +87,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  intp(1),
@@ -100,7 +100,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  intp(1),
@@ -117,7 +117,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 			inEnvNameToQuery: "prod-iad",
 			inEnvOverride: map[string]LoadBalancedWebAppConfig{
 				"prod-iad": {
-					taskConfig: taskConfig{
+					TaskConfig: TaskConfig{
 						CPU: 2046,
 						Variables: map[string]string{
 							"DDB_TABLE_NAME": "awards-prod",
@@ -131,7 +131,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    2046,
 					Memory: 1024,
 					Count:  intp(1),
@@ -152,7 +152,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  intp(1),
@@ -165,7 +165,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 						Path:            "/frontend*",
 						HealthCheckPath: "/healthcheck",
 					},
-					taskConfig: taskConfig{
+					TaskConfig: TaskConfig{
 						CPU:    2046,
 						Memory: 2046,
 						Count:  intp(3),
@@ -186,7 +186,7 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 					Path:            "/frontend*",
 					HealthCheckPath: "/healthcheck",
 				},
-				taskConfig: taskConfig{
+				TaskConfig: TaskConfig{
 					CPU:    2046,
 					Memory: 2046,
 					Count:  intp(3),

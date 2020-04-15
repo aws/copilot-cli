@@ -39,8 +39,8 @@ type AppImageWithPort struct {
 	Port     uint16 `yaml:"port"`
 }
 
-// taskConfig represents the resource boundaries and environment variables for the containers in the task.
-type taskConfig struct {
+// TaskConfig represents the resource boundaries and environment variables for the containers in the task.
+type TaskConfig struct {
 	CPU       int               `yaml:"cpu"`
 	Memory    int               `yaml:"memory"`
 	Count     *int              `yaml:"count"` // 0 is a valid value, so we want the default value to be nil.
@@ -48,7 +48,7 @@ type taskConfig struct {
 	Secrets   map[string]string `yaml:"secrets"`
 }
 
-func (tc taskConfig) apply(other taskConfig) taskConfig {
+func (tc TaskConfig) apply(other TaskConfig) TaskConfig {
 	override := tc.deepcopy()
 	if other.CPU != 0 {
 		override.CPU = other.CPU
@@ -68,7 +68,7 @@ func (tc taskConfig) apply(other taskConfig) taskConfig {
 	return override
 }
 
-func (tc taskConfig) deepcopy() taskConfig {
+func (tc TaskConfig) deepcopy() TaskConfig {
 	vars := make(map[string]string, len(tc.Variables))
 	for k, v := range tc.Variables {
 		vars[k] = v
@@ -77,7 +77,7 @@ func (tc taskConfig) deepcopy() taskConfig {
 	for k, v := range tc.Secrets {
 		secrets[k] = v
 	}
-	return taskConfig{
+	return TaskConfig{
 		CPU:       tc.CPU,
 		Memory:    tc.Memory,
 		Count:     intp(*tc.Count),
