@@ -70,12 +70,13 @@ var (
 )
 
 const (
-	projectFlagDescription = "Name of the project."
-	appFlagDescription     = "Name of the application."
-	envFlagDescription     = "Name of the environment."
-	profileFlagDescription = "Name of the profile."
-	yesFlagDescription     = "Skips confirmation prompt."
-	jsonFlagDescription    = "Optional. Outputs in JSON format."
+	projectFlagDescription  = "Name of the project."
+	appFlagDescription      = "Name of the application."
+	envFlagDescription      = "Name of the environment."
+	pipelineFlagDescription = "Name of the pipeline."
+	profileFlagDescription  = "Name of the profile."
+	yesFlagDescription      = "Skips confirmation prompt."
+	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	dockerFileFlagDescription   = "Path to the Dockerfile."
 	imageTagFlagDescription     = `Optional. The application's image tag.`

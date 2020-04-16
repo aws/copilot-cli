@@ -73,7 +73,6 @@ var _ = Describe("Multiple App Project", func() {
 				AppName:    "front-end",
 				AppType:    "Load Balanced Web App",
 				Dockerfile: "./front-end/Dockerfile",
-				AppPort:    "80",
 			})
 
 			_, backEndInitErr = cli.AppInit(&client.AppInitRequest{

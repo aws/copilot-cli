@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package manifest
@@ -14,27 +14,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLBFargateManifest_MarshalBinary(t *testing.T) {
+func TestLoadBalancedWebApp_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *LBFargateManifest)
+		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebApp)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LBFargateManifest) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebApp) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
-				m.EXPECT().Parse(lbFargateManifestPath, *manifest).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(lbWebAppManifestPath, *manifest).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
 		},
 		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LBFargateManifest) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebApp) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
-				m.EXPECT().Parse(lbFargateManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(lbWebAppManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -47,7 +47,7 @@ func TestLBFargateManifest_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			manifest := &LBFargateManifest{}
+			manifest := &LoadBalancedWebApp{}
 			tc.mockDependencies(ctrl, manifest)
 
 			// WHEN
@@ -60,21 +60,21 @@ func TestLBFargateManifest_MarshalBinary(t *testing.T) {
 	}
 }
 
-func TestLBFargateManifest_EnvConf(t *testing.T) {
+func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
-		inDefaultConfig  LBFargateConfig
+		inDefaultConfig  LoadBalancedWebAppConfig
 		inEnvNameToQuery string
-		inEnvOverride    map[string]LBFargateConfig
+		inEnvOverride    map[string]LoadBalancedWebAppConfig
 
-		wantedConfig LBFargateConfig
+		wantedConfig LoadBalancedWebAppConfig
 	}{
 		"with no existing environments": {
-			inDefaultConfig: LBFargateConfig{
+			inDefaultConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  1,
@@ -82,12 +82,12 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			},
 			inEnvNameToQuery: "prod-iad",
 
-			wantedConfig: LBFargateConfig{
+			wantedConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  1,
@@ -95,12 +95,12 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			},
 		},
 		"with partial overrides": {
-			inDefaultConfig: LBFargateConfig{
+			inDefaultConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  1,
@@ -121,9 +121,9 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 				},
 			},
 			inEnvNameToQuery: "prod-iad",
-			inEnvOverride: map[string]LBFargateConfig{
+			inEnvOverride: map[string]LoadBalancedWebAppConfig{
 				"prod-iad": {
-					ContainersConfig: ContainersConfig{
+					TaskConfig: TaskConfig{
 						CPU: 2046,
 						Variables: map[string]string{
 							"DDB_TABLE_NAME": "awards-prod",
@@ -135,12 +135,12 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 				},
 			},
 
-			wantedConfig: LBFargateConfig{
+			wantedConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    2046,
 					Memory: 1024,
 					Count:  1,
@@ -161,12 +161,12 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 			},
 		},
 		"with complete override": {
-			inDefaultConfig: LBFargateConfig{
+			inDefaultConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/awards/*",
+					Path:            "/awards/*",
 					HealthCheckPath: "/",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
 					Count:  1,
@@ -179,13 +179,13 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 				},
 			},
 			inEnvNameToQuery: "prod-iad",
-			inEnvOverride: map[string]LBFargateConfig{
+			inEnvOverride: map[string]LoadBalancedWebAppConfig{
 				"prod-iad": {
 					RoutingRule: RoutingRule{
-						Path: "/frontend*",
+						Path:            "/frontend*",
 						HealthCheckPath: "/healthcheck",
 					},
-					ContainersConfig: ContainersConfig{
+					TaskConfig: TaskConfig{
 						CPU:    2046,
 						Memory: 2046,
 						Count:  3,
@@ -207,12 +207,12 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 				},
 			},
 
-			wantedConfig: LBFargateConfig{
+			wantedConfig: LoadBalancedWebAppConfig{
 				RoutingRule: RoutingRule{
-					Path: "/frontend*",
+					Path:            "/frontend*",
 					HealthCheckPath: "/healthcheck",
 				},
-				ContainersConfig: ContainersConfig{
+				TaskConfig: TaskConfig{
 					CPU:    2046,
 					Memory: 2046,
 					Count:  3,
@@ -238,17 +238,17 @@ func TestLBFargateManifest_EnvConf(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			m := &LBFargateManifest{
-				LBFargateConfig: tc.inDefaultConfig,
-				Environments:    tc.inEnvOverride,
+			m := &LoadBalancedWebApp{
+				LoadBalancedWebAppConfig: tc.inDefaultConfig,
+				Environments:             tc.inEnvOverride,
 			}
 
 			// WHEN
-			conf := m.EnvConf(tc.inEnvNameToQuery)
+			conf := m.ApplyEnv(tc.inEnvNameToQuery)
 
 			// THEN
 			require.Equal(t, tc.wantedConfig, conf, "returned configuration should have overrides from the environment")
-			require.Equal(t, m.LBFargateConfig, tc.inDefaultConfig, "values in the default configuration should not be overwritten")
+			require.Equal(t, m.LoadBalancedWebAppConfig, tc.inDefaultConfig, "values in the default configuration should not be overwritten")
 		})
 	}
 }

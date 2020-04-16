@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package deploy holds the structures to deploy infrastructure resources.
@@ -12,7 +12,7 @@ import (
 
 // CreateLBFargateAppInput holds the fields required to deploy a load-balanced AWS Fargate application.
 type CreateLBFargateAppInput struct {
-	App            *manifest.LBFargateManifest
+	App            *manifest.LoadBalancedWebApp
 	Env            *archer.Environment
 	ImageRepoURL   string
 	ImageTag       string

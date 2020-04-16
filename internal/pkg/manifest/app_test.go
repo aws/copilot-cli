@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package manifest
@@ -42,12 +42,12 @@ environments:
     count: 3
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*LBFargateManifest)
+				actualManifest, ok := i.(*LoadBalancedWebApp)
 				require.True(t, ok)
-				wantedManifest := &LBFargateManifest{
-					AppManifest: AppManifest{Name: "frontend", Type: LoadBalancedWebApplication},
-					Image:       ImageWithPort{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
-					LBFargateConfig: LBFargateConfig{
+				wantedManifest := &LoadBalancedWebApp{
+					App:   App{Name: "frontend", Type: LoadBalancedWebApplication},
+					Image: AppImageWithPort{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
+					LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
 						RoutingRule: RoutingRule{
 							Path:            "app",
 							HealthCheckPath: "/",
@@ -55,7 +55,7 @@ environments:
 						LogsConfig: LogsConfig{
 							LogRetention: 30,
 						},
-						ContainersConfig: ContainersConfig{
+						TaskConfig: TaskConfig{
 							CPU:    512,
 							Memory: 1024,
 							Count:  1,
@@ -72,9 +72,9 @@ environments:
 							TargetMemory: 60.0,
 						},
 					},
-					Environments: map[string]LBFargateConfig{
+					Environments: map[string]LoadBalancedWebAppConfig{
 						"test": {
-							ContainersConfig: ContainersConfig{
+							TaskConfig: TaskConfig{
 								Count: 3,
 							},
 						},

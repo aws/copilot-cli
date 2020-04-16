@@ -147,6 +147,18 @@ func (ws *Workspace) ReadAppManifest(appName string) ([]byte, error) {
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under ecs-project/pipeline.yml.
 func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
+	pmPath, err := ws.pipelineManifestPath()
+	if err != nil {
+		return nil, err
+	}
+	manifestExists, err := ws.fsUtils.Exists(pmPath)
+
+	if err != nil {
+		return nil, err
+	}
+	if !manifestExists {
+		return nil, ErrNoPipelineInWorkspace
+	}
 	return ws.read(pipelineFileName)
 }
 
@@ -242,6 +254,15 @@ func (ws *Workspace) writeSummary(projectName string) error {
 		return err
 	}
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
+}
+
+func (ws *Workspace) pipelineManifestPath() (string, error) {
+	manifestPath, err := ws.projectDirPath()
+	if err != nil {
+		return "", err
+	}
+	pipelineManifestPath := filepath.Join(manifestPath, pipelineFileName)
+	return pipelineManifestPath, nil
 }
 
 func (ws *Workspace) summaryPath() (string, error) {

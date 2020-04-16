@@ -1,9 +1,15 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package workspace
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
+var ErrNoPipelineInWorkspace = errors.New("no pipeline manifest found in the workspace")
 
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {

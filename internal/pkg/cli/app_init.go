@@ -1,5 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package cli
 
@@ -13,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -37,8 +37,8 @@ Deployed resources (such as your service, logs) will contain this app's name and
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 
-	fmtAppInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
-	fmtAppInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
+	appInitAppPortPrompt     = "Which port do you want customer traffic sent to?"
+	appInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
@@ -46,6 +46,13 @@ const (
 	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
+)
+
+const (
+	fmtParsePortFromDockerfileStart    = "Parsing dockerfile at path %s for application %s...\n"
+	parseFromDockerfileTooManyPorts    = "It looks like your Dockerfile exposes more than one port.\n"
+	fmtParseFromDockerfileNoPort       = "Couldn't find an exposed port in dockerfile for application %s.\n"
+	fmtParsePortFromDockerfileComplete = "It looks like your Dockerfile exposes port %s. We'll use that to route traffic to your container from your load balancer.\n"
 )
 
 const (
@@ -70,12 +77,16 @@ type initAppOpts struct {
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
 	prog         progress
+	df           dockerfileParser
 
 	// Caches variables
 	proj *archer.Project
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	// sets up Dockerfile parser using fs and input path
+	setupParser func(*initAppOpts)
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -104,6 +115,10 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		ws:           ws,
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
+
+		setupParser: func(o *initAppOpts) {
+			o.df = dockerfile.New(o.fs, o.DockerfilePath)
+		},
 	}, nil
 }
 
@@ -220,9 +235,9 @@ func (o *initAppOpts) createManifest() (string, error) {
 	return relPath, nil
 }
 
-func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManifest, error) {
-	props := &manifest.LBFargateManifestProps{
-		AppManifestProps: &manifest.AppManifestProps{
+func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWebApp, error) {
+	props := &manifest.LoadBalancedWebAppProps{
+		AppProps: &manifest.AppProps{
 			AppName:    o.AppName,
 			Dockerfile: o.DockerfilePath,
 		},
@@ -241,7 +256,7 @@ func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LBFargateManife
 			break
 		}
 	}
-	return manifest.NewLoadBalancedFargateManifest(props), nil
+	return manifest.NewLoadBalancedWebApp(props), nil
 }
 
 func (o *initAppOpts) askAppType() error {
@@ -301,15 +316,44 @@ func (o *initAppOpts) askDockerfile() error {
 }
 
 func (o *initAppOpts) askAppPort() error {
+	// Use flag before anything else
 	if o.AppPort != 0 {
 		return nil
 	}
 
+	log.Infof(fmtParsePortFromDockerfileStart,
+		color.HighlightUserInput(o.DockerfilePath),
+		color.HighlightUserInput(o.AppName),
+	)
+
+	o.setupParser(o)
+	ports, err := o.df.GetExposedPorts()
+	// Ignore any errors in dockerfile parsing--we'll use the default instead.
+	if err != nil {
+		log.Debugln(err.Error())
+	}
+	var defaultPort = defaultAppPortString
+	switch len(ports) {
+	case 0:
+		log.Infof(fmtParseFromDockerfileNoPort,
+			color.HighlightUserInput(o.AppName),
+		)
+	case 1:
+		o.AppPort = ports[0]
+		log.Successf(fmtParsePortFromDockerfileComplete,
+			color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
+		)
+		return nil
+	default:
+		defaultPort = strconv.Itoa(int(ports[0]))
+		log.Infoln(parseFromDockerfileTooManyPorts)
+	}
+
 	port, err := o.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppPortPrompt),
-		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
+		fmt.Sprintf(appInitAppPortPrompt),
+		fmt.Sprintf(appInitAppPortHelpPrompt),
 		validateApplicationPort,
-		prompt.WithDefaultInput(defaultAppPortString),
+		prompt.WithDefaultInput(defaultPort),
 	)
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)

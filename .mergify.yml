@@ -7,7 +7,7 @@ pull_request_rules:
       - -approved-reviews-by~=author
       - status-success=AWS CodeBuild us-west-2 (ecs-cli-v2-ci)
       - status-success=Semantic Pull Request
-      - label!=WIP
+      - -label~=(WIP|do-not-merge)
       - -title~=(WIP|wip)
       - -merged
       - -closed

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
@@ -104,6 +105,10 @@ type storeReader interface {
 	archer.EnvironmentGetter
 	archer.ApplicationLister
 	archer.ApplicationGetter
+}
+
+type workspaceDeleter interface {
+	DeleteAll() error
 }
 
 type wsAppManifestReader interface {
@@ -213,10 +218,31 @@ type domainValidator interface {
 	DomainExists(domainName string) (bool, error)
 }
 
+type dockerfileParser interface {
+	GetExposedPorts() ([]uint16, error)
+}
+
 type serviceArnGetter interface {
 	GetServiceArn(envName string) (*ecs.ServiceArn, error)
 }
 
 type statusDescriber interface {
 	Describe() (*describe.WebAppStatusDesc, error)
+}
+
+type pipelineGetter interface {
+	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
+}
+
+type executor interface {
+	Execute() error
+}
+
+type deletePipelineRunner interface {
+	Run() error
+}
+
+type askExecutor interface {
+	Ask() error
+	executor
 }

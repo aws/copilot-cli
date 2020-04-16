@@ -15,10 +15,10 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/build/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -341,16 +341,24 @@ func (o *appDeployOpts) pushToECRRepo() error {
 }
 
 func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
+	type dfPath interface {
+		DockerfilePath() string
+	}
+
 	manifestBytes, err := o.workspaceService.ReadAppManifest(o.AppName)
 	if err != nil {
 		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
 	}
 
-	mf, err := manifest.UnmarshalApp(manifestBytes)
+	app, err := manifest.UnmarshalApp(manifestBytes)
 	if err != nil {
 		return "", fmt.Errorf("unmarshal app manifest: %w", err)
 	}
 
+	mf, ok := app.(dfPath)
+	if !ok {
+		return "", fmt.Errorf("application %s does not have a dockerfile path", o.AppName)
+	}
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
 }
 

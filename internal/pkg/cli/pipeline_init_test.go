@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -14,8 +14,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -294,7 +294,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 }
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
-	fileExistsErr := &workspace.ErrFileExists{ FileName: "buildspec.yml" }
+	fileExistsErr := &workspace.ErrFileExists{FileName: "buildspec.yml"}
 	testCases := map[string]struct {
 		inEnvironments []string
 		inGitHubToken  string
