@@ -21,7 +21,7 @@ type Application struct {
 type Project struct {
 	Name string         `json:"name"`
 	URI  string         `json:"uri"`
-	Envs []*Environment `json:"environments"`
+	Envs []*EnvironmentSummary `json:"environments"`
 	Apps []*Application `json:"applications"`
 }
 
