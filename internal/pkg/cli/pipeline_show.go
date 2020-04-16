@@ -6,12 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -37,6 +39,7 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
+	w           io.Writer
 	ws          wsPipelineReader
 	store       applicationStore
 	pipelineSvc pipelineGetter
@@ -65,6 +68,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		store:            store,
 		pipelineSvc:      codepipeline.New(defaultSession),
 		sel:              selector.NewSelect(vars.prompt, store),
+		w:                log.OutputWriter,
 	}
 	return opts, nil
 }
@@ -129,7 +133,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for project %s\n.", color.HighlightUserInput(o.AppName()))
+		log.Infof("No pipelines found for project %s.\n", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 
@@ -179,7 +183,30 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 
 // Execute shows details about the pipeline.
 func (o *showPipelineOpts) Execute() error {
-	fmt.Printf("Pipeline to show: %+v\n", o.pipelineName) // TODO Placeholder
+	if o.pipelineName == "" {
+		return nil
+	}
+
+	describer, err := describe.NewPipelineDescriber(o.pipelineName, o.shouldOutputResources)
+	if err != nil {
+		return err
+	}
+
+	pipeline, err := describer.Describe()
+	if err != nil {
+		return err
+	}
+
+	if o.shouldOutputJSON {
+		data, err := pipeline.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(o.w, data)
+	} else {
+		fmt.Fprintf(o.w, pipeline.HumanString())
+	}
+
 	return nil
 }
 

@@ -316,6 +316,10 @@ type resourceGroupsClient interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
+type pipelineDescriber interface {
+	Describe() (*describe.Pipeline, error)
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)

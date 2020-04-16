@@ -6,6 +6,7 @@ package codepipeline
 
 import (
 	"fmt"
+	"time"
 
 	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
@@ -31,7 +32,20 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name string `json:"name"`
+	Name      string  `json:"name"`
+	Region    string  `json:"region"`
+	AccountID string  `json:"accountId"`
+	Stages    []Stage `json:"stages"`
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
+}
+
+// Stage wraps the codepipeline pipeline stage
+type Stage struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Provider string `json:"provider"`
+	Details  string `json:"details"`
 }
 
 // New returns a CodePipeline client configured against the input session.
@@ -52,11 +66,63 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline %s: %w", name, err)
 	}
-	pipeline := &Pipeline{
-		Name: aws.StringValue(resp.Pipeline.Name),
+
+	pipeline := resp.Pipeline
+	metadata := resp.Metadata
+	arn := aws.StringValue(metadata.PipelineArn)
+	region, err := c.getPipelineRegion(arn)
+	if err != nil {
+		return nil, err
+	}
+	accountId, err := c.getPipelineAccountId(arn)
+	if err != nil {
+		return nil, err
 	}
 
-	return pipeline, nil
+	var stages []Stage
+	for _, s := range pipeline.Stages {
+		name := aws.StringValue(s.Name)
+		action := s.Actions[0]
+
+		category := aws.StringValue(action.ActionTypeId.Category)
+		provider := aws.StringValue(action.ActionTypeId.Provider)
+		config := action.Configuration
+
+		var details string
+		if category == "Source" {
+			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+		}
+		if category == "Build" {
+			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
+		}
+		if category == "Deploy" {
+			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
+		}
+
+		stage := Stage{
+			Name:     name,
+			Category: category,
+			Provider: provider,
+			Details:  details,
+		}
+		stages = append(stages, stage)
+	}
+
+	return &Pipeline{
+		Name:      aws.StringValue(pipeline.Name),
+		Region:    region,
+		AccountID: accountId,
+		Stages:    stages,
+		CreatedAt: metadata.Created,
+		UpdatedAt: metadata.Updated,
+	}, nil
+}
+
+// HumanString returns the stringified Stage struct with human readable format.
+// Example output:
+//   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
+func (s *Stage) HumanString() string {
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
 // ListPipelineNamesByTags retrieves the names of all pipelines for a project.
@@ -85,4 +151,22 @@ func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
 	}
 
 	return parsedArn.Resource, nil
+}
+
+func (c *CodePipeline) getPipelineRegion(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
+	}
+
+	return parsedArn.Region, nil
+}
+
+func (c *CodePipeline) getPipelineAccountId(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
+	}
+
+	return parsedArn.AccountID, nil
 }
