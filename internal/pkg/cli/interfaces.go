@@ -231,7 +231,7 @@ type statusDescriber interface {
 }
 
 type envDescriber interface {
-	// TODO
+	Describe() (*describe.Environment, error)
 }
 
 type pipelineGetter interface {
