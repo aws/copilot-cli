@@ -187,12 +187,12 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 	}
 
 	return &WebAppECSParams{
-		ContainerPort: appParams[stack.LBFargateContainerPortParamKey],
+		ContainerPort: appParams[stack.LBWebAppContainerPortParamKey],
 		TaskSize: TaskSize{
-			CPU:    appParams[stack.LBFargateTaskCPUParamKey],
-			Memory: appParams[stack.LBFargateTaskMemoryParamKey],
+			CPU:    appParams[stack.AppTaskCPUParamKey],
+			Memory: appParams[stack.AppTaskMemoryParamKey],
 		},
-		TaskCount: appParams[stack.LBFargateTaskCountParamKey],
+		TaskCount: appParams[stack.AppTaskCountParamKey],
 	}, nil
 }
 
@@ -264,7 +264,7 @@ func (d *WebAppDescriber) URI(envName string) (*WebAppURI, error) {
 
 	uri := &WebAppURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
-		Path:    appParams[stack.LBFargateRulePathParamKey],
+		Path:    appParams[stack.LBWebAppRulePathParamKey],
 	}
 	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
 	if isHTTPS {
