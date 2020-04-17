@@ -3,7 +3,13 @@
 
 package workspace
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
+var ErrNoPipelineInWorkspace = errors.New("no pipeline manifest found in the workspace")
 
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {

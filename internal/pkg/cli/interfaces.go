@@ -46,7 +46,7 @@ type ecrService interface {
 }
 
 type cwlogService interface {
-	TaskLogEvents(logGroupName string, stringTokens map[string]*string, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 	LogGroupExists(logGroupName string) (bool, error)
 }
 
@@ -105,6 +105,10 @@ type storeReader interface {
 	archer.EnvironmentGetter
 	archer.ApplicationLister
 	archer.ApplicationGetter
+}
+
+type workspaceDeleter interface {
+	DeleteAll() error
 }
 
 type wsAppManifestReader interface {
@@ -228,4 +232,17 @@ type statusDescriber interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
+}
+
+type executor interface {
+	Execute() error
+}
+
+type deletePipelineRunner interface {
+	Run() error
+}
+
+type askExecutor interface {
+	Ask() error
+	executor
 }
