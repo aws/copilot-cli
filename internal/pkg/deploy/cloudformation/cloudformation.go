@@ -18,7 +18,8 @@ import (
 	"github.com/gobuffalo/packd"
 )
 
-type stackConfiguration interface {
+// StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
+type StackConfiguration interface {
 	StackName() string
 	Template() (string, error)
 	Parameters() []*sdkcloudformation.Parameter
@@ -105,7 +106,7 @@ func (cf CloudFormation) streamResourceEvents(done <-chan struct{}, events chan 
 	}
 }
 
-func toStack(config stackConfiguration) (*cloudformation.Stack, error) {
+func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
 	template, err := config.Template()
 	if err != nil {
 		return nil, err
