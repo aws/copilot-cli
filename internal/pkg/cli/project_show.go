@@ -95,9 +95,10 @@ func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 	var envsToSerialize []*describe.EnvironmentSummary
 	for _, env := range envs {
 		envsToSerialize = append(envsToSerialize, &describe.EnvironmentSummary{
-			Name:      env.Name,
-			AccountID: env.AccountID,
-			Region:    env.Region,
+			Name:         env.Name,
+			AccountID:    env.AccountID,
+			Region:       env.Region,
+			IsProduction: env.Prod,
 		})
 	}
 	var appsToSerialize []*describe.Application

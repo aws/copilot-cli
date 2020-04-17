@@ -14,10 +14,10 @@ import (
 )
 
 type EnvironmentSummary struct {
-	Name       string `json:"name"`
-	Production bool   `json:"production"`
-	Region     string `json:"region"`
-	AccountID  string `json:"accountID"`
+	Name         string `json:"name"`
+	AccountID    string `json:"accountID"`
+	Region       string `json:"region"`
+	IsProduction bool   `json:"production"`
 }
 
 type Environment struct {
@@ -30,10 +30,10 @@ type Environment struct {
 type EnvDescriber struct {
 	env *archer.Environment
 
-	store           envGetter
-	ecsClient       map[string]ecsService
+	store          envGetter
+	ecsClient      map[string]ecsService
 	stackDescriber stackDescriber
-	sessProvider    sessionFromRoleProvider
+	sessProvider   sessionFromRoleProvider
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -51,19 +51,19 @@ func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", meta.ManagerRoleARN, meta.Region, err)
 	}
 	return &EnvDescriber{
-		env:             meta,
-		store:           svc,
-		stackDescriber:  cloudformation.New(sess),
-		ecsClient:       make(map[string]ecsService),
-		sessProvider:    session.NewProvider(),
+		env:            meta,
+		store:          svc,
+		stackDescriber: cloudformation.New(sess),
+		ecsClient:      make(map[string]ecsService),
+		sessProvider:   session.NewProvider(),
 	}, nil
 }
 
 func (e *EnvDescriber) Describe() (*Environment, error) {
 	return &Environment{
 		EnvironmentSummary: nil,
-		Applications: nil,
-		Tags: nil,
+		Applications:       nil,
+		Tags:               nil,
 	}, nil
 }
 

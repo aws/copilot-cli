@@ -19,10 +19,10 @@ type Application struct {
 
 // Project contains serialized parameters for a project.
 type Project struct {
-	Name string         `json:"name"`
-	URI  string         `json:"uri"`
+	Name string                `json:"name"`
+	URI  string                `json:"uri"`
 	Envs []*EnvironmentSummary `json:"environments"`
-	Apps []*Application `json:"applications"`
+	Apps []*Application        `json:"applications"`
 }
 
 // JSONString returns the stringified Project struct with json format.

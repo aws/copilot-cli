@@ -31,10 +31,10 @@ type showEnvVars struct {
 type showEnvOpts struct {
 	showEnvVars
 
-	w             io.Writer
-	storeSvc      storeReader
-	describer     envDescriber
-	initEnvDescriber	func(*showEnvOpts) error
+	w                io.Writer
+	storeSvc         storeReader
+	describer        envDescriber
+	initEnvDescriber func(*showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
