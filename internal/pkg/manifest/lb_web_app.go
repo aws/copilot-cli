@@ -29,7 +29,6 @@ type LoadBalancedWebApp struct {
 type LoadBalancedWebAppConfig struct {
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
-	Scaling     *AutoScalingConfig `yaml:",flow"`
 	LogsConfig  `yaml:",flow"`
 }
 
@@ -44,13 +43,14 @@ type RoutingRule struct {
 	HealthCheckPath string `yaml:"healthcheck"`
 }
 
-// AutoScalingConfig is the configuration to scale the service with target tracking scaling policies.
-type AutoScalingConfig struct {
-	MinCount int `yaml:"minCount"`
-	MaxCount int `yaml:"maxCount"`
-
-	TargetCPU    float64 `yaml:"targetCPU"`
-	TargetMemory float64 `yaml:"targetMemory"`
+func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
+	if other.Path != "" {
+		r.Path = other.Path
+	}
+	if other.HealthCheckPath != "" {
+		r.HealthCheckPath = other.HealthCheckPath
+	}
+	return r
 }
 
 // LoadBalancedWebAppProps contains properties for creating a new load balanced fargate application manifest.
@@ -91,7 +91,7 @@ func newDefaultLoadBalancedWebApp() *LoadBalancedWebApp {
 			TaskConfig: TaskConfig{
 				CPU:    256,
 				Memory: 512,
-				Count:  1,
+				Count:  intp(1),
 			},
 			LogsConfig: LogsConfig{
 				LogRetention: LogRetentionInDays,
@@ -118,82 +118,14 @@ func (a *LoadBalancedWebApp) DockerfilePath() string {
 // ApplyEnv returns the application configuration with environment overrides.
 // If the environment passed in does not have any overrides then we return the default values.
 func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
-	if _, ok := a.Environments[envName]; !ok {
+	target, ok := a.Environments[envName]
+	if !ok {
 		return a.LoadBalancedWebAppConfig
 	}
 
-	// We don't want to modify the default settings, so deep copy into a "conf" variable.
-	envVars := make(map[string]string, len(a.Variables))
-	for k, v := range a.Variables {
-		envVars[k] = v
-	}
-	secrets := make(map[string]string, len(a.Secrets))
-	for k, v := range a.Secrets {
-		secrets[k] = v
-	}
-	var scaling *AutoScalingConfig
-	if a.Scaling != nil {
-		scaling = &AutoScalingConfig{
-			MinCount:     a.Scaling.MinCount,
-			MaxCount:     a.Scaling.MaxCount,
-			TargetCPU:    a.Scaling.TargetCPU,
-			TargetMemory: a.Scaling.TargetMemory,
-		}
-	}
-	conf := LoadBalancedWebAppConfig{
-		RoutingRule: RoutingRule{
-			Path:            a.Path,
-			HealthCheckPath: a.HealthCheckPath,
-		},
-		TaskConfig: TaskConfig{
-			CPU:       a.CPU,
-			Memory:    a.Memory,
-			Count:     a.Count,
-			Variables: envVars,
-			Secrets:   secrets,
-		},
-		Scaling: scaling,
-	}
-
 	// Override with fields set in the environment.
-	target := a.Environments[envName]
-	if target.RoutingRule.Path != "" {
-		conf.RoutingRule.Path = target.RoutingRule.Path
+	return LoadBalancedWebAppConfig{
+		RoutingRule: a.RoutingRule.copyAndApply(target.RoutingRule),
+		TaskConfig:  a.TaskConfig.copyAndApply(target.TaskConfig),
 	}
-	if target.RoutingRule.HealthCheckPath != "" {
-		conf.RoutingRule.HealthCheckPath = target.RoutingRule.HealthCheckPath
-	}
-	if target.CPU != 0 {
-		conf.CPU = target.CPU
-	}
-	if target.Memory != 0 {
-		conf.Memory = target.Memory
-	}
-	if target.Count != 0 {
-		conf.Count = target.Count
-	}
-	for k, v := range target.Variables {
-		conf.Variables[k] = v
-	}
-	for k, v := range target.Secrets {
-		conf.Secrets[k] = v
-	}
-	if target.Scaling != nil {
-		if conf.Scaling == nil {
-			conf.Scaling = &AutoScalingConfig{}
-		}
-		if target.Scaling.MinCount != 0 {
-			conf.Scaling.MinCount = target.Scaling.MinCount
-		}
-		if target.Scaling.MaxCount != 0 {
-			conf.Scaling.MaxCount = target.Scaling.MaxCount
-		}
-		if target.Scaling.TargetCPU != 0 {
-			conf.Scaling.TargetCPU = target.Scaling.TargetCPU
-		}
-		if target.Scaling.TargetMemory != 0 {
-			conf.Scaling.TargetMemory = target.Scaling.TargetMemory
-		}
-	}
-	return conf
 }

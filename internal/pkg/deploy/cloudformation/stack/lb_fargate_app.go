@@ -158,7 +158,7 @@ func (c *LBFargateStackConfig) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(LBFargateTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(templateParams.App.Count)),
+			ParameterValue: aws.String(strconv.Itoa(*templateParams.App.Count)),
 		},
 		{
 			ParameterKey:   aws.String(LBFargateHTTPSParamKey),
