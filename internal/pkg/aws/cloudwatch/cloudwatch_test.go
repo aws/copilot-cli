@@ -9,13 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch/mocks"
+	cwmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch/mocks"
+	rgmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/resourcegroups"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+type cloudWatchMocks struct {
+	cw *cwmocks.MockcloudWatchClient
+	rg *rgmocks.MockResourceGroupClient
+}
 
 func TestCloudWatch_GetAlarms(t *testing.T) {
 	const (
@@ -26,16 +32,14 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		mockcwClient func(m *mocks.MockcloudWatchClient)
-		mockrgClient func(m *mocks.MockresourceGroupClient)
+		setupMocks func(m cloudWatchMocks)
 
 		wantErr         error
 		wantAlarmStatus []AlarmStatus
 	}{
 		"errors if failed to search resources": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -47,9 +51,8 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			wantErr: fmt.Errorf("search CloudWatch alarm resources: some error"),
 		},
 		"errors if failed to get alarm names because of invalid ARN": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -68,9 +71,8 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			wantErr: fmt.Errorf("parse alarm ARN badArn: arn: invalid prefix"),
 		},
 		"errors if failed to get alarm names because of bad ARN resource": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -89,14 +91,12 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			wantErr: fmt.Errorf("cannot parse alarm ARN resource alarm:badAlarm:Names"),
 		},
 		"errors if failed to describe CloudWatch alarms": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {
-				m.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					NextToken:  nil,
 					AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
 				}).Return(nil, mockError)
-			},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -115,9 +115,8 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			wantErr: fmt.Errorf("describe CloudWatch alarms: some error"),
 		},
 		"return an empty array if no alarms found": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -132,8 +131,8 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			wantAlarmStatus: []AlarmStatus{},
 		},
 		"success": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {
-				m.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					NextToken:  nil,
 					AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
 				}).Return(&cloudwatch.DescribeAlarmsOutput{
@@ -148,9 +147,7 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 						},
 					},
 				}, nil)
-			},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -178,8 +175,8 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			},
 		},
 		"success with pagination": {
-			mockcwClient: func(m *mocks.MockcloudWatchClient) {
-				m.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+			setupMocks: func(m cloudWatchMocks) {
+				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					NextToken:  nil,
 					AlarmNames: aws.StringSlice([]string{"mockAlarmName1", "mockAlarmName2"}),
 				}).Return(&cloudwatch.DescribeAlarmsOutput{
@@ -194,7 +191,7 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
+				m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 					NextToken:  aws.String("mockNextToken"),
 					AlarmNames: aws.StringSlice([]string{"mockAlarmName1", "mockAlarmName2"}),
 				}).Return(&cloudwatch.DescribeAlarmsOutput{
@@ -209,9 +206,7 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 						},
 					},
 				}, nil)
-			},
-			mockrgClient: func(m *mocks.MockresourceGroupClient) {
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: nil,
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -225,7 +220,7 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 						},
 					},
 				}, nil)
-				m.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
+				m.rg.EXPECT().SearchResources(&resourcegroups.SearchResourcesInput{
 					NextToken: aws.String("mockNextToken"),
 					ResourceQuery: &resourcegroups.ResourceQuery{
 						Type:  aws.String("TAG_FILTERS_1_0"),
@@ -268,14 +263,18 @@ func TestCloudWatch_GetAlarms(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockcwClient := mocks.NewMockcloudWatchClient(ctrl)
-			mockresourceGroupClient := mocks.NewMockresourceGroupClient(ctrl)
-			tc.mockcwClient(mockcwClient)
-			tc.mockrgClient(mockresourceGroupClient)
+			mockcwClient := cwmocks.NewMockcloudWatchClient(ctrl)
+			mockrgClient := rgmocks.NewMockResourceGroupClient(ctrl)
+			mocks := cloudWatchMocks{
+				cw: mockcwClient,
+				rg: mockrgClient,
+			}
+
+			tc.setupMocks(mocks)
 
 			cwSvc := CloudWatch{
 				mockcwClient,
-				mockresourceGroupClient,
+				mockrgClient,
 			}
 
 			gotAlarmStatus, gotErr := cwSvc.GetAlarmsWithTags(map[string]string{

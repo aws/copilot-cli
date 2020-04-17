@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strings"
 
+	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -27,14 +29,10 @@ type cloudWatchClient interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
 }
 
-type resourceGroupClient interface {
-	SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error)
-}
-
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
 	cwClient cloudWatchClient
-	rgClient resourceGroupClient
+	rgClient rg.ResourceGroupClient
 }
 
 // AlarmStatus contains CloudWatch alarm status.
