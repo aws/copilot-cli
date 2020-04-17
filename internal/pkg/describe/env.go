@@ -5,50 +5,39 @@ package describe
 
 import (
 	"encoding/json"
-	//"encoding/json"
 	"fmt"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-
-	//"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
+type EnvironmentSummary struct {
+	Name         string `json:"name"`
+	AccountID    string `json:"accountID"`
+	Region       string `json:"region"`
+	IsProduction bool   `json:"production"`
+}
+
 type Environment struct {
-	Name       string `json:"name"`
-	Production bool   `json:"production"` // add to instances used elsewhere (ie project_show)?
-	Region     string `json:"region"`
-	AccountID  string `json:"accountID"`
-}
-
-type EnvApp struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type EnvTag struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-type EnvSummary struct {
-	Environment  []*Environment `json:"environment"`
-	Applications []*EnvApp      `json:"applications"`
-	Tags         []*EnvTag      `json:"tags"`
+	*EnvironmentSummary `json:"environment"`
+	Applications        []*Application    `json:"applications"`
+	Tags                map[string]string `json:"tags,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
 	env *archer.Environment
 
-	store           envGetter
-	ecsClient       map[string]ecsService
-	stackDescribers map[string]stackDescriber
-	sessProvider    sessionFromRoleProvider
+	store          envGetter
+	ecsClient      map[string]ecsService
+	stackDescriber stackDescriber
+	sessProvider   sessionFromRoleProvider
 }
 
-// NewEnvDescriber instantiates an environment.
-func NewEnvDescriber(project, env string) (*EnvDescriber, error) {
+// NewEnvDescriber instantiates an environment describer.
+func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 	svc, err := store.New()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
@@ -57,17 +46,29 @@ func NewEnvDescriber(project, env string) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
+	sess, err := session.NewProvider().FromRole(meta.ManagerRoleARN, meta.Region)
+	if err != nil {
+		return nil, fmt.Errorf("session for role %s and region %s: %w", meta.ManagerRoleARN, meta.Region, err)
+	}
 	return &EnvDescriber{
-		env:             meta,
-		store:           svc,
-		stackDescribers: make(map[string]stackDescriber),
-		ecsClient:       make(map[string]ecsService),
-		sessProvider:    session.NewProvider(),
+		env:            meta,
+		store:          svc,
+		stackDescriber: cloudformation.New(sess),
+		ecsClient:      make(map[string]ecsService),
+		sessProvider:   session.NewProvider(),
+	}, nil
+}
+
+func (e *EnvDescriber) Describe() (*Environment, error) {
+	return &Environment{
+		EnvironmentSummary: nil,
+		Applications:       nil,
+		Tags:               nil,
 	}, nil
 }
 
 // JSONString returns the stringified WebApp struct with json format.
-func (w *EnvSummary) JSONString() (string, error) {
+func (w *Environment) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -76,7 +77,7 @@ func (w *EnvSummary) JSONString() (string, error) {
 }
 
 // HumanString returns the stringified WebApp struct with human readable format.
-func (w *EnvSummary) HumanString() string {
+func (w *Environment) HumanString() string {
 	// TODO
 	return ""
 }
