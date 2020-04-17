@@ -61,14 +61,7 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     DependsOn: LogGroup
     Properties:
-      Family: !Join ['', [!Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
-      NetworkMode: awsvpc
-      RequiresCompatibilities:
-        - FARGATE
-      Cpu: !Ref TaskCPU
-      Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
-      TaskRoleArn: !Ref TaskRole
+{{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
         - Name: !Ref AppName
           Image: !Ref ContainerImage
@@ -86,23 +79,8 @@ Resources:
 
 {{include "taskrole" . | indent 2}}
 
-  DiscoveryService:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      Description: Discovery Service for the ECS CLI V2 services
-      DnsConfig:
-        RoutingPolicy: MULTIVALUE
-        DnsRecords:
-          - TTL: 60
-            Type: A
-          - TTL: 60
-            Type: SRV
-      HealthCheckCustomConfig:
-        FailureThreshold: 1
-      Name:  !Ref AppName
-      NamespaceId:
-        Fn::ImportValue:
-          !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
+{{include "servicediscovery" . | indent 2}}
+
   Service:
     Type: AWS::ECS::Service
     DependsOn: WaitUntilListenerRuleIsCreated

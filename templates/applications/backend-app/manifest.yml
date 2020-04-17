@@ -15,7 +15,7 @@ image:
   port: {{.Image.Port}}{{if .Image.HealthCheck}}
   healthcheck:
     # The command the container runs to determine if it's healthy.
-    cmd: {{fmtSlice (quoteSlice .Image.HealthCheck.Command)}}
+    command: {{fmtSlice (quoteSlice .Image.HealthCheck.Command)}}
     interval: {{.Image.HealthCheck.Interval}}  # Time period between healthchecks. Default is 10s.
     retries: {{.Image.HealthCheck.Retries}}      # Number of times to retry before container is deemed unhealthy. Default is 2.
     timeout: {{.Image.HealthCheck.Timeout}}     # How long to wait before considering the healthcheck failed. Default is 5s.

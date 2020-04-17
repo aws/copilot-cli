@@ -43,7 +43,7 @@ func TestNewBackendApp(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -72,16 +72,16 @@ func TestNewBackendApp(t *testing.T) {
 					},
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-						Interval:    durationPointer(10 * time.Second),
-						Retries:     intPointer(2),
-						Timeout:     durationPointer(5 * time.Second),
-						StartPeriod: durationPointer(0 * time.Second),
+						Interval:    durationp(10 * time.Second),
+						Retries:     intp(2),
+						Timeout:     durationp(5 * time.Second),
+						StartPeriod: durationp(0 * time.Second),
 					},
 				},
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  1,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -126,10 +126,10 @@ func TestBackendApp_MarshalBinary(t *testing.T) {
 				},
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
-					Interval:    durationPointer(6 * time.Second),
-					Retries:     intPointer(0),
-					Timeout:     durationPointer(20 * time.Second),
-					StartPeriod: durationPointer(15 * time.Second),
+					Interval:    durationp(6 * time.Second),
+					Retries:     intp(0),
+					Timeout:     durationp(20 * time.Second),
+					StartPeriod: durationp(15 * time.Second),
 				},
 				Port: 8080,
 			},
@@ -168,9 +168,64 @@ func TestBackendApp_DockerfilePath(t *testing.T) {
 	require.Equal(t, "./subscribers/Dockerfile", manifest.DockerfilePath())
 }
 
-func durationPointer(dur time.Duration) *time.Duration {
-	return &dur
-}
-func intPointer(i int) *int {
-	return &i
+func TestBackendApp_ApplyEnv(t *testing.T) {
+	testCases := map[string]struct {
+		app       *BackendApp
+		inEnvName string
+
+		wanted TaskConfig
+	}{
+		"environment doesn't exist": {
+			app: &BackendApp{
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(1),
+				},
+			},
+			inEnvName: "test",
+
+			wanted: TaskConfig{
+				CPU:    256,
+				Memory: 256,
+				Count:  intp(1),
+			},
+		},
+		"uses env overrides": {
+			app: &BackendApp{
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(1),
+				},
+				Environments: map[string]TaskConfig{
+					"test": {
+						Count: intp(0),
+						Variables: map[string]string{
+							"LOG_LEVEL": "DEBUG",
+						},
+					},
+				},
+			},
+			inEnvName: "test",
+
+			wanted: TaskConfig{
+				CPU:    256,
+				Memory: 256,
+				Count:  intp(0),
+				Variables: map[string]string{
+					"LOG_LEVEL": "DEBUG",
+				},
+				Secrets: map[string]string{},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.app.ApplyEnv(tc.inEnvName)
+
+			require.Equal(t, tc.wanted, got)
+		})
+	}
 }

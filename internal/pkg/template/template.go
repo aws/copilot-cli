@@ -27,7 +27,9 @@ var (
 		"envvars",
 		"executionrole",
 		"taskrole",
+		"fargate-taskdef-base-properties",
 		"service-base-properties",
+		"servicediscovery",
 		"addons",
 	}
 )

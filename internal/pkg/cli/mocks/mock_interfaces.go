@@ -374,9 +374,9 @@ func (m *MockcwlogService) EXPECT() *MockcwlogServiceMockRecorder {
 }
 
 // TaskLogEvents mocks base method
-func (m *MockcwlogService) TaskLogEvents(logGroupName string, stringTokens map[string]*string, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+func (m *MockcwlogService) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{logGroupName, stringTokens}
+	varargs := []interface{}{logGroupName, streamLastEventTime}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -387,9 +387,9 @@ func (m *MockcwlogService) TaskLogEvents(logGroupName string, stringTokens map[s
 }
 
 // TaskLogEvents indicates an expected call of TaskLogEvents
-func (mr *MockcwlogServiceMockRecorder) TaskLogEvents(logGroupName, stringTokens interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockcwlogServiceMockRecorder) TaskLogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{logGroupName, stringTokens}, opts...)
+	varargs := append([]interface{}{logGroupName, streamLastEventTime}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockcwlogService)(nil).TaskLogEvents), varargs...)
 }
 

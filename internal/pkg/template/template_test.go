@@ -154,7 +154,9 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
 				mockBox.AddString("applications/common/cf/envvars.yml", "envvars")
 				mockBox.AddString("applications/common/cf/executionrole.yml", "executionrole")
 				mockBox.AddString("applications/common/cf/taskrole.yml", "taskrole")
+				mockBox.AddString("applications/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
 				mockBox.AddString("applications/common/cf/service-base-properties.yml", "service-base-properties")
+				mockBox.AddString("applications/common/cf/servicediscovery.yml", "servicediscovery")
 				mockBox.AddString("applications/common/cf/addons.yml", "addons")
 
 				t.box = mockBox
@@ -163,7 +165,9 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
   envvars
   executionrole
   taskrole
+  fargate-taskdef-base-properties
   service-base-properties
+  servicediscovery
   addons
 `,
 		},

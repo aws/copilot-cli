@@ -5,6 +5,9 @@
 package manifest
 
 import (
+	"fmt"
+	"time"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,9 +44,47 @@ type AppImageWithPort struct {
 type TaskConfig struct {
 	CPU       int               `yaml:"cpu"`
 	Memory    int               `yaml:"memory"`
-	Count     int               `yaml:"count"`
+	Count     *int              `yaml:"count"` // 0 is a valid value, so we want the default value to be nil.
 	Variables map[string]string `yaml:"variables"`
 	Secrets   map[string]string `yaml:"secrets"`
+}
+
+func (tc TaskConfig) copyAndApply(other TaskConfig) TaskConfig {
+	override := tc.deepcopy()
+	if other.CPU != 0 {
+		override.CPU = other.CPU
+	}
+	if other.Memory != 0 {
+		override.Memory = other.Memory
+	}
+	if other.Count != nil {
+		override.Count = intp(*other.Count)
+	}
+	for k, v := range other.Variables {
+		override.Variables[k] = v
+	}
+	for k, v := range other.Secrets {
+		override.Secrets[k] = v
+	}
+	return override
+}
+
+func (tc TaskConfig) deepcopy() TaskConfig {
+	vars := make(map[string]string, len(tc.Variables))
+	for k, v := range tc.Variables {
+		vars[k] = v
+	}
+	secrets := make(map[string]string, len(tc.Secrets))
+	for k, v := range tc.Secrets {
+		secrets[k] = v
+	}
+	return TaskConfig{
+		CPU:       tc.CPU,
+		Memory:    tc.Memory,
+		Count:     intp(*tc.Count),
+		Variables: vars,
+		Secrets:   secrets,
+	}
 }
 
 // AppProps contains properties for creating a new manifest.
@@ -58,17 +99,35 @@ type AppProps struct {
 func UnmarshalApp(in []byte) (interface{}, error) {
 	am := App{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, &ErrUnmarshalAppManifest{parent: err}
+		return nil, fmt.Errorf("unmarshal to application manifest: %w", err)
 	}
 
 	switch am.Type {
 	case LoadBalancedWebApplication:
 		m := newDefaultLoadBalancedWebApp()
 		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, &ErrUnmarshalLBFargateManifest{parent: err}
+			return nil, fmt.Errorf("unmarshal to load balanced web application: %w", err)
+		}
+		return m, nil
+	case BackendApplication:
+		m := newDefaultBackendApp()
+		if err := yaml.Unmarshal(in, m); err != nil {
+			return nil, fmt.Errorf("unmarshal to backend application: %w", err)
+		}
+		if m.Image.HealthCheck != nil {
+			// Make sure that unset fields in the healthcheck gets a default value.
+			m.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
 		}
 		return m, nil
 	default:
 		return nil, &ErrInvalidAppManifestType{Type: am.Type}
 	}
+}
+
+func intp(v int) *int {
+	return &v
+}
+
+func durationp(v time.Duration) *time.Duration {
+	return &v
 }
