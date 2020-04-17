@@ -59,14 +59,6 @@ func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 	}, nil
 }
 
-func (e *EnvDescriber) Describe() (*Environment, error) {
-	return &Environment{
-		EnvironmentSummary: nil,
-		Applications:       nil,
-		Tags:               nil,
-	}, nil
-}
-
 // JSONString returns the stringified WebApp struct with json format.
 func (w *Environment) JSONString() (string, error) {
 	b, err := json.Marshal(w)

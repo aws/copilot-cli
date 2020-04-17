@@ -87,7 +87,7 @@ func (o *showEnvOpts) Execute() error {
 	if err := o.initEnvDescriber(o); err != nil {
 		return err
 	}
-	env, err := o.describer.Describe()
+	env, err := o.retrieveData()
 	if err != nil {
 		return err
 	}
@@ -104,6 +104,37 @@ func (o *showEnvOpts) Execute() error {
 	}
 
 	return nil
+}
+
+func (o *showEnvOpts) retrieveData() (*describe.Environment, error) {
+	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: #{err}")
+	}
+	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	if err != nil {
+		return nil, fmt.Errorf("list applications: #{err}")
+	}
+	var envToExpand *describe.EnvironmentSummary
+	envToExpand = &describe.EnvironmentSummary{
+		Name:         env.Name,
+		AccountID:    env.AccountID,
+		Region:       env.Region,
+		IsProduction: env.Prod,
+	}
+	var appsToSerialize []*describe.Application
+	for _, app := range apps {
+		appsToSerialize = append(appsToSerialize, &describe.Application{
+			Name: app.Name,
+			Type: app.Type,
+		})
+	}
+	var tags map[string]string
+	return &describe.Environment{
+		EnvironmentSummary: envToExpand,
+		Applications:       appsToSerialize,
+		Tags:               tags,
+	}, nil
 }
 
 func (o *showEnvOpts) askProject() error {
