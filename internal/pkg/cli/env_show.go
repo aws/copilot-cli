@@ -34,7 +34,7 @@ type showEnvOpts struct {
 	w             io.Writer
 	storeSvc      storeReader
 	describer     envDescriber
-	initDescriber func(opts *showEnvOpts) error
+	initEnvDescriber	func(*showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -47,7 +47,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		showEnvVars: vars,
 		storeSvc:    ssmStore,
 		w:           log.OutputWriter,
-		initDescriber: func(o *showEnvOpts) error {
+		initEnvDescriber: func(o *showEnvOpts) error {
 			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
 			if err != nil {
 				return fmt.Errorf("creating describer for environment %s in project %s: %w", o.envName, o.ProjectName(), err)
@@ -84,10 +84,10 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
-	if err := o.initDescriber(o); err != nil {
+	if err := o.initEnvDescriber(o); err != nil {
 		return err
 	}
-	env, err := o.retrieveData()
+	env, err := o.describer.Describe()
 	if err != nil {
 		return err
 	}
@@ -104,38 +104,6 @@ func (o *showEnvOpts) Execute() error {
 	}
 
 	return nil
-}
-
-func (o *showEnvOpts) retrieveData() (*describe.EnvSummary, error) {
-	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
-	if err != nil {
-		return nil, fmt.Errorf("get environment: #{err}")
-	}
-
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
-	if err != nil {
-		return nil, fmt.Errorf("list applications: #{err}")
-	}
-	var envToSerialize []*describe.Environment
-	envToSerialize = append(envToSerialize, &describe.Environment{
-		Name:       env.Name,
-		Production: false,
-		Region:     "",
-		AccountID:  "",
-	})
-	var appsToSerialize []*describe.EnvApp
-	for _, app := range apps {
-		appsToSerialize = append(appsToSerialize, &describe.EnvApp{
-			Name:        app.Name,
-			Description: app.Type,
-		})
-	}
-	var tags []*describe.EnvTag
-	return &describe.EnvSummary{
-		Environment:  envToSerialize,
-		Applications: appsToSerialize,
-		Tags:         tags,
-	}, nil
 }
 
 func (o *showEnvOpts) askProject() error {
