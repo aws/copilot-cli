@@ -148,7 +148,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for project %s\n, looking for deployed pipelines", color.HighlightUserInput(o.ProjectName()))
+		log.Infof("No pipeline manifest in workspace for project %s, looking for deployed pipelines\n", color.HighlightUserInput(o.ProjectName()))
 	}
 
 	// find deployed pipelines
