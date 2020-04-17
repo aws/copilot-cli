@@ -1,0 +1,17 @@
+DiscoveryService:
+  Type: AWS::ServiceDiscovery::Service
+  Properties:
+    Description: Discovery Service for the ECS CLI V2 services
+    DnsConfig:
+      RoutingPolicy: MULTIVALUE
+      DnsRecords:
+        - TTL: 60
+          Type: A
+        - TTL: 60
+          Type: SRV
+    HealthCheckCustomConfig:
+      FailureThreshold: 1
+    Name:  !Ref AppName
+    NamespaceId:
+      Fn::ImportValue:
+        !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
