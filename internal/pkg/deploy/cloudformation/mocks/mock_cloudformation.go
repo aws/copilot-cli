@@ -12,31 +12,31 @@ import (
 	reflect "reflect"
 )
 
-// MockstackConfiguration is a mock of stackConfiguration interface
-type MockstackConfiguration struct {
+// MockStackConfiguration is a mock of StackConfiguration interface
+type MockStackConfiguration struct {
 	ctrl     *gomock.Controller
-	recorder *MockstackConfigurationMockRecorder
+	recorder *MockStackConfigurationMockRecorder
 }
 
-// MockstackConfigurationMockRecorder is the mock recorder for MockstackConfiguration
-type MockstackConfigurationMockRecorder struct {
-	mock *MockstackConfiguration
+// MockStackConfigurationMockRecorder is the mock recorder for MockStackConfiguration
+type MockStackConfigurationMockRecorder struct {
+	mock *MockStackConfiguration
 }
 
-// NewMockstackConfiguration creates a new mock instance
-func NewMockstackConfiguration(ctrl *gomock.Controller) *MockstackConfiguration {
-	mock := &MockstackConfiguration{ctrl: ctrl}
-	mock.recorder = &MockstackConfigurationMockRecorder{mock}
+// NewMockStackConfiguration creates a new mock instance
+func NewMockStackConfiguration(ctrl *gomock.Controller) *MockStackConfiguration {
+	mock := &MockStackConfiguration{ctrl: ctrl}
+	mock.recorder = &MockStackConfigurationMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockstackConfiguration) EXPECT() *MockstackConfigurationMockRecorder {
+func (m *MockStackConfiguration) EXPECT() *MockStackConfigurationMockRecorder {
 	return m.recorder
 }
 
 // StackName mocks base method
-func (m *MockstackConfiguration) StackName() string {
+func (m *MockStackConfiguration) StackName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StackName")
 	ret0, _ := ret[0].(string)
@@ -44,13 +44,13 @@ func (m *MockstackConfiguration) StackName() string {
 }
 
 // StackName indicates an expected call of StackName
-func (mr *MockstackConfigurationMockRecorder) StackName() *gomock.Call {
+func (mr *MockStackConfigurationMockRecorder) StackName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackName", reflect.TypeOf((*MockstackConfiguration)(nil).StackName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackName", reflect.TypeOf((*MockStackConfiguration)(nil).StackName))
 }
 
 // Template mocks base method
-func (m *MockstackConfiguration) Template() (string, error) {
+func (m *MockStackConfiguration) Template() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Template")
 	ret0, _ := ret[0].(string)
@@ -59,13 +59,13 @@ func (m *MockstackConfiguration) Template() (string, error) {
 }
 
 // Template indicates an expected call of Template
-func (mr *MockstackConfigurationMockRecorder) Template() *gomock.Call {
+func (mr *MockStackConfigurationMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackConfiguration)(nil).Template))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockStackConfiguration)(nil).Template))
 }
 
 // Parameters mocks base method
-func (m *MockstackConfiguration) Parameters() []*cloudformation0.Parameter {
+func (m *MockStackConfiguration) Parameters() []*cloudformation0.Parameter {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parameters")
 	ret0, _ := ret[0].([]*cloudformation0.Parameter)
@@ -73,13 +73,13 @@ func (m *MockstackConfiguration) Parameters() []*cloudformation0.Parameter {
 }
 
 // Parameters indicates an expected call of Parameters
-func (mr *MockstackConfigurationMockRecorder) Parameters() *gomock.Call {
+func (mr *MockStackConfigurationMockRecorder) Parameters() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockstackConfiguration)(nil).Parameters))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockStackConfiguration)(nil).Parameters))
 }
 
 // Tags mocks base method
-func (m *MockstackConfiguration) Tags() []*cloudformation0.Tag {
+func (m *MockStackConfiguration) Tags() []*cloudformation0.Tag {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Tags")
 	ret0, _ := ret[0].([]*cloudformation0.Tag)
@@ -87,9 +87,9 @@ func (m *MockstackConfiguration) Tags() []*cloudformation0.Tag {
 }
 
 // Tags indicates an expected call of Tags
-func (mr *MockstackConfigurationMockRecorder) Tags() *gomock.Call {
+func (mr *MockStackConfigurationMockRecorder) Tags() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tags", reflect.TypeOf((*MockstackConfiguration)(nil).Tags))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tags", reflect.TypeOf((*MockStackConfiguration)(nil).Tags))
 }
 
 // MockcfnClient is a mock of cfnClient interface

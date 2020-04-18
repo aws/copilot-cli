@@ -122,7 +122,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ParseApp(lbWebAppTemplateName, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -139,7 +139,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, struct {
+				m.EXPECT().ParseApp(lbWebAppTemplateName, struct {
 					RulePriorityLambda string
 					AddonsOutputs      []addons.Output
 					*lbWebAppTemplateParams
@@ -159,7 +159,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockAppTemplateReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, struct {
+				m.EXPECT().ParseApp(lbWebAppTemplateName, struct {
 					RulePriorityLambda string
 					AddonsOutputs      []addons.Output
 					*lbWebAppTemplateParams

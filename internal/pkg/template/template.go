@@ -50,7 +50,7 @@ type ReadParser interface {
 // AppTemplateReadParser is the interface that wraps the methods needed to parse all application templates.
 type AppTemplateReadParser interface {
 	ReadParser
-	ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error)
+	ParseApp(name string, data interface{}, options ...ParseOption) (*Content, error)
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -97,8 +97,8 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 	return &Content{buf}, nil
 }
 
-// ParseAppTemplate parses an application's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error) {
+// ParseApp parses an application's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseApp(name string, data interface{}, options ...ParseOption) (*Content, error) {
 	tpl, err := t.parse("base", fmt.Sprintf(fmtAppCFTemplatePath, name), options...)
 	if err != nil {
 		return nil, err

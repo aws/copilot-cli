@@ -180,7 +180,7 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
 			tc.mockDependencies(tpl)
 
 			// WHEN
-			c, err := tpl.ParseAppTemplate(testAppName, nil)
+			c, err := tpl.ParseApp(testAppName, nil)
 
 			if tc.wantedErr != nil {
 				require.Contains(t, err.Error(), tc.wantedErr.Error())

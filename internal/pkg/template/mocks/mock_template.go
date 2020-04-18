@@ -169,22 +169,22 @@ func (mr *MockAppTemplateReadParserMockRecorder) Parse(path, data interface{}, o
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockAppTemplateReadParser)(nil).Parse), varargs...)
 }
 
-// ParseAppTemplate mocks base method
-func (m *MockAppTemplateReadParser) ParseAppTemplate(name string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
+// ParseApp mocks base method
+func (m *MockAppTemplateReadParser) ParseApp(name string, data interface{}, options ...template.ParseOption) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, data}
 	for _, a := range options {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ParseAppTemplate", varargs...)
+	ret := m.ctrl.Call(m, "ParseApp", varargs...)
 	ret0, _ := ret[0].(*template.Content)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseAppTemplate indicates an expected call of ParseAppTemplate
-func (mr *MockAppTemplateReadParserMockRecorder) ParseAppTemplate(name, data interface{}, options ...interface{}) *gomock.Call {
+// ParseApp indicates an expected call of ParseApp
+func (mr *MockAppTemplateReadParserMockRecorder) ParseApp(name, data interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, data}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAppTemplate", reflect.TypeOf((*MockAppTemplateReadParser)(nil).ParseAppTemplate), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseApp", reflect.TypeOf((*MockAppTemplateReadParser)(nil).ParseApp), varargs...)
 }

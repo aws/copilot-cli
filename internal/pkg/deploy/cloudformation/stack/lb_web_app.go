@@ -102,7 +102,7 @@ func (c *LoadBalancedWebApp) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.ParseAppTemplate(lbWebAppTemplateName, struct {
+	content, err := c.parser.ParseApp(lbWebAppTemplateName, struct {
 		RulePriorityLambda string
 		AddonsOutputs      []addons.Output
 		*lbWebAppTemplateParams
