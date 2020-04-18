@@ -47,3 +47,18 @@ func (mr *MockcodepipelineClientMockRecorder) GetPipeline(arg0 interface{}) *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockcodepipelineClient)(nil).GetPipeline), arg0)
 }
+
+// ListPipelines mocks base method
+func (m *MockcodepipelineClient) ListPipelines(arg0 *codepipeline.ListPipelinesInput) (*codepipeline.ListPipelinesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelines", arg0)
+	ret0, _ := ret[0].(*codepipeline.ListPipelinesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelines indicates an expected call of ListPipelines
+func (mr *MockcodepipelineClientMockRecorder) ListPipelines(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockcodepipelineClient)(nil).ListPipelines), arg0)
+}
