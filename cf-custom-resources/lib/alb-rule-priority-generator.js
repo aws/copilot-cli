@@ -1,8 +1,11 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 'use strict';
 
 const aws = require('aws-sdk');
+
+// priorityForRootRule is the max priority number that's always set for the listener rule that matches the root path "/"
+const priorityForRootRule = "50000"
 
 // These are used for test purposes only
 let defaultResponseURL;
@@ -88,8 +91,9 @@ const calculateNextRulePriority = async function (listenerArn) {
     if (rules.length > 0) {
         // Take the max rule priority, and add 1 to it.
         const rulePriorities = rules.map(rule => {
-            if (rule.Priority === "default") {
-                // We treat the default rule as having priority 0
+            if (rule.Priority === "default" || rule.Priority === priorityForRootRule) {
+                // Ignore the root rule's priority since it has to be always the max value.
+                // Ignore the default rule's prority since it's the same as 0.
                 return 0
             }
             return parseInt(rule.Priority);

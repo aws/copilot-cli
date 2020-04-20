@@ -147,11 +147,22 @@ func (ws *Workspace) ReadAppManifest(appName string) ([]byte, error) {
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under ecs-project/pipeline.yml.
 func (ws *Workspace) ReadPipelineManifest() ([]byte, error) {
+	pmPath, err := ws.pipelineManifestPath()
+	if err != nil {
+		return nil, err
+	}
+	manifestExists, err := ws.fsUtils.Exists(pmPath)
+
+	if err != nil {
+		return nil, err
+	}
+	if !manifestExists {
+		return nil, ErrNoPipelineInWorkspace
+	}
 	return ws.read(pipelineFileName)
 }
 
 // WriteAppManifest writes the application manifest under the project directory.
-// If successful returns the full path of the file, otherwise returns an empty string and the error.
 func (ws *Workspace) WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
 	data, err := marshaler.MarshalBinary()
 	if err != nil {
@@ -245,6 +256,15 @@ func (ws *Workspace) writeSummary(projectName string) error {
 	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
+func (ws *Workspace) pipelineManifestPath() (string, error) {
+	manifestPath, err := ws.projectDirPath()
+	if err != nil {
+		return "", err
+	}
+	pipelineManifestPath := filepath.Join(manifestPath, pipelineFileName)
+	return pipelineManifestPath, nil
+}
+
 func (ws *Workspace) summaryPath() (string, error) {
 	manifestPath, err := ws.projectDirPath()
 	if err != nil {
@@ -295,7 +315,6 @@ func (ws *Workspace) projectDirPath() (string, error) {
 }
 
 // write flushes the data to a file under the project directory joined by path elements.
-// If successful returns the full path of the file, otherwise returns an empty string and the error.
 func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 	projectPath, err := ws.projectDirPath()
 	if err != nil {
@@ -305,10 +324,17 @@ func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 	filename := filepath.Join(pathElems...)
 
 	if err := ws.fsUtils.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
-		return "", fmt.Errorf("failed to create directories for file %s: %w", filename, err)
+		return "", fmt.Errorf("create directories for file %s: %w", filename, err)
+	}
+	exist, err := ws.fsUtils.Exists(filename)
+	if err != nil {
+		return "", fmt.Errorf("check if manifest file %s exists: %w", filename, err)
+	}
+	if exist {
+		return "", &ErrFileExists{FileName: filename}
 	}
 	if err := ws.fsUtils.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
-		return "", fmt.Errorf("failed to write manifest file: %w", err)
+		return "", fmt.Errorf("write manifest file: %w", err)
 	}
 	return filename, nil
 }

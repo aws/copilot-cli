@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cloudwatchlogs
@@ -23,16 +23,19 @@ func TestLogEvents(t *testing.T) {
 		startTime                int64
 		endTime                  int64
 		limit                    int
+		lastEventTime            map[string]int64
 		mockcloudwatchlogsClient func(m *mocks.MockcloudwatchlogsClient)
 
-		wantLogEvents []*Event
-		wantErr       error
+		wantLogEvents     []*Event
+		wantLastEventTime map[string]int64
+		wantErr           error
 	}{
 		"should get log stream name and return log events": {
-			logGroupName: "mockLogGroup",
-			startTime:    1234567,
-			endTime:      1234568,
-			limit:        10,
+			logGroupName:  "mockLogGroup",
+			startTime:     1234567,
+			endTime:       1234568,
+			limit:         10,
+			lastEventTime: make(map[string]int64),
 			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -92,13 +95,20 @@ func TestLogEvents(t *testing.T) {
 					Timestamp: 1,
 				},
 			},
+			wantLastEventTime: map[string]int64{
+				"ecs/mockLogGroup/mockLogStream1": 1,
+				"ecs/mockLogGroup/mockLogStream2": 0,
+			},
 			wantErr: nil,
 		},
-		"should return limited number of log events": {
+		"should override startTime to be last event time when follow mode": {
 			logGroupName: "mockLogGroup",
 			startTime:    1234567,
-			endTime:      1234568,
-			limit:        1,
+			endTime:      1234999,
+			limit:        10,
+			lastEventTime: map[string]int64{
+				"ecs/mockLogGroup/mockLogStream": 1234890,
+			},
 			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -107,40 +117,22 @@ func TestLogEvents(t *testing.T) {
 				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
 					LogStreams: []*cloudwatchlogs.LogStream{
 						&cloudwatchlogs.LogStream{
-							LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream1"),
-						},
-						&cloudwatchlogs.LogStream{
-							LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream2"),
+							LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream"),
 						},
 					},
 				}, nil)
 
 				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
-					StartTime:     aws.Int64(1234567),
-					EndTime:       aws.Int64(1234568),
-					Limit:         aws.Int64(1),
+					StartTime:     aws.Int64(1234891),
+					Limit:         aws.Int64(10),
+					EndTime:       aws.Int64(1234999),
 					LogGroupName:  aws.String("mockLogGroup"),
-					LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream1"),
+					LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream"),
 				}).Return(&cloudwatchlogs.GetLogEventsOutput{
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						&cloudwatchlogs.OutputLogEvent{
 							Message:   aws.String("some log"),
-							Timestamp: aws.Int64(1),
-						},
-					},
-				}, nil)
-
-				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
-					StartTime:     aws.Int64(1234567),
-					EndTime:       aws.Int64(1234568),
-					Limit:         aws.Int64(1),
-					LogGroupName:  aws.String("mockLogGroup"),
-					LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream2"),
-				}).Return(&cloudwatchlogs.GetLogEventsOutput{
-					Events: []*cloudwatchlogs.OutputLogEvent{
-						&cloudwatchlogs.OutputLogEvent{
-							Message:   aws.String("other log"),
-							Timestamp: aws.Int64(0),
+							Timestamp: aws.Int64(1234892),
 						},
 					},
 				}, nil)
@@ -148,18 +140,73 @@ func TestLogEvents(t *testing.T) {
 
 			wantLogEvents: []*Event{
 				&Event{
-					TaskID:    "mockLogStream1",
+					TaskID:    "mockLogStream",
 					Message:   "some log",
+					Timestamp: 1234892,
+				},
+			},
+			wantLastEventTime: map[string]int64{
+				"ecs/mockLogGroup/mockLogStream": 1234892,
+			},
+			wantErr: nil,
+		},
+		"should return limited number of log events": {
+			logGroupName:  "mockLogGroup",
+			startTime:     1234567,
+			endTime:       1234568,
+			limit:         1,
+			lastEventTime: make(map[string]int64),
+			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+					LogGroupName: aws.String("mockLogGroup"),
+					Descending:   aws.Bool(true),
+					OrderBy:      aws.String("LastEventTime"),
+				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
+					LogStreams: []*cloudwatchlogs.LogStream{
+						&cloudwatchlogs.LogStream{
+							LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream"),
+						},
+					},
+				}, nil)
+
+				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+					StartTime:     aws.Int64(1234567),
+					EndTime:       aws.Int64(1234568),
+					Limit:         aws.Int64(1),
+					LogGroupName:  aws.String("mockLogGroup"),
+					LogStreamName: aws.String("ecs/mockLogGroup/mockLogStream"),
+				}).Return(&cloudwatchlogs.GetLogEventsOutput{
+					Events: []*cloudwatchlogs.OutputLogEvent{
+						&cloudwatchlogs.OutputLogEvent{
+							Message:   aws.String("some log"),
+							Timestamp: aws.Int64(0),
+						},
+						&cloudwatchlogs.OutputLogEvent{
+							Message:   aws.String("other log"),
+							Timestamp: aws.Int64(1),
+						},
+					},
+				}, nil)
+			},
+
+			wantLogEvents: []*Event{
+				&Event{
+					TaskID:    "mockLogStream",
+					Message:   "other log",
 					Timestamp: 1,
 				},
+			},
+			wantLastEventTime: map[string]int64{
+				"ecs/mockLogGroup/mockLogStream": 1,
 			},
 			wantErr: nil,
 		},
 		"returns error if fail to describe log streams": {
-			logGroupName: "mockLogGroup",
-			startTime:    1234567,
-			endTime:      1234568,
-			limit:        10,
+			logGroupName:  "mockLogGroup",
+			startTime:     1234567,
+			endTime:       1234568,
+			limit:         10,
+			lastEventTime: make(map[string]int64),
 			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -172,10 +219,11 @@ func TestLogEvents(t *testing.T) {
 			wantErr:       fmt.Errorf("describe log streams of log group %s: %w", "mockLogGroup", mockError),
 		},
 		"returns error if no log stream found": {
-			logGroupName: "mockLogGroup",
-			startTime:    1234567,
-			endTime:      1234568,
-			limit:        10,
+			logGroupName:  "mockLogGroup",
+			startTime:     1234567,
+			endTime:       1234568,
+			limit:         10,
+			lastEventTime: make(map[string]int64),
 			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -190,10 +238,11 @@ func TestLogEvents(t *testing.T) {
 			wantErr:       fmt.Errorf("no log stream found in log group %s", "mockLogGroup"),
 		},
 		"returns error if fail to get log events": {
-			logGroupName: "mockLogGroup",
-			startTime:    1234567,
-			endTime:      1234568,
-			limit:        10,
+			logGroupName:  "mockLogGroup",
+			startTime:     1234567,
+			endTime:       1234568,
+			limit:         10,
+			lastEventTime: make(map[string]int64),
 			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -233,12 +282,13 @@ func TestLogEvents(t *testing.T) {
 				cwlogs: mockcloudwatchlogsClient,
 			}
 
-			gotLogEventsOutput, gotErr := service.TaskLogEvents(tc.logGroupName, nil, WithLimit(tc.limit), WithStartTime(tc.startTime), WithEndTime(tc.endTime))
+			gotLogEventsOutput, gotErr := service.TaskLogEvents(tc.logGroupName, tc.lastEventTime, WithLimit(tc.limit), WithStartTime(tc.startTime), WithEndTime(tc.endTime))
 
 			if gotErr != nil {
 				require.Equal(t, tc.wantErr, gotErr)
 			} else {
 				require.ElementsMatch(t, tc.wantLogEvents, gotLogEventsOutput.Events)
+				require.Equal(t, tc.wantLastEventTime, gotLogEventsOutput.LastEventTime)
 			}
 		})
 	}

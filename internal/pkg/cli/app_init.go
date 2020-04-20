@@ -1,18 +1,18 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -36,8 +37,8 @@ Deployed resources (such as your service, logs) will contain this app's name and
 	fmtAppInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
 	appInitDockerfileHelpPrompt = "Dockerfile to use for building your application's container image."
 
-	fmtAppInitAppPortPrompt     = "What port do you want requests from your load balancer forwarded to?"
-	fmtAppInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
+	appInitAppPortPrompt     = "Which port do you want customer traffic sent to?"
+	appInitAppPortHelpPrompt = `The app port will be used by the load balancer to route incoming traffic to this application.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
@@ -45,6 +46,13 @@ const (
 	fmtAddAppToProjectStart    = "Creating ECR repositories for application %s."
 	fmtAddAppToProjectFailed   = "Failed to create ECR repositories for application %s."
 	fmtAddAppToProjectComplete = "Created ECR repositories for application %s."
+)
+
+const (
+	fmtParsePortFromDockerfileStart    = "Parsing dockerfile at path %s for application %s...\n"
+	parseFromDockerfileTooManyPorts    = "It looks like your Dockerfile exposes more than one port.\n"
+	fmtParseFromDockerfileNoPort       = "Couldn't find an exposed port in dockerfile for application %s.\n"
+	fmtParsePortFromDockerfileComplete = "It looks like your Dockerfile exposes port %s. We'll use that to route traffic to your container from your load balancer.\n"
 )
 
 const (
@@ -69,12 +77,16 @@ type initAppOpts struct {
 	projGetter   archer.ProjectGetter
 	projDeployer projectDeployer
 	prog         progress
+	df           dockerfileParser
 
 	// Caches variables
 	proj *archer.Project
 
 	// Outputs stored on successful actions.
 	manifestPath string
+
+	// sets up Dockerfile parser using fs and input path
+	setupParser func(*initAppOpts)
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -103,6 +115,10 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		ws:           ws,
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
+
+		setupParser: func(o *initAppOpts) {
+			o.df = dockerfile.New(o.fs, o.DockerfilePath)
+		},
 	}, nil
 }
 
@@ -154,10 +170,6 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	if err := o.ensureNoExistingApp(o.ProjectName(), o.AppName); err != nil {
-		return err
-	}
-
 	proj, err := o.projGetter.GetProject(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
@@ -170,11 +182,6 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.manifestPath = manifestPath
 
-	log.Infoln()
-	log.Successf("Wrote the manifest for %s app at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(o.manifestPath))
-	log.Infoln("Your manifest contains configurations like your container size and ports.")
-	log.Infoln()
-
 	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
 	if err := o.projDeployer.AddAppToProject(o.proj, o.AppName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
@@ -182,22 +189,30 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	return o.createAppInProject(o.ProjectName())
+	if err := o.appStore.CreateApplication(&archer.Application{
+		Project: o.ProjectName(),
+		Name:    o.AppName,
+		Type:    o.AppType,
+	}); err != nil {
+		return fmt.Errorf("saving application %s: %w", o.AppName, err)
+	}
+	return nil
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
-	props := &manifest.LBFargateManifestProps{
-		AppManifestProps: &manifest.AppManifestProps{
-			AppName:    o.AppName,
-			Dockerfile: o.DockerfilePath,
-		},
-		Port: o.AppPort,
-	}
-	props.Path = o.AppName
-	manifest := manifest.NewLoadBalancedFargateManifest(props)
-	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
+	manifest, err := o.createLoadBalancedAppManifest()
 	if err != nil {
 		return "", err
+	}
+	var manifestExists bool
+	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", err
+		}
+		manifestExists = true
+		manifestPath = e.FileName
 	}
 	wkdir, err := os.Getwd()
 	if err != nil {
@@ -205,20 +220,43 @@ func (o *initAppOpts) createManifest() (string, error) {
 	}
 	relPath, err := filepath.Rel(wkdir, manifestPath)
 	if err != nil {
-		return "", fmt.Errorf("relative path of manifest file: %w", err)
+		return "", fmt.Errorf("get relative path of manifest file: %w", err)
 	}
+
+	log.Infoln()
+	manifestMsgFmt := "Wrote the manifest for %s app at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for %s app already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.AppName), color.HighlightResource(relPath))
+	log.Infoln("Your manifest contains configurations like your container size and ports.")
+	log.Infoln()
+
 	return relPath, nil
 }
 
-func (o *initAppOpts) createAppInProject(projectName string) error {
-	if err := o.appStore.CreateApplication(&archer.Application{
-		Project: projectName,
-		Name:    o.AppName,
-		Type:    o.AppType,
-	}); err != nil {
-		return fmt.Errorf("saving application %s: %w", o.AppName, err)
+func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWebApp, error) {
+	props := &manifest.LoadBalancedWebAppProps{
+		AppProps: &manifest.AppProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
+		Port: o.AppPort,
+		Path: "/",
 	}
-	return nil
+	existingApps, err := o.appStore.ListApplications(o.ProjectName())
+	if err != nil {
+		return nil, err
+	}
+	// We default to "/" for the first app, but if there's another
+	// load balanced web app, we use the app name as the default, instead.
+	for _, existingApp := range existingApps {
+		if existingApp.Type == manifest.LoadBalancedWebApplication && existingApp.Name != o.AppName {
+			props.Path = o.AppName
+			break
+		}
+	}
+	return manifest.NewLoadBalancedWebApp(props), nil
 }
 
 func (o *initAppOpts) askAppType() error {
@@ -278,15 +316,44 @@ func (o *initAppOpts) askDockerfile() error {
 }
 
 func (o *initAppOpts) askAppPort() error {
+	// Use flag before anything else
 	if o.AppPort != 0 {
 		return nil
 	}
 
+	log.Infof(fmtParsePortFromDockerfileStart,
+		color.HighlightUserInput(o.DockerfilePath),
+		color.HighlightUserInput(o.AppName),
+	)
+
+	o.setupParser(o)
+	ports, err := o.df.GetExposedPorts()
+	// Ignore any errors in dockerfile parsing--we'll use the default instead.
+	if err != nil {
+		log.Debugln(err.Error())
+	}
+	var defaultPort = defaultAppPortString
+	switch len(ports) {
+	case 0:
+		log.Infof(fmtParseFromDockerfileNoPort,
+			color.HighlightUserInput(o.AppName),
+		)
+	case 1:
+		o.AppPort = ports[0]
+		log.Successf(fmtParsePortFromDockerfileComplete,
+			color.HighlightUserInput(strconv.Itoa(int(o.AppPort))),
+		)
+		return nil
+	default:
+		defaultPort = strconv.Itoa(int(ports[0]))
+		log.Infoln(parseFromDockerfileTooManyPorts)
+	}
+
 	port, err := o.prompt.Get(
-		fmt.Sprintf(fmtAppInitAppPortPrompt),
-		fmt.Sprintf(fmtAppInitAppPortHelpPrompt),
+		fmt.Sprintf(appInitAppPortPrompt),
+		fmt.Sprintf(appInitAppPortHelpPrompt),
 		validateApplicationPort,
-		prompt.WithDefaultInput(defaultAppPortString),
+		prompt.WithDefaultInput(defaultPort),
 	)
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
@@ -300,21 +367,6 @@ func (o *initAppOpts) askAppPort() error {
 	o.AppPort = uint16(portUint)
 
 	return nil
-}
-
-func (o *initAppOpts) ensureNoExistingApp(projectName, appName string) error {
-	_, err := o.appStore.GetApplication(projectName, o.AppName)
-	// If the app doesn't exist - that's perfect, return no error.
-	var existsErr *store.ErrNoSuchApplication
-	if errors.As(err, &existsErr) {
-		return nil
-	}
-	// If there's no error, that means we were able to fetch an existing app
-	if err == nil {
-		return fmt.Errorf("application %s already exists under project %s", appName, projectName)
-	}
-	// Otherwise, there was an error calling the store
-	return fmt.Errorf("couldn't check if application %s exists in project %s: %w", appName, projectName, err)
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
@@ -339,7 +391,7 @@ func BuildAppInitCmd() *cobra.Command {
 This command is also run as part of "ecs-preview init".`,
 		Example: `
   Create a "frontend" web application.
-	/code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitAppOpts(vars)
 			if err != nil {
@@ -366,5 +418,34 @@ This command is also run as part of "ecs-preview init".`,
 	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 0, appPortFlagDescription)
+
+	// Bucket flags by application type.
+	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
+	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(appTypeFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
+
+	lbWebAppFlags := pflag.NewFlagSet(manifest.LoadBalancedWebApplication, pflag.ContinueOnError)
+	lbWebAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
+
+	cmd.Annotations = map[string]string{
+		// The order of the sections we want to display.
+		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.AppTypes, ",")),
+		"Required":                          requiredFlags.FlagUsages(),
+		manifest.LoadBalancedWebApplication: lbWebAppFlags.FlagUsages(),
+	}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
+  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
+
+{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
+{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
+
+{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+{{h1 "Global Flags"}}
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
+
+{{h1 "Examples"}}{{code .Example}}{{end}}
+`)
 	return cmd
 }

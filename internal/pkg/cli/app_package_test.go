@@ -11,7 +11,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -401,12 +402,16 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 						Region:    "us-west-2",
 						AccountID: "1111",
 					}, nil)
+				mockProject := &archer.Project{
+					Name:      "ecs-kudos",
+					AccountID: "1112",
+					Tags: map[string]string{
+						"owner": "boss",
+					},
+				}
 				mockStore.EXPECT().
 					GetProject("ecs-kudos").
-					Return(&archer.Project{
-						Name:      "ecs-kudos",
-						AccountID: "1112",
-					}, nil)
+					Return(mockProject, nil)
 
 				mockWs := climocks.NewMockwsAppReader(ctrl)
 				mockWs.EXPECT().
@@ -424,17 +429,14 @@ count: 1`), nil)
 
 				mockCfn := climocks.NewMockprojectResourcesGetter(ctrl)
 				mockCfn.EXPECT().
-					GetProjectResourcesByRegion(&archer.Project{
-						Name:      "ecs-kudos",
-						AccountID: "1112",
-					}, "us-west-2").
+					GetProjectResourcesByRegion(mockProject, "us-west-2").
 					Return(&archer.ProjectRegionalResources{
 						RepositoryURLs: map[string]string{
 							"api": "some url",
 						},
 					}, nil)
 
-				initLBFargateStack = func(in *deploy.CreateLBFargateAppInput, isHTTPS bool) (stackSerializer, error) {
+				initLBFargateStack = func(_ *manifest.LoadBalancedWebApp, _, _ string, _ stack.RuntimeConfig, _ bool) (stackSerializer, error) {
 					m := climocks.NewMockstackSerializer(ctrl)
 					m.EXPECT().Template().Return("mystack", nil)
 					m.EXPECT().SerializedParameters().Return("myparams", nil)

@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -31,8 +31,6 @@ const (
 )
 
 var (
-	errNoPipelineInWorkspace = errors.New("there was no pipeline manifest found in your workspace. Please run `ecs-preview pipeline init` to create an pipeline")
-
 	errPipelineDeleteCancelled = errors.New("pipeline delete cancelled - no changes made")
 )
 
@@ -61,16 +59,6 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	data, err := ws.ReadPipelineManifest()
-	if err != nil {
-		return nil, fmt.Errorf("read pipeline manifest: %w", err)
-	}
-
-	pipeline, err := manifest.UnmarshalPipeline(data)
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal pipeline manifest: %w", err)
-	}
-
 	secretsmanager, err := secretsmanager.New()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
@@ -88,10 +76,6 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		secretsmanager:     secretsmanager,
 		pipelineDeployer:   cloudformation.New(defaultSession),
 		ws:                 ws,
-	}
-	opts.PipelineName = pipeline.Name
-	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
-		opts.PipelineSecret = secret
 	}
 
 	return opts, nil
@@ -124,8 +108,31 @@ func (o *deletePipelineOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 
-	if o.PipelineName == "" {
-		return errNoPipelineInWorkspace
+	if err := o.readPipelineManifest(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *deletePipelineOpts) readPipelineManifest() error {
+	data, err := o.ws.ReadPipelineManifest()
+	if err != nil {
+		if err == workspace.ErrNoPipelineInWorkspace {
+			return err
+		}
+		return fmt.Errorf("read pipeline manifest: %w", err)
+	}
+
+	pipeline, err := manifest.UnmarshalPipeline(data)
+	if err != nil {
+		return fmt.Errorf("unmarshal pipeline manifest: %w", err)
+	}
+
+	o.PipelineName = pipeline.Name
+
+	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
+		o.PipelineSecret = secret
 	}
 
 	return nil
@@ -205,6 +212,19 @@ func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil
 }
 
+func (o *deletePipelineOpts) Run() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	if err := o.Ask(); err != nil {
+		return err
+	}
+	if err := o.Execute(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // BuildPipelineDeleteCmd build the command for deleting an existing pipeline.
 func BuildPipelineDeleteCmd() *cobra.Command {
 	vars := deletePipelineVars{
@@ -222,17 +242,7 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil {
-				return err
-			}
-			if err := opts.Ask(); err != nil {
-				return err
-			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			return nil
+			return opts.Run()
 		}),
 	}
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)

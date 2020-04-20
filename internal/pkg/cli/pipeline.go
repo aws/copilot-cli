@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -20,6 +20,7 @@ func BuildPipelineCmd() *cobra.Command {
 	cmd.AddCommand(BuildPipelineInitCmd())
 	cmd.AddCommand(BuildPipelineUpdateCmd())
 	cmd.AddCommand(BuildPipelineDeleteCmd())
+	cmd.AddCommand(BuildPipelineShowCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

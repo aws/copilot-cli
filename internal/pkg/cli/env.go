@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -26,6 +26,7 @@ An environment represents a deployment stage.`,
 	cmd.AddCommand(BuildEnvInitCmd())
 	cmd.AddCommand(BuildEnvListCmd())
 	cmd.AddCommand(BuildEnvDeleteCmd())
+	cmd.AddCommand(BuildEnvShowCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

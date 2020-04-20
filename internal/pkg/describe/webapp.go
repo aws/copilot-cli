@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package describe
@@ -17,7 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws"
-	clientSession "github.com/aws/aws-sdk-go/aws/session"
+	clientsession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
@@ -33,6 +33,8 @@ const (
 	rulePriorityFunction = "Custom::RulePriorityFunction"
 	waitCondition        = "AWS::CloudFormation::WaitCondition"
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
+
+	serviceLogicalID = "Service"
 )
 
 // WebAppURI represents the unique identifier to access a web application.
@@ -81,24 +83,13 @@ type WebAppEnvVars struct {
 	Value       string `json:"value"`
 }
 
-// WebApp contains serialized parameters for a web application.
-type WebApp struct {
-	AppName        string                    `json:"appName"`
-	Type           string                    `json:"type"`
-	Project        string                    `json:"project"`
-	Configurations []*WebAppConfig           `json:"configurations"`
-	Routes         []*WebAppRoute            `json:"routes"`
-	Variables      []*WebAppEnvVars          `json:"variables"`
-	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
-}
-
 type stackDescriber interface {
 	DescribeStacks(input *cloudformation.DescribeStacksInput) (*cloudformation.DescribeStacksOutput, error)
 	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)
 }
 
 type sessionFromRoleProvider interface {
-	FromRole(roleARN string, region string) (*clientSession.Session, error)
+	FromRole(roleARN string, region string) (*clientsession.Session, error)
 }
 
 type envGetter interface {
@@ -110,10 +101,21 @@ type ecsService interface {
 }
 
 func (uri *WebAppURI) String() string {
-	if uri.Path != "" {
+	switch uri.Path {
+	// When the app is using host based routing, the app
+	// is included in the DNS name (app.myenv.myproj.dns.com)
+	case "":
+		return fmt.Sprintf("https://%s", uri.DNSName)
+	// When the app is using the root path, there is no "path"
+	// (for example http://lb.us-west-2.amazon.com/)
+	case "/":
+		return fmt.Sprintf("http://%s", uri.DNSName)
+	// Otherwise, if there is a path for the app, link to the
+	// LoadBalancer DNS name and the path
+	// (for example http://lb.us-west-2.amazon.com/app)
+	default:
 		return fmt.Sprintf("http://%s/%s", uri.DNSName, uri.Path)
 	}
-	return "https://" + uri.DNSName
 }
 
 // WebAppDescriber retrieves information about a load balanced web application.
@@ -185,13 +187,32 @@ func (d *WebAppDescriber) ECSParams(envName string) (*WebAppECSParams, error) {
 	}
 
 	return &WebAppECSParams{
-		ContainerPort: appParams[stack.LBFargateParamContainerPortKey],
+		ContainerPort: appParams[stack.LBWebAppContainerPortParamKey],
 		TaskSize: TaskSize{
-			CPU:    appParams[stack.LBFargateTaskCPUKey],
-			Memory: appParams[stack.LBFargateTaskMemoryKey],
+			CPU:    appParams[stack.AppTaskCPUParamKey],
+			Memory: appParams[stack.AppTaskMemoryParamKey],
 		},
-		TaskCount: appParams[stack.LBFargateTaskCountKey],
+		TaskCount: appParams[stack.AppTaskCountParamKey],
 	}, nil
+}
+
+// GetServiceArn returns the ECS service ARN of the application in an environment.
+func (d *WebAppDescriber) GetServiceArn(envName string) (*ecs.ServiceArn, error) {
+	env, err := d.store.GetEnvironment(d.app.Project, envName)
+	if err != nil {
+		return nil, err
+	}
+	appResources, err := d.describeStackResources(env.ManagerRoleARN, env.Region, stack.NameForApp(d.app.Project, env.Name, d.app.Name))
+	if err != nil {
+		return nil, err
+	}
+	for _, appResource := range appResources {
+		if aws.StringValue(appResource.LogicalResourceId) == serviceLogicalID {
+			serviceArn := ecs.ServiceArn(aws.StringValue(appResource.PhysicalResourceId))
+			return &serviceArn, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find service arn in app stack resource")
 }
 
 // StackResources returns the physical ID of stack resources created by cloudformation.
@@ -243,7 +264,7 @@ func (d *WebAppDescriber) URI(envName string) (*WebAppURI, error) {
 
 	uri := &WebAppURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
-		Path:    appParams[stack.LBFargateRulePathKey],
+		Path:    appParams[stack.LBWebAppRulePathParamKey],
 	}
 	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
 	if isHTTPS {
@@ -319,6 +340,17 @@ func (d *WebAppDescriber) stackDescriber(roleARN, region string) (stackDescriber
 		d.stackDescribers[roleARN] = cloudformation.New(sess)
 	}
 	return d.stackDescribers[roleARN], nil
+}
+
+// WebApp contains serialized parameters for a web application.
+type WebApp struct {
+	AppName        string                    `json:"appName"`
+	Type           string                    `json:"type"`
+	Project        string                    `json:"project"`
+	Configurations []*WebAppConfig           `json:"configurations"`
+	Routes         []*WebAppRoute            `json:"routes"`
+	Variables      []*WebAppEnvVars          `json:"variables"`
+	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
 }
 
 // JSONString returns the stringified WebApp struct with json format.

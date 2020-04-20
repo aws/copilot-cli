@@ -9,7 +9,9 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -44,7 +46,7 @@ type ecrService interface {
 }
 
 type cwlogService interface {
-	TaskLogEvents(logGroupName string, stringTokens map[string]*string, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 	LogGroupExists(logGroupName string) (bool, error)
 }
 
@@ -105,6 +107,10 @@ type storeReader interface {
 	archer.ApplicationGetter
 }
 
+type workspaceDeleter interface {
+	DeleteAll() error
+}
+
 type wsAppManifestReader interface {
 	ReadAppManifest(appName string) ([]byte, error)
 }
@@ -163,6 +169,20 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(projName, envName string) error
+	GetEnvironment(projectName, envName string) (*archer.Environment, error)
+}
+
+type appDeployer interface {
+	// DeployApp // TODO ADD
+	DeleteApp(in deploy.DeleteAppInput) error
+}
+
+type appRemover interface {
+	RemoveAppFromProject(project *archer.Project, appName string) error
+}
+
+type imageRemover interface {
+	ClearRepository(repoName string) error // implemented by ECR Service
 }
 
 type pipelineDeployer interface {
@@ -192,4 +212,42 @@ type deployer interface {
 	environmentDeployer
 	projectDeployer
 	pipelineDeployer
+}
+
+type domainValidator interface {
+	DomainExists(domainName string) (bool, error)
+}
+
+type dockerfileParser interface {
+	GetExposedPorts() ([]uint16, error)
+}
+
+type serviceArnGetter interface {
+	GetServiceArn(envName string) (*ecs.ServiceArn, error)
+}
+
+type statusDescriber interface {
+	Describe() (*describe.WebAppStatusDesc, error)
+}
+
+type envDescriber interface {
+	Describe() (*describe.Environment, error)
+}
+
+type pipelineGetter interface {
+	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
+	ListPipelines() ([]string, error)
+}
+
+type executor interface {
+	Execute() error
+}
+
+type deletePipelineRunner interface {
+	Run() error
+}
+
+type askExecutor interface {
+	Ask() error
+	executor
 }

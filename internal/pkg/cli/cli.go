@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package cli contains the ecs-preview subcommands.
@@ -141,4 +141,13 @@ func isStackNotExistsErr(err error) bool {
 		}
 		return true
 	}
+}
+
+type appEnv struct {
+	appName string
+	envName string
+}
+
+func (a *appEnv) String() string {
+	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
 }

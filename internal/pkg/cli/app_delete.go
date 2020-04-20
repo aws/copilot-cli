@@ -1,4 +1,5 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -10,12 +11,14 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +26,14 @@ const (
 	appDeleteNamePrompt    = "Which application would you like to delete?"
 	appDeleteConfirmPrompt = "Are you sure you want to delete %s from project %s?"
 	appDeleteConfirmHelp   = "This will undeploy the app from all environments, delete the local workspace file, and remove ECR repositories."
+)
+
+const (
+	fmtDeleteAppStart             = "Deleting app %s from env %s."
+	fmtDeleteAppFailed            = "Failed to delete app %s from env %s: %v."
+	fmtDeleteAppComplete          = "Deleted app %s from env %s."
+	fmtDeleteAppResourcesStart    = "Deleting app %s resources from project %s."
+	fmtDeleteAppResourcesComplete = "Deleted app %s resources from project %s."
 )
 
 var (
@@ -44,6 +55,9 @@ type deleteAppOpts struct {
 	workspaceService wsAppDeleter
 	sessProvider     sessionProvider
 	spinner          progress
+	appRemover       appRemover
+	getAppDeployer   func(session *awssession.Session) appDeployer
+        getImageRemover  func(session *awssession.Session) imageRemover
 
 	// Internal state.
 	projectEnvironments []*archer.Environment
@@ -60,13 +74,26 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		return nil, fmt.Errorf("create project service: %w", err)
 	}
 
+	provider := session.NewProvider()
+	defaultSession, err := provider.Default()
+	if err != nil {
+		return nil, err
+	}
+
 	return &deleteAppOpts{
 		deleteAppVars: vars,
 
 		workspaceService: workspaceService,
 		projectService:   projectService,
 		spinner:          termprogress.NewSpinner(),
-		sessProvider:     session.NewProvider(),
+		sessProvider:     provider,
+		appRemover:       cloudformation.New(defaultSession),
+		getAppDeployer:   func(session *awssession.Session) appDeployer {
+			return cloudformation.New(session)
+		},
+		getImageRemover: func(session *awssession.Session) imageRemover {
+			return ecr.New(session)
+		},
 	}, nil
 }
 
@@ -115,7 +142,7 @@ func (o *deleteAppOpts) Ask() error {
 
 // Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
 func (o *deleteAppOpts) Execute() error {
-	if err := o.sourceProjectEnvironments(); err != nil {
+	if err := o.getProjectEnvironments(); err != nil {
 		return err
 	}
 
@@ -191,8 +218,7 @@ func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
 	return names, nil
 }
 
-func (o *deleteAppOpts) sourceProjectEnvironments() error {
-
+func (o *deleteAppOpts) getProjectEnvironments() error {
 	if o.EnvName != "" {
 		env, err := o.targetEnv()
 		if err != nil {
@@ -219,22 +245,24 @@ func (o *deleteAppOpts) deleteStacks() error {
 			return err
 		}
 
-		cfClient := cloudformation.New(sess)
+		cfClient := o.getAppDeployer(sess)
 
-		stackName := fmt.Sprintf("%s-%s-%s", o.projectName, env.Name, o.AppName)
-
-		o.spinner.Start(fmt.Sprintf("Deleting app %s from env %s.", o.AppName, env.Name))
-		if err := cfClient.DeleteStackAndWait(stackName); err != nil {
-			o.spinner.Stop(log.Serrorf("Deleting app %s from env %s.", o.AppName, env.Name))
-
+		o.spinner.Start(fmt.Sprintf(fmtDeleteAppStart, o.AppName, env.Name))
+		if err := cfClient.DeleteApp(deploy.DeleteAppInput{
+			AppName:     o.AppName,
+			EnvName:     env.Name,
+			ProjectName: o.projectName,
+		}); err != nil {
+			o.spinner.Stop(log.Serrorf(fmtDeleteAppFailed, o.AppName, env.Name, err))
 			return err
 		}
-		o.spinner.Stop(log.Ssuccessf("Deleted app %s from env %s.", o.AppName, env.Name))
+		o.spinner.Stop(log.Ssuccessf(fmtDeleteAppComplete, o.AppName, env.Name))
 	}
 
 	return nil
 }
 
+// This is to make mocking easier in unit tests
 func (o *deleteAppOpts) emptyECRRepos() error {
 	var uniqueRegions []string
 	for _, env := range o.projectEnvironments {
@@ -252,7 +280,7 @@ func (o *deleteAppOpts) emptyECRRepos() error {
 			return err
 		}
 
-		ecrService := ecr.New(sess)
+		ecrService := o.getImageRemover(sess)
 
 		if err := ecrService.ClearRepository(repoName); err != nil {
 			return err
@@ -268,22 +296,14 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 		return err
 	}
 
-	sess, err := o.sessProvider.Default()
-	if err != nil {
-		return err
-	}
-
-	// TODO: make this opts.toolsAccountCfClient...
-	cfClient := cloudformation.New(sess)
-
-	o.spinner.Start(fmt.Sprintf("Deleting app %s resources from project %s.", o.AppName, o.projectName))
-	if err := cfClient.RemoveAppFromProject(proj, o.AppName); err != nil {
+	o.spinner.Start(fmt.Sprintf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
+	if err := o.appRemover.RemoveAppFromProject(proj, o.AppName); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf("Deleting app %s resources from project %s.", o.AppName, o.projectName))
+			o.spinner.Stop(log.Serrorf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
 			return err
 		}
 	}
-	o.spinner.Stop(log.Ssuccessf("Deleted app %s resources from project %s.", o.AppName, o.projectName))
+	o.spinner.Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, o.AppName, o.projectName))
 
 	return nil
 }

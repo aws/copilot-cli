@@ -1,6 +1,6 @@
 // +build !windows
 
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package template
@@ -51,4 +51,6 @@ func init() {
 	cobra.AddTemplateFunc("h2", h2)
 	cobra.AddTemplateFunc("code", code)
 	cobra.AddTemplateFunc("mkSlice", mkSlice)
+	cobra.AddTemplateFunc("split", split)
+	cobra.AddTemplateFunc("inc", inc)
 }

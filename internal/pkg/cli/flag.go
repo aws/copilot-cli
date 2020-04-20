@@ -1,7 +1,15 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+)
 
 // Long flag names.
 const (
@@ -18,6 +26,7 @@ const (
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	imageTagFlag          = "tag"
+	resourceTagsFlag      = "resource-tags"
 	stackOutputDirFlag    = "output-dir"
 	limitFlag             = "limit"
 	followFlag            = "follow"
@@ -55,17 +64,24 @@ const (
 )
 
 // Descriptions for flags.
-const (
-	projectFlagDescription = "Name of the project."
-	appFlagDescription     = "Name of the application."
-	envFlagDescription     = "Name of the environment."
-	appTypeFlagDescription = "Type of application to create."
-	profileFlagDescription = "Name of the profile."
-	yesFlagDescription     = "Skips confirmation prompt."
-	jsonFlagDescription    = "Optional. Outputs in JSON format."
+var (
+	appTypeFlagDescription = fmt.Sprintf(`Type of application to create. Must be one of:
+%s`, strings.Join(quoteAll(manifest.AppTypes), ", "))
+)
 
-	dockerFileFlagDescription     = "Path to the Dockerfile."
-	imageTagFlagDescription       = `Optional. The application's image tag.`
+const (
+	projectFlagDescription  = "Name of the project."
+	appFlagDescription      = "Name of the application."
+	envFlagDescription      = "Name of the environment."
+	pipelineFlagDescription = "Name of the pipeline."
+	profileFlagDescription  = "Name of the profile."
+	yesFlagDescription      = "Skips confirmation prompt."
+	jsonFlagDescription     = "Optional. Outputs in JSON format."
+
+	dockerFileFlagDescription   = "Path to the Dockerfile."
+	imageTagFlagDescription     = `Optional. The application's image tag.`
+	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
+Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
 	prodEnvFlagDescription        = "If the environment contains production services."
 	limitFlagDescription          = "Optional. The maximum number of log events returned."
@@ -88,3 +104,11 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	appPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
 )
+
+func quoteAll(elems []string) []string {
+	quotedElems := make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(el)
+	}
+	return quotedElems
+}

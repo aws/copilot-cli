@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package store
@@ -28,46 +28,6 @@ func (e *ErrNoSuchProject) Error() string {
 		e.ProjectName, e.AccountID, e.Region)
 }
 
-// ErrProjectAlreadyExists means a project already exists and can't be created again.
-type ErrProjectAlreadyExists struct {
-	ProjectName string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrProjectAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrProjectAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName
-}
-
-func (e *ErrProjectAlreadyExists) Error() string {
-	return fmt.Sprintf("a project named %s already exists",
-		e.ProjectName)
-}
-
-// ErrEnvironmentAlreadyExists means that an environment is already created in a specific project.
-type ErrEnvironmentAlreadyExists struct {
-	EnvironmentName string
-	ProjectName     string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrEnvironmentAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrEnvironmentAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName &&
-		e.EnvironmentName == t.EnvironmentName
-}
-
-func (e *ErrEnvironmentAlreadyExists) Error() string {
-	return fmt.Sprintf("environment %s already exists in project %s",
-		e.EnvironmentName, e.ProjectName)
-}
-
 // ErrNoSuchEnvironment means a specific environment couldn't be found in a specific project.
 type ErrNoSuchEnvironment struct {
 	ProjectName     string
@@ -87,27 +47,6 @@ func (e *ErrNoSuchEnvironment) Is(target error) bool {
 func (e *ErrNoSuchEnvironment) Error() string {
 	return fmt.Sprintf("couldn't find environment %s in the project %s",
 		e.EnvironmentName, e.ProjectName)
-}
-
-// ErrApplicationAlreadyExists means that an application is already created in a specific project.
-type ErrApplicationAlreadyExists struct {
-	ApplicationName string
-	ProjectName     string
-}
-
-// Is returns whether the provided error equals this error.
-func (e *ErrApplicationAlreadyExists) Is(target error) bool {
-	t, ok := target.(*ErrApplicationAlreadyExists)
-	if !ok {
-		return false
-	}
-	return e.ProjectName == t.ProjectName &&
-		e.ApplicationName == t.ApplicationName
-}
-
-func (e *ErrApplicationAlreadyExists) Error() string {
-	return fmt.Sprintf("application %s already exists in project %s",
-		e.ApplicationName, e.ProjectName)
 }
 
 // ErrNoSuchApplication means a specific application couldn't be found in a specific project.

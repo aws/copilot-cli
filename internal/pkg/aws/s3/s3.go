@@ -1,7 +1,7 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package s3 contains utility functions for Amazon Simple Storage Service Client.
+// Package s3 provides a client to make API requests to Amazon Simple Storage Service.
 package s3
 
 import (

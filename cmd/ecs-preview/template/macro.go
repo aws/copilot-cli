@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package template provides usage templates to render help menus.
@@ -42,4 +42,12 @@ func code(text string) string {
 
 func mkSlice(args ...interface{}) []interface{} {
 	return args
+}
+
+func split(s string, sep string) []string {
+	return strings.Split(s, sep)
+}
+
+func inc(n int) int {
+	return n + 1
 }

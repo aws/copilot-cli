@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -223,7 +223,6 @@ func (o *initPipelineOpts) Execute() error {
 	o.buildspecPath = buildspecPath
 
 	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.GitHubRepo), color.HighlightResource(relPath(o.manifestPath)))
-	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(relPath(o.buildspecPath)))
 	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
 	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
@@ -296,9 +295,20 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		return "", err
 	}
 	path, err := o.workspace.WritePipelineBuildspec(content)
+	var buildspecExists bool
 	if err != nil {
-		return "", fmt.Errorf("write buildspec to workspace: %w", err)
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", fmt.Errorf("write buildspec to workspace: %w", err)
+		}
+		buildspecExists = true
+		path = e.FileName
 	}
+	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
+	if buildspecExists {
+		buildspecMsgFmt = "Buildspec file for project pipeline already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(buildspecMsgFmt, color.HighlightResource(relPath(o.buildspecPath)))
 	return path, nil
 }
 

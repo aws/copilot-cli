@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package manifest
@@ -48,33 +48,5 @@ func (e *ErrUnknownProvider) Error() string {
 // type
 func (e *ErrUnknownProvider) Is(target error) bool {
 	_, ok := target.(*ErrUnknownProvider)
-	return ok
-}
-
-// ErrUnmarshalAppManifest occurs if a byte stream cannot be unmarshalled into an application manifest.
-type ErrUnmarshalAppManifest struct {
-	parent error
-}
-
-func (e *ErrUnmarshalAppManifest) Error() string {
-	return fmt.Sprintf("unmarshal to application manifest: %v", e.parent)
-}
-
-func (e *ErrUnmarshalAppManifest) Is(target error) bool {
-	_, ok := target.(*ErrUnmarshalAppManifest)
-	return ok
-}
-
-// ErrUnmarshalLBFargateManifest occurs if a byte stream cannot be unmarshalled into a load-balanced fargate manifest.
-type ErrUnmarshalLBFargateManifest struct {
-	parent error
-}
-
-func (e *ErrUnmarshalLBFargateManifest) Error() string {
-	return fmt.Sprintf("unmarshal to load balanced web application: %v", e.parent)
-}
-
-func (e *ErrUnmarshalLBFargateManifest) Is(target error) bool {
-	_, ok := target.(*ErrUnmarshalLBFargateManifest)
 	return ok
 }

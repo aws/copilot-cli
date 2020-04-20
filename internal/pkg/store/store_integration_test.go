@@ -1,5 +1,5 @@
 // +build integration
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package store_test
@@ -28,7 +28,7 @@ func Test_SSM_Project_Integration(t *testing.T) {
 
 		// Can't overwrite an existing project
 		err = s.CreateProject(&projectToCreate)
-		require.EqualError(t, &store.ErrProjectAlreadyExists{ProjectName: projectToCreate.Name}, err.Error())
+		require.NoError(t, err)
 
 		// Fetch the project back from SSM
 		project, err := s.GetProject(projectToCreate.Name)
@@ -65,9 +65,9 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 		err = s.CreateEnvironment(&prodEnvironment)
 		require.NoError(t, err)
 
-		// Make sure we can't add a duplicate environment
+		// Skip and do not return error if environment already exists
 		err = s.CreateEnvironment(&prodEnvironment)
-		require.EqualError(t, &store.ErrEnvironmentAlreadyExists{ProjectName: projectToCreate.Name, EnvironmentName: prodEnvironment.Name}, err.Error())
+		require.NoError(t, err)
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
@@ -115,9 +115,9 @@ func Test_SSM_Application_Integration(t *testing.T) {
 		err = s.CreateApplication(&feApplication)
 		require.NoError(t, err)
 
-		// Make sure we can't add a duplicate apps
-		err = s.CreateApplication(&apiApplication)
-		require.EqualError(t, &store.ErrApplicationAlreadyExists{ProjectName: projectToCreate.Name, ApplicationName: apiApplication.Name}, err.Error())
+		// Skip and do not return error if application already exists
+		err = s.CreateApplication(&feApplication)
+		require.NoError(t, err)
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)

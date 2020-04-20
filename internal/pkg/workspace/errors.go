@@ -1,9 +1,15 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package workspace
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+// ErrNoPipelineInWorkspace means there was no pipeline manifest in the workspace dir.
+var ErrNoPipelineInWorkspace = errors.New("no pipeline manifest found in the workspace")
 
 // ErrWorkspaceNotFound means we couldn't locate a workspace root.
 type ErrWorkspaceNotFound struct {
@@ -34,4 +40,13 @@ type ErrWorkspaceHasExistingProject struct {
 
 func (e *ErrWorkspaceHasExistingProject) Error() string {
 	return fmt.Sprintf("this workspace is already registered with project %s", e.ExistingProjectName)
+}
+
+// ErrFileExists means we tried to create an existing file.
+type ErrFileExists struct {
+	FileName string
+}
+
+func (e *ErrFileExists) Error() string {
+	return fmt.Sprintf("file %s already exists", e.FileName)
 }

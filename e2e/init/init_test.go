@@ -83,11 +83,10 @@ var _ = Describe("init flow", func() {
 		It("should return a valid route", func() {
 			Expect(len(app.Routes)).To(Equal(1))
 			Expect(app.Routes[0].Environment).To(Equal("test"))
-			Expect(app.Routes[0].URL).To(HaveSuffix(appName))
 			Eventually(func() (int, error) {
 				resp, fetchErr := http.Get(app.Routes[0].URL)
 				return resp.StatusCode, fetchErr
-			}, "10s", "1s").Should(Equal(200))
+			}, "30s", "1s").Should(Equal(200))
 		})
 
 		It("should return the correct environment variables", func() {

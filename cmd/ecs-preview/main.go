@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package main contains the root command.
@@ -49,6 +49,7 @@ func buildRootCmd() *cobra.Command {
 	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.
 	// "Getting Started" command group.
 	cmd.AddCommand(cli.BuildInitCmd())
+	cmd.AddCommand(cli.BuildWikiCmd())
 
 	// "Develop" command group.
 	cmd.AddCommand(cli.BuildProjCmd())

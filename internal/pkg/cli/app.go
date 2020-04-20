@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -28,6 +28,7 @@ An application represents an Amazon ECS service or task.`,
 	cmd.AddCommand(BuildAppDeployCmd())
 	cmd.AddCommand(BuildAppDeleteCmd())
 	cmd.AddCommand(BuildAppShowCmd())
+	cmd.AddCommand(BuildAppStatusCmd())
 	cmd.AddCommand(BuildAppLogsCmd())
 
 	cmd.SetUsageTemplate(template.Usage)

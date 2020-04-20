@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -28,15 +28,6 @@ const (
 	cwGetLogEventsLimitMin = 1
 	cwGetLogEventsLimitMax = 10000
 )
-
-type appEnv struct {
-	appName string
-	envName string
-}
-
-func (a *appEnv) String() string {
-	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
-}
 
 type appLogsVars struct {
 	shouldOutputJSON bool
@@ -145,11 +136,11 @@ func (o *appLogsOpts) Ask() error {
 func (o *appLogsOpts) Execute() error {
 	logGroupName := fmt.Sprintf(logGroupNamePattern, o.ProjectName(), o.envName, o.appName)
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		NextTokens: nil,
+		LastEventTime: make(map[string]int64),
 	}
 	var err error
 	for {
-		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.NextTokens, o.generateGetLogEventOpts()...)
+		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.LastEventTime, o.generateGetLogEventOpts()...)
 		if err != nil {
 			return err
 		}
@@ -160,7 +151,7 @@ func (o *appLogsOpts) Execute() error {
 			return nil
 		}
 		// for unit test.
-		if logEventsOutput.NextTokens == nil {
+		if logEventsOutput.LastEventTime == nil {
 			return nil
 		}
 		time.Sleep(cloudwatchlogs.SleepDuration)

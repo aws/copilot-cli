@@ -1,7 +1,7 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package secretsmanager wraps AWS SecretsManager API functionality.
+// Package secretsmanager provides a client to make API requests to AWS Secrets Manager.
 package secretsmanager
 
 import (

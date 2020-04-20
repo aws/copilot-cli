@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -92,12 +92,13 @@ func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
-	var envsToSerialize []*describe.Environment
+	var envsToSerialize []*describe.EnvironmentSummary
 	for _, env := range envs {
-		envsToSerialize = append(envsToSerialize, &describe.Environment{
-			Name:      env.Name,
-			AccountID: env.AccountID,
-			Region:    env.Region,
+		envsToSerialize = append(envsToSerialize, &describe.EnvironmentSummary{
+			Name:         env.Name,
+			AccountID:    env.AccountID,
+			Region:       env.Region,
+			IsProduction: env.Prod,
 		})
 	}
 	var appsToSerialize []*describe.Application
@@ -162,7 +163,7 @@ func BuildProjectShowCmd() *cobra.Command {
 		Long:  "Shows configuration, environments and applications for a project.",
 		Example: `
   Shows info about the project "my-project"
-  /code $ ecs-preview project show -p my-project`,
+  /code $ ecs-preview project show -n my-project`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowProjectOpts(vars)
 			if err != nil {
@@ -183,6 +184,6 @@ func BuildProjectShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, nameFlag, nameFlagShort, "" /* default */, projectFlagDescription)
 	return cmd
 }

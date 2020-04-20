@@ -1,4 +1,4 @@
-// Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -17,14 +16,25 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
+	awssession "github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/spf13/cobra"
 )
 
 const (
 	defaultProfile = "default"
 
-	fmtConfirmProjectDeletePrompt = "Are you sure you want to delete project %s?"
-	confirmProjectDeleteHelp      = "Deleting a project will remove all associated resources. (apps, envs, etc.)"
+	fmtConfirmProjectDeletePrompt = `Are you sure you want to delete project %s?
+	This will delete your project as well as any apps, environments, and pipelines.`
+	confirmProjectDeleteHelp       = "Deleting a project will remove all associated resources. (apps, envs, pipelines, etc.)"
+	cleanResourcesStartMsg         = "Cleaning up deployment resources."
+	cleanResourcesStopMsg          = "Cleaned up deployment resources."
+	deleteProjectResourcesStartMsg = "Deleting project resources."
+	deleteProjectResourcesStopMsg  = "Deleted project resources."
+	deleteProjectParamsStartMsg    = "Deleting project metadata."
+	deleteProjectParamsStopMsg     = "Deleted project metadata."
+	deleteLocalWsStartMsg          = "Deleting local workspace folder."
+	deleteLocalWsStopMsg           = "Deleted local workspace folder."
 )
 
 var (
@@ -39,17 +49,16 @@ type deleteProjVars struct {
 
 type deleteProjOpts struct {
 	deleteProjVars
-	store               projectService
-	deployer            deployer
-	projResourcesGetter projectResourcesGetter
-	s3Client            bucketEmptier
-	initBucketEmptySvc  func(*deleteProjOpts, string) error
-	ws                  workspaceDeleter
-	spinner             progress
-}
+	spinner progress
 
-type workspaceDeleter interface {
-	DeleteAll() error
+	store                        projectService
+	ws                           workspaceDeleter
+	sessProvider                 sessionProvider
+	deployer                     deployer
+	getBucketEmptier             func(session *awssession.Session) bucketEmptier
+	executorProvider             func(appName string) (executor, error)
+	askExecutorProvider          func(envName, envProfile string) (askExecutor, error)
+	deletePipelineRunnerProvider func() (deletePipelineRunner, error)
 }
 
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
@@ -63,27 +72,68 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 		return nil, err
 	}
 
-	s, err := session.NewProvider().Default()
+	provider := session.NewProvider()
+	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err
 	}
-	cf := cloudformation.New(s)
+
+	cf := cloudformation.New(defaultSession)
 
 	return &deleteProjOpts{
-		deleteProjVars:      vars,
-		store:               store,
-		ws:                  ws,
-		deployer:            cf,
-		projResourcesGetter: cf,
-		initBucketEmptySvc: func(o *deleteProjOpts, region string) error {
-			sess, err := session.NewProvider().DefaultWithRegion(region)
-			if err != nil {
-				return err
-			}
-			o.s3Client = s3.New(sess)
-			return nil
+		deleteProjVars: vars,
+		spinner:        termprogress.NewSpinner(),
+		store:          store,
+		ws:             ws,
+		sessProvider:   provider,
+		deployer:       cf,
+		getBucketEmptier: func(session *awssession.Session) bucketEmptier {
+			return s3.New(session)
 		},
-		spinner: termprogress.NewSpinner(),
+		executorProvider: func(appName string) (executor, error) {
+			vars := deleteAppVars{
+				SkipConfirmation: true, // always skip sub-confirmations
+				GlobalOpts:       NewGlobalOpts(),
+				AppName:          appName,
+			}
+
+			deleteAppOpts, err := newDeleteAppOpts(vars)
+			if err != nil {
+				return nil, err
+			}
+
+			return deleteAppOpts, nil
+		},
+		askExecutorProvider: func(envName, envProfile string) (askExecutor, error) {
+			vars := deleteEnvVars{
+				SkipConfirmation: true,
+				GlobalOpts:       NewGlobalOpts(),
+				EnvName:          envName,
+				EnvProfile:       envProfile,
+			}
+
+			deleteEnvOpts, err := newDeleteEnvOpts(vars)
+
+			if err != nil {
+				return nil, err
+			}
+
+			return deleteEnvOpts, nil
+		},
+		deletePipelineRunnerProvider: func() (deletePipelineRunner, error) {
+			vars := deletePipelineVars{
+				GlobalOpts:       NewGlobalOpts(),
+				SkipConfirmation: true,
+				DeleteSecret:     true,
+			}
+
+			deletePipelineOpts, err := newDeletePipelineOpts(vars)
+			if err != nil {
+				return nil, err
+			}
+
+			return deletePipelineOpts, nil
+		},
 	}, nil
 }
 
@@ -129,6 +179,15 @@ func (o *deleteProjOpts) Execute() error {
 		return err
 	}
 
+	// deleteProjectPipeline must happen before deleteProjectResources and
+	// deleteLocalWorkspace, since the pipeline delete command relies on the
+	// project stackset as well as the workspace directory to still exist.
+	if err := o.deleteProjectPipeline(); err != nil {
+		if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
+			return err
+		}
+	}
+
 	if err := o.deleteProjectResources(); err != nil {
 		return err
 	}
@@ -151,16 +210,11 @@ func (o *deleteProjOpts) deleteApps() error {
 	}
 
 	for _, a := range apps {
-		ado, err := newDeleteAppOpts(deleteAppVars{
-			GlobalOpts: NewGlobalOpts(),
-		})
+		deleter, err := o.executorProvider(a.Name)
 		if err != nil {
 			return err
 		}
-		ado.AppName = a.Name
-		ado.SkipConfirmation = true // always skip sub-confirmations
-
-		if err := ado.Execute(); err != nil {
+		if err := deleter.Execute(); err != nil {
 			return err
 		}
 	}
@@ -174,37 +228,21 @@ func (o *deleteProjOpts) deleteEnvs() error {
 		return err
 	}
 
-	// TODO: move this dependency configuration into newDeleteEnvOpts() function.
-	cfg, err := profile.NewConfig()
-	if err != nil {
-		return err
-	}
-
 	for _, e := range envs {
-		vars := deleteEnvVars{
-			GlobalOpts:       NewGlobalOpts(),
-			EnvName:          e.Name,
-			SkipConfirmation: true,
-		}
+		// Check to see if a profile was passed in for this environment
+		// for deletion - otherwise it will be passed as an empty
+		// string, which triggers env delete's ask.
+		envProfile, _ := o.envProfiles[e.Name]
 
-		deo, err := newDeleteEnvOpts(vars)
+		deleter, err := o.askExecutorProvider(e.Name, envProfile)
 		if err != nil {
 			return err
 		}
-		deo.profileConfig = cfg
-		deo.storeClient = o.store
-		// Check to see if a profile was passed in for this environment
-		// for deletion - otherwise we won't set it, which triggers
-		// env delete's ask.
-		if envProfile, ok := o.envProfiles[e.Name]; ok {
-			deo.EnvProfile = envProfile
-		}
-
-		if err := deo.Ask(); err != nil {
+		if err := deleter.Ask(); err != nil {
 			return err
 		}
 
-		if err := deo.Execute(); err != nil {
+		if err := deleter.Execute(); err != nil {
 			return err
 		}
 	}
@@ -217,53 +255,68 @@ func (o *deleteProjOpts) emptyS3Bucket() error {
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
-	projResources, err := o.projResourcesGetter.GetRegionalProjectResources(proj)
+	projResources, err := o.deployer.GetRegionalProjectResources(proj)
 	if err != nil {
 		return fmt.Errorf("get regional resources for %s: %w", proj.Name, err)
 	}
-	o.spinner.Start("Cleaning up deployment resources.")
+	o.spinner.Start(cleanResourcesStartMsg)
 	for _, projResource := range projResources {
-		o.initBucketEmptySvc(o, projResource.Region)
-		if err := o.s3Client.EmptyBucket(projResource.S3Bucket); err != nil {
+		sess, err := o.sessProvider.DefaultWithRegion(projResource.Region)
+		if err != nil {
+			return err
+		}
+
+		s3Client := o.getBucketEmptier(sess)
+
+		if err := s3Client.EmptyBucket(projResource.S3Bucket); err != nil {
 			o.spinner.Stop(log.Serror("Error cleaning up deployment resources."))
 			return fmt.Errorf("empty bucket %s: %w", projResource.S3Bucket, err)
 		}
 	}
-	o.spinner.Stop(log.Ssuccess("Cleaning up deployment resources."))
+	o.spinner.Stop(log.Ssuccess(cleanResourcesStopMsg))
 	return nil
 }
 
+func (o *deleteProjOpts) deleteProjectPipeline() error {
+	deleter, err := o.deletePipelineRunnerProvider()
+	if err != nil {
+		return err
+	}
+
+	return deleter.Run()
+}
+
 func (o *deleteProjOpts) deleteProjectResources() error {
-	o.spinner.Start("Deleting project resources.")
+	o.spinner.Start(deleteProjectResourcesStartMsg)
 	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project resources."))
 		return fmt.Errorf("delete project resources: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess("Deleted project resources."))
+	o.spinner.Stop(log.Ssuccess(deleteProjectResourcesStopMsg))
 
 	return nil
 }
 
 func (o *deleteProjOpts) deleteProjectParams() error {
-	o.spinner.Start("Deleting project metadata.")
+	o.spinner.Start(deleteProjectParamsStartMsg)
 	if err := o.store.DeleteProject(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project metadata."))
 
 		return err
 	}
-	o.spinner.Stop(log.Ssuccess("Deleted project metadata."))
+	o.spinner.Stop(log.Ssuccess(deleteProjectParamsStopMsg))
 
 	return nil
 }
 
 func (o *deleteProjOpts) deleteLocalWorkspace() error {
-	o.spinner.Start("Deleting local workspace folder.")
+	o.spinner.Start(deleteLocalWsStartMsg)
 	if err := o.ws.DeleteAll(); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
 
 		return fmt.Errorf("delete workspace: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess("Deleted local workspace folder."))
+	o.spinner.Stop(log.Ssuccess(deleteLocalWsStopMsg))
 
 	return nil
 }

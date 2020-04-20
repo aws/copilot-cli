@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package store
@@ -264,10 +264,7 @@ func TestStore_CreateApplication(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: &ErrApplicationAlreadyExists{
-				ApplicationName: testApplication.Name,
-				ProjectName:     testApplication.Project,
-			},
+			wantedErr: nil,
 		},
 		"with SSM error": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {

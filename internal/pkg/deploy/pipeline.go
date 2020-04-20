@@ -1,4 +1,4 @@
-// Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package deploy holds the structures to deploy infrastructure resources.
@@ -41,6 +41,9 @@ type CreatePipelineInput struct {
 	// A list of artifact buckets and corresponding KMS keys that will
 	// be used in this pipeline.
 	ArtifactBuckets []ArtifactBucket
+
+	// AdditionalTags are labels applied to resources under the project.
+	AdditionalTags map[string]string
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
