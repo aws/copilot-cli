@@ -1,8 +1,8 @@
 TaskRole:
   Type: AWS::IAM::Role
-  Properties:{{if gt (len (filterManagedPolicies .AddonsOutputs)) 0}}
-    ManagedPolicyArns:{{range $managedPolicy := (filterManagedPolicies .AddonsOutputs)}}
-    - Fn::GetAtt: [AddonsStack, Outputs.{{$managedPolicy.Name}}]{{end}}{{end}}
+  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+    ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
+    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow

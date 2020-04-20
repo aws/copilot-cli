@@ -4,12 +4,10 @@
 package stack
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,7 +16,6 @@ import (
 
 // Template rendering configuration.
 const (
-	lbWebAppTemplateName              = "lb-web-app"
 	lbWebAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
@@ -30,8 +27,9 @@ const (
 	LBWebAppHealthCheckPathParamKey = "HealthCheckPath"
 )
 
-type templater interface {
-	Template() (string, error)
+type loadBalancedWebAppReadParser interface {
+	template.ReadParser
+	ParseLoadBalancedWebApp(template.LoadBalancedWebAppConfig) (*template.Content, error)
 }
 
 // LoadBalancedWebApp represents the configuration needed to create a CloudFormation stack from a load balanced web application manifest.
@@ -40,30 +38,31 @@ type LoadBalancedWebApp struct {
 	manifest     *manifest.LoadBalancedWebApp
 	httpsEnabled bool
 
-	addons templater
+	parser loadBalancedWebAppReadParser
 }
 
 // NewLoadBalancedWebApp creates a new LoadBalancedWebApp stack from a manifest file.
-// The stack is configured
 func NewLoadBalancedWebApp(mft *manifest.LoadBalancedWebApp, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
 	parser := template.New()
 	addons, err := addons.New(mft.Name)
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
+	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
 	return &LoadBalancedWebApp{
 		app: &app{
 			name:    mft.Name,
 			env:     env,
 			project: proj,
-			tc:      mft.ApplyEnv(env).TaskConfig,
+			tc:      envManifest.TaskConfig,
 			rc:      rc,
 			parser:  parser,
+			addons:  addons,
 		},
-		manifest:     mft,
+		manifest:     envManifest,
 		httpsEnabled: false,
 
-		addons: addons,
+		parser: parser,
 	}, nil
 }
 
@@ -71,25 +70,12 @@ func NewLoadBalancedWebApp(mft *manifest.LoadBalancedWebApp, env, proj string, r
 // a environment within a project. It creates an HTTPS listener and assumes that the environment
 // it's being deployed into has an HTTPS configured listener.
 func NewHTTPSLoadBalancedWebApp(mft *manifest.LoadBalancedWebApp, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
-	parser := template.New()
-	addons, err := addons.New(mft.Name)
+	webApp, err := NewLoadBalancedWebApp(mft, env, proj, rc)
 	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
+		return nil, err
 	}
-	return &LoadBalancedWebApp{
-		app: &app{
-			name:    mft.Name,
-			env:     env,
-			project: proj,
-			tc:      mft.ApplyEnv(env).TaskConfig,
-			rc:      rc,
-			parser:  parser,
-		},
-		manifest:     mft,
-		httpsEnabled: true,
-
-		addons: addons,
-	}, nil
+	webApp.httpsEnabled = true
+	return webApp, nil
 }
 
 // Template returns the CloudFormation template for the application parametrized for the environment.
@@ -102,19 +88,14 @@ func (c *LoadBalancedWebApp) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.ParseApp(lbWebAppTemplateName, struct {
-		RulePriorityLambda string
-		AddonsOutputs      []addons.Output
-		*lbWebAppTemplateParams
-	}{
-		RulePriorityLambda:     rulePriorityLambda.String(),
-		AddonsOutputs:          outputs,
-		lbWebAppTemplateParams: c.toTemplateParams(),
-	}, template.WithFuncs(map[string]interface{}{
-		"toSnakeCase":           toSnakeCase,
-		"filterSecrets":         filterSecrets,
-		"filterManagedPolicies": filterManagedPolicies,
-	}))
+	content, err := c.parser.ParseLoadBalancedWebApp(template.LoadBalancedWebAppConfig{
+		AppOpts: template.AppOpts{
+			Variables:   c.manifest.Variables,
+			Secrets:     c.manifest.Secrets,
+			NestedStack: outputs,
+		},
+		RulePriorityLambda: rulePriorityLambda.String(),
+	})
 	if err != nil {
 		return "", err
 	}
@@ -123,19 +104,18 @@ func (c *LoadBalancedWebApp) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (c *LoadBalancedWebApp) Parameters() []*cloudformation.Parameter {
-	templateParams := c.toTemplateParams()
 	return append(c.app.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebAppContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(templateParams.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(c.manifest.Image.Port), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebAppRulePathParamKey),
-			ParameterValue: aws.String(templateParams.App.Path),
+			ParameterValue: aws.String(c.manifest.Path),
 		},
 		{
 			ParameterKey:   aws.String(LBWebAppHealthCheckPathParamKey),
-			ParameterValue: aws.String(templateParams.App.HealthCheckPath),
+			ParameterValue: aws.String(c.manifest.HealthCheckPath),
 		},
 		{
 			ParameterKey:   aws.String(LBWebAppHTTPSParamKey),
@@ -148,52 +128,4 @@ func (c *LoadBalancedWebApp) Parameters() []*cloudformation.Parameter {
 // to a YAML document annotated with comments for readability to users.
 func (c *LoadBalancedWebApp) SerializedParameters() (string, error) {
 	return c.app.templateConfiguration(c)
-}
-
-func (c *LoadBalancedWebApp) addonsOutputs() ([]addons.Output, error) {
-	stack, err := c.addons.Template()
-	if err == nil {
-		return addons.Outputs(stack)
-	}
-
-	var noAddonsErr *addons.ErrDirNotExist
-	if !errors.As(err, &noAddonsErr) {
-		return nil, fmt.Errorf("generate addons template for application %s: %w", c.manifest.Name, err)
-	}
-	return nil, nil // Addons directory does not exist, so there are no outputs and error.
-}
-
-// lbWebAppTemplateParams holds the data to render the CloudFormation template for an application.
-type lbWebAppTemplateParams struct {
-	App *manifest.LoadBalancedWebApp
-	Env *archer.Environment
-
-	HTTPSEnabled string
-	// Field types to override.
-	Image struct {
-		URL  string
-		Port uint16
-	}
-}
-
-func (c *LoadBalancedWebApp) toTemplateParams() *lbWebAppTemplateParams {
-	url := fmt.Sprintf("%s:%s", c.rc.ImageRepoURL, c.rc.ImageTag)
-	return &lbWebAppTemplateParams{
-		App: &manifest.LoadBalancedWebApp{
-			App:                      c.manifest.App,
-			LoadBalancedWebAppConfig: c.manifest.ApplyEnv(c.env), // Get environment specific app configuration.
-		},
-		Env: &archer.Environment{
-			Name:    c.env,
-			Project: c.project,
-		},
-		HTTPSEnabled: strconv.FormatBool(c.httpsEnabled),
-		Image: struct {
-			URL  string
-			Port uint16
-		}{
-			URL:  url,
-			Port: c.manifest.Image.Port,
-		},
-	}
 }

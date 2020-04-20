@@ -47,12 +47,6 @@ type ReadParser interface {
 	Parser
 }
 
-// AppTemplateReadParser is the interface that wraps the methods needed to parse all application templates.
-type AppTemplateReadParser interface {
-	ReadParser
-	ParseApp(name string, data interface{}, options ...ParseOption) (*Content, error)
-}
-
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
 type Template struct {
 	box packd.Box

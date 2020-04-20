@@ -93,14 +93,21 @@ func (a *BackendApp) DockerfilePath() string {
 	return a.Image.Build
 }
 
-// ApplyEnv returns the application configuration with environment overrides.
-// If the environment passed in does not have any overrides then we return the default values.
-func (a *BackendApp) ApplyEnv(envName string) TaskConfig {
+// ApplyEnv returns the application manifest with environment overrides.
+// If the environment passed in does not have any overrides then it returns itself.
+func (a *BackendApp) ApplyEnv(envName string) *BackendApp {
 	target, ok := a.Environments[envName]
 	if !ok {
-		return a.TaskConfig
+		return a
 	}
-	return a.TaskConfig.copyAndApply(target)
+	return &BackendApp{
+		App: a.App,
+		Image: imageWithPortAndHealthcheck{
+			AppImageWithPort: a.Image.AppImageWithPort,
+			HealthCheck:      a.Image.HealthCheck,
+		},
+		TaskConfig: a.TaskConfig.copyAndApply(target),
+	}
 }
 
 // newDefaultBackendApp returns a backend application with minimal task sizes and a single replica.

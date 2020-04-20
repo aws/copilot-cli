@@ -13,15 +13,15 @@ Environment:
 - Name: ECS_CLI_LB_DNS
   Value:
     Fn::ImportValue:
-      !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .App.Variables}}{{range $name, $value := .App.Variables}}
+      !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
 - Name: {{$name}}
-  Value: {{$value}}{{end}}{{end}}{{range $output := .AddonsOutputs}}{{if and (not $output.IsSecret) (not $output.IsManagedPolicy)}}
-- Name: {{toSnakeCase $output.Name}}
+  Value: {{$value}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
+- Name: {{toSnakeCase $var}}
   Value:
-    Fn::GetAtt: [AddonsStack, Outputs.{{$output.Name}}]{{end}}{{end}}{{if or .App.Secrets (gt (len (filterSecrets .AddonsOutputs)) 0)}}
-Secrets:{{range $name, $valueFrom := .App.Secrets}}
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .AppOpts}}
+Secrets:{{range $name, $valueFrom := .Secrets}}
 - Name: {{$name}}
-  ValueFrom: {{$valueFrom}}{{end}}{{end}}{{range $secret := (filterSecrets .AddonsOutputs)}}
-- Name: {{toSnakeCase $secret.Name}}
+  ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $secret := .NestedStack.SecretOutputs}}
+- Name: {{toSnakeCase $secret}}
   ValueFrom:
-    Fn::GetAtt: [AddonsStack, Outputs.{{$secret.Name}}]{{end}}
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$secret}}]{{end}}{{end}}

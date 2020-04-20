@@ -68,3 +68,63 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
 		})
 	}
 }
+
+func TestToSnakeCase(t *testing.T) {
+	testCases := map[string]struct {
+		in     string
+		wanted string
+	}{
+		"camel case: starts with uppercase": {
+			in:     "AdditionalResourcesPolicyArn",
+			wanted: "ADDITIONAL_RESOURCES_POLICY_ARN",
+		},
+		"camel case: starts with lowercase": {
+			in:     "additionalResourcesPolicyArn",
+			wanted: "ADDITIONAL_RESOURCES_POLICY_ARN",
+		},
+		"all lower case": {
+			in:     "myddbtable",
+			wanted: "MYDDBTABLE",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, toSnakeCase(tc.in))
+		})
+	}
+}
+
+func TestHasSecrets(t *testing.T) {
+	testCases := map[string]struct {
+		in     AppOpts
+		wanted bool
+	}{
+		"no secrets": {
+			in:     AppOpts{},
+			wanted: false,
+		},
+		"app has secrets": {
+			in: AppOpts{
+				Secrets: map[string]string{
+					"hello": "world",
+				},
+			},
+			wanted: true,
+		},
+		"nested has secrets": {
+			in: AppOpts{
+				NestedStack: &AppNestedStackOpts{
+					SecretOutputs: []string{"MySecretArn"},
+				},
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, hasSecrets(tc.in))
+		})
+	}
+}
