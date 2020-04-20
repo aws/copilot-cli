@@ -34,9 +34,10 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	ImageRepoURL   string            // ImageRepoURL is the ECR repository URL the container image should be pushed to.
-	ImageTag       string            // ImageTag is the container image's unique tag.
-	AdditionalTags map[string]string // AdditionalTags are labels applied to resources in the application stack.
+	ImageRepoURL      string            // ImageRepoURL is the ECR repository URL the container image should be pushed to.
+	ImageTag          string            // ImageTag is the container image's unique tag.
+	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
+	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the application stack.
 }
 
 type app struct {
@@ -91,7 +92,7 @@ func (a *app) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(AppAddonsTemplateURLParamKey),
-			ParameterValue: aws.String(""),
+			ParameterValue: aws.String(a.rc.AddonsTemplateURL),
 		},
 	}
 }
