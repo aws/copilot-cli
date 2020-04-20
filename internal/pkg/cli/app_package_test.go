@@ -11,7 +11,8 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -435,7 +436,7 @@ count: 1`), nil)
 						},
 					}, nil)
 
-				initLBFargateStack = func(in *deploy.CreateLBFargateAppInput, isHTTPS bool) (stackSerializer, error) {
+				initLBFargateStack = func(_ *manifest.LoadBalancedWebApp, _, _ string, _ stack.RuntimeConfig, _ bool) (stackSerializer, error) {
 					m := climocks.NewMockstackSerializer(ctrl)
 					m.EXPECT().Template().Return("mystack", nil)
 					m.EXPECT().SerializedParameters().Return("myparams", nil)

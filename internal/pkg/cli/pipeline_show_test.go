@@ -5,10 +5,13 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -114,6 +117,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 }
 
 func TestPipelineShow_Ask(t *testing.T) {
+	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
 	pipelineData := `
 name: pipeline-dinder-badgoose-repo
 version: 1
@@ -141,7 +145,8 @@ stages:
 		expectedPipeline string
 		expectedErr      error
 	}{
-		"happy path with project and pipeline flags": {
+		// happy paths
+		"with project and pipeline flags": {
 			inProjectName:  mockProjectName,
 			inPipelineName: mockPipelineName,
 
@@ -163,6 +168,117 @@ stages:
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
+		"retrieves pipeline name from remote if no manifest found": {
+			inProjectName: mockProjectName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineSvc.EXPECT().ListPipelines().Return(mockPipelines, nil),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockProjectName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return(mockPipelineName, nil),
+				)
+			},
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      nil,
+		},
+		"skip selecting if only one project found": {
+			inProjectName:  "",
+			inPipelineName: mockPipelineName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{{Name: "dinder"}}, nil),
+				)
+			},
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      nil,
+		},
+		"skips selecting if only one pipeline found": {
+			inProjectName:  mockProjectName,
+			inPipelineName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineSvc.EXPECT().ListPipelines().Return([]string{mockPipelineName}, nil),
+				)
+			},
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      nil,
+		},
+		"does not error when no pipelines found at all": {
+			inProjectName:  mockProjectName,
+			inPipelineName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineSvc.EXPECT().ListPipelines().Return([]string{}, nil),
+				)
+			},
+
+			expectedProject:  mockProjectName,
+			expectedPipeline: "",
+			expectedErr:      nil,
+		},
+
+		// askProject errors
+		"wraps error when fails to retrieve projects": {
+			inProjectName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().ListProjects().Return(nil, mockError),
+				)
+			},
+			expectedErr: fmt.Errorf("list projects: %w", mockError),
+		},
+		"wraps error when no projects found": {
+			inProjectName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{}, nil),
+				)
+			},
+			expectedErr: fmt.Errorf("no project found: run %s please", color.HighlightCode("project init")),
+		},
+		"wraps error when no projects selected": {
+			inProjectName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{
+						{Name: "dinder"},
+						{Name: "badgoose"},
+					}, nil),
+					mocks.prompt.EXPECT().SelectOne(pipelineShowProjectNamePrompt, pipelineShowProjectNameHelpPrompt, []string{"dinder", "badgoose"}).Return("", mockError).Times(1),
+				)
+			},
+			expectedErr: fmt.Errorf("select projects: %w", mockError),
+		},
+
+		// askPipeline errors
+		"wraps error when fails to retrieve pipelines": {
+			inProjectName:  mockProjectName,
+			inPipelineName: "",
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineSvc.EXPECT().ListPipelines().Return(nil, mockError),
+				)
+			},
+			expectedErr: fmt.Errorf("list pipelines: %w", mockError),
+		},
+		"wraps error when no pipelines selected": {
+			inProjectName: mockProjectName,
+			setupMocks: func(mocks showPipelineMocks) {
+				gomock.InOrder(
+					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
+					mocks.pipelineSvc.EXPECT().ListPipelines().Return(mockPipelines, nil),
+					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockProjectName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return("", mockError),
+				)
+			},
+			expectedProject:  mockProjectName,
+			expectedPipeline: mockPipelineName,
+			expectedErr:      fmt.Errorf("select pipeline for project %s: %w", mockProjectName, mockError),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -174,11 +290,13 @@ stages:
 			mockStoreReader := mocks.NewMockstoreReader(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showPipelineMocks{
-				store:  mockStoreReader,
-				ws:     mockWorkspace,
-				prompt: mockPrompt,
+				store:       mockStoreReader,
+				ws:          mockWorkspace,
+				prompt:      mockPrompt,
+				pipelineSvc: mockPipelineSvc,
 			}
 
 			tc.setupMocks(mocks)
@@ -191,8 +309,9 @@ stages:
 					},
 					pipelineName: tc.inPipelineName,
 				},
-				store: mockStoreReader,
-				ws:    mockWorkspace,
+				store:       mockStoreReader,
+				ws:          mockWorkspace,
+				pipelineSvc: mockPipelineSvc,
 			}
 
 			// WHEN

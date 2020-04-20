@@ -14,7 +14,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -279,16 +278,12 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebApp:
-		appLBFargateManifest := mft.(*manifest.LoadBalancedWebApp)
-		createLBAppInput := &deploy.CreateLBFargateAppInput{
-			App:            appLBFargateManifest,
-			Env:            env,
+		appMft := mft.(*manifest.LoadBalancedWebApp)
+		appStack, err := initLBFargateStack(appMft, env.Name, env.Project, stack.RuntimeConfig{
 			ImageRepoURL:   repoURL,
 			ImageTag:       o.Tag,
 			AdditionalTags: proj.Tags,
-		}
-
-		appStack, err := initLBFargateStack(createLBAppInput, proj.RequiresDNSDelegation())
+		}, proj.RequiresDNSDelegation())
 		if err != nil {
 			return nil, err
 		}
@@ -307,11 +302,11 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	}
 }
 
-var initLBFargateStack = func(in *deploy.CreateLBFargateAppInput, isHTTPS bool) (stackSerializer, error) {
+var initLBFargateStack = func(app *manifest.LoadBalancedWebApp, env, proj string, rc stack.RuntimeConfig, isHTTPS bool) (stackSerializer, error) {
 	if isHTTPS {
-		return stack.NewHTTPSLBFargateStack(in)
+		return stack.NewHTTPSLoadBalancedWebApp(app, env, proj, rc)
 	}
-	return stack.NewLBFargateStack(in)
+	return stack.NewLoadBalancedWebApp(app, env, proj, rc)
 }
 
 // setAppFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.

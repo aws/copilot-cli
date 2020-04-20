@@ -14,6 +14,7 @@ import (
 
 type codepipelineClient interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
+	ListPipelines(*cp.ListPipelinesInput) (*cp.ListPipelinesOutput, error)
 }
 
 // CodePipeline wraps the AWS CodePipeline client.
@@ -42,6 +43,7 @@ func New(s *session.Session) *CodePipeline {
 	}
 }
 
+// GetPipeline retrieves information from a given pipeline
 func (c *CodePipeline) GetPipeline(pipelineName string) (*Pipeline, error) {
 	input := &cp.GetPipelineInput{
 		Name: aws.String(pipelineName),
@@ -56,4 +58,22 @@ func (c *CodePipeline) GetPipeline(pipelineName string) (*Pipeline, error) {
 	}
 
 	return pipeline, nil
+}
+
+// ListPipelines retrieves summaries of all pipelines for a project
+func (c *CodePipeline) ListPipelines() ([]string, error) {
+	input := &cp.ListPipelinesInput{}
+	resp, err := c.client.ListPipelines(input)
+	if err != nil {
+		return nil, fmt.Errorf("list pipelines: %w", err)
+	}
+
+	var pipelines []string
+
+	for _, ps := range resp.Pipelines {
+		p := aws.StringValue(ps.Name)
+		pipelines = append(pipelines, p)
+	}
+
+	return pipelines, nil
 }
