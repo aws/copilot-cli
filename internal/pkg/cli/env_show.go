@@ -106,6 +106,7 @@ func (o *showEnvOpts) Execute() error {
 	return nil
 }
 
+// TODO: Move to describe/env.go as Describe()
 func (o *showEnvOpts) retrieveData() (*describe.Environment, error) {
 	env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
 	if err != nil {
