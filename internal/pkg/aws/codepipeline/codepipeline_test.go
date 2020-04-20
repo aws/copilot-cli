@@ -8,13 +8,19 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline/mocks"
+	cpmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline/mocks"
+	rgmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
 	"github.com/stretchr/testify/require"
 )
+
+type codepipelineMocks struct {
+	cp *cpmocks.Mockapi
+	rg *rgmocks.MockResourceGroupsClient
+}
 
 func TestCodePipeline_GetPipeline(t *testing.T) {
 	mockPipelineName := "pipeline-dinder-badgoose-repo"
@@ -27,15 +33,15 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 
 	tests := map[string]struct {
 		inPipelineName string
-		callMock       func(m *mocks.Mockapi)
+		callMocks      func(m codepipelineMocks)
 
 		expectedOut   *Pipeline
 		expectedError error
 	}{
 		"happy path": {
 			inPipelineName: mockPipelineName,
-			callMock: func(m *mocks.Mockapi) {
-				m.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
 					Name: aws.String(mockPipelineName),
 				}).Return(mockOutput, nil)
 
@@ -45,8 +51,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 		},
 		"should wrap error": {
 			inPipelineName: mockPipelineName,
-			callMock: func(m *mocks.Mockapi) {
-				m.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
 					Name: aws.String(mockPipelineName),
 				}).Return(nil, mockError)
 
@@ -62,13 +68,18 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mocks.NewMockapi(ctrl)
+			mockClient := cpmocks.NewMockapi(ctrl)
+			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mocks := codepipelineMocks{
+				cp: mockClient,
+				rg: mockrgClient,
+			}
+			tc.callMocks(mocks)
 
 			cp := CodePipeline{
-				client: mockClient,
+				client:   mockClient,
+				rgClient: mockrgClient,
 			}
-
-			tc.callMock(mockClient)
 
 			// WHEN
 			actualOut, err := cp.GetPipeline(tc.inPipelineName)
@@ -80,38 +91,48 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 	}
 }
 
-func TestCodePipeline_ListPipelines(t *testing.T) {
+func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
+	mockProjectName := "dinder"
 	mockPipelineName := "pipeline-dinder-badgoose-repo"
 	mockError := errors.New("mockError")
-	mockInput := &codepipeline.ListPipelinesInput{}
-	mockOutput := &codepipeline.ListPipelinesOutput{
-		Pipelines: []*codepipeline.PipelineSummary{
-			{
-				Name: aws.String(mockPipelineName),
-			},
-		},
+	mockOutput := []string{
+		"arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName,
 	}
+	testTags := map[string]string{
+		"ecs-project": mockProjectName,
+	}
+	badArn := "badArn"
 
 	tests := map[string]struct {
-		callMock    func(m *mocks.Mockapi)
-		expectedOut []string
+		inProjectName string
+		callMocks     func(m codepipelineMocks)
+		expectedOut   []string
 
 		expectedError error
 	}{
 		"happy path": {
-			callMock: func(m *mocks.Mockapi) {
-				m.EXPECT().ListPipelines(mockInput).Return(mockOutput, nil)
+			inProjectName: mockProjectName,
+			callMocks: func(m codepipelineMocks) {
+				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return(mockOutput, nil)
 			},
 			expectedOut:   []string{mockPipelineName},
 			expectedError: nil,
 		},
-		"should wrap error": {
-			callMock: func(m *mocks.Mockapi) {
-				m.EXPECT().ListPipelines(mockInput).Return(nil, mockError)
-
+		"should return error from resourcegroups client": {
+			inProjectName: mockProjectName,
+			callMocks: func(m codepipelineMocks) {
+				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return(nil, mockError)
 			},
 			expectedOut:   nil,
-			expectedError: fmt.Errorf("list pipelines: %w", mockError),
+			expectedError: mockError,
+		},
+		"should return error for bad arns": {
+			inProjectName: mockProjectName,
+			callMocks: func(m codepipelineMocks) {
+				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]string{badArn}, nil)
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("cannot parse pipeline ARN: %s", badArn),
 		},
 	}
 
@@ -121,20 +142,28 @@ func TestCodePipeline_ListPipelines(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mocks.NewMockapi(ctrl)
+			mockClient := cpmocks.NewMockapi(ctrl)
+			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mocks := codepipelineMocks{
+				cp: mockClient,
+				rg: mockrgClient,
+			}
+			tc.callMocks(mocks)
 
 			cp := CodePipeline{
-				client: mockClient,
+				client:   mockClient,
+				rgClient: mockrgClient,
 			}
 
-			tc.callMock(mockClient)
-
 			// WHEN
-			actualOut, err := cp.ListPipelines()
+			actualOut, actualErr := cp.ListPipelinesForProject(tc.inProjectName)
 
 			// THEN
-			require.Equal(t, tc.expectedError, err)
-			require.Equal(t, tc.expectedOut, actualOut)
+			if actualErr != nil {
+				require.EqualError(t, tc.expectedError, actualErr.Error())
+			} else {
+				require.Equal(t, tc.expectedOut, actualOut)
+			}
 		})
 	}
 }
