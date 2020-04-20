@@ -4,13 +4,13 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	awscloudformation "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -26,7 +26,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -49,26 +48,22 @@ type appDeployVars struct {
 type appDeployOpts struct {
 	appDeployVars
 
-	projectService     projectService
-	workspaceService   wsAppReader
-	ecrService         ecrService
-	dockerService      dockerService
-	s3Service          artifactPutter
-	runner             runner
-	appPackageCfClient projectResourcesGetter
-	appDeployCfClient  cloudformation.CloudFormation
-	sessProvider       sessionProvider
+	projectService   projectService
+	workspaceService wsAppReader
+	ecrService       ecrService
+	dockerService    dockerService
+	s3Service        artifactPutter
+	runner           runner
+	addonsSvc        templater
+	projectCFSvc     projectResourcesGetter
+	appCFSvc         cloudformation.CloudFormation
+	sessProvider     sessionProvider
 
 	spinner progress
 
 	// cached variables
 	targetEnvironment *archer.Environment
 	targetProject     *archer.Project
-}
-
-type cfnTemplates struct {
-	app    *bytes.Buffer
-	addons *bytes.Buffer
 }
 
 func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
@@ -148,18 +143,13 @@ func (o *appDeployOpts) Execute() error {
 		return err
 	}
 
-	template, err := o.retrieveTemplate()
-	if err != nil {
-		return err
-	}
-
 	// TODO: delete addons template from S3 bucket when deleting the environment.
-	addonsURL, err := o.pushAddonsTemplateToS3Bucket(template.addons)
+	addonsURL, err := o.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return err
 	}
 
-	if err := o.deployAppStack(template.app, addonsURL); err != nil {
+	if err := o.deployApp(addonsURL); err != nil {
 		return err
 	}
 
@@ -301,14 +291,20 @@ func (o *appDeployOpts) configureClients() error {
 	o.s3Service = s3.New(defaultSessEnvRegion)
 
 	// app deploy CF client against env account profile AND target environment region
-	o.appDeployCfClient = cloudformation.New(envSession)
+	o.appCFSvc = cloudformation.New(envSession)
 
-	// app package CF client against tools account
-	appPackageCfSess, err := o.sessProvider.Default()
+	addonsSvc, err := addons.New(o.AppName)
 	if err != nil {
-		return fmt.Errorf("create app package CF session: %w", err)
+		return fmt.Errorf("initiate addons service: %w", err)
 	}
-	o.appPackageCfClient = cloudformation.New(appPackageCfSess)
+	o.addonsSvc = addonsSvc
+
+	// client to retrieve a project's resources created with CloudFormation
+	defaultSess, err := o.sessProvider.Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	o.projectCFSvc = cloudformation.New(defaultSess)
 	return nil
 }
 
@@ -362,79 +358,106 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
 }
 
-func (o *appDeployOpts) retrieveTemplate() (*cfnTemplates, error) {
-	appBuffer := &bytes.Buffer{}
-	addonsBuffer := &bytes.Buffer{}
-
-	appPackage := packageAppOpts{
-		packageAppVars: packageAppVars{
-			AppName:    o.AppName,
-			EnvName:    o.targetEnvironment.Name,
-			Tag:        o.ImageTag,
-			GlobalOpts: o.GlobalOpts,
-		},
-
-		stackWriter:   appBuffer,
-		paramsWriter:  ioutil.Discard,
-		addonsWriter:  addonsBuffer,
-		initAddonsSvc: initPackageAddonsSvc,
-		store:         o.projectService,
-		describer:     o.appPackageCfClient,
-		ws:            o.workspaceService,
+// pushAddonsTemplateToS3Bucket generates the addons template for the application and pushes it to S3.
+// If the application doesn't have any addons, it returns the empty string and no errors.
+// If the application has addons, it returns the URL of the S3 object storing the addons template.
+func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+	template, err := o.addonsSvc.Template()
+	if err != nil {
+		var notExistErr *addons.ErrDirNotExist
+		if errors.As(err, &notExistErr) {
+			// addons doesn't exist for app, the url is empty.
+			return "", nil
+		}
+		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-
-	if err := appPackage.Execute(); err != nil {
-		return nil, fmt.Errorf("retrieve template: %w", err)
-	}
-	return &cfnTemplates{
-		addons: addonsBuffer,
-		app:    appBuffer,
-	}, nil
-}
-
-func (o *appDeployOpts) pushAddonsTemplateToS3Bucket(addonsTemplate *bytes.Buffer) (string, error) {
-	if addonsTemplate.String() == "" {
-		return "", nil
-	}
-	resources, err := o.appPackageCfClient.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
+	resources, err := o.projectCFSvc.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
 	if err != nil {
 		return "", fmt.Errorf("get project resources: %w", err)
 	}
 
-	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName), addonsTemplate)
+	reader := strings.NewReader(template)
+	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
 	return url, nil
 }
 
-func (o *appDeployOpts) deployAppStack(appTemplate *bytes.Buffer, addonsURL string) error {
-	id, err := uuid.NewRandom()
+func (o *appDeployOpts) manifest() (interface{}, error) {
+	raw, err := o.workspaceService.ReadAppManifest(o.AppName)
 	if err != nil {
-		return fmt.Errorf("generate random id for changeSet: %w", err)
+		return nil, fmt.Errorf("read app %s manifest from workspace: %w", o.AppName, err)
 	}
-	stackName := stack.NameForApp(o.ProjectName(), o.targetEnvironment.Name, o.AppName)
-	changeSetName := fmt.Sprintf("%s-%s", stackName, id)
+	mft, err := manifest.UnmarshalApp(raw)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal app %s manifest: %w", o.AppName, err)
+	}
+	return mft, nil
+}
 
+func (o *appDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+	resources, err := o.projectCFSvc.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get project %s resources from region %s: %w", o.targetProject.Name, o.targetEnvironment.Region, err)
+	}
+	repoURL, ok := resources.RepositoryURLs[o.AppName]
+	if !ok {
+		return nil, &errRepoNotFound{
+			appName:       o.AppName,
+			envRegion:     o.targetEnvironment.Region,
+			projAccountID: o.targetProject.AccountID,
+		}
+	}
+	return &stack.RuntimeConfig{
+		ImageRepoURL:      repoURL,
+		ImageTag:          o.ImageTag,
+		AddonsTemplateURL: addonsURL,
+		AdditionalTags:    tags.Merge(o.targetProject.Tags, o.ResourceTags),
+	}, nil
+}
+
+func (o *appDeployOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+	mft, err := o.manifest()
+	if err != nil {
+		return nil, err
+	}
+	rc, err := o.runtimeConfig(addonsURL)
+	if err != nil {
+		return nil, err
+	}
+	var conf cloudformation.StackConfiguration
+	switch t := mft.(type) {
+	case *manifest.LoadBalancedWebApp:
+		if o.targetProject.RequiresDNSDelegation() {
+			conf, err = stack.NewHTTPSLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+		} else {
+			conf, err = stack.NewLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+		}
+	default:
+		return nil, fmt.Errorf("unknown manifest type %v while creating the CloudFormation stack", t)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
+	return conf, nil
+}
+
+func (o *appDeployOpts) deployApp(addonsURL string) error {
+	conf, err := o.stackConfiguration(addonsURL)
+	if err != nil {
+		return err
+	}
 	o.spinner.Start(
 		fmt.Sprintf("Deploying %s to %s.",
 			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.AppName), color.HighlightUserInput(o.ImageTag)),
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
-	// TODO Use the Tags() method defined in deploy/cloudformation/stack/lb_fargate_app.go
-	tags := tags.Merge(o.targetProject.Tags, o.ResourceTags, map[string]string{
-		stack.ProjectTagKey: o.ProjectName(),
-		stack.EnvTagKey:     o.targetEnvironment.Name,
-		stack.AppTagKey:     o.AppName,
-	})
-	params := make(map[string]string)
-	params["AddonsTemplateURL"] = addonsURL
-	if err := o.appDeployCfClient.DeployApp(appTemplate.String(), stackName, changeSetName, o.targetEnvironment.ExecutionRoleARN, tags, params); err != nil {
+	if err := o.appCFSvc.DeployApp(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		o.spinner.Stop("Error!")
 		return fmt.Errorf("deploy application: %w", err)
 	}
 	o.spinner.Stop("")
-
 	return nil
 }
 
