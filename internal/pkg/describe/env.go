@@ -28,7 +28,8 @@ type Environment struct {
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	env *archer.Environment
+	env  *archer.Environment
+	apps []*archer.Application
 
 	store          envGetter
 	ecsClient      map[string]ecsService
@@ -46,6 +47,10 @@ func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
+	apps, err := svc.ListApplications(project)
+	if err != nil {
+		return nil, err
+	}
 	sess, err := session.NewProvider().FromRole(meta.ManagerRoleARN, meta.Region)
 	if err != nil {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", meta.ManagerRoleARN, meta.Region, err)
@@ -53,6 +58,7 @@ func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 	return &EnvDescriber{
 		env:            meta,
 		store:          svc,
+		apps:           apps,
 		stackDescriber: cloudformation.New(sess),
 		ecsClient:      make(map[string]ecsService),
 		sessProvider:   session.NewProvider(),
@@ -60,10 +66,25 @@ func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
 }
 
 func (e *EnvDescriber) Describe() (*Environment, error) {
+	var envToExpand *EnvironmentSummary
+	envToExpand = &EnvironmentSummary{
+		Name:         e.env.Name,
+		AccountID:    e.env.AccountID,
+		Region:       e.env.Region,
+		IsProduction: e.env.Prod,
+	}
+	var appsToSerialize []*Application
+	for _, app := range e.apps {
+		appsToSerialize = append(appsToSerialize, &Application{
+			Name: app.Name,
+			Type: app.Type,
+		})
+	}
+	var tags map[string]string
 	return &Environment{
-		EnvironmentSummary: nil,
-		Applications:       nil,
-		Tags:               nil,
+		EnvironmentSummary: envToExpand,
+		Applications:       appsToSerialize,
+		Tags:               tags,
 	}, nil
 }
 
