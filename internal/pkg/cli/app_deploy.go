@@ -52,7 +52,7 @@ type appDeployOpts struct {
 	workspaceService wsAppReader
 	ecrService       ecrService
 	dockerService    dockerService
-	s3Service        artifactPutter
+	s3Service        artifactUploader
 	runner           runner
 	addonsSvc        templater
 	projectCFSvc     projectResourcesGetter

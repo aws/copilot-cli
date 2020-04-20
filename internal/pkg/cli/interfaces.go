@@ -152,7 +152,7 @@ type wsProjectManager interface {
 	Summary() (*workspace.Summary, error)
 }
 
-type artifactPutter interface {
+type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
 
