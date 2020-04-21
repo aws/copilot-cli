@@ -24,28 +24,22 @@ type AppNestedStackOpts struct {
 	PolicyOutputs   []string
 }
 
-// AppOpts holds optional data that can be provided to render an application stack template.
-// The empty AppOpts{} struct means that none of these fields will be rendered in the application template.
+// AppOpts holds optional data that can be provided to enable features in an application stack template.
 type AppOpts struct {
+	// Environment variables.
 	Variables map[string]string
 	Secrets   map[string]string
 
 	// Outputs from nested stacks such as the addons stack.
 	NestedStack *AppNestedStackOpts
-}
 
-// LoadBalancedWebAppConfig holds data that needs be provided to render a load balanced web app stack template.
-type LoadBalancedWebAppConfig struct {
-	// Optional fields.
-	AppOpts
-
-	// Mandatory fields.
+	// Custom resource lambdas.
 	RulePriorityLambda string
 }
 
 // ParseLoadBalancedWebApp parses a load balanced web app's CloudFormation template
 // with the specified data object and returns its content.
-func (t *Template) ParseLoadBalancedWebApp(data LoadBalancedWebAppConfig) (*Content, error) {
+func (t *Template) ParseLoadBalancedWebApp(data AppOpts) (*Content, error) {
 	return t.ParseApp(lbWebAppTemplateName, data, withAppParsingFuncs())
 }
 

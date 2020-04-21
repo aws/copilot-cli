@@ -18,7 +18,7 @@ Environment:
   Value: {{$value}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
 - Name: {{toSnakeCase $var}}
   Value:
-    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .AppOpts}}
+    Fn::GetAtt: [{{$stackName}}, Outputs.{{$var}}]{{end}}{{end}}{{if hasSecrets .}}
 Secrets:{{range $name, $valueFrom := .Secrets}}
 - Name: {{$name}}
   ValueFrom: {{$valueFrom}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $secret := .NestedStack.SecretOutputs}}

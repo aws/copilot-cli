@@ -350,7 +350,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		inProject     *archer.Project
 
 		mockProjectResourcesGetter func(m *climocks.MockprojectResourcesGetter)
-		mockS3Svc                  func(m *climocks.MockartifactPutter)
+		mockS3Svc                  func(m *climocks.MockartifactUploader)
 		mockAddons                 func(m *climocks.Mocktemplater)
 
 		wantPath string
@@ -375,7 +375,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockAddons: func(m *climocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", gomock.Any()).Return("https://mockS3DomainName/mockPath", nil)
 			},
 
@@ -399,7 +399,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockAddons: func(m *climocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactPutter) {},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {},
 
 			wantErr: fmt.Errorf("get project resources: some error"),
 		},
@@ -423,7 +423,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockAddons: func(m *climocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", gomock.Any()).Return("", mockError)
 			},
 
@@ -439,7 +439,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantPath: "",
@@ -452,7 +452,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
@@ -466,7 +466,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			mockProjectSvc := climocks.NewMockprojectService(ctrl)
 			mockProjectResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
-			mockS3Svc := climocks.NewMockartifactPutter(ctrl)
+			mockS3Svc := climocks.NewMockartifactUploader(ctrl)
 			mockAddons := climocks.NewMocktemplater(ctrl)
 			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
 			tc.mockS3Svc(mockS3Svc)

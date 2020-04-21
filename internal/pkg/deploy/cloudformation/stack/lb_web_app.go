@@ -29,7 +29,7 @@ const (
 
 type loadBalancedWebAppReadParser interface {
 	template.ReadParser
-	ParseLoadBalancedWebApp(template.LoadBalancedWebAppConfig) (*template.Content, error)
+	ParseLoadBalancedWebApp(template.AppOpts) (*template.Content, error)
 }
 
 // LoadBalancedWebApp represents the configuration needed to create a CloudFormation stack from a load balanced web application manifest.
@@ -88,12 +88,10 @@ func (c *LoadBalancedWebApp) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.ParseLoadBalancedWebApp(template.LoadBalancedWebAppConfig{
-		AppOpts: template.AppOpts{
-			Variables:   c.manifest.Variables,
-			Secrets:     c.manifest.Secrets,
-			NestedStack: outputs,
-		},
+	content, err := c.parser.ParseLoadBalancedWebApp(template.AppOpts{
+		Variables:          c.manifest.Variables,
+		Secrets:            c.manifest.Secrets,
+		NestedStack:        outputs,
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
 	if err != nil {

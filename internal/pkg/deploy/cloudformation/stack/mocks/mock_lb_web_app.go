@@ -69,7 +69,7 @@ func (mr *MockloadBalancedWebAppReadParserMockRecorder) Parse(path, data interfa
 }
 
 // ParseLoadBalancedWebApp mocks base method
-func (m *MockloadBalancedWebAppReadParser) ParseLoadBalancedWebApp(arg0 template.LoadBalancedWebAppConfig) (*template.Content, error) {
+func (m *MockloadBalancedWebAppReadParser) ParseLoadBalancedWebApp(arg0 template.AppOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseLoadBalancedWebApp", arg0)
 	ret0, _ := ret[0].(*template.Content)
