@@ -38,25 +38,25 @@ type EnvDescriber struct {
 }
 
 // NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(project string, env string) (*EnvDescriber, error) {
+func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) {
 	svc, err := store.New()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := svc.GetEnvironment(project, env)
+	env, err := svc.GetEnvironment(projectName, envName)
 	if err != nil {
 		return nil, err
 	}
-	apps, err := svc.ListApplications(project)
+	apps, err := svc.ListApplications(projectName)
 	if err != nil {
 		return nil, err
 	}
-	sess, err := session.NewProvider().FromRole(meta.ManagerRoleARN, meta.Region)
+	sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
-		return nil, fmt.Errorf("session for role %s and region %s: %w", meta.ManagerRoleARN, meta.Region, err)
+		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
-		env:            meta,
+		env:            env,
 		store:          svc,
 		apps:           apps,
 		stackDescriber: cloudformation.New(sess),
