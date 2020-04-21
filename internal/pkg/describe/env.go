@@ -67,8 +67,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 }
 
 func (e *EnvDescriber) Describe() (*Environment, error) {
-	var envToExpand *EnvironmentSummary
-	envToExpand = &EnvironmentSummary{
+	envToExpand := &EnvironmentSummary {
 		Name:         e.env.Name,
 		AccountID:    e.env.AccountID,
 		Region:       e.env.Region,
