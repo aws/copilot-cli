@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockResourceGroupClient is a mock of ResourceGroupClient interface
-type MockResourceGroupClient struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockResourceGroupClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockResourceGroupClientMockRecorder is the mock recorder for MockResourceGroupClient
-type MockResourceGroupClientMockRecorder struct {
-	mock *MockResourceGroupClient
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockResourceGroupClient creates a new mock instance
-func NewMockResourceGroupClient(ctrl *gomock.Controller) *MockResourceGroupClient {
-	mock := &MockResourceGroupClient{ctrl: ctrl}
-	mock.recorder = &MockResourceGroupClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockResourceGroupClient) EXPECT() *MockResourceGroupClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // SearchResources mocks base method
-func (m *MockResourceGroupClient) SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error) {
+func (m *Mockapi) SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SearchResources", input)
 	ret0, _ := ret[0].(*resourcegroups.SearchResourcesOutput)
@@ -43,7 +43,45 @@ func (m *MockResourceGroupClient) SearchResources(input *resourcegroups.SearchRe
 }
 
 // SearchResources indicates an expected call of SearchResources
-func (mr *MockResourceGroupClientMockRecorder) SearchResources(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) SearchResources(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchResources", reflect.TypeOf((*MockResourceGroupClient)(nil).SearchResources), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchResources", reflect.TypeOf((*Mockapi)(nil).SearchResources), input)
+}
+
+// MockResourceGroupsClient is a mock of ResourceGroupsClient interface
+type MockResourceGroupsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockResourceGroupsClientMockRecorder
+}
+
+// MockResourceGroupsClientMockRecorder is the mock recorder for MockResourceGroupsClient
+type MockResourceGroupsClientMockRecorder struct {
+	mock *MockResourceGroupsClient
+}
+
+// NewMockResourceGroupsClient creates a new mock instance
+func NewMockResourceGroupsClient(ctrl *gomock.Controller) *MockResourceGroupsClient {
+	mock := &MockResourceGroupsClient{ctrl: ctrl}
+	mock.recorder = &MockResourceGroupsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockResourceGroupsClient) EXPECT() *MockResourceGroupsClientMockRecorder {
+	return m.recorder
+}
+
+// GetResourcesByTags mocks base method
+func (m *MockResourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetResourcesByTags indicates an expected call of GetResourcesByTags
+func (mr *MockResourceGroupsClientMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockResourceGroupsClient)(nil).GetResourcesByTags), resourceType, tags)
 }

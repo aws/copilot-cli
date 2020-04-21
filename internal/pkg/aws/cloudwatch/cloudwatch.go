@@ -5,17 +5,15 @@
 package cloudwatch
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/aws/aws-sdk-go/service/resourcegroups"
 )
 
 const (
@@ -32,7 +30,7 @@ type cloudWatchClient interface {
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
 	cwClient cloudWatchClient
-	rgClient rg.ResourceGroupClient
+	rgClient resourcegroups.ResourceGroupsClient
 }
 
 // AlarmStatus contains CloudWatch alarm status.
@@ -56,33 +54,20 @@ func New(s *session.Session) *CloudWatch {
 // GetAlarmsWithTags returns all the CloudWatch alarms that have the resource tags.
 func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
 	var alarmNames []*string
-	resourceResp := &resourcegroups.SearchResourcesOutput{}
-	query, err := cw.searchResourceQuery(tags)
+
+	arns, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
 	if err != nil {
-		return nil, fmt.Errorf("construct search resource query: %w", err)
+		return nil, err
 	}
-	for {
-		resourceResp, err = cw.rgClient.SearchResources(&resourcegroups.SearchResourcesInput{
-			NextToken: resourceResp.NextToken,
-			ResourceQuery: &resourcegroups.ResourceQuery{
-				Type:  aws.String(resourceQueryType),
-				Query: aws.String(string(query)),
-			},
-		})
+
+	for _, arn := range arns {
+		name, err := cw.getAlarmName(arn)
 		if err != nil {
-			return nil, fmt.Errorf("search CloudWatch alarm resources: %w", err)
+			return nil, err
 		}
-		for _, identifier := range resourceResp.ResourceIdentifiers {
-			name, err := cw.getAlarmName(*identifier.ResourceArn)
-			if err != nil {
-				return nil, err
-			}
-			alarmNames = append(alarmNames, name)
-		}
-		if resourceResp.NextToken == nil {
-			break
-		}
+		alarmNames = append(alarmNames, name)
 	}
+
 	// Return an empty array since DescribeAlarms will return all alarms if "AlarmNames" is an empty array.
 	if len(alarmNames) == 0 {
 		return []AlarmStatus{}, nil
@@ -104,29 +89,6 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 		}
 	}
 	return alarmStatus, nil
-}
-
-func (cw *CloudWatch) searchResourceQuery(tags map[string]string) ([]byte, error) {
-	type keyVal struct {
-		Key    string
-		Values []string
-	}
-	type query struct {
-		ResourceTypeFilters []string
-		TagFilters          []keyVal
-	}
-	var keyVals []keyVal
-	for k, v := range tags {
-		keyVals = append(keyVals, keyVal{
-			Key:    k,
-			Values: []string{v},
-		})
-	}
-	queryStruct := query{
-		ResourceTypeFilters: []string{cloudwatchResourceType},
-		TagFilters:          keyVals,
-	}
-	return json.Marshal(queryStruct)
 }
 
 // getAlarmName gets the alarm name given a specific alarm ARN.
