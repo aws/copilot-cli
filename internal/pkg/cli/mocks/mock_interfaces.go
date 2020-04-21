@@ -2474,10 +2474,10 @@ func (m *MockenvDescriber) EXPECT() *MockenvDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockenvDescriber) Describe() (*describe.Environment, error) {
+func (m *MockenvDescriber) Describe() (*describe.EnvDescription, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.Environment)
+	ret0, _ := ret[0].(*describe.EnvDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -225,7 +225,7 @@ func TestProjectShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"name\":\"test\",\"accountID\":\"123456789\",\"region\":\"us-west-2\",\"production\":false},{\"name\":\"prod\",\"accountID\":\"123456789\",\"region\":\"us-west-1\",\"production\":true}],\"applications\":[{\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
+			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"project\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"project\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"project\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
 		},
 		"prompt for all input for human output": {
 			shouldOutputJSON: false,

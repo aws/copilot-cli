@@ -5,6 +5,7 @@ package cli
 
 import (
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
@@ -92,18 +93,18 @@ func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
-	var envsToSerialize []*describe.EnvironmentSummary
+	var envsToSerialize []*archer.Environment
 	for _, env := range envs {
-		envsToSerialize = append(envsToSerialize, &describe.EnvironmentSummary{
-			Name:         env.Name,
-			AccountID:    env.AccountID,
-			Region:       env.Region,
-			IsProduction: env.Prod,
+		envsToSerialize = append(envsToSerialize, &archer.Environment{
+			Name:      env.Name,
+			AccountID: env.AccountID,
+			Region:    env.Region,
+			Prod:      env.Prod,
 		})
 	}
-	var appsToSerialize []*describe.Application
+	var appsToSerialize []*archer.Application
 	for _, app := range apps {
-		appsToSerialize = append(appsToSerialize, &describe.Application{
+		appsToSerialize = append(appsToSerialize, &archer.Application{
 			Name: app.Name,
 			Type: app.Type,
 		})

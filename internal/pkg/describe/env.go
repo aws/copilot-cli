@@ -14,17 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-type EnvironmentSummary struct {
-	Name         string `json:"name"`
-	AccountID    string `json:"accountID"`
-	Region       string `json:"region"`
-	IsProduction bool   `json:"production"`
-}
-
-type Environment struct {
-	*EnvironmentSummary `json:"environment"`
-	Applications        []*Application    `json:"applications"`
-	Tags                map[string]string `json:"tags,omitempty"`
+type EnvDescription struct {
+	Environment  *archer.Environment   `json:"environment"`
+	Applications []*archer.Application `json:"applications"`
+	Tags         map[string]string     `json:"tags,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
@@ -32,7 +25,7 @@ type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
 
-	envGetter          envGetter
+	envGetter      envGetter
 	ecsClient      map[string]ecsService
 	stackDescriber stackDescriber
 	sessProvider   *sess.Session
@@ -58,7 +51,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}
 	return &EnvDescriber{
 		env:            env,
-		envGetter:          svc,
+		envGetter:      svc,
 		apps:           apps,
 		stackDescriber: cloudformation.New(sess),
 		ecsClient:      make(map[string]ecsService),
@@ -66,30 +59,24 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}, nil
 }
 
-func (e *EnvDescriber) Describe() (*Environment, error) {
-	envToExpand := &EnvironmentSummary {
-		Name:         e.env.Name,
-		AccountID:    e.env.AccountID,
-		Region:       e.env.Region,
-		IsProduction: e.env.Prod,
-	}
-	var appsToSerialize []*Application
+func (e *EnvDescriber) Describe() (*EnvDescription, error) {
+	var appsToSerialize []*archer.Application
 	for _, app := range e.apps {
-		appsToSerialize = append(appsToSerialize, &Application{
+		appsToSerialize = append(appsToSerialize, &archer.Application{
 			Name: app.Name,
 			Type: app.Type,
 		})
 	}
-	var tags map[string]string
-	return &Environment{
-		EnvironmentSummary: envToExpand,
-		Applications:       appsToSerialize,
-		Tags:               tags,
+	var tags map[string]string // where are tags coming from/
+	return &EnvDescription{
+		Environment:  e.env,
+		Applications: e.apps,
+		Tags:         tags,
 	}, nil
 }
 
 // JSONString returns the stringified WebApp struct with json format.
-func (w *Environment) JSONString() (string, error) {
+func (w *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -98,7 +85,7 @@ func (w *Environment) JSONString() (string, error) {
 }
 
 // HumanString returns the stringified WebApp struct with human readable format.
-func (w *Environment) HumanString() string {
+func (w *EnvDescription) HumanString() string {
 	// TODO
 	return ""
 }
