@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	sess "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
@@ -31,10 +32,10 @@ type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
 
-	store          envGetter
+	envGetter          envGetter
 	ecsClient      map[string]ecsService
 	stackDescriber stackDescriber
-	sessProvider   sessionFromRoleProvider
+	sessProvider   *sess.Session
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -57,11 +58,11 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}
 	return &EnvDescriber{
 		env:            env,
-		store:          svc,
+		envGetter:          svc,
 		apps:           apps,
 		stackDescriber: cloudformation.New(sess),
 		ecsClient:      make(map[string]ecsService),
-		sessProvider:   session.NewProvider(),
+		sessProvider:   sess,
 	}, nil
 }
 
