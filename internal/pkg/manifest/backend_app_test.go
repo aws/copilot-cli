@@ -173,10 +173,29 @@ func TestBackendApp_ApplyEnv(t *testing.T) {
 		app       *BackendApp
 		inEnvName string
 
-		wanted TaskConfig
+		wanted *BackendApp
 	}{
 		"environment doesn't exist": {
 			app: &BackendApp{
+				App: App{
+					Name: "phonetool",
+					Type: BackendApplication,
+				},
+				Image: imageWithPortAndHealthcheck{
+					AppImageWithPort: AppImageWithPort{
+						AppImage: AppImage{
+							Build: "./Dockerfile",
+						},
+						Port: 8080,
+					},
+					HealthCheck: &ContainerHealthCheck{
+						Command:     []string{"hello", "world"},
+						Interval:    durationp(1 * time.Second),
+						Retries:     intp(100),
+						Timeout:     durationp(100 * time.Minute),
+						StartPeriod: durationp(5 * time.Second),
+					},
+				},
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
@@ -185,10 +204,31 @@ func TestBackendApp_ApplyEnv(t *testing.T) {
 			},
 			inEnvName: "test",
 
-			wanted: TaskConfig{
-				CPU:    256,
-				Memory: 256,
-				Count:  intp(1),
+			wanted: &BackendApp{
+				App: App{
+					Name: "phonetool",
+					Type: BackendApplication,
+				},
+				Image: imageWithPortAndHealthcheck{
+					AppImageWithPort: AppImageWithPort{
+						AppImage: AppImage{
+							Build: "./Dockerfile",
+						},
+						Port: 8080,
+					},
+					HealthCheck: &ContainerHealthCheck{
+						Command:     []string{"hello", "world"},
+						Interval:    durationp(1 * time.Second),
+						Retries:     intp(100),
+						Timeout:     durationp(100 * time.Minute),
+						StartPeriod: durationp(5 * time.Second),
+					},
+				},
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(1),
+				},
 			},
 		},
 		"uses env overrides": {
@@ -209,14 +249,16 @@ func TestBackendApp_ApplyEnv(t *testing.T) {
 			},
 			inEnvName: "test",
 
-			wanted: TaskConfig{
-				CPU:    256,
-				Memory: 256,
-				Count:  intp(0),
-				Variables: map[string]string{
-					"LOG_LEVEL": "DEBUG",
+			wanted: &BackendApp{
+				TaskConfig: TaskConfig{
+					CPU:    256,
+					Memory: 256,
+					Count:  intp(0),
+					Variables: map[string]string{
+						"LOG_LEVEL": "DEBUG",
+					},
+					Secrets: map[string]string{},
 				},
-				Secrets: map[string]string{},
 			},
 		},
 	}

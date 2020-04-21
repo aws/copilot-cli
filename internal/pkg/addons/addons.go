@@ -14,6 +14,9 @@ import (
 )
 
 const (
+	// StackName is the name of the addons nested stack resource.
+	StackName = "AddonsStack"
+
 	addonsTemplatePath = "addons/cf.yml"
 
 	paramsFileWithoutExt  = "params"
