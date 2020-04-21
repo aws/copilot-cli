@@ -173,3 +173,17 @@ func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 		hc.StartPeriod = other.StartPeriod
 	}
 }
+
+// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
+func (i imageWithPortAndHealthcheck) HealthCheckOpts() *template.AppHealthCheckOpts {
+	if i.HealthCheck == nil {
+		return nil
+	}
+	return &template.AppHealthCheckOpts{
+		Command:     i.HealthCheck.Command,
+		Interval:    int(i.HealthCheck.Interval.Seconds()),
+		Retries:     *i.HealthCheck.Retries,
+		StartPeriod: int(i.HealthCheck.StartPeriod.Seconds()),
+		Timeout:     int(i.HealthCheck.Timeout.Seconds()),
+	}
+}

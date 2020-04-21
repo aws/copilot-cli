@@ -275,34 +275,39 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 			projAccountID: proj.AccountID,
 		}
 	}
-
-	switch t := mft.(type) {
-	case *manifest.LoadBalancedWebApp:
-		appMft := mft.(*manifest.LoadBalancedWebApp)
-		appStack, err := initLBFargateStack(appMft, env.Name, env.Project, stack.RuntimeConfig{
-			ImageRepoURL:   repoURL,
-			ImageTag:       o.Tag,
-			AdditionalTags: proj.Tags,
-		}, proj.RequiresDNSDelegation())
-		if err != nil {
-			return nil, err
-		}
-
-		tpl, err := appStack.Template()
-		if err != nil {
-			return nil, err
-		}
-		params, err := appStack.SerializedParameters()
-		if err != nil {
-			return nil, err
-		}
-		return &appCfnTemplates{stack: tpl, configuration: params}, nil
-	default:
-		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", t)
+	rc := stack.RuntimeConfig{
+		ImageRepoURL:   repoURL,
+		ImageTag:       o.Tag,
+		AdditionalTags: proj.Tags,
 	}
+
+	var serializer stackSerializer
+	switch v := mft.(type) {
+	case *manifest.LoadBalancedWebApp:
+		serializer, err = initLoadBalancedWebAppStack(v, env.Name, env.Project, rc, proj.RequiresDNSDelegation())
+		if err != nil {
+			return nil, fmt.Errorf("init load balanced web app stack serializer: %w", err)
+		}
+	case *manifest.BackendApp:
+		serializer, err = stack.NewBackendApp(v, env.Name, env.Project, rc)
+		if err != nil {
+			return nil, fmt.Errorf("init backend app stack serializer: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", v)
+	}
+	tpl, err := serializer.Template()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template: %w", err)
+	}
+	params, err := serializer.SerializedParameters()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template configuration: %w", err)
+	}
+	return &appCfnTemplates{stack: tpl, configuration: params}, nil
 }
 
-var initLBFargateStack = func(app *manifest.LoadBalancedWebApp, env, proj string, rc stack.RuntimeConfig, isHTTPS bool) (stackSerializer, error) {
+var initLoadBalancedWebAppStack = func(app *manifest.LoadBalancedWebApp, env, proj string, rc stack.RuntimeConfig, isHTTPS bool) (stackSerializer, error) {
 	if isHTTPS {
 		return stack.NewHTTPSLoadBalancedWebApp(app, env, proj, rc)
 	}

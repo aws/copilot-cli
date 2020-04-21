@@ -436,7 +436,7 @@ count: 1`), nil)
 						},
 					}, nil)
 
-				initLBFargateStack = func(_ *manifest.LoadBalancedWebApp, _, _ string, _ stack.RuntimeConfig, _ bool) (stackSerializer, error) {
+				initLoadBalancedWebAppStack = func(_ *manifest.LoadBalancedWebApp, _, _ string, _ stack.RuntimeConfig, _ bool) (stackSerializer, error) {
 					m := climocks.NewMockstackSerializer(ctrl)
 					m.EXPECT().Template().Return("mystack", nil)
 					m.EXPECT().SerializedParameters().Return("myparams", nil)
@@ -466,9 +466,9 @@ count: 1`), nil)
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			oldInitFargateStack := initLBFargateStack
+			oldInitFargateStack := initLoadBalancedWebAppStack
 			defer func() {
-				initLBFargateStack = oldInitFargateStack
+				initLoadBalancedWebAppStack = oldInitFargateStack
 			}()
 
 			stackBuf := new(bytes.Buffer)

@@ -128,3 +128,15 @@ func TestHasSecrets(t *testing.T) {
 		})
 	}
 }
+
+func TestStringifySlice(t *testing.T) {
+	require.Equal(t, "[]", stringifySlice(nil))
+	require.Equal(t, "[a]", stringifySlice([]string{"a"}))
+	require.Equal(t, "[a, b, c]", stringifySlice([]string{"a", "b", "c"}))
+}
+
+func TestQuoteAll(t *testing.T) {
+	require.Equal(t, []string(nil), quoteAll(nil))
+	require.Equal(t, []string{`"a"`}, quoteAll([]string{"a"}))
+	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, quoteAll([]string{"a", "b", "c"}))
+}
