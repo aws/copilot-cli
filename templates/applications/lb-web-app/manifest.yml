@@ -34,13 +34,6 @@ count: {{.Count}}
 #
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-#
-#scaling:                      # Optional configuration for scaling your service.
-#  minCount: 1                   # Minimum number of tasks that should be running in your service.
-#  maxCount: 3                   # Maximum number of tasks that should be running in your service.
-#
-#  # If the target value is crossed, ECS starts adding or removing tasks.
-#  targetCPU: 75.0               # Target average CPU utilization percentage.
 
 # You can override any of the values defined above by environment.
 #environments:

@@ -4,11 +4,11 @@
 package cli
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -344,23 +344,20 @@ image:
 
 func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 	mockError := errors.New("some error")
-	buf := &bytes.Buffer{}
-	fmt.Fprint(buf, "some data")
 	tests := map[string]struct {
-		addonsTemplate *bytes.Buffer
-		inputApp       string
-		inEnvironment  *archer.Environment
-		inProject      *archer.Project
+		inputApp      string
+		inEnvironment *archer.Environment
+		inProject     *archer.Project
 
 		mockProjectResourcesGetter func(m *climocks.MockprojectResourcesGetter)
-		mockS3Svc                  func(m *climocks.MockartifactPutter)
+		mockS3Svc                  func(m *climocks.MockartifactUploader)
+		mockAddons                 func(m *climocks.Mocktemplater)
 
 		wantPath string
 		wantErr  error
 	}{
 		"should push addons template to S3 bucket": {
-			addonsTemplate: buf,
-			inputApp:       "mockApp",
+			inputApp: "mockApp",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
@@ -375,17 +372,18 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 					S3Bucket: "mockBucket",
 				}, nil)
 			},
-
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
-				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", buf).Return("https://mockS3DomainName/mockPath", nil)
+			mockAddons: func(m *climocks.Mocktemplater) {
+				m.EXPECT().Template().Return("some data", nil)
+			},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
+				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", gomock.Any()).Return("https://mockS3DomainName/mockPath", nil)
 			},
 
 			wantErr:  nil,
 			wantPath: "https://mockS3DomainName/mockPath",
 		},
 		"should return error if fail to get project resources": {
-			addonsTemplate: buf,
-			inputApp:       "mockApp",
+			inputApp: "mockApp",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
@@ -393,20 +391,20 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			inProject: &archer.Project{
 				Name: "mockProject",
 			},
-
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
 					Name: "mockProject",
 				}, "us-west-2").Return(nil, mockError)
 			},
-
-			mockS3Svc: func(m *climocks.MockartifactPutter) {},
+			mockAddons: func(m *climocks.Mocktemplater) {
+				m.EXPECT().Template().Return("some data", nil)
+			},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {},
 
 			wantErr: fmt.Errorf("get project resources: some error"),
 		},
 		"should return error if fail to upload to S3 bucket": {
-			addonsTemplate: buf,
-			inputApp:       "mockApp",
+			inputApp: "mockApp",
 			inEnvironment: &archer.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
@@ -422,12 +420,42 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 					S3Bucket: "mockBucket",
 				}, nil)
 			},
-
-			mockS3Svc: func(m *climocks.MockartifactPutter) {
-				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", buf).Return("", mockError)
+			mockAddons: func(m *climocks.Mocktemplater) {
+				m.EXPECT().Template().Return("some data", nil)
+			},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
+				m.EXPECT().PutArtifact("mockBucket", "mockApp.addons.stack.yml", gomock.Any()).Return("", mockError)
 			},
 
 			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
+		},
+		"should return empty url if the application doesn't have any addons": {
+			inputApp: "mockApp",
+			mockAddons: func(m *climocks.Mocktemplater) {
+				m.EXPECT().Template().Return("", &addons.ErrDirNotExist{
+					AppName: "mockApp",
+				})
+			},
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
+				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantPath: "",
+		},
+		"should fail if addons cannot be retrieved from workspace": {
+			inputApp: "mockApp",
+			mockAddons: func(m *climocks.Mocktemplater) {
+				m.EXPECT().Template().Return("", mockError)
+			},
+			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
+			},
+			mockS3Svc: func(m *climocks.MockartifactUploader) {
+				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
 		},
 	}
 
@@ -438,22 +466,25 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			mockProjectSvc := climocks.NewMockprojectService(ctrl)
 			mockProjectResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
-			mockS3Svc := climocks.NewMockartifactPutter(ctrl)
+			mockS3Svc := climocks.NewMockartifactUploader(ctrl)
+			mockAddons := climocks.NewMocktemplater(ctrl)
 			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
 			tc.mockS3Svc(mockS3Svc)
+			tc.mockAddons(mockAddons)
 
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
 					AppName: tc.inputApp,
 				},
-				projectService:     mockProjectSvc,
-				appPackageCfClient: mockProjectResourcesGetter,
-				s3Service:          mockS3Svc,
-				targetEnvironment:  tc.inEnvironment,
-				targetProject:      tc.inProject,
+				projectService:    mockProjectSvc,
+				projectCFSvc:      mockProjectResourcesGetter,
+				addonsSvc:         mockAddons,
+				s3Service:         mockS3Svc,
+				targetEnvironment: tc.inEnvironment,
+				targetProject:     tc.inProject,
 			}
 
-			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket(tc.addonsTemplate)
+			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket()
 
 			if gotErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())

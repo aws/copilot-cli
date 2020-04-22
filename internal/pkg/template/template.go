@@ -27,7 +27,9 @@ var (
 		"envvars",
 		"executionrole",
 		"taskrole",
+		"fargate-taskdef-base-properties",
 		"service-base-properties",
+		"servicediscovery",
 		"addons",
 	}
 )
@@ -43,12 +45,6 @@ type Parser interface {
 type ReadParser interface {
 	Read(path string) (*Content, error)
 	Parser
-}
-
-// AppTemplateReadParser is the interface that wraps the methods needed to parse all application templates.
-type AppTemplateReadParser interface {
-	ReadParser
-	ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error)
 }
 
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
@@ -91,29 +87,6 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 	buf := new(bytes.Buffer)
 	if err := tpl.Execute(buf, data); err != nil {
 		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
-	}
-	return &Content{buf}, nil
-}
-
-// ParseAppTemplate parses an application's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseAppTemplate(name string, data interface{}, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", fmt.Sprintf(fmtAppCFTemplatePath, name), options...)
-	if err != nil {
-		return nil, err
-	}
-	for _, templateName := range commonCFTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtCommonCFTemplatePath, templateName), options...)
-		if err != nil {
-			return nil, err
-		}
-		_, err = tpl.AddParseTree(templateName, nestedTpl.Tree)
-		if err != nil {
-			return nil, fmt.Errorf("add parse tree of %s to base template: %w", templateName, err)
-		}
-	}
-	buf := &bytes.Buffer{}
-	if err := tpl.Execute(buf, data); err != nil {
-		return nil, fmt.Errorf("execute app template %s with data %v: %w", name, data, err)
 	}
 	return &Content{buf}, nil
 }

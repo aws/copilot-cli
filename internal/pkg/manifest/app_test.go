@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -33,10 +34,6 @@ variables:
   LOG_LEVEL: "WARN"
 secrets:
   DB_PASSWORD: MYSQL_DB_PASSWORD
-scaling:
-  minCount: 1
-  maxCount: 50
-  targetMemory: 60
 environments:
   test:
     count: 3
@@ -58,7 +55,7 @@ environments:
 						TaskConfig: TaskConfig{
 							CPU:    512,
 							Memory: 1024,
-							Count:  1,
+							Count:  intp(1),
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
@@ -66,17 +63,60 @@ environments:
 								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 							},
 						},
-						Scaling: &AutoScalingConfig{
-							MinCount:     1,
-							MaxCount:     50,
-							TargetMemory: 60.0,
-						},
 					},
 					Environments: map[string]LoadBalancedWebAppConfig{
 						"test": {
 							TaskConfig: TaskConfig{
-								Count: 3,
+								Count: intp(3),
 							},
+						},
+					},
+				}
+				require.Equal(t, wantedManifest, actualManifest)
+			},
+		},
+		"backend app": {
+			inContent: `
+name: subscribers
+type: Backend App
+image:
+  build: ./subscribers/Dockerfile
+  port: 8080
+  healthcheck:
+    command: ['CMD-SHELL', 'curl http://localhost:5000/ || exit 1']
+cpu: 1024
+memory: 1024
+secrets:
+  API_TOKEN: SUBS_API_TOKEN`,
+			requireCorrectValues: func(t *testing.T, i interface{}) {
+				actualManifest, ok := i.(*BackendApp)
+				require.True(t, ok)
+				wantedManifest := &BackendApp{
+					App: App{
+						Name: "subscribers",
+						Type: BackendApplication,
+					},
+					Image: imageWithPortAndHealthcheck{
+						AppImageWithPort: AppImageWithPort{
+							AppImage: AppImage{
+								Build: "./subscribers/Dockerfile",
+							},
+							Port: 8080,
+						},
+						HealthCheck: &ContainerHealthCheck{
+							Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
+							Interval:    durationp(10 * time.Second),
+							Retries:     intp(2),
+							Timeout:     durationp(5 * time.Second),
+							StartPeriod: durationp(0 * time.Second),
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    1024,
+						Memory: 1024,
+						Count:  intp(1),
+						Secrets: map[string]string{
+							"API_TOKEN": "SUBS_API_TOKEN",
 						},
 					},
 				}
