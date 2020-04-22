@@ -21,35 +21,35 @@ const (
 	artifactDirName = "manual"
 )
 
-type s3ManagerClient interface {
+type s3ManagerApi interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
-type s3Client interface {
+type s3Api interface {
 	ListObjectVersions(input *s3.ListObjectVersionsInput) (*s3.ListObjectVersionsOutput, error)
 	DeleteObjects(input *s3.DeleteObjectsInput) (*s3.DeleteObjectsOutput, error)
 }
 
-// Service wraps an Amazon Simple Storage Service client.
-type Service struct {
-	s3ManagerSvc s3ManagerClient
-	s3Svc        s3Client
+// S3 wraps an Amazon Simple Storage Service client.
+type S3 struct {
+	s3Manager s3ManagerApi
+	s3Client  s3Api
 }
 
-// New returns a Service configured against the input session.
-func New(s *session.Session) *Service {
-	return &Service{
-		s3ManagerSvc: s3manager.NewUploader(s),
-		s3Svc:        s3.New(s),
+// New returns an S3 client configured against the input session.
+func New(s *session.Session) *S3 {
+	return &S3{
+		s3Manager: s3manager.NewUploader(s),
+		s3Client:  s3.New(s),
 	}
 }
 
-// PutArtifact uploads data to a S3 bucket under a random path that ends with the file name
-// and returns its url.
-func (s *Service) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
+// PutArtifact uploads data to a S3 bucket under a random path that ends with
+// the file name and returns its url.
+func (s *S3) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
 	id := time.Now().Unix()
 	key := path.Join(artifactDirName, strconv.FormatInt(id, 10), fileName)
-	resp, err := s.s3ManagerSvc.Upload(&s3manager.UploadInput{
+	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
 		Body:   data,
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
@@ -62,7 +62,7 @@ func (s *Service) PutArtifact(bucket, fileName string, data io.Reader) (string, 
 }
 
 // EmptyBucket deletes all objects within the bucket.
-func (s *Service) EmptyBucket(bucket string) error {
+func (s *S3) EmptyBucket(bucket string) error {
 	var listResp *s3.ListObjectVersionsOutput
 	var err error
 	listParams := &s3.ListObjectVersionsInput{
@@ -70,7 +70,7 @@ func (s *Service) EmptyBucket(bucket string) error {
 	}
 	// Remove all versions of all objects.
 	for {
-		listResp, err = s.s3Svc.ListObjectVersions(listParams)
+		listResp, err = s.s3Client.ListObjectVersions(listParams)
 		if err != nil {
 			return fmt.Errorf("list objects for bucket %s: %w", bucket, err)
 		}
@@ -89,7 +89,7 @@ func (s *Service) EmptyBucket(bucket string) error {
 				VersionId: deleteMarker.VersionId,
 			})
 		}
-		_, err = s.s3Svc.DeleteObjects(&s3.DeleteObjectsInput{
+		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
 				Objects: objectsToDelete,

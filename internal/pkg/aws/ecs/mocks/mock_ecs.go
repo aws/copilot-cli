@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockecsClient is a mock of ecsClient interface
-type MockecsClient struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockecsClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockecsClientMockRecorder is the mock recorder for MockecsClient
-type MockecsClientMockRecorder struct {
-	mock *MockecsClient
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockecsClient creates a new mock instance
-func NewMockecsClient(ctrl *gomock.Controller) *MockecsClient {
-	mock := &MockecsClient{ctrl: ctrl}
-	mock.recorder = &MockecsClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // DescribeTasks mocks base method
-func (m *MockecsClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
+func (m *Mockapi) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTasks", input)
 	ret0, _ := ret[0].(*ecs.DescribeTasksOutput)
@@ -43,13 +43,13 @@ func (m *MockecsClient) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.Descr
 }
 
 // DescribeTasks indicates an expected call of DescribeTasks
-func (mr *MockecsClientMockRecorder) DescribeTasks(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeTasks(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*MockecsClient)(nil).DescribeTasks), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*Mockapi)(nil).DescribeTasks), input)
 }
 
 // DescribeTaskDefinition mocks base method
-func (m *MockecsClient) DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error) {
+func (m *Mockapi) DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTaskDefinition", input)
 	ret0, _ := ret[0].(*ecs.DescribeTaskDefinitionOutput)
@@ -58,13 +58,13 @@ func (m *MockecsClient) DescribeTaskDefinition(input *ecs.DescribeTaskDefinition
 }
 
 // DescribeTaskDefinition indicates an expected call of DescribeTaskDefinition
-func (mr *MockecsClientMockRecorder) DescribeTaskDefinition(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeTaskDefinition(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTaskDefinition", reflect.TypeOf((*MockecsClient)(nil).DescribeTaskDefinition), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTaskDefinition", reflect.TypeOf((*Mockapi)(nil).DescribeTaskDefinition), input)
 }
 
 // DescribeServices mocks base method
-func (m *MockecsClient) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
+func (m *Mockapi) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeServices", input)
 	ret0, _ := ret[0].(*ecs.DescribeServicesOutput)
@@ -73,13 +73,13 @@ func (m *MockecsClient) DescribeServices(input *ecs.DescribeServicesInput) (*ecs
 }
 
 // DescribeServices indicates an expected call of DescribeServices
-func (mr *MockecsClientMockRecorder) DescribeServices(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeServices(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeServices", reflect.TypeOf((*MockecsClient)(nil).DescribeServices), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeServices", reflect.TypeOf((*Mockapi)(nil).DescribeServices), input)
 }
 
 // ListTasks mocks base method
-func (m *MockecsClient) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
+func (m *Mockapi) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTasks", input)
 	ret0, _ := ret[0].(*ecs.ListTasksOutput)
@@ -88,7 +88,7 @@ func (m *MockecsClient) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutp
 }
 
 // ListTasks indicates an expected call of ListTasks
-func (mr *MockecsClientMockRecorder) ListTasks(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) ListTasks(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*MockecsClient)(nil).ListTasks), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*Mockapi)(nil).ListTasks), input)
 }

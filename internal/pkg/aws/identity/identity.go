@@ -9,18 +9,21 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 )
 
-// Service wraps the internal sts client.
-type Service struct {
-	sts stsiface.STSAPI
+type api interface {
+	GetCallerIdentity(input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
 }
 
-// New returns a Service configured with the input session.
-func New(s *session.Session) Service {
-	return Service{
-		sts: sts.New(s),
+// STS wraps the internal sts client.
+type STS struct {
+	client api
+}
+
+// New returns a STS configured with the input session.
+func New(s *session.Session) STS {
+	return STS{
+		client: sts.New(s),
 	}
 }
 
@@ -32,8 +35,8 @@ type Caller struct {
 }
 
 // Get returns the Caller associated with the Client's session.
-func (s Service) Get() (Caller, error) {
-	out, err := s.sts.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+func (s STS) Get() (Caller, error) {
+	out, err := s.client.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 
 	if err != nil {
 		return Caller{}, fmt.Errorf("get caller identity: %w", err)
