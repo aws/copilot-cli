@@ -26,14 +26,14 @@ var (
 	warningCodes = []string{"WARN", "warn", "WARNING", "warning"}
 )
 
-type cloudwatchlogsClient interface {
+type api interface {
 	DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error)
 	GetLogEvents(input *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error)
 }
 
-// Service wraps an AWS Cloudwatch Logs client.
-type Service struct {
-	cwlogs cloudwatchlogsClient
+// CloudWatchLogs wraps an AWS Cloudwatch Logs client.
+type CloudWatchLogs struct {
+	client api
 }
 
 // GetLogEventsOpts sets up optional parameters for LogEvents function.
@@ -68,16 +68,16 @@ type LogEventsOutput struct {
 	LastEventTime map[string]int64
 }
 
-// New returns a Service configured against the input session.
-func New(s *session.Session) *Service {
-	return &Service{
-		cwlogs: cloudwatchlogs.New(s),
+// New returns a CloudWatchLogs configured against the input session.
+func New(s *session.Session) *CloudWatchLogs {
+	return &CloudWatchLogs{
+		client: cloudwatchlogs.New(s),
 	}
 }
 
 // logStreams returns all name of the log streams in a log group.
-func (s *Service) logStreams(logGroupName string) ([]*string, error) {
-	resp, err := s.cwlogs.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+func (c *CloudWatchLogs) logStreams(logGroupName string) ([]*string, error) {
+	resp, err := c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroupName),
 		Descending:   aws.Bool(true),
 		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
@@ -96,10 +96,10 @@ func (s *Service) logStreams(logGroupName string) ([]*string, error) {
 }
 
 // TaskLogEvents returns an array of Cloudwatch Logs events.
-func (s *Service) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
+func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	var in *cloudwatchlogs.GetLogEventsInput
-	logStreamNames, err := s.logStreams(logGroupName)
+	logStreamNames, err := c.logStreams(logGroupName)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (s *Service) TaskLogEvents(logGroupName string, streamLastEventTime map[str
 			in.SetStartTime(streamLastEventTime[*logStreamName] + 1)
 		}
 		// TODO: https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374291068 and https://github.com/aws/amazon-ecs-cli-v2/pull/628#discussion_r374294362
-		resp, err := s.cwlogs.GetLogEvents(in)
+		resp, err := c.client.GetLogEvents(in)
 		if err != nil {
 			return nil, fmt.Errorf("get log events of %s/%s: %w", logGroupName, *logStreamName, err)
 		}
@@ -154,8 +154,8 @@ func (s *Service) TaskLogEvents(logGroupName string, streamLastEventTime map[str
 }
 
 // LogGroupExists returns if a log group exists.
-func (s *Service) LogGroupExists(logGroupName string) (bool, error) {
-	_, err := s.cwlogs.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+func (c *CloudWatchLogs) LogGroupExists(logGroupName string) (bool, error) {
+	_, err := c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroupName),
 	})
 	if err == nil {

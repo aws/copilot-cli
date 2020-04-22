@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockcloudwatchlogsClient is a mock of cloudwatchlogsClient interface
-type MockcloudwatchlogsClient struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockcloudwatchlogsClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockcloudwatchlogsClientMockRecorder is the mock recorder for MockcloudwatchlogsClient
-type MockcloudwatchlogsClientMockRecorder struct {
-	mock *MockcloudwatchlogsClient
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockcloudwatchlogsClient creates a new mock instance
-func NewMockcloudwatchlogsClient(ctrl *gomock.Controller) *MockcloudwatchlogsClient {
-	mock := &MockcloudwatchlogsClient{ctrl: ctrl}
-	mock.recorder = &MockcloudwatchlogsClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcloudwatchlogsClient) EXPECT() *MockcloudwatchlogsClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // DescribeLogStreams mocks base method
-func (m *MockcloudwatchlogsClient) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
+func (m *Mockapi) DescribeLogStreams(input *cloudwatchlogs.DescribeLogStreamsInput) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeLogStreams", input)
 	ret0, _ := ret[0].(*cloudwatchlogs.DescribeLogStreamsOutput)
@@ -43,13 +43,13 @@ func (m *MockcloudwatchlogsClient) DescribeLogStreams(input *cloudwatchlogs.Desc
 }
 
 // DescribeLogStreams indicates an expected call of DescribeLogStreams
-func (mr *MockcloudwatchlogsClientMockRecorder) DescribeLogStreams(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeLogStreams(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLogStreams", reflect.TypeOf((*MockcloudwatchlogsClient)(nil).DescribeLogStreams), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeLogStreams", reflect.TypeOf((*Mockapi)(nil).DescribeLogStreams), input)
 }
 
 // GetLogEvents mocks base method
-func (m *MockcloudwatchlogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error) {
+func (m *Mockapi) GetLogEvents(input *cloudwatchlogs.GetLogEventsInput) (*cloudwatchlogs.GetLogEventsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLogEvents", input)
 	ret0, _ := ret[0].(*cloudwatchlogs.GetLogEventsOutput)
@@ -58,7 +58,7 @@ func (m *MockcloudwatchlogsClient) GetLogEvents(input *cloudwatchlogs.GetLogEven
 }
 
 // GetLogEvents indicates an expected call of GetLogEvents
-func (mr *MockcloudwatchlogsClientMockRecorder) GetLogEvents(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) GetLogEvents(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogEvents", reflect.TypeOf((*MockcloudwatchlogsClient)(nil).GetLogEvents), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogEvents", reflect.TypeOf((*Mockapi)(nil).GetLogEvents), input)
 }
