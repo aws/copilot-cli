@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockecrClient is a mock of ecrClient interface
-type MockecrClient struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockecrClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockecrClientMockRecorder is the mock recorder for MockecrClient
-type MockecrClientMockRecorder struct {
-	mock *MockecrClient
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockecrClient creates a new mock instance
-func NewMockecrClient(ctrl *gomock.Controller) *MockecrClient {
-	mock := &MockecrClient{ctrl: ctrl}
-	mock.recorder = &MockecrClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockecrClient) EXPECT() *MockecrClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // DescribeImages mocks base method
-func (m *MockecrClient) DescribeImages(arg0 *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
+func (m *Mockapi) DescribeImages(arg0 *ecr.DescribeImagesInput) (*ecr.DescribeImagesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeImages", arg0)
 	ret0, _ := ret[0].(*ecr.DescribeImagesOutput)
@@ -43,13 +43,13 @@ func (m *MockecrClient) DescribeImages(arg0 *ecr.DescribeImagesInput) (*ecr.Desc
 }
 
 // DescribeImages indicates an expected call of DescribeImages
-func (mr *MockecrClientMockRecorder) DescribeImages(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeImages(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeImages", reflect.TypeOf((*MockecrClient)(nil).DescribeImages), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeImages", reflect.TypeOf((*Mockapi)(nil).DescribeImages), arg0)
 }
 
 // GetAuthorizationToken mocks base method
-func (m *MockecrClient) GetAuthorizationToken(arg0 *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
+func (m *Mockapi) GetAuthorizationToken(arg0 *ecr.GetAuthorizationTokenInput) (*ecr.GetAuthorizationTokenOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAuthorizationToken", arg0)
 	ret0, _ := ret[0].(*ecr.GetAuthorizationTokenOutput)
@@ -58,13 +58,13 @@ func (m *MockecrClient) GetAuthorizationToken(arg0 *ecr.GetAuthorizationTokenInp
 }
 
 // GetAuthorizationToken indicates an expected call of GetAuthorizationToken
-func (mr *MockecrClientMockRecorder) GetAuthorizationToken(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) GetAuthorizationToken(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorizationToken", reflect.TypeOf((*MockecrClient)(nil).GetAuthorizationToken), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorizationToken", reflect.TypeOf((*Mockapi)(nil).GetAuthorizationToken), arg0)
 }
 
 // DescribeRepositories mocks base method
-func (m *MockecrClient) DescribeRepositories(arg0 *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
+func (m *Mockapi) DescribeRepositories(arg0 *ecr.DescribeRepositoriesInput) (*ecr.DescribeRepositoriesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeRepositories", arg0)
 	ret0, _ := ret[0].(*ecr.DescribeRepositoriesOutput)
@@ -73,13 +73,13 @@ func (m *MockecrClient) DescribeRepositories(arg0 *ecr.DescribeRepositoriesInput
 }
 
 // DescribeRepositories indicates an expected call of DescribeRepositories
-func (mr *MockecrClientMockRecorder) DescribeRepositories(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeRepositories(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRepositories", reflect.TypeOf((*MockecrClient)(nil).DescribeRepositories), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRepositories", reflect.TypeOf((*Mockapi)(nil).DescribeRepositories), arg0)
 }
 
 // BatchDeleteImage mocks base method
-func (m *MockecrClient) BatchDeleteImage(arg0 *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
+func (m *Mockapi) BatchDeleteImage(arg0 *ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BatchDeleteImage", arg0)
 	ret0, _ := ret[0].(*ecr.BatchDeleteImageOutput)
@@ -88,7 +88,7 @@ func (m *MockecrClient) BatchDeleteImage(arg0 *ecr.BatchDeleteImageInput) (*ecr.
 }
 
 // BatchDeleteImage indicates an expected call of BatchDeleteImage
-func (mr *MockecrClientMockRecorder) BatchDeleteImage(arg0 interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) BatchDeleteImage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchDeleteImage", reflect.TypeOf((*MockecrClient)(nil).BatchDeleteImage), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchDeleteImage", reflect.TypeOf((*Mockapi)(nil).BatchDeleteImage), arg0)
 }

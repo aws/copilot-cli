@@ -19,14 +19,14 @@ func TestRoute53_DomainExists(t *testing.T) {
 
 	testCases := map[string]struct {
 		domainName        string
-		mockRoute53Client func(m *mocks.Mockroute53Client)
+		mockRoute53Client func(m *mocks.Mockapi)
 
 		wantErr    error
 		wantExists bool
 	}{
 		"domain exists": {
 			domainName: "mockDomain.com",
-			mockRoute53Client: func(m *mocks.Mockroute53Client) {
+			mockRoute53Client: func(m *mocks.Mockapi) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
 					DNSName: aws.String("mockDomain.com"),
 				}).Return(&route53.ListHostedZonesByNameOutput{
@@ -43,7 +43,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 		},
 		"DNS with subdomain": {
 			domainName: "mockDomain.subdomain.com",
-			mockRoute53Client: func(m *mocks.Mockroute53Client) {
+			mockRoute53Client: func(m *mocks.Mockapi) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
 					DNSName: aws.String("mockDomain.subdomain.com"),
 				}).Return(&route53.ListHostedZonesByNameOutput{
@@ -60,7 +60,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 		},
 		"domain exists within more than one page": {
 			domainName: "mockDomain3.com",
-			mockRoute53Client: func(m *mocks.Mockroute53Client) {
+			mockRoute53Client: func(m *mocks.Mockapi) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
 					DNSName: aws.String("mockDomain3.com"),
 				}).Return(&route53.ListHostedZonesByNameOutput{
@@ -93,7 +93,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 		},
 		"domain does not exist": {
 			domainName: "mockDomain4.com",
-			mockRoute53Client: func(m *mocks.Mockroute53Client) {
+			mockRoute53Client: func(m *mocks.Mockapi) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
 					DNSName: aws.String("mockDomain4.com"),
 				}).Return(&route53.ListHostedZonesByNameOutput{
@@ -126,7 +126,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 		},
 		"failed to validate if domain exists": {
 			domainName: "mockDomain.com",
-			mockRoute53Client: func(m *mocks.Mockroute53Client) {
+			mockRoute53Client: func(m *mocks.Mockapi) {
 				m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
 					DNSName: aws.String("mockDomain.com"),
 				}).Return(nil, errors.New("some error"))
@@ -142,7 +142,7 @@ func TestRoute53_DomainExists(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRoute53Client := mocks.NewMockroute53Client(ctrl)
+			mockRoute53Client := mocks.NewMockapi(ctrl)
 			tc.mockRoute53Client(mockRoute53Client)
 
 			service := Route53{

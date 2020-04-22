@@ -19,13 +19,13 @@ const (
 	route53Region = "us-east-1"
 )
 
-type route53Client interface {
+type api interface {
 	ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error)
 }
 
 // Route53 wraps an Route53 client.
 type Route53 struct {
-	client route53Client
+	client api
 }
 
 // New returns a Route53 struct configured against the input session.
