@@ -100,7 +100,7 @@ run-integ-test:
 	# Also adding count=1 so the test results aren't cached.
 	# This command also targets files with the build integration tag
 	# and runs tests which end in Integration.
-	go test -v -count=1 -timeout 60m -tags=integration ${PACKAGES}
+	go test -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
 .PHONY: e2e
 e2e: build-e2e
