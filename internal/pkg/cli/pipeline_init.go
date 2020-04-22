@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -75,9 +74,7 @@ type initPipelineOpts struct {
 	storeSvc       storeReader
 
 	// Outputs stored on successful actions.
-	manifestPath  string
-	buildspecPath string
-	secretName    string
+	secretName string
 
 	// Caches variables
 	projectEnvs []*archer.Environment
@@ -210,21 +207,15 @@ func (o *initPipelineOpts) Execute() error {
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
 
-	manifestPath, err := o.createPipelineManifest()
+	err = o.createPipelineManifest()
 	if err != nil {
 		return err
 	}
-	o.manifestPath = manifestPath
 
-	buildspecPath, err := o.createBuildspec()
+	err = o.createBuildspec()
 	if err != nil {
 		return err
 	}
-	o.buildspecPath = buildspecPath
-
-	log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.GitHubRepo), color.HighlightResource(relPath(o.manifestPath)))
-	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
-	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
 
 	return nil
 }
@@ -256,31 +247,48 @@ func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
-func (o *initPipelineOpts) createPipelineManifest() (string, error) {
+func (o *initPipelineOpts) createPipelineManifest() error {
 	// TODO change this to flag
 	pipelineName := o.createPipelineName()
 	provider, err := o.createPipelineProvider()
 	if err != nil {
-		return "", fmt.Errorf("could not create pipeline: %w", err)
+		return fmt.Errorf("could not create pipeline: %w", err)
 	}
 
 	manifest, err := manifest.CreatePipeline(pipelineName, provider, o.Environments)
 	if err != nil {
-		return "", fmt.Errorf("generate a manifest: %w", err)
+		return fmt.Errorf("generate a manifest: %w", err)
 	}
 
+	var manifestExists bool
 	manifestPath, err := o.workspace.WritePipelineManifest(manifest)
 	if err != nil {
-		return "", err
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return fmt.Errorf("write manifest to workspace: %w", err)
+		}
+		manifestExists = true
+		manifestPath = e.FileName
 	}
 
-	return manifestPath, nil
+	manifestPath, err = relPath(manifestPath)
+	if err != nil {
+		return err
+	}
+
+	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
+	if manifestExists {
+		manifestMsgFmt = "Pipeline manifest file for %s already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.GitHubRepo), color.HighlightResource(manifestPath))
+	log.Infoln("The manifest contains configurations for your CodePipeline resources, such as your pipeline stages and build steps.")
+	return nil
 }
 
-func (o *initPipelineOpts) createBuildspec() (string, error) {
+func (o *initPipelineOpts) createBuildspec() error {
 	artifactBuckets, err := o.artifactBuckets()
 	if err != nil {
-		return "", err
+		return err
 	}
 	content, err := o.parser.Parse(buildspecTemplatePath, struct {
 		BinaryS3BucketPath string
@@ -292,24 +300,30 @@ func (o *initPipelineOpts) createBuildspec() (string, error) {
 		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
-	path, err := o.workspace.WritePipelineBuildspec(content)
+	buildspecPath, err := o.workspace.WritePipelineBuildspec(content)
 	var buildspecExists bool
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
-			return "", fmt.Errorf("write buildspec to workspace: %w", err)
+			return fmt.Errorf("write buildspec to workspace: %w", err)
 		}
 		buildspecExists = true
-		path = e.FileName
+		buildspecPath = e.FileName
 	}
 	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
 		buildspecMsgFmt = "Buildspec file for project pipeline already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(buildspecMsgFmt, color.HighlightResource(relPath(o.buildspecPath)))
-	return path, nil
+	buildspecPath, err = relPath(buildspecPath)
+	if err != nil {
+		return err
+	}
+	log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+	log.Infoln("The buildspec contains the commands to build and push your container images to your ECR repositories.")
+
+	return nil
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
@@ -410,20 +424,6 @@ func (o *initPipelineOpts) selectEnvironment() error {
 	o.Environments = append(o.Environments, env)
 
 	return nil
-}
-
-// relPath returns the full path relative to the current working directory.
-// If there is an error during the process, returns the full path.
-func relPath(fullPath string) string {
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return fullPath
-	}
-	relPath, err := filepath.Rel(wkdir, fullPath)
-	if err != nil {
-		return fullPath
-	}
-	return relPath
 }
 
 func (o *initPipelineOpts) selectGitHubURL() error {

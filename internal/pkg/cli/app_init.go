@@ -4,8 +4,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -214,13 +212,9 @@ func (o *initAppOpts) createManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	wkdir, err := os.Getwd()
+	manifestPath, err = relPath(manifestPath)
 	if err != nil {
-		return "", fmt.Errorf("get working directory: %w", err)
-	}
-	relPath, err := filepath.Rel(wkdir, manifestPath)
-	if err != nil {
-		return "", fmt.Errorf("get relative path of manifest file: %w", err)
+		return "", err
 	}
 
 	log.Infoln()
@@ -228,11 +222,11 @@ func (o *initAppOpts) createManifest() (string, error) {
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s app already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.AppName), color.HighlightResource(relPath))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.AppName), color.HighlightResource(manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
-	return relPath, nil
+	return manifestPath, nil
 }
 
 func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWebApp, error) {
