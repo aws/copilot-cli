@@ -23,13 +23,13 @@ const (
 	metricAlarmType        = "Metric"
 )
 
-type cloudWatchClient interface {
+type api interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
 }
 
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
-	cwClient cloudWatchClient
+	cwClient api
 	rgClient resourcegroups.ResourceGroupsClient
 }
 
