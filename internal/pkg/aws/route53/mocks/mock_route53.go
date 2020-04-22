@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// Mockroute53Client is a mock of route53Client interface
-type Mockroute53Client struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *Mockroute53ClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// Mockroute53ClientMockRecorder is the mock recorder for Mockroute53Client
-type Mockroute53ClientMockRecorder struct {
-	mock *Mockroute53Client
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockroute53Client creates a new mock instance
-func NewMockroute53Client(ctrl *gomock.Controller) *Mockroute53Client {
-	mock := &Mockroute53Client{ctrl: ctrl}
-	mock.recorder = &Mockroute53ClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *Mockroute53Client) EXPECT() *Mockroute53ClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // ListHostedZonesByName mocks base method
-func (m *Mockroute53Client) ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+func (m *Mockapi) ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListHostedZonesByName", in)
 	ret0, _ := ret[0].(*route53.ListHostedZonesByNameOutput)
@@ -43,7 +43,7 @@ func (m *Mockroute53Client) ListHostedZonesByName(in *route53.ListHostedZonesByN
 }
 
 // ListHostedZonesByName indicates an expected call of ListHostedZonesByName
-func (mr *Mockroute53ClientMockRecorder) ListHostedZonesByName(in interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) ListHostedZonesByName(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHostedZonesByName", reflect.TypeOf((*Mockroute53Client)(nil).ListHostedZonesByName), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHostedZonesByName", reflect.TypeOf((*Mockapi)(nil).ListHostedZonesByName), in)
 }
