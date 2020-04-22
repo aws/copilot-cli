@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
@@ -137,6 +138,6 @@ func TestStringifySlice(t *testing.T) {
 
 func TestQuoteAll(t *testing.T) {
 	require.Equal(t, []string(nil), quoteAll(nil))
-	require.Equal(t, []string{`"a"`}, quoteAll([]string{"a"}))
-	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, quoteAll([]string{"a", "b", "c"}))
+	require.Equal(t, []string{`"a"`}, quoteAll(aws.StringSlice([]string{"a"})))
+	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, quoteAll(aws.StringSlice([]string{"a", "b", "c"})))
 }

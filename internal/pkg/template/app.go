@@ -10,6 +10,8 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Names of application templates.
@@ -41,7 +43,7 @@ type AppOpts struct {
 	Variables map[string]string
 	Secrets   map[string]string
 
-	HealthCheck *AppHealthCheckOpts
+	HealthCheck *ecs.HealthCheck
 
 	// Outputs from nested stacks such as the addons stack.
 	NestedStack *AppNestedStackOpts
@@ -122,14 +124,14 @@ func stringifySlice(elems []string) string {
 	return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
 }
 
-func quoteAll(elems []string) []string {
+func quoteAll(elems []*string) []string {
 	if elems == nil {
 		return nil
 	}
 
 	quotedElems := make([]string, len(elems))
 	for i, el := range elems {
-		quotedElems[i] = strconv.Quote(el)
+		quotedElems[i] = strconv.Quote(*el)
 	}
 	return quotedElems
 }

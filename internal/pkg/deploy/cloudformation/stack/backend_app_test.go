@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -73,12 +74,12 @@ func TestBackendApp_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
 				m := mocks.NewMockbackendAppReadParser(ctrl)
 				m.EXPECT().ParseBackendApp(template.AppOpts{
-					HealthCheck: &template.AppHealthCheckOpts{
-						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-						Interval:    5,
-						Retries:     3,
-						StartPeriod: 0,
-						Timeout:     10,
+					HealthCheck: &ecs.HealthCheck{
+						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
+						Interval:    aws.Int64(5),
+						Retries:     aws.Int64(3),
+						StartPeriod: aws.Int64(0),
+						Timeout:     aws.Int64(10),
 					},
 					NestedStack: &template.AppNestedStackOpts{
 						StackName:       addons.StackName,
