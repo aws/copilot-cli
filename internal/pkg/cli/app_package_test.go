@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -436,13 +435,6 @@ count: 1`), nil)
 						},
 					}, nil)
 
-				initLoadBalancedWebAppStack = func(_ *manifest.LoadBalancedWebApp, _, _ string, _ stack.RuntimeConfig, _ bool) (stackSerializer, error) {
-					m := climocks.NewMockstackSerializer(ctrl)
-					m.EXPECT().Template().Return("mystack", nil)
-					m.EXPECT().SerializedParameters().Return("myparams", nil)
-					return m, nil
-				}
-
 				mockAddons := climocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
 					Return("", &addons.ErrDirNotExist{})
@@ -453,6 +445,12 @@ count: 1`), nil)
 				opts.initAddonsSvc = func(opts *packageAppOpts) error {
 					opts.addonsSvc = mockAddons
 					return nil
+				}
+				opts.stackSerializer = func(_ interface{}, _ *archer.Environment, _ *archer.Project, _ stack.RuntimeConfig) (stackSerializer, error) {
+					mockStackSerializer := climocks.NewMockstackSerializer(ctrl)
+					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
+					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
+					return mockStackSerializer, nil
 				}
 			},
 
@@ -466,10 +464,6 @@ count: 1`), nil)
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			oldInitFargateStack := initLoadBalancedWebAppStack
-			defer func() {
-				initLoadBalancedWebAppStack = oldInitFargateStack
-			}()
 
 			stackBuf := new(bytes.Buffer)
 			paramsBuf := new(bytes.Buffer)
