@@ -402,7 +402,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockParser:                  func(m *templatemocks.MockParser) {},
 			mockStoreSvc:                func(m *climocks.MockstoreReader) {},
 			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
-			expectedError:               errors.New("some error"),
+			expectedError:               errors.New("write manifest to workspace: some error"),
 		},
 		"returns an error if project cannot be retrieved": {
 			inEnvironments: []string{"test"},

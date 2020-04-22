@@ -269,7 +269,7 @@ func (o *initPipelineOpts) createPipelineManifest() (string, error) {
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
-			return "", err
+			return "", fmt.Errorf("write manifest to workspace: %w", err)
 		}
 		manifestExists = true
 		manifestPath = e.FileName
