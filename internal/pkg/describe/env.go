@@ -54,6 +54,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}, nil
 }
 
+// Describe returns info about a project's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	var tags map[string]string
 	return &EnvDescription{
