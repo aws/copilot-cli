@@ -294,7 +294,8 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 }
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
-	fileExistsErr := &workspace.ErrFileExists{FileName: "buildspec.yml"}
+	buildspecExistsErr := &workspace.ErrFileExists{FileName: "/buildspec.yml"}
+	manifestExistsErr := &workspace.ErrFileExists{FileName: "/pipeline.yml"}
 	testCases := map[string]struct {
 		inEnvironments []string
 		inGitHubToken  string
@@ -309,10 +310,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockRegionalResourcesGetter func(m *archermocks.MockProjectResourceStore)
 		mockStoreSvc                func(m *climocks.MockstoreReader)
 
-		expectedSecretName    string
-		expectManifestPath    string
-		expectedBuildspecPath string
-		expectedError         error
+		expectedError error
 	}{
 		"creates secret and writes manifest and buildspecs": {
 			inEnvironments: []string{"test"},
@@ -325,8 +323,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -348,10 +346,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedSecretName:    "github-token-badgoose-goose",
-			expectManifestPath:    "pipeline.yml",
-			expectedBuildspecPath: "buildspec.yml",
-			expectedError:         nil,
+			expectedError: nil,
 		},
 		"does not return an error if secret already exists": {
 			inEnvironments: []string{"test"},
@@ -365,8 +360,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("buildspec.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -388,10 +383,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedSecretName:    "github-token-badgoose-goose",
-			expectManifestPath:    "pipeline.yml",
-			expectedBuildspecPath: "buildspec.yml",
-			expectedError:         nil,
+
+			expectedError: nil,
 		},
 		"returns an error if can't write manifest": {
 			inEnvironments: []string{"test"},
@@ -422,7 +415,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
@@ -442,7 +435,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
@@ -468,7 +461,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Times(0)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
@@ -491,7 +484,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: errors.New("some error"),
 		},
-		"does not return an error if buildspec already exists": {
+		"does not return an error if buildspec and manifest already exists": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
@@ -502,8 +495,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
-				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", fileExistsErr)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", manifestExistsErr)
+				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", buildspecExistsErr)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -525,10 +518,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectedSecretName:    "github-token-badgoose-goose",
-			expectManifestPath:    "pipeline.yml",
-			expectedBuildspecPath: "buildspec.yml",
-			expectedError:         nil,
+			expectedError: nil,
 		},
 		"returns an error if can't write buildspec": {
 			inEnvironments: []string{"test"},
@@ -541,7 +531,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
 			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
-				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("pipeline.yml", nil)
+				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", errors.New("some error"))
 			},
 			mockParser: func(m *templatemocks.MockParser) {
@@ -612,9 +602,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.expectedSecretName, opts.secretName)
-				require.Equal(t, tc.expectManifestPath, opts.manifestPath)
-				require.Equal(t, tc.expectedBuildspecPath, opts.buildspecPath)
 			}
 		})
 	}

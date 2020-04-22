@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -150,4 +151,17 @@ type appEnv struct {
 
 func (a *appEnv) String() string {
 	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
+}
+
+// relPath returns the path relative to the current working directory.
+func relPath(fullPath string) (string, error) {
+	wkdir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	path, err := filepath.Rel(wkdir, fullPath)
+	if err != nil {
+		return "", fmt.Errorf("get relative path of file: %w", err)
+	}
+	return path, nil
 }
