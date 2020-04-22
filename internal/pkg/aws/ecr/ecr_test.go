@@ -63,7 +63,7 @@ func TestGetECRAuth(t *testing.T) {
 			mockECRAPI := mocks.NewMockapi(ctrl)
 			tc.mockECRClient(mockECRAPI)
 
-			client := Ecr{
+			client := ECR{
 				mockECRAPI,
 			}
 
@@ -129,7 +129,7 @@ func TestGetRepository(t *testing.T) {
 			mockECRAPI := mocks.NewMockapi(ctrl)
 			tc.mockECRClient(mockECRAPI)
 
-			client := Ecr{
+			client := ECR{
 				mockECRAPI,
 			}
 
@@ -248,7 +248,7 @@ func TestListImages(t *testing.T) {
 			mockECRAPI := mocks.NewMockapi(ctrl)
 			tc.mockECRClient(mockECRAPI)
 
-			client := Ecr{
+			client := ECR{
 				mockECRAPI,
 			}
 
@@ -357,7 +357,7 @@ func TestDeleteImages(t *testing.T) {
 			mockECRAPI := mocks.NewMockapi(ctrl)
 			tc.mockECRClient(mockECRAPI)
 
-			client := Ecr{
+			client := ECR{
 				mockECRAPI,
 			}
 
@@ -436,7 +436,7 @@ func TestClearRepository(t *testing.T) {
 			mockECRAPI := mocks.NewMockapi(ctrl)
 			tc.mockECRClient(mockECRAPI)
 
-			client := Ecr{
+			client := ECR{
 				mockECRAPI,
 			}
 

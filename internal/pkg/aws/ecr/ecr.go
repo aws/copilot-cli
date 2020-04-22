@@ -31,14 +31,14 @@ type api interface {
 	BatchDeleteImage(*ecr.BatchDeleteImageInput) (*ecr.BatchDeleteImageOutput, error)
 }
 
-// Ecr wraps an AWS ECR client.
-type Ecr struct {
+// ECR wraps an AWS ECR client.
+type ECR struct {
 	client api
 }
 
-// New returns a Ecr configured against the input session.
-func New(s *session.Session) Ecr {
-	return Ecr{
+// New returns a ECR configured against the input session.
+func New(s *session.Session) ECR {
+	return ECR{
 		client: ecr.New(s),
 	}
 }
@@ -50,7 +50,7 @@ type Auth struct {
 }
 
 // GetECRAuth returns the basic authentication credentials needed to push images.
-func (c Ecr) GetECRAuth() (Auth, error) {
+func (c ECR) GetECRAuth() (Auth, error) {
 	response, err := c.client.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 
 	if err != nil {
@@ -72,7 +72,7 @@ func (c Ecr) GetECRAuth() (Auth, error) {
 }
 
 // GetRepository returns the ECR repository URI.
-func (c Ecr) GetRepository(name string) (string, error) {
+func (c ECR) GetRepository(name string) (string, error) {
 	result, err := c.client.DescribeRepositories(&ecr.DescribeRepositoriesInput{
 		RepositoryNames: aws.StringSlice([]string{name}),
 	})
@@ -105,7 +105,7 @@ func (i Image) imageIdentifier() *ecr.ImageIdentifier {
 
 // ListImages calls the ECR DescribeImages API and returns a list of
 // Image metadata for images in the input ECR repository name.
-func (c Ecr) ListImages(repoName string) ([]Image, error) {
+func (c ECR) ListImages(repoName string) ([]Image, error) {
 	var images []Image
 	resp, err := c.client.DescribeImages(&ecr.DescribeImagesInput{
 		RepositoryName: aws.String(repoName),
@@ -136,7 +136,7 @@ func (c Ecr) ListImages(repoName string) ([]Image, error) {
 }
 
 // DeleteImages calls the ECR BatchDeleteImage API with the input image list and repository name.
-func (c Ecr) DeleteImages(images []Image, repoName string) error {
+func (c ECR) DeleteImages(images []Image, repoName string) error {
 	if len(images) == 0 {
 		return nil
 	}
@@ -170,12 +170,12 @@ func (c Ecr) DeleteImages(images []Image, repoName string) error {
 
 // ClearRepository orchestrates a ListImages call followed by a DeleteImages
 // call to delete all images from the input ECR repository name.
-func (s Ecr) ClearRepository(repoName string) error {
-	images, err := s.ListImages(repoName)
+func (c ECR) ClearRepository(repoName string) error {
+	images, err := c.ListImages(repoName)
 
 	if err == nil {
 		// TODO: add retry handling in case images are added to a repository after a call to ListImages
-		return s.DeleteImages(images, repoName)
+		return c.DeleteImages(images, repoName)
 	}
 	if isRepoNotFoundErr(errors.Unwrap(err)) {
 		return nil
