@@ -55,7 +55,7 @@ func TestIdentity_Get(t *testing.T) {
 
 			mockClient := mocks.NewMockapi(ctrl)
 
-			sts := Sts{
+			sts := STS{
 				client: mockClient,
 			}
 

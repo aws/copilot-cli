@@ -15,14 +15,14 @@ type api interface {
 	GetCallerIdentity(input *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error)
 }
 
-// Sts wraps the internal sts client.
-type Sts struct {
+// STS wraps the internal sts client.
+type STS struct {
 	client api
 }
 
-// New returns a Sts configured with the input session.
-func New(s *session.Session) Sts {
-	return Sts{
+// New returns a STS configured with the input session.
+func New(s *session.Session) STS {
+	return STS{
 		client: sts.New(s),
 	}
 }
@@ -35,7 +35,7 @@ type Caller struct {
 }
 
 // Get returns the Caller associated with the Client's session.
-func (s Sts) Get() (Caller, error) {
+func (s STS) Get() (Caller, error) {
 	out, err := s.client.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 
 	if err != nil {
