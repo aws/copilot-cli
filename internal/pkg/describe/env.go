@@ -11,7 +11,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	sess "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
 type EnvDescription struct {
@@ -26,8 +25,6 @@ type EnvDescriber struct {
 	apps []*archer.Application
 
 	envGetter      envGetter
-	ecsClient      map[string]ecsService
-	stackDescriber stackDescriber
 	sessProvider   *sess.Session
 }
 
@@ -53,21 +50,12 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		env:            env,
 		envGetter:      svc,
 		apps:           apps,
-		stackDescriber: cloudformation.New(sess),
-		ecsClient:      make(map[string]ecsService),
 		sessProvider:   sess,
 	}, nil
 }
 
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	var appsToSerialize []*archer.Application
-	for _, app := range e.apps {
-		appsToSerialize = append(appsToSerialize, &archer.Application{
-			Name: app.Name,
-			Type: app.Type,
-		})
-	}
-	var tags map[string]string // where are tags coming from/
+	var tags map[string]string
 	return &EnvDescription{
 		Environment:  e.env,
 		Applications: e.apps,
