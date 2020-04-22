@@ -4,8 +4,11 @@
 package describe
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -24,8 +27,8 @@ type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
 
-	envGetter      envGetter
-	sessProvider   *sess.Session
+	envGetter    envGetter
+	sessProvider *sess.Session
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -47,10 +50,10 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
-		env:            env,
-		envGetter:      svc,
-		apps:           apps,
-		sessProvider:   sess,
+		env:          env,
+		envGetter:    svc,
+		apps:         apps,
+		sessProvider: sess,
 	}, nil
 }
 
@@ -64,17 +67,32 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	}, nil
 }
 
-// JSONString returns the stringified WebApp struct with json format.
-func (w *EnvDescription) JSONString() (string, error) {
-	b, err := json.Marshal(w)
+// JSONString returns the stringified EnvDescription struct with json format.
+func (e *EnvDescription) JSONString() (string, error) {
+	b, err := json.Marshal(e)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified WebApp struct with human readable format.
-func (w *EnvDescription) HumanString() string {
-	// TODO
-	return ""
+// HumanString returns the stringified EnvDescription struct with human readable format.
+func (e *EnvDescription) HumanString() string {
+	// HumanString returns the stringified WebApp struct with human readable format.
+	var b bytes.Buffer
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", e.Environment.Name)
+	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
+	fmt.Fprintf(writer, color.Bold.Sprint("\nApplications\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
+	for _, app := range e.Applications {
+		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
+	}
+	writer.Flush()
+	return b.String()
 }
