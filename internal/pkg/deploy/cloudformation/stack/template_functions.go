@@ -5,7 +5,6 @@ package stack
 
 import (
 	"strings"
-	"unicode"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 )
@@ -32,35 +31,32 @@ func safeLogicalIDToOriginal(safeLogicalID string) string {
 	return strings.ReplaceAll(safeLogicalID, dashReplacement, "-")
 }
 
-// toSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
-// For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
-func toSnakeCase(s string) string {
-	var name string
-	for i, r := range s {
-		if unicode.IsUpper(r) && i != 0 {
-			name += "_"
-		}
-		name += string(unicode.ToUpper(r))
-	}
-	return name
-}
-
-func filterSecrets(outputs []addons.Output) []addons.Output {
-	var secrets []addons.Output
+func secretOutputNames(outputs []addons.Output) []string {
+	var secrets []string
 	for _, out := range outputs {
 		if out.IsSecret {
-			secrets = append(secrets, out)
+			secrets = append(secrets, out.Name)
 		}
 	}
 	return secrets
 }
 
-func filterManagedPolicies(outputs []addons.Output) []addons.Output {
-	var policies []addons.Output
+func managedPolicyOutputNames(outputs []addons.Output) []string {
+	var policies []string
 	for _, out := range outputs {
 		if out.IsManagedPolicy {
-			policies = append(policies, out)
+			policies = append(policies, out.Name)
 		}
 	}
 	return policies
+}
+
+func envVarOutputNames(outputs []addons.Output) []string {
+	var envVars []string
+	for _, out := range outputs {
+		if !out.IsSecret && !out.IsManagedPolicy {
+			envVars = append(envVars, out.Name)
+		}
+	}
+	return envVars
 }

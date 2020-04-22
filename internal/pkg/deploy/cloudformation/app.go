@@ -11,15 +11,19 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 )
 
-// DeployApp wraps the application deployment flow and handles orchestration of
-// creating a stack versus updating a stack.
-func (cf CloudFormation) DeployApp(template, stackName, changeSetName, cfExecutionRole string, tags map[string]string, parameters map[string]string) error {
-	stack := cloudformation.NewStack(stackName, template,
-		cloudformation.WithParameters(parameters),
-		cloudformation.WithTags(tags),
-		cloudformation.WithRoleARN(cfExecutionRole))
+// DeployApp deploys an application stack and waits until the deployment is done.
+// If the application doesn't exist, then it creates the stack.
+// If the application already exists, it updates the stack.
+func (cf CloudFormation) DeployApp(conf StackConfiguration, opts ...cloudformation.StackOption) error {
+	stack, err := toStack(conf)
+	if err != nil {
+		return err
+	}
+	for _, opt := range opts {
+		opt(stack)
+	}
 
-	err := cf.cfnClient.CreateAndWait(stack)
+	err = cf.cfnClient.CreateAndWait(stack)
 	if err == nil { // Created a new stack, stop execution.
 		return nil
 	}

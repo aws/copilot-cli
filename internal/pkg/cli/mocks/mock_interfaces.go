@@ -1472,31 +1472,31 @@ func (mr *MockwsProjectManagerMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsProjectManager)(nil).Summary))
 }
 
-// MockartifactPutter is a mock of artifactPutter interface
-type MockartifactPutter struct {
+// MockartifactUploader is a mock of artifactUploader interface
+type MockartifactUploader struct {
 	ctrl     *gomock.Controller
-	recorder *MockartifactPutterMockRecorder
+	recorder *MockartifactUploaderMockRecorder
 }
 
-// MockartifactPutterMockRecorder is the mock recorder for MockartifactPutter
-type MockartifactPutterMockRecorder struct {
-	mock *MockartifactPutter
+// MockartifactUploaderMockRecorder is the mock recorder for MockartifactUploader
+type MockartifactUploaderMockRecorder struct {
+	mock *MockartifactUploader
 }
 
-// NewMockartifactPutter creates a new mock instance
-func NewMockartifactPutter(ctrl *gomock.Controller) *MockartifactPutter {
-	mock := &MockartifactPutter{ctrl: ctrl}
-	mock.recorder = &MockartifactPutterMockRecorder{mock}
+// NewMockartifactUploader creates a new mock instance
+func NewMockartifactUploader(ctrl *gomock.Controller) *MockartifactUploader {
+	mock := &MockartifactUploader{ctrl: ctrl}
+	mock.recorder = &MockartifactUploaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockartifactPutter) EXPECT() *MockartifactPutterMockRecorder {
+func (m *MockartifactUploader) EXPECT() *MockartifactUploaderMockRecorder {
 	return m.recorder
 }
 
 // PutArtifact mocks base method
-func (m *MockartifactPutter) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
+func (m *MockartifactUploader) PutArtifact(bucket, fileName string, data io.Reader) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PutArtifact", bucket, fileName, data)
 	ret0, _ := ret[0].(string)
@@ -1505,9 +1505,9 @@ func (m *MockartifactPutter) PutArtifact(bucket, fileName string, data io.Reader
 }
 
 // PutArtifact indicates an expected call of PutArtifact
-func (mr *MockartifactPutterMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
+func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactPutter)(nil).PutArtifact), bucket, fileName, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
 }
 
 // Mockport is a mock of port interface
@@ -2524,6 +2524,21 @@ func (m *MockpipelineGetter) GetPipeline(pipelineName string) (*codepipeline.Pip
 func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
+}
+
+// ListPipelines mocks base method
+func (m *MockpipelineGetter) ListPipelines() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelines")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelines indicates an expected call of ListPipelines
+func (mr *MockpipelineGetterMockRecorder) ListPipelines() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockpipelineGetter)(nil).ListPipelines))
 }
 
 // Mockexecutor is a mock of executor interface

@@ -34,8 +34,8 @@ type BackendApp struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	AppImageWithPort
-	HealthCheck *ContainerHealthCheck `yaml:"healthcheck"`
+	AppImageWithPort `yaml:",inline"`
+	HealthCheck      *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ContainerHealthCheck holds the configuration to determine if the application container is healthy.
@@ -93,6 +93,23 @@ func (a *BackendApp) DockerfilePath() string {
 	return a.Image.Build
 }
 
+// ApplyEnv returns the application manifest with environment overrides.
+// If the environment passed in does not have any overrides then it returns itself.
+func (a *BackendApp) ApplyEnv(envName string) *BackendApp {
+	target, ok := a.Environments[envName]
+	if !ok {
+		return a
+	}
+	return &BackendApp{
+		App: a.App,
+		Image: imageWithPortAndHealthcheck{
+			AppImageWithPort: a.Image.AppImageWithPort,
+			HealthCheck:      a.Image.HealthCheck,
+		},
+		TaskConfig: a.TaskConfig.copyAndApply(target),
+	}
+}
+
 // newDefaultBackendApp returns a backend application with minimal task sizes and a single replica.
 func newDefaultBackendApp() *BackendApp {
 	return &BackendApp{
@@ -102,7 +119,7 @@ func newDefaultBackendApp() *BackendApp {
 		TaskConfig: TaskConfig{
 			CPU:    256,
 			Memory: 512,
-			Count:  1,
+			Count:  intp(1),
 		},
 	}
 }
@@ -110,17 +127,16 @@ func newDefaultBackendApp() *BackendApp {
 // newDefaultContainerHealthCheck returns container health check configuration
 // that's identical to a load balanced web application's defaults.
 func newDefaultContainerHealthCheck() *ContainerHealthCheck {
-	interval, timeout, startPeriod := 10*time.Second, 5*time.Second, 0*time.Second
-	retries := 2
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    &interval,
-		Retries:     &retries,
-		Timeout:     &timeout,
-		StartPeriod: &startPeriod,
+		Interval:    durationp(10 * time.Second),
+		Retries:     intp(2),
+		Timeout:     durationp(5 * time.Second),
+		StartPeriod: durationp(0 * time.Second),
 	}
 }
 
+// apply overrides the healthcheck's fields if other has them set.
 func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
 	if other.Command != nil {
 		hc.Command = other.Command
@@ -135,6 +151,25 @@ func (hc *ContainerHealthCheck) apply(other *ContainerHealthCheck) {
 		hc.Timeout = other.Timeout
 	}
 	if other.StartPeriod != nil {
+		hc.StartPeriod = other.StartPeriod
+	}
+}
+
+// applyIfNotSet changes the healthcheck's fields only if they were not set and the other healthcheck has them set.
+func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
+	if hc.Command == nil && other.Command != nil {
+		hc.Command = other.Command
+	}
+	if hc.Interval == nil && other.Interval != nil {
+		hc.Interval = other.Interval
+	}
+	if hc.Retries == nil && other.Retries != nil {
+		hc.Retries = other.Retries
+	}
+	if hc.Timeout == nil && other.Timeout != nil {
+		hc.Timeout = other.Timeout
+	}
+	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
 	}
 }

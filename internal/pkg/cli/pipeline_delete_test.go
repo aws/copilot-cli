@@ -186,8 +186,6 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 func TestDeletePipelineOpts_Execute(t *testing.T) {
 	testError := errors.New("some error")
-	stackName := testProjName + "-" + testPipelineName
-
 	testCases := map[string]struct {
 		deleteSecret     bool
 		inProjectName    string
@@ -209,7 +207,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					// no confirmation prompt for deleting secret
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
-					mocks.deployer.EXPECT().DeletePipeline(stackName).Return(nil),
+					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
@@ -231,7 +229,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					).Times(1).Return(true, nil),
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
-					mocks.deployer.EXPECT().DeletePipeline(stackName).Return(nil),
+					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
@@ -255,7 +253,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					// does not delete secret
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Times(0),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
-					mocks.deployer.EXPECT().DeletePipeline(stackName).Times(1).Return(nil),
+					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
@@ -273,7 +271,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
-					mocks.deployer.EXPECT().DeletePipeline(stackName).Times(1).Return(testError),
+					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(testError),
 					mocks.prog.EXPECT().Stop(log.Serrorf(fmtDeletePipelineFailed, testPipelineName, testProjName, testError)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Times(0),
 				)

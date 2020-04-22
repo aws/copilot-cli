@@ -152,7 +152,7 @@ type wsProjectManager interface {
 	Summary() (*workspace.Summary, error)
 }
 
-type artifactPutter interface {
+type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
 
@@ -236,6 +236,7 @@ type envDescriber interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
+	ListPipelines() ([]string, error)
 }
 
 type executor interface {

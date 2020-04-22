@@ -25,7 +25,7 @@ func NewPipelineStackConfig(in *deploy.CreatePipelineInput) *pipelineStackConfig
 }
 
 func (p *pipelineStackConfig) StackName() string {
-	return p.ProjectName + "-" + p.Name
+	return p.Name
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {

@@ -62,174 +62,135 @@ func TestLoadBalancedWebApp_MarshalBinary(t *testing.T) {
 
 func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
-		inDefaultConfig  LoadBalancedWebAppConfig
-		inEnvNameToQuery string
-		inEnvOverride    map[string]LoadBalancedWebAppConfig
+		in         *LoadBalancedWebApp
+		envToApply string
 
-		wantedConfig LoadBalancedWebAppConfig
+		wanted *LoadBalancedWebApp
 	}{
 		"with no existing environments": {
-			inDefaultConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+			in: &LoadBalancedWebApp{
+				App: App{
+					Name: "phonetool",
+					Type: LoadBalancedWebApplication,
 				},
-				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
-					Count:  1,
+				Image: AppImageWithPort{
+					AppImage: AppImage{
+						Build: "./Dockerfile",
+					},
+					Port: 80,
+				},
+				LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+					RoutingRule: RoutingRule{
+						Path:            "/awards/*",
+						HealthCheckPath: "/",
+					},
+					TaskConfig: TaskConfig{
+						CPU:    1024,
+						Memory: 1024,
+						Count:  intp(1),
+					},
 				},
 			},
-			inEnvNameToQuery: "prod-iad",
+			envToApply: "prod-iad",
 
-			wantedConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+			wanted: &LoadBalancedWebApp{
+				App: App{
+					Name: "phonetool",
+					Type: LoadBalancedWebApplication,
 				},
-				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
-					Count:  1,
+				Image: AppImageWithPort{
+					AppImage: AppImage{
+						Build: "./Dockerfile",
+					},
+					Port: 80,
+				},
+				LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+					RoutingRule: RoutingRule{
+						Path:            "/awards/*",
+						HealthCheckPath: "/",
+					},
+					TaskConfig: TaskConfig{
+						CPU:    1024,
+						Memory: 1024,
+						Count:  intp(1),
+					},
 				},
 			},
 		},
-		"with partial overrides": {
-			inDefaultConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+		"with overrides": {
+			in: &LoadBalancedWebApp{
+				App: App{
+					Name: "phonetool",
+					Type: LoadBalancedWebApplication,
 				},
-				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
-					Count:  1,
-					Variables: map[string]string{
-						"LOG_LEVEL":      "DEBUG",
-						"DDB_TABLE_NAME": "awards",
+				Image: AppImageWithPort{
+					AppImage: AppImage{
+						Build: "./Dockerfile",
 					},
-					Secrets: map[string]string{
-						"GITHUB_TOKEN": "1111",
-						"TWILIO_TOKEN": "1111",
+					Port: 80,
+				},
+				LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+					RoutingRule: RoutingRule{
+						Path:            "/awards/*",
+						HealthCheckPath: "/",
 					},
-				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     1,
-					MaxCount:     2,
-					TargetCPU:    75.0,
-					TargetMemory: 0,
-				},
-			},
-			inEnvNameToQuery: "prod-iad",
-			inEnvOverride: map[string]LoadBalancedWebAppConfig{
-				"prod-iad": {
 					TaskConfig: TaskConfig{
-						CPU: 2046,
+						CPU:    1024,
+						Memory: 1024,
+						Count:  intp(1),
 						Variables: map[string]string{
-							"DDB_TABLE_NAME": "awards-prod",
+							"LOG_LEVEL":      "DEBUG",
+							"DDB_TABLE_NAME": "awards",
+						},
+						Secrets: map[string]string{
+							"GITHUB_TOKEN": "1111",
+							"TWILIO_TOKEN": "1111",
 						},
 					},
-					Scaling: &AutoScalingConfig{
-						MaxCount: 5,
+				},
+				Environments: map[string]LoadBalancedWebAppConfig{
+					"prod-iad": {
+						TaskConfig: TaskConfig{
+							CPU:   2046,
+							Count: intp(0),
+							Variables: map[string]string{
+								"DDB_TABLE_NAME": "awards-prod",
+							},
+						},
 					},
 				},
 			},
+			envToApply: "prod-iad",
 
-			wantedConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+			wanted: &LoadBalancedWebApp{
+				App: App{
+					Name: "phonetool",
+					Type: LoadBalancedWebApplication,
 				},
-				TaskConfig: TaskConfig{
-					CPU:    2046,
-					Memory: 1024,
-					Count:  1,
-					Variables: map[string]string{
-						"LOG_LEVEL":      "DEBUG",
-						"DDB_TABLE_NAME": "awards-prod",
+				Image: AppImageWithPort{
+					AppImage: AppImage{
+						Build: "./Dockerfile",
 					},
-					Secrets: map[string]string{
-						"GITHUB_TOKEN": "1111",
-						"TWILIO_TOKEN": "1111",
-					},
+					Port: 80,
 				},
-				Scaling: &AutoScalingConfig{
-					MinCount:  1,
-					MaxCount:  5,
-					TargetCPU: 75.0,
-				},
-			},
-		},
-		"with complete override": {
-			inDefaultConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
-				},
-				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
-					Count:  1,
-				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     1,
-					MaxCount:     2,
-					TargetCPU:    75.0,
-					TargetMemory: 0,
-				},
-			},
-			inEnvNameToQuery: "prod-iad",
-			inEnvOverride: map[string]LoadBalancedWebAppConfig{
-				"prod-iad": {
+				LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
 					RoutingRule: RoutingRule{
-						Path:            "/frontend*",
-						HealthCheckPath: "/healthcheck",
+						Path:            "/awards/*",
+						HealthCheckPath: "/",
 					},
 					TaskConfig: TaskConfig{
 						CPU:    2046,
-						Memory: 2046,
-						Count:  3,
+						Memory: 1024,
+						Count:  intp(0),
 						Variables: map[string]string{
-							"LOG_LEVEL":      "WARN",
+							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards-prod",
 						},
 						Secrets: map[string]string{
-							"GITHUB_TOKEN": "2222",
-							"TWILIO_TOKEN": "2222",
+							"GITHUB_TOKEN": "1111",
+							"TWILIO_TOKEN": "1111",
 						},
 					},
-					Scaling: &AutoScalingConfig{
-						MinCount:     2,
-						MaxCount:     5,
-						TargetCPU:    75.0,
-						TargetMemory: 75.0,
-					},
-				},
-			},
-
-			wantedConfig: LoadBalancedWebAppConfig{
-				RoutingRule: RoutingRule{
-					Path:            "/frontend*",
-					HealthCheckPath: "/healthcheck",
-				},
-				TaskConfig: TaskConfig{
-					CPU:    2046,
-					Memory: 2046,
-					Count:  3,
-					Variables: map[string]string{
-						"LOG_LEVEL":      "WARN",
-						"DDB_TABLE_NAME": "awards-prod",
-					},
-					Secrets: map[string]string{
-						"GITHUB_TOKEN": "2222",
-						"TWILIO_TOKEN": "2222",
-					},
-				},
-				Scaling: &AutoScalingConfig{
-					MinCount:     2,
-					MaxCount:     5,
-					TargetCPU:    75.0,
-					TargetMemory: 75.0,
 				},
 			},
 		},
@@ -238,17 +199,12 @@ func TestLoadBalancedWebApp_ApplyEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			m := &LoadBalancedWebApp{
-				LoadBalancedWebAppConfig: tc.inDefaultConfig,
-				Environments:             tc.inEnvOverride,
-			}
 
 			// WHEN
-			conf := m.ApplyEnv(tc.inEnvNameToQuery)
+			conf := tc.in.ApplyEnv(tc.envToApply)
 
 			// THEN
-			require.Equal(t, tc.wantedConfig, conf, "returned configuration should have overrides from the environment")
-			require.Equal(t, m.LoadBalancedWebAppConfig, tc.inDefaultConfig, "values in the default configuration should not be overwritten")
+			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
 		})
 	}
 }

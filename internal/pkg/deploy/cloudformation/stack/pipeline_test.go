@@ -58,8 +58,7 @@ func TestPipelineStackName(t *testing.T) {
 		mockCreatePipelineInput(),
 	)
 
-	require.Equal(t, projectName+"-"+pipelineName,
-		pipeline.StackName(), "unexpected StackName")
+	require.Equal(t, pipelineName, pipeline.StackName(), "unexpected StackName")
 }
 
 func TestPipelineStackConfig_Template(t *testing.T) {
