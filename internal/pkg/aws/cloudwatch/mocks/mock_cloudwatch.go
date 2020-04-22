@@ -6,7 +6,6 @@ package mocks
 
 import (
 	cloudwatch "github.com/aws/aws-sdk-go/service/cloudwatch"
-	resourcegroups "github.com/aws/aws-sdk-go/service/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -47,42 +46,4 @@ func (m *MockcloudWatchClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsIn
 func (mr *MockcloudWatchClientMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*MockcloudWatchClient)(nil).DescribeAlarms), input)
-}
-
-// MockresourceGroupClient is a mock of resourceGroupClient interface
-type MockresourceGroupClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockresourceGroupClientMockRecorder
-}
-
-// MockresourceGroupClientMockRecorder is the mock recorder for MockresourceGroupClient
-type MockresourceGroupClientMockRecorder struct {
-	mock *MockresourceGroupClient
-}
-
-// NewMockresourceGroupClient creates a new mock instance
-func NewMockresourceGroupClient(ctrl *gomock.Controller) *MockresourceGroupClient {
-	mock := &MockresourceGroupClient{ctrl: ctrl}
-	mock.recorder = &MockresourceGroupClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockresourceGroupClient) EXPECT() *MockresourceGroupClientMockRecorder {
-	return m.recorder
-}
-
-// SearchResources mocks base method
-func (m *MockresourceGroupClient) SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchResources", input)
-	ret0, _ := ret[0].(*resourcegroups.SearchResourcesOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SearchResources indicates an expected call of SearchResources
-func (mr *MockresourceGroupClientMockRecorder) SearchResources(input interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchResources", reflect.TypeOf((*MockresourceGroupClient)(nil).SearchResources), input)
 }
