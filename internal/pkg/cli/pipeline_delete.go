@@ -180,15 +180,10 @@ func (o *deletePipelineOpts) deleteSecret() error {
 	return nil
 }
 
-func (o *deletePipelineOpts) stackName() string {
-	return o.ProjectName() + "-" + o.PipelineName // based on stack.pipelineStackConfig.StackName()
-}
-
 func (o *deletePipelineOpts) deleteStack() error {
 	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.ProjectName()))
-	stackName := o.stackName()
 
-	if err := o.pipelineDeployer.DeletePipeline(stackName); err != nil {
+	if err := o.pipelineDeployer.DeletePipeline(o.PipelineName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.ProjectName(), err))
 		return err
 	}

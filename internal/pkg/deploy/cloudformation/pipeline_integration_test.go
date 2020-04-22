@@ -40,12 +40,11 @@ func TestPipelineCreation(t *testing.T) {
 		createMockSecret(t, sm, secretId)
 		projCfClient := awsCF.New(projectSess)
 
-		const pipelineName = "pipepiper"
 		project := archer.Project{
 			Name:      randStringBytes(10),
 			AccountID: projectCallerInfo.Account,
 		}
-		pipelineStackName := project.Name + "-" + pipelineName
+		pipelineStackName := project.Name + "-pipepiper"
 		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
 		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
 
@@ -172,7 +171,7 @@ func TestPipelineCreation(t *testing.T) {
 
 		pipelineInput := &deploy.CreatePipelineInput{
 			ProjectName: project.Name,
-			Name:        pipelineName,
+			Name:        pipelineStackName,
 			Source: &deploy.Source{
 				ProviderName: manifest.GithubProviderName,
 				Properties: map[string]interface{}{

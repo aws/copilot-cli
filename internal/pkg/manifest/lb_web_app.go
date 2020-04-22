@@ -115,17 +115,23 @@ func (a *LoadBalancedWebApp) DockerfilePath() string {
 	return a.Image.Build
 }
 
-// ApplyEnv returns the application configuration with environment overrides.
-// If the environment passed in does not have any overrides then we return the default values.
-func (a *LoadBalancedWebApp) ApplyEnv(envName string) LoadBalancedWebAppConfig {
+// ApplyEnv returns the application manifest with environment overrides.
+// If the environment passed in does not have any overrides then it returns itself.
+func (a *LoadBalancedWebApp) ApplyEnv(envName string) *LoadBalancedWebApp {
 	target, ok := a.Environments[envName]
 	if !ok {
-		return a.LoadBalancedWebAppConfig
+		return a
 	}
 
-	// Override with fields set in the environment.
-	return LoadBalancedWebAppConfig{
-		RoutingRule: a.RoutingRule.copyAndApply(target.RoutingRule),
-		TaskConfig:  a.TaskConfig.copyAndApply(target.TaskConfig),
+	return &LoadBalancedWebApp{
+		App:   a.App,
+		Image: a.Image,
+		LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+			RoutingRule: a.RoutingRule.copyAndApply(target.RoutingRule),
+			TaskConfig:  a.TaskConfig.copyAndApply(target.TaskConfig),
+			LogsConfig: LogsConfig{
+				LogRetention: a.LogRetention,
+			},
+		},
 	}
 }

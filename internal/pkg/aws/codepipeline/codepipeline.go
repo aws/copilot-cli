@@ -12,14 +12,14 @@ import (
 	cp "github.com/aws/aws-sdk-go/service/codepipeline"
 )
 
-type codepipelineClient interface {
+type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
 	ListPipelines(*cp.ListPipelinesInput) (*cp.ListPipelinesOutput, error)
 }
 
 // CodePipeline wraps the AWS CodePipeline client.
 type CodePipeline struct {
-	client codepipelineClient
+	client api
 }
 
 // Pipeline contains information about the pipeline

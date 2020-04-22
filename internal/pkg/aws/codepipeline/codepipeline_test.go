@@ -27,14 +27,14 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 
 	tests := map[string]struct {
 		inPipelineName string
-		callMock       func(m *mocks.MockcodepipelineClient)
+		callMock       func(m *mocks.Mockapi)
 
 		expectedOut   *Pipeline
 		expectedError error
 	}{
 		"happy path": {
 			inPipelineName: mockPipelineName,
-			callMock: func(m *mocks.MockcodepipelineClient) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
 					Name: aws.String(mockPipelineName),
 				}).Return(mockOutput, nil)
@@ -45,7 +45,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 		},
 		"should wrap error": {
 			inPipelineName: mockPipelineName,
-			callMock: func(m *mocks.MockcodepipelineClient) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
 					Name: aws.String(mockPipelineName),
 				}).Return(nil, mockError)
@@ -62,7 +62,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mocks.NewMockcodepipelineClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
 
 			cp := CodePipeline{
 				client: mockClient,
@@ -93,20 +93,20 @@ func TestCodePipeline_ListPipelines(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		callMock    func(m *mocks.MockcodepipelineClient)
+		callMock    func(m *mocks.Mockapi)
 		expectedOut []string
 
 		expectedError error
 	}{
 		"happy path": {
-			callMock: func(m *mocks.MockcodepipelineClient) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().ListPipelines(mockInput).Return(mockOutput, nil)
 			},
 			expectedOut:   []string{mockPipelineName},
 			expectedError: nil,
 		},
 		"should wrap error": {
-			callMock: func(m *mocks.MockcodepipelineClient) {
+			callMock: func(m *mocks.Mockapi) {
 				m.EXPECT().ListPipelines(mockInput).Return(nil, mockError)
 
 			},
@@ -121,7 +121,7 @@ func TestCodePipeline_ListPipelines(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mocks.NewMockcodepipelineClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
 
 			cp := CodePipeline{
 				client: mockClient,

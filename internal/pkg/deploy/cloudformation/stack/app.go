@@ -4,9 +4,11 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -40,6 +42,10 @@ type RuntimeConfig struct {
 	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the application stack.
 }
 
+type templater interface {
+	Template() (string, error)
+}
+
 type app struct {
 	name    string
 	env     string
@@ -47,7 +53,8 @@ type app struct {
 	tc      manifest.TaskConfig
 	rc      RuntimeConfig
 
-	parser template.AppTemplateReadParser
+	parser template.Parser
+	addons templater
 }
 
 // StackName returns the name of the stack.
@@ -125,4 +132,26 @@ func (a *app) templateConfiguration(tc templateConfigurer) (string, error) {
 		return "", err
 	}
 	return doc.String(), nil
+}
+
+func (a *app) addonsOutputs() (*template.AppNestedStackOpts, error) {
+	stack, err := a.addons.Template()
+	if err != nil {
+		var noAddonsErr *addons.ErrDirNotExist
+		if !errors.As(err, &noAddonsErr) {
+			return nil, fmt.Errorf("generate addons template for application %s: %w", a.name, err)
+		}
+		return nil, nil // Addons directory does not exist, so there are no outputs and error.
+	}
+
+	out, err := addons.Outputs(stack)
+	if err != nil {
+		return nil, fmt.Errorf("get addons outputs for application %s: %w", a.name, err)
+	}
+	return &template.AppNestedStackOpts{
+		StackName:       addons.StackName,
+		VariableOutputs: envVarOutputNames(out),
+		SecretOutputs:   secretOutputNames(out),
+		PolicyOutputs:   managedPolicyOutputNames(out),
+	}, nil
 }

@@ -5,45 +5,33 @@ Description: CloudFormation template that represents a load balanced web applica
 Parameters:
   ProjectName:
     Type: String
-    Default: {{.Env.Project}}
   EnvName:
     Type: String
-    Default: {{.Env.Name}}
   AppName:
     Type: String
-    Default: {{.App.Name}}
   ContainerImage:
     Type: String
-    Default: {{.Image.URL}}
   ContainerPort:
     Type: Number
-    Default: {{.Image.Port}}
   RulePath:
     Type: String
-    Default: '{{.App.Path}}'
   TaskCPU:
     Type: String
-    Default: '{{.App.CPU}}'
   TaskMemory:
     Type: String
-    Default: '{{.App.Memory}}'
   TaskCount:
     Type: Number
-    Default: {{.App.Count}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
-    Default: '{{.HTTPSEnabled}}'
   LogRetention:
     Type: Number
-    Default: {{.App.LogRetention}}
   AddonsTemplateURL:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String
     Default: ""
   HealthCheckPath:
     Type: String
-    Default: '{{.App.HealthCheckPath}}'
 Conditions:
   HTTPLoadBalancer:
     !Not

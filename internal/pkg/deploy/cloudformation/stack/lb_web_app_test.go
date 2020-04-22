@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/golang/mock/gomock"
@@ -93,14 +93,14 @@ func TestLoadBalancedWebApp_StackName(t *testing.T) {
 
 func TestLoadBalancedWebApp_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebApp)
+		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp)
 
 		wantedTemplate string
 		wantedError    error
 	}{
 		"unavailable rule priority lambda template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -108,79 +108,91 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			wantedError:    errors.New("some error"),
 		},
 		"unexpected addons parsing error": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
-				c.addons = addons
+				c.app.addons = addons
 			},
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("generate addons template for application %s: %w", testLBWebAppManifest.Name, errors.New("some error")),
 		},
 		"failed parsing app template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ParseLoadBalancedWebApp(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}
 				c.parser = m
-				c.addons = addons
+				c.app.addons = addons
 			},
 
 			wantedTemplate: "",
 			wantedError:    errors.New("some error"),
 		},
 		"render template without addons": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, struct {
-					RulePriorityLambda string
-					AddonsOutputs      []addons.Output
-					*lbWebAppTemplateParams
-				}{
-					RulePriorityLambda:     "lambda",
-					lbWebAppTemplateParams: c.toTemplateParams(),
-				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseLoadBalancedWebApp(template.AppOpts{
+					RulePriorityLambda: "lambda",
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addons.ErrDirNotExist{}}
 				c.parser = m
-				c.addons = addons
+				c.app.addons = addons
 			},
 
 			wantedTemplate: "template",
 		},
 		"render template with addons": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseAppTemplate(lbWebAppTemplateName, struct {
-					RulePriorityLambda string
-					AddonsOutputs      []addons.Output
-					*lbWebAppTemplateParams
-				}{
-					RulePriorityLambda: "lambda",
-					AddonsOutputs: []addons.Output{
-						{
-							Name: "AdditionalResourcesPolicyArn",
-						},
+				m.EXPECT().ParseLoadBalancedWebApp(template.AppOpts{
+					NestedStack: &template.AppNestedStackOpts{
+						StackName:       addons.StackName,
+						VariableOutputs: []string{"Hello"},
+						SecretOutputs:   []string{"MySecretArn"},
+						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
-					lbWebAppTemplateParams: c.toTemplateParams(),
-				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+					RulePriorityLambda: "lambda",
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				addons := mockTemplater{
-					tpl: `Outputs:
+					tpl: `Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: '*'
+          Resource: '*'
+  MySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: 'This is my rds instance secret'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+Outputs:
   AdditionalResourcesPolicyArn:
+    Value: !Ref AdditionalResourcesPolicy
+  MySecretArn:
+    Value: !Ref MySecret
+  Hello:
     Value: hello`,
 				}
 				c.parser = m
 				c.addons = addons
 			},
-
 			wantedTemplate: "template",
 		},
 	}
@@ -202,7 +214,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 				},
 				manifest: testLBWebAppManifest,
 			}
-			tc.mockDependencies(ctrl, conf)
+			tc.mockDependencies(t, ctrl, conf)
 
 			// WHEN
 			template, err := conf.Template()
@@ -319,7 +331,7 @@ func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
 	}{
 		"unavailable template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Parse(appParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.app.parser = m
 			},
@@ -328,7 +340,7 @@ func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
 		},
 		"render params template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
-				m := mocks.NewMockAppTemplateReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Parse(appParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
 				c.app.parser = m
 			},
