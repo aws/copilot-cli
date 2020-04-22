@@ -230,6 +230,10 @@ type statusDescriber interface {
 	Describe() (*describe.WebAppStatusDesc, error)
 }
 
+type envDescriber interface {
+	Describe() (*describe.EnvDescription, error)
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelines() ([]string, error)

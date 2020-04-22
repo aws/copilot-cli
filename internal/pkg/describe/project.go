@@ -7,28 +7,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
 
-type Environment struct {
-	Name      string `json:"name"`
-	AccountID string `json:"accountID"`
-	Region    string `json:"region"`
-}
-
-type Application struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
 // Project contains serialized parameters for a project.
 type Project struct {
-	Name string         `json:"name"`
-	URI  string         `json:"uri"`
-	Envs []*Environment `json:"environments"`
-	Apps []*Application `json:"applications"`
+	Name string                `json:"name"`
+	URI  string                `json:"uri"`
+	Envs []*archer.Environment `json:"environments"`
+	Apps []*archer.Application `json:"applications"`
 }
 
 // JSONString returns the stringified Project struct with json format.

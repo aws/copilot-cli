@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -30,8 +31,10 @@ type showEnvVars struct {
 type showEnvOpts struct {
 	showEnvVars
 
-	w        io.Writer
-	storeSvc storeReader
+	w                io.Writer
+	storeSvc         storeReader
+	describer        envDescriber
+	initEnvDescriber func(*showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -44,7 +47,14 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		showEnvVars: vars,
 		storeSvc:    ssmStore,
 		w:           log.OutputWriter,
-		// initDescriber: make EnvDescriber here
+		initEnvDescriber: func(o *showEnvOpts) error {
+			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
+			if err != nil {
+				return fmt.Errorf("creating describer for environment %s in project %s: %w", o.envName, o.ProjectName(), err)
+			}
+			o.describer = d
+			return nil
+		},
 	}, nil
 }
 
@@ -74,6 +84,25 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
+	if err := o.initEnvDescriber(o); err != nil {
+		return err
+	}
+	env, err := o.describer.Describe()
+	if err != nil {
+		return err
+	}
+	if o.shouldOutputJSON {
+		data, err := env.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(o.w, data)
+	} else {
+		fmt.Println(env)
+		//} else {
+		//	fmt.Fprintf(o.w, env.HumanString())
+	}
+
 	return nil
 }
 
