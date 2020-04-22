@@ -53,7 +53,7 @@ func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[strin
 	var resourceArns []string
 	resourceResp := &resourcegroups.SearchResourcesOutput{}
 
-	query, err := rg.SearchResourcesQuery(resourceType, tags)
+	query, err := rg.searchResourcesQuery(resourceType, tags)
 	if err != nil {
 		return nil, fmt.Errorf("construct search resource query: %w", err)
 	}
@@ -80,8 +80,8 @@ func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[strin
 	return resourceArns, nil
 }
 
-// SearchResourcesQuery returns a query string with the tag filters used to filter Resources
-func (rg *ResourceGroups) SearchResourcesQuery(resourceType string, tags map[string]string) (string, error) {
+// searchResourcesQuery returns a query string with the tag filters used to filter Resources
+func (rg *ResourceGroups) searchResourcesQuery(resourceType string, tags map[string]string) (string, error) {
 	var tagFilters []tagFilter
 	for k, v := range tags {
 		tagFilters = append(tagFilters, tagFilter{

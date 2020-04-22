@@ -53,7 +53,7 @@ func TestResourceGroups_SearchResourcesQuery(t *testing.T) {
 			rg := &ResourceGroups{client: mockClient}
 
 			// WHEN
-			actualQuery, actualErr := rg.SearchResourcesQuery(tc.inResourceType, tc.inTags)
+			actualQuery, actualErr := rg.searchResourcesQuery(tc.inResourceType, tc.inTags)
 
 			// THEN
 			if actualErr != nil {
