@@ -21,14 +21,14 @@ func TestECS_TaskDefinition(t *testing.T) {
 
 	testCases := map[string]struct {
 		taskDefinitionName string
-		mockECSClient      func(m *mocks.MockecsClient)
+		mockECSClient      func(m *mocks.Mockapi)
 
 		wantErr     error
 		wantTaskDef *TaskDefinition
 	}{
 		"should return wrapped error given error": {
 			taskDefinitionName: "task-def",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 					TaskDefinition: aws.String("task-def"),
 				}).Return(nil, mockError)
@@ -37,7 +37,7 @@ func TestECS_TaskDefinition(t *testing.T) {
 		},
 		"returns task definition given a task definition name": {
 			taskDefinitionName: "task-def",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{
 					TaskDefinition: aws.String("task-def"),
 				}).Return(&ecs.DescribeTaskDefinitionOutput{
@@ -84,7 +84,7 @@ func TestECS_TaskDefinition(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mockECSClient := mocks.NewMockapi(ctrl)
 			tc.mockECSClient(mockECSClient)
 
 			service := ECS{
@@ -107,7 +107,7 @@ func TestECS_Service(t *testing.T) {
 	testCases := map[string]struct {
 		clusterName   string
 		serviceName   string
-		mockECSClient func(m *mocks.MockecsClient)
+		mockECSClient func(m *mocks.Mockapi)
 
 		wantErr error
 		wantSvc *Service
@@ -115,7 +115,7 @@ func TestECS_Service(t *testing.T) {
 		"success": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
 					Cluster:  aws.String("mockCluster"),
 					Services: aws.StringSlice([]string{"mockService"}),
@@ -134,7 +134,7 @@ func TestECS_Service(t *testing.T) {
 		"errors if failed to describe service": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
 					Cluster:  aws.String("mockCluster"),
 					Services: aws.StringSlice([]string{"mockService"}),
@@ -145,7 +145,7 @@ func TestECS_Service(t *testing.T) {
 		"errors if failed to find the service": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeServices(&ecs.DescribeServicesInput{
 					Cluster:  aws.String("mockCluster"),
 					Services: aws.StringSlice([]string{"mockService"}),
@@ -167,7 +167,7 @@ func TestECS_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mockECSClient := mocks.NewMockapi(ctrl)
 			tc.mockECSClient(mockECSClient)
 
 			service := ECS{
@@ -190,7 +190,7 @@ func TestECS_Tasks(t *testing.T) {
 	testCases := map[string]struct {
 		clusterName   string
 		serviceName   string
-		mockECSClient func(m *mocks.MockecsClient)
+		mockECSClient func(m *mocks.Mockapi)
 
 		wantErr   error
 		wantTasks []*Task
@@ -198,7 +198,7 @@ func TestECS_Tasks(t *testing.T) {
 		"errors if failed to list running tasks": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
 					Cluster:     aws.String("mockCluster"),
 					ServiceName: aws.String("mockService"),
@@ -209,7 +209,7 @@ func TestECS_Tasks(t *testing.T) {
 		"errors if failed to describe running tasks": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
 					Cluster:     aws.String("mockCluster"),
 					ServiceName: aws.String("mockService"),
@@ -227,7 +227,7 @@ func TestECS_Tasks(t *testing.T) {
 		"success": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
 					Cluster:     aws.String("mockCluster"),
 					ServiceName: aws.String("mockService"),
@@ -255,7 +255,7 @@ func TestECS_Tasks(t *testing.T) {
 		"success with pagination": {
 			clusterName: "mockCluster",
 			serviceName: "mockService",
-			mockECSClient: func(m *mocks.MockecsClient) {
+			mockECSClient: func(m *mocks.Mockapi) {
 				m.EXPECT().ListTasks(&ecs.ListTasksInput{
 					Cluster:     aws.String("mockCluster"),
 					ServiceName: aws.String("mockService"),
@@ -309,7 +309,7 @@ func TestECS_Tasks(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockECSClient := mocks.NewMockecsClient(ctrl)
+			mockECSClient := mocks.NewMockapi(ctrl)
 			tc.mockECSClient(mockECSClient)
 
 			service := ECS{

@@ -24,7 +24,7 @@ func TestLogEvents(t *testing.T) {
 		endTime                  int64
 		limit                    int
 		lastEventTime            map[string]int64
-		mockcloudwatchlogsClient func(m *mocks.MockcloudwatchlogsClient)
+		mockcloudwatchlogsClient func(m *mocks.Mockapi)
 
 		wantLogEvents     []*Event
 		wantLastEventTime map[string]int64
@@ -36,7 +36,7 @@ func TestLogEvents(t *testing.T) {
 			endTime:       1234568,
 			limit:         10,
 			lastEventTime: make(map[string]int64),
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -109,7 +109,7 @@ func TestLogEvents(t *testing.T) {
 			lastEventTime: map[string]int64{
 				"ecs/mockLogGroup/mockLogStream": 1234890,
 			},
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -156,7 +156,7 @@ func TestLogEvents(t *testing.T) {
 			endTime:       1234568,
 			limit:         1,
 			lastEventTime: make(map[string]int64),
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -207,7 +207,7 @@ func TestLogEvents(t *testing.T) {
 			endTime:       1234568,
 			limit:         10,
 			lastEventTime: make(map[string]int64),
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -224,7 +224,7 @@ func TestLogEvents(t *testing.T) {
 			endTime:       1234568,
 			limit:         10,
 			lastEventTime: make(map[string]int64),
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -243,7 +243,7 @@ func TestLogEvents(t *testing.T) {
 			endTime:       1234568,
 			limit:         10,
 			lastEventTime: make(map[string]int64),
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
@@ -275,11 +275,11 @@ func TestLogEvents(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockcloudwatchlogsClient := mocks.NewMockcloudwatchlogsClient(ctrl)
+			mockcloudwatchlogsClient := mocks.NewMockapi(ctrl)
 			tc.mockcloudwatchlogsClient(mockcloudwatchlogsClient)
 
-			service := Service{
-				cwlogs: mockcloudwatchlogsClient,
+			service := CloudWatchLogs{
+				client: mockcloudwatchlogsClient,
 			}
 
 			gotLogEventsOutput, gotErr := service.TaskLogEvents(tc.logGroupName, tc.lastEventTime, WithLimit(tc.limit), WithStartTime(tc.startTime), WithEndTime(tc.endTime))
@@ -299,14 +299,14 @@ func TestLogGroupExists(t *testing.T) {
 	testCases := map[string]struct {
 		logGroupName string
 
-		mockcloudwatchlogsClient func(m *mocks.MockcloudwatchlogsClient)
+		mockcloudwatchlogsClient func(m *mocks.Mockapi)
 
 		exist   bool
 		wantErr error
 	}{
 		"should return true if a log group exists": {
 			logGroupName: "mockLogGroup",
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
@@ -323,7 +323,7 @@ func TestLogGroupExists(t *testing.T) {
 		},
 		"should return false if a log group does not exist": {
 			logGroupName: "mockLogGroup",
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 				}).Return(nil, awserr.New("ResourceNotFoundException", "some error", nil))
@@ -334,7 +334,7 @@ func TestLogGroupExists(t *testing.T) {
 		},
 		"should return error if fail to describe log stream": {
 			logGroupName: "mockLogGroup",
-			mockcloudwatchlogsClient: func(m *mocks.MockcloudwatchlogsClient) {
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 				}).Return(nil, mockError)
@@ -351,11 +351,11 @@ func TestLogGroupExists(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockcloudwatchlogsClient := mocks.NewMockcloudwatchlogsClient(ctrl)
+			mockcloudwatchlogsClient := mocks.NewMockapi(ctrl)
 			tc.mockcloudwatchlogsClient(mockcloudwatchlogsClient)
 
-			service := Service{
-				cwlogs: mockcloudwatchlogsClient,
+			service := CloudWatchLogs{
+				client: mockcloudwatchlogsClient,
 			}
 
 			exist, gotErr := service.LogGroupExists(tc.logGroupName)

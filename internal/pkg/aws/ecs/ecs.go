@@ -22,7 +22,7 @@ const (
 	imageDigestPrefix      = "sha256:"
 )
 
-type ecsClient interface {
+type api interface {
 	DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
@@ -31,7 +31,7 @@ type ecsClient interface {
 
 // ECS wraps an AWS ECS client.
 type ECS struct {
-	client ecsClient
+	client api
 }
 
 // TaskDefinition wraps up ECS TaskDefinition struct.
