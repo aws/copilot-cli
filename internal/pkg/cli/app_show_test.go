@@ -12,7 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -371,6 +371,62 @@ func TestAppShow_Ask(t *testing.T) {
 
 func TestAppShow_Execute(t *testing.T) {
 	projectName := "my-project"
+	webApp := describe.WebApp{
+		AppName: "my-app",
+		Configurations: []*describe.WebAppConfig{
+			{
+				CPU:         "256",
+				Environment: "test",
+				Memory:      "512",
+				Port:        "80",
+				Tasks:       "1",
+			},
+			{
+				CPU:         "512",
+				Environment: "prod",
+				Memory:      "1024",
+				Port:        "5000",
+				Tasks:       "3",
+			},
+		},
+		Project: "my-project",
+		Variables: []*stack.EnvVars{
+			{
+				Environment: "prod",
+				Name:        "ECS_CLI_ENVIRONMENT_NAME",
+				Value:       "prod",
+			},
+			{
+				Environment: "test",
+				Name:        "ECS_CLI_ENVIRONMENT_NAME",
+				Value:       "test",
+			},
+		},
+		Routes: []*describe.WebAppRoute{
+			{
+				Environment: "test",
+				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend",
+			},
+			{
+				Environment: "prod",
+				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
+			},
+		},
+		Resources: map[string][]*stack.CfnResource{
+			"test": []*stack.CfnResource{
+				{
+					PhysicalID: "sg-0758ed6b233743530",
+					Type:       "AWS::EC2::SecurityGroup",
+				},
+			},
+			"prod": []*stack.CfnResource{
+				{
+					Type:       "AWS::EC2::SecurityGroupIngress",
+					PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+				},
+			},
+		},
+	}
 	testCases := map[string]struct {
 		inputApp              string
 		shouldOutputJSON      bool
@@ -383,8 +439,7 @@ func TestAppShow_Execute(t *testing.T) {
 	}{
 		"noop if app name is empty": {
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication(gomock.Any(), gomock.Any()).Times(0)
-				m.describer.EXPECT().URI(gomock.Any()).Times(0)
+				m.describer.EXPECT().Describe(gomock.Any()).Times(0)
 			},
 		},
 		"prompt for all input for json output": {
@@ -394,66 +449,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "prod"},
-					}, nil),
-
-					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "frontend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-						ContainerPort: "80",
-						TaskSize: describe.TaskSize{
-							CPU:    "256",
-							Memory: "512",
-						},
-						TaskCount: "1",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "test",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-					}, nil),
-					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "backend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-						ContainerPort: "5000",
-						TaskSize: describe.TaskSize{
-							CPU:    "512",
-							Memory: "1024",
-						},
-						TaskCount: "3",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "prod",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-					}, nil),
-
-					// describer#StackResources
-					m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-						{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-0758ed6b233743530",
-						},
-					}, nil),
-					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-						{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-						},
-					}, nil),
+					m.describer.EXPECT().Describe(true).Return(&webApp, nil),
 				)
 			},
 
@@ -466,65 +462,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "prod"},
-					}, nil),
-
-					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "frontend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-						ContainerPort: "80",
-						TaskSize: describe.TaskSize{
-							CPU:    "256",
-							Memory: "512",
-						},
-						TaskCount: "1",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "test",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-					}, nil),
-					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "backend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-						ContainerPort: "5000",
-						TaskSize: describe.TaskSize{
-							CPU:    "512",
-							Memory: "1024",
-						},
-						TaskCount: "3",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "prod",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-					}, nil),
-
-					m.describer.EXPECT().StackResources("test").Return([]*describe.CfnResource{
-						{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-0758ed6b233743530",
-						},
-					}, nil),
-					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-						{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-						},
-					}, nil),
+					m.describer.EXPECT().Describe(true).Return(&webApp, nil),
 				)
 			},
 
@@ -561,234 +499,16 @@ Resources
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
 		},
-		"returns error if fail to get application": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: false,
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("get application: some error"),
-		},
-		"returns error if fail to list environments": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: false,
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("list environments: some error"),
-		},
-		"returns error if fail to retrieve URI": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: false,
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
-
-				m.describer.EXPECT().URI("test").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("retrieve application URI: some error"),
-		},
-		"returns error if fail to retrieve deploy info": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
-
-				m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "frontend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("retrieve application deployment configuration: some error"),
-		},
-		"returns error if fail to retrieve environment variables": {
-			inputApp:         "my-app",
-			shouldOutputJSON: false,
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
-
-				m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-					DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-					Path:    "frontend",
-				}, nil)
-				m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-					ContainerPort: "80",
-					TaskSize: describe.TaskSize{
-						CPU:    "256",
-						Memory: "512",
-					},
-					TaskCount: "1",
-				}, nil)
-				m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("retrieve environment variables: some error"),
-		},
-		"returns error if fail to retrieve application resources": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: true,
+		"return error if fail to describe application": {
+			inputApp: "my-app",
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "prod"},
-					}, nil),
-
-					m.describer.EXPECT().URI("test").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "frontend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("test").Return(&describe.WebAppECSParams{
-						ContainerPort: "80",
-						TaskSize: describe.TaskSize{
-							CPU:    "256",
-							Memory: "512",
-						},
-						TaskCount: "1",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "test",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-					}, nil),
-					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "backend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-						ContainerPort: "5000",
-						TaskSize: describe.TaskSize{
-							CPU:    "512",
-							Memory: "1024",
-						},
-						TaskCount: "3",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "prod",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-					}, nil),
-					m.describer.EXPECT().StackResources("test").Return(nil, errors.New("some error")),
+					m.describer.EXPECT().Describe(false).Return(nil, errors.New("some error")),
 				)
 			},
 
-			wantedError: fmt.Errorf("retrieve application resources: some error"),
-		},
-		"do not return error if fail to retrieve URI because of application not deployed": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: true,
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "test"},
-						{Name: "prod"},
-					}, nil),
-
-					m.describer.EXPECT().URI("test").Return(nil, fmt.Errorf("describe stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))),
-					m.describer.EXPECT().URI("prod").Return(&describe.WebAppURI{
-						DNSName: "my-pr-Publi.us-west-2.elb.amazonaws.com",
-						Path:    "backend",
-					}, nil),
-					m.describer.EXPECT().ECSParams("test").Times(0),
-					m.describer.EXPECT().ECSParams("prod").Return(&describe.WebAppECSParams{
-						ContainerPort: "5000",
-						TaskSize: describe.TaskSize{
-							CPU:    "512",
-							Memory: "1024",
-						},
-						TaskCount: "3",
-					}, nil),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "test"}).Times(0),
-					m.describer.EXPECT().EnvVars(&archer.Environment{Name: "prod"}).Return([]*describe.WebAppEnvVars{
-						&describe.WebAppEnvVars{
-							Environment: "prod",
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-					}, nil),
-					m.describer.EXPECT().StackResources("test").Return(nil, fmt.Errorf("describe resources for stack my-project-test-my-app: %w", awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))),
-					m.describer.EXPECT().StackResources("prod").Return([]*describe.CfnResource{
-						{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-						},
-					}, nil),
-				)
-			},
-
-			wantedContent: `About
-
-  Project           my-project
-  Name              my-app
-  Type              
-
-Configurations
-
-  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
-  prod              3                   0.5                 1024                5000
-
-Routes
-
-  Environment       URL
-  prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
-
-Variables
-
-  Name                      Environment         Value
-  ECS_CLI_ENVIRONMENT_NAME  prod                prod
-
-Resources
-
-  prod
-    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
-`,
+			wantedError: fmt.Errorf("describe application my-app: some error"),
 		},
 	}
 
@@ -798,11 +518,9 @@ Resources
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			mockWebAppDescriber := climocks.NewMockwebAppDescriber(ctrl)
 
 			mocks := showAppMocks{
-				storeSvc:  mockStoreReader,
 				describer: mockWebAppDescriber,
 			}
 
@@ -817,7 +535,6 @@ Resources
 						projectName: projectName,
 					},
 				},
-				storeSvc:      mockStoreReader,
 				describer:     mockWebAppDescriber,
 				initDescriber: func(*showAppOpts) error { return nil },
 				w:             b,

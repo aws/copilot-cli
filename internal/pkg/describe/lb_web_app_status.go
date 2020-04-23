@@ -27,7 +27,7 @@ type ecsServiceGetter interface {
 }
 
 type serviceArnGetter interface {
-	GetServiceArn(envName string) (*ecs.ServiceArn, error)
+	GetServiceArn(envName, appName string) (*ecs.ServiceArn, error)
 }
 
 // WebAppStatus retrieves status of a web app application.
@@ -59,7 +59,7 @@ func NewWebAppStatus(projectName, envName, appName string) (*WebAppStatus, error
 
 // Describe returns status of a web app application.
 func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
-	serviceArn, err := w.Describer.GetServiceArn(w.EnvName)
+	serviceArn, err := w.Describer.GetServiceArn(w.EnvName, w.AppName)
 	if err != nil {
 		return nil, fmt.Errorf("get service ARN: %w", err)
 	}

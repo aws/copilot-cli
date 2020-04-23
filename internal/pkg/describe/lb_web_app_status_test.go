@@ -36,7 +36,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockError)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(nil, mockError)
 			},
 
 			wantedError: fmt.Errorf("get service ARN: some error"),
@@ -45,7 +45,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&badMockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&badMockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get cluster name: arn: invalid prefix"),
@@ -56,7 +56,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get ECS service mockService: some error"),
@@ -68,7 +68,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get ECS tasks for service mockService: some error"),
@@ -84,7 +84,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get status for task badMockTaskArn: arn: invalid prefix"),
@@ -107,7 +107,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				}).Return(nil, mockError)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get CloudWatch alarms: some error"),
@@ -163,7 +163,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
 			wantedContent: &WebAppStatusDesc{

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -36,9 +37,9 @@ type appStatusOpts struct {
 
 	w                   io.Writer
 	storeSvc            storeReader
-	appDescriber        serviceArnGetter
+	stackDescriber      serviceArnGetter
 	statusDescriber     statusDescriber
-	initAppDescriber    func(*appStatusOpts, string) error
+	initStackDescriber  func(*appStatusOpts, string) error
 	initStatusDescriber func(*appStatusOpts) error
 }
 
@@ -52,12 +53,12 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 		appStatusVars: vars,
 		storeSvc:      ssmStore,
 		w:             log.OutputWriter,
-		initAppDescriber: func(o *appStatusOpts, appName string) error {
-			d, err := describe.NewWebAppDescriber(o.ProjectName(), appName)
+		initStackDescriber: func(o *appStatusOpts, appName string) error {
+			d, err := stack.NewDescriber(o.ProjectName())
 			if err != nil {
-				return fmt.Errorf("creating app describer for application %s in project %s: %w", appName, o.ProjectName(), err)
+				return fmt.Errorf("creating stack describer for project %s: %w", o.ProjectName(), err)
 			}
-			o.appDescriber = d
+			o.stackDescriber = d
 			return nil
 		},
 		initStatusDescriber: func(o *appStatusOpts) error {
@@ -75,9 +76,9 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 			}
 			d.CwSvc = cloudwatch.New(sess)
 			d.EcsSvc = ecs.New(sess)
-			describer, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			describer, err := stack.NewDescriber(o.ProjectName())
 			if err != nil {
-				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+				return fmt.Errorf("creating stack describer for project %s: %w", o.ProjectName(), err)
 			}
 			d.Describer = describer
 
@@ -201,13 +202,13 @@ func (o *appStatusOpts) askAppEnvName() error {
 	appEnvs := make(map[string]appEnv)
 	var appEnvNames []string
 	for _, appName := range appNames {
-		if err := o.initAppDescriber(o, appName); err != nil {
+		if err := o.initStackDescriber(o, appName); err != nil {
 			return err
 		}
 		for _, envName := range envNames {
-			_, err := o.appDescriber.GetServiceArn(envName)
+			_, err := o.stackDescriber.GetServiceArn(envName, appName)
 			if err != nil {
-				if isStackNotExistsErr(err) {
+				if describe.IsStackNotExistsErr(err) {
 					continue
 				}
 				return fmt.Errorf("check if app %s is deployed in env %s: %w", appName, envName, err)

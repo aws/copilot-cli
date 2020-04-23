@@ -139,7 +139,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 		},
@@ -208,7 +208,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockError)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(nil, mockError)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
@@ -221,7 +221,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockStackNotFoundErr)
+				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(nil, mockStackNotFoundErr)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
@@ -246,8 +246,8 @@ func TestAppStatus_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv1").Return(&mockServiceArn, nil)
-				m.EXPECT().GetServiceArn("mockEnv2").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv1", "mockApp").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv2", "mockApp").Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
@@ -275,8 +275,8 @@ func TestAppStatus_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv1").Return(&mockServiceArn, nil)
-				m.EXPECT().GetServiceArn("mockEnv2").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv1", "mockApp").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn("mockEnv2", "mockApp").Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
@@ -306,9 +306,9 @@ func TestAppStatus_Ask(t *testing.T) {
 						prompt:      mockPrompt,
 					},
 				},
-				appDescriber:     mockWebAppDescriber,
-				initAppDescriber: func(*appStatusOpts, string) error { return nil },
-				storeSvc:         mockStoreReader,
+				stackDescriber:     mockWebAppDescriber,
+				initStackDescriber: func(*appStatusOpts, string) error { return nil },
+				storeSvc:           mockStoreReader,
 			}
 
 			// WHEN
