@@ -19,7 +19,7 @@ const (
 	lbWebAppRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
 )
 
-// Parameter logical IDs unique for a load balanced web application.
+// Parameter logical IDs for a load balanced web application.
 const (
 	LBWebAppHTTPSParamKey           = "HTTPSEnabled"
 	LBWebAppContainerPortParamKey   = "ContainerPort"
