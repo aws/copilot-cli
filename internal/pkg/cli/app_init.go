@@ -26,10 +26,10 @@ import (
 
 var (
 	appInitAppTypePrompt        = "Which type of " + color.Emphasize("infrastructure pattern") + " best represents your application?"
-	fmtAppInitAppTypeHelpPrompt = `A %s is an internet-facing HTTP server that's behind a load balancer. 
+	fmtAppInitAppTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
 To learn more see: https://git.io/JfIpv
 
-A %s is a service that is not internet-facing, but is reachable with service discovery.
+A %s is a private, non internet-facing service.
 To learn more see: https://git.io/JfIpT`
 
 	fmtAppInitAppNamePrompt     = "What do you want to " + color.Emphasize("name") + " this %s?"
