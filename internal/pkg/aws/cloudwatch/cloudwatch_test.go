@@ -18,7 +18,7 @@ import (
 )
 
 type cloudWatchMocks struct {
-	cw *cwmocks.MockcloudWatchClient
+	cw *cwmocks.Mockapi
 	rg *rgmocks.MockResourceGroupsClient
 }
 
@@ -181,7 +181,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockcwClient := cwmocks.NewMockcloudWatchClient(ctrl)
+			mockcwClient := cwmocks.NewMockapi(ctrl)
 			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
 			mocks := cloudWatchMocks{
 				cw: mockcwClient,

@@ -7,19 +7,26 @@ package codepipeline
 import (
 	"fmt"
 
+	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cp "github.com/aws/aws-sdk-go/service/codepipeline"
 )
 
+const (
+	pipelineResourceType = "AWS::CodePipeline::Pipeline"
+)
+
 type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
-	ListPipelines(*cp.ListPipelinesInput) (*cp.ListPipelinesOutput, error)
 }
 
 // CodePipeline wraps the AWS CodePipeline client.
 type CodePipeline struct {
-	client api
+	client   api
+	rgClient rg.ResourceGroupsClient
 }
 
 // Pipeline contains information about the pipeline
@@ -39,7 +46,8 @@ type ArtifactStore cp.ArtifactStore
 // New returns a CodePipeline client configured against the input session.
 func New(s *session.Session) *CodePipeline {
 	return &CodePipeline{
-		client: cp.New(s),
+		client:   cp.New(s),
+		rgClient: rg.New(s),
 	}
 }
 
@@ -60,20 +68,35 @@ func (c *CodePipeline) GetPipeline(pipelineName string) (*Pipeline, error) {
 	return pipeline, nil
 }
 
-// ListPipelines retrieves summaries of all pipelines for a project
-func (c *CodePipeline) ListPipelines() ([]string, error) {
-	input := &cp.ListPipelinesInput{}
-	resp, err := c.client.ListPipelines(input)
+// ListPipelines retrieves the names of all pipelines for a project
+func (c *CodePipeline) ListPipelinesForProject(projectName string) ([]string, error) {
+	var pipelineNames []string
+
+	tags := map[string]string{
+		"ecs-project": projectName,
+	}
+
+	arns, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
 	if err != nil {
-		return nil, fmt.Errorf("list pipelines: %w", err)
+		return nil, err
 	}
 
-	var pipelines []string
-
-	for _, ps := range resp.Pipelines {
-		p := aws.StringValue(ps.Name)
-		pipelines = append(pipelines, p)
+	for _, arn := range arns {
+		name, err := c.getPipelineName(arn)
+		if err != nil {
+			return nil, err
+		}
+		pipelineNames = append(pipelineNames, name)
 	}
 
-	return pipelines, nil
+	return pipelineNames, nil
+}
+
+func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
+	}
+
+	return parsedArn.Resource, nil
 }

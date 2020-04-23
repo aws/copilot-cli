@@ -236,7 +236,7 @@ type envDescriber interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	ListPipelines() ([]string, error)
+	ListPipelinesForProject(projectName string) ([]string, error)
 }
 
 type executor interface {
