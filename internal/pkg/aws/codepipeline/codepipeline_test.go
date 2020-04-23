@@ -132,7 +132,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]string{badArn}, nil)
 			},
 			expectedOut:   nil,
-			expectedError: fmt.Errorf("cannot parse pipeline ARN: %s", badArn),
+			expectedError: fmt.Errorf("parse pipeline ARN: %s", badArn),
 		},
 	}
 

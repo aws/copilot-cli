@@ -6,11 +6,11 @@ package codepipeline
 
 import (
 	"fmt"
-	"strings"
 
 	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cp "github.com/aws/aws-sdk-go/service/codepipeline"
 )
@@ -92,12 +92,11 @@ func (c *CodePipeline) ListPipelinesForProject(projectName string) ([]string, er
 	return pipelineNames, nil
 }
 
-func (c *CodePipeline) getPipelineName(arn string) (string, error) {
-	i := strings.LastIndex(arn, ":")
-	if i == -1 {
-		return "", fmt.Errorf("cannot parse pipeline ARN: %s", arn)
+func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
 	}
-	name := arn[i+1:]
 
-	return name, nil
+	return parsedArn.Resource, nil
 }
