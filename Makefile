@@ -132,7 +132,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_describe.go -source=./internal/pkg/describe/lb_web_app.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/stack/mocks/mock_stack.go -source=./internal/pkg/describe/stack/stack.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/lb_web_app_status.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecr/mocks/mock_ecr.go -source=./internal/pkg/aws/ecr/ecr.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/ecs/mocks/mock_ecs.go -source=./internal/pkg/aws/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/identity/mocks/mock_identity.go -source=./internal/pkg/aws/identity/identity.go

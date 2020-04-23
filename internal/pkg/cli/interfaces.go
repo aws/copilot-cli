@@ -224,7 +224,7 @@ type serviceArnGetter interface {
 }
 
 type statusDescriber interface {
-	Describe() (*describe.WebAppStatusDesc, error)
+	Describe() (*describe.AppStatusDesc, error)
 }
 
 type envDescriber interface {

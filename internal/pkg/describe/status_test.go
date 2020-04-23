@@ -30,7 +30,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 		mockWebAppDescriber func(m *mocks.MockserviceArnGetter)
 
 		wantedError   error
-		wantedContent *WebAppStatusDesc
+		wantedContent *AppStatusDesc
 	}{
 		"errors if failed to get service ARN": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
@@ -166,7 +166,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				m.EXPECT().GetServiceArn("mockEnv", "mockApp").Return(&mockServiceArn, nil)
 			},
 
-			wantedContent: &WebAppStatusDesc{
+			wantedContent: &AppStatusDesc{
 				Service: ecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     1,
@@ -220,7 +220,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			tc.mockcwSvc(mockcwSvc)
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
-			appStatus := &WebAppStatus{
+			appStatus := &AppStatus{
 				AppName:     "mockApp",
 				EnvName:     "mockEnv",
 				ProjectName: "mockProject",

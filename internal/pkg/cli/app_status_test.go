@@ -329,7 +329,7 @@ func TestAppStatus_Execute(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime := time.Unix(1584129030, 0)
-	mockProvisioningAppStatus := &describe.WebAppStatusDesc{
+	mockProvisioningAppStatus := &describe.AppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
 			RunningCount:     0,
@@ -355,7 +355,7 @@ func TestAppStatus_Execute(t *testing.T) {
 			},
 		},
 	}
-	mockAppStatus := &describe.WebAppStatusDesc{
+	mockAppStatus := &describe.AppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
 			RunningCount:     1,

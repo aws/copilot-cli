@@ -62,7 +62,7 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 			return nil
 		},
 		initStatusDescriber: func(o *appStatusOpts) error {
-			d, err := describe.NewWebAppStatus(o.ProjectName(), o.envName, o.appName)
+			d, err := describe.NewAppStatus(o.ProjectName(), o.envName, o.appName)
 			if err != nil {
 				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
 			}

@@ -2391,10 +2391,10 @@ func (m *MockstatusDescriber) EXPECT() *MockstatusDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockstatusDescriber) Describe() (*describe.WebAppStatusDesc, error) {
+func (m *MockstatusDescriber) Describe() (*describe.AppStatusDesc, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.WebAppStatusDesc)
+	ret0, _ := ret[0].(*describe.AppStatusDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
