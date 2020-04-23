@@ -78,7 +78,6 @@ func (e *EnvDescription) JSONString() (string, error) {
 
 // HumanString returns the stringified EnvDescription struct with human readable format.
 func (e *EnvDescription) HumanString() string {
-	// HumanString returns the stringified WebApp struct with human readable format.
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))

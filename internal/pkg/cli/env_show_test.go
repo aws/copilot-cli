@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -17,7 +18,7 @@ import (
 type showEnvMocks struct {
 	storeSvc *climocks.MockstoreReader
 	prompt   *climocks.Mockprompter
-	//describer   *climocks.MockwebEnvDescriber
+	//describer   *climocks.MockenvDescriber
 }
 
 func TestEnvShow_Validate(t *testing.T) {
@@ -113,7 +114,7 @@ func TestEnvShow_Ask(t *testing.T) {
 		inputProject string
 		inputEnv     string
 
-		setupMocks func(mocks showEnvMocks) //or m?
+		setupMocks func(mocks showEnvMocks)
 
 		wantedProject string
 		wantedEnv     string
@@ -314,6 +315,159 @@ func TestEnvShow_Ask(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedProject, showEnvs.ProjectName(), "expected project name to match")
 				require.Equal(t, tc.wantedEnv, showEnvs.envName, "expected environment name to match")
+			}
+		})
+	}
+}
+
+func TestEnvShow_Execute(t *testing.T) {
+	projectName := "my-project"
+	testCases := map[string]struct {
+		inputEnv         string
+		shouldOutputJSON bool
+		//shouldOutputResources bool
+
+		setupMocks func(m showEnvMocks)
+
+		wantedContent string
+		wantedError   error
+	}{
+		"correctly shows json output": {
+			inputEnv: 	"test",
+			shouldOutputJSON: true,
+
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						&archer.Environment{
+							Name:      "test",
+							AccountID: "123456789",
+							Region:    "us-west-1",
+							Prod:      false,
+						},
+					}, nil),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						&archer.Application{
+							Name: "my-app",
+							Type: "lb-web-app",
+						},
+						&archer.Application{
+							Name: "archer-app",
+							Type: "lb-web-app",
+						},
+					}, nil),
+				)
+			},
+
+			wantedContent: "{\"environment\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"project\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"project\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"project\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
+		},
+		"correctly shows human output": {
+			inputEnv:	"test",
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+						&archer.Environment{
+							Name:      "test",
+							Prod:      false,
+							Region:    "us-west-2",
+							AccountID: "123456789",
+						},
+					}, nil),
+					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+						&archer.Application{
+							Name: "my-app",
+							Type: "lb-web-app",
+						},
+						&archer.Application{
+							Name: "archer-app",
+							Type: "lb-web-app",
+						},
+					}, nil),
+				)
+			},
+
+			wantedContent: `About
+
+  Name              test
+  Production        false
+  Region			us-west-2
+  Account ID		123456789
+
+Applications
+
+  Name              Type
+  my-app            lb-web-app
+  archer-app		lb-web-app
+`,
+		},
+		"returns error if fail to list environment": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("list environments: some error"),
+		},
+		"returns error if fail to list applications": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					&archer.Environment{
+						Name:      "test",
+						Prod:      false,
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf("list applications: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			b := &bytes.Buffer{}
+			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			//mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
+
+			mocks := showEnvMocks{
+				storeSvc: mockStoreReader,
+				//describer: mockEnvDescriber,
+			}
+
+			tc.setupMocks(mocks)
+
+			showEnvs := &showEnvOpts{
+				showEnvVars: showEnvVars{
+					shouldOutputJSON: tc.shouldOutputJSON,
+					GlobalOpts: &GlobalOpts{
+						projectName: projectName,
+					},
+				},
+				storeSvc:         mockStoreReader,
+				//describer: 			climocks.MockenvDescriber,
+				//initEnvDescriber: func(opts *showEnvOpts) error { return nil },
+				w:                b,
+			}
+
+			// WHEN
+			err := showEnvs.Execute()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
 			}
 		})
 	}
