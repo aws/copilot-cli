@@ -849,18 +849,18 @@ func (m *MockwebAppDescriber) EXPECT() *MockwebAppDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockwebAppDescriber) Describe(shouldOutputResources bool) (*describe.WebApp, error) {
+func (m *MockwebAppDescriber) Describe(option func() bool) (*describe.WebAppDesc, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Describe", shouldOutputResources)
-	ret0, _ := ret[0].(*describe.WebApp)
+	ret := m.ctrl.Call(m, "Describe", option)
+	ret0, _ := ret[0].(*describe.WebAppDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Describe indicates an expected call of Describe
-func (mr *MockwebAppDescriberMockRecorder) Describe(shouldOutputResources interface{}) *gomock.Call {
+func (mr *MockwebAppDescriberMockRecorder) Describe(option interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe), shouldOutputResources)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe), option)
 }
 
 // MockstoreReader is a mock of storeReader interface
@@ -2353,18 +2353,18 @@ func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
 }
 
 // GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn(envName, appName string) (*ecs.ServiceArn, error) {
+func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn", envName, appName)
+	ret := m.ctrl.Call(m, "GetServiceArn")
 	ret0, _ := ret[0].(*ecs.ServiceArn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn(envName, appName interface{}) *gomock.Call {
+func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn), envName, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
 }
 
 // MockstatusDescriber is a mock of statusDescriber interface

@@ -12,7 +12,9 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	humanize "github.com/dustin/go-humanize"
 )
@@ -27,7 +29,7 @@ type ecsServiceGetter interface {
 }
 
 type serviceArnGetter interface {
-	GetServiceArn(envName, appName string) (*ecs.ServiceArn, error)
+	GetServiceArn() (*ecs.ServiceArn, error)
 }
 
 // AppStatus retrieves status of an application.
@@ -50,16 +52,38 @@ type AppStatusDesc struct {
 
 // NewAppStatus instantiates a new AppStatus struct.
 func NewAppStatus(projectName, envName, appName string) (*AppStatus, error) {
+	d, err := NewAppDescriber(projectName, envName, appName)
+	if err != nil {
+		return nil, err
+	}
+	svc, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to store: %w", err)
+	}
+	env, err := svc.GetEnvironment(projectName, envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", envName, err)
+	}
+	sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("creating stack describer for project %s: %w", projectName, err)
+	}
 	return &AppStatus{
 		ProjectName: projectName,
 		EnvName:     envName,
 		AppName:     appName,
+		Describer:   d,
+		CwSvc:       cloudwatch.New(sess),
+		EcsSvc:      ecs.New(sess),
 	}, nil
 }
 
 // Describe returns status of a web app application.
 func (w *AppStatus) Describe() (*AppStatusDesc, error) {
-	serviceArn, err := w.Describer.GetServiceArn(w.EnvName, w.AppName)
+	serviceArn, err := w.Describer.GetServiceArn()
 	if err != nil {
 		return nil, fmt.Errorf("get service ARN: %w", err)
 	}

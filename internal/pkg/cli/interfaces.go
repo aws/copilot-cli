@@ -92,7 +92,7 @@ type sessionProvider interface {
 }
 
 type webAppDescriber interface {
-	Describe(shouldOutputResources bool) (*describe.WebApp, error)
+	Describe(option func() bool) (*describe.WebAppDesc, error)
 }
 
 type storeReader interface {
@@ -220,7 +220,7 @@ type dockerfileParser interface {
 }
 
 type serviceArnGetter interface {
-	GetServiceArn(envName, appName string) (*ecs.ServiceArn, error)
+	GetServiceArn() (*ecs.ServiceArn, error)
 }
 
 type statusDescriber interface {

@@ -9,10 +9,11 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	CFNStack "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/stack"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -56,9 +57,9 @@ func TestWebAppURI_String(t *testing.T) {
 	}
 }
 
-type describeMocks struct {
-	storeSvc       *mocks.MockstoreSvc
-	stackDescriber *mocks.MockstackDescriber
+type webAppDescriberMocks struct {
+	storeSvc     *mocks.MockstoreSvc
+	appDescriber *mocks.MockappDescriber
 }
 
 func TestWebAppDescriber_URI(t *testing.T) {
@@ -70,82 +71,61 @@ func TestWebAppDescriber_URI(t *testing.T) {
 		testEnvLBDNSName = "http://abc.us-west-1.elb.amazonaws.com"
 		testAppPath      = "*"
 	)
-	environment := archer.Environment{
-		Project: testProject,
-		Name:    testEnv,
-	}
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		setupMocks func(mocks describeMocks)
+		setupMocks func(mocks webAppDescriberMocks)
 
-		wantedURI   *WebAppURI
+		wantedURI   string
 		wantedError error
 	}{
-		"environment does not exist in store": {
-			setupMocks: func(m describeMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(nil, mockErr),
-				)
-			},
-			wantedError: fmt.Errorf("get environment test: some error"),
-		},
 		"fail to get output of environment stack": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&environment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&environment).Return(nil, mockErr),
+					m.appDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get output for environment test: some error"),
 		},
 		"fail to get parameters of application stack": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&environment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&environment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-						CFNStack.EnvOutputSubdomain:                 testEnvSubdomain,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&environment, testApp).Return(nil, mockErr),
+					m.appDescriber.EXPECT().AppParams().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get parameters for application jobs: some error"),
 		},
 		"https web application": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&environment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&environment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-						CFNStack.EnvOutputSubdomain:                 testEnvSubdomain,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&environment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: testAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
 				)
 			},
 
-			wantedURI: &WebAppURI{
-				DNSName: testApp + "." + testEnvSubdomain,
-			},
+			wantedURI: "https://jobs.test.phonetool.com",
 		},
 		"http web application": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&environment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&environment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&environment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: testAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
 				)
 			},
 
-			wantedURI: &WebAppURI{
-				DNSName: testEnvLBDNSName,
-				Path:    testAppPath,
-			},
+			wantedURI: "http://http://abc.us-west-1.elb.amazonaws.com/*",
 		},
 	}
 
@@ -155,11 +135,9 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockstoreSvc(ctrl)
-			mockStackDescriber := mocks.NewMockstackDescriber(ctrl)
-			mocks := describeMocks{
-				storeSvc:       mockStore,
-				stackDescriber: mockStackDescriber,
+			mockAppDescriber := mocks.NewMockappDescriber(ctrl)
+			mocks := webAppDescriberMocks{
+				appDescriber: mockAppDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -169,8 +147,8 @@ func TestWebAppDescriber_URI(t *testing.T) {
 					Project: testProject,
 					Name:    testApp,
 				},
-				store:          mockStore,
-				stackDescriber: mockStackDescriber,
+				appDescriber:     mockAppDescriber,
+				initAppDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
@@ -199,6 +177,9 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		prodAppPath      = "*"
 	)
 	mockErr := errors.New("some error")
+	withResources := func() bool {
+		return true
+	}
 	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
 	testEnvironment := archer.Environment{
 		Project: testProject,
@@ -209,15 +190,15 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		Name:    prodEnv,
 	}
 	testCases := map[string]struct {
-		shouldOutputResources bool
+		shouldOutputResources func() bool
 
-		setupMocks func(mocks describeMocks)
+		setupMocks func(mocks webAppDescriberMocks)
 
-		wantedWebApp *WebApp
+		wantedWebApp *WebAppDesc
 		wantedError  error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return(nil, mockErr),
 				)
@@ -225,160 +206,146 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("list environments: some error"),
 		},
 		"return error if fail to retrieve URI": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
 						&testEnvironment,
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(nil, mockErr),
+					m.appDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve application URI: get environment test: some error"),
+			wantedError: fmt.Errorf("retrieve application URI: get output for environment test: some error"),
 		},
 		"return error if fail to retrieve application deployment configuration": {
-			setupMocks: func(m describeMocks) {
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
 						&testEnvironment,
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&testEnvironment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&testEnvironment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: testAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppContainerPortParamKey: "80",
-						CFNStack.AppTaskCountParamKey:          "1",
-						CFNStack.AppTaskCPUParamKey:            "256",
-						CFNStack.AppTaskMemoryParamKey:         "512",
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppContainerPortParamKey: "80",
+						stack.AppTaskCountParamKey:          "1",
+						stack.AppTaskCPUParamKey:            "256",
+						stack.AppTaskMemoryParamKey:         "512",
 					}, nil),
-					m.stackDescriber.EXPECT().EnvVars(&testEnvironment, testApp).Return(nil, mockErr),
+					m.appDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve application resources": {
-			shouldOutputResources: true,
-			setupMocks: func(m describeMocks) {
+			shouldOutputResources: withResources,
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
 						&testEnvironment,
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&testEnvironment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&testEnvironment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: testAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppContainerPortParamKey: "80",
-						CFNStack.AppTaskCountParamKey:          "1",
-						CFNStack.AppTaskCPUParamKey:            "256",
-						CFNStack.AppTaskMemoryParamKey:         "512",
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppContainerPortParamKey: "80",
+						stack.AppTaskCountParamKey:          "1",
+						stack.AppTaskCPUParamKey:            "256",
+						stack.AppTaskMemoryParamKey:         "512",
 					}, nil),
-					m.stackDescriber.EXPECT().EnvVars(&testEnvironment, testApp).Return([]*stack.EnvVars{
-						&stack.EnvVars{
-							Environment: testEnv,
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       testEnv,
-						},
-					}, nil),
-					m.stackDescriber.EXPECT().StackResources(testEnv, testApp).Return(nil, mockErr),
+					m.appDescriber.EXPECT().EnvVars().Return(
+						map[string]string{
+							"ECS_CLI_ENVIRONMENT_NAME": testEnv,
+						}, nil),
+					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve application resources: some error"),
 		},
 		"skip if not deployed": {
-			shouldOutputResources: true,
-			setupMocks: func(m describeMocks) {
+			shouldOutputResources: withResources,
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
 						&testEnvironment,
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&testEnvironment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&testEnvironment).Return(nil, mockNotExistErr),
-					m.stackDescriber.EXPECT().StackResources(testEnv, testApp).Return(nil, mockNotExistErr),
+					m.appDescriber.EXPECT().EnvOutputs().Return(nil, mockNotExistErr),
+					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockNotExistErr),
 				)
 			},
-			wantedWebApp: &WebApp{
+			wantedWebApp: &WebAppDesc{
 				AppName:        testApp,
 				Type:           "",
 				Project:        testProject,
 				Configurations: []*WebAppConfig(nil),
 				Routes:         []*WebAppRoute(nil),
-				Variables:      []*stack.EnvVars(nil),
-				Resources:      make(map[string][]*stack.CfnResource),
+				Variables:      []*EnvVars(nil),
+				Resources:      make(map[string][]*CfnResource),
 			},
 		},
 		"success": {
-			shouldOutputResources: true,
-			setupMocks: func(m describeMocks) {
+			shouldOutputResources: withResources,
+			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
 						&testEnvironment,
 						&prodEnvironment,
 					}, nil),
 
-					m.storeSvc.EXPECT().GetEnvironment(testProject, testEnv).Return(&testEnvironment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&testEnvironment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: testAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&testEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppContainerPortParamKey: "80",
-						CFNStack.AppTaskCountParamKey:          "1",
-						CFNStack.AppTaskCPUParamKey:            "256",
-						CFNStack.AppTaskMemoryParamKey:         "512",
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppContainerPortParamKey: "80",
+						stack.AppTaskCountParamKey:          "1",
+						stack.AppTaskCPUParamKey:            "256",
+						stack.AppTaskMemoryParamKey:         "512",
 					}, nil),
-					m.stackDescriber.EXPECT().EnvVars(&testEnvironment, testApp).Return([]*stack.EnvVars{
-						&stack.EnvVars{
-							Environment: testEnv,
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       testEnv,
-						},
-					}, nil),
+					m.appDescriber.EXPECT().EnvVars().Return(
+						map[string]string{
+							"ECS_CLI_ENVIRONMENT_NAME": testEnv,
+						}, nil),
 
-					m.storeSvc.EXPECT().GetEnvironment(testProject, prodEnv).Return(&prodEnvironment, nil),
-					m.stackDescriber.EXPECT().EnvOutputs(&prodEnvironment).Return(map[string]string{
-						CFNStack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
+					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&prodEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppRulePathParamKey: prodAppPath,
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppRulePathParamKey: prodAppPath,
 					}, nil),
-					m.stackDescriber.EXPECT().AppParams(&prodEnvironment, testApp).Return(map[string]string{
-						CFNStack.LBWebAppContainerPortParamKey: "5000",
-						CFNStack.AppTaskCountParamKey:          "2",
-						CFNStack.AppTaskCPUParamKey:            "512",
-						CFNStack.AppTaskMemoryParamKey:         "1024",
+					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+						stack.LBWebAppContainerPortParamKey: "5000",
+						stack.AppTaskCountParamKey:          "2",
+						stack.AppTaskCPUParamKey:            "512",
+						stack.AppTaskMemoryParamKey:         "1024",
 					}, nil),
-					m.stackDescriber.EXPECT().EnvVars(&prodEnvironment, testApp).Return([]*stack.EnvVars{
-						&stack.EnvVars{
-							Environment: prodEnv,
-							Name:        "ECS_CLI_ENVIRONMENT_NAME",
-							Value:       prodEnv,
-						},
-					}, nil),
+					m.appDescriber.EXPECT().EnvVars().Return(
+						map[string]string{
+							"ECS_CLI_ENVIRONMENT_NAME": prodEnv,
+						}, nil),
 
-					m.stackDescriber.EXPECT().StackResources(testEnv, testApp).Return([]*stack.CfnResource{
-						&stack.CfnResource{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					m.appDescriber.EXPECT().AppStackResources().Return([]*cloudformation.StackResource{
+						{
+							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
+							PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
 						},
 					}, nil),
-					m.stackDescriber.EXPECT().StackResources(prodEnv, testApp).Return([]*stack.CfnResource{
-						&stack.CfnResource{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-0758ed6b233743530",
+					m.appDescriber.EXPECT().AppStackResources().Return([]*cloudformation.StackResource{
+						{
+							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
+							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
 						},
 					}, nil),
 				)
 			},
-			wantedWebApp: &WebApp{
+			wantedWebApp: &WebAppDesc{
 				AppName: testApp,
 				Type:    "",
 				Project: testProject,
@@ -408,7 +375,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
 					},
 				},
-				Variables: []*stack.EnvVars{
+				Variables: []*EnvVars{
 					{
 						Environment: "prod",
 						Name:        "ECS_CLI_ENVIRONMENT_NAME",
@@ -420,14 +387,14 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						Value:       "test",
 					},
 				},
-				Resources: map[string][]*stack.CfnResource{
-					"test": []*stack.CfnResource{
+				Resources: map[string][]*CfnResource{
+					"test": []*CfnResource{
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
 							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					},
-					"prod": []*stack.CfnResource{
+					"prod": []*CfnResource{
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
@@ -444,10 +411,10 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockstoreSvc(ctrl)
-			mockStackDescriber := mocks.NewMockstackDescriber(ctrl)
-			mocks := describeMocks{
-				storeSvc:       mockStore,
-				stackDescriber: mockStackDescriber,
+			mockAppDescriber := mocks.NewMockappDescriber(ctrl)
+			mocks := webAppDescriberMocks{
+				storeSvc:     mockStore,
+				appDescriber: mockAppDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -457,12 +424,13 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					Project: testProject,
 					Name:    testApp,
 				},
-				store:          mockStore,
-				stackDescriber: mockStackDescriber,
+				store:            mockStore,
+				appDescriber:     mockAppDescriber,
+				initAppDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
-			webapp, err := d.Describe(tc.shouldOutputResources)
+			webapp, err := d.Describe(withResources)
 
 			// THEN
 			if tc.wantedError != nil {

@@ -96,13 +96,21 @@ func (o *showAppOpts) Execute() error {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
 	}
-
-	if err := o.initDescriber(o); err != nil {
+	err := o.initDescriber(o)
+	if err != nil {
 		return err
 	}
-	app, err := o.describer.Describe(o.shouldOutputResources)
-	if err != nil {
-		return fmt.Errorf("describe application %s: %w", o.appName, err)
+	var app *describe.WebAppDesc
+	if o.shouldOutputResources {
+		app, err = o.describer.Describe(describe.WithAppResources())
+		if err != nil {
+			return fmt.Errorf("describe application %s: %w", o.appName, err)
+		}
+	} else {
+		app, err = o.describer.Describe(describe.WithNoAppResources())
+		if err != nil {
+			return fmt.Errorf("describe application %s: %w", o.appName, err)
+		}
 	}
 
 	if o.shouldOutputJSON {

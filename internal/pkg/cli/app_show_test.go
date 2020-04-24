@@ -12,7 +12,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -371,7 +370,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 func TestAppShow_Execute(t *testing.T) {
 	projectName := "my-project"
-	webApp := describe.WebApp{
+	webApp := describe.WebAppDesc{
 		AppName: "my-app",
 		Configurations: []*describe.WebAppConfig{
 			{
@@ -390,7 +389,7 @@ func TestAppShow_Execute(t *testing.T) {
 			},
 		},
 		Project: "my-project",
-		Variables: []*stack.EnvVars{
+		Variables: []*describe.EnvVars{
 			{
 				Environment: "prod",
 				Name:        "ECS_CLI_ENVIRONMENT_NAME",
@@ -412,14 +411,14 @@ func TestAppShow_Execute(t *testing.T) {
 				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
 			},
 		},
-		Resources: map[string][]*stack.CfnResource{
-			"test": []*stack.CfnResource{
+		Resources: map[string][]*describe.CfnResource{
+			"test": []*describe.CfnResource{
 				{
 					PhysicalID: "sg-0758ed6b233743530",
 					Type:       "AWS::EC2::SecurityGroup",
 				},
 			},
-			"prod": []*stack.CfnResource{
+			"prod": []*describe.CfnResource{
 				{
 					Type:       "AWS::EC2::SecurityGroupIngress",
 					PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
@@ -449,7 +448,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(true).Return(&webApp, nil),
+					m.describer.EXPECT().Describe(gomock.Any()).Return(&webApp, nil),
 				)
 			},
 
@@ -462,7 +461,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(true).Return(&webApp, nil),
+					m.describer.EXPECT().Describe(gomock.Any()).Return(&webApp, nil),
 				)
 			},
 
@@ -504,7 +503,7 @@ Resources
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(false).Return(nil, errors.New("some error")),
+					m.describer.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error")),
 				)
 			},
 
