@@ -238,13 +238,7 @@ func (o *initAppOpts) newManifest() (encoding.BinaryMarshaler, error) {
 	case manifest.LoadBalancedWebApplication:
 		return o.newLoadBalancedWebAppManifest()
 	case manifest.BackendApplication:
-		return manifest.NewBackendApp(manifest.BackendAppProps{
-			AppProps: manifest.AppProps{
-				AppName:    o.AppName,
-				Dockerfile: o.DockerfilePath,
-			},
-			Port: o.AppPort,
-		}), nil
+		return o.newBackendAppManifest()
 	default:
 		return nil, fmt.Errorf("application type %s doesn't have a manifest", o.AppType)
 	}
@@ -272,6 +266,16 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 		}
 	}
 	return manifest.NewLoadBalancedWebApp(props), nil
+}
+
+func (o *initAppOpts) newBackendAppManifest() (*manifest.BackendApp, error) {
+	return manifest.NewBackendApp(manifest.BackendAppProps{
+		AppProps: manifest.AppProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
+		Port: o.AppPort,
+	}), nil
 }
 
 func (o *initAppOpts) askAppType() error {
