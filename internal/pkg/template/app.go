@@ -6,16 +6,21 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 // Names of application templates.
 const (
-	lbWebAppTemplateName = "lb-web-app"
+	lbWebAppTemplateName   = "lb-web-app"
+	backendAppTemplateName = "backend-app"
 )
 
-// AppNestedStackOpts holds optional configuration that's needed only if the application stack has a nested stack.
+// AppNestedStackOpts holds configuration that's needed if the application stack has a nested stack.
 type AppNestedStackOpts struct {
 	StackName string
 
@@ -24,11 +29,21 @@ type AppNestedStackOpts struct {
 	PolicyOutputs   []string
 }
 
+// AppHealthCheckOpts holds configuration for the container healthcheck.
+type AppHealthCheckOpts struct {
+	Command     []string
+	Interval    int
+	Retries     int
+	StartPeriod int
+	Timeout     int
+}
+
 // AppOpts holds optional data that can be provided to enable features in an application stack template.
 type AppOpts struct {
-	// Environment variables.
 	Variables map[string]string
 	Secrets   map[string]string
+
+	HealthCheck *ecs.HealthCheck
 
 	// Outputs from nested stacks such as the addons stack.
 	NestedStack *AppNestedStackOpts
@@ -41,6 +56,11 @@ type AppOpts struct {
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebApp(data AppOpts) (*Content, error) {
 	return t.ParseApp(lbWebAppTemplateName, data, withAppParsingFuncs())
+}
+
+// ParseBackendApp parses a backend app's CloudFormation template with the specified data object and returns its content.
+func (t *Template) ParseBackendApp(data AppOpts) (*Content, error) {
+	return t.ParseApp(backendAppTemplateName, data, withAppParsingFuncs())
 }
 
 // ParseApp parses an application's CloudFormation template with the specified data object and returns its content.
@@ -69,8 +89,10 @@ func (t *Template) ParseApp(name string, data interface{}, options ...ParseOptio
 func withAppParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase": toSnakeCase,
-			"hasSecrets":  hasSecrets,
+			"toSnakeCase":    toSnakeCase,
+			"hasSecrets":     hasSecrets,
+			"stringifySlice": stringifySlice,
+			"quoteAll":       quoteAll,
 		})
 	}
 }
@@ -96,4 +118,20 @@ func hasSecrets(opts AppOpts) bool {
 		return true
 	}
 	return false
+}
+
+func stringifySlice(elems []string) string {
+	return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
+}
+
+func quoteAll(elems []*string) []string {
+	if elems == nil {
+		return nil
+	}
+
+	quotedElems := make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(*el)
+	}
+	return quotedElems
 }

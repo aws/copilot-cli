@@ -44,7 +44,7 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: ecs{{if .HealthCheck}}
           HealthCheck:
-            Command: {{.HealthCheck.Command}}
+            Command: {{quoteAll .HealthCheck.Command | stringifySlice}}
             Interval: {{.HealthCheck.Interval}}
             Retries: {{.HealthCheck.Retries}}
             StartPeriod: {{.HealthCheck.StartPeriod}}

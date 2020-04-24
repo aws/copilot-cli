@@ -51,16 +51,17 @@ type packageAppOpts struct {
 	packageAppVars
 
 	// Interfaces to interact with dependencies.
-	addonsSvc     templater
-	initAddonsSvc func(*packageAppOpts) error // Overriden in tests.
-	ws            wsAppReader
-	store         projectService
-	describer     projectResourcesGetter
-	stackWriter   io.Writer
-	paramsWriter  io.Writer
-	addonsWriter  io.Writer
-	fs            afero.Fs
-	runner        runner
+	addonsSvc       templater
+	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
+	ws              wsAppReader
+	store           projectService
+	describer       projectResourcesGetter
+	stackWriter     io.Writer
+	paramsWriter    io.Writer
+	addonsWriter    io.Writer
+	fs              afero.Fs
+	runner          runner
+	stackSerializer func(mft interface{}, env *archer.Environment, proj *archer.Project, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
@@ -78,7 +79,7 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 		return nil, fmt.Errorf("error retrieving default session: %w", err)
 	}
 
-	return &packageAppOpts{
+	opts := &packageAppOpts{
 		packageAppVars: vars,
 		initAddonsSvc:  initPackageAddonsSvc,
 		ws:             ws,
@@ -89,7 +90,33 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 		paramsWriter:   ioutil.Discard,
 		addonsWriter:   ioutil.Discard,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
-	}, nil
+	}
+
+	opts.stackSerializer = func(mft interface{}, env *archer.Environment, proj *archer.Project, rc stack.RuntimeConfig) (stackSerializer, error) {
+		var serializer stackSerializer
+		switch v := mft.(type) {
+		case *manifest.LoadBalancedWebApp:
+			if proj.RequiresDNSDelegation() {
+				serializer, err = stack.NewHTTPSLoadBalancedWebApp(v, env.Name, proj.Name, rc)
+				if err != nil {
+					return nil, fmt.Errorf("init https load balanced web app stack serializer: %w", err)
+				}
+			}
+			serializer, err = stack.NewLoadBalancedWebApp(v, env.Name, proj.Name, rc)
+			if err != nil {
+				return nil, fmt.Errorf("init load balanced web app stack serializer: %w", err)
+			}
+		case *manifest.BackendApp:
+			serializer, err = stack.NewBackendApp(v, env.Name, proj.Name, rc)
+			if err != nil {
+				return nil, fmt.Errorf("init backend app stack serializer: %w", err)
+			}
+		default:
+			return nil, fmt.Errorf("create stack serializer for manifest of type %T", v)
+		}
+		return serializer, nil
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -275,38 +302,23 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 			projAccountID: proj.AccountID,
 		}
 	}
-
-	switch t := mft.(type) {
-	case *manifest.LoadBalancedWebApp:
-		appMft := mft.(*manifest.LoadBalancedWebApp)
-		appStack, err := initLBFargateStack(appMft, env.Name, env.Project, stack.RuntimeConfig{
-			ImageRepoURL:   repoURL,
-			ImageTag:       o.Tag,
-			AdditionalTags: proj.Tags,
-		}, proj.RequiresDNSDelegation())
-		if err != nil {
-			return nil, err
-		}
-
-		tpl, err := appStack.Template()
-		if err != nil {
-			return nil, err
-		}
-		params, err := appStack.SerializedParameters()
-		if err != nil {
-			return nil, err
-		}
-		return &appCfnTemplates{stack: tpl, configuration: params}, nil
-	default:
-		return nil, fmt.Errorf("create CloudFormation template for manifest of type %T", t)
+	serializer, err := o.stackSerializer(mft, env, proj, stack.RuntimeConfig{
+		ImageRepoURL:   repoURL,
+		ImageTag:       o.Tag,
+		AdditionalTags: proj.Tags,
+	})
+	if err != nil {
+		return nil, err
 	}
-}
-
-var initLBFargateStack = func(app *manifest.LoadBalancedWebApp, env, proj string, rc stack.RuntimeConfig, isHTTPS bool) (stackSerializer, error) {
-	if isHTTPS {
-		return stack.NewHTTPSLoadBalancedWebApp(app, env, proj, rc)
+	tpl, err := serializer.Template()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template: %w", err)
 	}
-	return stack.NewLoadBalancedWebApp(app, env, proj, rc)
+	params, err := serializer.SerializedParameters()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template configuration: %w", err)
+	}
+	return &appCfnTemplates{stack: tpl, configuration: params}, nil
 }
 
 // setAppFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
