@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"encoding"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,9 +25,12 @@ import (
 )
 
 var (
-	appInitAppTypePrompt     = "Which type of " + color.Emphasize("infrastructure pattern") + " best represents your application?"
-	appInitAppTypeHelpPrompt = `Your application's architecture. Most applications need additional AWS resources to run.
-To help setup the infrastructure resources, select what "kind" or "type" of application you want to build.`
+	appInitAppTypePrompt        = "Which type of " + color.Emphasize("infrastructure pattern") + " best represents your application?"
+	fmtAppInitAppTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
+To learn more see: https://git.io/JfIpv
+
+A %s is a private, non internet-facing service.
+To learn more see: https://git.io/JfIpT`
 
 	fmtAppInitAppNamePrompt     = "What do you want to " + color.Emphasize("name") + " this %s?"
 	fmtAppInitAppNameHelpPrompt = `The name will uniquely identify this application within your %s project.
@@ -198,7 +202,7 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) createManifest() (string, error) {
-	manifest, err := o.createLoadBalancedAppManifest()
+	manifest, err := o.newManifest()
 	if err != nil {
 		return "", err
 	}
@@ -229,7 +233,18 @@ func (o *initAppOpts) createManifest() (string, error) {
 	return manifestPath, nil
 }
 
-func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWebApp, error) {
+func (o *initAppOpts) newManifest() (encoding.BinaryMarshaler, error) {
+	switch o.AppType {
+	case manifest.LoadBalancedWebApplication:
+		return o.newLoadBalancedWebAppManifest()
+	case manifest.BackendApplication:
+		return o.newBackendAppManifest()
+	default:
+		return nil, fmt.Errorf("application type %s doesn't have a manifest", o.AppType)
+	}
+}
+
+func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWebApp, error) {
 	props := &manifest.LoadBalancedWebAppProps{
 		AppProps: &manifest.AppProps{
 			AppName:    o.AppName,
@@ -253,12 +268,26 @@ func (o *initAppOpts) createLoadBalancedAppManifest() (*manifest.LoadBalancedWeb
 	return manifest.NewLoadBalancedWebApp(props), nil
 }
 
+func (o *initAppOpts) newBackendAppManifest() (*manifest.BackendApp, error) {
+	return manifest.NewBackendApp(manifest.BackendAppProps{
+		AppProps: manifest.AppProps{
+			AppName:    o.AppName,
+			Dockerfile: o.DockerfilePath,
+		},
+		Port: o.AppPort,
+	}), nil
+}
+
 func (o *initAppOpts) askAppType() error {
 	if o.AppType != "" {
 		return nil
 	}
 
-	t, err := o.prompt.SelectOne(appInitAppTypePrompt, appInitAppTypeHelpPrompt, manifest.AppTypes)
+	help := fmt.Sprintf(fmtAppInitAppTypeHelpPrompt,
+		manifest.LoadBalancedWebApplication,
+		manifest.BackendApplication,
+	)
+	t, err := o.prompt.SelectOne(appInitAppTypePrompt, help, manifest.AppTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
 	}
@@ -384,8 +413,11 @@ func BuildAppInitCmd() *cobra.Command {
 		Long: `Creates a new application in a project.
 This command is also run as part of "ecs-preview init".`,
 		Example: `
-  Create a "frontend" web application.
-  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile`,
+  Create a "frontend" load balanced web application.
+  /code $ ecs-preview app init --name frontend --app-type "Load Balanced Web App" --dockerfile ./frontend/Dockerfile
+
+  Create an "subscribers" backend application.
+  /code $ ecs-preview app init --name subscribers --app-type "Backend App"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitAppOpts(vars)
 			if err != nil {
@@ -422,11 +454,15 @@ This command is also run as part of "ecs-preview init".`,
 	lbWebAppFlags := pflag.NewFlagSet(manifest.LoadBalancedWebApplication, pflag.ContinueOnError)
 	lbWebAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
 
+	backendAppFlags := pflag.NewFlagSet(manifest.BackendApplication, pflag.ContinueOnError)
+	backendAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
+
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
 		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.AppTypes, ",")),
 		"Required":                          requiredFlags.FlagUsages(),
 		manifest.LoadBalancedWebApplication: lbWebAppFlags.FlagUsages(),
+		manifest.BackendApplication:         lbWebAppFlags.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
