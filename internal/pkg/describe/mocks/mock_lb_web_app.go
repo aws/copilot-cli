@@ -88,19 +88,19 @@ func (m *MockappDescriber) EXPECT() *MockappDescriberMockRecorder {
 	return m.recorder
 }
 
-// AppParams mocks base method
-func (m *MockappDescriber) AppParams() (map[string]string, error) {
+// Params mocks base method
+func (m *MockappDescriber) Params() (map[string]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppParams")
+	ret := m.ctrl.Call(m, "Params")
 	ret0, _ := ret[0].(map[string]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AppParams indicates an expected call of AppParams
-func (mr *MockappDescriberMockRecorder) AppParams() *gomock.Call {
+// Params indicates an expected call of Params
+func (mr *MockappDescriberMockRecorder) Params() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppParams", reflect.TypeOf((*MockappDescriber)(nil).AppParams))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockappDescriber)(nil).Params))
 }
 
 // EnvOutputs mocks base method

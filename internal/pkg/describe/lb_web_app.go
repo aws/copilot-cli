@@ -61,7 +61,7 @@ type storeSvc interface {
 }
 
 type appDescriber interface {
-	AppParams() (map[string]string, error)
+	Params() (map[string]string, error)
 	EnvOutputs() (map[string]string, error)
 	EnvVars() (map[string]string, error)
 	GetServiceArn() (*ecs.ServiceArn, error)
@@ -70,7 +70,8 @@ type appDescriber interface {
 
 // WebAppDescriber retrieves information about a load balanced web application.
 type WebAppDescriber struct {
-	app *archer.Application
+	app             *archer.Application
+	enableResources bool
 
 	store            storeSvc
 	appDescriber     appDescriber
@@ -88,8 +89,9 @@ func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 		return nil, err
 	}
 	opts := &WebAppDescriber{
-		app:   meta,
-		store: svc,
+		app:             meta,
+		enableResources: false,
+		store:           svc,
 	}
 	opts.initAppDescriber = func(env string) error {
 		d, err := NewAppDescriber(project, env, app)
@@ -102,22 +104,18 @@ func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 	return opts, nil
 }
 
-// WithAppResources returns web app description with stack resources.
-func WithAppResources() func() bool {
-	return func() bool {
-		return true
+// NewWebAppDescriberWithResources instantiates a load balanced application with stack resources.
+func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, error) {
+	d, err := NewWebAppDescriber(project, app)
+	if err != nil {
+		return nil, err
 	}
-}
-
-// WithNoAppResources returns web app description without stack resources.
-func WithNoAppResources() func() bool {
-	return func() bool {
-		return false
-	}
+	d.enableResources = true
+	return d, nil
 }
 
 // Describe returns info of a web app application.
-func (d *WebAppDescriber) Describe(resourceOption func() bool) (*WebAppDesc, error) {
+func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
 	environments, err := d.store.ListEnvironments(d.app.Project)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
@@ -137,7 +135,7 @@ func (d *WebAppDescriber) Describe(resourceOption func() bool) (*WebAppDesc, err
 				Environment: env.Name,
 				URL:         webAppURI,
 			})
-			appParams, err := d.appDescriber.AppParams()
+			appParams, err := d.appDescriber.Params()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
 			}
@@ -163,8 +161,7 @@ func (d *WebAppDescriber) Describe(resourceOption func() bool) (*WebAppDesc, err
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
 	resources := make(map[string][]*CfnResource)
-	shouldOutputResources := resourceOption()
-	if shouldOutputResources {
+	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.appDescriber.AppStackResources()
 			if err == nil {
@@ -199,7 +196,7 @@ func (d *WebAppDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get output for environment %s: %w", envName, err)
 	}
-	appParams, err := d.appDescriber.AppParams()
+	appParams, err := d.appDescriber.Params()
 	if err != nil {
 		return "", fmt.Errorf("get parameters for application %s: %w", d.app.Name, err)
 	}

@@ -438,7 +438,7 @@ func TestAppShow_Execute(t *testing.T) {
 	}{
 		"noop if app name is empty": {
 			setupMocks: func(m showAppMocks) {
-				m.describer.EXPECT().Describe(gomock.Any()).Times(0)
+				m.describer.EXPECT().Describe().Times(0)
 			},
 		},
 		"prompt for all input for json output": {
@@ -448,7 +448,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(gomock.Any()).Return(&webApp, nil),
+					m.describer.EXPECT().Describe().Return(&webApp, nil),
 				)
 			},
 
@@ -461,7 +461,7 @@ func TestAppShow_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(gomock.Any()).Return(&webApp, nil),
+					m.describer.EXPECT().Describe().Return(&webApp, nil),
 				)
 			},
 
@@ -503,7 +503,7 @@ Resources
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.describer.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error")),
+					m.describer.EXPECT().Describe().Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -535,7 +535,7 @@ Resources
 					},
 				},
 				describer:     mockWebAppDescriber,
-				initDescriber: func(*showAppOpts) error { return nil },
+				initDescriber: func(*showAppOpts, bool) error { return nil },
 				w:             b,
 			}
 

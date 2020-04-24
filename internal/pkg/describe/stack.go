@@ -16,20 +16,20 @@ type cfnStackDescriber interface {
 	DescribeStackResources(input *cloudformation.DescribeStackResourcesInput) (*cloudformation.DescribeStackResourcesOutput, error)
 }
 
-// StackDescriber retrieves information of a CloudFormation Stack.
-type StackDescriber struct {
+// stackDescriber retrieves information of a CloudFormation Stack.
+type stackDescriber struct {
 	stackDescribers cfnStackDescriber
 }
 
-// NewStackDescriber instantiates a new StackDescriber struct.
-func NewStackDescriber(s *session.Session) *StackDescriber {
-	return &StackDescriber{
+// newStackDescriber instantiates a new StackDescriber struct.
+func newStackDescriber(s *session.Session) *stackDescriber {
+	return &stackDescriber{
 		stackDescribers: cloudformation.New(s),
 	}
 }
 
 // Stack returns the CloudFormation stack information.
-func (d *StackDescriber) Stack(stackName string) (*cloudformation.Stack, error) {
+func (d *stackDescriber) Stack(stackName string) (*cloudformation.Stack, error) {
 	out, err := d.stackDescribers.DescribeStacks(&cloudformation.DescribeStacksInput{
 		StackName: aws.String(stackName),
 	})
@@ -43,7 +43,7 @@ func (d *StackDescriber) Stack(stackName string) (*cloudformation.Stack, error) 
 }
 
 // StackResources returns the CloudFormation stack resources information.
-func (d *StackDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
+func (d *stackDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
 	out, err := d.stackDescribers.DescribeStackResources(&cloudformation.DescribeStackResourcesInput{
 		StackName: aws.String(stackName),
 	})

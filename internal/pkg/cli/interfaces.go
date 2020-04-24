@@ -92,7 +92,7 @@ type sessionProvider interface {
 }
 
 type webAppDescriber interface {
-	Describe(option func() bool) (*describe.WebAppDesc, error)
+	Describe() (*describe.WebAppDesc, error)
 }
 
 type storeReader interface {

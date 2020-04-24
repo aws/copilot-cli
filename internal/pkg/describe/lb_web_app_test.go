@@ -93,7 +93,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(nil, mockErr),
+					m.appDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get parameters for application jobs: some error"),
@@ -105,7 +105,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
 				)
@@ -119,7 +119,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
 				)
@@ -177,9 +177,6 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		prodAppPath      = "*"
 	)
 	mockErr := errors.New("some error")
-	withResources := func() bool {
-		return true
-	}
 	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
 	testEnvironment := archer.Environment{
 		Project: testProject,
@@ -190,7 +187,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		Name:    prodEnv,
 	}
 	testCases := map[string]struct {
-		shouldOutputResources func() bool
+		shouldOutputResources bool
 
 		setupMocks func(mocks webAppDescriberMocks)
 
@@ -225,10 +222,10 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppContainerPortParamKey: "80",
 						stack.AppTaskCountParamKey:          "1",
 						stack.AppTaskCPUParamKey:            "256",
@@ -240,7 +237,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"return error if fail to retrieve application resources": {
-			shouldOutputResources: withResources,
+			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
@@ -249,10 +246,10 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppContainerPortParamKey: "80",
 						stack.AppTaskCountParamKey:          "1",
 						stack.AppTaskCPUParamKey:            "256",
@@ -268,7 +265,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			wantedError: fmt.Errorf("retrieve application resources: some error"),
 		},
 		"skip if not deployed": {
-			shouldOutputResources: withResources,
+			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
@@ -289,7 +286,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			},
 		},
 		"success": {
-			shouldOutputResources: withResources,
+			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
@@ -300,10 +297,10 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppContainerPortParamKey: "80",
 						stack.AppTaskCountParamKey:          "1",
 						stack.AppTaskCPUParamKey:            "256",
@@ -317,10 +314,10 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppRulePathParamKey: prodAppPath,
 					}, nil),
-					m.appDescriber.EXPECT().AppParams().Return(map[string]string{
+					m.appDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebAppContainerPortParamKey: "5000",
 						stack.AppTaskCountParamKey:          "2",
 						stack.AppTaskCPUParamKey:            "512",
@@ -424,13 +421,14 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					Project: testProject,
 					Name:    testApp,
 				},
+				enableResources:  tc.shouldOutputResources,
 				store:            mockStore,
 				appDescriber:     mockAppDescriber,
 				initAppDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
-			webapp, err := d.Describe(withResources)
+			webapp, err := d.Describe()
 
 			// THEN
 			if tc.wantedError != nil {

@@ -83,7 +83,7 @@ func TestStackDescriber_Stack(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &StackDescriber{
+			d := &stackDescriber{
 				stackDescribers: mockStackDescriber,
 			}
 
@@ -155,7 +155,7 @@ func TestStackDescriber_StackResources(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			d := &StackDescriber{
+			d := &stackDescriber{
 				stackDescribers: mockStackDescriber,
 			}
 

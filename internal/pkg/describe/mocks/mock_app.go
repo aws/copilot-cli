@@ -11,31 +11,31 @@ import (
 	reflect "reflect"
 )
 
-// MockstackDescriber is a mock of stackDescriber interface
-type MockstackDescriber struct {
+// MockstackAndResourcesDescriber is a mock of stackAndResourcesDescriber interface
+type MockstackAndResourcesDescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockstackDescriberMockRecorder
+	recorder *MockstackAndResourcesDescriberMockRecorder
 }
 
-// MockstackDescriberMockRecorder is the mock recorder for MockstackDescriber
-type MockstackDescriberMockRecorder struct {
-	mock *MockstackDescriber
+// MockstackAndResourcesDescriberMockRecorder is the mock recorder for MockstackAndResourcesDescriber
+type MockstackAndResourcesDescriberMockRecorder struct {
+	mock *MockstackAndResourcesDescriber
 }
 
-// NewMockstackDescriber creates a new mock instance
-func NewMockstackDescriber(ctrl *gomock.Controller) *MockstackDescriber {
-	mock := &MockstackDescriber{ctrl: ctrl}
-	mock.recorder = &MockstackDescriberMockRecorder{mock}
+// NewMockstackAndResourcesDescriber creates a new mock instance
+func NewMockstackAndResourcesDescriber(ctrl *gomock.Controller) *MockstackAndResourcesDescriber {
+	mock := &MockstackAndResourcesDescriber{ctrl: ctrl}
+	mock.recorder = &MockstackAndResourcesDescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockstackDescriber) EXPECT() *MockstackDescriberMockRecorder {
+func (m *MockstackAndResourcesDescriber) EXPECT() *MockstackAndResourcesDescriberMockRecorder {
 	return m.recorder
 }
 
 // Stack mocks base method
-func (m *MockstackDescriber) Stack(stackName string) (*cloudformation.Stack, error) {
+func (m *MockstackAndResourcesDescriber) Stack(stackName string) (*cloudformation.Stack, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Stack", stackName)
 	ret0, _ := ret[0].(*cloudformation.Stack)
@@ -44,13 +44,13 @@ func (m *MockstackDescriber) Stack(stackName string) (*cloudformation.Stack, err
 }
 
 // Stack indicates an expected call of Stack
-func (mr *MockstackDescriberMockRecorder) Stack(stackName interface{}) *gomock.Call {
+func (mr *MockstackAndResourcesDescriberMockRecorder) Stack(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stack", reflect.TypeOf((*MockstackDescriber)(nil).Stack), stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stack", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).Stack), stackName)
 }
 
 // StackResources mocks base method
-func (m *MockstackDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
+func (m *MockstackAndResourcesDescriber) StackResources(stackName string) ([]*cloudformation.StackResource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StackResources", stackName)
 	ret0, _ := ret[0].([]*cloudformation.StackResource)
@@ -59,9 +59,9 @@ func (m *MockstackDescriber) StackResources(stackName string) ([]*cloudformation
 }
 
 // StackResources indicates an expected call of StackResources
-func (mr *MockstackDescriberMockRecorder) StackResources(stackName interface{}) *gomock.Call {
+func (mr *MockstackAndResourcesDescriberMockRecorder) StackResources(stackName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackDescriber)(nil).StackResources), stackName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).StackResources), stackName)
 }
 
 // MockecsService is a mock of ecsService interface

@@ -23,7 +23,7 @@ const (
 	serviceLogicalID = "Service"
 )
 
-type stackDescriber interface {
+type stackAndResourcesDescriber interface {
 	Stack(stackName string) (*cloudformation.Stack, error)
 	StackResources(stackName string) ([]*cloudformation.StackResource, error)
 }
@@ -39,7 +39,7 @@ type AppDescriber struct {
 	env     string
 
 	ecsClient      ecsService
-	stackDescriber stackDescriber
+	stackDescriber stackAndResourcesDescriber
 }
 
 // NewAppDescriber instantiates a new application.
@@ -60,7 +60,7 @@ func NewAppDescriber(project, env, app string) (*AppDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := NewStackDescriber(sess)
+	d := newStackDescriber(sess)
 	return &AppDescriber{
 		project: project,
 		app:     meta.Name,
@@ -134,8 +134,8 @@ func (d *AppDescriber) EnvOutputs() (map[string]string, error) {
 	return outputs, nil
 }
 
-// AppParams returns the parameters of the application stack.
-func (d *AppDescriber) AppParams() (map[string]string, error) {
+// Params returns the parameters of the application stack.
+func (d *AppDescriber) Params() (map[string]string, error) {
 	appStack, err := d.stackDescriber.Stack(stack.NameForApp(d.project, d.env, d.app))
 	if err != nil {
 		return nil, err

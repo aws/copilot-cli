@@ -37,7 +37,7 @@ type showAppOpts struct {
 	storeSvc      storeReader
 	describer     webAppDescriber
 	ws            wsAppReader
-	initDescriber func(*showAppOpts) error // Overriden in tests.
+	initDescriber func(*showAppOpts, bool) error // Overriden in tests.
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -55,8 +55,14 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		storeSvc:    ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
-		initDescriber: func(o *showAppOpts) error {
-			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+		initDescriber: func(o *showAppOpts, enableResources bool) error {
+			var d *describe.WebAppDescriber
+			var err error
+			if enableResources {
+				d, err = describe.NewWebAppDescriberWithResources(o.ProjectName(), o.appName)
+			} else {
+				d, err = describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			}
 			if err != nil {
 				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
 			}
@@ -96,21 +102,13 @@ func (o *showAppOpts) Execute() error {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
 	}
-	err := o.initDescriber(o)
+	err := o.initDescriber(o, o.shouldOutputResources)
 	if err != nil {
 		return err
 	}
-	var app *describe.WebAppDesc
-	if o.shouldOutputResources {
-		app, err = o.describer.Describe(describe.WithAppResources())
-		if err != nil {
-			return fmt.Errorf("describe application %s: %w", o.appName, err)
-		}
-	} else {
-		app, err = o.describer.Describe(describe.WithNoAppResources())
-		if err != nil {
-			return fmt.Errorf("describe application %s: %w", o.appName, err)
-		}
+	app, err := o.describer.Describe()
+	if err != nil {
+		return fmt.Errorf("describe application %s: %w", o.appName, err)
 	}
 
 	if o.shouldOutputJSON {

@@ -19,7 +19,7 @@ import (
 )
 
 type appDescriberMocks struct {
-	mockStackDescriber *mocks.MockstackDescriber
+	mockStackDescriber *mocks.MockstackAndResourcesDescriber
 	mockEcsService     *mocks.MockecsService
 }
 
@@ -91,7 +91,7 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockEcsService := mocks.NewMockecsService(ctrl)
-			mockStackDescriber := mocks.NewMockstackDescriber(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := appDescriberMocks{
 				mockEcsService:     mockEcsService,
 				mockStackDescriber: mockStackDescriber,
@@ -184,7 +184,7 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStackDescriber := mocks.NewMockstackDescriber(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := appDescriberMocks{
 				mockStackDescriber: mockStackDescriber,
 			}
@@ -269,7 +269,7 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStackDescriber := mocks.NewMockstackDescriber(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := appDescriberMocks{
 				mockStackDescriber: mockStackDescriber,
 			}

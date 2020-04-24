@@ -849,18 +849,18 @@ func (m *MockwebAppDescriber) EXPECT() *MockwebAppDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockwebAppDescriber) Describe(option func() bool) (*describe.WebAppDesc, error) {
+func (m *MockwebAppDescriber) Describe() (*describe.WebAppDesc, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Describe", option)
+	ret := m.ctrl.Call(m, "Describe")
 	ret0, _ := ret[0].(*describe.WebAppDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Describe indicates an expected call of Describe
-func (mr *MockwebAppDescriberMockRecorder) Describe(option interface{}) *gomock.Call {
+func (mr *MockwebAppDescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe), option)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe))
 }
 
 // MockstoreReader is a mock of storeReader interface
