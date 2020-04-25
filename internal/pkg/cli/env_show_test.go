@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
@@ -16,9 +17,9 @@ import (
 )
 
 type showEnvMocks struct {
-	storeSvc *climocks.MockstoreReader
-	prompt   *climocks.Mockprompter
-	//describer   *climocks.MockenvDescriber
+	storeSvc  *climocks.MockstoreReader
+	prompt    *climocks.Mockprompter
+	describer *climocks.MockenvDescriber
 }
 
 func TestEnvShow_Validate(t *testing.T) {
@@ -321,112 +322,73 @@ func TestEnvShow_Ask(t *testing.T) {
 }
 
 func TestEnvShow_Execute(t *testing.T) {
-	projectName := "my-project"
+
+	mockApplications := []*archer.Application{
+		{Project: "my-project",
+			Name: "my-app",
+			Type: "lb-web-app"},
+		{Project: "my-project",
+			Name: "copilot-app",
+			Type: "lb-web-app"},
+	}
+	mockTags := map[string]string{"tag1": "value1", "tag2": "value2"}
+
+	mockEnv := &describe.EnvDescription{
+		Environment: &archer.Environment{
+			Project:          "my-project",
+			Name:             "test",
+			Region:           "us-west-2",
+			AccountID:        "123456789",
+			Prod:             false,
+			RegistryURL:      "",
+			ExecutionRoleARN: "",
+			ManagerRoleARN:   "",
+		},
+		Applications: mockApplications,
+		Tags:         mockTags}
+
 	testCases := map[string]struct {
 		inputEnv         string
 		shouldOutputJSON bool
-		//shouldOutputResources bool
 
-		setupMocks func(m showEnvMocks)
+		mockEnvDescriber func(m *climocks.MockenvDescriber)
 
 		wantedContent string
 		wantedError   error
 	}{
 		"correctly shows json output": {
-			inputEnv: 	"test",
+			inputEnv:         "test",
 			shouldOutputJSON: true,
 
-			setupMocks: func(m showEnvMocks) {
+			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						&archer.Environment{
-							Name:      "test",
-							AccountID: "123456789",
-							Region:    "us-west-1",
-							Prod:      false,
-						},
-					}, nil),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						&archer.Application{
-							Name: "my-app",
-							Type: "lb-web-app",
-						},
-						&archer.Application{
-							Name: "archer-app",
-							Type: "lb-web-app",
-						},
-					}, nil),
-				)
+					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
 
-			wantedContent: "{\"environment\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"project\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"project\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"project\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
+			wantedContent: "{\"environment\":{\"project\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"project\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
 		},
 		"correctly shows human output": {
-			inputEnv:	"test",
+			inputEnv:         "test",
 			shouldOutputJSON: false,
 
-			setupMocks: func(m showEnvMocks) {
+			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						&archer.Environment{
-							Name:      "test",
-							Prod:      false,
-							Region:    "us-west-2",
-							AccountID: "123456789",
-						},
-					}, nil),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						&archer.Application{
-							Name: "my-app",
-							Type: "lb-web-app",
-						},
-						&archer.Application{
-							Name: "archer-app",
-							Type: "lb-web-app",
-						},
-					}, nil),
-				)
+					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
 
 			wantedContent: `About
 
   Name              test
   Production        false
-  Region			us-west-2
-  Account ID		123456789
+  Region            us-west-2
+  Account ID        123456789
 
 Applications
 
   Name              Type
   my-app            lb-web-app
-  archer-app		lb-web-app
+  copilot-app       lb-web-app
 `,
-		},
-		"returns error if fail to list environment": {
-			shouldOutputJSON: false,
-
-			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("list environments: some error"),
-		},
-		"returns error if fail to list applications": {
-			shouldOutputJSON: false,
-
-			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
-						Name:      "test",
-						Prod:      false,
-						Region:    "us-west-2",
-						AccountID: "123456789",
-					},
-				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("list applications: some error"),
 		},
 	}
 
@@ -437,25 +399,17 @@ Applications
 
 			b := &bytes.Buffer{}
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			//mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
-
-			mocks := showEnvMocks{
-				storeSvc: mockStoreReader,
-				//describer: mockEnvDescriber,
-			}
-
-			tc.setupMocks(mocks)
+			mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
+			tc.mockEnvDescriber(mockEnvDescriber)
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
-					GlobalOpts: &GlobalOpts{
-						projectName: projectName,
-					},
+					GlobalOpts:       &GlobalOpts{},
 				},
 				storeSvc:         mockStoreReader,
-				//describer: 			climocks.MockenvDescriber,
-				//initEnvDescriber: func(opts *showEnvOpts) error { return nil },
+				describer:        mockEnvDescriber,
+				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
 				w:                b,
 			}
 
