@@ -15,18 +15,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type showProjectMocks struct {
+	storeSvc *climocks.MockstoreReader
+	prompt   *climocks.Mockprompter
+}
+
 func TestProjectShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputProject    string
-		mockStoreReader func(m *climocks.MockstoreReader)
+		inputProject string
+		setupMocks   func(mocks showProjectMocks)
 
 		wantedError error
 	}{
 		"valid project name and application name": {
 			inputProject: "my-project",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name: "my-project",
 				}, nil)
 			},
@@ -36,8 +41,8 @@ func TestProjectShow_Validate(t *testing.T) {
 		"invalid project name": {
 			inputProject: "my-project",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -50,11 +55,18 @@ func TestProjectShow_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			tc.mockStoreReader(mockStoreReader)
+			mockPrompter := climocks.NewMockprompter(ctrl)
+
+			mocks := showProjectMocks{
+				storeSvc: mockStoreReader,
+				prompt:   mockPrompter,
+			}
+			tc.setupMocks(mocks)
 
 			showProjects := &showProjectOpts{
 				showProjectVars: showProjectVars{
 					GlobalOpts: &GlobalOpts{
+						prompt:      mockPrompter,
 						projectName: tc.inputProject,
 					},
 				},
@@ -78,8 +90,7 @@ func TestProjectShow_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject string
 
-		mockStoreReader func(m *climocks.MockstoreReader)
-		mockPrompt      func(m *climocks.Mockprompter)
+		setupMocks func(mocks showProjectMocks)
 
 		wantedProject string
 		wantedError   error
@@ -87,9 +98,7 @@ func TestProjectShow_Ask(t *testing.T) {
 		"with all flags": {
 			inputProject: "my-project",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {},
-
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			setupMocks: func(m showProjectMocks) {},
 
 			wantedProject: "my-project",
 			wantedError:   nil,
@@ -97,15 +106,15 @@ func TestProjectShow_Ask(t *testing.T) {
 		"prompt for all input": {
 			inputProject: "",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
-				}, nil)
-			},
+			setupMocks: func(m showProjectMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						&archer.Project{Name: "my-project"},
+						&archer.Project{Name: "archer-project"},
+					}, nil),
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
+				)
 			},
 			wantedProject: "my-project",
 			wantedError:   nil,
@@ -113,37 +122,32 @@ func TestProjectShow_Ask(t *testing.T) {
 		"returns error if fail to list project": {
 			inputProject: "",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
 			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {},
-
 			wantedError: fmt.Errorf("list project: some error"),
 		},
 		"returns error if no project found": {
 			inputProject: "",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
 			},
-
-			mockPrompt: func(m *climocks.Mockprompter) {},
 
 			wantedError: fmt.Errorf("no project found: run `project init` to set one up, or `cd` into your workspace please"),
 		},
 		"returns error if fail to select project": {
 			inputProject: "",
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
-				}, nil)
-			},
+			setupMocks: func(m showProjectMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+						&archer.Project{Name: "my-project"},
+						&archer.Project{Name: "archer-project"},
+					}, nil),
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1)
+					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
+				)
 			},
 
 			wantedError: fmt.Errorf("select project: some error"),
@@ -157,8 +161,12 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 			mockPrompter := climocks.NewMockprompter(ctrl)
-			tc.mockPrompt(mockPrompter)
-			tc.mockStoreReader(mockStoreReader)
+
+			mocks := showProjectMocks{
+				storeSvc: mockStoreReader,
+				prompt:   mockPrompter,
+			}
+			tc.setupMocks(mocks)
 
 			showProjects := &showProjectOpts{
 				showProjectVars: showProjectVars{
@@ -190,58 +198,58 @@ func TestProjectShow_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputJSON bool
 
-		mockStoreReader func(m *climocks.MockstoreReader)
+		setupMocks func(mocks showProjectMocks)
 
 		wantedContent string
 		wantedError   error
 	}{
-		"prompt for all input for json output": {
+		"correctly shows json output": {
 			shouldOutputJSON: true,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 						Type: "lb-web-app",
 					},
 				}, nil)
-				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
 					&archer.Environment{
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789",
-						Prod: false,
+						Prod:      false,
 					},
 					&archer.Environment{
 						Name:      "prod",
 						AccountID: "123456789",
 						Region:    "us-west-1",
-						Prod: true,
+						Prod:      true,
 					},
 				}, nil)
 			},
 
 			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"project\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"project\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"project\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
 		},
-		"prompt for all input for human output": {
+		"correctly shows human output": {
 			shouldOutputJSON: false,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 						Type: "lb-web-app",
 					},
 				}, nil)
-				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
 					&archer.Environment{
 						Name:      "test",
 						Region:    "us-west-2",
@@ -275,8 +283,8 @@ Applications
 		"returns error if fail to get project": {
 			shouldOutputJSON: false,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("get project: some error"),
@@ -284,12 +292,12 @@ Applications
 		"returns error if fail to list environment": {
 			shouldOutputJSON: false,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("list environment: some error"),
@@ -297,12 +305,12 @@ Applications
 		"returns error if fail to list application": {
 			shouldOutputJSON: false,
 
-			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+			setupMocks: func(m showProjectMocks) {
+				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
 					&archer.Environment{
 						Name:      "test",
 						Region:    "us-west-2",
@@ -314,7 +322,7 @@ Applications
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("list application: some error"),
@@ -328,7 +336,11 @@ Applications
 
 			b := &bytes.Buffer{}
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			tc.mockStoreReader(mockStoreReader)
+
+			mocks := showProjectMocks{
+				storeSvc: mockStoreReader,
+			}
+			tc.setupMocks(mocks)
 
 			showProjects := &showProjectOpts{
 				showProjectVars: showProjectVars{
@@ -338,8 +350,7 @@ Applications
 					},
 				},
 				storeSvc: mockStoreReader,
-
-				w: b,
+				w:        b,
 			}
 
 			// WHEN

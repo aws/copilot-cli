@@ -147,7 +147,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 		return nil
 	}
 
-	if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
+	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
 		log.Infof("No pipeline manifest in workspace for project %s, looking for deployed pipelines\n", color.HighlightUserInput(o.ProjectName()))
 	}
 
@@ -163,7 +163,10 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 1 {
-		o.pipelineName = pipelineNames[0]
+		pipelineName = pipelineNames[0]
+		log.Infof("Found pipeline: %s\n.", color.HighlightUserInput(pipelineName))
+		o.pipelineName = pipelineName
+
 		return nil
 	}
 
@@ -181,7 +184,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 }
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.pipelineSvc.ListPipelines()
+	pipelines, err := o.pipelineSvc.ListPipelinesForProject(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
 	}
@@ -204,7 +207,7 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 
 // Execute writes the pipeline manifest file.
 func (o *showPipelineOpts) Execute() error {
-	// TODO Placeholder
+	fmt.Printf("Pipeline to show: %+v\n", o.pipelineName) // TODO Placeholder
 	return nil
 }
 

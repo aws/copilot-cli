@@ -2526,19 +2526,19 @@ func (mr *MockpipelineGetterMockRecorder) GetPipeline(pipelineName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineGetter)(nil).GetPipeline), pipelineName)
 }
 
-// ListPipelines mocks base method
-func (m *MockpipelineGetter) ListPipelines() ([]string, error) {
+// ListPipelinesForProject mocks base method
+func (m *MockpipelineGetter) ListPipelinesForProject(projectName string) ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelines")
+	ret := m.ctrl.Call(m, "ListPipelinesForProject", projectName)
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListPipelines indicates an expected call of ListPipelines
-func (mr *MockpipelineGetterMockRecorder) ListPipelines() *gomock.Call {
+// ListPipelinesForProject indicates an expected call of ListPipelinesForProject
+func (mr *MockpipelineGetterMockRecorder) ListPipelinesForProject(projectName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockpipelineGetter)(nil).ListPipelines))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelinesForProject", reflect.TypeOf((*MockpipelineGetter)(nil).ListPipelinesForProject), projectName)
 }
 
 // Mockexecutor is a mock of executor interface

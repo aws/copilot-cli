@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockcloudWatchClient is a mock of cloudWatchClient interface
-type MockcloudWatchClient struct {
+// Mockapi is a mock of api interface
+type Mockapi struct {
 	ctrl     *gomock.Controller
-	recorder *MockcloudWatchClientMockRecorder
+	recorder *MockapiMockRecorder
 }
 
-// MockcloudWatchClientMockRecorder is the mock recorder for MockcloudWatchClient
-type MockcloudWatchClientMockRecorder struct {
-	mock *MockcloudWatchClient
+// MockapiMockRecorder is the mock recorder for Mockapi
+type MockapiMockRecorder struct {
+	mock *Mockapi
 }
 
-// NewMockcloudWatchClient creates a new mock instance
-func NewMockcloudWatchClient(ctrl *gomock.Controller) *MockcloudWatchClient {
-	mock := &MockcloudWatchClient{ctrl: ctrl}
-	mock.recorder = &MockcloudWatchClientMockRecorder{mock}
+// NewMockapi creates a new mock instance
+func NewMockapi(ctrl *gomock.Controller) *Mockapi {
+	mock := &Mockapi{ctrl: ctrl}
+	mock.recorder = &MockapiMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcloudWatchClient) EXPECT() *MockcloudWatchClientMockRecorder {
+func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
 // DescribeAlarms mocks base method
-func (m *MockcloudWatchClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error) {
+func (m *Mockapi) DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeAlarms", input)
 	ret0, _ := ret[0].(*cloudwatch.DescribeAlarmsOutput)
@@ -43,7 +43,7 @@ func (m *MockcloudWatchClient) DescribeAlarms(input *cloudwatch.DescribeAlarmsIn
 }
 
 // DescribeAlarms indicates an expected call of DescribeAlarms
-func (mr *MockcloudWatchClientMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeAlarms(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*MockcloudWatchClient)(nil).DescribeAlarms), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAlarms", reflect.TypeOf((*Mockapi)(nil).DescribeAlarms), input)
 }

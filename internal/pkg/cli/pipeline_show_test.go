@@ -173,7 +173,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelines().Return(mockPipelines, nil),
+					mocks.pipelineSvc.EXPECT().ListPipelinesForProject(mockProjectName).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockProjectName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return(mockPipelineName, nil),
 				)
 			},
@@ -199,7 +199,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelines().Return([]string{mockPipelineName}, nil),
+					mocks.pipelineSvc.EXPECT().ListPipelinesForProject(mockProjectName).Return([]string{mockPipelineName}, nil),
 				)
 			},
 			expectedProject:  mockProjectName,
@@ -212,7 +212,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelines().Return([]string{}, nil),
+					mocks.pipelineSvc.EXPECT().ListPipelinesForProject(mockProjectName).Return([]string{}, nil),
 				)
 			},
 
@@ -261,7 +261,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelines().Return(nil, mockError),
+					mocks.pipelineSvc.EXPECT().ListPipelinesForProject(mockProjectName).Return(nil, mockError),
 				)
 			},
 			expectedErr: fmt.Errorf("list pipelines: %w", mockError),
@@ -271,7 +271,7 @@ stages:
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace),
-					mocks.pipelineSvc.EXPECT().ListPipelines().Return(mockPipelines, nil),
+					mocks.pipelineSvc.EXPECT().ListPipelinesForProject(mockProjectName).Return(mockPipelines, nil),
 					mocks.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(mockProjectName)), pipelineShowPipelineNameHelpPrompt, mockPipelines).Return("", mockError),
 				)
 			},
