@@ -24,8 +24,8 @@ type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
 
-	envGetter      envGetter
-	sessProvider   *sess.Session
+	store        storeSvc
+	sessProvider *sess.Session
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -47,10 +47,10 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
-		env:            env,
-		envGetter:      svc,
-		apps:           apps,
-		sessProvider:   sess,
+		env:          env,
+		store:        svc,
+		apps:         apps,
+		sessProvider: sess,
 	}, nil
 }
 

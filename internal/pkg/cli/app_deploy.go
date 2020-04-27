@@ -470,7 +470,7 @@ func (o *appDeployOpts) showAppURI() error {
 	if err != nil {
 		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", o.EnvName, err)
 	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(loadBalancerURI.String()))
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(loadBalancerURI))
 
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -38,7 +37,7 @@ type showAppOpts struct {
 	storeSvc      storeReader
 	describer     webAppDescriber
 	ws            wsAppReader
-	initDescriber func(*showAppOpts) error // Overriden in tests.
+	initDescriber func(*showAppOpts, bool) error // Overriden in tests.
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -56,8 +55,14 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		storeSvc:    ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
-		initDescriber: func(o *showAppOpts) error {
-			d, err := describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+		initDescriber: func(o *showAppOpts, enableResources bool) error {
+			var d *describe.WebAppDescriber
+			var err error
+			if enableResources {
+				d, err = describe.NewWebAppDescriberWithResources(o.ProjectName(), o.appName)
+			} else {
+				d, err = describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+			}
 			if err != nil {
 				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
 			}
@@ -97,13 +102,13 @@ func (o *showAppOpts) Execute() error {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
 	}
-
-	if err := o.initDescriber(o); err != nil {
-		return err
-	}
-	app, err := o.retrieveData()
+	err := o.initDescriber(o, o.shouldOutputResources)
 	if err != nil {
 		return err
+	}
+	app, err := o.describer.Describe()
+	if err != nil {
+		return fmt.Errorf("describe application %s: %w", o.appName, err)
 	}
 
 	if o.shouldOutputJSON {
@@ -117,80 +122,6 @@ func (o *showAppOpts) Execute() error {
 	}
 
 	return nil
-}
-
-func (o *showAppOpts) retrieveData() (*describe.WebApp, error) {
-	app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application: %w", err)
-	}
-
-	environments, err := o.storeSvc.ListEnvironments(o.ProjectName())
-	if err != nil {
-		return nil, fmt.Errorf("list environments: %w", err)
-	}
-
-	var routes []*describe.WebAppRoute
-	var configs []*describe.WebAppConfig
-	var envVars []*describe.WebAppEnvVars
-	for _, env := range environments {
-		webAppURI, err := o.describer.URI(env.Name)
-		if err == nil {
-			routes = append(routes, &describe.WebAppRoute{
-				Environment: env.Name,
-				URL:         webAppURI.String(),
-			})
-
-			webAppECSParams, err := o.describer.ECSParams(env.Name)
-			if err != nil {
-				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
-			}
-			configs = append(configs, &describe.WebAppConfig{
-				Environment: env.Name,
-				Port:        webAppECSParams.ContainerPort,
-				Tasks:       webAppECSParams.TaskCount,
-				CPU:         webAppECSParams.CPU,
-				Memory:      webAppECSParams.Memory,
-			})
-
-			webAppEnvVars, err := o.describer.EnvVars(env)
-			if err != nil {
-				return nil, fmt.Errorf("retrieve environment variables: %w", err)
-			}
-			envVars = append(envVars, webAppEnvVars...)
-
-			continue
-		}
-		if !isStackNotExistsErr(err) {
-			return nil, fmt.Errorf("retrieve application URI: %w", err)
-		}
-	}
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
-	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
-
-	resources := make(map[string][]*describe.CfnResource)
-	if o.shouldOutputResources {
-		for _, env := range environments {
-			webAppResources, err := o.describer.StackResources(env.Name)
-			if err == nil {
-				resources[env.Name] = webAppResources
-				continue
-			}
-			if !isStackNotExistsErr(err) {
-				return nil, fmt.Errorf("retrieve application resources: %w", err)
-			}
-		}
-	}
-
-	return &describe.WebApp{
-		AppName:        app.Name,
-		Type:           app.Type,
-		Project:        o.ProjectName(),
-		Configurations: configs,
-		Routes:         routes,
-		Variables:      envVars,
-		Resources:      resources,
-	}, nil
 }
 
 func (o *showAppOpts) askProject() error {

@@ -12,7 +12,9 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	humanize "github.com/dustin/go-humanize"
 )
@@ -27,11 +29,11 @@ type ecsServiceGetter interface {
 }
 
 type serviceArnGetter interface {
-	GetServiceArn(envName string) (*ecs.ServiceArn, error)
+	GetServiceArn() (*ecs.ServiceArn, error)
 }
 
-// WebAppStatus retrieves status of a web app application.
-type WebAppStatus struct {
+// AppStatus retrieves status of an application.
+type AppStatus struct {
 	ProjectName string
 	EnvName     string
 	AppName     string
@@ -41,25 +43,47 @@ type WebAppStatus struct {
 	CwSvc     alarmStatusGetter
 }
 
-// WebAppStatusDesc contains the status for a web application.
-type WebAppStatusDesc struct {
+// AppStatusDesc contains the status for an application.
+type AppStatusDesc struct {
 	Service ecs.ServiceStatus        `json:",flow"`
 	Tasks   []ecs.TaskStatus         `json:"tasks"`
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
 
-// NewWebAppStatus initinstantiatesiate a new WebAppStatus struct.
-func NewWebAppStatus(projectName, envName, appName string) (*WebAppStatus, error) {
-	return &WebAppStatus{
+// NewAppStatus instantiates a new AppStatus struct.
+func NewAppStatus(projectName, envName, appName string) (*AppStatus, error) {
+	d, err := NewAppDescriber(projectName, envName, appName)
+	if err != nil {
+		return nil, err
+	}
+	svc, err := store.New()
+	if err != nil {
+		return nil, fmt.Errorf("connect to store: %w", err)
+	}
+	env, err := svc.GetEnvironment(projectName, envName)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", envName, err)
+	}
+	sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("creating stack describer for project %s: %w", projectName, err)
+	}
+	return &AppStatus{
 		ProjectName: projectName,
 		EnvName:     envName,
 		AppName:     appName,
+		Describer:   d,
+		CwSvc:       cloudwatch.New(sess),
+		EcsSvc:      ecs.New(sess),
 	}, nil
 }
 
 // Describe returns status of a web app application.
-func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
-	serviceArn, err := w.Describer.GetServiceArn(w.EnvName)
+func (w *AppStatus) Describe() (*AppStatusDesc, error) {
+	serviceArn, err := w.Describer.GetServiceArn()
 	if err != nil {
 		return nil, fmt.Errorf("get service ARN: %w", err)
 	}
@@ -95,15 +119,15 @@ func (w *WebAppStatus) Describe() (*WebAppStatusDesc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)
 	}
-	return &WebAppStatusDesc{
+	return &AppStatusDesc{
 		Service: service.ServiceStatus(),
 		Tasks:   taskStatus,
 		Alarms:  alarms,
 	}, nil
 }
 
-// JSONString returns the stringified WebAppStatusDesc struct with json format.
-func (w *WebAppStatusDesc) JSONString() (string, error) {
+// JSONString returns the stringified AppStatusDesc struct with json format.
+func (w *AppStatusDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -111,8 +135,8 @@ func (w *WebAppStatusDesc) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified WebAppStatusDesc struct with human readable format.
-func (w *WebAppStatusDesc) HumanString() string {
+// HumanString returns the stringified AppStatusDesc struct with human readable format.
+func (w *AppStatusDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("Service Status\n\n"))

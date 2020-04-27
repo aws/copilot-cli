@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -119,26 +118,6 @@ func isStackSetNotExistsErr(err error) bool {
 		}
 		if aerr.Code() != "StackSetNotFoundException" {
 			return isStackSetNotExistsErr(errors.Unwrap(err))
-		}
-		return true
-	}
-}
-
-// returns true if error type is stack not exist.
-func isStackNotExistsErr(err error) bool {
-	for {
-		if err == nil {
-			return false
-		}
-		aerr, ok := err.(awserr.Error)
-		if !ok {
-			return isStackNotExistsErr(errors.Unwrap(err))
-		}
-		if aerr.Code() != "ValidationError" {
-			return isStackNotExistsErr(errors.Unwrap(err))
-		}
-		if !strings.Contains(aerr.Message(), "does not exist") {
-			return isStackNotExistsErr(errors.Unwrap(err))
 		}
 		return true
 	}
