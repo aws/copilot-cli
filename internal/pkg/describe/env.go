@@ -27,7 +27,7 @@ type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
 
-	envGetter    envGetter
+	store        storeSvc
 	sessProvider *sess.Session
 }
 
@@ -51,7 +51,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}
 	return &EnvDescriber{
 		env:          env,
-		envGetter:    svc,
+		store:        svc,
 		apps:         apps,
 		sessProvider: sess,
 	}, nil
