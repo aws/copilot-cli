@@ -31,7 +31,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		"invalid app type": {
 			inProjectName: "phonetool",
 			inAppType:     "TestAppType",
-			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App"`),
+			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App", "Backend App"`),
 		},
 		"invalid app name": {
 			inProjectName: "phonetool",
@@ -116,7 +116,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), appInitAppTypeHelpPrompt, gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
 					Return(wantedAppType, nil)
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
@@ -354,7 +354,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 		mockDependencies func(*gomock.Controller, *initAppOpts)
 		wantedErr        error
 	}{
-		"writes manifest, and creates repositories successfully": {
+		"writes load balanced web app manifest, and creates repositories successfully": {
 			inAppType:        manifest.LoadBalancedWebApplication,
 			inProjectName:    "project",
 			inAppName:        "frontend",
@@ -646,7 +646,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			}
 			tc.mockDependencies(ctrl, &opts)
 			// WHEN
-			manifest, err := opts.createLoadBalancedAppManifest()
+			manifest, err := opts.newLoadBalancedWebAppManifest()
 
 			// THEN
 			if tc.wantedErr == nil {

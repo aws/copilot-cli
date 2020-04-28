@@ -139,7 +139,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 		},
@@ -208,7 +208,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockError)
+				m.EXPECT().GetServiceArn().Return(nil, mockError)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
@@ -221,7 +221,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv").Return(nil, mockStackNotFoundErr)
+				m.EXPECT().GetServiceArn().Return(nil, mockStackNotFoundErr)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
@@ -246,8 +246,8 @@ func TestAppStatus_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv1").Return(&mockServiceArn, nil)
-				m.EXPECT().GetServiceArn("mockEnv2").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
@@ -275,8 +275,8 @@ func TestAppStatus_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {
-				m.EXPECT().GetServiceArn("mockEnv1").Return(&mockServiceArn, nil)
-				m.EXPECT().GetServiceArn("mockEnv2").Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
+				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
@@ -307,7 +307,7 @@ func TestAppStatus_Ask(t *testing.T) {
 					},
 				},
 				appDescriber:     mockWebAppDescriber,
-				initAppDescriber: func(*appStatusOpts, string) error { return nil },
+				initAppDescriber: func(*appStatusOpts, string, string) error { return nil },
 				storeSvc:         mockStoreReader,
 			}
 
@@ -329,7 +329,7 @@ func TestAppStatus_Execute(t *testing.T) {
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	updateTime := time.Unix(1584129030, 0)
-	mockProvisioningAppStatus := &describe.WebAppStatusDesc{
+	mockProvisioningAppStatus := &describe.AppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
 			RunningCount:     0,
@@ -355,7 +355,7 @@ func TestAppStatus_Execute(t *testing.T) {
 			},
 		},
 	}
-	mockAppStatus := &describe.WebAppStatusDesc{
+	mockAppStatus := &describe.AppStatusDesc{
 		Service: ecs.ServiceStatus{
 			DesiredCount:     1,
 			RunningCount:     1,

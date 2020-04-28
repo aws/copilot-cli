@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (
@@ -171,5 +173,19 @@ func (hc *ContainerHealthCheck) applyIfNotSet(other *ContainerHealthCheck) {
 	}
 	if hc.StartPeriod == nil && other.StartPeriod != nil {
 		hc.StartPeriod = other.StartPeriod
+	}
+}
+
+// HealthCheckOpts converts the image's healthcheck configuration into a format parsable by the templates pkg.
+func (i imageWithPortAndHealthcheck) HealthCheckOpts() *ecs.HealthCheck {
+	if i.HealthCheck == nil {
+		return nil
+	}
+	return &ecs.HealthCheck{
+		Command:     aws.StringSlice(i.HealthCheck.Command),
+		Interval:    aws.Int64(int64(i.HealthCheck.Interval.Seconds())),
+		Retries:     aws.Int64(int64(*i.HealthCheck.Retries)),
+		StartPeriod: aws.Int64(int64(i.HealthCheck.StartPeriod.Seconds())),
+		Timeout:     aws.Int64(int64(i.HealthCheck.Timeout.Seconds())),
 	}
 }

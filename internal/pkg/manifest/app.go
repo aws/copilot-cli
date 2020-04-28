@@ -21,6 +21,7 @@ const (
 // AppTypes are the supported manifest types.
 var AppTypes = []string{
 	LoadBalancedWebApplication,
+	BackendApplication,
 }
 
 // App holds the basic data that every application manifest file needs to have.
