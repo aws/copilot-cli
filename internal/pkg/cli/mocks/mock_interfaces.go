@@ -825,42 +825,42 @@ func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
 }
 
-// MockwebAppDescriber is a mock of webAppDescriber interface
-type MockwebAppDescriber struct {
+// Mockdescriber is a mock of describer interface
+type Mockdescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockwebAppDescriberMockRecorder
+	recorder *MockdescriberMockRecorder
 }
 
-// MockwebAppDescriberMockRecorder is the mock recorder for MockwebAppDescriber
-type MockwebAppDescriberMockRecorder struct {
-	mock *MockwebAppDescriber
+// MockdescriberMockRecorder is the mock recorder for Mockdescriber
+type MockdescriberMockRecorder struct {
+	mock *Mockdescriber
 }
 
-// NewMockwebAppDescriber creates a new mock instance
-func NewMockwebAppDescriber(ctrl *gomock.Controller) *MockwebAppDescriber {
-	mock := &MockwebAppDescriber{ctrl: ctrl}
-	mock.recorder = &MockwebAppDescriberMockRecorder{mock}
+// NewMockdescriber creates a new mock instance
+func NewMockdescriber(ctrl *gomock.Controller) *Mockdescriber {
+	mock := &Mockdescriber{ctrl: ctrl}
+	mock.recorder = &MockdescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwebAppDescriber) EXPECT() *MockwebAppDescriberMockRecorder {
+func (m *Mockdescriber) EXPECT() *MockdescriberMockRecorder {
 	return m.recorder
 }
 
 // Describe mocks base method
-func (m *MockwebAppDescriber) Describe() (*describe.WebAppDesc, error) {
+func (m *Mockdescriber) Describe() (describe.HumanJSONStringer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.WebAppDesc)
+	ret0, _ := ret[0].(describe.HumanJSONStringer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Describe indicates an expected call of Describe
-func (mr *MockwebAppDescriberMockRecorder) Describe() *gomock.Call {
+func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
 // MockstoreReader is a mock of storeReader interface

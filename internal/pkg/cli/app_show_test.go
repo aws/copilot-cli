@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -19,8 +18,21 @@ import (
 type showAppMocks struct {
 	storeSvc  *climocks.MockstoreReader
 	prompt    *climocks.Mockprompter
-	describer *climocks.MockwebAppDescriber
+	describer *climocks.Mockdescriber
 	ws        *climocks.MockwsAppReader
+}
+
+type mockDescribeData struct {
+	data string
+	err  error
+}
+
+func (m *mockDescribeData) HumanString() string {
+	return m.data
+}
+
+func (m *mockDescribeData) JSONString() (string, error) {
+	return m.data, m.err
 }
 
 func TestAppShow_Validate(t *testing.T) {
@@ -370,66 +382,13 @@ func TestAppShow_Ask(t *testing.T) {
 
 func TestAppShow_Execute(t *testing.T) {
 	projectName := "my-project"
-	webApp := describe.WebAppDesc{
-		AppName: "my-app",
-		Configurations: []*describe.WebAppConfig{
-			{
-				CPU:         "256",
-				Environment: "test",
-				Memory:      "512",
-				Port:        "80",
-				Tasks:       "1",
-			},
-			{
-				CPU:         "512",
-				Environment: "prod",
-				Memory:      "1024",
-				Port:        "5000",
-				Tasks:       "3",
-			},
-		},
-		Project: "my-project",
-		Variables: []*describe.EnvVars{
-			{
-				Environment: "prod",
-				Name:        "ECS_CLI_ENVIRONMENT_NAME",
-				Value:       "prod",
-			},
-			{
-				Environment: "test",
-				Name:        "ECS_CLI_ENVIRONMENT_NAME",
-				Value:       "test",
-			},
-		},
-		Routes: []*describe.WebAppRoute{
-			{
-				Environment: "test",
-				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend",
-			},
-			{
-				Environment: "prod",
-				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
-			},
-		},
-		Resources: map[string][]*describe.CfnResource{
-			"test": []*describe.CfnResource{
-				{
-					PhysicalID: "sg-0758ed6b233743530",
-					Type:       "AWS::EC2::SecurityGroup",
-				},
-			},
-			"prod": []*describe.CfnResource{
-				{
-					Type:       "AWS::EC2::SecurityGroupIngress",
-					PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-				},
-			},
-		},
+	webApp := mockDescribeData{
+		data: "mockData",
+		err:  errors.New("some error"),
 	}
 	testCases := map[string]struct {
-		inputApp              string
-		shouldOutputJSON      bool
-		shouldOutputResources bool
+		inputApp         string
+		shouldOutputJSON bool
 
 		setupMocks func(mocks showAppMocks)
 
@@ -441,10 +400,8 @@ func TestAppShow_Execute(t *testing.T) {
 				m.describer.EXPECT().Describe().Times(0)
 			},
 		},
-		"prompt for all input for json output": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      true,
-			shouldOutputResources: true,
+		"success": {
+			inputApp: "my-app",
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
@@ -452,12 +409,11 @@ func TestAppShow_Execute(t *testing.T) {
 				)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "mockData",
 		},
-		"prompt for all input for human output": {
-			inputApp:              "my-app",
-			shouldOutputJSON:      false,
-			shouldOutputResources: true,
+		"return error if fail to generate JSON output": {
+			inputApp:         "my-app",
+			shouldOutputJSON: true,
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
@@ -465,38 +421,7 @@ func TestAppShow_Execute(t *testing.T) {
 				)
 			},
 
-			wantedContent: `About
-
-  Project           my-project
-  Name              my-app
-  Type              
-
-Configurations
-
-  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
-  test              1                   0.25                512                 80
-  prod              3                   0.5                 1024                5000
-
-Routes
-
-  Environment       URL
-  test              http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
-  prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
-
-Variables
-
-  Name                      Environment         Value
-  ECS_CLI_ENVIRONMENT_NAME  prod                prod
-  -                         test                test
-
-Resources
-
-  test
-    AWS::EC2::SecurityGroup  sg-0758ed6b233743530
-
-  prod
-    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
-`,
+			wantedError: fmt.Errorf("some error"),
 		},
 		"return error if fail to describe application": {
 			inputApp: "my-app",
@@ -517,25 +442,24 @@ Resources
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockWebAppDescriber := climocks.NewMockwebAppDescriber(ctrl)
+			mockAppDescriber := climocks.NewMockdescriber(ctrl)
 
 			mocks := showAppMocks{
-				describer: mockWebAppDescriber,
+				describer: mockAppDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
 			showApps := &showAppOpts{
 				showAppVars: showAppVars{
-					appName:               tc.inputApp,
-					shouldOutputJSON:      tc.shouldOutputJSON,
-					shouldOutputResources: tc.shouldOutputResources,
+					appName:          tc.inputApp,
+					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
 						projectName: projectName,
 					},
 				},
-				describer:     mockWebAppDescriber,
-				initDescriber: func(*showAppOpts, bool) error { return nil },
+				describer:     mockAppDescriber,
+				initDescriber: func(bool) error { return nil },
 				w:             b,
 			}
 

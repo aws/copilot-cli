@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -35,9 +36,9 @@ type showAppOpts struct {
 
 	w             io.Writer
 	storeSvc      storeReader
-	describer     webAppDescriber
+	describer     describer
 	ws            wsAppReader
-	initDescriber func(*showAppOpts, bool) error // Overriden in tests.
+	initDescriber func(bool) error // Overriden in tests.
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
@@ -50,26 +51,42 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		return nil, err
 	}
 
-	return &showAppOpts{
+	opts := &showAppOpts{
 		showAppVars: vars,
 		storeSvc:    ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
-		initDescriber: func(o *showAppOpts, enableResources bool) error {
-			var d *describe.WebAppDescriber
-			var err error
+	}
+	opts.initDescriber = func(enableResources bool) error {
+		var d describer
+		app, err := opts.storeSvc.GetApplication(opts.ProjectName(), opts.appName)
+		if err != nil {
+			return err
+		}
+		switch app.Type {
+		case manifest.LoadBalancedWebApplication:
 			if enableResources {
-				d, err = describe.NewWebAppDescriberWithResources(o.ProjectName(), o.appName)
+				d, err = describe.NewWebAppDescriberWithResources(opts.ProjectName(), opts.appName)
 			} else {
-				d, err = describe.NewWebAppDescriber(o.ProjectName(), o.appName)
+				d, err = describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
 			}
-			if err != nil {
-				return fmt.Errorf("creating describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+		case manifest.BackendApplication:
+			if enableResources {
+				d, err = describe.NewBackendAppDescriberWithResources(opts.ProjectName(), opts.appName)
+			} else {
+				d, err = describe.NewBackendAppDescriber(opts.ProjectName(), opts.appName)
 			}
-			o.describer = d
-			return nil
-		},
-	}, nil
+		default:
+			return fmt.Errorf("invalid application type %s", app.Type)
+		}
+
+		if err != nil {
+			return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
+		}
+		opts.describer = d
+		return nil
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -102,7 +119,7 @@ func (o *showAppOpts) Execute() error {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
 	}
-	err := o.initDescriber(o, o.shouldOutputResources)
+	err := o.initDescriber(o.shouldOutputResources)
 	if err != nil {
 		return err
 	}

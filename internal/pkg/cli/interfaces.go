@@ -91,8 +91,8 @@ type sessionProvider interface {
 	sessionFromRoleProvider
 }
 
-type webAppDescriber interface {
-	Describe() (*describe.WebAppDesc, error)
+type describer interface {
+	Describe() (describe.HumanJSONStringer, error)
 }
 
 type storeReader interface {
