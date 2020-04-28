@@ -98,9 +98,7 @@ func (o *showEnvOpts) Execute() error {
 		}
 		fmt.Fprintf(o.w, data)
 	} else {
-		fmt.Println(env)
-		//} else {
-		//	fmt.Fprintf(o.w, env.HumanString())
+		fmt.Fprintf(o.w, env.HumanString())
 	}
 
 	return nil

@@ -4,8 +4,10 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
@@ -15,9 +17,9 @@ import (
 )
 
 type showEnvMocks struct {
-	storeSvc *climocks.MockstoreReader
-	prompt   *climocks.Mockprompter
-	//describer   *climocks.MockwebEnvDescriber
+	storeSvc  *climocks.MockstoreReader
+	prompt    *climocks.Mockprompter
+	describer *climocks.MockenvDescriber
 }
 
 func TestEnvShow_Validate(t *testing.T) {
@@ -113,7 +115,7 @@ func TestEnvShow_Ask(t *testing.T) {
 		inputProject string
 		inputEnv     string
 
-		setupMocks func(mocks showEnvMocks) //or m?
+		setupMocks func(mocks showEnvMocks)
 
 		wantedProject string
 		wantedEnv     string
@@ -314,6 +316,112 @@ func TestEnvShow_Ask(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedProject, showEnvs.ProjectName(), "expected project name to match")
 				require.Equal(t, tc.wantedEnv, showEnvs.envName, "expected environment name to match")
+			}
+		})
+	}
+}
+
+func TestEnvShow_Execute(t *testing.T) {
+
+	mockApplications := []*archer.Application{
+		{Project: "my-project",
+			Name: "my-app",
+			Type: "lb-web-app"},
+		{Project: "my-project",
+			Name: "copilot-app",
+			Type: "lb-web-app"},
+	}
+	mockTags := map[string]string{"tag1": "value1", "tag2": "value2"}
+
+	mockEnv := &describe.EnvDescription{
+		Environment: &archer.Environment{
+			Project:          "my-project",
+			Name:             "test",
+			Region:           "us-west-2",
+			AccountID:        "123456789",
+			Prod:             false,
+			RegistryURL:      "",
+			ExecutionRoleARN: "",
+			ManagerRoleARN:   "",
+		},
+		Applications: mockApplications,
+		Tags:         mockTags}
+
+	testCases := map[string]struct {
+		inputEnv         string
+		shouldOutputJSON bool
+
+		mockEnvDescriber func(m *climocks.MockenvDescriber)
+
+		wantedContent string
+		wantedError   error
+	}{
+		"correctly shows json output": {
+			inputEnv:         "test",
+			shouldOutputJSON: true,
+
+			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+				gomock.InOrder(
+					m.EXPECT().Describe().Return(mockEnv, nil))
+			},
+
+			wantedContent: "{\"environment\":{\"project\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"project\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
+		},
+		"correctly shows human output": {
+			inputEnv:         "test",
+			shouldOutputJSON: false,
+
+			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+				gomock.InOrder(
+					m.EXPECT().Describe().Return(mockEnv, nil))
+			},
+
+			wantedContent: `About
+
+  Name              test
+  Production        false
+  Region            us-west-2
+  Account ID        123456789
+
+Applications
+
+  Name              Type
+  my-app            lb-web-app
+  copilot-app       lb-web-app
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			b := &bytes.Buffer{}
+			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
+			tc.mockEnvDescriber(mockEnvDescriber)
+
+			showEnvs := &showEnvOpts{
+				showEnvVars: showEnvVars{
+					shouldOutputJSON: tc.shouldOutputJSON,
+					GlobalOpts:       &GlobalOpts{},
+				},
+				storeSvc:         mockStoreReader,
+				describer:        mockEnvDescriber,
+				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
+				w:                b,
+			}
+
+			// WHEN
+			err := showEnvs.Execute()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
 			}
 		})
 	}
