@@ -187,13 +187,13 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.appDescriber.AppStackResources()
-			if err == nil {
-				resources[env.Name] = flattenResources(stackResources)
-				continue
-			}
-			if !IsStackNotExistsErr(err) {
+			if err != nil && !IsStackNotExistsErr(err) {
 				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
+			if err != nil {
+				continue
+			}
+			resources[env.Name] = flattenResources(stackResources)
 		}
 	}
 
@@ -249,6 +249,7 @@ type EnvVars struct {
 type envVars []*EnvVars
 
 func (e envVars) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
 	var prevName string
 	var prevValue string
 	for _, variable := range e {
@@ -304,6 +305,7 @@ type AppConfig struct {
 type configurations []*AppConfig
 
 func (c configurations) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
 	for _, config := range c {
 		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
 	}
@@ -324,6 +326,7 @@ type ServiceDiscovery struct {
 type serviceDiscoveries []*ServiceDiscovery
 
 func (s serviceDiscoveries) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\n", "Environment", "Namespace")
 	for _, sd := range s {
 		fmt.Fprintf(w, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
 	}
@@ -361,7 +364,6 @@ func (w *webAppDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
 	w.Configurations.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
@@ -371,11 +373,9 @@ func (w *webAppDesc) HumanString() string {
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "Namespace")
 	w.ServiceDiscovery.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
 	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))

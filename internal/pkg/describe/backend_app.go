@@ -62,9 +62,21 @@ func NewBackendAppDescriberWithResources(project, app string) (*BackendAppDescri
 	return d, nil
 }
 
-// URI is used to make BackendAppDescriber have the same signature as WebAppDescriber
+// URI returns the service discovery namespace and is used to make
+// BackendAppDescriber have the same signature as WebAppDescriber.
 func (d *BackendAppDescriber) URI(envName string) (string, error) {
-	s := serviceDiscovery{}
+	if err := d.initAppDescriber(envName); err != nil {
+		return "", err
+	}
+	appParams, err := d.appDescriber.Params()
+	if err != nil {
+		return "", fmt.Errorf("retrieve application deployment configuration: %w", err)
+	}
+	s := serviceDiscovery{
+		AppName:     d.app.Name,
+		Port:        appParams[stack.LBWebAppContainerPortParamKey],
+		ProjectName: d.app.Project,
+	}
 	return s.String(), nil
 }
 
@@ -115,13 +127,13 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.appDescriber.AppStackResources()
-			if err == nil {
-				resources[env.Name] = flattenResources(stackResources)
-				continue
-			}
-			if !IsStackNotExistsErr(err) {
+			if err != nil && !IsStackNotExistsErr(err) {
 				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
+			if err != nil {
+				continue
+			}
+			resources[env.Name] = flattenResources(stackResources)
 		}
 	}
 
@@ -167,15 +179,12 @@ func (w *backendAppDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
 	w.Configurations.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "Namespace")
 	w.ServiceDiscovery.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
 	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
