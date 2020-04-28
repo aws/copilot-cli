@@ -825,31 +825,31 @@ func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
 }
 
-// MockappDescriber is a mock of appDescriber interface
-type MockappDescriber struct {
+// Mockdescriber is a mock of describer interface
+type Mockdescriber struct {
 	ctrl     *gomock.Controller
-	recorder *MockappDescriberMockRecorder
+	recorder *MockdescriberMockRecorder
 }
 
-// MockappDescriberMockRecorder is the mock recorder for MockappDescriber
-type MockappDescriberMockRecorder struct {
-	mock *MockappDescriber
+// MockdescriberMockRecorder is the mock recorder for Mockdescriber
+type MockdescriberMockRecorder struct {
+	mock *Mockdescriber
 }
 
-// NewMockappDescriber creates a new mock instance
-func NewMockappDescriber(ctrl *gomock.Controller) *MockappDescriber {
-	mock := &MockappDescriber{ctrl: ctrl}
-	mock.recorder = &MockappDescriberMockRecorder{mock}
+// NewMockdescriber creates a new mock instance
+func NewMockdescriber(ctrl *gomock.Controller) *Mockdescriber {
+	mock := &Mockdescriber{ctrl: ctrl}
+	mock.recorder = &MockdescriberMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockappDescriber) EXPECT() *MockappDescriberMockRecorder {
+func (m *Mockdescriber) EXPECT() *MockdescriberMockRecorder {
 	return m.recorder
 }
 
 // Describe mocks base method
-func (m *MockappDescriber) Describe() (describe.HumanJSONStringer, error) {
+func (m *Mockdescriber) Describe() (describe.HumanJSONStringer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
 	ret0, _ := ret[0].(describe.HumanJSONStringer)
@@ -858,9 +858,9 @@ func (m *MockappDescriber) Describe() (describe.HumanJSONStringer, error) {
 }
 
 // Describe indicates an expected call of Describe
-func (mr *MockappDescriberMockRecorder) Describe() *gomock.Call {
+func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockappDescriber)(nil).Describe))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
 // MockstoreReader is a mock of storeReader interface

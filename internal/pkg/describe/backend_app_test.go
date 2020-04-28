@@ -47,7 +47,7 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 
 		setupMocks func(mocks backendAppDescriberMocks)
 
-		wantedBackendApp *BackendAppDesc
+		wantedBackendApp *backendAppDesc
 		wantedError      error
 	}{
 		"return error if fail to list environment": {
@@ -56,7 +56,7 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironments(testProject).Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("list environments: some error"),
+			wantedError: fmt.Errorf("list environments for project phonetool: some error"),
 		},
 		"return error if fail to retrieve application deployment configuration": {
 			setupMocks: func(m backendAppDescriberMocks) {
@@ -97,7 +97,7 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockNotExistErr),
 				)
 			},
-			wantedBackendApp: &BackendAppDesc{
+			wantedBackendApp: &backendAppDesc{
 				AppName:          testApp,
 				Type:             "",
 				Project:          testProject,
@@ -152,7 +152,7 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedBackendApp: &BackendAppDesc{
+			wantedBackendApp: &backendAppDesc{
 				AppName: testApp,
 				Type:    "",
 				Project: testProject,
@@ -175,7 +175,7 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
 						Environment: []string{"test", "prod"},
-						Namespace:   "http://jobs.phonetool.local:5000",
+						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
 				Variables: []*EnvVars{
@@ -243,6 +243,115 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedBackendApp, backendapp, "expected output content match")
 			}
+		})
+	}
+}
+
+func TestBackendAppDesc_String(t *testing.T) {
+	testCases := map[string]struct {
+		wantedHumanString string
+		wantedJSONString  string
+	}{
+		"correct output": {
+			wantedHumanString: `About
+
+  Project           my-project
+  Name              my-app
+  Type              Backend App
+
+Configurations
+
+  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  test              1                   0.25                512                 80
+  prod              3                   0.5                 1024                5000
+
+Service Discovery
+
+  Environment       Namespace
+  test, prod        http://my-app.my-project.local:5000
+
+Variables
+
+  Name                      Environment         Value
+  ECS_CLI_ENVIRONMENT_NAME  prod                prod
+  -                         test                test
+
+Resources
+
+  test
+    AWS::EC2::SecurityGroup  sg-0758ed6b233743530
+
+  prod
+    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
+`,
+			wantedJSONString: "{\"appName\":\"my-app\",\"type\":\"Backend App\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config := []*AppConfig{
+				{
+					CPU:         "256",
+					Environment: "test",
+					Memory:      "512",
+					Port:        "80",
+					Tasks:       "1",
+				},
+				{
+					CPU:         "512",
+					Environment: "prod",
+					Memory:      "1024",
+					Port:        "5000",
+					Tasks:       "3",
+				},
+			}
+			envVars := []*EnvVars{
+				{
+					Environment: "prod",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "prod",
+				},
+				{
+					Environment: "test",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "test",
+				},
+			}
+			sds := []*ServiceDiscovery{
+				{
+					Environment: []string{"test", "prod"},
+					Namespace:   "http://my-app.my-project.local:5000",
+				},
+			}
+			resources := map[string][]*CfnResource{
+				"test": []*CfnResource{
+					{
+						PhysicalID: "sg-0758ed6b233743530",
+						Type:       "AWS::EC2::SecurityGroup",
+					},
+				},
+				"prod": []*CfnResource{
+					{
+						Type:       "AWS::EC2::SecurityGroupIngress",
+						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					},
+				},
+			}
+			backendApp := &backendAppDesc{
+				AppName:          "my-app",
+				Type:             "Backend App",
+				Configurations:   config,
+				Project:          "my-project",
+				Variables:        envVars,
+				ServiceDiscovery: sds,
+				Resources:        resources,
+			}
+			human := backendApp.HumanString()
+			json, _ := backendApp.JSONString()
+
+			require.Equal(t, tc.wantedHumanString, human)
+			require.Equal(t, tc.wantedJSONString, json)
 		})
 	}
 }

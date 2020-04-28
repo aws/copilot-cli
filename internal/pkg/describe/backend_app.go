@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -63,11 +62,17 @@ func NewBackendAppDescriberWithResources(project, app string) (*BackendAppDescri
 	return d, nil
 }
 
+// URI is used to make BackendAppDescriber have the same signature as WebAppDescriber
+func (d *BackendAppDescriber) URI(envName string) (string, error) {
+	s := serviceDiscovery{}
+	return s.String(), nil
+}
+
 // Describe returns info of a backend application.
 func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironments(d.app.Project)
 	if err != nil {
-		return nil, fmt.Errorf("list environments: %w", err)
+		return nil, fmt.Errorf("list environments for project %s: %w", d.app.Project, err)
 	}
 
 	var configs []*AppConfig
@@ -79,29 +84,29 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, err
 		}
 		appParams, err := d.appDescriber.Params()
-		if err == nil {
-			services = appendServiceDiscovery(services, serviceDiscovery{
-				AppName:     d.app.Name,
-				Port:        appParams[stack.LBWebAppContainerPortParamKey],
-				ProjectName: d.app.Project,
-			}, env.Name)
-			configs = append(configs, &AppConfig{
-				Environment: env.Name,
-				Port:        appParams[stack.LBWebAppContainerPortParamKey],
-				Tasks:       appParams[stack.AppTaskCountParamKey],
-				CPU:         appParams[stack.AppTaskCPUParamKey],
-				Memory:      appParams[stack.AppTaskMemoryParamKey],
-			})
-			backendAppEnvVars, err := d.appDescriber.EnvVars()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve environment variables: %w", err)
-			}
-			envVars = append(envVars, flattenEnvVars(env.Name, backendAppEnvVars)...)
-			continue
-		}
-		if !IsStackNotExistsErr(err) {
+		if err != nil && !IsStackNotExistsErr(err) {
 			return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
 		}
+		if err != nil {
+			continue
+		}
+		services = appendServiceDiscovery(services, serviceDiscovery{
+			AppName:     d.app.Name,
+			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			ProjectName: d.app.Project,
+		}, env.Name)
+		configs = append(configs, &AppConfig{
+			Environment: env.Name,
+			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			Tasks:       appParams[stack.AppTaskCountParamKey],
+			CPU:         appParams[stack.AppTaskCPUParamKey],
+			Memory:      appParams[stack.AppTaskMemoryParamKey],
+		})
+		backendAppEnvVars, err := d.appDescriber.EnvVars()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
+		envVars = append(envVars, flattenEnvVars(env.Name, backendAppEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -120,7 +125,7 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 		}
 	}
 
-	return &BackendAppDesc{
+	return &backendAppDesc{
 		AppName:          d.app.Name,
 		Type:             d.app.Type,
 		Project:          d.app.Project,
@@ -131,19 +136,19 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-// BackendAppDesc contains serialized parameters for a backend application.
-type BackendAppDesc struct {
-	AppName          string                    `json:"appName"`
-	Type             string                    `json:"type"`
-	Project          string                    `json:"project"`
-	Configurations   []*AppConfig              `json:"configurations"`
-	ServiceDiscovery []*ServiceDiscovery       `json:"serviceDiscovery"`
-	Variables        []*EnvVars                `json:"variables"`
-	Resources        map[string][]*CfnResource `json:"resources,omitempty"`
+// backendAppDesc contains serialized parameters for a backend application.
+type backendAppDesc struct {
+	AppName          string             `json:"appName"`
+	Type             string             `json:"type"`
+	Project          string             `json:"project"`
+	Configurations   configurations     `json:"configurations"`
+	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
+	Variables        envVars            `json:"variables"`
+	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
 // JSONString returns the stringified BackendApp struct with json format.
-func (w *BackendAppDesc) JSONString() (string, error) {
+func (w *backendAppDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -152,7 +157,7 @@ func (w *BackendAppDesc) JSONString() (string, error) {
 }
 
 // HumanString returns the stringified BackendApp struct with human readable format.
-func (w *BackendAppDesc) HumanString() string {
+func (w *backendAppDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
@@ -163,52 +168,22 @@ func (w *BackendAppDesc) HumanString() string {
 	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
-	for _, config := range w.Configurations {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
-	}
+	w.Configurations.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "Namespace")
-	for _, sd := range w.ServiceDiscovery {
-		fmt.Fprintf(writer, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
-	}
+	w.ServiceDiscovery.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
-	var prevName string
-	var prevValue string
-	for _, variable := range w.Variables {
-		// Instead of re-writing the same variable value, we replace it with "-" to reduce text.
-		if variable.Name != prevName {
-			if variable.Value != prevValue {
-				fmt.Fprintf(writer, "  %s\t%s\t%s\n", variable.Name, variable.Environment, variable.Value)
-			} else {
-				fmt.Fprintf(writer, "  %s\t%s\t-\n", variable.Name, variable.Environment)
-			}
-		} else {
-			if variable.Value != prevValue {
-				fmt.Fprintf(writer, "  -\t%s\t%s\n", variable.Environment, variable.Value)
-			} else {
-				fmt.Fprintf(writer, "  -\t%s\t-\n", variable.Environment)
-			}
-		}
-		prevName = variable.Name
-		prevValue = variable.Value
-	}
+	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
 		// Go maps don't have a guaranteed order.
-		// Show the resources by the order of environments displayed under Routes for a consistent view.
-		for _, config := range w.Configurations {
-			env := config.Environment
-			resources := w.Resources[env]
-			fmt.Fprintf(writer, "\n  %s\n", env)
-			for _, resource := range resources {
-				fmt.Fprintf(writer, "    %s\t%s\n", resource.Type, resource.PhysicalID)
-			}
-		}
+		// Show the resources by the order of environments displayed under Configurations for a consistent view.
+		w.Resources.humanString(writer, w.Configurations)
 	}
 	writer.Flush()
 	return b.String()

@@ -36,7 +36,7 @@ type showAppOpts struct {
 
 	w             io.Writer
 	storeSvc      storeReader
-	describer     appDescriber
+	describer     describer
 	ws            wsAppReader
 	initDescriber func(bool) error // Overriden in tests.
 }
@@ -58,7 +58,7 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		w:           log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
-		var d appDescriber
+		var d describer
 		app, err := opts.storeSvc.GetApplication(opts.ProjectName(), opts.appName)
 		if err != nil {
 			return err

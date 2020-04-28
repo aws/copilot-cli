@@ -191,7 +191,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 
 		setupMocks func(mocks webAppDescriberMocks)
 
-		wantedWebApp *WebAppDesc
+		wantedWebApp *webAppDesc
 		wantedError  error
 	}{
 		"return error if fail to list environment": {
@@ -275,7 +275,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockNotExistErr),
 				)
 			},
-			wantedWebApp: &WebAppDesc{
+			wantedWebApp: &webAppDesc{
 				AppName:          testApp,
 				Type:             "",
 				Project:          testProject,
@@ -343,7 +343,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedWebApp: &WebAppDesc{
+			wantedWebApp: &webAppDesc{
 				AppName: testApp,
 				Type:    "",
 				Project: testProject,
@@ -376,7 +376,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
 						Environment: []string{"test", "prod"},
-						Namespace:   "http://jobs.phonetool.local:5000",
+						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
 				Variables: []*EnvVars{
@@ -444,6 +444,132 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedWebApp, webapp, "expected output content match")
 			}
+		})
+	}
+}
+
+func TestWebAppDesc_String(t *testing.T) {
+	testCases := map[string]struct {
+		wantedHumanString string
+		wantedJSONString  string
+	}{
+		"correct output": {
+			wantedHumanString: `About
+
+  Project           my-project
+  Name              my-app
+  Type              Load Balanced Web App
+
+Configurations
+
+  Environment       Tasks               CPU (vCPU)          Memory (MiB)        Port
+  test              1                   0.25                512                 80
+  prod              3                   0.5                 1024                5000
+
+Routes
+
+  Environment       URL
+  test              http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
+  prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
+
+Service Discovery
+
+  Environment       Namespace
+  test, prod        http://my-app.my-project.local:5000
+
+Variables
+
+  Name                      Environment         Value
+  ECS_CLI_ENVIRONMENT_NAME  prod                prod
+  -                         test                test
+
+Resources
+
+  test
+    AWS::EC2::SecurityGroup  sg-0758ed6b233743530
+
+  prod
+    AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
+`,
+			wantedJSONString: "{\"appName\":\"my-app\",\"type\":\"Load Balanced Web App\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config := []*AppConfig{
+				{
+					CPU:         "256",
+					Environment: "test",
+					Memory:      "512",
+					Port:        "80",
+					Tasks:       "1",
+				},
+				{
+					CPU:         "512",
+					Environment: "prod",
+					Memory:      "1024",
+					Port:        "5000",
+					Tasks:       "3",
+				},
+			}
+			envVars := []*EnvVars{
+				{
+					Environment: "prod",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "prod",
+				},
+				{
+					Environment: "test",
+					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Value:       "test",
+				},
+			}
+			routes := []*WebAppRoute{
+				{
+					Environment: "test",
+					URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend",
+				},
+				{
+					Environment: "prod",
+					URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
+				},
+			}
+			sds := []*ServiceDiscovery{
+				{
+					Environment: []string{"test", "prod"},
+					Namespace:   "http://my-app.my-project.local:5000",
+				},
+			}
+			resources := map[string][]*CfnResource{
+				"test": []*CfnResource{
+					{
+						PhysicalID: "sg-0758ed6b233743530",
+						Type:       "AWS::EC2::SecurityGroup",
+					},
+				},
+				"prod": []*CfnResource{
+					{
+						Type:       "AWS::EC2::SecurityGroupIngress",
+						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+					},
+				},
+			}
+			webApp := &webAppDesc{
+				AppName:          "my-app",
+				Type:             "Load Balanced Web App",
+				Configurations:   config,
+				Project:          "my-project",
+				Variables:        envVars,
+				Routes:           routes,
+				ServiceDiscovery: sds,
+				Resources:        resources,
+			}
+			human := webApp.HumanString()
+			json, _ := webApp.JSONString()
+
+			require.Equal(t, tc.wantedHumanString, human)
+			require.Equal(t, tc.wantedJSONString, json)
 		})
 	}
 }

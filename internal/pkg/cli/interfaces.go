@@ -91,7 +91,7 @@ type sessionProvider interface {
 	sessionFromRoleProvider
 }
 
-type appDescriber interface {
+type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
