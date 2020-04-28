@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,6 +56,16 @@ func (uri *WebAppURI) String() string {
 	}
 }
 
+type serviceDiscovery struct {
+	AppName     string
+	ProjectName string
+	Port        string
+}
+
+func (s *serviceDiscovery) String() string {
+	return fmt.Sprintf("%s.%s.local:%s", s.AppName, s.ProjectName, s.Port)
+}
+
 type storeSvc interface {
 	GetEnvironment(projectName string, environmentName string) (*archer.Environment, error)
 	ListEnvironments(projectName string) ([]*archer.Environment, error)
@@ -68,6 +79,12 @@ type appDescriber interface {
 	AppStackResources() ([]*cloudformation.StackResource, error)
 }
 
+// HumanJSONStringer contains methods that stringify app info for output.
+type HumanJSONStringer interface {
+	HumanString() string
+	JSONString() (string, error)
+}
+
 // WebAppDescriber retrieves information about a load balanced web application.
 type WebAppDescriber struct {
 	app             *archer.Application
@@ -78,7 +95,7 @@ type WebAppDescriber struct {
 	initAppDescriber func(string) error
 }
 
-// NewWebAppDescriber instantiates a load balanced application.
+// NewWebAppDescriber instantiates a load balanced application describer.
 func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 	svc, err := store.New()
 	if err != nil {
@@ -115,14 +132,15 @@ func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, err
 }
 
 // Describe returns info of a web app application.
-func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
+func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironments(d.app.Project)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
 
 	var routes []*WebAppRoute
-	var configs []*WebAppConfig
+	var configs []*AppConfig
+	var services []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
 		err := d.initAppDescriber(env.Name)
@@ -130,32 +148,37 @@ func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
 			return nil, err
 		}
 		webAppURI, err := d.URI(env.Name)
-		if err == nil {
-			routes = append(routes, &WebAppRoute{
-				Environment: env.Name,
-				URL:         webAppURI,
-			})
-			appParams, err := d.appDescriber.Params()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
-			}
-			configs = append(configs, &WebAppConfig{
-				Environment: env.Name,
-				Port:        appParams[stack.LBWebAppContainerPortParamKey],
-				Tasks:       appParams[stack.AppTaskCountParamKey],
-				CPU:         appParams[stack.AppTaskCPUParamKey],
-				Memory:      appParams[stack.AppTaskMemoryParamKey],
-			})
-			webAppEnvVars, err := d.appDescriber.EnvVars()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve environment variables: %w", err)
-			}
-			envVars = append(envVars, flattenEnvVars(env.Name, webAppEnvVars)...)
-			continue
-		}
-		if !IsStackNotExistsErr(err) {
+		if err != nil && !IsStackNotExistsErr(err) {
 			return nil, fmt.Errorf("retrieve application URI: %w", err)
 		}
+		if err != nil {
+			continue
+		}
+		routes = append(routes, &WebAppRoute{
+			Environment: env.Name,
+			URL:         webAppURI,
+		})
+		appParams, err := d.appDescriber.Params()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
+		}
+		configs = append(configs, &AppConfig{
+			Environment: env.Name,
+			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			Tasks:       appParams[stack.AppTaskCountParamKey],
+			CPU:         appParams[stack.AppTaskCPUParamKey],
+			Memory:      appParams[stack.AppTaskMemoryParamKey],
+		})
+		services = appendServiceDiscovery(services, serviceDiscovery{
+			AppName:     d.app.Name,
+			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			ProjectName: d.app.Project,
+		}, env.Name)
+		webAppEnvVars, err := d.appDescriber.EnvVars()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
+		envVars = append(envVars, flattenEnvVars(env.Name, webAppEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -164,24 +187,25 @@ func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
 	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.appDescriber.AppStackResources()
-			if err == nil {
-				resources[env.Name] = flattenResources(stackResources)
-				continue
-			}
-			if !IsStackNotExistsErr(err) {
+			if err != nil && !IsStackNotExistsErr(err) {
 				return nil, fmt.Errorf("retrieve application resources: %w", err)
 			}
+			if err != nil {
+				continue
+			}
+			resources[env.Name] = flattenResources(stackResources)
 		}
 	}
 
-	return &WebAppDesc{
-		AppName:        d.app.Name,
-		Type:           d.app.Type,
-		Project:        d.app.Project,
-		Configurations: configs,
-		Routes:         routes,
-		Variables:      envVars,
-		Resources:      resources,
+	return &webAppDesc{
+		AppName:          d.app.Name,
+		Type:             d.app.Type,
+		Project:          d.app.Project,
+		Configurations:   configs,
+		Routes:           routes,
+		ServiceDiscovery: services,
+		Variables:        envVars,
+		Resources:        resources,
 	}, nil
 }
 
@@ -222,19 +246,69 @@ type EnvVars struct {
 	Value       string `json:"value"`
 }
 
+type envVars []*EnvVars
+
+func (e envVars) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
+	var prevName string
+	var prevValue string
+	for _, variable := range e {
+		// Instead of re-writing the same variable value, we replace it with "-" to reduce text.
+		if variable.Name != prevName {
+			if variable.Value != prevValue {
+				fmt.Fprintf(w, "  %s\t%s\t%s\n", variable.Name, variable.Environment, variable.Value)
+			} else {
+				fmt.Fprintf(w, "  %s\t%s\t-\n", variable.Name, variable.Environment)
+			}
+		} else {
+			if variable.Value != prevValue {
+				fmt.Fprintf(w, "  -\t%s\t%s\n", variable.Environment, variable.Value)
+			} else {
+				fmt.Fprintf(w, "  -\t%s\t-\n", variable.Environment)
+			}
+		}
+		prevName = variable.Name
+		prevValue = variable.Value
+	}
+}
+
 // CfnResource contains application resources created by cloudformation.
 type CfnResource struct {
 	Type       string `json:"type"`
 	PhysicalID string `json:"physicalID"`
 }
 
-// WebAppConfig contains serialized configuration parameters for a web application.
-type WebAppConfig struct {
+type cfnResources map[string][]*CfnResource
+
+func (c cfnResources) humanString(w io.Writer, configs []*AppConfig) {
+	// Go maps don't have a guaranteed order.
+	// Show the resources by the order of environments displayed under Configuration for a consistent view.
+	for _, config := range configs {
+		env := config.Environment
+		resources := c[env]
+		fmt.Fprintf(w, "\n  %s\n", env)
+		for _, resource := range resources {
+			fmt.Fprintf(w, "    %s\t%s\n", resource.Type, resource.PhysicalID)
+		}
+	}
+}
+
+// AppConfig contains serialized configuration parameters for an application.
+type AppConfig struct {
 	Environment string `json:"environment"`
 	Port        string `json:"port"`
 	Tasks       string `json:"tasks"`
 	CPU         string `json:"cpu"`
 	Memory      string `json:"memory"`
+}
+
+type configurations []*AppConfig
+
+func (c configurations) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
+	for _, config := range c {
+		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
+	}
 }
 
 // WebAppRoute contains serialized route parameters for a web application.
@@ -243,19 +317,35 @@ type WebAppRoute struct {
 	URL         string `json:"url"`
 }
 
-// WebAppDesc contains serialized parameters for a web application.
-type WebAppDesc struct {
-	AppName        string                    `json:"appName"`
-	Type           string                    `json:"type"`
-	Project        string                    `json:"project"`
-	Configurations []*WebAppConfig           `json:"configurations"`
-	Routes         []*WebAppRoute            `json:"routes"`
-	Variables      []*EnvVars                `json:"variables"`
-	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
+// ServiceDiscovery contains serialized service discovery info for an application.
+type ServiceDiscovery struct {
+	Environment []string `json:"environment"`
+	Namespace   string   `json:"namespace"`
+}
+
+type serviceDiscoveries []*ServiceDiscovery
+
+func (s serviceDiscoveries) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\n", "Environment", "Namespace")
+	for _, sd := range s {
+		fmt.Fprintf(w, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
+	}
+}
+
+// webAppDesc contains serialized parameters for a web application.
+type webAppDesc struct {
+	AppName          string             `json:"appName"`
+	Type             string             `json:"type"`
+	Project          string             `json:"project"`
+	Configurations   configurations     `json:"configurations"`
+	Routes           []*WebAppRoute     `json:"routes"`
+	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
+	Variables        envVars            `json:"variables"`
+	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
 // JSONString returns the stringified WebApp struct with json format.
-func (w *WebAppDesc) JSONString() (string, error) {
+func (w *webAppDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("marshal applications: %w", err)
@@ -264,7 +354,7 @@ func (w *WebAppDesc) JSONString() (string, error) {
 }
 
 // HumanString returns the stringified WebApp struct with human readable format.
-func (w *WebAppDesc) HumanString() string {
+func (w *webAppDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
@@ -274,53 +364,26 @@ func (w *WebAppDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
-	for _, config := range w.Configurations {
-		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
-	}
+	w.Configurations.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
+	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
+	writer.Flush()
+	w.ServiceDiscovery.humanString(writer)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "Environment", "Value")
-	var prevName string
-	var prevValue string
-	for _, variable := range w.Variables {
-		// Instead of re-writing the same variable value, we replace it with "-" to reduce text.
-		if variable.Name != prevName {
-			if variable.Value != prevValue {
-				fmt.Fprintf(writer, "  %s\t%s\t%s\n", variable.Name, variable.Environment, variable.Value)
-			} else {
-				fmt.Fprintf(writer, "  %s\t%s\t-\n", variable.Name, variable.Environment)
-			}
-		} else {
-			if variable.Value != prevValue {
-				fmt.Fprintf(writer, "  -\t%s\t%s\n", variable.Environment, variable.Value)
-			} else {
-				fmt.Fprintf(writer, "  -\t%s\t-\n", variable.Environment)
-			}
-		}
-		prevName = variable.Name
-		prevValue = variable.Value
-	}
+	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
 		// Go maps don't have a guaranteed order.
-		// Show the resources by the order of environments displayed under Routes for a consistent view.
-		for _, route := range w.Routes {
-			env := route.Environment
-			resources := w.Resources[env]
-			fmt.Fprintf(writer, "\n  %s\n", env)
-			for _, resource := range resources {
-				fmt.Fprintf(writer, "    %s\t%s\n", resource.Type, resource.PhysicalID)
-			}
-		}
+		// Show the resources by the order of environments displayed under Configuration for a consistent view.
+		w.Resources.humanString(writer, w.Configurations)
 	}
 	writer.Flush()
 	return b.String()
@@ -350,4 +413,21 @@ func IsStackNotExistsErr(err error) bool {
 		}
 		return true
 	}
+}
+
+func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env string) []*ServiceDiscovery {
+	exist := false
+	for _, s := range sds {
+		if s.Namespace == sd.String() {
+			s.Environment = append(s.Environment, env)
+			exist = true
+		}
+	}
+	if !exist {
+		sds = append(sds, &ServiceDiscovery{
+			Environment: []string{env},
+			Namespace:   sd.String(),
+		})
+	}
+	return sds
 }
