@@ -55,6 +55,16 @@ func (uri *WebAppURI) String() string {
 	}
 }
 
+type serviceDiscovery struct {
+	AppName     string
+	ProjectName string
+	Port        string
+}
+
+func (s *serviceDiscovery) String() string {
+	return fmt.Sprintf("http://%s.%s.local:%s", s.AppName, s.ProjectName, s.Port)
+}
+
 type storeSvc interface {
 	GetEnvironment(projectName string, environmentName string) (*archer.Environment, error)
 	ListEnvironments(projectName string) ([]*archer.Environment, error)
@@ -68,6 +78,12 @@ type appDescriber interface {
 	AppStackResources() ([]*cloudformation.StackResource, error)
 }
 
+// HumanJSONStringer contains methods that stringify app info for output.
+type HumanJSONStringer interface {
+	HumanString() string
+	JSONString() (string, error)
+}
+
 // WebAppDescriber retrieves information about a load balanced web application.
 type WebAppDescriber struct {
 	app             *archer.Application
@@ -78,7 +94,7 @@ type WebAppDescriber struct {
 	initAppDescriber func(string) error
 }
 
-// NewWebAppDescriber instantiates a load balanced application.
+// NewWebAppDescriber instantiates a load balanced application describer.
 func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
 	svc, err := store.New()
 	if err != nil {
@@ -115,14 +131,15 @@ func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, err
 }
 
 // Describe returns info of a web app application.
-func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
+func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironments(d.app.Project)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
 
 	var routes []*WebAppRoute
-	var configs []*WebAppConfig
+	var configs []*AppConfig
+	var services []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
 		err := d.initAppDescriber(env.Name)
@@ -139,13 +156,18 @@ func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
 			if err != nil {
 				return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
 			}
-			configs = append(configs, &WebAppConfig{
+			configs = append(configs, &AppConfig{
 				Environment: env.Name,
 				Port:        appParams[stack.LBWebAppContainerPortParamKey],
 				Tasks:       appParams[stack.AppTaskCountParamKey],
 				CPU:         appParams[stack.AppTaskCPUParamKey],
 				Memory:      appParams[stack.AppTaskMemoryParamKey],
 			})
+			services = appendServiceDiscovery(services, serviceDiscovery{
+				AppName:     d.app.Name,
+				Port:        appParams[stack.LBWebAppContainerPortParamKey],
+				ProjectName: d.app.Project,
+			}, env.Name)
 			webAppEnvVars, err := d.appDescriber.EnvVars()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve environment variables: %w", err)
@@ -175,13 +197,14 @@ func (d *WebAppDescriber) Describe() (*WebAppDesc, error) {
 	}
 
 	return &WebAppDesc{
-		AppName:        d.app.Name,
-		Type:           d.app.Type,
-		Project:        d.app.Project,
-		Configurations: configs,
-		Routes:         routes,
-		Variables:      envVars,
-		Resources:      resources,
+		AppName:          d.app.Name,
+		Type:             d.app.Type,
+		Project:          d.app.Project,
+		Configurations:   configs,
+		Routes:           routes,
+		ServiceDiscovery: services,
+		Variables:        envVars,
+		Resources:        resources,
 	}, nil
 }
 
@@ -228,8 +251,8 @@ type CfnResource struct {
 	PhysicalID string `json:"physicalID"`
 }
 
-// WebAppConfig contains serialized configuration parameters for a web application.
-type WebAppConfig struct {
+// AppConfig contains serialized configuration parameters for an application.
+type AppConfig struct {
 	Environment string `json:"environment"`
 	Port        string `json:"port"`
 	Tasks       string `json:"tasks"`
@@ -243,15 +266,22 @@ type WebAppRoute struct {
 	URL         string `json:"url"`
 }
 
+// ServiceDiscovery contains serialized service discovery info for an application.
+type ServiceDiscovery struct {
+	Environment []string `json:"environment"`
+	Namespace   string   `json:"namespace"`
+}
+
 // WebAppDesc contains serialized parameters for a web application.
 type WebAppDesc struct {
-	AppName        string                    `json:"appName"`
-	Type           string                    `json:"type"`
-	Project        string                    `json:"project"`
-	Configurations []*WebAppConfig           `json:"configurations"`
-	Routes         []*WebAppRoute            `json:"routes"`
-	Variables      []*EnvVars                `json:"variables"`
-	Resources      map[string][]*CfnResource `json:"resources,omitempty"`
+	AppName          string                    `json:"appName"`
+	Type             string                    `json:"type"`
+	Project          string                    `json:"project"`
+	Configurations   []*AppConfig              `json:"configurations"`
+	Routes           []*WebAppRoute            `json:"routes"`
+	ServiceDiscovery []*ServiceDiscovery       `json:"serviceDiscovery"`
+	Variables        []*EnvVars                `json:"variables"`
+	Resources        map[string][]*CfnResource `json:"resources,omitempty"`
 }
 
 // JSONString returns the stringified WebApp struct with json format.
@@ -283,6 +313,12 @@ func (w *WebAppDesc) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "URL")
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+	}
+	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Environment", "Namespace")
+	for _, sd := range w.ServiceDiscovery {
+		fmt.Fprintf(writer, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
 	}
 	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
@@ -350,4 +386,21 @@ func IsStackNotExistsErr(err error) bool {
 		}
 		return true
 	}
+}
+
+func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env string) []*ServiceDiscovery {
+	exist := false
+	for _, s := range sds {
+		if s.Namespace == sd.String() {
+			s.Environment = append(s.Environment, env)
+			exist = true
+		}
+	}
+	if !exist {
+		sds = append(sds, &ServiceDiscovery{
+			Environment: []string{env},
+			Namespace:   sd.String(),
+		})
+	}
+	return sds
 }

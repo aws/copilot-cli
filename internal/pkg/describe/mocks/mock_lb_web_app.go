@@ -162,3 +162,55 @@ func (mr *MockappDescriberMockRecorder) AppStackResources() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppStackResources", reflect.TypeOf((*MockappDescriber)(nil).AppStackResources))
 }
+
+// MockHumanJSONStringer is a mock of HumanJSONStringer interface
+type MockHumanJSONStringer struct {
+	ctrl     *gomock.Controller
+	recorder *MockHumanJSONStringerMockRecorder
+}
+
+// MockHumanJSONStringerMockRecorder is the mock recorder for MockHumanJSONStringer
+type MockHumanJSONStringerMockRecorder struct {
+	mock *MockHumanJSONStringer
+}
+
+// NewMockHumanJSONStringer creates a new mock instance
+func NewMockHumanJSONStringer(ctrl *gomock.Controller) *MockHumanJSONStringer {
+	mock := &MockHumanJSONStringer{ctrl: ctrl}
+	mock.recorder = &MockHumanJSONStringerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockHumanJSONStringer) EXPECT() *MockHumanJSONStringerMockRecorder {
+	return m.recorder
+}
+
+// HumanString mocks base method
+func (m *MockHumanJSONStringer) HumanString() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HumanString")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// HumanString indicates an expected call of HumanString
+func (mr *MockHumanJSONStringerMockRecorder) HumanString() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HumanString", reflect.TypeOf((*MockHumanJSONStringer)(nil).HumanString))
+}
+
+// JSONString mocks base method
+func (m *MockHumanJSONStringer) JSONString() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "JSONString")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// JSONString indicates an expected call of JSONString
+func (mr *MockHumanJSONStringerMockRecorder) JSONString() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JSONString", reflect.TypeOf((*MockHumanJSONStringer)(nil).JSONString))
+}

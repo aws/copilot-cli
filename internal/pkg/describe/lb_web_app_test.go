@@ -276,13 +276,14 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedWebApp: &WebAppDesc{
-				AppName:        testApp,
-				Type:           "",
-				Project:        testProject,
-				Configurations: []*WebAppConfig(nil),
-				Routes:         []*WebAppRoute(nil),
-				Variables:      []*EnvVars(nil),
-				Resources:      make(map[string][]*CfnResource),
+				AppName:          testApp,
+				Type:             "",
+				Project:          testProject,
+				Configurations:   []*AppConfig(nil),
+				Routes:           []*WebAppRoute(nil),
+				ServiceDiscovery: []*ServiceDiscovery(nil),
+				Variables:        []*EnvVars(nil),
+				Resources:        make(map[string][]*CfnResource),
 			},
 		},
 		"success": {
@@ -301,7 +302,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						stack.LBWebAppRulePathParamKey: testAppPath,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "80",
+						stack.LBWebAppContainerPortParamKey: "5000",
 						stack.AppTaskCountParamKey:          "1",
 						stack.AppTaskCPUParamKey:            "256",
 						stack.AppTaskMemoryParamKey:         "512",
@@ -346,12 +347,12 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 				AppName: testApp,
 				Type:    "",
 				Project: testProject,
-				Configurations: []*WebAppConfig{
+				Configurations: []*AppConfig{
 					{
 						CPU:         "256",
 						Environment: "test",
 						Memory:      "512",
-						Port:        "80",
+						Port:        "5000",
 						Tasks:       "1",
 					},
 					{
@@ -370,6 +371,12 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 					{
 						Environment: "prod",
 						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
+					},
+				},
+				ServiceDiscovery: []*ServiceDiscovery{
+					{
+						Environment: []string{"test", "prod"},
+						Namespace:   "http://jobs.phonetool.local:5000",
 					},
 				},
 				Variables: []*EnvVars{

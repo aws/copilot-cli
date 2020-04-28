@@ -19,7 +19,7 @@ import (
 type showAppMocks struct {
 	storeSvc  *climocks.MockstoreReader
 	prompt    *climocks.Mockprompter
-	describer *climocks.MockwebAppDescriber
+	describer *climocks.MockappDescriber
 	ws        *climocks.MockwsAppReader
 }
 
@@ -372,7 +372,7 @@ func TestAppShow_Execute(t *testing.T) {
 	projectName := "my-project"
 	webApp := describe.WebAppDesc{
 		AppName: "my-app",
-		Configurations: []*describe.WebAppConfig{
+		Configurations: []*describe.AppConfig{
 			{
 				CPU:         "256",
 				Environment: "test",
@@ -409,6 +409,12 @@ func TestAppShow_Execute(t *testing.T) {
 			{
 				Environment: "prod",
 				URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
+			},
+		},
+		ServiceDiscovery: []*describe.ServiceDiscovery{
+			{
+				Environment: []string{"test", "prod"},
+				Namespace:   "http://my-app.my-project.local:5000",
 			},
 		},
 		Resources: map[string][]*describe.CfnResource{
@@ -452,7 +458,7 @@ func TestAppShow_Execute(t *testing.T) {
 				)
 			},
 
-			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedContent: "{\"appName\":\"my-app\",\"type\":\"\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 		"prompt for all input for human output": {
 			inputApp:              "my-app",
@@ -482,6 +488,11 @@ Routes
   Environment       URL
   test              http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
   prod              http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
+
+Service Discovery
+
+  Environment       Namespace
+  test, prod        http://my-app.my-project.local:5000
 
 Variables
 
@@ -517,10 +528,10 @@ Resources
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockWebAppDescriber := climocks.NewMockwebAppDescriber(ctrl)
+			mockAppDescriber := climocks.NewMockappDescriber(ctrl)
 
 			mocks := showAppMocks{
-				describer: mockWebAppDescriber,
+				describer: mockAppDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -534,8 +545,8 @@ Resources
 						projectName: projectName,
 					},
 				},
-				describer:     mockWebAppDescriber,
-				initDescriber: func(*showAppOpts, bool) error { return nil },
+				describer:     mockAppDescriber,
+				initDescriber: func(bool) error { return nil },
 				w:             b,
 			}
 
