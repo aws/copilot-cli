@@ -126,16 +126,16 @@ func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
 }
 
 // GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn(envName string) (*ecs.ServiceArn, error) {
+func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn", envName)
+	ret := m.ctrl.Call(m, "GetServiceArn")
 	ret0, _ := ret[0].(*ecs.ServiceArn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn(envName interface{}) *gomock.Call {
+func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn), envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
 }

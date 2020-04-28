@@ -92,10 +92,7 @@ type sessionProvider interface {
 }
 
 type webAppDescriber interface {
-	URI(envName string) (*describe.WebAppURI, error)
-	ECSParams(envName string) (*describe.WebAppECSParams, error)
-	EnvVars(env *archer.Environment) ([]*describe.WebAppEnvVars, error)
-	StackResources(envName string) ([]*describe.CfnResource, error)
+	Describe() (*describe.WebAppDesc, error)
 }
 
 type storeReader interface {
@@ -223,11 +220,11 @@ type dockerfileParser interface {
 }
 
 type serviceArnGetter interface {
-	GetServiceArn(envName string) (*ecs.ServiceArn, error)
+	GetServiceArn() (*ecs.ServiceArn, error)
 }
 
 type statusDescriber interface {
-	Describe() (*describe.WebAppStatusDesc, error)
+	Describe() (*describe.AppStatusDesc, error)
 }
 
 type envDescriber interface {

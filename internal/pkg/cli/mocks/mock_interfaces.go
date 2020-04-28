@@ -848,64 +848,19 @@ func (m *MockwebAppDescriber) EXPECT() *MockwebAppDescriberMockRecorder {
 	return m.recorder
 }
 
-// URI mocks base method
-func (m *MockwebAppDescriber) URI(envName string) (*describe.WebAppURI, error) {
+// Describe mocks base method
+func (m *MockwebAppDescriber) Describe() (*describe.WebAppDesc, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "URI", envName)
-	ret0, _ := ret[0].(*describe.WebAppURI)
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(*describe.WebAppDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// URI indicates an expected call of URI
-func (mr *MockwebAppDescriberMockRecorder) URI(envName interface{}) *gomock.Call {
+// Describe indicates an expected call of Describe
+func (mr *MockwebAppDescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "URI", reflect.TypeOf((*MockwebAppDescriber)(nil).URI), envName)
-}
-
-// ECSParams mocks base method
-func (m *MockwebAppDescriber) ECSParams(envName string) (*describe.WebAppECSParams, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ECSParams", envName)
-	ret0, _ := ret[0].(*describe.WebAppECSParams)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ECSParams indicates an expected call of ECSParams
-func (mr *MockwebAppDescriberMockRecorder) ECSParams(envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ECSParams", reflect.TypeOf((*MockwebAppDescriber)(nil).ECSParams), envName)
-}
-
-// EnvVars mocks base method
-func (m *MockwebAppDescriber) EnvVars(env *archer.Environment) ([]*describe.WebAppEnvVars, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvVars", env)
-	ret0, _ := ret[0].([]*describe.WebAppEnvVars)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvVars indicates an expected call of EnvVars
-func (mr *MockwebAppDescriberMockRecorder) EnvVars(env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockwebAppDescriber)(nil).EnvVars), env)
-}
-
-// StackResources mocks base method
-func (m *MockwebAppDescriber) StackResources(envName string) ([]*describe.CfnResource, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StackResources", envName)
-	ret0, _ := ret[0].([]*describe.CfnResource)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// StackResources indicates an expected call of StackResources
-func (mr *MockwebAppDescriberMockRecorder) StackResources(envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockwebAppDescriber)(nil).StackResources), envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockwebAppDescriber)(nil).Describe))
 }
 
 // MockstoreReader is a mock of storeReader interface
@@ -2398,18 +2353,18 @@ func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
 }
 
 // GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn(envName string) (*ecs.ServiceArn, error) {
+func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn", envName)
+	ret := m.ctrl.Call(m, "GetServiceArn")
 	ret0, _ := ret[0].(*ecs.ServiceArn)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn(envName interface{}) *gomock.Call {
+func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn), envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
 }
 
 // MockstatusDescriber is a mock of statusDescriber interface
@@ -2436,10 +2391,10 @@ func (m *MockstatusDescriber) EXPECT() *MockstatusDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockstatusDescriber) Describe() (*describe.WebAppStatusDesc, error) {
+func (m *MockstatusDescriber) Describe() (*describe.AppStatusDesc, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.WebAppStatusDesc)
+	ret0, _ := ret[0].(*describe.AppStatusDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
