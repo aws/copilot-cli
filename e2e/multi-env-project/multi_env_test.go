@@ -1,6 +1,7 @@
 package multi_env_app_test
 
 import (
+	"fmt"
 	"net/http"
 
 	. "github.com/onsi/ginkgo"
@@ -165,6 +166,10 @@ var _ = Describe("Multiple Env Project", func() {
 			for _, route := range app.Routes {
 				envRoutes[route.Environment] = route
 			}
+
+			Expect(len(app.ServiceDiscoveries)).To(Equal(1))
+			Expect(app.ServiceDiscoveries[0].Environment).To(Equal([]string{"test", "prod"}))
+			Expect(app.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", appName, projectName)))
 
 			// Call each environment's endpoint and ensure it returns a 200
 			for _, env := range []string{"test", "prod"} {

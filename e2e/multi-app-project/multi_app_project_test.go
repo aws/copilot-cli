@@ -77,7 +77,7 @@ var _ = Describe("Multiple App Project", func() {
 
 			_, backEndInitErr = cli.AppInit(&client.AppInitRequest{
 				AppName:    "back-end",
-				AppType:    "Load Balanced Web App",
+				AppType:    "Backend App",
 				Dockerfile: "./back-end/Dockerfile",
 				AppPort:    "80",
 			})
@@ -146,32 +146,19 @@ var _ = Describe("Multiple App Project", func() {
 					AppName:     appName,
 				})
 				Expect(appShowErr).NotTo(HaveOccurred())
-				Expect(len(app.Routes)).To(Equal(1))
 
-				// Call each environment's endpoint and ensure it returns a 200
-				route := app.Routes[0]
-				Expect(route.Environment).To(Equal("test"))
-				// Since the front end was added first, it should have no suffix.
+				Expect(len(app.ServiceDiscoveries)).To(Equal(1))
+				Expect(app.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
+				Expect(app.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", appName, projectName)))
+
 				if appName == "front-end" {
+					// Load balanced web apps have routes.
+					Expect(len(app.Routes)).To(Equal(1))
+					route := app.Routes[0]
+					Expect(route.Environment).To(Equal("test"))
+					// Since the front end was added first, it should have no suffix.
 					Expect(route.URL).ToNot(HaveSuffix(appName))
 				}
-				// Since the back end was added second, it should have app appended
-				// to the name
-				if appName == "back-end" {
-					Expect(route.URL).To(HaveSuffix(appName))
-				}
-				var resp *http.Response
-				var fetchErr error
-				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(route.URL)
-					return resp.StatusCode, fetchErr
-				}, "30s", "1s").Should(Equal(200))
-
-				// Read the response - our deployed apps should return a body with their
-				// name as the value.
-				bodyBytes, err := ioutil.ReadAll(resp.Body)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(bodyBytes)).To(Equal(appName))
 			}
 		})
 
