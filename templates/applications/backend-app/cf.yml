@@ -13,6 +13,12 @@ Parameters:
     Type: String
   ContainerPort:
     Type: Number
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  TaskCount:
+    Type: Number
   AddonsTemplateURL:
     Description: 'URL of the addons nested stack template within the S3 bucket.'
     Type: String

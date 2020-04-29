@@ -64,6 +64,7 @@ type appDeployOpts struct {
 	// cached variables
 	targetEnvironment *archer.Environment
 	targetProject     *archer.Project
+	targetApplication *archer.Application
 }
 
 func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
@@ -134,6 +135,12 @@ func (o *appDeployOpts) Execute() error {
 		return err
 	}
 	o.targetProject = proj
+
+	app, err := o.projectService.GetApplication(o.ProjectName(), o.AppName)
+	if err != nil {
+		return fmt.Errorf("get application metadata: %w", err)
+	}
+	o.targetApplication = app
 
 	if err := o.configureClients(); err != nil {
 		return err
@@ -462,16 +469,27 @@ func (o *appDeployOpts) deployApp(addonsURL string) error {
 }
 
 func (o *appDeployOpts) showAppURI() error {
-	identifier, err := describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
-	if err != nil {
-		return fmt.Errorf("create identifier for application %s in project %s: %w", o.AppName, o.ProjectName(), err)
+	type identifier interface {
+		URI(string) (string, error)
 	}
-	loadBalancerURI, err := identifier.URI(o.targetEnvironment.Name)
-	if err != nil {
-		return fmt.Errorf("cannot retrieve the URI from environment %s: %w", o.EnvName, err)
-	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(loadBalancerURI))
 
+	var appDescriber identifier
+	var err error
+	switch o.targetApplication.Type {
+	case manifest.LoadBalancedWebApplication:
+		appDescriber, err = describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
+	default:
+		err = errors.New("unexpected application type")
+	}
+	if err != nil {
+		return fmt.Errorf("create describer for app type %s: %w", o.targetApplication.Type, err)
+	}
+
+	uri, err := appDescriber.URI(o.targetEnvironment.Name)
+	if err != nil {
+		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
+	}
+	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
 	return nil
 }
 

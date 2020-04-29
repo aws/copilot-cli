@@ -180,7 +180,7 @@ func (cs *changeSet) createAndExecute(conf *stackConfig) error {
 		// We make a call to describe the change set to see if that is indeed the case and handle it gracefully.
 		descr, descrErr := cs.describe()
 		if descrErr != nil {
-			return descrErr
+			return fmt.Errorf("check if changeset is empty: %v: %w", err, descrErr)
 		}
 		// The change set was empty - so we clean it up.
 		// We have to clean up the change set because there's a limit on the number
