@@ -89,6 +89,12 @@ var _ = Describe("init flow", func() {
 			}, "30s", "1s").Should(Equal(200))
 		})
 
+		It("should return a valid service discovery namespace", func() {
+			Expect(len(app.ServiceDiscoveries)).To(Equal(1))
+			Expect(app.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
+			Expect(app.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", appName, projectName)))
+		})
+
 		It("should return the correct environment variables", func() {
 			Expect(len(app.Variables)).To(Equal(5))
 			expectedVars := map[string]string{

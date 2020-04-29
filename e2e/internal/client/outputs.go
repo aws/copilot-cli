@@ -6,12 +6,13 @@ import (
 )
 
 type AppShowOutput struct {
-	AppName   string                  `json:"appName"`
-	Type      string                  `json:"type"`
-	Project   string                  `json:"project"`
-	Configs   []AppShowConfigurations `json:"configurations"`
-	Routes    []AppShowRoutes         `json:"routes"`
-	Variables []AppShowVariables      `json:"variables"`
+	AppName            string                      `json:"appName"`
+	Type               string                      `json:"type"`
+	Project            string                      `json:"project"`
+	Configs            []AppShowConfigurations     `json:"configurations"`
+	ServiceDiscoveries []AppShowServiceDiscoveries `json:"serviceDiscovery"`
+	Routes             []AppShowRoutes             `json:"routes"`
+	Variables          []AppShowVariables          `json:"variables"`
 }
 
 type AppShowConfigurations struct {
@@ -25,6 +26,11 @@ type AppShowConfigurations struct {
 type AppShowRoutes struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
+}
+
+type AppShowServiceDiscoveries struct {
+	Environment []string `json:"environment"`
+	Namespace   string   `json:"namespace"`
 }
 
 type AppShowVariables struct {
