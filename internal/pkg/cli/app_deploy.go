@@ -441,8 +441,10 @@ func (o *appDeployOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 		} else {
 			conf, err = stack.NewLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 		}
+	case *manifest.BackendApp:
+		conf, err = stack.NewBackendApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 	default:
-		return nil, fmt.Errorf("unknown manifest type %v while creating the CloudFormation stack", t)
+		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -478,6 +480,8 @@ func (o *appDeployOpts) showAppURI() error {
 	switch o.targetApplication.Type {
 	case manifest.LoadBalancedWebApplication:
 		appDescriber, err = describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
+	case manifest.BackendApplication:
+		appDescriber, err = describe.NewBackendAppDescriber(o.ProjectName(), o.AppName)
 	default:
 		err = errors.New("unexpected application type")
 	}
@@ -489,7 +493,12 @@ func (o *appDeployOpts) showAppURI() error {
 	if err != nil {
 		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
 	}
-	log.Successf("Deployed %s, you can access it at %s\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
+	switch o.targetApplication.Type {
+	case manifest.BackendApplication:
+		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
+	default:
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
+	}
 	return nil
 }
 
