@@ -71,7 +71,7 @@ func newListAppOpts(vars listAppVars) (*listAppOpts, error) {
 }
 
 func (opts *listAppOpts) selectProject() (string, error) {
-	projs, err := opts.projectLister.ListProjects()
+	projs, err := opts.projectLister.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -123,11 +123,11 @@ func (opts *listAppOpts) Ask() error {
 // Execute lists the applications through the prompt.
 func (opts *listAppOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its applications.
-	if _, err := opts.projectGetter.GetProject(opts.ProjectName()); err != nil {
+	if _, err := opts.projectGetter.GetApplication(opts.ProjectName()); err != nil {
 		return err
 	}
 
-	apps, err := opts.appLister.ListApplications(opts.ProjectName())
+	apps, err := opts.appLister.ListServices(opts.ProjectName())
 	if err != nil {
 		return err
 	}

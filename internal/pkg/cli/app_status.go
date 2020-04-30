@@ -71,12 +71,12 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appStatusOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetProject(o.ProjectName()); err != nil {
+		if _, err := o.storeSvc.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.storeSvc.GetService(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
@@ -144,7 +144,7 @@ func (o *appStatusOpts) askProject() error {
 }
 
 func (o *appStatusOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListProjects()
+	projs, err := o.storeSvc.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -230,7 +230,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 }
 
 func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	apps, err := o.storeSvc.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}

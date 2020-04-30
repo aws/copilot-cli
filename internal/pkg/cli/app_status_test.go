@@ -35,7 +35,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputProject: "my-project",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -45,10 +45,10 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name: "my-project",
 				}, nil)
-				m.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error"))
+				m.EXPECT().GetService("my-project", "my-app").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -58,7 +58,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputEnvironment: "test",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name: "my-project",
 				}, nil)
 				m.EXPECT().GetEnvironment("my-project", "test").Return(nil, errors.New("some error"))
@@ -72,13 +72,13 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputEnvironment: "test",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name: "my-project",
 				}, nil)
 				m.EXPECT().GetEnvironment("my-project", "test").Return(&archer.Environment{
 					Name: "test",
 				}, nil)
-				m.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+				m.EXPECT().GetService("my-project", "my-app").Return(&archer.Application{
 					Name: "my-app",
 				}, nil)
 			},
@@ -146,7 +146,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if failed to list project": {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{}, mockError)
+				m.EXPECT().ListApplications().Return([]*archer.Project{}, mockError)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
@@ -156,7 +156,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if no project found": {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+				m.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
@@ -166,7 +166,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if failed to select project": {
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					{
 						Name: "mockProject",
 					},
@@ -183,7 +183,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputProject: "mockProject",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{}, mockError)
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{}, mockError)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
@@ -194,7 +194,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputProject: "mockProject",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{}, nil)
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
@@ -231,7 +231,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputProject: "mockProject",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					{
 						Name: "mockApp",
 					},
@@ -260,7 +260,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputProject: "mockProject",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					{
 						Name: "mockApp",
 					},

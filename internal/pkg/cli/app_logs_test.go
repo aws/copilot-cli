@@ -58,7 +58,7 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputProject: "my-project",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -197,7 +197,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputEnvName:     "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetApplication("mockProject", "mockApp").Return(&archer.Application{
+				m.EXPECT().GetService("mockProject", "mockApp").Return(&archer.Application{
 					Name: "mockApp",
 				}, nil)
 				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
@@ -221,7 +221,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputEnvName:     "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetApplication("mockProject", "mockApp").Return(nil, errors.New("some error"))
+				m.EXPECT().GetService("mockProject", "mockApp").Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -236,7 +236,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputEnvName:     "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetApplication("mockProject", "mockApp").Return(&archer.Application{
+				m.EXPECT().GetService("mockProject", "mockApp").Return(&archer.Application{
 					Name: "mockApp",
 				}, nil)
 				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(nil, errors.New("some error"))
@@ -253,7 +253,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputApplication: "mockApp",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetApplication("mockProject", "mockApp").Return(&archer.Application{
+				m.EXPECT().GetService("mockProject", "mockApp").Return(&archer.Application{
 					Name: "mockApp",
 				}, nil)
 				m.EXPECT().ListEnvironments("mockProject").Return([]*archer.Environment{
@@ -293,7 +293,7 @@ func TestAppLogs_Ask(t *testing.T) {
 				m.EXPECT().GetEnvironment("mockProject", "mockEnv").Return(&archer.Environment{
 					Name: "mockEnv",
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockFrontend",
 					},
@@ -318,7 +318,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"retrieve app name from ssm store": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -331,7 +331,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						Name: "mockProdEnv",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -355,7 +355,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"skip selecting if only one deployed app found": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -368,7 +368,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						Name: "mockProdEnv",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -391,7 +391,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to list projects": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+				m.EXPECT().ListApplications().Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -402,7 +402,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if no project found": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+				m.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -413,7 +413,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to select project": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -430,12 +430,12 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to retrieve application": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return(nil, errors.New("some error"))
+				m.EXPECT().ListServices("mockProject").Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -448,12 +448,12 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if no applications found": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{}, nil)
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{}, nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
@@ -466,13 +466,13 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to list environments": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
 				}, nil)
 				m.EXPECT().ListEnvironments("mockProject").Return(nil, errors.New("some error"))
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -489,13 +489,13 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if no environment found": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
 				}, nil)
 				m.EXPECT().ListEnvironments("mockProject").Return([]*archer.Environment{}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -511,7 +511,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to check application deployed or not": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -521,7 +521,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						Name: "mockEnv",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -542,7 +542,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if no deployed application found": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -552,7 +552,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						Name: "mockEnv",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},
@@ -573,7 +573,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		},
 		"returns error if fail to select app env name": {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{
 						Name: "mockProject",
 					},
@@ -586,7 +586,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						Name: "mockProdEnv",
 					},
 				}, nil)
-				m.EXPECT().ListApplications("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
 					&archer.Application{
 						Name: "mockApp",
 					},

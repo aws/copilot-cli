@@ -13,25 +13,23 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// CreateApplication instantiates a new application within an existing project. Skip if
-// the application already exists in the project.
-func (s *Store) CreateApplication(app *archer.Application) error {
-	if _, err := s.GetProject(app.Project); err != nil {
-		return err
-	}
+// CreateApplication instantiates a new application, validates its uniqueness and stores it in SSM.
+func (s *Store) CreateApplication(application *archer.Project) error {
+	applicationPath := fmt.Sprintf(fmtApplicationPath, application.Name)
+	application.Version = schemaVersion
 
-	applicationPath := fmt.Sprintf(fmtAppParamPath, app.Project, app.Name)
-	data, err := marshal(app)
+	data, err := marshal(application)
 	if err != nil {
-		return fmt.Errorf("serializing application %s: %w", app.Name, err)
+		return fmt.Errorf("serializing application %s: %w", application.Name, err)
 	}
 
 	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(applicationPath),
-		Description: aws.String(fmt.Sprintf("ECS-CLI v2 Application %s", app.Name)),
+		Description: aws.String("Copilot Application"),
 		Type:        aws.String(ssm.ParameterTypeString),
 		Value:       aws.String(data),
 	})
+
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -39,76 +37,78 @@ func (s *Store) CreateApplication(app *archer.Application) error {
 				return nil
 			}
 		}
-		return fmt.Errorf("create application %s in project %s: %w", app.Name, app.Project, err)
+		return fmt.Errorf("create application %s: %w", application.Name, err)
 	}
 	return nil
 }
 
-// GetApplication gets an application belonging to a particular project by name. If no app is found
-// it returns ErrNoSuchApplication.
-func (s *Store) GetApplication(projectName, appName string) (*archer.Application, error) {
-	appPath := fmt.Sprintf(fmtAppParamPath, projectName, appName)
-	appParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
-		Name: aws.String(appPath),
+// GetApplication fetches an application by name. If it can't be found, return a ErrNoSuchApplication
+func (s *Store) GetApplication(applicationName string) (*archer.Project, error) {
+	applicationPath := fmt.Sprintf(fmtApplicationPath, applicationName)
+	applicationParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+		Name: aws.String(applicationPath),
 	})
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ssm.ErrCodeParameterNotFound:
+				account, region := s.getCallerAccountAndRegion()
 				return nil, &ErrNoSuchApplication{
-					ProjectName:     projectName,
-					ApplicationName: appName,
+					ApplicationName: applicationName,
+					AccountID:       account,
+					Region:          region,
 				}
 			}
 		}
-		return nil, fmt.Errorf("get application %s in project %s: %w", appName, projectName, err)
+		return nil, fmt.Errorf("get application %s: %w", applicationName, err)
 	}
 
-	var app archer.Application
-	err = json.Unmarshal([]byte(*appParam.Parameter.Value), &app)
-	if err != nil {
-		return nil, fmt.Errorf("read details for application %s in project %s: %w", appName, projectName, err)
+	var application archer.Project
+	if err := json.Unmarshal([]byte(*applicationParam.Parameter.Value), &application); err != nil {
+		return nil, fmt.Errorf("read details for application %s: %w", applicationName, err)
 	}
-	return &app, nil
+	return &application, nil
 }
 
-// ListApplications returns all applications belonging to a particular project.
-func (s *Store) ListApplications(projectName string) ([]*archer.Application, error) {
-	var applications []*archer.Application
-
-	applicationsPath := fmt.Sprintf(rootAppParamPath, projectName)
-	serializedApps, err := s.listParams(applicationsPath)
+// ListApplications returns the list of existing applications in the customer's account and region.
+func (s *Store) ListApplications() ([]*archer.Project, error) {
+	var applications []*archer.Project
+	serializedApplications, err := s.listParams(rootApplicationPath)
 	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", projectName, err)
+		return nil, fmt.Errorf("list applications: %w", err)
 	}
-	for _, serializedApp := range serializedApps {
-		var app archer.Application
-		if err := json.Unmarshal([]byte(*serializedApp), &app); err != nil {
-			return nil, fmt.Errorf("read application details for project %s: %w", projectName, err)
+	for _, serializedApplication := range serializedApplications {
+		var application archer.Project
+		if err := json.Unmarshal([]byte(*serializedApplication), &application); err != nil {
+			return nil, fmt.Errorf("read application details: %w", err)
 		}
 
-		applications = append(applications, &app)
+		applications = append(applications, &application)
 	}
 	return applications, nil
 }
 
-// DeleteApplication removes an application from SSM.
-// If the application does not exist in the store or is successfully deleted then returns nil. Otherwise, returns an error.
-func (s *Store) DeleteApplication(projectName, appName string) error {
-	paramName := fmt.Sprintf(fmtAppParamPath, projectName, appName)
+// DeleteApplication deletes the SSM parameter related to the application.
+func (s *Store) DeleteApplication(name string) error {
+	paramName := fmt.Sprintf(fmtApplicationPath, name)
+
 	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case ssm.ErrCodeParameterNotFound:
-				return nil
-			}
+		awserr, ok := err.(awserr.Error)
+		if !ok {
+			return err
 		}
-		return fmt.Errorf("delete application %s from project %s: %w", appName, projectName, err)
+
+		if awserr.Code() == ssm.ErrCodeParameterNotFound {
+			return nil
+		}
+
+		return fmt.Errorf("delete SSM param %s: %w", paramName, awserr)
 	}
+
 	return nil
 }

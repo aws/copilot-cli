@@ -18,43 +18,43 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func Test_SSM_Project_Integration(t *testing.T) {
+func Test_SSM_Application_Integration(t *testing.T) {
 	s, _ := store.New()
-	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
-	t.Run("Create, Get and List Projects", func(t *testing.T) {
-		// Create our first project
-		err := s.CreateProject(&projectToCreate)
+	applicationToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
+	t.Run("Create, Get and List Applications", func(t *testing.T) {
+		// Create our first application
+		err := s.CreateApplication(&applicationToCreate)
 		require.NoError(t, err)
 
-		// Can't overwrite an existing project
-		err = s.CreateProject(&projectToCreate)
+		// Can't overwrite an existing application
+		err = s.CreateApplication(&applicationToCreate)
 		require.NoError(t, err)
 
-		// Fetch the project back from SSM
-		project, err := s.GetProject(projectToCreate.Name)
+		// Fetch the application back from SSM
+		application, err := s.GetApplication(applicationToCreate.Name)
 		require.NoError(t, err)
-		require.Equal(t, projectToCreate, *project)
+		require.Equal(t, applicationToCreate, *application)
 
-		// List returns a non-empty list of projects
-		projects, err := s.ListProjects()
+		// List returns a non-empty list of applications
+		applications, err := s.ListApplications()
 		require.NoError(t, err)
-		require.NotEmpty(t, projects)
+		require.NotEmpty(t, applications)
 	})
 }
 
 func Test_SSM_Environment_Integration(t *testing.T) {
 	s, _ := store.New()
-	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
-	testEnvironment := archer.Environment{Name: "test", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: false}
-	prodEnvironment := archer.Environment{Name: "prod", Project: projectToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: true}
+	applicationToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
+	testEnvironment := archer.Environment{Name: "test", Project: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: false}
+	prodEnvironment := archer.Environment{Name: "prod", Project: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: true}
 
 	t.Run("Create, Get and List Environments", func(t *testing.T) {
-		// Create our first project
-		err := s.CreateProject(&projectToCreate)
+		// Create our first application
+		err := s.CreateApplication(&applicationToCreate)
 		require.NoError(t, err)
 
-		// Make sure there are no envs with our new project
-		envs, err := s.ListEnvironments(projectToCreate.Name)
+		// Make sure there are no envs with our new application
+		envs, err := s.ListEnvironments(applicationToCreate.Name)
 		require.NoError(t, err)
 		require.Empty(t, envs)
 
@@ -72,8 +72,8 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
 
-		// Make sure all the environments are under our project
-		envs, err = s.ListEnvironments(projectToCreate.Name)
+		// Make sure all the environments are under our application
+		envs, err = s.ListEnvironments(applicationToCreate.Name)
 		require.NoError(t, err)
 		var environments []archer.Environment
 		for _, e := range envs {
@@ -82,63 +82,63 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 		require.ElementsMatch(t, environments, []archer.Environment{testEnvironment, prodEnvironment})
 
 		// Fetch our saved environments, one by one
-		env, err := s.GetEnvironment(projectToCreate.Name, testEnvironment.Name)
+		env, err := s.GetEnvironment(applicationToCreate.Name, testEnvironment.Name)
 		require.NoError(t, err)
 		require.Equal(t, testEnvironment, *env)
 
-		env, err = s.GetEnvironment(projectToCreate.Name, prodEnvironment.Name)
+		env, err = s.GetEnvironment(applicationToCreate.Name, prodEnvironment.Name)
 		require.NoError(t, err)
 		require.Equal(t, prodEnvironment, *env)
 	})
 }
 
-func Test_SSM_Application_Integration(t *testing.T) {
+func Test_SSM_Service_Integration(t *testing.T) {
 	s, _ := store.New()
-	projectToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
-	apiApplication := archer.Application{Name: "api", Project: projectToCreate.Name, Type: "LBFargateService"}
-	feApplication := archer.Application{Name: "front-end", Project: projectToCreate.Name, Type: "LBFargateService"}
+	applicationToCreate := archer.Project{Name: randStringBytes(10), Version: "1.0"}
+	apiService := archer.Application{Name: "api", Project: applicationToCreate.Name, Type: "LBFargateService"}
+	feService := archer.Application{Name: "front-end", Project: applicationToCreate.Name, Type: "LBFargateService"}
 
 	t.Run("Create, Get and List Applications", func(t *testing.T) {
-		// Create our first project
-		err := s.CreateProject(&projectToCreate)
+		// Create our first application
+		err := s.CreateApplication(&applicationToCreate)
 		require.NoError(t, err)
 
-		// Make sure there are no apps with our new project
-		apps, err := s.ListApplications(projectToCreate.Name)
+		// Make sure there are no svcs with our new application
+		svcs, err := s.ListServices(applicationToCreate.Name)
 		require.NoError(t, err)
-		require.Empty(t, apps)
+		require.Empty(t, svcs)
 
-		// Add our applications
-		err = s.CreateApplication(&apiApplication)
-		require.NoError(t, err)
-
-		err = s.CreateApplication(&feApplication)
+		// Add our services
+		err = s.CreateService(&apiService)
 		require.NoError(t, err)
 
-		// Skip and do not return error if application already exists
-		err = s.CreateApplication(&feApplication)
+		err = s.CreateService(&feService)
+		require.NoError(t, err)
+
+		// Skip and do not return error if services already exists
+		err = s.CreateService(&feService)
 		require.NoError(t, err)
 
 		// Wait for consistency to kick in (ssm path commands are eventually consistent)
 		time.Sleep(5 * time.Second)
 
-		// Make sure all the apps are under our project
-		apps, err = s.ListApplications(projectToCreate.Name)
+		// Make sure all the svcs are under our application
+		svcs, err = s.ListServices(applicationToCreate.Name)
 		require.NoError(t, err)
-		var applications []archer.Application
-		for _, a := range apps {
-			applications = append(applications, *a)
+		var services []archer.Application
+		for _, s := range svcs {
+			services = append(services, *s)
 		}
-		require.ElementsMatch(t, applications, []archer.Application{apiApplication, feApplication})
+		require.ElementsMatch(t, services, []archer.Application{apiService, feService})
 
-		// Fetch our saved apps, one by one
-		app, err := s.GetApplication(projectToCreate.Name, apiApplication.Name)
+		// Fetch our saved svcs, one by one
+		svc, err := s.GetService(applicationToCreate.Name, apiService.Name)
 		require.NoError(t, err)
-		require.Equal(t, apiApplication, *app)
+		require.Equal(t, apiService, *svc)
 
-		app, err = s.GetApplication(projectToCreate.Name, feApplication.Name)
+		svc, err = s.GetService(applicationToCreate.Name, feService.Name)
 		require.NoError(t, err)
-		require.Equal(t, feApplication, *app)
+		require.Equal(t, feService, *svc)
 	})
 }
 

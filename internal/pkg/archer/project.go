@@ -35,22 +35,22 @@ type ProjectStore interface {
 
 // ProjectLister lists all the projects in the underlying project manager.
 type ProjectLister interface {
-	ListProjects() ([]*Project, error)
+	ListApplications() ([]*Project, error)
 }
 
 // ProjectCreator creates a project in the underlying project manager.
 type ProjectCreator interface {
-	CreateProject(project *Project) error
+	CreateApplication(project *Project) error
 }
 
 // ProjectGetter fetches an individual project from the underlying project manager.
 type ProjectGetter interface {
-	GetProject(projectName string) (*Project, error)
+	GetApplication(projectName string) (*Project, error)
 }
 
 // ProjectDeleter deletes project resources.
 type ProjectDeleter interface {
-	DeleteProject(name string) error
+	DeleteApplication(name string) error
 }
 
 // ProjectResourceStore fetches resources related to the project.

@@ -32,7 +32,7 @@ func TestProjectList_Execute(t *testing.T) {
 			mocking: func() {
 				mockProjectStore.
 					EXPECT().
-					ListProjects().
+					ListApplications().
 					Return([]*archer.Project{
 						&archer.Project{Name: "project1"},
 						&archer.Project{Name: "project2"},
@@ -48,7 +48,7 @@ func TestProjectList_Execute(t *testing.T) {
 			mocking: func() {
 				mockProjectStore.
 					EXPECT().
-					ListProjects().
+					ListApplications().
 					Return(nil, fmt.Errorf("error fetching projects")).
 					Times(1)
 			},

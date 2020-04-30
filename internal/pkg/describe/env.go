@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"text/tabwriter"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -41,7 +42,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	if err != nil {
 		return nil, err
 	}
-	apps, err := svc.ListApplications(projectName)
+	apps, err := svc.ListServices(projectName)
 	if err != nil {
 		return nil, err
 	}

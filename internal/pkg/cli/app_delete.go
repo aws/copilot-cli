@@ -57,7 +57,7 @@ type deleteAppOpts struct {
 	spinner          progress
 	appRemover       appRemover
 	getAppDeployer   func(session *awssession.Session) appDeployer
-        getImageRemover  func(session *awssession.Session) imageRemover
+	getImageRemover  func(session *awssession.Session) imageRemover
 
 	// Internal state.
 	projectEnvironments []*archer.Environment
@@ -88,7 +88,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		spinner:          termprogress.NewSpinner(),
 		sessProvider:     provider,
 		appRemover:       cloudformation.New(defaultSession),
-		getAppDeployer:   func(session *awssession.Session) appDeployer {
+		getAppDeployer: func(session *awssession.Session) appDeployer {
 			return cloudformation.New(session)
 		},
 		getImageRemover: func(session *awssession.Session) imageRemover {
@@ -103,7 +103,7 @@ func (o *deleteAppOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 	if o.AppName != "" {
-		if _, err := o.projectService.GetApplication(o.ProjectName(), o.AppName); err != nil {
+		if _, err := o.projectService.GetService(o.ProjectName(), o.AppName); err != nil {
 			return err
 		}
 	}
@@ -207,7 +207,7 @@ func (o *deleteAppOpts) askAppName() error {
 }
 
 func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
-	apps, err := o.projectService.ListApplications(o.ProjectName())
+	apps, err := o.projectService.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get app names: %w", err)
 	}
@@ -291,7 +291,7 @@ func (o *deleteAppOpts) emptyECRRepos() error {
 }
 
 func (o *deleteAppOpts) removeAppProjectResources() error {
-	proj, err := o.projectService.GetProject(o.projectName)
+	proj, err := o.projectService.GetApplication(o.projectName)
 	if err != nil {
 		return err
 	}
@@ -309,7 +309,7 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 }
 
 func (o *deleteAppOpts) deleteSSMParam() error {
-	if err := o.projectService.DeleteApplication(o.projectName, o.AppName); err != nil {
+	if err := o.projectService.DeleteService(o.projectName, o.AppName); err != nil {
 		return fmt.Errorf("delete app %s from project %s: %w", o.AppName, o.projectName, err)
 	}
 

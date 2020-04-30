@@ -172,7 +172,7 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	proj, err := o.projGetter.GetProject(o.ProjectName())
+	proj, err := o.projGetter.GetApplication(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
@@ -191,7 +191,7 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	if err := o.appStore.CreateApplication(&archer.Application{
+	if err := o.appStore.CreateService(&archer.Application{
 		Project: o.ProjectName(),
 		Name:    o.AppName,
 		Type:    o.AppType,
@@ -253,7 +253,7 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 		Port: o.AppPort,
 		Path: "/",
 	}
-	existingApps, err := o.appStore.ListApplications(o.ProjectName())
+	existingApps, err := o.appStore.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, err
 	}

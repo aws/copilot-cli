@@ -168,7 +168,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(nil, errors.New("some error"))
+				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 
 			wantedErrorS: "some error",
@@ -178,7 +178,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{}, errors.New("some identity error"))
@@ -190,7 +190,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -209,7 +209,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -257,7 +257,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -296,7 +296,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -343,7 +343,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{
 					Name: "phonetool",
 				}, nil)
 			},
@@ -397,7 +397,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProd:        true,
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -450,7 +450,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
@@ -490,7 +490,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(1)
@@ -510,7 +510,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 
 			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetProject("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
 			expectIdentity: func(m *climocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)

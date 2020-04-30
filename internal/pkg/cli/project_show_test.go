@@ -31,7 +31,7 @@ func TestProjectShow_Validate(t *testing.T) {
 			inputProject: "my-project",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name: "my-project",
 				}, nil)
 			},
@@ -42,7 +42,7 @@ func TestProjectShow_Validate(t *testing.T) {
 			inputProject: "my-project",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -108,7 +108,7 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showProjectMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						&archer.Project{Name: "my-project"},
 						&archer.Project{Name: "archer-project"},
 					}, nil),
@@ -123,7 +123,7 @@ func TestProjectShow_Ask(t *testing.T) {
 			inputProject: "",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListApplications().Return(nil, errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("list project: some error"),
 		},
@@ -131,7 +131,7 @@ func TestProjectShow_Ask(t *testing.T) {
 			inputProject: "",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+				m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
 			},
 
 			wantedError: fmt.Errorf("no project found: run `project init` to set one up, or `cd` into your workspace please"),
@@ -141,7 +141,7 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showProjectMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						&archer.Project{Name: "my-project"},
 						&archer.Project{Name: "archer-project"},
 					}, nil),
@@ -207,11 +207,11 @@ func TestProjectShow_Execute(t *testing.T) {
 			shouldOutputJSON: true,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+				m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 						Type: "lb-web-app",
@@ -239,11 +239,11 @@ func TestProjectShow_Execute(t *testing.T) {
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+				m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 						Type: "lb-web-app",
@@ -284,7 +284,7 @@ Applications
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("get project: some error"),
@@ -293,7 +293,7 @@ Applications
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
@@ -306,7 +306,7 @@ Applications
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
@@ -322,7 +322,7 @@ Applications
 						Region:    "us-west-1",
 					},
 				}, nil)
-				m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListServices("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("list application: some error"),

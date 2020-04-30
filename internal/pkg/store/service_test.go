@@ -15,79 +15,79 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStore_ListEnvironments(t *testing.T) {
-	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s", Prod: false}
-	testEnvironmentString, err := marshal(testEnvironment)
-	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+func TestStore_ListServices(t *testing.T) {
+	frontendService := archer.Application{Name: "fe", Project: "chicken", Type: "LBFargate"}
+	frontendServiceString, err := marshal(frontendService)
+	frontendServicePath := fmt.Sprintf(fmtSvcParamPath, frontendService.Project, frontendService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
 
-	prodEnvironment := archer.Environment{Name: "prod", AccountID: "12345", Project: "chicken", Region: "us-west-2s", Prod: true}
-	prodEnvironmentString, err := marshal(prodEnvironment)
-	prodEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, prodEnvironment.Project, prodEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+	apiService := archer.Application{Name: "api", Project: "chicken", Type: "LBFargate"}
+	apiServiceString, err := marshal(apiService)
+	apiServicePath := fmt.Sprintf(fmtSvcParamPath, apiService.Project, apiService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
 
-	environmentPath := fmt.Sprintf(rootEnvParamPath, testEnvironment.Project)
+	servicePath := fmt.Sprintf(rootSvcParamPath, frontendService.Project)
 
 	lastPageInPaginatedResp := false
 
 	testCases := map[string]struct {
 		mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 
-		wantedEnvironments []archer.Environment
-		wantedErr          error
+		wantedSvcs []archer.Application
+		wantedErr  error
 	}{
-		"with multiple existing environments": {
+		"with multiple existing svcs": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
-				require.Equal(t, environmentPath, *param.Path)
+				require.Equal(t, servicePath, *param.Path)
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(prodEnvironmentPath), // <- return prod before test on purpose to test sorting by Prod
-							Value: aws.String(prodEnvironmentString),
+							Name:  aws.String(frontendServicePath),
+							Value: aws.String(frontendServiceString),
 						},
 						{
-							Name:  aws.String(testEnvironmentPath),
-							Value: aws.String(testEnvironmentString),
+							Name:  aws.String(apiServicePath),
+							Value: aws.String(apiServiceString),
 						},
 					},
 				}, nil
 			},
 
-			wantedEnvironments: []archer.Environment{testEnvironment, prodEnvironment},
-			wantedErr:          nil,
+			wantedSvcs: []archer.Application{apiService, frontendService},
+			wantedErr:  nil,
 		},
 		"with malformed json": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
-				require.Equal(t, environmentPath, *param.Path)
+				require.Equal(t, servicePath, *param.Path)
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(testEnvironmentPath),
+							Name:  aws.String(apiServicePath),
 							Value: aws.String("oops"),
 						},
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("read environment details for application chicken: invalid character 'o' looking for beginning of value"),
+			wantedErr: fmt.Errorf("read service details for application chicken: invalid character 'o' looking for beginning of value"),
 		},
 		"with SSM error": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
-				require.Equal(t, environmentPath, *param.Path)
+				require.Equal(t, servicePath, *param.Path)
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("list environments for application chicken: broken"),
+			wantedErr: fmt.Errorf("list services for application chicken: broken"),
 		},
 		"with paginated response": {
 			mockGetParametersByPath: func(t *testing.T, param *ssm.GetParametersByPathInput) (output *ssm.GetParametersByPathOutput, e error) {
-				require.Equal(t, environmentPath, *param.Path)
+				require.Equal(t, servicePath, *param.Path)
 
 				if !lastPageInPaginatedResp {
 					lastPageInPaginatedResp = true
 					return &ssm.GetParametersByPathOutput{
 						Parameters: []*ssm.Parameter{
 							{
-								Name:  aws.String(testEnvironmentPath),
-								Value: aws.String(testEnvironmentString),
+								Name:  aws.String(frontendServicePath),
+								Value: aws.String(frontendServiceString),
 							},
 						},
 						NextToken: aws.String("more"),
@@ -97,15 +97,15 @@ func TestStore_ListEnvironments(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(prodEnvironmentPath),
-							Value: aws.String(prodEnvironmentString),
+							Name:  aws.String(apiServicePath),
+							Value: aws.String(apiServiceString),
 						},
 					},
 				}, nil
 			},
 
-			wantedEnvironments: []archer.Environment{testEnvironment, prodEnvironment},
-			wantedErr:          nil,
+			wantedSvcs: []archer.Application{apiService, frontendService},
+			wantedErr:  nil,
 		},
 	}
 
@@ -121,73 +121,73 @@ func TestStore_ListEnvironments(t *testing.T) {
 			}
 
 			// WHEN
-			envPointers, err := store.ListEnvironments("chicken")
+			svcPointers, err := store.ListServices("chicken")
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				var environments []archer.Environment
-				for _, e := range envPointers {
-					environments = append(environments, *e)
+				var services []archer.Application
+				for _, s := range svcPointers {
+					services = append(services, *s)
 				}
-				require.Equal(t, tc.wantedEnvironments, environments)
+				require.ElementsMatch(t, tc.wantedSvcs, services)
 
 			}
 		})
 	}
 }
 
-func TestStore_GetEnvironment(t *testing.T) {
-	testEnvironment := archer.Environment{Name: "test", AccountID: "12345", Project: "chicken", Region: "us-west-2s"}
-	testEnvironmentString, err := marshal(testEnvironment)
-	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+func TestStore_GetService(t *testing.T) {
+	testService := archer.Application{Name: "api", Project: "chicken", Type: "LBFargate"}
+	testServiceString, err := marshal(testService)
+	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.Project, testService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
-		mockGetParameter  func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-		wantedEnvironment archer.Environment
-		wantedErr         error
+		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+		wantedSvc        archer.Application
+		wantedErr        error
 	}{
-		"with existing environment": {
+		"with existing service": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
-				require.Equal(t, testEnvironmentPath, *param.Name)
+				require.Equal(t, testServicePath, *param.Name)
 				return &ssm.GetParameterOutput{
 					Parameter: &ssm.Parameter{
-						Name:  aws.String(testEnvironmentPath),
-						Value: aws.String(testEnvironmentString),
+						Name:  aws.String(testServicePath),
+						Value: aws.String(testServiceString),
 					},
 				}, nil
 			},
-			wantedEnvironment: testEnvironment,
-			wantedErr:         nil,
+			wantedSvc: testService,
+			wantedErr: nil,
 		},
-		"with no existing environment": {
+		"with no existing svc": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
-				require.Equal(t, testEnvironmentPath, *param.Name)
+				require.Equal(t, testServicePath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "bloop", nil)
 			},
-			wantedErr: &ErrNoSuchEnvironment{
-				ApplicationName: testEnvironment.Project,
-				EnvironmentName: testEnvironment.Name,
+			wantedErr: &ErrNoSuchService{
+				ApplicationName: testService.Project,
+				ServiceName:     testService.Name,
 			},
 		},
 		"with malformed json": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
-				require.Equal(t, testEnvironmentPath, *param.Name)
+				require.Equal(t, testServicePath, *param.Name)
 				return &ssm.GetParameterOutput{
 					Parameter: &ssm.Parameter{
-						Name:  aws.String(testEnvironmentPath),
+						Name:  aws.String(testServicePath),
 						Value: aws.String("oops"),
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("read details for environment test in application chicken: invalid character 'o' looking for beginning of value"),
+			wantedErr: fmt.Errorf("read details for service api in application chicken: invalid character 'o' looking for beginning of value"),
 		},
 		"with SSM error": {
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
 				return nil, fmt.Errorf("broken")
 			},
-			wantedErr: fmt.Errorf("get environment test in application chicken: broken"),
+			wantedErr: fmt.Errorf("get service api in application chicken: broken"),
 		},
 	}
 
@@ -202,38 +202,38 @@ func TestStore_GetEnvironment(t *testing.T) {
 			}
 
 			// WHEN
-			env, err := store.GetEnvironment("chicken", "test")
+			svc, err := store.GetService("chicken", "api")
 
 			// THEN
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Equal(t, tc.wantedEnvironment, *env)
+				require.Equal(t, tc.wantedSvc, *svc)
 			}
 		})
 	}
 }
 
-func TestStore_CreateEnvironment(t *testing.T) {
+func TestStore_CreateService(t *testing.T) {
 	testApplication := archer.Project{Name: "chicken", Version: "1.0"}
 	testApplicationString, err := marshal(testApplication)
 	testApplicationPath := fmt.Sprintf(fmtApplicationPath, testApplication.Name)
-	require.NoError(t, err, "Marshal application should not fail")
+	require.NoError(t, err, "Marshal svc should not fail")
 
-	testEnvironment := archer.Environment{Name: "test", Project: testApplication.Name, AccountID: "1234", Region: "us-west-2"}
-	testEnvironmentString, err := marshal(testEnvironment)
-	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.Project, testEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+	testService := archer.Application{Name: "api", Project: testApplication.Name, Type: "LBFargate"}
+	testServiceString, err := marshal(testService)
+	testServicePath := fmt.Sprintf(fmtSvcParamPath, testService.Project, testService.Name)
+	require.NoError(t, err, "Marshal svc should not fail")
 
 	testCases := map[string]struct {
 		mockGetParameter func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 		mockPutParameter func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
 		wantedErr        error
 	}{
-		"with no existing environment": {
+		"with no existing svc": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-				require.Equal(t, testEnvironmentPath, *param.Name)
-				require.Equal(t, testEnvironmentString, *param.Value)
+				require.Equal(t, testServicePath, *param.Name)
+				require.Equal(t, testServiceString, *param.Value)
 				return &ssm.PutParameterOutput{
 					Version: aws.Int64(1),
 				}, nil
@@ -250,9 +250,9 @@ func TestStore_CreateEnvironment(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"with existing environment": {
+		"with existing svc": {
 			mockPutParameter: func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-				require.Equal(t, testEnvironmentPath, *param.Name)
+				require.Equal(t, testServicePath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterAlreadyExists, "Already exists", fmt.Errorf("Already Exists"))
 			},
 			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
@@ -279,7 +279,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 					},
 				}, nil
 			},
-			wantedErr: fmt.Errorf("create environment test in application chicken: broken"),
+			wantedErr: fmt.Errorf("create service api in application chicken: broken"),
 		},
 	}
 
@@ -295,11 +295,10 @@ func TestStore_CreateEnvironment(t *testing.T) {
 			}
 
 			// WHEN
-			err := store.CreateEnvironment(&archer.Environment{
-				Name:      testEnvironment.Name,
-				Project:   testEnvironment.Project,
-				AccountID: testEnvironment.AccountID,
-				Region:    testEnvironment.Region})
+			err := store.CreateService(&archer.Application{
+				Name:    testService.Name,
+				Project: testService.Project,
+				Type:    testService.Type})
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -309,59 +308,51 @@ func TestStore_CreateEnvironment(t *testing.T) {
 	}
 }
 
-func TestStore_DeleteEnvironment(t *testing.T) {
-	testCases := map[string]struct {
-		inApplicationName string
-		inEnvName         string
-		mockDeleteParam   func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+func TestDeleteService(t *testing.T) {
+	mockApplicationName := "mockApplicationName"
+	mockSvcName := "mockSvcName"
+	mockError := errors.New("mockError")
 
-		wantedError error
+	tests := map[string]struct {
+		mockDeleteParam func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+
+		want error
 	}{
 		"parameter is already deleted": {
-			inApplicationName: "phonetool",
-			inEnvName:         "test",
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "Not found", nil)
 			},
 		},
 		"unexpected error": {
-			inApplicationName: "phonetool",
-			inEnvName:         "test",
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
-				return nil, errors.New("some error")
+				return nil, mockError
 			},
-			wantedError: errors.New("delete environment test from application phonetool: some error"),
+			want: fmt.Errorf("delete service %s from application %s: %w", mockSvcName, mockApplicationName, mockError),
 		},
 		"successfully deleted param": {
-			inApplicationName: "phonetool",
-			inEnvName:         "test",
 			mockDeleteParam: func(t *testing.T, in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
-				wantedPath := fmt.Sprintf(fmtEnvParamPath, "phonetool", "test")
+				wantedPath := fmt.Sprintf(fmtSvcParamPath, mockApplicationName, mockSvcName)
+
 				require.Equal(t, wantedPath, *in.Name)
+
 				return nil, nil
 			},
 		},
 	}
 
-	for name, tc := range testCases {
+	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			store := &Store{
+			s := &Store{
 				ssmClient: &mockSSM{
-					t:                   t,
-					mockDeleteParameter: tc.mockDeleteParam,
+					t: t,
+
+					mockDeleteParameter: test.mockDeleteParam,
 				},
 			}
 
-			// WHEN
-			err := store.DeleteEnvironment(tc.inApplicationName, tc.inEnvName)
+			got := s.DeleteService(mockApplicationName, mockSvcName)
 
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-			}
+			require.Equal(t, test.want, got)
 		})
 	}
 }

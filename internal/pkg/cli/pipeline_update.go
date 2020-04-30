@@ -63,7 +63,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
 	}
 
-	project, err := store.GetProject(vars.ProjectName())
+	project, err := store.GetApplication(vars.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project %s: %w", vars.ProjectName(), err)
 	}

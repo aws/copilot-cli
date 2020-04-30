@@ -66,13 +66,13 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			setupMocks: func() {
 				mockWorkspace.EXPECT().AppNames().Times(0)
 				mockProjectService.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
-					ProjectName:     "phonetool",
+					ApplicationName: "phonetool",
 					EnvironmentName: "test",
 				})
 			},
 
 			wantedErrorS: (&store.ErrNoSuchEnvironment{
-				ProjectName:     "phonetool",
+				ApplicationName: "phonetool",
 				EnvironmentName: "test",
 			}).Error(),
 		},
@@ -409,7 +409,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 					},
 				}
 				mockStore.EXPECT().
-					GetProject("ecs-kudos").
+					GetApplication("ecs-kudos").
 					Return(mockProject, nil)
 
 				mockWs := climocks.NewMockwsAppReader(ctrl)

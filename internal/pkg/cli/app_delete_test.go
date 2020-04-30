@@ -43,7 +43,7 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
 			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(&archer.Application{
+				m.EXPECT().GetService("phonetool", "my-app").Times(1).Return(&archer.Application{
 					Name: "my-app",
 				}, nil)
 			},
@@ -70,7 +70,7 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
 			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(nil, mockError)
+				m.EXPECT().GetService("phonetool", "my-app").Times(1).Return(nil, mockError)
 			},
 			want: errors.New("some error"),
 		},
@@ -128,7 +128,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			inAppName:        "",
 			skipConfirmation: true,
 			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 					},
@@ -147,7 +147,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			inAppName:        "",
 			skipConfirmation: true,
 			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 					},
@@ -161,7 +161,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			inAppName:        "",
 			skipConfirmation: true,
 			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{}, nil)
+				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{}, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
@@ -171,7 +171,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			inAppName:        "",
 			skipConfirmation: true,
 			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
+				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
 					&archer.Application{
 						Name: "my-app",
 					},
@@ -385,13 +385,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
 					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
 					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
@@ -415,13 +415,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
 					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
 					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),

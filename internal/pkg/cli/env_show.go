@@ -61,7 +61,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetProject(o.ProjectName()); err != nil {
+		if _, err := o.storeSvc.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
@@ -163,7 +163,7 @@ func (o *showEnvOpts) askEnvName() error {
 }
 
 func (o *showEnvOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListProjects()
+	projs, err := o.storeSvc.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}

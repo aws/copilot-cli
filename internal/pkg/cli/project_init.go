@@ -120,7 +120,7 @@ func (o *initProjectOpts) Ask() error {
 		return nil
 	}
 
-	existingProjects, _ := o.projectStore.ListProjects()
+	existingProjects, _ := o.projectStore.ListApplications()
 	if len(existingProjects) == 0 {
 		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
 		return o.askNewProjectName()
@@ -164,7 +164,7 @@ func (o *initProjectOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(o.ProjectName)))
 
-	return o.projectStore.CreateProject(&archer.Project{
+	return o.projectStore.CreateApplication(&archer.Project{
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
@@ -176,9 +176,9 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 	if err := validateProjectName(projectName); err != nil {
 		return err
 	}
-	proj, err := o.projectStore.GetProject(projectName)
+	proj, err := o.projectStore.GetApplication(projectName)
 	if err != nil {
-		var noSuchProjectErr *store.ErrNoSuchProject
+		var noSuchProjectErr *store.ErrNoSuchApplication
 		if errors.As(err, &noSuchProjectErr) {
 			return nil
 		}
