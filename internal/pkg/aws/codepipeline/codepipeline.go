@@ -29,19 +29,10 @@ type CodePipeline struct {
 	rgClient rg.ResourceGroupsClient
 }
 
-// Pipeline contains information about the pipeline
-// TODO wrap nested resources or just use what the SDK provides?
+// Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
 	Name string `json:"name"`
-	// Stages        []Stage       `json:"stages"`
-	// ArtifactStore ArtifactStore `json:"artifactStore"`
 }
-
-// Stage wraps the codepipeline pipeline stage
-type Stage cp.StageDeclaration
-
-// ArtifactStore wraps the artifact store for the pipeline
-type ArtifactStore cp.ArtifactStore
 
 // New returns a CodePipeline client configured against the input session.
 func New(s *session.Session) *CodePipeline {
@@ -51,15 +42,15 @@ func New(s *session.Session) *CodePipeline {
 	}
 }
 
-// GetPipeline retrieves information from a given pipeline
-func (c *CodePipeline) GetPipeline(pipelineName string) (*Pipeline, error) {
+// GetPipeline retrieves information from a given pipeline.
+func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	input := &cp.GetPipelineInput{
-		Name: aws.String(pipelineName),
+		Name: aws.String(name),
 	}
 	resp, err := c.client.GetPipeline(input)
 
 	if err != nil {
-		return nil, fmt.Errorf("get pipeline %s: %w", pipelineName, err)
+		return nil, fmt.Errorf("get pipeline %s: %w", name, err)
 	}
 	pipeline := &Pipeline{
 		Name: aws.StringValue(resp.Pipeline.Name),
@@ -68,14 +59,9 @@ func (c *CodePipeline) GetPipeline(pipelineName string) (*Pipeline, error) {
 	return pipeline, nil
 }
 
-// ListPipelines retrieves the names of all pipelines for a project
-func (c *CodePipeline) ListPipelinesForProject(projectName string) ([]string, error) {
+// ListPipelineNamesByTags retrieves the names of all pipelines for a project.
+func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
 	var pipelineNames []string
-
-	tags := map[string]string{
-		"ecs-project": projectName,
-	}
-
 	arns, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
 	if err != nil {
 		return nil, err

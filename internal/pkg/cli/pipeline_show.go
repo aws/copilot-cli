@@ -184,7 +184,9 @@ func (o *showPipelineOpts) askPipelineName() error {
 }
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
-	pipelines, err := o.pipelineSvc.ListPipelinesForProject(o.ProjectName())
+	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
+		"ecs-project": o.ProjectName(),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
 	}
