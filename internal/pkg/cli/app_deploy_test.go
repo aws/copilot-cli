@@ -433,7 +433,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			inputApp: "mockApp",
 			mockAddons: func(m *climocks.Mocktemplater) {
 				m.EXPECT().Template().Return("", &addons.ErrDirNotExist{
-					AppName: "mockApp",
+					SvcName: "mockApp",
 				})
 			},
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
