@@ -66,6 +66,7 @@ var _ = Describe("Multiple App Project", func() {
 	Context("when adding an app", func() {
 		var (
 			frontEndInitErr error
+			wwwInitErr      error
 			backEndInitErr  error
 		)
 		BeforeAll(func() {
@@ -73,6 +74,13 @@ var _ = Describe("Multiple App Project", func() {
 				AppName:    "front-end",
 				AppType:    "Load Balanced Web App",
 				Dockerfile: "./front-end/Dockerfile",
+			})
+
+			_, wwwInitErr = cli.AppInit(&client.AppInitRequest{
+				AppName:    "www",
+				AppType:    "Load Balanced Web App",
+				Dockerfile: "./www/Dockerfile",
+				AppPort:    "80",
 			})
 
 			_, backEndInitErr = cli.AppInit(&client.AppInitRequest{
@@ -85,11 +93,13 @@ var _ = Describe("Multiple App Project", func() {
 
 		It("app init should succeed", func() {
 			Expect(frontEndInitErr).NotTo(HaveOccurred())
+			Expect(wwwInitErr).NotTo(HaveOccurred())
 			Expect(backEndInitErr).NotTo(HaveOccurred())
 		})
 
 		It("app init should create app manifests", func() {
 			Expect("./ecs-project/front-end/manifest.yml").Should(BeAnExistingFile())
+			Expect("./ecs-project/www/manifest.yml").Should(BeAnExistingFile())
 			Expect("./ecs-project/back-end/manifest.yml").Should(BeAnExistingFile())
 
 		})
@@ -97,14 +107,14 @@ var _ = Describe("Multiple App Project", func() {
 		It("app ls should list the apps", func() {
 			appList, appListError := cli.AppList(projectName)
 			Expect(appListError).NotTo(HaveOccurred())
-			Expect(len(appList.Apps)).To(Equal(2))
+			Expect(len(appList.Apps)).To(Equal(3))
 
 			appsByName := map[string]client.AppDescription{}
 			for _, app := range appList.Apps {
 				appsByName[app.AppName] = app
 			}
 
-			for _, app := range []string{"front-end", "back-end"} {
+			for _, app := range []string{"front-end", "www", "back-end"} {
 				Expect(appsByName[app].AppName).To(Equal(app))
 				Expect(appsByName[app].Project).To(Equal(projectName))
 			}
@@ -118,6 +128,7 @@ var _ = Describe("Multiple App Project", func() {
 	Context("when deploying apps", func() {
 		var (
 			frontEndDeployErr error
+			wwwDeployErr      error
 			backEndDeployErr  error
 		)
 		BeforeAll(func() {
@@ -126,7 +137,11 @@ var _ = Describe("Multiple App Project", func() {
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
 			})
-
+			_, wwwDeployErr = cli.AppDeploy(&client.AppDeployInput{
+				AppName:  "www",
+				EnvName:  "test",
+				ImageTag: "gallopinggurdey",
+			})
 			_, backEndDeployErr = cli.AppDeploy(&client.AppDeployInput{
 				AppName:  "back-end",
 				EnvName:  "test",
@@ -136,29 +151,40 @@ var _ = Describe("Multiple App Project", func() {
 
 		It("app deploy should succeed to both environment", func() {
 			Expect(frontEndDeployErr).NotTo(HaveOccurred())
+			Expect(wwwDeployErr).NotTo(HaveOccurred())
 			Expect(backEndDeployErr).NotTo(HaveOccurred())
 		})
 
 		It("app show should include a valid URL and description for test and prod envs", func() {
-			for _, appName := range []string{"front-end", "back-end"} {
+			for _, appName := range []string{"front-end", "www"} {
 				app, appShowErr := cli.AppShow(&client.AppShowRequest{
 					ProjectName: projectName,
 					AppName:     appName,
 				})
 				Expect(appShowErr).NotTo(HaveOccurred())
 
-				Expect(len(app.ServiceDiscoveries)).To(Equal(1))
-				Expect(app.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
-				Expect(app.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", appName, projectName)))
-
+				// Load balanced web apps have routes.
+				Expect(len(app.Routes)).To(Equal(1))
+				route := app.Routes[0]
+				Expect(route.Environment).To(Equal("test"))
 				if appName == "front-end" {
-					// Load balanced web apps have routes.
-					Expect(len(app.Routes)).To(Equal(1))
-					route := app.Routes[0]
-					Expect(route.Environment).To(Equal("test"))
 					// Since the front end was added first, it should have no suffix.
 					Expect(route.URL).ToNot(HaveSuffix(appName))
 				}
+
+				// Since the www app was added second, it should have app appended to the name.
+				var resp *http.Response
+				var fetchErr error
+				Eventually(func() (int, error) {
+					resp, fetchErr = http.Get(route.URL)
+					return resp.StatusCode, fetchErr
+				}, "30s", "1s").Should(Equal(200))
+
+				// Read the response - our deployed apps should return a body with their
+				// name as the value.
+				bodyBytes, err := ioutil.ReadAll(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(bodyBytes)).To(Equal(appName))
 			}
 		})
 
