@@ -23,67 +23,67 @@ func TestWorkspace_copilotDirPath(t *testing.T) {
 		presetManifestDir   string
 		workingDir          string
 		expectedError       error
-		mockFileSystem      func(appFS afero.Fs)
+		mockFileSystem      func(fs afero.Fs)
 	}{
 		"same directory level": {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 
 		"same directory": {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/copilot"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 
 		"several levels deep": {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("test/1/2/3/4"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				appFS.MkdirAll("test/1/2/3/4", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				fs.MkdirAll("test/1/2/3/4", 0755)
 			},
 		},
 
 		"too many levels deep": {
 			expectedError: fmt.Errorf("couldn't find a directory called copilot up to 5 levels up from " + filepath.FromSlash("test/1/2/3/4/5")),
 			workingDir:    filepath.FromSlash("test/1/2/3/4/5"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				appFS.MkdirAll("test/1/2/3/4/5", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				fs.MkdirAll("test/1/2/3/4/5", 0755)
 			},
 		},
 
 		"out of a workspace": {
 			expectedError: fmt.Errorf("couldn't find a directory called copilot up to 5 levels up from " + filepath.FromSlash("/")),
 			workingDir:    filepath.FromSlash("/"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 
 		"uses precomputed manifest path": {
 			expectedManifestDir: manifestDir,
 			workingDir:          filepath.FromSlash("/"),
-			mockFileSystem:      func(appFS afero.Fs) {},
+			mockFileSystem:      func(fs afero.Fs) {},
 			presetManifestDir:   filepath.FromSlash("test/copilot"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Create an empty FileSystem
-			appFS := afero.NewMemMapFs()
+			fs := afero.NewMemMapFs()
 			// Set it up
-			tc.mockFileSystem(appFS)
+			tc.mockFileSystem(fs)
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: appFS},
+				fsUtils:    &afero.Afero{Fs: fs},
 				copilotDir: tc.presetManifestDir,
 			}
 			manifestDirPath, err := ws.copilotDirPath()
@@ -102,39 +102,39 @@ func TestWorkspace_Summary(t *testing.T) {
 		expectedSummary Summary
 		workingDir      string
 		expectedError   error
-		mockFileSystem  func(appFS afero.Fs)
+		mockFileSystem  func(fs afero.Fs)
 	}{
 		"existing workspace summary": {
 			expectedSummary: Summary{Application: "DavidsApp"},
 			workingDir:      "test/",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(appFS, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 			},
 		},
 		"no existing workspace summary": {
 			workingDir:    "test/",
 			expectedError: fmt.Errorf("couldn't find an application associated with this workspace"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
 			},
 		},
 		"no existing manifest dir": {
 			workingDir:     "test/",
 			expectedError:  fmt.Errorf("couldn't find a directory called copilot up to 5 levels up from test/"),
-			mockFileSystem: func(appFS afero.Fs) {},
+			mockFileSystem: func(fs afero.Fs) {},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Create an empty FileSystem
-			appFS := afero.NewMemMapFs()
+			fs := afero.NewMemMapFs()
 			// Set it up
-			tc.mockFileSystem(appFS)
+			tc.mockFileSystem(fs)
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: appFS},
+				fsUtils:    &afero.Afero{Fs: fs},
 			}
 			summary, err := ws.Summary()
 			if tc.expectedError == nil {
@@ -153,34 +153,34 @@ func TestWorkspace_Create(t *testing.T) {
 		workingDir     string
 		expectedError  error
 		expectNoWrites bool
-		mockFileSystem func(appFS afero.Fs)
+		mockFileSystem func(fs afero.Fs)
 	}{
 		"existing workspace and workspace summary": {
 			workingDir:     "test/",
 			appName:        "DavidsApp",
 			expectNoWrites: true,
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(appFS, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 			},
 		},
 		"existing workspace and workspace summary in different directory": {
 			workingDir:     "test/app/",
 			appName:        "DavidsApp",
 			expectNoWrites: true,
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				appFS.MkdirAll("test/app", 0755)
-				afero.WriteFile(appFS, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				fs.MkdirAll("test/app", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 			},
 		},
 		"existing workspace and different application": {
 			workingDir:    "test/",
 			appName:       "DavidsApp",
 			expectedError: fmt.Errorf("this workspace is already registered with application DavidsOtherApp"),
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(appFS, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
 			},
 		},
 		"existing workspace but no workspace summary": {
@@ -193,24 +193,24 @@ func TestWorkspace_Create(t *testing.T) {
 		"no existing workspace or workspace summary": {
 			workingDir:     "test/",
 			appName:        "DavidsApp",
-			mockFileSystem: func(appFS afero.Fs) {},
+			mockFileSystem: func(fs afero.Fs) {},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Create an empty FileSystem
-			appFS := afero.NewMemMapFs()
+			fs := afero.NewMemMapFs()
 			// Set it up
-			tc.mockFileSystem(appFS)
+			tc.mockFileSystem(fs)
 			// Throw an error if someone tries to write
 			// if we expect there to be no writes.
 			if tc.expectNoWrites {
-				appFS = afero.NewReadOnlyFs(appFS)
+				fs = afero.NewReadOnlyFs(fs)
 			}
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: appFS},
+				fsUtils:    &afero.Afero{Fs: fs},
 			}
 			err := ws.Create(tc.appName)
 			if tc.expectedError == nil {
@@ -357,7 +357,7 @@ func TestWorkspace_write(t *testing.T) {
 			elems:      []string{"webhook", "addons", "policy.yml"},
 			wantedPath: "/copilot/webhook/addons/policy.yml",
 		},
-		"create file under project directory": {
+		"create file under copilot directory": {
 			elems:      []string{pipelineFileName},
 			wantedPath: "/copilot/pipeline.yml",
 		},
@@ -402,7 +402,7 @@ func TestWorkspace_DeleteService(t *testing.T) {
 		copilotDir string
 		fs         func() afero.Fs
 	}{
-		"deletes existing app": {
+		"deletes existing service": {
 			name: "webhook",
 
 			copilotDir: "/copilot",
@@ -415,7 +415,7 @@ func TestWorkspace_DeleteService(t *testing.T) {
 				return fs
 			},
 		},
-		"deletes an non-existing app": {
+		"deletes an non-existing service": {
 			name: "webhook",
 
 			copilotDir: "/copilot",
@@ -458,7 +458,7 @@ func TestWorkspace_DeleteService(t *testing.T) {
 }
 
 func TestWorkspace_DeletePipelineManifest(t *testing.T) {
-	copilotDir := "/ecs-project"
+	copilotDir := "/copilot"
 	testCases := map[string]struct {
 		fs            func() afero.Fs
 		expectedError error
@@ -505,8 +505,7 @@ func TestWorkspace_DeletePipelineManifest(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			}
 
-			// There should be no pipeline manifest in the project
-			// directory.
+			// There should be no pipeline manifest in the copilot directory.
 			if err == nil {
 				path := filepath.Join(copilotDir, "pipeline.yml")
 				_, existErr := fs.Stat(path)
@@ -523,7 +522,7 @@ func TestWorkspace_DeletePipelineManifest(t *testing.T) {
 
 func TestWorkspace_ReadAddonsDir(t *testing.T) {
 	testCases := map[string]struct {
-		appName        string
+		svcName        string
 		copilotDirPath string
 		fs             func() afero.Fs
 
@@ -531,7 +530,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 		wantedErr       error
 	}{
 		"dir not exist": {
-			appName:        "webhook",
+			svcName:        "webhook",
 			copilotDirPath: "/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -545,7 +544,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 			},
 		},
 		"retrieves file names": {
-			appName:        "webhook",
+			svcName:        "webhook",
 			copilotDirPath: "/copilot",
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -571,7 +570,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 			}
 
 			// WHEN
-			actualFileNames, actualErr := ws.ReadAddonsDir(tc.appName)
+			actualFileNames, actualErr := ws.ReadAddonsDir(tc.svcName)
 
 			// THEN
 			require.Equal(t, tc.wantedErr, actualErr)
@@ -581,7 +580,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 }
 
 func TestWorkspace_ReadPipelineManifest(t *testing.T) {
-	projectDir := "/copilot"
+	copilotDir := "/copilot"
 	testCases := map[string]struct {
 		fs            func() afero.Fs
 		expectedError error
@@ -601,7 +600,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 		"when no pipeline file exists": {
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.Mkdir(projectDir, 0755)
+				fs.Mkdir(copilotDir, 0755)
 				return fs
 			},
 			expectedError: ErrNoPipelineInWorkspace,
@@ -613,7 +612,7 @@ func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 			// GIVEN
 			fs := tc.fs()
 			ws := &Workspace{
-				copilotDir: projectDir,
+				copilotDir: copilotDir,
 				fsUtils:    &afero.Afero{Fs: fs},
 			}
 

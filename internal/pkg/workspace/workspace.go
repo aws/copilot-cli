@@ -51,8 +51,8 @@ type Workspace struct {
 
 // New returns a workspace, used for reading and writing to user's local workspace.
 func New() (*Workspace, error) {
-	appFs := afero.NewOsFs()
-	fsUtils := &afero.Afero{Fs: appFs}
+	fs := afero.NewOsFs()
+	fsUtils := &afero.Afero{Fs: fs}
 
 	workingDir, err := os.Getwd()
 	if err != nil {
