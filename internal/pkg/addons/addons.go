@@ -24,48 +24,48 @@ const (
 	resourcesFiles        = "resources"
 )
 
-type workspaceService interface {
-	ReadAddonsDir(appName string) ([]string, error)
-	ReadAddonsFile(appName, fileName string) ([]byte, error)
+type workspaceReader interface {
+	ReadAddonsDir(svcName string) ([]string, error)
+	ReadAddonsFile(svcName, fileName string) ([]byte, error)
 }
 
-// Addons represents additional resources for an application.
+// Addons represents additional resources for a service.
 type Addons struct {
-	appName string
+	svcName string
 
 	parser template.Parser
-	ws     workspaceService
+	ws     workspaceReader
 }
 
-// New creates an Addons object given an application name.
-func New(appName string) (*Addons, error) {
+// New creates an Addons object given an service name.
+func New(svcName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 	return &Addons{
-		appName: appName,
+		svcName: svcName,
 		parser:  template.New(),
 		ws:      ws,
 	}, nil
 }
 
-// Template merges the files under the "addons/" directory of an application
+// Template merges the files under the "addons/" directory of a service
 // into a single CloudFormation template and returns it.
 func (a *Addons) Template() (string, error) {
-	fileNames, err := a.ws.ReadAddonsDir(a.appName)
+	fileNames, err := a.ws.ReadAddonsDir(a.svcName)
 	if err != nil {
 		return "", &ErrDirNotExist{
-			AppName:   a.appName,
+			SvcName:   a.svcName,
 			ParentErr: err,
 		}
 	}
 
 	addonFiles := make(map[string]string)
 	for _, fileName := range filterYAMLfiles(fileNames) {
-		content, err := a.ws.ReadAddonsFile(a.appName, fileName)
+		content, err := a.ws.ReadAddonsFile(a.svcName, fileName)
 		if err != nil {
-			return "", fmt.Errorf("read addons file %s under application %s: %w", fileName, a.appName, err)
+			return "", fmt.Errorf("read addons file %s under service %s: %w", fileName, a.svcName, err)
 		}
 		trimmedContent := strings.TrimSpace(string(content))
 		switch nameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName)); nameWithoutExt {
@@ -82,12 +82,12 @@ func (a *Addons) Template() (string, error) {
 	}
 
 	content, err := a.parser.Parse(addonsTemplatePath, struct {
-		AppName    string
+		SvcName    string
 		Parameters []string
 		Resources  []string
 		Outputs    []string
 	}{
-		AppName:    a.appName,
+		SvcName:    a.svcName,
 		Parameters: strings.Split(strings.TrimSpace(addonFiles[paramsFileWithoutExt]), "\n"),
 		Resources:  strings.Split(strings.TrimSpace(addonFiles[resourcesFiles]), "\n"),
 		Outputs:    strings.Split(strings.TrimSpace(addonFiles[outputsFileWithoutExt]), "\n"),
