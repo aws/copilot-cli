@@ -132,7 +132,7 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	project, err := o.projectGetter.GetProject(o.ProjectName())
+	project, err := o.projectGetter.GetApplication(o.ProjectName())
 	if err != nil {
 		// Ensure the project actually exists before we do a deployment.
 		return err

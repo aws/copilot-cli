@@ -10,24 +10,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestErrNoSuchProject(t *testing.T) {
-	err := &ErrNoSuchProject{ProjectName: "chicken", AccountID: "12345", Region: "us-west-2"}
-	require.EqualError(t, err, "couldn't find a project named chicken in account 12345 and region us-west-2")
+func TestErrNoSuchApplication(t *testing.T) {
+	err := &ErrNoSuchApplication{ApplicationName: "chicken", AccountID: "12345", Region: "us-west-2"}
+	require.EqualError(t, err, "couldn't find an application named chicken in account 12345 and region us-west-2")
 }
 
-func TestErrNoSuchProject_Is(t *testing.T) {
-	err := &ErrNoSuchProject{ProjectName: "chicken", AccountID: "12345", Region: "us-west-2"}
+func TestErrNoSuchApplication_Is(t *testing.T) {
+	err := &ErrNoSuchApplication{ApplicationName: "chicken", AccountID: "12345", Region: "us-west-2"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchProject{ProjectName: "chicken", AccountID: "12345", Region: "us-west-2"},
+			otherError: &ErrNoSuchApplication{ApplicationName: "chicken", AccountID: "12345", Region: "us-west-2"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchProject{ProjectName: "rooster", AccountID: "12345", Region: "us-west-2"},
+			otherError: &ErrNoSuchApplication{ApplicationName: "rooster", AccountID: "12345", Region: "us-west-2"},
 		},
 		"errors are different type": {
 			wantedSame: false,
@@ -41,23 +41,23 @@ func TestErrNoSuchProject_Is(t *testing.T) {
 	}
 }
 func TestErrNoSuchEnvironment(t *testing.T) {
-	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"}
-	require.EqualError(t, err, "couldn't find environment test in the project chicken")
+	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ApplicationName: "chicken"}
+	require.EqualError(t, err, "couldn't find environment test in the application chicken")
 }
 
 func TestErrNoSuchEnvironment_Is(t *testing.T) {
-	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"}
+	err := &ErrNoSuchEnvironment{EnvironmentName: "test", ApplicationName: "chicken"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "chicken"},
+			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ApplicationName: "chicken"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ProjectName: "rooster"},
+			otherError: &ErrNoSuchEnvironment{EnvironmentName: "test", ApplicationName: "rooster"},
 		},
 		"errors are different type": {
 			wantedSame: false,
@@ -71,24 +71,24 @@ func TestErrNoSuchEnvironment_Is(t *testing.T) {
 	}
 }
 
-func TestErrNoSuchApplication(t *testing.T) {
-	err := &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"}
-	require.EqualError(t, err, "couldn't find application api in the project chicken")
+func TestErrNoSuchService(t *testing.T) {
+	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
+	require.EqualError(t, err, "couldn't find service api in the application chicken")
 }
 
-func TestErrNoSuchApplication_Is(t *testing.T) {
-	err := &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"}
+func TestErrNoSuchService_Is(t *testing.T) {
+	err := &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"}
 	testCases := map[string]struct {
 		wantedSame bool
 		otherError error
 	}{
 		"errors are same": {
 			wantedSame: true,
-			otherError: &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "chicken"},
+			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "chicken"},
 		},
 		"errors have different values": {
 			wantedSame: false,
-			otherError: &ErrNoSuchApplication{ApplicationName: "api", ProjectName: "rooster"},
+			otherError: &ErrNoSuchService{ServiceName: "api", ApplicationName: "rooster"},
 		},
 		"errors are different type": {
 			wantedSame: false,

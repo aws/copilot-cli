@@ -49,10 +49,10 @@ func TestAppShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 						Name: "my-project",
 					}, nil),
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
+					m.storeSvc.EXPECT().GetService("my-project", "my-app").Return(&archer.Application{
 						Name: "my-app",
 					}, nil),
 				)
@@ -65,7 +65,7 @@ func TestAppShow_Validate(t *testing.T) {
 			inputApplication: "my-app",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -76,10 +76,10 @@ func TestAppShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 						Name: "my-project",
 					}, nil),
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().GetService("my-project", "my-app").Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -150,7 +150,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -158,7 +158,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 					// askAppName
 					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},
 					}, nil),
@@ -177,7 +177,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -185,7 +185,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 					// askAppName
 					m.ws.EXPECT().AppNames().Return([]string{}, nil),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},
 					}, nil),
@@ -205,7 +205,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -228,7 +228,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{
 							Name: "my-app",
 						},
@@ -245,7 +245,7 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListApplications().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -257,7 +257,7 @@ func TestAppShow_Ask(t *testing.T) {
 			inputApp:     "",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+				m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
 			},
 
 			wantedProject: "my-project",
@@ -271,7 +271,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -290,7 +290,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -298,7 +298,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 					// askAskName
 					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error")),
+					m.storeSvc.EXPECT().ListServices("my-project").Return(nil, fmt.Errorf("some error")),
 				)
 			},
 
@@ -313,7 +313,7 @@ func TestAppShow_Ask(t *testing.T) {
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -321,7 +321,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 					// askAppName
 					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
+					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},
 					}, nil),

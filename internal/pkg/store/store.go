@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package store implements CRUD operations for project, environment, application and
-pipeline configuration. This configuration contains the archer projects
+Package store implements CRUD operations for application, environment, service and
+pipeline configuration. This configuration contains the Copilot applications
 a customer has, and the environments and pipelines associated with each
-project.
+application.
 */
 package store
 
@@ -20,37 +20,37 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
 
-// Parameter name formats for resources in a project. Projects are laid out in SSM
+// Parameter name formats for resources in an application. Applications are laid out in SSM
 // based on path - each parameter's key has a certain format, and you can have
-// hierarchies based on that format. Projects are at the root of the hierarchy.
-// Searching SSM for all parameters with the `rootProjectPath` key will give you
-// all the project keys, for example.
+// hierarchies based on that format. Applications are at the root of the hierarchy.
+// Searching SSM for all parameters with the `rootApplicationPath` key will give you
+// all the application keys, for example.
 
 // current schema Version for Projects
 const schemaVersion = "1.0"
 
 // schema formats supported in current schemaVersion. NOTE: May change to map in the future.
 const (
-	rootProjectPath  = "/ecs-cli-v2/"
-	fmtProjectPath   = "/ecs-cli-v2/%s"
-	rootEnvParamPath = "/ecs-cli-v2/%s/environments/"
-	fmtEnvParamPath  = "/ecs-cli-v2/%s/environments/%s" // path for an environment in a project
-	rootAppParamPath = "/ecs-cli-v2/%s/applications/"
-	fmtAppParamPath  = "/ecs-cli-v2/%s/applications/%s" // path for an application in a project
+	rootApplicationPath = "/copilot/applications/"
+	fmtApplicationPath  = "/copilot/applications/%s"
+	rootEnvParamPath    = "/copilot/applications/%s/environments/"
+	fmtEnvParamPath     = "/copilot/applications/%s/environments/%s" // path for an environment in an application
+	rootSvcParamPath    = "/copilot/applications/%s/components/"
+	fmtSvcParamPath     = "/copilot/applications/%s/components/%s" // path for a service in an application
 )
 
-type identityService interface {
+type identityGetter interface {
 	Get() (identity.Caller, error)
 }
 
-// Store is in charge of fetching and creating projects, environment and pipeline configuration in SSM.
+// Store is in charge of fetching and creating applications, environment, services and pipeline configuration in SSM.
 type Store struct {
-	idClient      identityService
+	idClient      identityGetter
 	ssmClient     ssmiface.SSMAPI
 	sessionRegion string
 }
 
-// New returns a Store allowing you to query or create Projects or Environments.
+// New returns a Store allowing you to query or create Applications, Environments, or Services.
 func New() (*Store, error) {
 	p := session.NewProvider()
 	sess, err := p.Default()

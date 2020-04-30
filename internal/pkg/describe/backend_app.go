@@ -32,7 +32,7 @@ func NewBackendAppDescriber(project, app string) (*BackendAppDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := svc.GetApplication(project, app)
+	meta, err := svc.GetService(project, app)
 	if err != nil {
 		return nil, err
 	}

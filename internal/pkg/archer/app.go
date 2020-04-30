@@ -20,22 +20,22 @@ type ApplicationStore interface {
 
 // ApplicationLister fetches and returns a list of application from an underlying project management store
 type ApplicationLister interface {
-	ListApplications(projectName string) ([]*Application, error)
+	ListServices(projectName string) ([]*Application, error)
 }
 
 // ApplicationGetter fetches and returns an application from an underlying project management store
 type ApplicationGetter interface {
-	GetApplication(projectName string, applicationName string) (*Application, error)
+	GetService(projectName string, applicationName string) (*Application, error)
 }
 
 // ApplicationCreator creates an application in the underlying project management store
 type ApplicationCreator interface {
-	CreateApplication(app *Application) error
+	CreateService(app *Application) error
 }
 
 // ApplicationDeleter deletes an application from the underlying project management store.
 type ApplicationDeleter interface {
-	DeleteApplication(projectName, appName string) error
+	DeleteService(projectName, appName string) error
 }
 
 const (

@@ -39,13 +39,13 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockEnvironmentStore {
 				envStore := mocks.NewMockEnvironmentStore(ctrl)
 				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, &store.ErrNoSuchEnvironment{
-					ProjectName:     testProjName,
+					ApplicationName: testProjName,
 					EnvironmentName: testEnvName,
 				})
 				return envStore
 			},
 			wantedError: &store.ErrNoSuchEnvironment{
-				ProjectName:     testProjName,
+				ApplicationName: testProjName,
 				EnvironmentName: testEnvName,
 			},
 		},

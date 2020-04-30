@@ -137,7 +137,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 				mockStore = mocks.NewMockprojectService(ctrl)
 
 				mockStore.EXPECT().
-					ListApplications(mockProjectName).
+					ListServices(mockProjectName).
 					Return(nil, mockError)
 			},
 			want: mockError,
@@ -147,7 +147,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 				mockStore = mocks.NewMockprojectService(ctrl)
 
 				mockStore.EXPECT().
-					ListApplications(mockProjectName).
+					ListServices(mockProjectName).
 					Return(nil, nil)
 			},
 			want: nil,
@@ -188,7 +188,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 				mockStore = mocks.NewMockprojectService(ctrl)
 
 				mockStore.EXPECT().
-					ListApplications(mockProjectName).
+					ListServices(mockProjectName).
 					Return(nil, mockError)
 			},
 			want: mockError,
@@ -198,7 +198,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 				mockStore = mocks.NewMockprojectService(ctrl)
 
 				mockStore.EXPECT().
-					ListApplications(mockProjectName).
+					ListServices(mockProjectName).
 					Return(nil, nil)
 			},
 			want: nil,
@@ -271,7 +271,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteProjectMocks) {
 				gomock.InOrder(
 					// deleteApps
-					mocks.store.EXPECT().ListApplications(mockProjectName).Return(mockApps, nil),
+					mocks.store.EXPECT().ListServices(mockProjectName).Return(mockApps, nil),
 					mocks.appDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
@@ -280,7 +280,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
 					// emptyS3bucket
-					mocks.store.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
 					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
@@ -296,7 +296,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// deleteProjectParams
 					mocks.spinner.EXPECT().Start(deleteProjectParamsStartMsg),
-					mocks.store.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.store.EXPECT().DeleteApplication(mockProjectName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectParamsStopMsg)),
 
 					// deleteLocalWorkspace
@@ -313,7 +313,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteProjectMocks) {
 				gomock.InOrder(
 					// deleteApps
-					mocks.store.EXPECT().ListApplications(mockProjectName).Return(mockApps, nil),
+					mocks.store.EXPECT().ListServices(mockProjectName).Return(mockApps, nil),
 					mocks.appDeleter.EXPECT().Execute().Return(nil),
 
 					// deleteEnvs
@@ -322,7 +322,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
 					// emptyS3bucket
-					mocks.store.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
 					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
@@ -338,7 +338,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// deleteProjectParams
 					mocks.spinner.EXPECT().Start(deleteProjectParamsStartMsg),
-					mocks.store.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.store.EXPECT().DeleteApplication(mockProjectName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectParamsStopMsg)),
 
 					// deleteLocalWorkspace

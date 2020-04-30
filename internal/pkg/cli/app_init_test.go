@@ -366,8 +366,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
+				mockAppStore.EXPECT().CreateService(gomock.Any()).
 					Do(func(app *archer.Application) {
 						require.Equal(t, &archer.Application{
 							Name:    "frontend",
@@ -378,7 +378,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					Return(nil)
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject("project").Return(&archer.Project{
+				mockProjGetter.EXPECT().GetApplication("project").Return(&archer.Project{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -412,10 +412,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject("project").Return(&archer.Project{
+				mockProjGetter.EXPECT().GetApplication("project").Return(&archer.Project{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -445,7 +445,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(nil, errors.New("some error"))
+				mockProjGetter.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
 
 				opts.ws = mockWriter
 				opts.appStore = mockAppStore
@@ -465,10 +465,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(&archer.Project{
+				mockProjGetter.EXPECT().GetApplication(gomock.Any()).Return(&archer.Project{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -500,12 +500,12 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
+				mockAppStore.EXPECT().CreateService(gomock.Any()).
 					Return(fmt.Errorf("oops"))
 
 				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(&archer.Project{}, nil)
+				mockProjGetter.EXPECT().GetApplication(gomock.Any()).Return(&archer.Project{}, nil)
 
 				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
 				mockProjDeployer.EXPECT().AddAppToProject(gomock.Any(), gomock.Any()).Return(nil)
@@ -572,7 +572,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
 				opts.appStore = mockAppStore
 			},
 		},
@@ -584,7 +584,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "frontend",
 						Type: manifest.LoadBalancedWebApplication,
@@ -601,7 +601,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "another-app",
 						Type: "backend",
@@ -618,7 +618,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			wantedPath:       "frontend",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
+				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "another-app",
 						Type: manifest.LoadBalancedWebApplication,

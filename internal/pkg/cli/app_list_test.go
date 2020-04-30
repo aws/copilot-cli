@@ -42,11 +42,11 @@ func TestAppList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockAppStore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
+					ListServices(gomock.Eq("coolproject")).
 					Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "lb-app"},
@@ -66,11 +66,11 @@ func TestAppList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockAppStore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
+					ListServices(gomock.Eq("coolproject")).
 					Return([]*archer.Application{
 						{Name: "my-app", Type: "Load Balanced Web App"},
 						{Name: "lb-app", Type: "Load Balanced Web App"},
@@ -91,12 +91,12 @@ func TestAppList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 
 				mockAppStore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
+					ListServices(gomock.Eq("coolproject")).
 					Times(0)
 			},
 		},
@@ -113,12 +113,12 @@ func TestAppList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 
 				mockAppStore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
+					ListServices(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 			},
 		},
@@ -137,11 +137,11 @@ func TestAppList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockAppStore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
+					ListServices(gomock.Eq("coolproject")).
 					Return([]*archer.Application{
 						{Name: "my-app", Type: "Load Balanced Web App"},
 						{Name: "lb-app", Type: "Load Balanced Web App"},
@@ -180,7 +180,7 @@ func TestAppList_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockProjectLister: func(m *mocks.MockProjectLister) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{Name: "my-project"},
 					&archer.Project{Name: "archer-project"},
 				}, nil)

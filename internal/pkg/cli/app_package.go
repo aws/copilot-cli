@@ -285,7 +285,7 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 		return nil, err
 	}
 
-	proj, err := o.store.GetProject(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, err
 	}

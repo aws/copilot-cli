@@ -43,7 +43,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject(mockProjectName).Return(&archer.Project{
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&archer.Project{
 						Name: "dinder",
 					}, nil),
 					mocks.pipelineSvc.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil),
@@ -56,7 +56,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			inPipelineName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject(mockProjectName).Return(nil, mockError),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(nil, mockError),
 				)
 			},
 			expectedErr: mockError,
@@ -66,7 +66,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			inPipelineName: "bad-pipeline",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetProject(mockProjectName).Return(&archer.Project{
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&archer.Project{
 						Name: "dinder",
 					}, nil),
 					mocks.pipelineSvc.EXPECT().GetPipeline("bad-pipeline").Return(nil, mockError),
@@ -189,7 +189,7 @@ stages:
 			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{{Name: "dinder"}}, nil),
+					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{{Name: "dinder"}}, nil),
 				)
 			},
 			expectedProject:  mockProjectName,
@@ -229,7 +229,7 @@ stages:
 			inProjectName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListProjects().Return(nil, mockError),
+					mocks.store.EXPECT().ListApplications().Return(nil, mockError),
 				)
 			},
 			expectedErr: fmt.Errorf("list projects: %w", mockError),
@@ -238,7 +238,7 @@ stages:
 			inProjectName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{}, nil),
+					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{}, nil),
 				)
 			},
 			expectedErr: fmt.Errorf("no project found: run %s please", color.HighlightCode("project init")),
@@ -247,7 +247,7 @@ stages:
 			inProjectName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListProjects().Return([]*archer.Project{
+					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "dinder"},
 						{Name: "badgoose"},
 					}, nil),

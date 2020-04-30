@@ -327,7 +327,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	proj, err := o.storeSvc.GetProject(o.ProjectName())
+	proj, err := o.storeSvc.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
 	}

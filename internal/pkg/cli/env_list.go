@@ -53,7 +53,7 @@ func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 }
 
 func (o *listEnvOpts) selectProject() (string, error) {
-	projs, err := o.projectLister.ListProjects()
+	projs, err := o.projectLister.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -90,7 +90,7 @@ func (o *listEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := o.projectGetter.GetProject(o.ProjectName()); err != nil {
+	if _, err := o.projectGetter.GetApplication(o.ProjectName()); err != nil {
 		return err
 	}
 

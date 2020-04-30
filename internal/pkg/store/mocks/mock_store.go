@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockidentityService is a mock of identityService interface
-type MockidentityService struct {
+// MockidentityGetter is a mock of identityGetter interface
+type MockidentityGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockidentityServiceMockRecorder
+	recorder *MockidentityGetterMockRecorder
 }
 
-// MockidentityServiceMockRecorder is the mock recorder for MockidentityService
-type MockidentityServiceMockRecorder struct {
-	mock *MockidentityService
+// MockidentityGetterMockRecorder is the mock recorder for MockidentityGetter
+type MockidentityGetterMockRecorder struct {
+	mock *MockidentityGetter
 }
 
-// NewMockidentityService creates a new mock instance
-func NewMockidentityService(ctrl *gomock.Controller) *MockidentityService {
-	mock := &MockidentityService{ctrl: ctrl}
-	mock.recorder = &MockidentityServiceMockRecorder{mock}
+// NewMockidentityGetter creates a new mock instance
+func NewMockidentityGetter(ctrl *gomock.Controller) *MockidentityGetter {
+	mock := &MockidentityGetter{ctrl: ctrl}
+	mock.recorder = &MockidentityGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockidentityService) EXPECT() *MockidentityServiceMockRecorder {
+func (m *MockidentityGetter) EXPECT() *MockidentityGetterMockRecorder {
 	return m.recorder
 }
 
 // Get mocks base method
-func (m *MockidentityService) Get() (identity.Caller, error) {
+func (m *MockidentityGetter) Get() (identity.Caller, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get")
 	ret0, _ := ret[0].(identity.Caller)
@@ -43,7 +43,7 @@ func (m *MockidentityService) Get() (identity.Caller, error) {
 }
 
 // Get indicates an expected call of Get
-func (mr *MockidentityServiceMockRecorder) Get() *gomock.Call {
+func (mr *MockidentityGetterMockRecorder) Get() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockidentityService)(nil).Get))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockidentityGetter)(nil).Get))
 }

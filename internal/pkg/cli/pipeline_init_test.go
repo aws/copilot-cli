@@ -332,7 +332,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},
@@ -369,7 +369,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},
@@ -419,7 +419,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(nil, errors.New("some error"))
+				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
 			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
 			expectedError:               errors.New("get project metadata badgoose: some error"),
@@ -439,7 +439,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},
@@ -468,7 +468,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},
@@ -504,7 +504,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},
@@ -540,7 +540,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+				m.EXPECT().GetApplication("badgoose").Return(&archer.Project{
 					Name: "badgoose",
 				}, nil)
 			},

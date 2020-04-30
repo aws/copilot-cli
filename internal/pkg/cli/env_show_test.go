@@ -7,13 +7,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+
+	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type showEnvMocks struct {
@@ -36,7 +38,7 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 						Name: "my-project",
 					}, nil),
 					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(&archer.Environment{
@@ -52,7 +54,7 @@ func TestEnvShow_Validate(t *testing.T) {
 			inputEnvironment: "my-env",
 
 			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -63,7 +65,7 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
 						Name: "my-project",
 					}, nil),
 					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(nil, errors.New("some error")),
@@ -138,7 +140,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -163,7 +165,7 @@ func TestEnvShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{
 							Name: "my-project",
 						},
@@ -198,7 +200,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			inputEnv:     "",
 
 			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().ListApplications().Return(nil, errors.New("some error"))
 			},
 
 			wantedProject: "my-project",
@@ -210,7 +212,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			inputEnv:     "",
 
 			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
+				m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
 			},
 
 			wantedProject: "my-project",
@@ -224,7 +226,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -243,7 +245,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -263,7 +265,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),

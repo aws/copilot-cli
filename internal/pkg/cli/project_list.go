@@ -20,7 +20,7 @@ type listProjectOpts struct {
 
 // Execute lists the existing projects to the prompt.
 func (o *listProjectOpts) Execute() error {
-	projects, err := o.store.ListProjects()
+	projects, err := o.store.ListApplications()
 	if err != nil {
 		return err
 	}

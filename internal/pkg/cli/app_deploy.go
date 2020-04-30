@@ -130,13 +130,13 @@ func (o *appDeployOpts) Execute() error {
 	}
 	o.targetEnvironment = env
 
-	proj, err := o.projectService.GetProject(o.ProjectName())
+	proj, err := o.projectService.GetApplication(o.ProjectName())
 	if err != nil {
 		return err
 	}
 	o.targetProject = proj
 
-	app, err := o.projectService.GetApplication(o.ProjectName(), o.AppName)
+	app, err := o.projectService.GetService(o.ProjectName(), o.AppName)
 	if err != nil {
 		return fmt.Errorf("get application metadata: %w", err)
 	}

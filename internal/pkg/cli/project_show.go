@@ -5,8 +5,9 @@ package cli
 
 import (
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"io"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -43,7 +44,7 @@ func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showProjectOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeSvc.GetProject(o.ProjectName())
+		_, err := o.storeSvc.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -81,7 +82,7 @@ func (o *showProjectOpts) Execute() error {
 }
 
 func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
-	proj, err := o.storeSvc.GetProject(o.ProjectName())
+	proj, err := o.storeSvc.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
@@ -89,7 +90,7 @@ func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list environment: %w", err)
 	}
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	apps, err := o.storeSvc.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
@@ -142,7 +143,7 @@ func (o *showProjectOpts) askProject() error {
 }
 
 func (o *showProjectOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListProjects()
+	projs, err := o.storeSvc.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list project: %w", err)
 	}

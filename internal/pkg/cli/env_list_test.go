@@ -41,7 +41,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockEnvStore.
 					EXPECT().
@@ -65,7 +65,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockEnvStore.
 					EXPECT().
@@ -90,7 +90,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 
 				mockEnvStore.
@@ -112,7 +112,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 
 				mockEnvStore.
@@ -133,7 +133,7 @@ func TestEnvList_Execute(t *testing.T) {
 			},
 			mocking: func() {
 				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
+					GetApplication(gomock.Eq("coolproject")).
 					Return(&archer.Project{}, nil)
 				mockEnvStore.
 					EXPECT().
@@ -174,7 +174,7 @@ func TestEnvList_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockProjectLister: func(m *mocks.MockProjectLister) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
+				m.EXPECT().ListApplications().Return([]*archer.Project{
 					&archer.Project{Name: "my-project"},
 					&archer.Project{Name: "archer-project"},
 				}, nil)

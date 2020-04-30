@@ -48,7 +48,7 @@ func NewAppDescriber(project, env, app string) (*AppDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := svc.GetApplication(project, app)
+	meta, err := svc.GetService(project, app)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s: %w", app, err)
 	}

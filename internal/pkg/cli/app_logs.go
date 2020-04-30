@@ -79,7 +79,7 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appLogsOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeSvc.GetProject(o.ProjectName())
+		_, err := o.storeSvc.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.ProjectName()))
 		}
 	} else {
-		app, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName)
+		app, err := o.storeSvc.GetService(o.ProjectName(), o.appName)
 		if err != nil {
 			return fmt.Errorf("get application: %w", err)
 		}
@@ -282,7 +282,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 }
 
 func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
-	projs, err := o.storeSvc.ListProjects()
+	projs, err := o.storeSvc.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -294,7 +294,7 @@ func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
 }
 
 func (o *appLogsOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
+	apps, err := o.storeSvc.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}
