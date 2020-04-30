@@ -37,7 +37,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			},
 			inProjectName: "badgoose",
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				mockEnv := &archer.Environment{
@@ -219,7 +219,7 @@ stages:
 			inRegion:      region,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -251,7 +251,7 @@ stages:
 			inRegion:      region,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -285,7 +285,7 @@ stages:
 			inRegion:      region,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -319,7 +319,7 @@ stages:
 			inRegion:      region,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -402,7 +402,7 @@ stages:
 			inProjectName: projectName,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return(nil, errors.New("some error")).Times(1)
+				m.EXPECT().ServiceNames().Return(nil, errors.New("some error")).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
 			mockProgress: func(m *climocks.Mockprogress) {
@@ -422,7 +422,7 @@ stages:
 			inProjectName: projectName,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -446,7 +446,7 @@ stages:
 			inProjectName: projectName,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -471,7 +471,7 @@ stages:
 			inProjectName: projectName,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
@@ -503,7 +503,7 @@ stages:
 			inProjectName: projectName,
 			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
 			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)

@@ -72,7 +72,7 @@ func loadProjectName() (string, error) {
 		// the project flag be set.
 		return "", fmt.Errorf("reading from workspace: %w", err)
 	}
-	return summary.ProjectName, nil
+	return summary.Application, nil
 }
 
 type errReservedArg struct {

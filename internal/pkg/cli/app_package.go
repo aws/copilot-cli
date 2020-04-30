@@ -125,7 +125,7 @@ func (o *packageAppOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 	if o.AppName != "" {
-		names, err := o.ws.AppNames()
+		names, err := o.ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("list applications in workspace: %w", err)
 		}
@@ -202,7 +202,7 @@ func (o *packageAppOpts) askAppName() error {
 		return nil
 	}
 
-	appNames, err := o.ws.AppNames()
+	appNames, err := o.ws.ServiceNames()
 	if err != nil {
 		return fmt.Errorf("list applications in workspace: %w", err)
 	}
@@ -276,7 +276,7 @@ type appCfnTemplates struct {
 
 // getAppTemplates returns the CloudFormation stack's template and its parameters for the application.
 func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTemplates, error) {
-	raw, err := o.ws.ReadAppManifest(o.AppName)
+	raw, err := o.ws.ReadServiceManifest(o.AppName)
 	if err != nil {
 		return nil, err
 	}

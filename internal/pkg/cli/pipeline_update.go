@@ -97,7 +97,7 @@ func (o *updatePipelineOpts) Validate() error {
 
 func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineStage) ([]deploy.PipelineStage, error) {
 	var stages []deploy.PipelineStage
-	appNames, err := o.ws.AppNames()
+	appNames, err := o.ws.ServiceNames()
 	if err != nil {
 		return nil, err
 	}

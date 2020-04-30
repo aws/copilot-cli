@@ -317,7 +317,7 @@ func (o *deleteAppOpts) deleteSSMParam() error {
 }
 
 func (o *deleteAppOpts) deleteWorkspaceFile() error {
-	if err := o.workspaceService.DeleteApp(o.AppName); err != nil {
+	if err := o.workspaceService.DeleteService(o.AppName); err != nil {
 		return fmt.Errorf("delete application %s directory: %w", o.AppName, err)
 	}
 

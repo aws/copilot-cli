@@ -98,20 +98,20 @@ func (o *initProjectOpts) Ask() error {
 		if o.ProjectName == "" {
 			log.Infoln(fmt.Sprintf(
 				"Looks like you are using a workspace that's registered to project %s.\nWe'll use that as your project.",
-				color.HighlightResource(summary.ProjectName)))
-			o.ProjectName = summary.ProjectName
+				color.HighlightResource(summary.Application)))
+			o.ProjectName = summary.Application
 			return nil
 		}
-		if o.ProjectName != summary.ProjectName {
+		if o.ProjectName != summary.Application {
 			log.Errorf(`Workspace is already registered with project %s instead of %s.
 			If you'd like to delete the project locally, you can remove the %s directory.
 			If you'd like to delete project and all of its resources, run %s.
 `,
-				summary.ProjectName,
+				summary.Application,
 				o.ProjectName,
-				workspace.ProjectDirectoryName,
+				workspace.CopilotDirName,
 				color.HighlightCode("ecs-preview project delete"))
-			return fmt.Errorf("workspace already registered with %s", summary.ProjectName)
+			return fmt.Errorf("workspace already registered with %s", summary.Application)
 		}
 	}
 
@@ -271,7 +271,7 @@ A project is a collection of containerized applications (or micro-services) that
 			if err := opts.Execute(); err != nil {
 				return err
 			}
-			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.ProjectDirectoryName), color.HighlightUserInput(opts.ProjectName))
+			log.Successf("The directory %s will hold application manifests for project %s.\n", color.HighlightResource(workspace.CopilotDirName), color.HighlightUserInput(opts.ProjectName))
 			log.Infoln()
 			log.Infoln("Recommended follow-up actions:")
 			for _, followUp := range opts.RecommendedActions() {

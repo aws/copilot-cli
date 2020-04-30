@@ -134,7 +134,7 @@ func (opts *listAppOpts) Execute() error {
 	opts.applications = apps
 
 	if opts.ShouldShowLocalApps {
-		localAppNames, err := opts.ws.AppNames()
+		localAppNames, err := opts.ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("failed to get local app manifests: %w", err)
 		}

@@ -109,11 +109,11 @@ type workspaceDeleter interface {
 }
 
 type wsAppManifestReader interface {
-	ReadAppManifest(appName string) ([]byte, error)
+	ReadServiceManifest(appName string) ([]byte, error)
 }
 
 type wsAppManifestWriter interface {
-	WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
+	WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -126,11 +126,11 @@ type wsPipelineWriter interface {
 }
 
 type wsAppDeleter interface {
-	DeleteApp(name string) error
+	DeleteService(name string) error
 }
 
 type wsAppReader interface {
-	AppNames() ([]string, error)
+	ServiceNames() ([]string, error)
 	wsAppManifestReader
 }
 
@@ -140,7 +140,7 @@ type wsPipelineDeleter interface {
 }
 
 type wsPipelineReader interface {
-	AppNames() ([]string, error)
+	ServiceNames() ([]string, error)
 	wsPipelineManifestReader
 }
 
@@ -151,10 +151,6 @@ type wsProjectManager interface {
 
 type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
-}
-
-type port interface {
-	Set(number int) error
 }
 
 type bucketEmptier interface {

@@ -213,7 +213,7 @@ func (o *showAppOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
-	localAppNames, err := o.ws.AppNames()
+	localAppNames, err := o.ws.ServiceNames()
 	if err != nil {
 		return nil, err
 	}
