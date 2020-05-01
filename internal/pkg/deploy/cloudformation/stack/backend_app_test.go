@@ -60,7 +60,7 @@ func TestBackendApp_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
 
 				m := mocks.NewMockbackendAppReadParser(ctrl)
-				m.EXPECT().ParseBackendApp(gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				app.parser = m
 				app.addons = mockTemplater{
 					tpl: `Outputs:
@@ -73,7 +73,7 @@ func TestBackendApp_Template(t *testing.T) {
 		"render template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
 				m := mocks.NewMockbackendAppReadParser(ctrl)
-				m.EXPECT().ParseBackendApp(template.AppOpts{
+				m.EXPECT().ParseBackendService(template.ServiceOpts{
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),
 						Interval:    aws.Int64(5),
@@ -81,7 +81,7 @@ func TestBackendApp_Template(t *testing.T) {
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
-					NestedStack: &template.AppNestedStackOpts{
+					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addons.StackName,
 						VariableOutputs: []string{"Hello"},
 					},

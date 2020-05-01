@@ -21,7 +21,7 @@ const (
 
 type backendAppReadParser interface {
 	template.ReadParser
-	ParseBackendApp(template.AppOpts) (*template.Content, error)
+	ParseBackendService(template.ServiceOpts) (*template.Content, error)
 }
 
 // BackendApp represents the configuration needed to create a CloudFormation stack from a backend application manifest.
@@ -62,7 +62,7 @@ func (a *BackendApp) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := a.parser.ParseBackendApp(template.AppOpts{
+	content, err := a.parser.ParseBackendService(template.ServiceOpts{
 		Variables:   a.manifest.Variables,
 		Secrets:     a.manifest.Secrets,
 		NestedStack: outputs,

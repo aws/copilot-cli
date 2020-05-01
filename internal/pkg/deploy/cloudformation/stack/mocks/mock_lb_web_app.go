@@ -68,17 +68,17 @@ func (mr *MockloadBalancedWebAppReadParserMockRecorder) Parse(path, data interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockloadBalancedWebAppReadParser)(nil).Parse), varargs...)
 }
 
-// ParseLoadBalancedWebApp mocks base method
-func (m *MockloadBalancedWebAppReadParser) ParseLoadBalancedWebApp(arg0 template.AppOpts) (*template.Content, error) {
+// ParseLoadBalancedWebService mocks base method
+func (m *MockloadBalancedWebAppReadParser) ParseLoadBalancedWebService(arg0 template.ServiceOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseLoadBalancedWebApp", arg0)
+	ret := m.ctrl.Call(m, "ParseLoadBalancedWebService", arg0)
 	ret0, _ := ret[0].(*template.Content)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseLoadBalancedWebApp indicates an expected call of ParseLoadBalancedWebApp
-func (mr *MockloadBalancedWebAppReadParserMockRecorder) ParseLoadBalancedWebApp(arg0 interface{}) *gomock.Call {
+// ParseLoadBalancedWebService indicates an expected call of ParseLoadBalancedWebService
+func (mr *MockloadBalancedWebAppReadParserMockRecorder) ParseLoadBalancedWebService(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseLoadBalancedWebApp", reflect.TypeOf((*MockloadBalancedWebAppReadParser)(nil).ParseLoadBalancedWebApp), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseLoadBalancedWebService", reflect.TypeOf((*MockloadBalancedWebAppReadParser)(nil).ParseLoadBalancedWebService), arg0)
 }

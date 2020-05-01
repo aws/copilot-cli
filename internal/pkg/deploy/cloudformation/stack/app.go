@@ -134,7 +134,7 @@ func (a *app) templateConfiguration(tc templateConfigurer) (string, error) {
 	return doc.String(), nil
 }
 
-func (a *app) addonsOutputs() (*template.AppNestedStackOpts, error) {
+func (a *app) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 	stack, err := a.addons.Template()
 	if err != nil {
 		var noAddonsErr *addons.ErrDirNotExist
@@ -148,7 +148,7 @@ func (a *app) addonsOutputs() (*template.AppNestedStackOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get addons outputs for application %s: %w", a.name, err)
 	}
-	return &template.AppNestedStackOpts{
+	return &template.ServiceNestedStackOpts{
 		StackName:       addons.StackName,
 		VariableOutputs: envVarOutputNames(out),
 		SecretOutputs:   secretOutputNames(out),

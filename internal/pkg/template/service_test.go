@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTemplate_ParseAppTemplate(t *testing.T) {
+func TestTemplate_ParseSvc(t *testing.T) {
 	const (
-		testAppName = "backend-app"
+		testSvcName = "backend"
 	)
 	testCases := map[string]struct {
 		mockDependencies func(t *Template)
@@ -25,18 +25,18 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
 			mockDependencies: func(t *Template) {
 				mockBox := packd.NewMemoryBox()
 				var baseContent string
-				for _, name := range commonCFTemplateNames {
+				for _, name := range commonServiceCFTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
-				mockBox.AddString("applications/backend-app/cf.yml", baseContent)
-				mockBox.AddString("applications/common/cf/loggroup.yml", "loggroup")
-				mockBox.AddString("applications/common/cf/envvars.yml", "envvars")
-				mockBox.AddString("applications/common/cf/executionrole.yml", "executionrole")
-				mockBox.AddString("applications/common/cf/taskrole.yml", "taskrole")
-				mockBox.AddString("applications/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
-				mockBox.AddString("applications/common/cf/service-base-properties.yml", "service-base-properties")
-				mockBox.AddString("applications/common/cf/servicediscovery.yml", "servicediscovery")
-				mockBox.AddString("applications/common/cf/addons.yml", "addons")
+				mockBox.AddString("services/backend/cf.yml", baseContent)
+				mockBox.AddString("services/common/cf/loggroup.yml", "loggroup")
+				mockBox.AddString("services/common/cf/envvars.yml", "envvars")
+				mockBox.AddString("services/common/cf/executionrole.yml", "executionrole")
+				mockBox.AddString("services/common/cf/taskrole.yml", "taskrole")
+				mockBox.AddString("services/common/cf/fargate-taskdef-base-properties.yml", "fargate-taskdef-base-properties")
+				mockBox.AddString("services/common/cf/service-base-properties.yml", "service-base-properties")
+				mockBox.AddString("services/common/cf/servicediscovery.yml", "servicediscovery")
+				mockBox.AddString("services/common/cf/addons.yml", "addons")
 
 				t.box = mockBox
 			},
@@ -59,7 +59,7 @@ func TestTemplate_ParseAppTemplate(t *testing.T) {
 			tc.mockDependencies(tpl)
 
 			// WHEN
-			c, err := tpl.ParseApp(testAppName, nil)
+			c, err := tpl.parseSvc(testSvcName, nil)
 
 			if tc.wantedErr != nil {
 				require.Contains(t, err.Error(), tc.wantedErr.Error())
@@ -98,15 +98,15 @@ func TestToSnakeCase(t *testing.T) {
 
 func TestHasSecrets(t *testing.T) {
 	testCases := map[string]struct {
-		in     AppOpts
+		in     ServiceOpts
 		wanted bool
 	}{
 		"no secrets": {
-			in:     AppOpts{},
+			in:     ServiceOpts{},
 			wanted: false,
 		},
-		"app has secrets": {
-			in: AppOpts{
+		"service has secrets": {
+			in: ServiceOpts{
 				Secrets: map[string]string{
 					"hello": "world",
 				},
@@ -114,8 +114,8 @@ func TestHasSecrets(t *testing.T) {
 			wanted: true,
 		},
 		"nested has secrets": {
-			in: AppOpts{
-				NestedStack: &AppNestedStackOpts{
+			in: ServiceOpts{
+				NestedStack: &ServiceNestedStackOpts{
 					SecretOutputs: []string{"MySecretArn"},
 				},
 			},
