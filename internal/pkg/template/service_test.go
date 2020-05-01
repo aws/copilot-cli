@@ -105,7 +105,7 @@ func TestHasSecrets(t *testing.T) {
 			in:     ServiceOpts{},
 			wanted: false,
 		},
-		"app has secrets": {
+		"service has secrets": {
 			in: ServiceOpts{
 				Secrets: map[string]string{
 					"hello": "world",
