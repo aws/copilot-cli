@@ -2,15 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-Package store implements CRUD operations for application, environment, service and
+Package config implements CRUD operations for application, environment, service and
 pipeline configuration. This configuration contains the Copilot applications
 a customer has, and the environments and pipelines associated with each
 application.
-
-// Deprecated: This functionality has been moved to the config package.
-//
 */
-package store
+package config
 
 import (
 	"encoding/json"
@@ -29,7 +26,7 @@ import (
 // Searching SSM for all parameters with the `rootApplicationPath` key will give you
 // all the application keys, for example.
 
-// current schema Version for Projects
+// current schema Version for Apps.
 const schemaVersion = "1.0"
 
 // schema formats supported in current schemaVersion. NOTE: May change to map in the future.
@@ -53,8 +50,8 @@ type Store struct {
 	sessionRegion string
 }
 
-// New returns a Store allowing you to query or create Applications, Environments, or Services.
-func New() (*Store, error) {
+// NewStore returns a new store, allowing you to query or create Applications, Environments, and Services.
+func NewStore() (*Store, error) {
 	p := session.NewProvider()
 	sess, err := p.Default()
 
