@@ -34,7 +34,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 	}{
 		"invalid workspace": {
 			setupMocks: func() {
-				mockWorkspace.EXPECT().AppNames().Times(0)
+				mockWorkspace.EXPECT().ServiceNames().Times(0)
 				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
@@ -43,7 +43,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().AppNames().Return(nil, errors.New("some error"))
+				mockWorkspace.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -53,7 +53,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			setupMocks: func() {
-				mockWorkspace.EXPECT().AppNames().Return([]string{"backend"}, nil)
+				mockWorkspace.EXPECT().ServiceNames().Return([]string{"backend"}, nil)
 				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 
@@ -64,7 +64,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			inEnvName:     "test",
 
 			setupMocks: func() {
-				mockWorkspace.EXPECT().AppNames().Times(0)
+				mockWorkspace.EXPECT().ServiceNames().Times(0)
 				mockProjectService.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",
@@ -130,7 +130,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 	}{
 		"wrap list apps error": {
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
+				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -144,7 +144,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		},
 		"empty workspace error": {
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{}, nil)
+				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -159,7 +159,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"wrap list envs error": {
 			inAppName: "frontend",
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Times(0)
+				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, errors.New("some ssm error"))
@@ -175,7 +175,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"empty environments error": {
 			inAppName: "frontend",
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Times(0)
+				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, nil)
@@ -190,7 +190,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		},
 		"prompt for all options": {
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
@@ -220,7 +220,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend", "backend"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -239,7 +239,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Times(0)
+				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
@@ -266,7 +266,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inTag:     "v1.0.0",
 
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Times(0)
+				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -282,7 +282,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		},
 		"don't prompt if only one app or one env": {
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
@@ -307,7 +307,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inAppName: "frontend",
 			inEnvName: "test",
 			expectWS: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Times(0)
+				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
@@ -414,7 +414,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 
 				mockWs := climocks.NewMockwsAppReader(ctrl)
 				mockWs.EXPECT().
-					ReadAppManifest("api").
+					ReadServiceManifest("api").
 					Return([]byte(`name: api
 type: Load Balanced Web App
 image:

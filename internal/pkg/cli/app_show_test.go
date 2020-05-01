@@ -157,7 +157,7 @@ func TestAppShow_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askAppName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},
@@ -184,7 +184,7 @@ func TestAppShow_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askAppName
-					m.ws.EXPECT().AppNames().Return([]string{}, nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{}, nil),
 					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},
@@ -212,7 +212,7 @@ func TestAppShow_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askAppName
-					m.ws.EXPECT().AppNames().Return([]string{"my-app", "archer-app"}, nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"my-app", "archer-app"}, nil),
 					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
 				)
 			},
@@ -227,7 +227,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				gomock.InOrder(
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{
 							Name: "my-app",
@@ -297,7 +297,7 @@ func TestAppShow_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askAskName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-project").Return(nil, fmt.Errorf("some error")),
 				)
 			},
@@ -320,7 +320,7 @@ func TestAppShow_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askAppName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
+					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
 						{Name: "my-app"},
 						{Name: "archer-app"},

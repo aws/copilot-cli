@@ -363,7 +363,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
@@ -409,7 +409,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
@@ -462,7 +462,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
@@ -497,7 +497,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
 				mockAppStore := mocks.NewMockApplicationStore(ctrl)
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{}, nil)
