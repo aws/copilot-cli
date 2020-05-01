@@ -95,7 +95,7 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 	opts.stackSerializer = func(mft interface{}, env *archer.Environment, proj *archer.Project, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
 		switch v := mft.(type) {
-		case *manifest.LoadBalancedWebApp:
+		case *manifest.LoadBalancedWebSvc:
 			if proj.RequiresDNSDelegation() {
 				serializer, err = stack.NewHTTPSLoadBalancedWebApp(v, env.Name, proj.Name, rc)
 				if err != nil {
@@ -106,7 +106,7 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 			if err != nil {
 				return nil, fmt.Errorf("init load balanced web app stack serializer: %w", err)
 			}
-		case *manifest.BackendApp:
+		case *manifest.BackendSvc:
 			serializer, err = stack.NewBackendApp(v, env.Name, proj.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init backend app stack serializer: %w", err)
@@ -280,7 +280,7 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	mft, err := manifest.UnmarshalApp(raw)
+	mft, err := manifest.UnmarshalSvc(raw)
 	if err != nil {
 		return nil, err
 	}

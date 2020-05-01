@@ -64,13 +64,13 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 			return err
 		}
 		switch app.Type {
-		case manifest.LoadBalancedWebApplication:
+		case manifest.LoadBalancedWebService:
 			if enableResources {
 				d, err = describe.NewWebAppDescriberWithResources(opts.ProjectName(), opts.appName)
 			} else {
 				d, err = describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
 			}
-		case manifest.BackendApplication:
+		case manifest.BackendService:
 			if enableResources {
 				d, err = describe.NewBackendAppDescriberWithResources(opts.ProjectName(), opts.appName)
 			} else {

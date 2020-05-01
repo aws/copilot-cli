@@ -12,32 +12,32 @@ import (
 )
 
 const (
-	// LoadBalancedWebApplication is a web application with a load balancer and Fargate as compute.
-	LoadBalancedWebApplication = "Load Balanced Web App"
-	// BackendApplication is a service that cannot be accessed from the internet but can be reached from other services.
-	BackendApplication = "Backend App"
+	// LoadBalancedWebService is a web service with a load balancer and Fargate as compute.
+	LoadBalancedWebService = "Load Balanced Web Svc"
+	// BackendService is a service that cannot be accessed from the internet but can be reached from other services.
+	BackendService = "Backend Svc"
 )
 
-// AppTypes are the supported manifest types.
-var AppTypes = []string{
-	LoadBalancedWebApplication,
-	BackendApplication,
+// SvcTypes are the supported service manifest types.
+var SvcTypes = []string{
+	LoadBalancedWebService,
+	BackendService,
 }
 
-// App holds the basic data that every application manifest file needs to have.
-type App struct {
+// Svc holds the basic data that every service manifest file needs to have.
+type Svc struct {
 	Name string `yaml:"name"`
 	Type string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// AppImage represents the application's container image.
-type AppImage struct {
+// SvcImage represents the service's container image.
+type SvcImage struct {
 	Build string `yaml:"build"` // Path to the Dockerfile.
 }
 
-// AppImageWithPort represents a container image with an exposed port.
-type AppImageWithPort struct {
-	AppImage `yaml:",inline"`
+// SvcImageWithPort represents a container image with an exposed port.
+type SvcImageWithPort struct {
+	SvcImage `yaml:",inline"`
 	Port     uint16 `yaml:"port"`
 }
 
@@ -88,32 +88,32 @@ func (tc TaskConfig) deepcopy() TaskConfig {
 	}
 }
 
-// AppProps contains properties for creating a new manifest.
-type AppProps struct {
-	AppName    string
+// SvcProps contains properties for creating a new service manifest.
+type SvcProps struct {
+	SvcName    string
 	Dockerfile string
 }
 
-// UnmarshalApp deserializes the YAML input stream into a application manifest object.
+// UnmarshalSvc deserializes the YAML input stream into a service manifest object.
 // If an error occurs during deserialization, then returns the error.
-// If the application type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalApp(in []byte) (interface{}, error) {
-	am := App{}
+// If the service type in the manifest is invalid, then returns an ErrInvalidManifestType.
+func UnmarshalSvc(in []byte) (interface{}, error) {
+	am := Svc{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
-		return nil, fmt.Errorf("unmarshal to application manifest: %w", err)
+		return nil, fmt.Errorf("unmarshal to service manifest: %w", err)
 	}
 
 	switch am.Type {
-	case LoadBalancedWebApplication:
-		m := newDefaultLoadBalancedWebApp()
+	case LoadBalancedWebService:
+		m := newDefaultLoadBalancedWebSvc()
 		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to load balanced web application: %w", err)
+			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
 		}
 		return m, nil
-	case BackendApplication:
-		m := newDefaultBackendApp()
+	case BackendService:
+		m := newDefaultBackendSvc()
 		if err := yaml.Unmarshal(in, m); err != nil {
-			return nil, fmt.Errorf("unmarshal to backend application: %w", err)
+			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
 		if m.Image.HealthCheck != nil {
 			// Make sure that unset fields in the healthcheck gets a default value.
@@ -121,7 +121,7 @@ func UnmarshalApp(in []byte) (interface{}, error) {
 		}
 		return m, nil
 	default:
-		return nil, &ErrInvalidAppManifestType{Type: am.Type}
+		return nil, &ErrInvalidSvcManifestType{Type: am.Type}
 	}
 }
 

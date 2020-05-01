@@ -353,7 +353,7 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
 	}
 
-	app, err := manifest.UnmarshalApp(manifestBytes)
+	app, err := manifest.UnmarshalSvc(manifestBytes)
 	if err != nil {
 		return "", fmt.Errorf("unmarshal app manifest: %w", err)
 	}
@@ -396,7 +396,7 @@ func (o *appDeployOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read app %s manifest from workspace: %w", o.AppName, err)
 	}
-	mft, err := manifest.UnmarshalApp(raw)
+	mft, err := manifest.UnmarshalSvc(raw)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal app %s manifest: %w", o.AppName, err)
 	}
@@ -435,13 +435,13 @@ func (o *appDeployOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	}
 	var conf cloudformation.StackConfiguration
 	switch t := mft.(type) {
-	case *manifest.LoadBalancedWebApp:
+	case *manifest.LoadBalancedWebSvc:
 		if o.targetProject.RequiresDNSDelegation() {
 			conf, err = stack.NewHTTPSLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 		} else {
 			conf, err = stack.NewLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 		}
-	case *manifest.BackendApp:
+	case *manifest.BackendSvc:
 		conf, err = stack.NewBackendApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
@@ -478,9 +478,9 @@ func (o *appDeployOpts) showAppURI() error {
 	var appDescriber identifier
 	var err error
 	switch o.targetApplication.Type {
-	case manifest.LoadBalancedWebApplication:
+	case manifest.LoadBalancedWebService:
 		appDescriber, err = describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
-	case manifest.BackendApplication:
+	case manifest.BackendService:
 		appDescriber, err = describe.NewBackendAppDescriber(o.ProjectName(), o.AppName)
 	default:
 		err = errors.New("unexpected application type")
@@ -494,7 +494,7 @@ func (o *appDeployOpts) showAppURI() error {
 		return fmt.Errorf("get uri for environment %s: %w", o.targetEnvironment.Name, err)
 	}
 	switch o.targetApplication.Type {
-	case manifest.BackendApplication:
+	case manifest.BackendService:
 		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
 	default:
 		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))

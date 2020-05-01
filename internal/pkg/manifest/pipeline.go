@@ -49,7 +49,7 @@ type GitHubProperties struct {
 	// use tag from https://godoc.org/github.com/fatih/structs#example-Map--Tags
 	// to specify the name of the field in the output properties
 
-	// An example for OwnerAndRepository would be: "aws/amazon-ecs-cli-v2"
+	// An example for OwnerAndRepository would be: "aws/copilot"
 	OwnerAndRepository    string `structs:"repository" yaml:"repository"`
 	Branch                string `structs:"branch" yaml:"branch"`
 	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret` // TODO fix naming

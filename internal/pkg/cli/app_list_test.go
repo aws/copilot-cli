@@ -72,11 +72,11 @@ func TestAppList_Execute(t *testing.T) {
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return([]*archer.Application{
-						{Name: "my-app", Type: "Load Balanced Web App"},
-						{Name: "lb-app", Type: "Load Balanced Web App"},
+						{Name: "my-app", Type: "Load Balanced Web Svc"},
+						{Name: "lb-app", Type: "Load Balanced Web Svc"},
 					}, nil)
 			},
-			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\nlb-app              Load Balanced Web App\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web Svc\nlb-app              Load Balanced Web Svc\n",
 		},
 		"with invalid project name": {
 			expectedErr: mockError,
@@ -143,13 +143,13 @@ func TestAppList_Execute(t *testing.T) {
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return([]*archer.Application{
-						{Name: "my-app", Type: "Load Balanced Web App"},
-						{Name: "lb-app", Type: "Load Balanced Web App"},
+						{Name: "my-app", Type: "Load Balanced Web Svc"},
+						{Name: "lb-app", Type: "Load Balanced Web Svc"},
 					}, nil)
 				mockWorkspace.EXPECT().ServiceNames().
 					Return([]string{"my-app"}, nil).Times(1)
 			},
-			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\n",
+			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web Svc\n",
 		},
 	}
 

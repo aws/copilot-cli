@@ -284,7 +284,7 @@ func TestAppDeployOpts_getAppDockerfilePath(t *testing.T) {
 
 	mockError := errors.New("mockError")
 	mockManifest := []byte(`name: appA
-type: 'Load Balanced Web App'
+type: 'Load Balanced Web Svc'
 image:
   build: appA/Dockerfile
 `)

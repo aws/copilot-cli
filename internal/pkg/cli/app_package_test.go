@@ -416,7 +416,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				mockWs.EXPECT().
 					ReadServiceManifest("api").
 					Return([]byte(`name: api
-type: Load Balanced Web App
+type: Load Balanced Web Svc
 image:
   build: ./Dockerfile
   port: 80

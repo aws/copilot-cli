@@ -8,25 +8,25 @@ import (
 )
 
 const (
-	lbWebAppManifestPath = "services/lb-web/manifest.yml"
+	lbWebSvcManifestPath = "services/lb-web/manifest.yml"
 
 	// LogRetentionInDays is the default log retention time in days.
 	LogRetentionInDays = 30
 )
 
-// LoadBalancedWebApp holds the configuration to build a container image with an exposed port that receives
+// LoadBalancedWebSvc holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
-type LoadBalancedWebApp struct {
-	App                      `yaml:",inline"`
-	Image                    AppImageWithPort `yaml:",flow"`
-	LoadBalancedWebAppConfig `yaml:",inline"`
-	Environments             map[string]LoadBalancedWebAppConfig `yaml:",flow"` // Fields to override per environment.
+type LoadBalancedWebSvc struct {
+	Svc                      `yaml:",inline"`
+	Image                    SvcImageWithPort `yaml:",flow"`
+	LoadBalancedWebSvcConfig `yaml:",inline"`
+	Environments             map[string]LoadBalancedWebSvcConfig `yaml:",flow"` // Fields to override per environment.
 
 	parser template.Parser
 }
 
-// LoadBalancedWebAppConfig represents a load balanced web application with AWS Fargate as compute.
-type LoadBalancedWebAppConfig struct {
+// LoadBalancedWebSvcConfig represents a load balanced web service with AWS Fargate as compute.
+type LoadBalancedWebSvcConfig struct {
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
 	LogsConfig  `yaml:",flow"`
@@ -53,38 +53,38 @@ func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
 	return r
 }
 
-// LoadBalancedWebAppProps contains properties for creating a new load balanced fargate application manifest.
-type LoadBalancedWebAppProps struct {
-	*AppProps
+// LoadBalancedWebSvcProps contains properties for creating a new load balanced fargate service manifest.
+type LoadBalancedWebSvcProps struct {
+	*SvcProps
 	Path string
 	Port uint16
 }
 
-// NewLoadBalancedWebApp creates a new public load balanced web service, receives all the requests from the load balancer,
+// NewLoadBalancedWebSvc creates a new public load balanced web service, receives all the requests from the load balancer,
 // has a single task with minimal CPU and memory thresholds, and sets the default health check path to "/".
-func NewLoadBalancedWebApp(input *LoadBalancedWebAppProps) *LoadBalancedWebApp {
-	defaultLbManifest := newDefaultLoadBalancedWebApp()
-	defaultLbManifest.App = App{
-		Name: input.AppName,
-		Type: LoadBalancedWebApplication,
+func NewLoadBalancedWebSvc(input *LoadBalancedWebSvcProps) *LoadBalancedWebSvc {
+	defaultLbManifest := newDefaultLoadBalancedWebSvc()
+	defaultLbManifest.Svc = Svc{
+		Name: input.SvcName,
+		Type: LoadBalancedWebService,
 	}
-	defaultLbManifest.Image = AppImageWithPort{
-		AppImage: AppImage{
+	defaultLbManifest.Image = SvcImageWithPort{
+		SvcImage: SvcImage{
 			Build: input.Dockerfile,
 		},
 		Port: input.Port,
 	}
-	defaultLbManifest.LoadBalancedWebAppConfig.RoutingRule.Path = input.Path
+	defaultLbManifest.LoadBalancedWebSvcConfig.RoutingRule.Path = input.Path
 	defaultLbManifest.parser = template.New()
 	return defaultLbManifest
 }
 
-// newDefaultLoadBalancedWebApp returns an empty LoadBalancedWebApp with only the default values set.
-func newDefaultLoadBalancedWebApp() *LoadBalancedWebApp {
-	return &LoadBalancedWebApp{
-		App:   App{},
-		Image: AppImageWithPort{},
-		LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+// newDefaultLoadBalancedWebSvc returns an empty LoadBalancedWebSvc with only the default values set.
+func newDefaultLoadBalancedWebSvc() *LoadBalancedWebSvc {
+	return &LoadBalancedWebSvc{
+		Svc:   Svc{},
+		Image: SvcImageWithPort{},
+		LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
 			RoutingRule: RoutingRule{
 				HealthCheckPath: "/",
 			},
@@ -102,8 +102,8 @@ func newDefaultLoadBalancedWebApp() *LoadBalancedWebApp {
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
-func (a *LoadBalancedWebApp) MarshalBinary() ([]byte, error) {
-	content, err := a.parser.Parse(lbWebAppManifestPath, *a)
+func (a *LoadBalancedWebSvc) MarshalBinary() ([]byte, error) {
+	content, err := a.parser.Parse(lbWebSvcManifestPath, *a)
 	if err != nil {
 		return nil, err
 	}
@@ -111,22 +111,22 @@ func (a *LoadBalancedWebApp) MarshalBinary() ([]byte, error) {
 }
 
 // DockerfilePath returns the image build path.
-func (a *LoadBalancedWebApp) DockerfilePath() string {
+func (a *LoadBalancedWebSvc) DockerfilePath() string {
 	return a.Image.Build
 }
 
-// ApplyEnv returns the application manifest with environment overrides.
+// ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (a *LoadBalancedWebApp) ApplyEnv(envName string) *LoadBalancedWebApp {
+func (a *LoadBalancedWebSvc) ApplyEnv(envName string) *LoadBalancedWebSvc {
 	target, ok := a.Environments[envName]
 	if !ok {
 		return a
 	}
 
-	return &LoadBalancedWebApp{
-		App:   a.App,
+	return &LoadBalancedWebSvc{
+		Svc:   a.Svc,
 		Image: a.Image,
-		LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+		LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
 			RoutingRule: a.RoutingRule.copyAndApply(target.RoutingRule),
 			TaskConfig:  a.TaskConfig.copyAndApply(target.TaskConfig),
 			LogsConfig: LogsConfig{

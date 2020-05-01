@@ -26,9 +26,9 @@ const (
 	testImageTag     = "manual-bf3678c"
 )
 
-var testLBWebAppManifest = manifest.NewLoadBalancedWebApp(&manifest.LoadBalancedWebAppProps{
-	AppProps: &manifest.AppProps{
-		AppName:    "frontend",
+var testLBWebAppManifest = manifest.NewLoadBalancedWebSvc(&manifest.LoadBalancedWebSvcProps{
+	SvcProps: &manifest.SvcProps{
+		SvcName:    "frontend",
 		Dockerfile: "frontend/Dockerfile",
 	},
 	Path: "frontend",
