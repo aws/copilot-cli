@@ -14,15 +14,15 @@ import (
 	"github.com/gobuffalo/packd"
 )
 
-// Paths for application cloudformation templates under templates/applications/.
+// Paths of service cloudformation templates under templates/services/.
 const (
-	fmtAppCFTemplatePath    = "applications/%s/cf.yml"
-	fmtCommonCFTemplatePath = "applications/common/cf/%s.yml"
+	fmtSvcCFTemplatePath       = "services/%s/cf.yml"
+	fmtSvcCommonCFTemplatePath = "services/common/cf/%s.yml"
 )
 
 var (
-	// Template names under "applications/common/cf/".
-	commonCFTemplateNames = []string{
+	// Template names under "services/common/cf/".
+	commonServiceCFTemplateNames = []string{
 		"loggroup",
 		"envvars",
 		"executionrole",
@@ -51,14 +51,6 @@ type ReadParser interface {
 type Template struct {
 	box packd.Box
 }
-
-// Content represents the parsed template.
-type Content struct {
-	*bytes.Buffer
-}
-
-// ParseOption represents a functional option for the Parse method.
-type ParseOption func(t *template.Template) *template.Template
 
 // New returns a Template object that can be used to parse files under the "/templates/" directory.
 func New() *Template {
@@ -91,11 +83,19 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 	return &Content{buf}, nil
 }
 
+// ParseOption represents a functional option for the Parse method.
+type ParseOption func(t *template.Template) *template.Template
+
 // WithFuncs returns a template that can parse additional custom functions.
 func WithFuncs(fns map[string]interface{}) ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(fns)
 	}
+}
+
+// Content represents the parsed template.
+type Content struct {
+	*bytes.Buffer
 }
 
 // MarshalBinary returns the contents as binary and implements the encoding.BinaryMarshaler interface.

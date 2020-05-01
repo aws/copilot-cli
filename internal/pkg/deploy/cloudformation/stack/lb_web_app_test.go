@@ -122,7 +122,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebApp(gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
@@ -139,7 +139,7 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseLoadBalancedWebApp(template.AppOpts{
+				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					RulePriorityLambda: "lambda",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
@@ -154,8 +154,8 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
 				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
-				m.EXPECT().ParseLoadBalancedWebApp(template.AppOpts{
-					NestedStack: &template.AppNestedStackOpts{
+				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
+					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addons.StackName,
 						VariableOutputs: []string{"Hello"},
 						SecretOutputs:   []string{"MySecretArn"},

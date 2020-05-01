@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	backedAppManifestPath = "applications/backend-app/manifest.yml"
+	backedAppManifestPath = "services/backend/manifest.yml"
 )
 
 // BackendAppProps represents the configuration needed to create a backend application.

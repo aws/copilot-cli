@@ -68,17 +68,17 @@ func (mr *MockbackendAppReadParserMockRecorder) Parse(path, data interface{}, op
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockbackendAppReadParser)(nil).Parse), varargs...)
 }
 
-// ParseBackendApp mocks base method
-func (m *MockbackendAppReadParser) ParseBackendApp(arg0 template.AppOpts) (*template.Content, error) {
+// ParseBackendService mocks base method
+func (m *MockbackendAppReadParser) ParseBackendService(arg0 template.ServiceOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseBackendApp", arg0)
+	ret := m.ctrl.Call(m, "ParseBackendService", arg0)
 	ret0, _ := ret[0].(*template.Content)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseBackendApp indicates an expected call of ParseBackendApp
-func (mr *MockbackendAppReadParserMockRecorder) ParseBackendApp(arg0 interface{}) *gomock.Call {
+// ParseBackendService indicates an expected call of ParseBackendService
+func (mr *MockbackendAppReadParserMockRecorder) ParseBackendService(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseBackendApp", reflect.TypeOf((*MockbackendAppReadParser)(nil).ParseBackendApp), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseBackendService", reflect.TypeOf((*MockbackendAppReadParser)(nil).ParseBackendService), arg0)
 }
