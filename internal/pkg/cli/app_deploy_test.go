@@ -37,7 +37,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return(nil, errors.New("some error"))
+				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 
@@ -47,7 +47,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{}, nil)
+				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 
@@ -69,7 +69,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inAppName:     "frontend",
 			inEnvName:     "test",
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
@@ -130,7 +130,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 	}{
 		"no applications in the workspace": {
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{}, nil)
+				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			mockStore:  func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {},
@@ -141,7 +141,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inEnvName:  "test",
 			inImageTag: "latest",
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:  func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {},
@@ -154,7 +154,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inEnvName:  "test",
 			inImageTag: "latest",
 			mockWs: func(m *climocks.MockwsAppReader) {
-				m.EXPECT().AppNames().Return([]string{"frontend", "webhook"}, nil)
+				m.EXPECT().ServiceNames().Return([]string{"frontend", "webhook"}, nil)
 			},
 			mockStore: func(m *climocks.MockprojectService) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -302,7 +302,7 @@ image:
 				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadAppManifest("appA").Times(1).Return(nil, mockError),
+					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(nil, mockError),
 				)
 			},
 			wantPath: "",
@@ -314,7 +314,7 @@ image:
 				mockWorkspace = climocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadAppManifest("appA").Times(1).Return(mockManifest, nil),
+					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(mockManifest, nil),
 				)
 			},
 			wantPath: "appA",

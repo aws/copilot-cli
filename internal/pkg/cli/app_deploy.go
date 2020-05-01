@@ -169,7 +169,7 @@ func (o *appDeployOpts) RecommendedActions() []string {
 }
 
 func (o *appDeployOpts) validateAppName() error {
-	names, err := o.workspaceService.AppNames()
+	names, err := o.workspaceService.ServiceNames()
 	if err != nil {
 		return fmt.Errorf("list applications in the workspace: %w", err)
 	}
@@ -201,7 +201,7 @@ func (o *appDeployOpts) askAppName() error {
 		return nil
 	}
 
-	names, err := o.workspaceService.AppNames()
+	names, err := o.workspaceService.ServiceNames()
 	if err != nil {
 		return fmt.Errorf("list applications in workspace: %w", err)
 	}
@@ -348,7 +348,7 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 		DockerfilePath() string
 	}
 
-	manifestBytes, err := o.workspaceService.ReadAppManifest(o.AppName)
+	manifestBytes, err := o.workspaceService.ReadServiceManifest(o.AppName)
 	if err != nil {
 		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
 	}
@@ -392,7 +392,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *appDeployOpts) manifest() (interface{}, error) {
-	raw, err := o.workspaceService.ReadAppManifest(o.AppName)
+	raw, err := o.workspaceService.ReadServiceManifest(o.AppName)
 	if err != nil {
 		return nil, fmt.Errorf("read app %s manifest from workspace: %w", o.AppName, err)
 	}

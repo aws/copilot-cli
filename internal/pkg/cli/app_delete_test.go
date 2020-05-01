@@ -394,7 +394,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+					mocks.ws.EXPECT().DeleteService(mockAppName).Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -424,7 +424,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+					mocks.ws.EXPECT().DeleteService(mockAppName).Return(nil),
 				)
 			},
 			wantedError: nil,

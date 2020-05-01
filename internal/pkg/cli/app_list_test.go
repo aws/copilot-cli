@@ -146,7 +146,7 @@ func TestAppList_Execute(t *testing.T) {
 						{Name: "my-app", Type: "Load Balanced Web App"},
 						{Name: "lb-app", Type: "Load Balanced Web App"},
 					}, nil)
-				mockWorkspace.EXPECT().AppNames().
+				mockWorkspace.EXPECT().ServiceNames().
 					Return([]string{"my-app"}, nil).Times(1)
 			},
 			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\n",

@@ -31,7 +31,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 		"errors if summary exists and differs from project flag": {
 			inProjectName: "testname",
 			expect: func(opts *initProjectOpts) {
-				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(&workspace.Summary{ProjectName: "metrics"}, nil)
+				opts.ws.(*climocks.MockwsProjectManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics"}, nil)
 				opts.projectStore.(*mocks.MockProjectStore).EXPECT().ListApplications().Times(0)
 			},
 			wantedErr: "workspace already registered with metrics",

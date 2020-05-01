@@ -1036,19 +1036,19 @@ func (m *MockwsAppManifestReader) EXPECT() *MockwsAppManifestReaderMockRecorder 
 	return m.recorder
 }
 
-// ReadAppManifest mocks base method
-func (m *MockwsAppManifestReader) ReadAppManifest(appName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MockwsAppManifestReader) ReadServiceManifest(appName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadAppManifest", appName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadAppManifest indicates an expected call of ReadAppManifest
-func (mr *MockwsAppManifestReaderMockRecorder) ReadAppManifest(appName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsAppManifestReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadAppManifest", reflect.TypeOf((*MockwsAppManifestReader)(nil).ReadAppManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAppManifestReader)(nil).ReadServiceManifest), appName)
 }
 
 // MockwsAppManifestWriter is a mock of wsAppManifestWriter interface
@@ -1074,19 +1074,19 @@ func (m *MockwsAppManifestWriter) EXPECT() *MockwsAppManifestWriterMockRecorder 
 	return m.recorder
 }
 
-// WriteAppManifest mocks base method
-func (m *MockwsAppManifestWriter) WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
+// WriteServiceManifest mocks base method
+func (m *MockwsAppManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteAppManifest", marshaler, appName)
+	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, appName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// WriteAppManifest indicates an expected call of WriteAppManifest
-func (mr *MockwsAppManifestWriterMockRecorder) WriteAppManifest(marshaler, appName interface{}) *gomock.Call {
+// WriteServiceManifest indicates an expected call of WriteServiceManifest
+func (mr *MockwsAppManifestWriterMockRecorder) WriteServiceManifest(marshaler, appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAppManifest", reflect.TypeOf((*MockwsAppManifestWriter)(nil).WriteAppManifest), marshaler, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MockwsAppManifestWriter)(nil).WriteServiceManifest), marshaler, appName)
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
@@ -1203,18 +1203,18 @@ func (m *MockwsAppDeleter) EXPECT() *MockwsAppDeleterMockRecorder {
 	return m.recorder
 }
 
-// DeleteApp mocks base method
-func (m *MockwsAppDeleter) DeleteApp(name string) error {
+// DeleteService mocks base method
+func (m *MockwsAppDeleter) DeleteService(name string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteApp", name)
+	ret := m.ctrl.Call(m, "DeleteService", name)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteApp indicates an expected call of DeleteApp
-func (mr *MockwsAppDeleterMockRecorder) DeleteApp(name interface{}) *gomock.Call {
+// DeleteService indicates an expected call of DeleteService
+func (mr *MockwsAppDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteApp), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteService), name)
 }
 
 // MockwsAppReader is a mock of wsAppReader interface
@@ -1240,34 +1240,34 @@ func (m *MockwsAppReader) EXPECT() *MockwsAppReaderMockRecorder {
 	return m.recorder
 }
 
-// AppNames mocks base method
-func (m *MockwsAppReader) AppNames() ([]string, error) {
+// ServiceNames mocks base method
+func (m *MockwsAppReader) ServiceNames() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppNames")
+	ret := m.ctrl.Call(m, "ServiceNames")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AppNames indicates an expected call of AppNames
-func (mr *MockwsAppReaderMockRecorder) AppNames() *gomock.Call {
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsAppReaderMockRecorder) ServiceNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppNames", reflect.TypeOf((*MockwsAppReader)(nil).AppNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAppReader)(nil).ServiceNames))
 }
 
-// ReadAppManifest mocks base method
-func (m *MockwsAppReader) ReadAppManifest(appName string) ([]byte, error) {
+// ReadServiceManifest mocks base method
+func (m *MockwsAppReader) ReadServiceManifest(appName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadAppManifest", appName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ReadAppManifest indicates an expected call of ReadAppManifest
-func (mr *MockwsAppReaderMockRecorder) ReadAppManifest(appName interface{}) *gomock.Call {
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsAppReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadAppManifest", reflect.TypeOf((*MockwsAppReader)(nil).ReadAppManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAppReader)(nil).ReadServiceManifest), appName)
 }
 
 // MockwsPipelineDeleter is a mock of wsPipelineDeleter interface
@@ -1345,19 +1345,19 @@ func (m *MockwsPipelineReader) EXPECT() *MockwsPipelineReaderMockRecorder {
 	return m.recorder
 }
 
-// AppNames mocks base method
-func (m *MockwsPipelineReader) AppNames() ([]string, error) {
+// ServiceNames mocks base method
+func (m *MockwsPipelineReader) ServiceNames() ([]string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AppNames")
+	ret := m.ctrl.Call(m, "ServiceNames")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// AppNames indicates an expected call of AppNames
-func (mr *MockwsPipelineReaderMockRecorder) AppNames() *gomock.Call {
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsPipelineReaderMockRecorder) ServiceNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppNames", reflect.TypeOf((*MockwsPipelineReader)(nil).AppNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsPipelineReader)(nil).ServiceNames))
 }
 
 // ReadPipelineManifest mocks base method
@@ -1463,43 +1463,6 @@ func (m *MockartifactUploader) PutArtifact(bucket, fileName string, data io.Read
 func (mr *MockartifactUploaderMockRecorder) PutArtifact(bucket, fileName, data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutArtifact", reflect.TypeOf((*MockartifactUploader)(nil).PutArtifact), bucket, fileName, data)
-}
-
-// Mockport is a mock of port interface
-type Mockport struct {
-	ctrl     *gomock.Controller
-	recorder *MockportMockRecorder
-}
-
-// MockportMockRecorder is the mock recorder for Mockport
-type MockportMockRecorder struct {
-	mock *Mockport
-}
-
-// NewMockport creates a new mock instance
-func NewMockport(ctrl *gomock.Controller) *Mockport {
-	mock := &Mockport{ctrl: ctrl}
-	mock.recorder = &MockportMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *Mockport) EXPECT() *MockportMockRecorder {
-	return m.recorder
-}
-
-// Set mocks base method
-func (m *Mockport) Set(number int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Set", number)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Set indicates an expected call of Set
-func (mr *MockportMockRecorder) Set(number interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Set", reflect.TypeOf((*Mockport)(nil).Set), number)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface

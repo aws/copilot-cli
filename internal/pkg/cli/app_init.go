@@ -207,7 +207,7 @@ func (o *initAppOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteAppManifest(manifest, o.AppName)
+	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.AppName)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
