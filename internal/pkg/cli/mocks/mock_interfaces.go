@@ -11,6 +11,7 @@ import (
 	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	config "github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	deploy "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -98,6 +99,544 @@ func (m *MockactionCommand) RecommendedActions() []string {
 func (mr *MockactionCommandMockRecorder) RecommendedActions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendedActions", reflect.TypeOf((*MockactionCommand)(nil).RecommendedActions))
+}
+
+// MockserviceLister is a mock of serviceLister interface
+type MockserviceLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceListerMockRecorder
+}
+
+// MockserviceListerMockRecorder is the mock recorder for MockserviceLister
+type MockserviceListerMockRecorder struct {
+	mock *MockserviceLister
+}
+
+// NewMockserviceLister creates a new mock instance
+func NewMockserviceLister(ctrl *gomock.Controller) *MockserviceLister {
+	mock := &MockserviceLister{ctrl: ctrl}
+	mock.recorder = &MockserviceListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockserviceLister) EXPECT() *MockserviceListerMockRecorder {
+	return m.recorder
+}
+
+// ListServices mocks base method
+func (m *MockserviceLister) ListServices(appName string) ([]*archer.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListServices", appName)
+	ret0, _ := ret[0].([]*archer.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListServices indicates an expected call of ListServices
+func (mr *MockserviceListerMockRecorder) ListServices(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockserviceLister)(nil).ListServices), appName)
+}
+
+// MockappLister is a mock of appLister interface
+type MockappLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockappListerMockRecorder
+}
+
+// MockappListerMockRecorder is the mock recorder for MockappLister
+type MockappListerMockRecorder struct {
+	mock *MockappLister
+}
+
+// NewMockappLister creates a new mock instance
+func NewMockappLister(ctrl *gomock.Controller) *MockappLister {
+	mock := &MockappLister{ctrl: ctrl}
+	mock.recorder = &MockappListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappLister) EXPECT() *MockappListerMockRecorder {
+	return m.recorder
+}
+
+// ListApps mocks base method
+func (m *MockappLister) ListApps() ([]*archer.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApps")
+	ret0, _ := ret[0].([]*archer.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApps indicates an expected call of ListApps
+func (mr *MockappListerMockRecorder) ListApps() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApps", reflect.TypeOf((*MockappLister)(nil).ListApps))
+}
+
+// MockapplicationStore is a mock of applicationStore interface
+type MockapplicationStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationStoreMockRecorder
+}
+
+// MockapplicationStoreMockRecorder is the mock recorder for MockapplicationStore
+type MockapplicationStoreMockRecorder struct {
+	mock *MockapplicationStore
+}
+
+// NewMockapplicationStore creates a new mock instance
+func NewMockapplicationStore(ctrl *gomock.Controller) *MockapplicationStore {
+	mock := &MockapplicationStore{ctrl: ctrl}
+	mock.recorder = &MockapplicationStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockapplicationStore) EXPECT() *MockapplicationStoreMockRecorder {
+	return m.recorder
+}
+
+// ListApplications mocks base method
+func (m *MockapplicationStore) ListApplications() ([]*config.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApplications")
+	ret0, _ := ret[0].([]*config.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApplications indicates an expected call of ListApplications
+func (mr *MockapplicationStoreMockRecorder) ListApplications() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockapplicationStore)(nil).ListApplications))
+}
+
+// GetApplication mocks base method
+func (m *MockapplicationStore) GetApplication(appName string) (*config.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetApplication", appName)
+	ret0, _ := ret[0].(*config.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetApplication indicates an expected call of GetApplication
+func (mr *MockapplicationStoreMockRecorder) GetApplication(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockapplicationStore)(nil).GetApplication), appName)
+}
+
+// CreateApplication mocks base method
+func (m *MockapplicationStore) CreateApplication(app *config.Application) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateApplication", app)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateApplication indicates an expected call of CreateApplication
+func (mr *MockapplicationStoreMockRecorder) CreateApplication(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockapplicationStore)(nil).CreateApplication), app)
+}
+
+// DeleteApplication mocks base method
+func (m *MockapplicationStore) DeleteApplication(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApplication", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApplication indicates an expected call of DeleteApplication
+func (mr *MockapplicationStoreMockRecorder) DeleteApplication(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApplication", reflect.TypeOf((*MockapplicationStore)(nil).DeleteApplication), name)
+}
+
+// MockapplicationLister is a mock of applicationLister interface
+type MockapplicationLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationListerMockRecorder
+}
+
+// MockapplicationListerMockRecorder is the mock recorder for MockapplicationLister
+type MockapplicationListerMockRecorder struct {
+	mock *MockapplicationLister
+}
+
+// NewMockapplicationLister creates a new mock instance
+func NewMockapplicationLister(ctrl *gomock.Controller) *MockapplicationLister {
+	mock := &MockapplicationLister{ctrl: ctrl}
+	mock.recorder = &MockapplicationListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockapplicationLister) EXPECT() *MockapplicationListerMockRecorder {
+	return m.recorder
+}
+
+// ListApplications mocks base method
+func (m *MockapplicationLister) ListApplications() ([]*config.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApplications")
+	ret0, _ := ret[0].([]*config.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApplications indicates an expected call of ListApplications
+func (mr *MockapplicationListerMockRecorder) ListApplications() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplications", reflect.TypeOf((*MockapplicationLister)(nil).ListApplications))
+}
+
+// MockapplicationCreator is a mock of applicationCreator interface
+type MockapplicationCreator struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationCreatorMockRecorder
+}
+
+// MockapplicationCreatorMockRecorder is the mock recorder for MockapplicationCreator
+type MockapplicationCreatorMockRecorder struct {
+	mock *MockapplicationCreator
+}
+
+// NewMockapplicationCreator creates a new mock instance
+func NewMockapplicationCreator(ctrl *gomock.Controller) *MockapplicationCreator {
+	mock := &MockapplicationCreator{ctrl: ctrl}
+	mock.recorder = &MockapplicationCreatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockapplicationCreator) EXPECT() *MockapplicationCreatorMockRecorder {
+	return m.recorder
+}
+
+// CreateApplication mocks base method
+func (m *MockapplicationCreator) CreateApplication(app *config.Application) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateApplication", app)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateApplication indicates an expected call of CreateApplication
+func (mr *MockapplicationCreatorMockRecorder) CreateApplication(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateApplication", reflect.TypeOf((*MockapplicationCreator)(nil).CreateApplication), app)
+}
+
+// MockapplicationGetter is a mock of applicationGetter interface
+type MockapplicationGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationGetterMockRecorder
+}
+
+// MockapplicationGetterMockRecorder is the mock recorder for MockapplicationGetter
+type MockapplicationGetterMockRecorder struct {
+	mock *MockapplicationGetter
+}
+
+// NewMockapplicationGetter creates a new mock instance
+func NewMockapplicationGetter(ctrl *gomock.Controller) *MockapplicationGetter {
+	mock := &MockapplicationGetter{ctrl: ctrl}
+	mock.recorder = &MockapplicationGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockapplicationGetter) EXPECT() *MockapplicationGetterMockRecorder {
+	return m.recorder
+}
+
+// GetApplication mocks base method
+func (m *MockapplicationGetter) GetApplication(appName string) (*config.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetApplication", appName)
+	ret0, _ := ret[0].(*config.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetApplication indicates an expected call of GetApplication
+func (mr *MockapplicationGetterMockRecorder) GetApplication(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetApplication", reflect.TypeOf((*MockapplicationGetter)(nil).GetApplication), appName)
+}
+
+// MockapplicationDeleter is a mock of applicationDeleter interface
+type MockapplicationDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockapplicationDeleterMockRecorder
+}
+
+// MockapplicationDeleterMockRecorder is the mock recorder for MockapplicationDeleter
+type MockapplicationDeleterMockRecorder struct {
+	mock *MockapplicationDeleter
+}
+
+// NewMockapplicationDeleter creates a new mock instance
+func NewMockapplicationDeleter(ctrl *gomock.Controller) *MockapplicationDeleter {
+	mock := &MockapplicationDeleter{ctrl: ctrl}
+	mock.recorder = &MockapplicationDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockapplicationDeleter) EXPECT() *MockapplicationDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteApplication mocks base method
+func (m *MockapplicationDeleter) DeleteApplication(name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteApplication", name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteApplication indicates an expected call of DeleteApplication
+func (mr *MockapplicationDeleterMockRecorder) DeleteApplication(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApplication", reflect.TypeOf((*MockapplicationDeleter)(nil).DeleteApplication), name)
+}
+
+// MockenvironmentStore is a mock of environmentStore interface
+type MockenvironmentStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentStoreMockRecorder
+}
+
+// MockenvironmentStoreMockRecorder is the mock recorder for MockenvironmentStore
+type MockenvironmentStoreMockRecorder struct {
+	mock *MockenvironmentStore
+}
+
+// NewMockenvironmentStore creates a new mock instance
+func NewMockenvironmentStore(ctrl *gomock.Controller) *MockenvironmentStore {
+	mock := &MockenvironmentStore{ctrl: ctrl}
+	mock.recorder = &MockenvironmentStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvironmentStore) EXPECT() *MockenvironmentStoreMockRecorder {
+	return m.recorder
+}
+
+// ListEnvironments mocks base method
+func (m *MockenvironmentStore) ListEnvironments(appName string) ([]*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments", appName)
+	ret0, _ := ret[0].([]*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments
+func (mr *MockenvironmentStoreMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockenvironmentStore)(nil).ListEnvironments), appName)
+}
+
+// GetEnvironment mocks base method
+func (m *MockenvironmentStore) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
+	ret0, _ := ret[0].(*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockenvironmentStoreMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentStore)(nil).GetEnvironment), appName, environmentName)
+}
+
+// CreateEnvironment mocks base method
+func (m *MockenvironmentStore) CreateEnvironment(env *config.Environment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEnvironment", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateEnvironment indicates an expected call of CreateEnvironment
+func (mr *MockenvironmentStoreMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockenvironmentStore)(nil).CreateEnvironment), env)
+}
+
+// DeleteEnvironment mocks base method
+func (m *MockenvironmentStore) DeleteEnvironment(appName, environmentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, environmentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockenvironmentStoreMockRecorder) DeleteEnvironment(appName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentStore)(nil).DeleteEnvironment), appName, environmentName)
+}
+
+// MockenvironmentLister is a mock of environmentLister interface
+type MockenvironmentLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentListerMockRecorder
+}
+
+// MockenvironmentListerMockRecorder is the mock recorder for MockenvironmentLister
+type MockenvironmentListerMockRecorder struct {
+	mock *MockenvironmentLister
+}
+
+// NewMockenvironmentLister creates a new mock instance
+func NewMockenvironmentLister(ctrl *gomock.Controller) *MockenvironmentLister {
+	mock := &MockenvironmentLister{ctrl: ctrl}
+	mock.recorder = &MockenvironmentListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvironmentLister) EXPECT() *MockenvironmentListerMockRecorder {
+	return m.recorder
+}
+
+// ListEnvironments mocks base method
+func (m *MockenvironmentLister) ListEnvironments(appName string) ([]*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments", appName)
+	ret0, _ := ret[0].([]*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments
+func (mr *MockenvironmentListerMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockenvironmentLister)(nil).ListEnvironments), appName)
+}
+
+// MockenvironmentGetter is a mock of environmentGetter interface
+type MockenvironmentGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentGetterMockRecorder
+}
+
+// MockenvironmentGetterMockRecorder is the mock recorder for MockenvironmentGetter
+type MockenvironmentGetterMockRecorder struct {
+	mock *MockenvironmentGetter
+}
+
+// NewMockenvironmentGetter creates a new mock instance
+func NewMockenvironmentGetter(ctrl *gomock.Controller) *MockenvironmentGetter {
+	mock := &MockenvironmentGetter{ctrl: ctrl}
+	mock.recorder = &MockenvironmentGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvironmentGetter) EXPECT() *MockenvironmentGetterMockRecorder {
+	return m.recorder
+}
+
+// GetEnvironment mocks base method
+func (m *MockenvironmentGetter) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
+	ret0, _ := ret[0].(*config.Environment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEnvironment indicates an expected call of GetEnvironment
+func (mr *MockenvironmentGetterMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentGetter)(nil).GetEnvironment), appName, environmentName)
+}
+
+// MockenvironmentCreator is a mock of environmentCreator interface
+type MockenvironmentCreator struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentCreatorMockRecorder
+}
+
+// MockenvironmentCreatorMockRecorder is the mock recorder for MockenvironmentCreator
+type MockenvironmentCreatorMockRecorder struct {
+	mock *MockenvironmentCreator
+}
+
+// NewMockenvironmentCreator creates a new mock instance
+func NewMockenvironmentCreator(ctrl *gomock.Controller) *MockenvironmentCreator {
+	mock := &MockenvironmentCreator{ctrl: ctrl}
+	mock.recorder = &MockenvironmentCreatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvironmentCreator) EXPECT() *MockenvironmentCreatorMockRecorder {
+	return m.recorder
+}
+
+// CreateEnvironment mocks base method
+func (m *MockenvironmentCreator) CreateEnvironment(env *config.Environment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateEnvironment", env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateEnvironment indicates an expected call of CreateEnvironment
+func (mr *MockenvironmentCreatorMockRecorder) CreateEnvironment(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnvironment", reflect.TypeOf((*MockenvironmentCreator)(nil).CreateEnvironment), env)
+}
+
+// MockenvironmentDeleter is a mock of environmentDeleter interface
+type MockenvironmentDeleter struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentDeleterMockRecorder
+}
+
+// MockenvironmentDeleterMockRecorder is the mock recorder for MockenvironmentDeleter
+type MockenvironmentDeleterMockRecorder struct {
+	mock *MockenvironmentDeleter
+}
+
+// NewMockenvironmentDeleter creates a new mock instance
+func NewMockenvironmentDeleter(ctrl *gomock.Controller) *MockenvironmentDeleter {
+	mock := &MockenvironmentDeleter{ctrl: ctrl}
+	mock.recorder = &MockenvironmentDeleterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockenvironmentDeleter) EXPECT() *MockenvironmentDeleterMockRecorder {
+	return m.recorder
+}
+
+// DeleteEnvironment mocks base method
+func (m *MockenvironmentDeleter) DeleteEnvironment(appName, environmentName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, environmentName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnvironment indicates an expected call of DeleteEnvironment
+func (mr *MockenvironmentDeleterMockRecorder) DeleteEnvironment(appName, environmentName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeleter)(nil).DeleteEnvironment), appName, environmentName)
 }
 
 // MockprojectService is a mock of projectService interface
@@ -1215,6 +1754,44 @@ func (m *MockwsAppDeleter) DeleteService(name string) error {
 func (mr *MockwsAppDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteService), name)
+}
+
+// MockwsServiceLister is a mock of wsServiceLister interface
+type MockwsServiceLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsServiceListerMockRecorder
+}
+
+// MockwsServiceListerMockRecorder is the mock recorder for MockwsServiceLister
+type MockwsServiceListerMockRecorder struct {
+	mock *MockwsServiceLister
+}
+
+// NewMockwsServiceLister creates a new mock instance
+func NewMockwsServiceLister(ctrl *gomock.Controller) *MockwsServiceLister {
+	mock := &MockwsServiceLister{ctrl: ctrl}
+	mock.recorder = &MockwsServiceListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsServiceLister) EXPECT() *MockwsServiceListerMockRecorder {
+	return m.recorder
+}
+
+// ServiceNames mocks base method
+func (m *MockwsServiceLister) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsServiceListerMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsServiceLister)(nil).ServiceNames))
 }
 
 // MockwsAppReader is a mock of wsAppReader interface
