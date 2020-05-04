@@ -437,12 +437,12 @@ func (o *appDeployOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if o.targetProject.RequiresDNSDelegation() {
-			conf, err = stack.NewHTTPSLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 		} else {
-			conf, err = stack.NewLoadBalancedWebApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 		}
 	case *manifest.BackendService:
-		conf, err = stack.NewBackendApp(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}

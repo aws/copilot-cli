@@ -10,17 +10,17 @@ Parameters:
   DNSDelegationRoleName:
     Type: String
     Default: ""
-  ProjectDNSDelegatedAccounts:
+  AppDNSDelegatedAccounts:
     Type: CommaDelimitedList
     Default: ""
-  ProjectDomainName:
+  AppDomainName:
     Type: String
     Default: ""
-  ProjectName:
+  AppName:
     Type: String
 Conditions:
   DelegateDNS:
-    !Not [!Equals [ !Ref ProjectDomainName, "" ]]
+    !Not [!Equals [ !Ref AppDomainName, "" ]]
 
 Resources:
   AdministrationRole:
@@ -119,7 +119,7 @@ Resources:
                     - 'arn:aws:iam::${inner}:root'
                     - inner: !Join
                       - ':root,arn:aws:iam::'
-                      - Ref: "ProjectDNSDelegatedAccounts"
+                      - Ref: "AppDNSDelegatedAccounts"
             Action:
               - sts:AssumeRole
       Path: /
@@ -139,31 +139,31 @@ Resources:
                 Action:
                   - route53:ChangeResourceRecordSets
                 Resource:
-                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${ProjectHostedZone}
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppHostedZone}
 
-  ProjectHostedZone:
+  AppHostedZone:
     Type: AWS::Route53::HostedZone
     Condition: DelegateDNS
     Properties:
       HostedZoneConfig:
-        Comment: !Sub "Hosted zone for ecs-cli project ${ProjectName}: ${ProjectName}.${ProjectDomainName}"
-      Name: !Sub ${ProjectName}.${ProjectDomainName}
+        Comment: !Sub "Hosted zone for ecs-cli application ${AppName}: ${AppName}.${AppDomainName}"
+      Name: !Sub ${AppName}.${AppDomainName}
 
-  ProjectDomainDelegationRecordSet:
+  AppDomainDelegationRecordSet:
     Type: AWS::Route53::RecordSet
     Condition: DelegateDNS
     Properties:
-      HostedZoneName: !Sub ${ProjectDomainName}.
-      Comment: !Sub "Record for ecs-cli domain delegation for project ${ProjectDomainName}"
-      Name: !Sub ${ProjectName}.${ProjectDomainName}.
+      HostedZoneName: !Sub ${AppDomainName}.
+      Comment: !Sub "Record for ecs-cli domain delegation for application ${AppDomainName}"
+      Name: !Sub ${AppName}.${AppDomainName}.
       Type: NS
       TTL: '900'
-      ResourceRecords: !GetAtt ProjectHostedZone.NameServers
+      ResourceRecords: !GetAtt AppHostedZone.NameServers
 
 Outputs:
   ExecutionRoleARN:
-    Description: ExecutionRole used by this project to set up ECR Repos, KMS Keys and S3 buckets
+    Description: ExecutionRole used by this application to set up ECR Repos, KMS Keys and S3 buckets
     Value: !GetAtt ExecutionRole.Arn
   AdministrationRoleARN:
-    Description: AdministrationRole used by this project to manage this project's StackSet
+    Description: AdministrationRole used by this application to manage this application's StackSet
     Value: !GetAtt AdministrationRole.Arn

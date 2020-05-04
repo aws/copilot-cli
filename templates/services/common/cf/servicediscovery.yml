@@ -11,7 +11,7 @@ DiscoveryService:
           Type: SRV
     HealthCheckCustomConfig:
       FailureThreshold: 1
-    Name:  !Ref AppName
+    Name:  !Ref ServiceName
     NamespaceId:
       Fn::ImportValue:
-        !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
+        !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'

@@ -15,7 +15,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/gobuffalo/packd"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -24,26 +23,26 @@ const (
 	mockTemplate = "mockTemplate"
 )
 
-func TestProjTemplate(t *testing.T) {
+func TestAppTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *ProjectStackConfig)
+		mockDependencies func(ctrl *gomock.Controller, c *AppStackConfig)
 
 		wantedTemplate string
 		wantedError    error
 	}{
 		"should return error given template not found": {
-			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(projectTemplatePath).Return(nil, errors.New("some error"))
+				m.EXPECT().Read(appTemplatePath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 
 			wantedError: errors.New("some error"),
 		},
 		"should return template body when present": {
-			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Read(projectTemplatePath).Return(&template.Content{
+				m.EXPECT().Read(appTemplatePath).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
 				c.parser = m
@@ -58,11 +57,11 @@ func TestProjTemplate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			projStack := &ProjectStackConfig{}
-			tc.mockDependencies(ctrl, projStack)
+			appStack := &AppStackConfig{}
+			tc.mockDependencies(ctrl, appStack)
 
 			// WHEN
-			got, err := projStack.Template()
+			got, err := appStack.Template()
 
 			// THEN
 			require.Equal(t, tc.wantedError, err)
@@ -76,7 +75,7 @@ func TestDNSDelegationAccounts(t *testing.T) {
 		given *deploy.CreateProjectInput
 		want  []string
 	}{
-		"should append project account": {
+		"should append app account": {
 			given: &deploy.CreateProjectInput{
 				AccountID: "1234",
 			},
@@ -100,26 +99,26 @@ func TestDNSDelegationAccounts(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			projStack := &ProjectStackConfig{
+			appStack := &AppStackConfig{
 				CreateProjectInput: tc.given,
 			}
-			got := projStack.dnsDelegationAccounts()
+			got := appStack.dnsDelegationAccounts()
 			require.ElementsMatch(t, tc.want, got)
 		})
 	}
 }
 
-func TestProjResourceTemplate(t *testing.T) {
+func TestAppResourceTemplate(t *testing.T) {
 	testCases := map[string]struct {
-		given            *ProjectResourcesConfig
-		mockDependencies func(ctrl *gomock.Controller, c *ProjectStackConfig)
+		given            *AppResourcesConfig
+		mockDependencies func(ctrl *gomock.Controller, c *AppStackConfig)
 
 		wantedTemplate string
 		wantedError    error
 	}{
 		"should return error when template cannot be parsed": {
-			given: &ProjectResourcesConfig{},
-			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+			given: &AppResourcesConfig{},
+			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
 				m.EXPECT().Parse(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.parser = m
@@ -128,25 +127,25 @@ func TestProjResourceTemplate(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"should render template after sorting": {
-			given: &ProjectResourcesConfig{
+			given: &AppResourcesConfig{
 				Accounts: []string{"4567", "1234"},
-				Apps:     []string{"app-2", "app-1"},
+				Services: []string{"app-2", "app-1"},
 				Version:  1,
-				Project:  "testproject",
+				App:      "testapp",
 			},
-			mockDependencies: func(ctrl *gomock.Controller, c *ProjectStackConfig) {
+			mockDependencies: func(ctrl *gomock.Controller, c *AppStackConfig) {
 				m := mocks.NewMockReadParser(ctrl)
-				m.EXPECT().Parse(projectResourcesTemplatePath, struct {
-					*ProjectResourcesConfig
-					AppTagKey string
+				m.EXPECT().Parse(appResourcesTemplatePath, struct {
+					*AppResourcesConfig
+					ServiceTagKey string
 				}{
-					&ProjectResourcesConfig{
+					&AppResourcesConfig{
 						Accounts: []string{"1234", "4567"},
-						Apps:     []string{"app-1", "app-2"},
+						Services: []string{"app-1", "app-2"},
 						Version:  1,
-						Project:  "testproject",
+						App:      "testapp",
 					},
-					AppTagKey,
+					ServiceTagKey,
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
@@ -161,12 +160,12 @@ func TestProjResourceTemplate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			projStack := &ProjectStackConfig{
-				CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+			appStack := &AppStackConfig{
+				CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
 			}
-			tc.mockDependencies(ctrl, projStack)
+			tc.mockDependencies(ctrl, appStack)
 
-			got, err := projStack.ResourceTemplate(tc.given)
+			got, err := appStack.ResourceTemplate(tc.given)
 
 			require.Equal(t, tc.wantedError, err)
 			require.Equal(t, tc.wantedTemplate, got)
@@ -174,55 +173,55 @@ func TestProjResourceTemplate(t *testing.T) {
 	}
 }
 
-func TestProjectParameters(t *testing.T) {
+func TestAppParameters(t *testing.T) {
 	expectedParams := []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(projectAdminRoleParamName),
-			ParameterValue: aws.String("testproject-adminrole"),
+			ParameterKey:   aws.String(appAdminRoleParamName),
+			ParameterValue: aws.String("testapp-adminrole"),
 		},
 		{
-			ParameterKey:   aws.String(projectExecutionRoleParamName),
-			ParameterValue: aws.String("testproject-executionrole"),
+			ParameterKey:   aws.String(appExecutionRoleParamName),
+			ParameterValue: aws.String("testapp-executionrole"),
 		},
 		{
-			ParameterKey:   aws.String(projectDNSDelegatedAccountsKey),
+			ParameterKey:   aws.String(appDNSDelegatedAccountsKey),
 			ParameterValue: aws.String("1234"),
 		},
 		{
-			ParameterKey:   aws.String(projectDomainNameKey),
+			ParameterKey:   aws.String(appDomainNameKey),
 			ParameterValue: aws.String("amazon.com"),
 		},
 		{
-			ParameterKey:   aws.String(projectDNSDelegationRoleParamName),
-			ParameterValue: aws.String("testproject-DNSDelegationRole"),
+			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
+			ParameterValue: aws.String("testapp-DNSDelegationRole"),
 		},
 		{
-			ParameterKey:   aws.String(projectNameKey),
-			ParameterValue: aws.String("testproject"),
+			ParameterKey:   aws.String(appNameKey),
+			ParameterValue: aws.String("testapp"),
 		},
 	}
-	proj := &ProjectStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234", DomainName: "amazon.com"},
+	app := &AppStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234", DomainName: "amazon.com"},
 	}
-	require.ElementsMatch(t, expectedParams, proj.Parameters())
+	require.ElementsMatch(t, expectedParams, app.Parameters())
 }
 
-func TestProjectTags(t *testing.T) {
-	proj := &ProjectStackConfig{
+func TestAppTags(t *testing.T) {
+	app := &AppStackConfig{
 		CreateProjectInput: &deploy.CreateProjectInput{
-			Project:   "testproject",
+			Project:   "testapp",
 			AccountID: "1234",
 			AdditionalTags: map[string]string{
 				"confidentiality": "public",
 				"owner":           "finance",
-				ProjectTagKey:     "overrideproject",
+				AppTagKey:         "overrideapp",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
-			Value: aws.String(proj.Project),
+			Key:   aws.String(AppTagKey),
+			Value: aws.String(app.Project),
 		},
 		{
 			Key:   aws.String("confidentiality"),
@@ -233,7 +232,7 @@ func TestProjectTags(t *testing.T) {
 			Value: aws.String("finance"),
 		},
 	}
-	require.ElementsMatch(t, expectedTags, proj.Tags())
+	require.ElementsMatch(t, expectedTags, app.Tags())
 }
 
 func TestToRegionalResources(t *testing.T) {
@@ -244,33 +243,33 @@ func TestToRegionalResources(t *testing.T) {
 	}{
 		"should generate fully formed resource": {
 			givenStackOutputs: map[string]string{
-				projectOutputKMSKey:   "arn:aws:kms:us-west-2:01234567890:key/0000",
-				projectOutputS3Bucket: "tests3-bucket-us-west-2",
-				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
-				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+				appOutputKMSKey:       "arn:aws:kms:us-west-2:01234567890:key/0000",
+				appOutputS3Bucket:     "tests3-bucket-us-west-2",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/app/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/app/back-end",
 			},
 			wantedResource: archer.ProjectRegionalResources{
 				KMSKeyARN: "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:  "tests3-bucket-us-west-2",
 				RepositoryURLs: map[string]string{
-					"front-end": "0123456789.dkr.ecr.us-west-2.amazonaws.com/project/front-end",
-					"back-end":  "0123456789.dkr.ecr.us-west-2.amazonaws.com/project/back-end",
+					"front-end": "0123456789.dkr.ecr.us-west-2.amazonaws.com/app/front-end",
+					"back-end":  "0123456789.dkr.ecr.us-west-2.amazonaws.com/app/back-end",
 				},
 			},
 		},
 		"should return error when no bucket exists": {
 			givenStackOutputs: map[string]string{
-				projectOutputKMSKey:   "arn:aws:kms:us-west-2:01234567890:key/0000",
-				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
-				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+				appOutputKMSKey:       "arn:aws:kms:us-west-2:01234567890:key/0000",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/app/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/app/back-end",
 			},
 			wantedErr: fmt.Errorf("couldn't find S3 bucket output key PipelineBucket in stack stack"),
 		},
 		"should return error when no kms key exists": {
 			givenStackOutputs: map[string]string{
-				projectOutputS3Bucket: "tests3-bucket-us-west-2",
-				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/project/front-end",
-				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/project/back-end",
+				appOutputS3Bucket:     "tests3-bucket-us-west-2",
+				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/app/front-end",
+				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/app/back-end",
 			},
 			wantedErr: fmt.Errorf("couldn't find KMS output key KMSKeyARN in stack stack"),
 		},
@@ -278,7 +277,7 @@ func TestToRegionalResources(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := ToProjectRegionalResources(mockProjectResourceStack("stack", tc.givenStackOutputs))
+			got, err := ToAppRegionalResources(mockAppResourceStack("stack", tc.givenStackOutputs))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, tc.wantedErr, err.Error())
@@ -297,7 +296,7 @@ func TestDNSDelegatedAccountsForStack(t *testing.T) {
 	}{
 		"should read from parameter and parse comma seperated list": {
 			given: map[string]string{
-				projectDNSDelegatedAccountsKey: "1234,5678",
+				appDNSDelegatedAccountsKey: "1234,5678",
 			},
 			want: []string{"1234", "5678"},
 		},
@@ -311,13 +310,13 @@ func TestDNSDelegatedAccountsForStack(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := DNSDelegatedAccountsForStack(mockProjectRolesStack("stack", tc.given))
+			got := DNSDelegatedAccountsForStack(mockAppRolesStack("stack", tc.given))
 			require.ElementsMatch(t, tc.want, got)
 		})
 	}
 }
 
-func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloudformation.Stack {
+func mockAppResourceStack(stackArn string, outputs map[string]string) *cloudformation.Stack {
 	outputList := []*cloudformation.Output{}
 	for key, val := range outputs {
 		outputList = append(outputList, &cloudformation.Output{
@@ -332,7 +331,7 @@ func mockProjectResourceStack(stackArn string, outputs map[string]string) *cloud
 	}
 }
 
-func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloudformation.Stack {
+func mockAppRolesStack(stackArn string, parameters map[string]string) *cloudformation.Stack {
 	parameterList := []*cloudformation.Parameter{}
 	for key, val := range parameters {
 		parameterList = append(parameterList, &cloudformation.Parameter{
@@ -347,59 +346,36 @@ func mockProjectRolesStack(stackArn string, parameters map[string]string) *cloud
 	}
 }
 
-func TestProjectStackName(t *testing.T) {
-	proj := &ProjectStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+func TestAppStackName(t *testing.T) {
+	app := &AppStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
 	}
-	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", proj.Project), proj.StackName())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", app.Project), app.StackName())
 }
 
-func TestProjectStackSetName(t *testing.T) {
-	proj := &ProjectStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testproject", AccountID: "1234"},
+func TestAppStackSetName(t *testing.T) {
+	app := &AppStackConfig{
+		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
 	}
-	require.Equal(t, fmt.Sprintf("%s-infrastructure", proj.Project), proj.StackSetName())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure", app.Project), app.StackSetName())
 }
 
-func TestTemplateToProjectConfig(t *testing.T) {
+func TestTemplateToAppConfig(t *testing.T) {
 	given := `AWSTemplateFormatVersion: '2010-09-09'
 Description: Cross-regional resources to support the CodePipeline for a workspace
 Metadata:
   Version: 7
-  Apps:
-  - testapp1
-  - testapp2
+  Services:
+  - testsvc1
+  - testsvc2
   Accounts:
   - 0000000000
 `
-	config, err := ProjectConfigFrom(&given)
+	config, err := AppConfigFrom(&given)
 	require.NoError(t, err)
-	require.Equal(t, ProjectResourcesConfig{
+	require.Equal(t, AppResourcesConfig{
 		Accounts: []string{"0000000000"},
 		Version:  7,
-		Apps:     []string{"testapp1", "testapp2"},
+		Services: []string{"testsvc1", "testsvc2"},
 	}, *config)
-}
-
-func emptyProjectBox() packd.Box {
-	return packd.NewMemoryBox()
-}
-
-func projectBoxTemplateFileWithSafeLogicalIDs() packd.Box {
-	box := packd.NewMemoryBox()
-	templateWithFunction := `AWSTemplateFormatVersion: '2010-09-09'
-Outputs:
-  KMSKeyARN:
-    Description: KMS Key used by CodePipeline for encrypting artifacts.
-    Value: !GetAtt KMSKey.Arn
-  PipelineBucket:
-    Description: Bucket used for CodePipeline to stage resources in.
-    Value: !Ref PipelineBuiltArtifactBucket
-{{range $app := .Apps}}  ECRRepo{{logicalIDSafe $app}}:
-    Description: ECR Repo used to store images of the {{$app}} app.
-	Value: !GetAtt ECRRepo{{logicalIDSafe $app}}.Arn{{end}}`
-
-	box.AddString(projectTemplatePath, mockTemplate)
-	box.AddString(projectResourcesTemplatePath, templateWithFunction)
-	return box
 }

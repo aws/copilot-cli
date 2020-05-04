@@ -162,7 +162,7 @@ func (o *deleteEnvOpts) validateNoRunningApps() error {
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
-				Key:    aws.String(stack.AppTagKey),
+				Key:    aws.String(stack.ServiceTagKey),
 				Values: []*string{}, // Matches any application stack.
 			},
 			{
@@ -170,7 +170,7 @@ func (o *deleteEnvOpts) validateNoRunningApps() error {
 				Values: []*string{aws.String(o.EnvName)},
 			},
 			{
-				Key:    aws.String(stack.ProjectTagKey),
+				Key:    aws.String(stack.AppTagKey),
 				Values: []*string{aws.String(o.ProjectName())},
 			},
 		},
@@ -182,7 +182,7 @@ func (o *deleteEnvOpts) validateNoRunningApps() error {
 		var appNames []string
 		for _, cfnStack := range stacks.ResourceTagMappingList {
 			for _, t := range cfnStack.Tags {
-				if *t.Key != stack.AppTagKey {
+				if *t.Key != stack.ServiceTagKey {
 					continue
 				}
 				appNames = append(appNames, *t.Value)

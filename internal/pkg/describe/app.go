@@ -85,7 +85,7 @@ func (d *AppDescriber) EnvVars() (map[string]string, error) {
 
 // GetServiceArn returns the ECS service ARN of the application in an environment.
 func (d *AppDescriber) GetServiceArn() (*ecs.ServiceArn, error) {
-	appResources, err := d.stackDescriber.StackResources(stack.NameForApp(d.project, d.env, d.app))
+	appResources, err := d.stackDescriber.StackResources(stack.NameForService(d.project, d.env, d.app))
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (d *AppDescriber) GetServiceArn() (*ecs.ServiceArn, error) {
 
 // AppStackResources returns the filtered application stack resources created by CloudFormation.
 func (d *AppDescriber) AppStackResources() ([]*cloudformation.StackResource, error) {
-	appResources, err := d.stackDescriber.StackResources(stack.NameForApp(d.project, d.env, d.app))
+	appResources, err := d.stackDescriber.StackResources(stack.NameForService(d.project, d.env, d.app))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (d *AppDescriber) EnvOutputs() (map[string]string, error) {
 
 // Params returns the parameters of the application stack.
 func (d *AppDescriber) Params() (map[string]string, error) {
-	appStack, err := d.stackDescriber.Stack(stack.NameForApp(d.project, d.env, d.app))
+	appStack, err := d.stackDescriber.Stack(stack.NameForService(d.project, d.env, d.app))
 	if err != nil {
 		return nil, err
 	}

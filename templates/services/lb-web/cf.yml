@@ -1,13 +1,13 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation template that represents a load balanced web application on Amazon ECS.
+Description: CloudFormation template that represents a load balanced web service on Amazon ECS.
 Parameters:
-  ProjectName:
+  AppName:
     Type: String
   EnvName:
     Type: String
-  AppName:
+  ServiceName:
     Type: String
   ContainerImage:
     Type: String
@@ -51,7 +51,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref AppName
+        - Name: !Ref ServiceName
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
@@ -80,7 +80,7 @@ Resources:
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref AppName
+        - ContainerName: !Ref ServiceName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
       ServiceRegistries:
@@ -90,7 +90,7 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      #  Check if your service is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
       HealthCheckIntervalSeconds: 10 # Default is 30.
       HealthyThresholdCount: 2       # Default is 5.
       HealthCheckTimeoutSeconds: 5
@@ -103,7 +103,7 @@ Resources:
       TargetType: ip
       VpcId:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-VpcId"
+          !Sub "${AppName}-${EnvName}-VpcId"
 
   LoadBalancerDNSAlias:
     Type: AWS::Route53::RecordSetGroup
@@ -111,24 +111,24 @@ Resources:
     Properties:
       HostedZoneId:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HostedZone"
-      Comment: !Sub "LoadBalancer alias for app ${AppName}"
+          !Sub "${AppName}-${EnvName}-HostedZone"
+      Comment: !Sub "LoadBalancer alias for service ${ServiceName}"
       RecordSets:
       - Name:
           !Join
             - '.'
-            - - !Ref AppName
+            - - !Ref ServiceName
               - Fn::ImportValue:
-                  !Sub "${ProjectName}-${EnvName}-SubDomain"
+                  !Sub "${AppName}-${EnvName}-SubDomain"
               - ""
         Type: A
         AliasTarget:
           HostedZoneId:
             Fn::ImportValue:
-              !Sub "${ProjectName}-${EnvName}-CanonicalHostedZoneID"
+              !Sub "${AppName}-${EnvName}-CanonicalHostedZoneID"
           DNSName:
             Fn::ImportValue:
-              !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS"
+              !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS"
 
   RulePriorityFunction:
     Type: AWS::Lambda::Function
@@ -175,7 +175,7 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
+          !Sub "${AppName}-${EnvName}-HTTPSListenerArn"
 
   HTTPSListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -190,12 +190,12 @@ Resources:
             Values:
               - Fn::Join:
                 - '.'
-                - - !Ref AppName
+                - - !Ref ServiceName
                   - Fn::ImportValue:
-                      !Sub "${ProjectName}-${EnvName}-SubDomain"
+                      !Sub "${AppName}-${EnvName}-SubDomain"
       ListenerArn:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HTTPSListenerArn"
+          !Sub "${AppName}-${EnvName}-HTTPSListenerArn"
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
 
   HTTPRulePriorityAction:
@@ -205,7 +205,7 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       ListenerArn:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+          !Sub "${AppName}-${EnvName}-HTTPListenerArn"
 
   HTTPListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -227,7 +227,7 @@ Resources:
                   - !Sub "/${RulePath}/*"
       ListenerArn:
         Fn::ImportValue:
-          !Sub "${ProjectName}-${EnvName}-HTTPListenerArn"
+          !Sub "${AppName}-${EnvName}-HTTPListenerArn"
       Priority: 
         !If
           - HTTPRootPath

@@ -76,10 +76,10 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 						&testEnvironment,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "80",
-						stack.AppTaskCountParamKey:          "1",
-						stack.AppTaskCPUParamKey:            "256",
-						stack.AppTaskMemoryParamKey:         "512",
+						stack.LBWebServiceContainerPortParamKey: "80",
+						stack.ServiceTaskCountParamKey:          "1",
+						stack.ServiceTaskCPUParamKey:            "256",
+						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
@@ -117,10 +117,10 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 					}, nil),
 
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "5000",
-						stack.AppTaskCountParamKey:          "1",
-						stack.AppTaskCPUParamKey:            "256",
-						stack.AppTaskMemoryParamKey:         "512",
+						stack.LBWebServiceContainerPortParamKey: "5000",
+						stack.ServiceTaskCountParamKey:          "1",
+						stack.ServiceTaskCPUParamKey:            "256",
+						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
@@ -128,10 +128,10 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 						}, nil),
 
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "5000",
-						stack.AppTaskCountParamKey:          "2",
-						stack.AppTaskCPUParamKey:            "512",
-						stack.AppTaskMemoryParamKey:         "1024",
+						stack.LBWebServiceContainerPortParamKey: "5000",
+						stack.ServiceTaskCountParamKey:          "2",
+						stack.ServiceTaskCPUParamKey:            "512",
+						stack.ServiceTaskMemoryParamKey:         "1024",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(
 						map[string]string{

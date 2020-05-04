@@ -82,7 +82,7 @@ func TestEnvTemplate(t *testing.T) {
 func TestEnvParameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
-	deploymentInputWithDNS.ProjectDNSName = "ecs.aws"
+	deploymentInputWithDNS.AppDNSName = "ecs.aws"
 	testCases := map[string]struct {
 		input *deploy.CreateEnvironmentInput
 		want  []*cloudformation.Parameter
@@ -95,7 +95,7 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectNameKey),
+					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInput.Project),
 				},
 				{
@@ -107,11 +107,11 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSKey),
+					ParameterKey:   aws.String(envParamAppDNSKey),
 					ParameterValue: aws.String(""),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String(""),
 				},
 			},
@@ -124,7 +124,7 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(strconv.FormatBool(deploymentInputWithDNS.PublicLoadBalancer)),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectNameKey),
+					ParameterKey:   aws.String(envParamAppNameKey),
 					ParameterValue: aws.String(deploymentInputWithDNS.Project),
 				},
 				{
@@ -136,11 +136,11 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(deploymentInputWithDNS.ToolsAccountPrincipalARN),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.ProjectDNSName),
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.AppDNSName),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String("arn:aws:iam::000000000:role/project-DNSDelegationRole"),
 				},
 			},
@@ -167,7 +167,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -176,7 +176,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
-					ProjectDNSName:           "",
+					AppDNSName:               "",
 				},
 			},
 		},
@@ -185,7 +185,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "0000000",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -194,7 +194,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -213,14 +213,14 @@ func TestEnvTags(t *testing.T) {
 			Name:    "env",
 			Project: "project",
 			AdditionalTags: map[string]string{
-				"owner":       "boss",
-				ProjectTagKey: "overrideproject",
+				"owner":   "boss",
+				AppTagKey: "overrideproject",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String("project"), // Ignore user's overrides.
 		},
 		{

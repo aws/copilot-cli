@@ -11,9 +11,9 @@ import (
 
 // Tag keys used while creating stacks.
 const (
-	ProjectTagKey = "ecs-project"
+	AppTagKey     = "ecs-project"
 	EnvTagKey     = "ecs-environment"
-	AppTagKey     = "ecs-application"
+	ServiceTagKey = "ecs-application"
 )
 
 func mergeAndFlattenTags(additionalTags map[string]string, cliTags map[string]string) []*cloudformation.Tag {

@@ -306,11 +306,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 						{
 							Tags: []*resourcegroupstaggingapi.Tag{
 								{
-									Key:   aws.String(stack.AppTagKey),
+									Key:   aws.String(stack.ServiceTagKey),
 									Value: aws.String("frontend"),
 								},
 								{
-									Key:   aws.String(stack.AppTagKey),
+									Key:   aws.String(stack.ServiceTagKey),
 									Value: aws.String("backend"),
 								},
 							},

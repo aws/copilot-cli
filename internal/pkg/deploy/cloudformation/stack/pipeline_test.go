@@ -42,7 +42,7 @@ func TestPipelineTags(t *testing.T) {
 
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String(projectName),
 		},
 		{

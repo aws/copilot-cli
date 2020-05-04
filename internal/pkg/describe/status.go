@@ -112,9 +112,9 @@ func (w *AppStatus) Describe() (*AppStatusDesc, error) {
 		taskStatus = append(taskStatus, *status)
 	}
 	alarms, err := w.CwSvc.GetAlarmsWithTags(map[string]string{
-		stack.ProjectTagKey: w.ProjectName,
+		stack.AppTagKey:     w.ProjectName,
 		stack.EnvTagKey:     w.EnvName,
-		stack.AppTagKey:     w.AppName,
+		stack.ServiceTagKey: w.AppName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)

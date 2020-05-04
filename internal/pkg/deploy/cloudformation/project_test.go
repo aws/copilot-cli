@@ -115,7 +115,7 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
 				require.NoError(t, err)
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
@@ -139,8 +139,8 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-					Metadata: stack.ProjectResourcesConfig{
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{
+					Metadata: stack.AppResourcesConfig{
 						Accounts: []string{"1234"},
 					},
 				})
@@ -160,8 +160,8 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{
-					Metadata: stack.ProjectResourcesConfig{
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{
+					Metadata: stack.AppResourcesConfig{
 						Accounts: []string{"1234"},
 						Version:  1,
 					},
@@ -292,7 +292,7 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 			app:     "TestApp",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{})
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
 				require.NoError(t, err)
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
@@ -300,9 +300,9 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
-						configToDeploy, err := stack.ProjectConfigFrom(&template)
+						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []string{"TestApp"}, configToDeploy.Apps)
+						require.ElementsMatch(t, []string{"TestApp"}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 1, configToDeploy.Version)
 					})
@@ -314,9 +314,9 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 			app:     "test",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-					Apps:    []string{"firsttest"},
-					Version: 1,
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{Metadata: stack.AppResourcesConfig{
+					Services: []string{"firsttest"},
+					Version:  1,
 				}})
 				require.NoError(t, err)
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
@@ -325,9 +325,9 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
-						configToDeploy, err := stack.ProjectConfigFrom(&template)
+						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []string{"test", "firsttest"}, configToDeploy.Apps)
+						require.ElementsMatch(t, []string{"test", "firsttest"}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "there should be no new accounts to deploy")
 						require.Equal(t, 2, configToDeploy.Version)
 
@@ -340,9 +340,9 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 			app:     "test",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-					Apps:    []string{"test"},
-					Version: 1,
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{Metadata: stack.AppResourcesConfig{
+					Services: []string{"test"},
+					Version:  1,
 				}})
 				require.NoError(t, err)
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
@@ -391,9 +391,9 @@ func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
 
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
-				body, err := yaml.Marshal(stack.DeployedProjectMetadata{Metadata: stack.ProjectResourcesConfig{
-					Apps:    []string{"test", "firsttest"},
-					Version: 1,
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{Metadata: stack.AppResourcesConfig{
+					Services: []string{"test", "firsttest"},
+					Version:  1,
 				}})
 				require.NoError(t, err)
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
@@ -402,9 +402,9 @@ func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
 					Do(func(_, template string, _, _, _, _, _ stackset.CreateOrUpdateOption) {
-						configToDeploy, err := stack.ProjectConfigFrom(&template)
+						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
-						require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Apps)
+						require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
 						require.Equal(t, 2, configToDeploy.Version)
 					})
@@ -629,7 +629,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(mockProjectRolesStack("stackname", map[string]string{
-					"ProjectDNSDelegatedAccounts": "1234",
+					"AppDNSDelegatedAccounts": "1234",
 				}), nil)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
 				return m
@@ -659,7 +659,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(mockProjectRolesStack("stackname", map[string]string{
-					"ProjectDNSDelegatedAccounts": "1234",
+					"AppDNSDelegatedAccounts": "1234",
 				}), nil)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(&cloudformation.ErrChangeSetEmpty{})
 				return m
@@ -675,7 +675,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(mockProjectRolesStack("stackname", map[string]string{
-					"ProjectDNSDelegatedAccounts": "1234",
+					"AppDNSDelegatedAccounts": "1234",
 				}), nil)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("error"))
 				return m

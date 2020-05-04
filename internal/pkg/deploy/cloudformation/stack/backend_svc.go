@@ -14,41 +14,41 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-// Parameter logical IDs for a backend application.
+// Parameter logical IDs for a backend service.
 const (
-	BackendAppContainerPortParamKey = "ContainerPort"
+	BackendServiceContainerPortParamKey = "ContainerPort"
 )
 
-type backendAppReadParser interface {
+type backendSvcReadParser interface {
 	template.ReadParser
 	ParseBackendService(template.ServiceOpts) (*template.Content, error)
 }
 
-// BackendApp represents the configuration needed to create a CloudFormation stack from a backend application manifest.
-type BackendApp struct {
-	*app
+// BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
+type BackendService struct {
+	*svc
 	manifest *manifest.BackendService
 
-	parser backendAppReadParser
+	parser backendSvcReadParser
 }
 
-// NewBackendApp creates a new BackendApp stack from a manifest file.
-func NewBackendApp(mft *manifest.BackendService, env, proj string, rc RuntimeConfig) (*BackendApp, error) {
+// NewBackendService creates a new BackendService stack from a manifest file.
+func NewBackendService(mft *manifest.BackendService, env, app string, rc RuntimeConfig) (*BackendService, error) {
 	parser := template.New()
 	addons, err := addons.New(mft.Name)
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
 	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
-	return &BackendApp{
-		app: &app{
-			name:    mft.Name,
-			env:     env,
-			project: proj,
-			tc:      envManifest.TaskConfig,
-			rc:      rc,
-			parser:  parser,
-			addons:  addons,
+	return &BackendService{
+		svc: &svc{
+			name:   mft.Name,
+			env:    env,
+			app:    app,
+			tc:     envManifest.TaskConfig,
+			rc:     rc,
+			parser: parser,
+			addons: addons,
 		},
 		manifest: envManifest,
 
@@ -56,8 +56,8 @@ func NewBackendApp(mft *manifest.BackendService, env, proj string, rc RuntimeCon
 	}, nil
 }
 
-// Template returns the CloudFormation template for the backend application.
-func (a *BackendApp) Template() (string, error) {
+// Template returns the CloudFormation template for the backend service.
+func (a *BackendService) Template() (string, error) {
 	outputs, err := a.addonsOutputs()
 	if err != nil {
 		return "", err
@@ -69,16 +69,16 @@ func (a *BackendApp) Template() (string, error) {
 		HealthCheck: a.manifest.Image.HealthCheckOpts(),
 	})
 	if err != nil {
-		return "", fmt.Errorf("parse backend app template: %w", err)
+		return "", fmt.Errorf("parse backend service template: %w", err)
 	}
 	return content.String(), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (a *BackendApp) Parameters() []*cloudformation.Parameter {
-	return append(a.app.Parameters(), []*cloudformation.Parameter{
+func (a *BackendService) Parameters() []*cloudformation.Parameter {
+	return append(a.svc.Parameters(), []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(BackendAppContainerPortParamKey),
+			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(a.manifest.Image.Port), 10)),
 		},
 	}...)
@@ -86,6 +86,6 @@ func (a *BackendApp) Parameters() []*cloudformation.Parameter {
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
-func (a *BackendApp) SerializedParameters() (string, error) {
-	return a.app.templateConfiguration(a)
+func (a *BackendService) SerializedParameters() (string, error) {
+	return a.svc.templateConfiguration(a)
 }

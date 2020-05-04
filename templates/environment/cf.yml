@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 Parameters:
-  ProjectName:
+  AppName:
     Type: String
 
   EnvironmentName:
@@ -36,11 +36,11 @@ Parameters:
   ToolsAccountPrincipalARN:
     Type: String
 
-  ProjectDNSName:
+  AppDNSName:
     Type: String
     Default: ""
 
-  ProjectDNSDelegationRole:
+  AppDNSDelegationRole:
     Type: String
     Default: ""
 
@@ -48,7 +48,7 @@ Conditions:
   CreatePublicLoadBalancer:
     Fn::Equals: [ !Ref IncludePublicLoadBalancer, true ]
   DelegateDNS:
-    !Not [!Equals [ !Ref ProjectDNSName, "" ]]
+    !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
     - !Condition DelegateDNS
     - !Condition CreatePublicLoadBalancer
@@ -63,14 +63,14 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -87,7 +87,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-pub0'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-pub0'
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -98,7 +98,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-pub1'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-pub1'
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
@@ -109,7 +109,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-priv0'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-priv0'
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -120,7 +120,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-priv1'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-priv1'
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -128,7 +128,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -151,11 +151,11 @@ Resources:
       SubnetId: !Ref PublicSubnet2
 
   # Creates a service discovery namespace with the form:
-  # {app}.{projectname}.local
+  # {svc}.{appname}.local
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
-        Name: !Sub ${ProjectName}.local
+        Name: !Sub ${AppName}.local
         Vpc: !Ref VPC
 
   Cluster:
@@ -180,17 +180,17 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-lb'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-lb'
 
   # Only accept requests coming from the public ALB or other containers in the same security group.
   EnvironmentSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Join ['', [!Ref ProjectName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+      GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${ProjectName}-${EnvironmentName}-env'
+          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-env'
 
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
@@ -337,7 +337,7 @@ Resources:
             Resource: "*"
             Condition: 
               StringEquals:
-                'aws:ResourceTag/ecs-project': !Sub '${ProjectName}'
+                'aws:ResourceTag/ecs-project': !Sub '${AppName}'
                 'aws:ResourceTag/ecs-environment': !Sub '${EnvironmentName}'
           - Sid: ECS
             Effect: Allow
@@ -537,8 +537,8 @@ Resources:
     Condition: DelegateDNS
     Properties:
       HostedZoneConfig:
-        Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
-      Name: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+        Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${AppName}.${AppDNSName}"
+      Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 
   CustomResourceRole:
     Type: AWS::IAM::Role
@@ -599,7 +599,7 @@ Resources:
       ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
 
   # Adds records for this environment's hostedzone
-  # into the project's hostedzone. This lets this
+  # into the application's hostedzone. This lets this
   # environment own the DNS of the it's subdomain.
   DelegateDNSAction:
     Condition: DelegateDNS
@@ -609,10 +609,10 @@ Resources:
     - EnvironmentHostedZone
     Properties:
       ServiceToken: !GetAtt DNSDelegationFunction.Arn
-      DomainName: !Sub ${ProjectName}.${ProjectDNSName}
-      SubdomainName: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+      DomainName: !Sub ${AppName}.${AppDNSName}
+      SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
       NameServers: !GetAtt EnvironmentHostedZone.NameServers
-      RootDNSRole: !Ref ProjectDNSDelegationRole
+      RootDNSRole: !Ref AppDNSDelegationRole
 
   HTTPSCert:
     Condition: DelegateDNS
@@ -623,11 +623,11 @@ Resources:
     - DelegateDNSAction
     Properties:
       ServiceToken: !GetAtt CertificateValidationFunction.Arn
-      DomainName: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+      DomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
       HostedZoneId: !Ref EnvironmentHostedZone
       Region: !Ref AWS::Region
       SubjectAlternativeNames:
-      - !Sub "*.${EnvironmentName}.${ProjectName}.${ProjectDNSName}"
+      - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -710,7 +710,7 @@ Outputs:
 
   EnvironmentSubdomain:
     Condition: DelegateDNS
-    Value: !Sub ${EnvironmentName}.${ProjectName}.${ProjectDNSName}
+    Value: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain

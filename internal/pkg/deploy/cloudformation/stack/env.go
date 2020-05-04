@@ -29,12 +29,12 @@ const (
 
 // Parameter keys.
 const (
-	envParamIncludeLBKey                = "IncludePublicLoadBalancer"
-	envParamProjectNameKey              = "ProjectName"
-	envParamEnvNameKey                  = "EnvironmentName"
-	envParamToolsAccountPrincipalKey    = "ToolsAccountPrincipalARN"
-	envParamProjectDNSKey               = "ProjectDNSName"
-	envParamProjectDNSDelegationRoleKey = "ProjectDNSDelegationRole"
+	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
+	envParamAppNameKey               = "AppName"
+	envParamEnvNameKey               = "EnvironmentName"
+	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
+	envParamAppDNSKey                = "AppDNSName"
+	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 )
 
 // Output keys.
@@ -93,7 +93,7 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterValue: aws.String(strconv.FormatBool(e.PublicLoadBalancer)),
 		},
 		{
-			ParameterKey:   aws.String(envParamProjectNameKey),
+			ParameterKey:   aws.String(envParamAppNameKey),
 			ParameterValue: aws.String(e.Project),
 		},
 		{
@@ -105,11 +105,11 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterValue: aws.String(e.ToolsAccountPrincipalARN),
 		},
 		{
-			ParameterKey:   aws.String(envParamProjectDNSKey),
-			ParameterValue: aws.String(e.ProjectDNSName),
+			ParameterKey:   aws.String(envParamAppDNSKey),
+			ParameterValue: aws.String(e.AppDNSName),
 		},
 		{
-			ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 			ParameterValue: aws.String(e.dnsDelegationRole()),
 		},
 	}
@@ -118,24 +118,24 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
-		ProjectTagKey: e.Project,
-		EnvTagKey:     e.Name,
+		AppTagKey: e.Project,
+		EnvTagKey: e.Name,
 	})
 }
 
 func (e *EnvStackConfig) dnsDelegationRole() string {
-	if e.ToolsAccountPrincipalARN == "" || e.ProjectDNSName == "" {
+	if e.ToolsAccountPrincipalARN == "" || e.AppDNSName == "" {
 		return ""
 	}
 
-	projectRole, err := arn.Parse(e.ToolsAccountPrincipalARN)
+	appRole, err := arn.Parse(e.ToolsAccountPrincipalARN)
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", projectRole.AccountID, dnsDelegationRoleName(e.Project))
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.Project))
 }
 
-// StackName returns the name of the CloudFormation stack (based on the project and env names).
+// StackName returns the name of the CloudFormation stack (based on the app and env names).
 func (e *EnvStackConfig) StackName() string {
 	return NameForEnv(e.Project, e.Name)
 }

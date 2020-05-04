@@ -5,9 +5,7 @@
 // This file defines environment deployment resources.
 package deploy
 
-import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-)
+import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
@@ -16,7 +14,7 @@ type CreateEnvironmentInput struct {
 	Prod                     bool              // Whether or not this environment is a production environment.
 	PublicLoadBalancer       bool              // Whether or not this environment should contain a shared public load balancer between applications.
 	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
-	ProjectDNSName           string            // The DNS name of this project, if it exists
+	AppDNSName               string            // The DNS name of this project, if it exists
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the project.
 }
 

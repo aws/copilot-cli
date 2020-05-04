@@ -22,7 +22,7 @@ import (
 // We deploy project resources through StackSets - that way we can have one
 // template that we update and all regional stacks are updated.
 func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
-	projectConfig := stack.NewProjectStackConfig(in)
+	projectConfig := stack.NewAppStackConfig(in)
 	s, err := toStack(projectConfig)
 	if err != nil {
 		return err
@@ -35,8 +35,8 @@ func (cf CloudFormation) DeployProject(in *deploy.CreateProjectInput) error {
 		}
 	}
 
-	blankProjectTemplate, err := projectConfig.ResourceTemplate(&stack.ProjectResourcesConfig{
-		Project: projectConfig.Project,
+	blankProjectTemplate, err := projectConfig.ResourceTemplate(&stack.AppResourcesConfig{
+		App: projectConfig.Project,
 	})
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 		DomainName: project.Domain,
 	}
 
-	projectConfig := stack.NewProjectStackConfig(&deployProject)
+	projectConfig := stack.NewAppStackConfig(&deployProject)
 	projectStack, err := cf.cfnClient.Describe(projectConfig.StackName())
 	if err != nil {
 		return fmt.Errorf("getting existing project infrastructure stack: %w", err)
@@ -67,7 +67,7 @@ func (cf CloudFormation) DelegateDNSPermissions(project *archer.Project, account
 	dnsDelegatedAccounts := stack.DNSDelegatedAccountsForStack(projectStack.SDK())
 	deployProject.DNSDelegationAccounts = append(dnsDelegatedAccounts, accountID)
 
-	s, err := toStack(stack.NewProjectStackConfig(&deployProject))
+	s, err := toStack(stack.NewAppStackConfig(&deployProject))
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (cf CloudFormation) GetRegionalProjectResources(project *archer.Project) ([
 }
 
 func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, region *string) ([]*archer.ProjectRegionalResources, error) {
-	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+	projectConfig := stack.NewAppStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	})
@@ -129,7 +129,7 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 		if err != nil {
 			return nil, fmt.Errorf("getting outputs for stack %s in region %s: %w", summary.StackID, summary.Region, err)
 		}
-		regionalResource, err := stack.ToProjectRegionalResources(cfStack.SDK())
+		regionalResource, err := stack.ToAppRegionalResources(cfStack.SDK())
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (cf CloudFormation) getResourcesForStackInstances(project *archer.Project, 
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
 func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string) error {
-	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+	projectConfig := stack.NewAppStackConfig(&deploy.CreateProjectInput{
 		Project:        project.Name,
 		AccountID:      project.AccountID,
 		AdditionalTags: project.Tags,
@@ -159,7 +159,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string
 	// doesn't already exist.
 	var appList []string
 	shouldAddNewApp := true
-	for _, app := range previouslyDeployedConfig.Apps {
+	for _, app := range previouslyDeployedConfig.Services {
 		appList = append(appList, app)
 		if app == appName {
 			shouldAddNewApp = false
@@ -172,11 +172,11 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string
 
 	appList = append(appList, appName)
 
-	newDeploymentConfig := stack.ProjectResourcesConfig{
+	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
-		Apps:     appList,
+		Services: appList,
 		Accounts: previouslyDeployedConfig.Accounts,
-		Project:  projectConfig.Project,
+		App:      projectConfig.Project,
 	}
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
 		return fmt.Errorf("adding %s app resources to project: %w", appName, err)
@@ -187,7 +187,7 @@ func (cf CloudFormation) AddAppToProject(project *archer.Project, appName string
 
 // RemoveAppFromProject attempts to remove App specific resources (ECR repositories) from the Project resource stack.
 func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName string) error {
-	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+	projectConfig := stack.NewAppStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	})
@@ -200,7 +200,7 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 	// with the input app to be removed.
 	var appList []string
 	shouldRemoveApp := false
-	for _, app := range previouslyDeployedConfig.Apps {
+	for _, app := range previouslyDeployedConfig.Services {
 		if app == appName {
 			shouldRemoveApp = true
 			continue
@@ -212,11 +212,11 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 		return nil
 	}
 
-	newDeploymentConfig := stack.ProjectResourcesConfig{
+	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
-		Apps:     appList,
+		Services: appList,
 		Accounts: previouslyDeployedConfig.Accounts,
-		Project:  projectConfig.Project,
+		App:      projectConfig.Project,
 	}
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
 		return fmt.Errorf("removing %s app resources from project: %w", appName, err)
@@ -229,7 +229,7 @@ func (cf CloudFormation) RemoveAppFromProject(project *archer.Project, appName s
 // with new Account IDs in resource policies (KMS Keys and ECR Repos) - and
 // sets up a new stack instance if the environment is in a new region.
 func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.Environment) error {
-	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+	projectConfig := stack.NewAppStackConfig(&deploy.CreateProjectInput{
 		Project:        project.Name,
 		AccountID:      project.AccountID,
 		AdditionalTags: project.Tags,
@@ -255,11 +255,11 @@ func (cf CloudFormation) AddEnvToProject(project *archer.Project, env *archer.En
 		accountList = append(accountList, env.AccountID)
 	}
 
-	newDeploymentConfig := stack.ProjectResourcesConfig{
+	newDeploymentConfig := stack.AppResourcesConfig{
 		Version:  previouslyDeployedConfig.Version + 1,
-		Apps:     previouslyDeployedConfig.Apps,
+		Services: previouslyDeployedConfig.Services,
 		Accounts: accountList,
-		Project:  projectConfig.Project,
+		App:      projectConfig.Project,
 	}
 
 	if err := cf.deployProjectConfig(projectConfig, &newDeploymentConfig); err != nil {
@@ -286,7 +286,7 @@ var getRegionFromClient = func(client sdkcloudformationiface.CloudFormationAPI) 
 // This is necessary because the project region might not contain any environment.
 func (cf CloudFormation) AddPipelineResourcesToProject(
 	project *archer.Project, projectRegion string) error {
-	projectConfig := stack.NewProjectStackConfig(&deploy.CreateProjectInput{
+	projectConfig := stack.NewAppStackConfig(&deploy.CreateProjectInput{
 		Project:   project.Name,
 		AccountID: project.AccountID,
 	})
@@ -301,7 +301,7 @@ func (cf CloudFormation) AddPipelineResourcesToProject(
 	return nil
 }
 
-func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackConfig, resources *stack.ProjectResourcesConfig) error {
+func (cf CloudFormation) deployProjectConfig(projectConfig *stack.AppStackConfig, resources *stack.AppResourcesConfig) error {
 	newTemplateToDeploy, err := projectConfig.ResourceTemplate(resources)
 	if err != nil {
 		return err
@@ -326,7 +326,7 @@ func (cf CloudFormation) deployProjectConfig(projectConfig *stack.ProjectStackCo
 
 // addNewStackInstances takes an environment and determines if we need to create a new
 // stack instance. We only spin up a new stack instance if the env is in a new region.
-func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.ProjectStackConfig, region string) error {
+func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.AppStackConfig, region string) error {
 	summaries, err := cf.projectStackSet.InstanceSummaries(projectConfig.StackSetName())
 	if err != nil {
 		return err
@@ -349,14 +349,14 @@ func (cf CloudFormation) addNewProjectStackInstances(projectConfig *stack.Projec
 	return cf.projectStackSet.CreateInstancesAndWait(projectConfig.StackSetName(), []string{projectConfig.AccountID}, []string{region})
 }
 
-func (cf CloudFormation) getLastDeployedProjectConfig(projectConfig *stack.ProjectStackConfig) (*stack.ProjectResourcesConfig, error) {
+func (cf CloudFormation) getLastDeployedProjectConfig(projectConfig *stack.AppStackConfig) (*stack.AppResourcesConfig, error) {
 	// Check the existing deploy stack template. From that template, we'll parse out the list of apps and accounts that
 	// are deployed in the stack.
 	descr, err := cf.projectStackSet.Describe(projectConfig.StackSetName())
 	if err != nil {
 		return nil, err
 	}
-	previouslyDeployedConfig, err := stack.ProjectConfigFrom(&descr.Template)
+	previouslyDeployedConfig, err := stack.AppConfigFrom(&descr.Template)
 	if err != nil {
 		return nil, fmt.Errorf("parse previous deployed stackset %w", err)
 	}
