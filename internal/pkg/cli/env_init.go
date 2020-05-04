@@ -137,13 +137,15 @@ func (o *initEnvOpts) Execute() error {
 		// Ensure the project actually exists before we do a deployment.
 		return err
 	}
+
+	if err = o.initProfileClients(o); err != nil {
+		return err
+	}
+
 	if project.RequiresDNSDelegation() {
 		if err := o.delegateDNSFromProject(project); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
-	}
-	if err = o.initProfileClients(o); err != nil {
-		return err
 	}
 
 	// 1. Start creating the CloudFormation stack for the environment.
