@@ -12,33 +12,33 @@ import (
 )
 
 const (
-	// LoadBalancedWebService is a web service with a load balancer and Fargate as compute.
-	LoadBalancedWebService = "Load Balanced Web Svc"
-	// BackendService is a service that cannot be accessed from the internet but can be reached from other services.
-	BackendService = "Backend Svc"
+	// LoadBalancedWebServiceType is a web service with a load balancer and Fargate as compute.
+	LoadBalancedWebServiceType = "Load Balanced Web Service"
+	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
+	BackendServiceType = "Backend Service"
 )
 
-// SvcTypes are the supported service manifest types.
-var SvcTypes = []string{
-	LoadBalancedWebService,
-	BackendService,
+// ServiceTypes are the supported service manifest types.
+var ServiceTypes = []string{
+	LoadBalancedWebServiceType,
+	BackendServiceType,
 }
 
-// Svc holds the basic data that every service manifest file needs to have.
-type Svc struct {
+// Service holds the basic data that every service manifest file needs to have.
+type Service struct {
 	Name string `yaml:"name"`
 	Type string `yaml:"type"` // must be one of the supported manifest types.
 }
 
-// SvcImage represents the service's container image.
-type SvcImage struct {
+// ServiceImage represents the service's container image.
+type ServiceImage struct {
 	Build string `yaml:"build"` // Path to the Dockerfile.
 }
 
-// SvcImageWithPort represents a container image with an exposed port.
-type SvcImageWithPort struct {
-	SvcImage `yaml:",inline"`
-	Port     uint16 `yaml:"port"`
+// ServiceImageWithPort represents a container image with an exposed port.
+type ServiceImageWithPort struct {
+	ServiceImage `yaml:",inline"`
+	Port         uint16 `yaml:"port"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
@@ -88,30 +88,30 @@ func (tc TaskConfig) deepcopy() TaskConfig {
 	}
 }
 
-// SvcProps contains properties for creating a new service manifest.
-type SvcProps struct {
-	SvcName    string
+// ServiceProps contains properties for creating a new service manifest.
+type ServiceProps struct {
+	Name       string
 	Dockerfile string
 }
 
-// UnmarshalSvc deserializes the YAML input stream into a service manifest object.
+// UnmarshalService deserializes the YAML input stream into a service manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the service type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalSvc(in []byte) (interface{}, error) {
-	am := Svc{}
+func UnmarshalService(in []byte) (interface{}, error) {
+	am := Service{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to service manifest: %w", err)
 	}
 
 	switch am.Type {
-	case LoadBalancedWebService:
-		m := newDefaultLoadBalancedWebSvc()
+	case LoadBalancedWebServiceType:
+		m := newDefaultLoadBalancedWebService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to load balanced web service: %w", err)
 		}
 		return m, nil
-	case BackendService:
-		m := newDefaultBackendSvc()
+	case BackendServiceType:
+		m := newDefaultBackendService()
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}

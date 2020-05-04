@@ -16,13 +16,13 @@ import (
 
 func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebSvc)
+		mockDependencies func(ctrl *gomock.Controller, manifest *LoadBalancedWebService)
 
 		wantedBinary []byte
 		wantedError  error
 	}{
 		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebSvc) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
 				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest).Return(nil, errors.New("some error"))
@@ -31,7 +31,7 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebSvc) {
+			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
 				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
@@ -47,7 +47,7 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			manifest := &LoadBalancedWebSvc{}
+			manifest := &LoadBalancedWebService{}
 			tc.mockDependencies(ctrl, manifest)
 
 			// WHEN
@@ -62,24 +62,24 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 
 func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
-		in         *LoadBalancedWebSvc
+		in         *LoadBalancedWebService
 		envToApply string
 
-		wanted *LoadBalancedWebSvc
+		wanted *LoadBalancedWebService
 	}{
 		"with no existing environments": {
-			in: &LoadBalancedWebSvc{
-				Svc: Svc{
+			in: &LoadBalancedWebService{
+				Service: Service{
 					Name: "phonetool",
-					Type: LoadBalancedWebService,
+					Type: LoadBalancedWebServiceType,
 				},
-				Image: SvcImageWithPort{
-					SvcImage: SvcImage{
+				Image: ServiceImageWithPort{
+					ServiceImage: ServiceImage{
 						Build: "./Dockerfile",
 					},
 					Port: 80,
 				},
-				LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRule{
 						Path:            "/awards/*",
 						HealthCheckPath: "/",
@@ -93,18 +93,18 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			},
 			envToApply: "prod-iad",
 
-			wanted: &LoadBalancedWebSvc{
-				Svc: Svc{
+			wanted: &LoadBalancedWebService{
+				Service: Service{
 					Name: "phonetool",
-					Type: LoadBalancedWebService,
+					Type: LoadBalancedWebServiceType,
 				},
-				Image: SvcImageWithPort{
-					SvcImage: SvcImage{
+				Image: ServiceImageWithPort{
+					ServiceImage: ServiceImage{
 						Build: "./Dockerfile",
 					},
 					Port: 80,
 				},
-				LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRule{
 						Path:            "/awards/*",
 						HealthCheckPath: "/",
@@ -118,18 +118,18 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 		"with overrides": {
-			in: &LoadBalancedWebSvc{
-				Svc: Svc{
+			in: &LoadBalancedWebService{
+				Service: Service{
 					Name: "phonetool",
-					Type: LoadBalancedWebService,
+					Type: LoadBalancedWebServiceType,
 				},
-				Image: SvcImageWithPort{
-					SvcImage: SvcImage{
+				Image: ServiceImageWithPort{
+					ServiceImage: ServiceImage{
 						Build: "./Dockerfile",
 					},
 					Port: 80,
 				},
-				LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRule{
 						Path:            "/awards/*",
 						HealthCheckPath: "/",
@@ -148,7 +148,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				Environments: map[string]LoadBalancedWebSvcConfig{
+				Environments: map[string]LoadBalancedWebServiceConfig{
 					"prod-iad": {
 						TaskConfig: TaskConfig{
 							CPU:   2046,
@@ -162,18 +162,18 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			},
 			envToApply: "prod-iad",
 
-			wanted: &LoadBalancedWebSvc{
-				Svc: Svc{
+			wanted: &LoadBalancedWebService{
+				Service: Service{
 					Name: "phonetool",
-					Type: LoadBalancedWebService,
+					Type: LoadBalancedWebServiceType,
 				},
-				Image: SvcImageWithPort{
-					SvcImage: SvcImage{
+				Image: ServiceImageWithPort{
+					ServiceImage: ServiceImage{
 						Build: "./Dockerfile",
 					},
 					Port: 80,
 				},
-				LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					RoutingRule: RoutingRule{
 						Path:            "/awards/*",
 						HealthCheckPath: "/",

@@ -35,14 +35,14 @@ type loadBalancedWebAppReadParser interface {
 // LoadBalancedWebApp represents the configuration needed to create a CloudFormation stack from a load balanced web application manifest.
 type LoadBalancedWebApp struct {
 	*app
-	manifest     *manifest.LoadBalancedWebSvc
+	manifest     *manifest.LoadBalancedWebService
 	httpsEnabled bool
 
 	parser loadBalancedWebAppReadParser
 }
 
 // NewLoadBalancedWebApp creates a new LoadBalancedWebApp stack from a manifest file.
-func NewLoadBalancedWebApp(mft *manifest.LoadBalancedWebSvc, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
+func NewLoadBalancedWebApp(mft *manifest.LoadBalancedWebService, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
 	parser := template.New()
 	addons, err := addons.New(mft.Name)
 	if err != nil {
@@ -69,7 +69,7 @@ func NewLoadBalancedWebApp(mft *manifest.LoadBalancedWebSvc, env, proj string, r
 // NewHTTPSLoadBalancedWebApp  creates a new LoadBalancedWebApp stack from its manifest that needs to be deployed to
 // a environment within a project. It creates an HTTPS listener and assumes that the environment
 // it's being deployed into has an HTTPS configured listener.
-func NewHTTPSLoadBalancedWebApp(mft *manifest.LoadBalancedWebSvc, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
+func NewHTTPSLoadBalancedWebApp(mft *manifest.LoadBalancedWebService, env, proj string, rc RuntimeConfig) (*LoadBalancedWebApp, error) {
 	webApp, err := NewLoadBalancedWebApp(mft, env, proj, rc)
 	if err != nil {
 		return nil, err

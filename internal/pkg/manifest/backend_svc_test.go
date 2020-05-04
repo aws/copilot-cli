@@ -15,26 +15,26 @@ import (
 
 func TestNewBackendSvc(t *testing.T) {
 	testCases := map[string]struct {
-		inProps BackendSvcProps
+		inProps BackendServiceProps
 
-		wantedManifest *BackendSvc
+		wantedManifest *BackendService
 	}{
 		"without healthcheck": {
-			inProps: BackendSvcProps{
-				SvcProps: SvcProps{
-					SvcName:    "subscribers",
+			inProps: BackendServiceProps{
+				ServiceProps: ServiceProps{
+					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Port: 8080,
 			},
-			wantedManifest: &BackendSvc{
-				Svc: Svc{
+			wantedManifest: &BackendService{
+				Service: Service{
 					Name: "subscribers",
-					Type: BackendService,
+					Type: BackendServiceType,
 				},
 				Image: imageWithPortAndHealthcheck{
-					SvcImageWithPort: SvcImageWithPort{
-						SvcImage: SvcImage{
+					ServiceImageWithPort: ServiceImageWithPort{
+						ServiceImage: ServiceImage{
 							Build: "./subscribers/Dockerfile",
 						},
 						Port: 8080,
@@ -48,9 +48,9 @@ func TestNewBackendSvc(t *testing.T) {
 			},
 		},
 		"with custom healthcheck command": {
-			inProps: BackendSvcProps{
-				SvcProps: SvcProps{
-					SvcName:    "subscribers",
+			inProps: BackendServiceProps{
+				ServiceProps: ServiceProps{
+					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				HealthCheck: &ContainerHealthCheck{
@@ -58,14 +58,14 @@ func TestNewBackendSvc(t *testing.T) {
 				},
 				Port: 8080,
 			},
-			wantedManifest: &BackendSvc{
-				Svc: Svc{
+			wantedManifest: &BackendService{
+				Service: Service{
 					Name: "subscribers",
-					Type: BackendService,
+					Type: BackendServiceType,
 				},
 				Image: imageWithPortAndHealthcheck{
-					SvcImageWithPort: SvcImageWithPort{
-						SvcImage: SvcImage{
+					ServiceImageWithPort: ServiceImageWithPort{
+						ServiceImage: ServiceImage{
 							Build: "./subscribers/Dockerfile",
 						},
 						Port: 8080,
@@ -94,7 +94,7 @@ func TestNewBackendSvc(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			actualBytes, err := yaml.Marshal(NewBackendSvc(tc.inProps))
+			actualBytes, err := yaml.Marshal(NewBackendService(tc.inProps))
 			require.NoError(t, err)
 
 			require.Equal(t, string(wantedBytes), string(actualBytes))
@@ -104,14 +104,14 @@ func TestNewBackendSvc(t *testing.T) {
 
 func TestBackendSvc_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
-		inProps BackendSvcProps
+		inProps BackendServiceProps
 
 		wantedTestdata string
 	}{
 		"without healthcheck": {
-			inProps: BackendSvcProps{
-				SvcProps: SvcProps{
-					SvcName:    "subscribers",
+			inProps: BackendServiceProps{
+				ServiceProps: ServiceProps{
+					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				Port: 8080,
@@ -119,9 +119,9 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 			wantedTestdata: "backend-svc-nohealthcheck.yml",
 		},
 		"with custom healthcheck command": {
-			inProps: BackendSvcProps{
-				SvcProps: SvcProps{
-					SvcName:    "subscribers",
+			inProps: BackendServiceProps{
+				ServiceProps: ServiceProps{
+					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
 				HealthCheck: &ContainerHealthCheck{
@@ -143,7 +143,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 			path := filepath.Join("testdata", tc.wantedTestdata)
 			wantedBytes, err := ioutil.ReadFile(path)
 			require.NoError(t, err)
-			manifest := NewBackendSvc(tc.inProps)
+			manifest := NewBackendService(tc.inProps)
 
 			// WHEN
 			tpl, err := manifest.MarshalBinary()
@@ -157,9 +157,9 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 func TestBackendSvc_DockerfilePath(t *testing.T) {
 	// GIVEN
-	manifest := NewBackendSvc(BackendSvcProps{
-		SvcProps: SvcProps{
-			SvcName:    "subscribers",
+	manifest := NewBackendService(BackendServiceProps{
+		ServiceProps: ServiceProps{
+			Name:       "subscribers",
 			Dockerfile: "./subscribers/Dockerfile",
 		},
 		Port: 8080,
@@ -170,20 +170,20 @@ func TestBackendSvc_DockerfilePath(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	testCases := map[string]struct {
-		svc       *BackendSvc
+		svc       *BackendService
 		inEnvName string
 
-		wanted *BackendSvc
+		wanted *BackendService
 	}{
 		"environment doesn't exist": {
-			svc: &BackendSvc{
-				Svc: Svc{
+			svc: &BackendService{
+				Service: Service{
 					Name: "phonetool",
-					Type: BackendService,
+					Type: BackendServiceType,
 				},
 				Image: imageWithPortAndHealthcheck{
-					SvcImageWithPort: SvcImageWithPort{
-						SvcImage: SvcImage{
+					ServiceImageWithPort: ServiceImageWithPort{
+						ServiceImage: ServiceImage{
 							Build: "./Dockerfile",
 						},
 						Port: 8080,
@@ -204,14 +204,14 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			},
 			inEnvName: "test",
 
-			wanted: &BackendSvc{
-				Svc: Svc{
+			wanted: &BackendService{
+				Service: Service{
 					Name: "phonetool",
-					Type: BackendService,
+					Type: BackendServiceType,
 				},
 				Image: imageWithPortAndHealthcheck{
-					SvcImageWithPort: SvcImageWithPort{
-						SvcImage: SvcImage{
+					ServiceImageWithPort: ServiceImageWithPort{
+						ServiceImage: ServiceImage{
 							Build: "./Dockerfile",
 						},
 						Port: 8080,
@@ -232,7 +232,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			},
 		},
 		"uses env overrides": {
-			svc: &BackendSvc{
+			svc: &BackendService{
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
@@ -249,7 +249,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			},
 			inEnvName: "test",
 
-			wanted: &BackendSvc{
+			wanted: &BackendService{
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,

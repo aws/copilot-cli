@@ -29,9 +29,9 @@ var (
 	testStartPeriod = 0 * time.Second
 )
 
-var testBackendAppManifest = manifest.NewBackendSvc(manifest.BackendSvcProps{
-	SvcProps: manifest.SvcProps{
-		SvcName:    "frontend",
+var testBackendAppManifest = manifest.NewBackendService(manifest.BackendServiceProps{
+	ServiceProps: manifest.ServiceProps{
+		Name:       "frontend",
 		Dockerfile: "./frontend/Dockerfile",
 	},
 	Port: 8080,

@@ -15,19 +15,19 @@ import (
 )
 
 const (
-	backedSvcManifestPath = "services/backend/manifest.yml"
+	backendSvcManifestPath = "services/backend/manifest.yml"
 )
 
-// BackendSvcProps represents the configuration needed to create a backend service.
-type BackendSvcProps struct {
-	SvcProps
+// BackendServiceProps represents the configuration needed to create a backend service.
+type BackendServiceProps struct {
+	ServiceProps
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
 }
 
-// BackendSvc holds the configuration to create a backend service manifest.
-type BackendSvc struct {
-	Svc          `yaml:",inline"`
+// BackendService holds the configuration to create a backend service manifest.
+type BackendService struct {
+	Service      `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig   `yaml:",inline"`
 	Environments map[string]TaskConfig `yaml:",flow"`
@@ -36,8 +36,8 @@ type BackendSvc struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	SvcImageWithPort `yaml:",inline"`
-	HealthCheck      *ContainerHealthCheck `yaml:"healthcheck"`
+	ServiceImageWithPort `yaml:",inline"`
+	HealthCheck          *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
 // ContainerHealthCheck holds the configuration to determine if the service container is healthy.
@@ -50,10 +50,10 @@ type ContainerHealthCheck struct {
 	StartPeriod *time.Duration `yaml:"start_period"`
 }
 
-// NewBackendSvc applies the props to a default backend service configuration with
+// NewBackendService applies the props to a default backend service configuration with
 // minimal task sizes, single replica, no healthcheck, and then returns it.
-func NewBackendSvc(props BackendSvcProps) *BackendSvc {
-	svc := newDefaultBackendSvc()
+func NewBackendService(props BackendServiceProps) *BackendService {
+	svc := newDefaultBackendService()
 	var healthCheck *ContainerHealthCheck
 	if props.HealthCheck != nil {
 		// Create the healthcheck field only if the caller specified a healthcheck.
@@ -61,7 +61,7 @@ func NewBackendSvc(props BackendSvcProps) *BackendSvc {
 		healthCheck.apply(props.HealthCheck)
 	}
 	// Apply overrides.
-	svc.Name = props.SvcName
+	svc.Name = props.Name
 	svc.Image.Build = props.Dockerfile
 	svc.Image.Port = props.Port
 	svc.Image.HealthCheck = healthCheck
@@ -71,8 +71,8 @@ func NewBackendSvc(props BackendSvcProps) *BackendSvc {
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
-func (a *BackendSvc) MarshalBinary() ([]byte, error) {
-	content, err := a.parser.Parse(backedSvcManifestPath, *a, template.WithFuncs(map[string]interface{}{
+func (s *BackendService) MarshalBinary() ([]byte, error) {
+	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice": func(elems []string) string {
 			return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
 		},
@@ -91,32 +91,32 @@ func (a *BackendSvc) MarshalBinary() ([]byte, error) {
 }
 
 // DockerfilePath returns the image build path.
-func (a *BackendSvc) DockerfilePath() string {
-	return a.Image.Build
+func (s *BackendService) DockerfilePath() string {
+	return s.Image.Build
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (a *BackendSvc) ApplyEnv(envName string) *BackendSvc {
-	target, ok := a.Environments[envName]
+func (s *BackendService) ApplyEnv(envName string) *BackendService {
+	target, ok := s.Environments[envName]
 	if !ok {
-		return a
+		return s
 	}
-	return &BackendSvc{
-		Svc: a.Svc,
+	return &BackendService{
+		Service: s.Service,
 		Image: imageWithPortAndHealthcheck{
-			SvcImageWithPort: a.Image.SvcImageWithPort,
-			HealthCheck:      a.Image.HealthCheck,
+			ServiceImageWithPort: s.Image.ServiceImageWithPort,
+			HealthCheck:          s.Image.HealthCheck,
 		},
-		TaskConfig: a.TaskConfig.copyAndApply(target),
+		TaskConfig: s.TaskConfig.copyAndApply(target),
 	}
 }
 
-// newDefaultBackendSvc returns a backend service with minimal task sizes and a single replica.
-func newDefaultBackendSvc() *BackendSvc {
-	return &BackendSvc{
-		Svc: Svc{
-			Type: BackendService,
+// newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
+func newDefaultBackendService() *BackendService {
+	return &BackendService{
+		Service: Service{
+			Type: BackendServiceType,
 		},
 		TaskConfig: TaskConfig{
 			CPU:    256,

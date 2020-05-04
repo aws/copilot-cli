@@ -21,7 +21,7 @@ func TestUnmarshalSvc(t *testing.T) {
 			inContent: `
 version: 1.0
 name: frontend
-type: "Load Balanced Web Svc"
+type: "Load Balanced Web Service"
 image:
   build: frontend/Dockerfile
   port: 80
@@ -39,12 +39,12 @@ environments:
     count: 3
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*LoadBalancedWebSvc)
+				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
-				wantedManifest := &LoadBalancedWebSvc{
-					Svc:   Svc{Name: "frontend", Type: LoadBalancedWebService},
-					Image: SvcImageWithPort{SvcImage: SvcImage{Build: "frontend/Dockerfile"}, Port: 80},
-					LoadBalancedWebSvcConfig: LoadBalancedWebSvcConfig{
+				wantedManifest := &LoadBalancedWebService{
+					Service: Service{Name: "frontend", Type: LoadBalancedWebServiceType},
+					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: "frontend/Dockerfile"}, Port: 80},
+					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						RoutingRule: RoutingRule{
 							Path:            "svc",
 							HealthCheckPath: "/",
@@ -64,7 +64,7 @@ environments:
 							},
 						},
 					},
-					Environments: map[string]LoadBalancedWebSvcConfig{
+					Environments: map[string]LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
 								Count: intp(3),
@@ -75,10 +75,10 @@ environments:
 				require.Equal(t, wantedManifest, actualManifest)
 			},
 		},
-		"backend svc": {
+		"Backend Service": {
 			inContent: `
 name: subscribers
-type: Backend Svc
+type: Backend Service
 image:
   build: ./subscribers/Dockerfile
   port: 8080
@@ -89,16 +89,16 @@ memory: 1024
 secrets:
   API_TOKEN: SUBS_API_TOKEN`,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*BackendSvc)
+				actualManifest, ok := i.(*BackendService)
 				require.True(t, ok)
-				wantedManifest := &BackendSvc{
-					Svc: Svc{
+				wantedManifest := &BackendService{
+					Service: Service{
 						Name: "subscribers",
-						Type: BackendService,
+						Type: BackendServiceType,
 					},
 					Image: imageWithPortAndHealthcheck{
-						SvcImageWithPort: SvcImageWithPort{
-							SvcImage: SvcImage{
+						ServiceImageWithPort: ServiceImageWithPort{
+							ServiceImage: ServiceImage{
 								Build: "./subscribers/Dockerfile",
 							},
 							Port: 8080,
@@ -134,7 +134,7 @@ type: 'OH NO'
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalSvc([]byte(tc.inContent))
+			m, err := UnmarshalService([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

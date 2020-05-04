@@ -235,19 +235,19 @@ func (o *initAppOpts) createManifest() (string, error) {
 
 func (o *initAppOpts) newManifest() (encoding.BinaryMarshaler, error) {
 	switch o.AppType {
-	case manifest.LoadBalancedWebService:
+	case manifest.LoadBalancedWebServiceType:
 		return o.newLoadBalancedWebAppManifest()
-	case manifest.BackendService:
+	case manifest.BackendServiceType:
 		return o.newBackendAppManifest()
 	default:
 		return nil, fmt.Errorf("application type %s doesn't have a manifest", o.AppType)
 	}
 }
 
-func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWebSvc, error) {
-	props := &manifest.LoadBalancedWebSvcProps{
-		SvcProps: &manifest.SvcProps{
-			SvcName:    o.AppName,
+func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWebService, error) {
+	props := &manifest.LoadBalancedWebServiceProps{
+		ServiceProps: &manifest.ServiceProps{
+			Name:       o.AppName,
 			Dockerfile: o.DockerfilePath,
 		},
 		Port: o.AppPort,
@@ -258,20 +258,20 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 		return nil, err
 	}
 	// We default to "/" for the first service, but if there's another
-	// load balanced web svc, we use the svc name as the default, instead.
+	// Load Balanced Web Service, we use the svc name as the default, instead.
 	for _, existingApp := range existingApps {
-		if existingApp.Type == manifest.LoadBalancedWebService && existingApp.Name != o.AppName {
+		if existingApp.Type == manifest.LoadBalancedWebServiceType && existingApp.Name != o.AppName {
 			props.Path = o.AppName
 			break
 		}
 	}
-	return manifest.NewLoadBalancedWebSvc(props), nil
+	return manifest.NewLoadBalancedWebService(props), nil
 }
 
-func (o *initAppOpts) newBackendAppManifest() (*manifest.BackendSvc, error) {
-	return manifest.NewBackendSvc(manifest.BackendSvcProps{
-		SvcProps: manifest.SvcProps{
-			SvcName:    o.AppName,
+func (o *initAppOpts) newBackendAppManifest() (*manifest.BackendService, error) {
+	return manifest.NewBackendService(manifest.BackendServiceProps{
+		ServiceProps: manifest.ServiceProps{
+			Name:       o.AppName,
 			Dockerfile: o.DockerfilePath,
 		},
 		Port: o.AppPort,
@@ -284,10 +284,10 @@ func (o *initAppOpts) askAppType() error {
 	}
 
 	help := fmt.Sprintf(fmtAppInitAppTypeHelpPrompt,
-		manifest.LoadBalancedWebService,
-		manifest.BackendService,
+		manifest.LoadBalancedWebServiceType,
+		manifest.BackendServiceType,
 	)
-	t, err := o.prompt.SelectOne(appInitAppTypePrompt, help, manifest.SvcTypes)
+	t, err := o.prompt.SelectOne(appInitAppTypePrompt, help, manifest.ServiceTypes)
 	if err != nil {
 		return fmt.Errorf("failed to get type selection: %w", err)
 	}
@@ -451,18 +451,18 @@ This command is also run as part of "ecs-preview init".`,
 	requiredFlags.AddFlag(cmd.Flags().Lookup(appTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(dockerFileFlag))
 
-	lbWebAppFlags := pflag.NewFlagSet(manifest.LoadBalancedWebService, pflag.ContinueOnError)
+	lbWebAppFlags := pflag.NewFlagSet(manifest.LoadBalancedWebServiceType, pflag.ContinueOnError)
 	lbWebAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
 
-	backendAppFlags := pflag.NewFlagSet(manifest.BackendService, pflag.ContinueOnError)
+	backendAppFlags := pflag.NewFlagSet(manifest.BackendServiceType, pflag.ContinueOnError)
 	backendAppFlags.AddFlag(cmd.Flags().Lookup(appPortFlag))
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":                      fmt.Sprintf(`Required,%s`, strings.Join(manifest.SvcTypes, ",")),
-		"Required":                      requiredFlags.FlagUsages(),
-		manifest.LoadBalancedWebService: lbWebAppFlags.FlagUsages(),
-		manifest.BackendService:         lbWebAppFlags.FlagUsages(),
+		"sections":                          fmt.Sprintf(`Required,%s`, strings.Join(manifest.ServiceTypes, ",")),
+		"Required":                          requiredFlags.FlagUsages(),
+		manifest.LoadBalancedWebServiceType: lbWebAppFlags.FlagUsages(),
+		manifest.BackendServiceType:         lbWebAppFlags.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}

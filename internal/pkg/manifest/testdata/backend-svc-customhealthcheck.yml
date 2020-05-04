@@ -1,12 +1,12 @@
 # The manifest for the "subscribers" service.
-# Read the full specification for the "Backend Svc" type at:
+# Read the full specification for the "Backend Service" type at:
 #  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-svc
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: subscribers
 
 # Your service is reachable at "http://subscribers.${ECS_SVC_DISCOVERY_ENDPOINT}:8080" but is not public.
-type: Backend Svc
+type: Backend Service
 
 image:
   # Path to your service's Dockerfile.
