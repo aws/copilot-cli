@@ -31,7 +31,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		"invalid app type": {
 			inProjectName: "phonetool",
 			inAppType:     "TestAppType",
-			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App", "Backend App"`),
+			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web Service", "Backend Service"`),
 		},
 		"invalid app name": {
 			inProjectName: "phonetool",
@@ -49,7 +49,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"valid flags": {
 			inAppName:        "frontend",
-			inAppType:        "Load Balanced Web App",
+			inAppType:        "Load Balanced Web Service",
 			inDockerfilePath: "./hello/Dockerfile",
 			inProjectName:    "phonetool",
 
@@ -91,7 +91,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 }
 func TestAppInitOpts_Ask(t *testing.T) {
 	const (
-		wantedAppType        = manifest.LoadBalancedWebApplication
+		wantedAppType        = manifest.LoadBalancedWebServiceType
 		wantedAppName        = "frontend"
 		wantedDockerfilePath = "frontend/Dockerfile"
 		wantedAppPort        = 80
@@ -116,7 +116,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.ServiceTypes)).
 					Return(wantedAppType, nil)
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
@@ -130,7 +130,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.AppTypes)).
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.ServiceTypes)).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
@@ -354,8 +354,8 @@ func TestAppInitOpts_Execute(t *testing.T) {
 		mockDependencies func(*gomock.Controller, *initAppOpts)
 		wantedErr        error
 	}{
-		"writes load balanced web app manifest, and creates repositories successfully": {
-			inAppType:        manifest.LoadBalancedWebApplication,
+		"writes Load Balanced Web Service manifest, and creates repositories successfully": {
+			inAppType:        manifest.LoadBalancedWebServiceType,
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -372,7 +372,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 						require.Equal(t, &archer.Application{
 							Name:    "frontend",
 							Project: "project",
-							Type:    manifest.LoadBalancedWebApplication,
+							Type:    manifest.LoadBalancedWebServiceType,
 						}, app)
 					}).
 					Return(nil)
@@ -401,7 +401,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			},
 		},
 		"write manifest error": {
-			inAppType:        manifest.LoadBalancedWebApplication,
+			inAppType:        manifest.LoadBalancedWebServiceType,
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -433,7 +433,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("some error"),
 		},
 		"project error": {
-			inAppType:        manifest.LoadBalancedWebApplication,
+			inAppType:        manifest.LoadBalancedWebServiceType,
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inAppPort:        80,
@@ -454,7 +454,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("get project project: some error"),
 		},
 		"add app to project fails": {
-			inAppType:        manifest.LoadBalancedWebApplication,
+			inAppType:        manifest.LoadBalancedWebServiceType,
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inAppPort:        80,
@@ -490,7 +490,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("add app frontend to project project: some error"),
 		},
 		"error saving app": {
-			inAppType:        manifest.LoadBalancedWebApplication,
+			inAppType:        manifest.LoadBalancedWebServiceType,
 			inProjectName:    "project",
 			inAppName:        "frontend",
 			inDockerfilePath: "frontend/Dockerfile",
@@ -587,7 +587,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "frontend",
-						Type: manifest.LoadBalancedWebApplication,
+						Type: manifest.LoadBalancedWebServiceType,
 					},
 				}, nil)
 				opts.appStore = mockAppStore
@@ -621,7 +621,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				mockAppStore.EXPECT().ListServices("project").Return([]*archer.Application{
 					&archer.Application{
 						Name: "another-app",
-						Type: manifest.LoadBalancedWebApplication,
+						Type: manifest.LoadBalancedWebServiceType,
 					},
 				}, nil)
 				opts.appStore = mockAppStore
@@ -637,7 +637,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 			opts := initAppOpts{
 				initAppVars: initAppVars{
-					AppType:        manifest.LoadBalancedWebApplication,
+					AppType:        manifest.LoadBalancedWebServiceType,
 					AppName:        tc.inAppName,
 					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
@@ -651,10 +651,10 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.inAppName, manifest.App.Name)
+				require.Equal(t, tc.inAppName, manifest.Service.Name)
 				require.Equal(t, tc.inAppPort, manifest.Image.Port)
-				require.Equal(t, tc.inDockerfilePath, manifest.Image.AppImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebAppConfig.Path)
+				require.Equal(t, tc.inDockerfilePath, manifest.Image.ServiceImage.Build)
+				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebServiceConfig.Path)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

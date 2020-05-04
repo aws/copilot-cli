@@ -51,13 +51,13 @@ func validateApplicationType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range manifest.AppTypes {
+	for _, validType := range manifest.ServiceTypes {
 		if appType == validType {
 			return nil
 		}
 	}
 	var prettyTypes []string
-	for _, validType := range manifest.AppTypes {
+	for _, validType := range manifest.ServiceTypes {
 		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
 	}
 	return fmt.Errorf("invalid app type %s: must be one of %s", appType, strings.Join(prettyTypes, ", "))

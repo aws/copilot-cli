@@ -66,7 +66,7 @@ const (
 // Descriptions for flags.
 var (
 	appTypeFlagDescription = fmt.Sprintf(`Type of application to create. Must be one of:
-%s`, strings.Join(quoteAll(manifest.AppTypes), ", "))
+%s`, strings.Join(quoteAll(manifest.ServiceTypes), ", "))
 )
 
 const (

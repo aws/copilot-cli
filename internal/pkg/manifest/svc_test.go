@@ -10,18 +10,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestUnmarshalApp(t *testing.T) {
+func TestUnmarshalSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inContent string
 
 		requireCorrectValues func(t *testing.T, i interface{})
 		wantedErr            error
 	}{
-		"load balanced web application": {
+		"load balanced web service": {
 			inContent: `
 version: 1.0
 name: frontend
-type: "Load Balanced Web App"
+type: "Load Balanced Web Service"
 image:
   build: frontend/Dockerfile
   port: 80
@@ -29,7 +29,7 @@ cpu: 512
 memory: 1024
 count: 1
 http:
-  path: "app"
+  path: "svc"
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -39,14 +39,14 @@ environments:
     count: 3
 `,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*LoadBalancedWebApp)
+				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
-				wantedManifest := &LoadBalancedWebApp{
-					App:   App{Name: "frontend", Type: LoadBalancedWebApplication},
-					Image: AppImageWithPort{AppImage: AppImage{Build: "frontend/Dockerfile"}, Port: 80},
-					LoadBalancedWebAppConfig: LoadBalancedWebAppConfig{
+				wantedManifest := &LoadBalancedWebService{
+					Service: Service{Name: "frontend", Type: LoadBalancedWebServiceType},
+					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: "frontend/Dockerfile"}, Port: 80},
+					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 						RoutingRule: RoutingRule{
-							Path:            "app",
+							Path:            "svc",
 							HealthCheckPath: "/",
 						},
 						LogsConfig: LogsConfig{
@@ -64,7 +64,7 @@ environments:
 							},
 						},
 					},
-					Environments: map[string]LoadBalancedWebAppConfig{
+					Environments: map[string]LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
 								Count: intp(3),
@@ -75,10 +75,10 @@ environments:
 				require.Equal(t, wantedManifest, actualManifest)
 			},
 		},
-		"backend app": {
+		"Backend Service": {
 			inContent: `
 name: subscribers
-type: Backend App
+type: Backend Service
 image:
   build: ./subscribers/Dockerfile
   port: 8080
@@ -89,16 +89,16 @@ memory: 1024
 secrets:
   API_TOKEN: SUBS_API_TOKEN`,
 			requireCorrectValues: func(t *testing.T, i interface{}) {
-				actualManifest, ok := i.(*BackendApp)
+				actualManifest, ok := i.(*BackendService)
 				require.True(t, ok)
-				wantedManifest := &BackendApp{
-					App: App{
+				wantedManifest := &BackendService{
+					Service: Service{
 						Name: "subscribers",
-						Type: BackendApplication,
+						Type: BackendServiceType,
 					},
 					Image: imageWithPortAndHealthcheck{
-						AppImageWithPort: AppImageWithPort{
-							AppImage: AppImage{
+						ServiceImageWithPort: ServiceImageWithPort{
+							ServiceImage: ServiceImage{
 								Build: "./subscribers/Dockerfile",
 							},
 							Port: 8080,
@@ -123,18 +123,18 @@ secrets:
 				require.Equal(t, wantedManifest, actualManifest)
 			},
 		},
-		"invalid app type": {
+		"invalid svc type": {
 			inContent: `
-name: CowApp
+name: CowSvc
 type: 'OH NO'
 `,
-			wantedErr: &ErrInvalidAppManifestType{Type: "OH NO"},
+			wantedErr: &ErrInvalidSvcManifestType{Type: "OH NO"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := UnmarshalApp([]byte(tc.inContent))
+			m, err := UnmarshalService([]byte(tc.inContent))
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

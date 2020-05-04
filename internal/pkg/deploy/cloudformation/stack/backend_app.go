@@ -27,13 +27,13 @@ type backendAppReadParser interface {
 // BackendApp represents the configuration needed to create a CloudFormation stack from a backend application manifest.
 type BackendApp struct {
 	*app
-	manifest *manifest.BackendApp
+	manifest *manifest.BackendService
 
 	parser backendAppReadParser
 }
 
 // NewBackendApp creates a new BackendApp stack from a manifest file.
-func NewBackendApp(mft *manifest.BackendApp, env, proj string, rc RuntimeConfig) (*BackendApp, error) {
+func NewBackendApp(mft *manifest.BackendService, env, proj string, rc RuntimeConfig) (*BackendApp, error) {
 	parser := template.New()
 	addons, err := addons.New(mft.Name)
 	if err != nil {

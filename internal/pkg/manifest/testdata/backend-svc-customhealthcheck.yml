@@ -1,15 +1,15 @@
-# The manifest for the "subscribers" application.
-# Read the full specification for the "Backend App" type at:
-#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-app
+# The manifest for the "subscribers" service.
+# Read the full specification for the "Backend Service" type at:
+#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-svc
 
-# Your application name will be used in naming your resources like log groups, services, etc.
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: subscribers
 
-# Your application is reachable at "http://subscribers.${ECS_APP_DISCOVERY_ENDPOINT}:8080" but is not public.
-type: Backend App
+# Your service is reachable at "http://subscribers.${ECS_SVC_DISCOVERY_ENDPOINT}:8080" but is not public.
+type: Backend Service
 
 image:
-  # Path to your application's Dockerfile.
+  # Path to your service's Dockerfile.
   build: ./subscribers/Dockerfile
   # Port exposed through your container to route traffic to it.
   port: 8080

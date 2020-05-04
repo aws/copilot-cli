@@ -15,19 +15,19 @@ import (
 )
 
 const (
-	backedAppManifestPath = "services/backend/manifest.yml"
+	backendSvcManifestPath = "services/backend/manifest.yml"
 )
 
-// BackendAppProps represents the configuration needed to create a backend application.
-type BackendAppProps struct {
-	AppProps
+// BackendServiceProps represents the configuration needed to create a backend service.
+type BackendServiceProps struct {
+	ServiceProps
 	Port        uint16
 	HealthCheck *ContainerHealthCheck // Optional healthcheck configuration.
 }
 
-// BackendApp holds the configuration to create a backend application manifest.
-type BackendApp struct {
-	App          `yaml:",inline"`
+// BackendService holds the configuration to create a backend service manifest.
+type BackendService struct {
+	Service      `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig   `yaml:",inline"`
 	Environments map[string]TaskConfig `yaml:",flow"`
@@ -36,11 +36,11 @@ type BackendApp struct {
 }
 
 type imageWithPortAndHealthcheck struct {
-	AppImageWithPort `yaml:",inline"`
-	HealthCheck      *ContainerHealthCheck `yaml:"healthcheck"`
+	ServiceImageWithPort `yaml:",inline"`
+	HealthCheck          *ContainerHealthCheck `yaml:"healthcheck"`
 }
 
-// ContainerHealthCheck holds the configuration to determine if the application container is healthy.
+// ContainerHealthCheck holds the configuration to determine if the service container is healthy.
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-healthcheck.html
 type ContainerHealthCheck struct {
 	Command     []string       `yaml:"command"`
@@ -50,10 +50,10 @@ type ContainerHealthCheck struct {
 	StartPeriod *time.Duration `yaml:"start_period"`
 }
 
-// NewBackendApp applies the props to a default backend app configuration with
+// NewBackendService applies the props to a default backend service configuration with
 // minimal task sizes, single replica, no healthcheck, and then returns it.
-func NewBackendApp(props BackendAppProps) *BackendApp {
-	app := newDefaultBackendApp()
+func NewBackendService(props BackendServiceProps) *BackendService {
+	svc := newDefaultBackendService()
 	var healthCheck *ContainerHealthCheck
 	if props.HealthCheck != nil {
 		// Create the healthcheck field only if the caller specified a healthcheck.
@@ -61,18 +61,18 @@ func NewBackendApp(props BackendAppProps) *BackendApp {
 		healthCheck.apply(props.HealthCheck)
 	}
 	// Apply overrides.
-	app.Name = props.AppName
-	app.Image.Build = props.Dockerfile
-	app.Image.Port = props.Port
-	app.Image.HealthCheck = healthCheck
-	app.parser = template.New()
-	return app
+	svc.Name = props.Name
+	svc.Image.Build = props.Dockerfile
+	svc.Image.Port = props.Port
+	svc.Image.HealthCheck = healthCheck
+	svc.parser = template.New()
+	return svc
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
-func (a *BackendApp) MarshalBinary() ([]byte, error) {
-	content, err := a.parser.Parse(backedAppManifestPath, *a, template.WithFuncs(map[string]interface{}{
+func (s *BackendService) MarshalBinary() ([]byte, error) {
+	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice": func(elems []string) string {
 			return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
 		},
@@ -91,32 +91,32 @@ func (a *BackendApp) MarshalBinary() ([]byte, error) {
 }
 
 // DockerfilePath returns the image build path.
-func (a *BackendApp) DockerfilePath() string {
-	return a.Image.Build
+func (s *BackendService) DockerfilePath() string {
+	return s.Image.Build
 }
 
-// ApplyEnv returns the application manifest with environment overrides.
+// ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (a *BackendApp) ApplyEnv(envName string) *BackendApp {
-	target, ok := a.Environments[envName]
+func (s *BackendService) ApplyEnv(envName string) *BackendService {
+	target, ok := s.Environments[envName]
 	if !ok {
-		return a
+		return s
 	}
-	return &BackendApp{
-		App: a.App,
+	return &BackendService{
+		Service: s.Service,
 		Image: imageWithPortAndHealthcheck{
-			AppImageWithPort: a.Image.AppImageWithPort,
-			HealthCheck:      a.Image.HealthCheck,
+			ServiceImageWithPort: s.Image.ServiceImageWithPort,
+			HealthCheck:          s.Image.HealthCheck,
 		},
-		TaskConfig: a.TaskConfig.copyAndApply(target),
+		TaskConfig: s.TaskConfig.copyAndApply(target),
 	}
 }
 
-// newDefaultBackendApp returns a backend application with minimal task sizes and a single replica.
-func newDefaultBackendApp() *BackendApp {
-	return &BackendApp{
-		App: App{
-			Type: BackendApplication,
+// newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
+func newDefaultBackendService() *BackendService {
+	return &BackendService{
+		Service: Service{
+			Type: BackendServiceType,
 		},
 		TaskConfig: TaskConfig{
 			CPU:    256,
@@ -127,7 +127,7 @@ func newDefaultBackendApp() *BackendApp {
 }
 
 // newDefaultContainerHealthCheck returns container health check configuration
-// that's identical to a load balanced web application's defaults.
+// that's identical to a load balanced web service's defaults.
 func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},

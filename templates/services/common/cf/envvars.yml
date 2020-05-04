@@ -4,7 +4,7 @@
 Environment:
 - Name: ECS_CLI_PROJECT_NAME
   Value: !Sub '${ProjectName}'
-- Name: ECS_APP_DISCOVERY_ENDPOINT
+- Name: ECS_SVC_DISCOVERY_ENDPOINT
   Value: !Sub '${ProjectName}.local'
 - Name: ECS_CLI_ENVIRONMENT_NAME
   Value: !Sub '${EnvName}'

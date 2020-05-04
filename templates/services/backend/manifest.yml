@@ -1,15 +1,15 @@
-# The manifest for the "{{.Name}}" application.
+# The manifest for the "{{.Name}}" service.
 # Read the full specification for the "{{.Type}}" type at:
-#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-app
+#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-svc
 
-# Your application name will be used in naming your resources like log groups, services, etc.
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}
 
-# Your application is reachable at "http://{{.Name}}.${ECS_APP_DISCOVERY_ENDPOINT}:{{.Image.Port}}" but is not public.
+# Your service is reachable at "http://{{.Name}}.${ECS_SVC_DISCOVERY_ENDPOINT}:{{.Image.Port}}" but is not public.
 type: {{.Type}}
 
 image:
-  # Path to your application's Dockerfile.
+  # Path to your service's Dockerfile.
   build: {{.Image.Build}}
   # Port exposed through your container to route traffic to it.
   port: {{.Image.Port}}{{if .Image.HealthCheck}}
