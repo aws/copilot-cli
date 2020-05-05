@@ -11,9 +11,14 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	sess "github.com/aws/aws-sdk-go/aws/session"
+)
+
+const (
+	cloudformationResourceType = "AWS::CloudFormation::Stack"
 )
 
 type EnvDescription struct {
@@ -26,9 +31,10 @@ type EnvDescription struct {
 type EnvDescriber struct {
 	env  *archer.Environment
 	apps []*archer.Application
-
+	
 	store        storeSvc
 	sessProvider *sess.Session
+	rgClient  		resourcegroups.ResourceGroupsClient
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -54,15 +60,22 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		store:        svc,
 		apps:         apps,
 		sessProvider: sess,
+		rgClient: resourcegroups.New(sess),
 	}, nil
 }
 
 // Describe returns info about a project's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	var tags map[string]string
+
+	appsForEnv, err := e.FilterAppsForEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	return &EnvDescription{
 		Environment:  e.env,
-		Applications: e.apps,
+		Applications: appsForEnv,
 		Tags:         tags,
 	}, nil
 }
