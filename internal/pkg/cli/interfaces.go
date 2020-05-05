@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -33,6 +34,74 @@ type actionCommand interface {
 	// RecommendedActions returns a list of follow-up suggestions users can run once the command executes successfully.
 	RecommendedActions() []string
 }
+
+// Config interfaces
+
+type serviceLister interface {
+	ListServices(appName string) ([]*archer.Application, error)
+}
+
+type appLister interface {
+	ListApps() ([]*archer.Project, error)
+}
+
+// ApplicationStore is an interface for creating and listing apps.
+type applicationStore interface {
+	applicationLister
+	applicationGetter
+	applicationCreator
+	applicationDeleter
+}
+
+// applicationLister lists all the apps .
+type applicationLister interface {
+	ListApplications() ([]*config.Application, error)
+}
+
+// applicationCreator creates a app in the underlying app manager.
+type applicationCreator interface {
+	CreateApplication(app *config.Application) error
+}
+
+// applicationGetter fetches an individual app from the underlying app manager.
+type applicationGetter interface {
+	GetApplication(appName string) (*config.Application, error)
+}
+
+// applicationDeleter deletes app resources.
+type applicationDeleter interface {
+	DeleteApplication(name string) error
+}
+
+// environmentStore can List, Create, Get, and Delete environments in an underlying app management store.
+type environmentStore interface {
+	environmentLister
+	environmentGetter
+	environmentCreator
+	environmentDeleter
+}
+
+// EnvironmentLister fetches and returns a list of environments from an underlying project management store.
+type environmentLister interface {
+	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
+// EnvironmentGetter fetches and returns an environment from an underlying project management store.
+type environmentGetter interface {
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+}
+
+// EnvironmentCreator creates an environment in the underlying project management store.
+type environmentCreator interface {
+	CreateEnvironment(env *config.Environment) error
+}
+
+// EnvironmentDeleter deletes an environment from the underlying project management store.
+type environmentDeleter interface {
+	DeleteEnvironment(appName, environmentName string) error
+}
+
+// Legacy config interfaces
 
 type projectService interface {
 	archer.ProjectStore
@@ -129,8 +198,12 @@ type wsAppDeleter interface {
 	DeleteService(name string) error
 }
 
-type wsAppReader interface {
+type wsServiceLister interface {
 	ServiceNames() ([]string, error)
+}
+
+type wsAppReader interface {
+	wsServiceLister
 	wsAppManifestReader
 }
 
@@ -140,7 +213,7 @@ type wsPipelineDeleter interface {
 }
 
 type wsPipelineReader interface {
-	ServiceNames() ([]string, error)
+	wsServiceLister
 	wsPipelineManifestReader
 }
 
