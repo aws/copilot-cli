@@ -37,7 +37,7 @@ type EnvDescriber struct {
 	store          storeSvc
 	sessProvider   *sess.Session
 	rgClient       resourcegroups.ResourceGroupsClient
-	cloudformation   *cloudformation.CloudFormation
+	cloudformation *cloudformation.CloudFormation
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -60,12 +60,12 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
-		env:          env,
-		store:        svc,
-		proj:         proj,
-		apps:         apps,
-		sessProvider: sess,
-		rgClient:     resourcegroups.New(sess),
+		env:            env,
+		store:          svc,
+		proj:           proj,
+		apps:           apps,
+		sessProvider:   sess,
+		rgClient:       resourcegroups.New(sess),
 		cloudformation: cloudformation.New(sess),
 	}, nil
 }
