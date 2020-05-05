@@ -11,6 +11,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
@@ -30,11 +31,13 @@ type EnvDescription struct {
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
 	env  *archer.Environment
+	proj *archer.Project
 	apps []*archer.Application
-	
-	store        storeSvc
-	sessProvider *sess.Session
-	rgClient  		resourcegroups.ResourceGroupsClient
+
+	store          storeSvc
+	sessProvider   *sess.Session
+	rgClient       resourcegroups.ResourceGroupsClient
+	cloudformation   *cloudformation.CloudFormation
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -47,6 +50,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	if err != nil {
 		return nil, err
 	}
+	proj, err := svc.GetProject(projectName)
 	apps, err := svc.ListApplications(projectName)
 	if err != nil {
 		return nil, err
@@ -58,16 +62,16 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	return &EnvDescriber{
 		env:          env,
 		store:        svc,
+		proj:         proj,
 		apps:         apps,
 		sessProvider: sess,
-		rgClient: resourcegroups.New(sess),
+		rgClient:     resourcegroups.New(sess),
+		cloudformation: cloudformation.New(sess),
 	}, nil
 }
 
 // Describe returns info about a project's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	var tags map[string]string
-
 	appsForEnv, err := e.FilterAppsForEnv()
 	if err != nil {
 		return nil, err
@@ -76,8 +80,36 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	return &EnvDescription{
 		Environment:  e.env,
 		Applications: appsForEnv,
-		Tags:         tags,
+		Tags:         e.proj.Tags,
 	}, nil
+}
+
+func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
+	var appObjects []*archer.Application
+	tags := map[string]string{
+		"ecs-environment": e.env.Name,
+	}
+	stackNames, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
+	if err != nil {
+		return nil, err
+	}
+	for _, singleStack := range stackNames {
+		stackDesc, err := e.cloudformation.Describe(singleStack)
+		if err != nil {
+			return nil, err
+		}
+		params := make(map[string]string)
+		for _, param := range stackDesc.Parameters {
+			params[*param.ParameterKey] = *param.ParameterValue
+		}
+		appName := params["AppName"]
+		for _, app := range e.apps {
+			if appName == app.Name {
+				appObjects = append(appObjects, app)
+			}
+		}
+	}
+	return appObjects, nil
 }
 
 // JSONString returns the stringified EnvDescription struct with json format.
