@@ -99,7 +99,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 	return content.String(), err
 }
 
-// Parameters returns the parameters to be passed into a environment CloudFormation template.
+// Parameters returns a list of parameters which accompany the app CloudFormation template.
 func (c *AppStackConfig) Parameters() []*cloudformation.Parameter {
 	return []*cloudformation.Parameter{
 		{

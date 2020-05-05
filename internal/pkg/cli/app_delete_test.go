@@ -354,7 +354,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 		Region:         "us-west-2",
 	}
 	mockEnvs := []*archer.Environment{mockEnv}
-	mockProject := &archer.Project{
+	mockApp := &archer.Project{
 		Name: mockProjectName,
 	}
 
@@ -385,9 +385,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
+					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
+					mocks.appRemover.EXPECT().RemoveAppFromProject(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
@@ -415,9 +415,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
+					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
+					mocks.appRemover.EXPECT().RemoveAppFromProject(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam

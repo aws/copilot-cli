@@ -133,8 +133,8 @@ func TestAppStatus_Ask(t *testing.T) {
 		wantedError error
 	}{
 		"skip asking": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
+			inputProject:     "mockApp",
+			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
@@ -168,42 +168,42 @@ func TestAppStatus_Ask(t *testing.T) {
 			mockStoreReader: func(m *climocks.MockstoreReader) {
 				m.EXPECT().ListApplications().Return([]*archer.Project{
 					{
-						Name: "mockProject",
+						Name: "mockApp",
 					},
 				}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(appStatusProjectNamePrompt, appStatusProjectNameHelpPrompt, []string{"mockProject"}).Return("", mockError)
+				m.EXPECT().SelectOne(appStatusProjectNamePrompt, appStatusProjectNameHelpPrompt, []string{"mockApp"}).Return("", mockError)
 			},
 
 			wantedError: fmt.Errorf("select project: some error"),
 		},
 		"errors if failed to list applications": {
-			inputProject: "mockProject",
+			inputProject: "mockApp",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{}, mockError)
+				m.EXPECT().ListServices("mockApp").Return([]*archer.Application{}, mockError)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("list applications for project mockProject: some error"),
+			wantedError: fmt.Errorf("list applications for project mockApp: some error"),
 		},
 		"errors if no available application found": {
-			inputProject: "mockProject",
+			inputProject: "mockApp",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{}, nil)
+				m.EXPECT().ListServices("mockApp").Return([]*archer.Application{}, nil)
 			},
 			mockWebAppDescriber: func(m *climocks.MockserviceArnGetter) {},
 			mockPrompt:          func(m *climocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no applications found in project mockProject"),
+			wantedError: fmt.Errorf("no applications found in project mockApp"),
 		},
 		"errors if failed to check if app deployed in env": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
+			inputProject:     "mockApp",
+			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
@@ -212,11 +212,11 @@ func TestAppStatus_Ask(t *testing.T) {
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("check if app mockApp is deployed in env mockEnv: some error"),
+			wantedError: fmt.Errorf("check if app mockSvc is deployed in env mockEnv: some error"),
 		},
 		"errors if no deployed application found": {
-			inputProject:     "mockProject",
-			inputApplication: "mockApp",
+			inputProject:     "mockApp",
+			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {},
@@ -225,18 +225,18 @@ func TestAppStatus_Ask(t *testing.T) {
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no deployed apps found in project mockProject"),
+			wantedError: fmt.Errorf("no deployed apps found in project mockApp"),
 		},
 		"errors if failed to select deployed application": {
-			inputProject: "mockProject",
+			inputProject: "mockApp",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockApp").Return([]*archer.Application{
 					{
-						Name: "mockApp",
+						Name: "mockSvc",
 					},
 				}, nil)
-				m.EXPECT().ListEnvironments("mockProject").Return([]*archer.Environment{
+				m.EXPECT().ListEnvironments("mockApp").Return([]*archer.Environment{
 					{
 						Name: "mockEnv1",
 					},
@@ -251,21 +251,21 @@ func TestAppStatus_Ask(t *testing.T) {
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
-					[]string{"mockApp (mockEnv1)", "mockApp (mockEnv2)"}).Return("", mockError)
+					[]string{"mockSvc (mockEnv1)", "mockSvc (mockEnv2)"}).Return("", mockError)
 			},
 
-			wantedError: fmt.Errorf("select deployed applications for project mockProject: some error"),
+			wantedError: fmt.Errorf("select deployed applications for project mockApp: some error"),
 		},
 		"success": {
-			inputProject: "mockProject",
+			inputProject: "mockApp",
 
 			mockStoreReader: func(m *climocks.MockstoreReader) {
-				m.EXPECT().ListServices("mockProject").Return([]*archer.Application{
+				m.EXPECT().ListServices("mockApp").Return([]*archer.Application{
 					{
-						Name: "mockApp",
+						Name: "mockSvc",
 					},
 				}, nil)
-				m.EXPECT().ListEnvironments("mockProject").Return([]*archer.Environment{
+				m.EXPECT().ListEnvironments("mockApp").Return([]*archer.Environment{
 					{
 						Name: "mockEnv1",
 					},
@@ -280,7 +280,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
-					[]string{"mockApp (mockEnv1)", "mockApp (mockEnv2)"}).Return("mockApp (mockEnv1)", nil)
+					[]string{"mockSvc (mockEnv1)", "mockSvc (mockEnv2)"}).Return("mockSvc (mockEnv1)", nil)
 			},
 		},
 	}
@@ -406,7 +406,7 @@ func TestAppStatus_Execute(t *testing.T) {
 			mockStatusDescriber: func(m *climocks.MockstatusDescriber) {
 				m.EXPECT().Describe().Return(nil, mockError)
 			},
-			wantedError: fmt.Errorf("describe status of application mockApp: some error"),
+			wantedError: fmt.Errorf("describe status of application mockSvc: some error"),
 		},
 		"success with JSON output": {
 			shouldOutputJSON: true,
@@ -480,11 +480,11 @@ Alarms
 
 			appStatus := &appStatusOpts{
 				appStatusVars: appStatusVars{
-					appName:          "mockApp",
+					appName:          "mockSvc",
 					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: "mockProject",
+						projectName: "mockApp",
 					},
 				},
 				statusDescriber:     mockStatusDescriber,

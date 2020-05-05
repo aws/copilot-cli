@@ -401,7 +401,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 						Region:    "us-west-2",
 						AccountID: "1111",
 					}, nil)
-				mockProject := &archer.Project{
+				mockApp := &archer.Project{
 					Name:      "ecs-kudos",
 					AccountID: "1112",
 					Tags: map[string]string{
@@ -410,7 +410,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				}
 				mockStore.EXPECT().
 					GetApplication("ecs-kudos").
-					Return(mockProject, nil)
+					Return(mockApp, nil)
 
 				mockWs := climocks.NewMockwsAppReader(ctrl)
 				mockWs.EXPECT().
@@ -428,7 +428,7 @@ count: 1`), nil)
 
 				mockCfn := climocks.NewMockprojectResourcesGetter(ctrl)
 				mockCfn.EXPECT().
-					GetProjectResourcesByRegion(mockProject, "us-west-2").
+					GetProjectResourcesByRegion(mockApp, "us-west-2").
 					Return(&archer.ProjectRegionalResources{
 						RepositoryURLs: map[string]string{
 							"api": "some url",

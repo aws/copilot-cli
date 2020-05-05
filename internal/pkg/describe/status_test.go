@@ -101,9 +101,9 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {
 				m.EXPECT().GetAlarmsWithTags(map[string]string{
-					"copilot-application": "mockProject",
+					"copilot-application": "mockApp",
 					"copilot-environment": "mockEnv",
-					"copilot-service":     "mockApp",
+					"copilot-service":     "mockSvc",
 				}).Return(nil, mockError)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
@@ -148,9 +148,9 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {
 				m.EXPECT().GetAlarmsWithTags(map[string]string{
-					"copilot-application": "mockProject",
+					"copilot-application": "mockApp",
 					"copilot-environment": "mockEnv",
-					"copilot-service":     "mockApp",
+					"copilot-service":     "mockSvc",
 				}).Return([]cloudwatch.AlarmStatus{
 					{
 						Arn:          "mockAlarmArn",
@@ -221,9 +221,9 @@ func TestWebAppStatus_Describe(t *testing.T) {
 			tc.mockWebAppDescriber(mockWebAppDescriber)
 
 			appStatus := &AppStatus{
-				AppName:     "mockApp",
+				AppName:     "mockSvc",
 				EnvName:     "mockEnv",
-				ProjectName: "mockProject",
+				ProjectName: "mockApp",
 				CwSvc:       mockcwSvc,
 				EcsSvc:      mockecsSvc,
 				Describer:   mockWebAppDescriber,

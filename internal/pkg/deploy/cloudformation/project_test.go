@@ -24,7 +24,7 @@ import (
 )
 
 func TestCloudFormation_DeployProject(t *testing.T) {
-	mockProject := &deploy.CreateProjectInput{
+	mockApp := &deploy.CreateProjectInput{
 		Project:   "testproject",
 		AccountID: "1234",
 	}
@@ -87,7 +87,7 @@ func TestCloudFormation_DeployProject(t *testing.T) {
 			}
 
 			// WHEN
-			got := cf.DeployProject(mockProject)
+			got := cf.DeployProject(mockApp)
 
 			// THEN
 			if tc.want != nil {
@@ -100,7 +100,7 @@ func TestCloudFormation_DeployProject(t *testing.T) {
 }
 
 func TestCloudFormation_AddEnvToProject(t *testing.T) {
-	mockProject := archer.Project{
+	mockApp := archer.Project{
 		Name:      "testproject",
 		AccountID: "1234",
 	}
@@ -111,7 +111,7 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 		want         error
 	}{
 		"with no existing deployments and adding an env": {
-			project: &mockProject,
+			project: &mockApp,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -135,7 +135,7 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 			},
 		},
 		"with no new account ID added": {
-			project: &mockProject,
+			project: &mockApp,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -156,7 +156,7 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 			},
 		},
 		"with existing stack instances in same region but different account (no new stack instances, but update stackset)": {
-			project: &mockProject,
+			project: &mockApp,
 			env:     &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -212,7 +212,7 @@ func TestCloudFormation_AddEnvToProject(t *testing.T) {
 }
 
 func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
-	mockProject := archer.Project{
+	mockApp := archer.Project{
 		Name:      "testproject",
 		AccountID: "1234",
 	}
@@ -223,7 +223,7 @@ func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
 		expectedErr         error
 	}{
 		"with no existing account nor environment, add pipeline supporting resources": {
-			project: &mockProject,
+			project: &mockApp,
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
@@ -235,13 +235,13 @@ func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
 			},
 		},
 		"with existing account and existing environment in a region, should not add pipeline supporting resources": {
-			project: &mockProject,
+			project: &mockApp,
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{
 					{
 						Region:  "us-west-2",
-						Account: mockProject.AccountID,
+						Account: mockApp.AccountID,
 					},
 				}, nil)
 				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -277,7 +277,7 @@ func TestCloudFormation_AddPipelineResourcesToProject(t *testing.T) {
 }
 
 func TestCloudFormation_AddAppToProject(t *testing.T) {
-	mockProject := archer.Project{
+	mockApp := archer.Project{
 		Name:      "testproject",
 		AccountID: "1234",
 	}
@@ -288,7 +288,7 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 		want         error
 	}{
 		"with no existing deployments and adding an app": {
-			project: &mockProject,
+			project: &mockApp,
 			app:     "TestApp",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -310,7 +310,7 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 			},
 		},
 		"with new app to existing project with existing apps": {
-			project: &mockProject,
+			project: &mockApp,
 			app:     "test",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -336,7 +336,7 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 			},
 		},
 		"with existing app to existing project with existing apps": {
-			project: &mockProject,
+			project: &mockApp,
 			app:     "test",
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
@@ -376,7 +376,7 @@ func TestCloudFormation_AddAppToProject(t *testing.T) {
 }
 
 func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
-	mockProject := &archer.Project{
+	mockApp := &archer.Project{
 		Name:      "testproject",
 		AccountID: "1234",
 	}
@@ -422,7 +422,7 @@ func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
 				box:             templates.Box(),
 			}
 
-			got := cf.RemoveAppFromProject(mockProject, tc.app)
+			got := cf.RemoveAppFromProject(mockApp, tc.app)
 
 			require.Equal(t, tc.want, got)
 		})
@@ -430,7 +430,7 @@ func TestCloudFormation_RemoveAppFromProject(t *testing.T) {
 }
 
 func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
-	mockProject := archer.Project{Name: "project", AccountID: "12345"}
+	mockApp := archer.Project{Name: "project", AccountID: "12345"}
 
 	testCases := map[string]struct {
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
@@ -513,7 +513,7 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 			}
 
 			// WHEN
-			got, err := cf.GetRegionalProjectResources(&mockProject)
+			got, err := cf.GetRegionalProjectResources(&mockApp)
 
 			// THEN
 			if tc.want != nil {
@@ -529,7 +529,7 @@ func TestCloudFormation_GetRegionalProjectResources(t *testing.T) {
 }
 
 func TestCloudFormation_GetProjectResourcesByRegion(t *testing.T) {
-	mockProject := archer.Project{Name: "project", AccountID: "12345"}
+	mockApp := archer.Project{Name: "project", AccountID: "12345"}
 
 	testCases := map[string]struct {
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
@@ -598,7 +598,7 @@ func TestCloudFormation_GetProjectResourcesByRegion(t *testing.T) {
 			}
 
 			// WHEN
-			got, err := cf.GetProjectResourcesByRegion(&mockProject, tc.region)
+			got, err := cf.GetProjectResourcesByRegion(&mockApp, tc.region)
 
 			// THEN
 			if tc.want != nil {
