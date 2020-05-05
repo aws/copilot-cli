@@ -106,7 +106,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: testAppPath,
+						stack.LBWebServiceRulePathParamKey: testAppPath,
 					}, nil),
 				)
 			},
@@ -120,7 +120,7 @@ func TestWebAppDescriber_URI(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: testAppPath,
+						stack.LBWebServiceRulePathParamKey: testAppPath,
 					}, nil),
 				)
 			},
@@ -223,13 +223,13 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: testAppPath,
+						stack.LBWebServiceRulePathParamKey: testAppPath,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "80",
-						stack.AppTaskCountParamKey:          "1",
-						stack.AppTaskCPUParamKey:            "256",
-						stack.AppTaskMemoryParamKey:         "512",
+						stack.LBWebServiceContainerPortParamKey: "80",
+						stack.ServiceTaskCountParamKey:          "1",
+						stack.ServiceTaskCPUParamKey:            "256",
+						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
@@ -247,17 +247,17 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: testAppPath,
+						stack.LBWebServiceRulePathParamKey: testAppPath,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "80",
-						stack.AppTaskCountParamKey:          "1",
-						stack.AppTaskCPUParamKey:            "256",
-						stack.AppTaskMemoryParamKey:         "512",
+						stack.LBWebServiceContainerPortParamKey: "80",
+						stack.ServiceTaskCountParamKey:          "1",
+						stack.ServiceTaskCPUParamKey:            "256",
+						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
-							"ECS_CLI_ENVIRONMENT_NAME": testEnv,
+							"COPILOT_ENVIRONMENT_NAME": testEnv,
 						}, nil),
 					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockErr),
 				)
@@ -299,34 +299,34 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: testAppPath,
+						stack.LBWebServiceRulePathParamKey: testAppPath,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "5000",
-						stack.AppTaskCountParamKey:          "1",
-						stack.AppTaskCPUParamKey:            "256",
-						stack.AppTaskMemoryParamKey:         "512",
+						stack.LBWebServiceContainerPortParamKey: "5000",
+						stack.ServiceTaskCountParamKey:          "1",
+						stack.ServiceTaskCPUParamKey:            "256",
+						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
-							"ECS_CLI_ENVIRONMENT_NAME": testEnv,
+							"COPILOT_ENVIRONMENT_NAME": testEnv,
 						}, nil),
 
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppRulePathParamKey: prodAppPath,
+						stack.LBWebServiceRulePathParamKey: prodAppPath,
 					}, nil),
 					m.appDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebAppContainerPortParamKey: "5000",
-						stack.AppTaskCountParamKey:          "2",
-						stack.AppTaskCPUParamKey:            "512",
-						stack.AppTaskMemoryParamKey:         "1024",
+						stack.LBWebServiceContainerPortParamKey: "5000",
+						stack.ServiceTaskCountParamKey:          "2",
+						stack.ServiceTaskCPUParamKey:            "512",
+						stack.ServiceTaskMemoryParamKey:         "1024",
 					}, nil),
 					m.appDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
-							"ECS_CLI_ENVIRONMENT_NAME": prodEnv,
+							"COPILOT_ENVIRONMENT_NAME": prodEnv,
 						}, nil),
 
 					m.appDescriber.EXPECT().AppStackResources().Return([]*cloudformation.StackResource{
@@ -382,12 +382,12 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 				Variables: []*EnvVars{
 					{
 						Environment: "prod",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "prod",
 					},
 					{
 						Environment: "test",
-						Name:        "ECS_CLI_ENVIRONMENT_NAME",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
 						Value:       "test",
 					},
 				},
@@ -480,7 +480,7 @@ Service Discovery
 Variables
 
   Name                      Environment         Value
-  ECS_CLI_ENVIRONMENT_NAME  prod                prod
+  COPILOT_ENVIRONMENT_NAME  prod                prod
   -                         test                test
 
 Resources
@@ -491,7 +491,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"appName\":\"my-app\",\"type\":\"Load Balanced Web Service\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"ECS_CLI_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"appName\":\"my-app\",\"type\":\"Load Balanced Web Service\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -516,12 +516,12 @@ Resources
 			envVars := []*EnvVars{
 				{
 					Environment: "prod",
-					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "prod",
 				},
 				{
 					Environment: "test",
-					Name:        "ECS_CLI_ENVIRONMENT_NAME",
+					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "test",
 				},
 			}

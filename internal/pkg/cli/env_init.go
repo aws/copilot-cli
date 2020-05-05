@@ -183,7 +183,7 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 		Prod:                     o.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
-		ProjectDNSName:           project.Domain,
+		AppDNSName:               project.Domain,
 		AdditionalTags:           project.Tags,
 	}
 

@@ -1,6 +1,6 @@
 Cluster:
   Fn::ImportValue:
-    !Sub '${ProjectName}-${EnvName}-ClusterId'
+    !Sub '${AppName}-${EnvName}-ClusterId'
 TaskDefinition: !Ref TaskDefinition
 DesiredCount: !Ref TaskCount
 PropagateTags: SERVICE
@@ -13,11 +13,11 @@ NetworkConfiguration:
         - 0
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
       - Fn::Select:
         - 1
         - Fn::Split:
           - ','
-          - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-PublicSubnets'
+          - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
     SecurityGroups:
-      - Fn::ImportValue: !Sub '${ProjectName}-${EnvName}-EnvironmentSecurityGroup'
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'

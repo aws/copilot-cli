@@ -164,14 +164,14 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		configs = append(configs, &AppConfig{
 			Environment: env.Name,
-			Port:        appParams[stack.LBWebAppContainerPortParamKey],
-			Tasks:       appParams[stack.AppTaskCountParamKey],
-			CPU:         appParams[stack.AppTaskCPUParamKey],
-			Memory:      appParams[stack.AppTaskMemoryParamKey],
+			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
+			Tasks:       appParams[stack.ServiceTaskCountParamKey],
+			CPU:         appParams[stack.ServiceTaskCPUParamKey],
+			Memory:      appParams[stack.ServiceTaskMemoryParamKey],
 		})
 		services = appendServiceDiscovery(services, serviceDiscovery{
 			AppName:     d.app.Name,
-			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
 			ProjectName: d.app.Project,
 		}, env.Name)
 		webAppEnvVars, err := d.appDescriber.EnvVars()
@@ -227,7 +227,7 @@ func (d *WebAppDescriber) URI(envName string) (string, error) {
 
 	uri := &WebAppURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
-		Path:    appParams[stack.LBWebAppRulePathParamKey],
+		Path:    appParams[stack.LBWebServiceRulePathParamKey],
 	}
 	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
 	if isHTTPS {

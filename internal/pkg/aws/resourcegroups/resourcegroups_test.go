@@ -16,12 +16,12 @@ import (
 )
 
 var testTags = map[string]string{
-	"ecs-environment": "test",
+	"copilot-environment": "test",
 }
 
 const (
 	testResourceType    = "AWS::CloudWatch::Alarm"
-	testTagsQueryString = `{"ResourceTypeFilters":["AWS::CloudWatch::Alarm"],"TagFilters":[{"Key":"ecs-environment","Values":["test"]}]}` // NOTE only using one tag, since ranging over a map is not idempotent
+	testTagsQueryString = `{"ResourceTypeFilters":["AWS::CloudWatch::Alarm"],"TagFilters":[{"Key":"copilot-environment","Values":["test"]}]}` // NOTE only using one tag, since ranging over a map is not idempotent
 
 	testArn  = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:SDc-ReadCapacityUnitsLimit-BasicAlarm"
 	mockArn1 = "arn:aws:cloudwatch:us-west-2:1234567890:alarm:mockAlarmName1"

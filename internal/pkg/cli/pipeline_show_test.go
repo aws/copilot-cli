@@ -136,7 +136,7 @@ stages:
       name: prod
 `
 	testTags := map[string]string{
-		"ecs-project": mockProjectName,
+		"copilot-application": mockProjectName,
 	}
 
 	testCases := map[string]struct {

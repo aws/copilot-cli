@@ -64,11 +64,11 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 							&ecsapi.ContainerDefinition{
 								Environment: []*ecsapi.KeyValuePair{
 									&ecsapi.KeyValuePair{
-										Name:  aws.String("ECS_CLI_APP_NAME"),
-										Value: aws.String("my-app"),
+										Name:  aws.String("COPILOT_SERVICE_NAME"),
+										Value: aws.String("my-svc"),
 									},
 									&ecsapi.KeyValuePair{
-										Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+										Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 										Value: aws.String("prod"),
 									},
 								},
@@ -78,8 +78,8 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 				)
 			},
 			wantedEnvVars: map[string]string{
-				"ECS_CLI_APP_NAME":         "my-app",
-				"ECS_CLI_ENVIRONMENT_NAME": "prod",
+				"COPILOT_SERVICE_NAME":     "my-svc",
+				"COPILOT_ENVIRONMENT_NAME": "prod",
 			},
 		},
 	}
@@ -144,7 +144,7 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 		"returns error when fail to describe stack resources": {
 			setupMocks: func(m appDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForApp(testProject, testEnv, testApp)).Return(nil, errors.New("some error")),
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -153,7 +153,7 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 		"ignores dummy stack resources": {
 			setupMocks: func(m appDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForApp(testProject, testEnv, testApp)).Return([]*cloudformation.StackResource{
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).Return([]*cloudformation.StackResource{
 						&cloudformation.StackResource{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -229,7 +229,7 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 		"success": {
 			setupMocks: func(m appDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForApp(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
 						Return([]*cloudformation.StackResource{
 							{
 								LogicalResourceId:  aws.String("Service"),
@@ -244,7 +244,7 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 		"error if cannot find service arn": {
 			setupMocks: func(m appDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForApp(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
 						Return([]*cloudformation.StackResource{}, nil),
 				)
 			},
@@ -254,7 +254,7 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 		"error if fail to describe stack resources": {
 			setupMocks: func(m appDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForApp(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
 						Return(nil, errors.New("some error")),
 				)
 			},

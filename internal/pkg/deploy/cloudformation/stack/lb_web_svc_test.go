@@ -21,12 +21,12 @@ import (
 
 const (
 	testEnvName      = "test"
-	testProjName     = "phonetool"
+	testAppName      = "phonetool"
 	testImageRepoURL = "12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend"
 	testImageTag     = "manual-bf3678c"
 )
 
-var testLBWebAppManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
 	ServiceProps: &manifest.ServiceProps{
 		Name:       "frontend",
 		Dockerfile: "frontend/Dockerfile",
@@ -47,38 +47,38 @@ func (m mockTemplater) Template() (string, error) {
 	return m.tpl, nil
 }
 
-func TestLoadBalancedWebApp_StackName(t *testing.T) {
+func TestLoadBalancedWebService_StackName(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName     string
-		inEnvName     string
-		inProjectName string
+		inSvcName string
+		inEnvName string
+		inAppName string
 
 		wantedStackName string
 	}{
 		"valid stack name": {
-			inAppName:     "frontend",
-			inEnvName:     "test",
-			inProjectName: "phonetool",
+			inSvcName: "frontend",
+			inEnvName: "test",
+			inAppName: "phonetool",
 
 			wantedStackName: "phonetool-test-frontend",
 		},
 		"longer than 128 characters": {
-			inAppName:     "whatisthishorriblylongapplicationnamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaaaaa",
-			inEnvName:     "test",
-			inProjectName: "phonetool",
+			inSvcName: "whatisthishorriblylongservicenamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			inEnvName: "test",
+			inAppName: "phonetool",
 
-			wantedStackName: "phonetool-test-whatisthishorriblylongapplicationnamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaa",
+			wantedStackName: "phonetool-test-whatisthishorriblylongservicenamethatcantfitintocloudformationwhatarewesupposedtodoaboutthisaaaaaaaaaaaaaaaaaaaaa",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			conf := &LoadBalancedWebApp{
-				app: &app{
-					name:    tc.inAppName,
-					env:     tc.inEnvName,
-					project: tc.inProjectName,
+			conf := &LoadBalancedWebService{
+				svc: &svc{
+					name: tc.inSvcName,
+					env:  tc.inEnvName,
+					app:  tc.inAppName,
 				},
 			}
 
@@ -91,37 +91,37 @@ func TestLoadBalancedWebApp_StackName(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebApp_Template(t *testing.T) {
+func TestLoadBalancedWebService_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp)
+		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 
 		wantedTemplate string
 		wantedError    error
 	}{
 		"unavailable rule priority lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 			wantedTemplate: "",
 			wantedError:    errors.New("some error"),
 		},
 		"unexpected addons parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
-				c.app.addons = addons
+				c.svc.addons = addons
 			},
 			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for application %s: %w", testLBWebAppManifest.Name, errors.New("some error")),
+			wantedError:    fmt.Errorf("generate addons template for service %s: %w", testLBWebServiceManifest.Name, errors.New("some error")),
 		},
-		"failed parsing app template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+		"failed parsing svc template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
 					tpl: `Outputs:
@@ -129,31 +129,31 @@ func TestLoadBalancedWebApp_Template(t *testing.T) {
     Value: hello`,
 				}
 				c.parser = m
-				c.app.addons = addons
+				c.svc.addons = addons
 			},
 
 			wantedTemplate: "",
 			wantedError:    errors.New("some error"),
 		},
 		"render template without addons": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					RulePriorityLambda: "lambda",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
 				addons := mockTemplater{err: &addons.ErrDirNotExist{}}
 				c.parser = m
-				c.app.addons = addons
+				c.svc.addons = addons
 			},
 
 			wantedTemplate: "template",
 		},
 		"render template with addons": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Read(lbWebAppRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					NestedStack: &template.ServiceNestedStackOpts{
 						StackName:       addons.StackName,
@@ -202,17 +202,17 @@ Outputs:
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			conf := &LoadBalancedWebApp{
-				app: &app{
-					name:    testLBWebAppManifest.Name,
-					env:     testEnvName,
-					project: testProjName,
+			conf := &LoadBalancedWebService{
+				svc: &svc{
+					name: testLBWebServiceManifest.Name,
+					env:  testEnvName,
+					app:  testAppName,
 					rc: RuntimeConfig{
 						ImageRepoURL: testImageRepoURL,
 						ImageTag:     testImageTag,
 					},
 				},
-				manifest: testLBWebAppManifest,
+				manifest: testLBWebServiceManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
@@ -226,7 +226,7 @@ Outputs:
 	}
 }
 
-func TestLoadBalancedWebApp_Parameters(t *testing.T) {
+func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	testCases := map[string]struct {
 		httpsEnabled bool
 		expectedHTTP string
@@ -244,18 +244,18 @@ func TestLoadBalancedWebApp_Parameters(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			// GIVEN
-			conf := &LoadBalancedWebApp{
-				app: &app{
-					name:    testLBWebAppManifest.Name,
-					env:     testEnvName,
-					project: testProjName,
-					tc:      testLBWebAppManifest.TaskConfig,
+			conf := &LoadBalancedWebService{
+				svc: &svc{
+					name: testLBWebServiceManifest.Name,
+					env:  testEnvName,
+					app:  testAppName,
+					tc:   testLBWebServiceManifest.TaskConfig,
 					rc: RuntimeConfig{
 						ImageRepoURL: testImageRepoURL,
 						ImageTag:     testImageTag,
 					},
 				},
-				manifest: testLBWebAppManifest,
+				manifest: testLBWebServiceManifest,
 
 				httpsEnabled: tc.httpsEnabled,
 			}
@@ -266,55 +266,55 @@ func TestLoadBalancedWebApp_Parameters(t *testing.T) {
 			// THEN
 			require.ElementsMatch(t, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(AppProjectNameParamKey),
+					ParameterKey:   aws.String(ServiceAppNameParamKey),
 					ParameterValue: aws.String("phonetool"),
 				},
 				{
-					ParameterKey:   aws.String(AppEnvNameParamKey),
+					ParameterKey:   aws.String(ServiceEnvNameParamKey),
 					ParameterValue: aws.String("test"),
 				},
 				{
-					ParameterKey:   aws.String(AppNameParamKey),
+					ParameterKey:   aws.String(ServiceNameParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(AppContainerImageParamKey),
+					ParameterKey:   aws.String(ServiceContainerImageParamKey),
 					ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebAppContainerPortParamKey),
+					ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebAppRulePathParamKey),
+					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebAppHealthCheckPathParamKey),
+					ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
 					ParameterValue: aws.String("/"),
 				},
 				{
-					ParameterKey:   aws.String(AppTaskCPUParamKey),
+					ParameterKey:   aws.String(ServiceTaskCPUParamKey),
 					ParameterValue: aws.String("256"),
 				},
 				{
-					ParameterKey:   aws.String(AppTaskMemoryParamKey),
+					ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
 					ParameterValue: aws.String("512"),
 				},
 				{
-					ParameterKey:   aws.String(AppTaskCountParamKey),
+					ParameterKey:   aws.String(ServiceTaskCountParamKey),
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebAppHTTPSParamKey),
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 					ParameterValue: aws.String(tc.expectedHTTP),
 				},
 				{
-					ParameterKey:   aws.String(AppLogRetentionParamKey),
+					ParameterKey:   aws.String(ServiceLogRetentionParamKey),
 					ParameterValue: aws.String("30"),
 				},
 				{
-					ParameterKey:   aws.String(AppAddonsTemplateURLParamKey),
+					ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
 					ParameterValue: aws.String(""),
 				},
 			}, params)
@@ -322,27 +322,27 @@ func TestLoadBalancedWebApp_Parameters(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
+func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebApp)
+		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebService)
 
 		wantedParams string
 		wantedError  error
 	}{
 		"unavailable template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Parse(appParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
-				c.app.parser = m
+				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				c.svc.parser = m
 			},
 			wantedParams: "",
 			wantedError:  errors.New("some error"),
 		},
 		"render params template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebApp) {
+			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
-				m.EXPECT().Parse(appParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
-				c.app.parser = m
+				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
+				c.svc.parser = m
 			},
 			wantedParams: "params",
 		},
@@ -353,12 +353,12 @@ func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			c := &LoadBalancedWebApp{
-				app: &app{
-					name:    testLBWebAppManifest.Name,
-					env:     testEnvName,
-					project: testProjName,
-					tc:      testLBWebAppManifest.TaskConfig,
+			c := &LoadBalancedWebService{
+				svc: &svc{
+					name: testLBWebServiceManifest.Name,
+					env:  testEnvName,
+					app:  testAppName,
+					tc:   testLBWebServiceManifest.TaskConfig,
 					rc: RuntimeConfig{
 						ImageRepoURL: testImageRepoURL,
 						ImageTag:     testImageTag,
@@ -367,7 +367,7 @@ func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
 						},
 					},
 				},
-				manifest: testLBWebAppManifest,
+				manifest: testLBWebServiceManifest,
 			}
 			tc.mockDependencies(ctrl, c)
 
@@ -381,25 +381,25 @@ func TestLoadBalancedWebApp_SerializedParameters(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebApp_Tags(t *testing.T) {
+func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// GIVEN
-	conf := &LoadBalancedWebApp{
-		app: &app{
-			name:    testLBWebAppManifest.Name,
-			env:     testEnvName,
-			project: testProjName,
+	conf := &LoadBalancedWebService{
+		svc: &svc{
+			name: testLBWebServiceManifest.Name,
+			env:  testEnvName,
+			app:  testAppName,
 			rc: RuntimeConfig{
 				ImageRepoURL: testImageRepoURL,
 				ImageTag:     testImageTag,
 				AdditionalTags: map[string]string{
 					"owner":       "boss",
-					ProjectTagKey: "overrideproject",
-					EnvTagKey:     "overrideenv",
 					AppTagKey:     "overrideapp",
+					EnvTagKey:     "overrideenv",
+					ServiceTagKey: "overridesvc",
 				},
 			},
 		},
-		manifest: testLBWebAppManifest,
+		manifest: testLBWebServiceManifest,
 	}
 
 	// WHEN
@@ -408,7 +408,7 @@ func TestLoadBalancedWebApp_Tags(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String("phonetool"),
 		},
 		{
@@ -416,7 +416,7 @@ func TestLoadBalancedWebApp_Tags(t *testing.T) {
 			Value: aws.String("test"),
 		},
 		{
-			Key:   aws.String(AppTagKey),
+			Key:   aws.String(ServiceTagKey),
 			Value: aws.String("frontend"),
 		},
 		{

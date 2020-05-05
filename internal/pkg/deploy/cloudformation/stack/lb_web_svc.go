@@ -1,0 +1,129 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package stack
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+)
+
+// Template rendering configuration.
+const (
+	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
+)
+
+// Parameter logical IDs for a load balanced web service.
+const (
+	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
+	LBWebServiceContainerPortParamKey   = "ContainerPort"
+	LBWebServiceRulePathParamKey        = "RulePath"
+	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
+)
+
+type loadBalancedWebSvcReadParser interface {
+	template.ReadParser
+	ParseLoadBalancedWebService(template.ServiceOpts) (*template.Content, error)
+}
+
+// LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
+type LoadBalancedWebService struct {
+	*svc
+	manifest     *manifest.LoadBalancedWebService
+	httpsEnabled bool
+
+	parser loadBalancedWebSvcReadParser
+}
+
+// NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
+func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+	parser := template.New()
+	addons, err := addons.New(mft.Name)
+	if err != nil {
+		return nil, fmt.Errorf("new addons: %w", err)
+	}
+	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	return &LoadBalancedWebService{
+		svc: &svc{
+			name:   mft.Name,
+			env:    env,
+			app:    app,
+			tc:     envManifest.TaskConfig,
+			rc:     rc,
+			parser: parser,
+			addons: addons,
+		},
+		manifest:     envManifest,
+		httpsEnabled: false,
+
+		parser: parser,
+	}, nil
+}
+
+// NewHTTPSLoadBalancedWebService  creates a new LoadBalancedWebService stack from its manifest that needs to be deployed to
+// a environment within an application. It creates an HTTPS listener and assumes that the environment
+// it's being deployed into has an HTTPS configured listener.
+func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
+	webSvc, err := NewLoadBalancedWebService(mft, env, app, rc)
+	if err != nil {
+		return nil, err
+	}
+	webSvc.httpsEnabled = true
+	return webSvc, nil
+}
+
+// Template returns the CloudFormation template for the service parametrized for the environment.
+func (s *LoadBalancedWebService) Template() (string, error) {
+	rulePriorityLambda, err := s.parser.Read(lbWebSvcRulePriorityGeneratorPath)
+	if err != nil {
+		return "", err
+	}
+	outputs, err := s.addonsOutputs()
+	if err != nil {
+		return "", err
+	}
+	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
+		Variables:          s.manifest.Variables,
+		Secrets:            s.manifest.Secrets,
+		NestedStack:        outputs,
+		RulePriorityLambda: rulePriorityLambda.String(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return content.String(), nil
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
+func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+	return append(s.svc.Parameters(), []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+			ParameterValue: aws.String(s.manifest.Path),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
+			ParameterValue: aws.String(s.manifest.HealthCheckPath),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
+		},
+	}...)
+}
+
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
+	return s.svc.templateConfiguration(s)
+}

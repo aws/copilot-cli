@@ -1,7 +1,7 @@
 DiscoveryService:
   Type: AWS::ServiceDiscovery::Service
   Properties:
-    Description: Discovery Service for the ECS CLI V2 services
+    Description: Discovery Service for the Copilot services
     DnsConfig:
       RoutingPolicy: MULTIVALUE
       DnsRecords:
@@ -11,7 +11,7 @@ DiscoveryService:
           Type: SRV
     HealthCheckCustomConfig:
       FailureThreshold: 1
-    Name:  !Ref AppName
+    Name:  !Ref ServiceName
     NamespaceId:
       Fn::ImportValue:
-        !Sub '${ProjectName}-${EnvName}-ServiceDiscoveryNamespaceID'
+        !Sub '${AppName}-${EnvName}-ServiceDiscoveryNamespaceID'

@@ -97,17 +97,17 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
 			if proj.RequiresDNSDelegation() {
-				serializer, err = stack.NewHTTPSLoadBalancedWebApp(v, env.Name, proj.Name, rc)
+				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, proj.Name, rc)
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web app stack serializer: %w", err)
 				}
 			}
-			serializer, err = stack.NewLoadBalancedWebApp(v, env.Name, proj.Name, rc)
+			serializer, err = stack.NewLoadBalancedWebService(v, env.Name, proj.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init load balanced web app stack serializer: %w", err)
 			}
 		case *manifest.BackendService:
-			serializer, err = stack.NewBackendApp(v, env.Name, proj.Name, rc)
+			serializer, err = stack.NewBackendService(v, env.Name, proj.Name, rc)
 			if err != nil {
 				return nil, fmt.Errorf("init backend app stack serializer: %w", err)
 			}

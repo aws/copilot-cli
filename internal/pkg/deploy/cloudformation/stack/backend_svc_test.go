@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test settings for container healthchecks in the backend app manifest.
+// Test settings for container healthchecks in the backend service manifest.
 var (
 	testInterval    = 5 * time.Second
 	testRetries     = 3
@@ -29,7 +29,7 @@ var (
 	testStartPeriod = 0 * time.Second
 )
 
-var testBackendAppManifest = manifest.NewBackendService(manifest.BackendServiceProps{
+var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceProps{
 	ServiceProps: manifest.ServiceProps{
 		Name:       "frontend",
 		Dockerfile: "./frontend/Dockerfile",
@@ -44,34 +44,34 @@ var testBackendAppManifest = manifest.NewBackendService(manifest.BackendServiceP
 	},
 })
 
-func TestBackendApp_Template(t *testing.T) {
+func TestBackendService_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, app *BackendApp)
+		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
 		wantedTemplate   string
 		wantedErr        error
 	}{
 		"unexpected addons parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
-				app.addons = mockTemplater{err: errors.New("some error")}
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for application %s: %w", testBackendAppManifest.Name, errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for service %s: %w", testBackendSvcManifest.Name, errors.New("some error")),
 		},
-		"failed parsing app template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
+		"failed parsing svc template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 
 				m := mocks.NewMockbackendAppReadParser(ctrl)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
-				app.parser = m
-				app.addons = mockTemplater{
+				svc.parser = m
+				svc.addons = mockTemplater{
 					tpl: `Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("parse backend app template: %w", errors.New("some error")),
+			wantedErr: fmt.Errorf("parse backend service template: %w", errors.New("some error")),
 		},
 		"render template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, app *BackendApp) {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendAppReadParser(ctrl)
 				m.EXPECT().ParseBackendService(template.ServiceOpts{
 					HealthCheck: &ecs.HealthCheck{
@@ -86,8 +86,8 @@ func TestBackendApp_Template(t *testing.T) {
 						VariableOutputs: []string{"Hello"},
 					},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
-				app.parser = m
-				app.addons = mockTemplater{
+				svc.parser = m
+				svc.addons = mockTemplater{
 					tpl: `Outputs:
   Hello:
     Value: hello`,
@@ -102,17 +102,17 @@ func TestBackendApp_Template(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			conf := &BackendApp{
-				app: &app{
-					name:    testBackendAppManifest.Name,
-					env:     testEnvName,
-					project: testProjName,
+			conf := &BackendService{
+				svc: &svc{
+					name: testBackendSvcManifest.Name,
+					env:  testEnvName,
+					app:  testAppName,
 					rc: RuntimeConfig{
 						ImageRepoURL: testImageRepoURL,
 						ImageTag:     testImageTag,
 					},
 				},
-				manifest: testBackendAppManifest,
+				manifest: testBackendSvcManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
@@ -126,20 +126,20 @@ func TestBackendApp_Template(t *testing.T) {
 	}
 }
 
-func TestBackendApp_Parameters(t *testing.T) {
+func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
-	conf := &BackendApp{
-		app: &app{
-			name:    testBackendAppManifest.Name,
-			env:     testEnvName,
-			project: testProjName,
-			tc:      testBackendAppManifest.TaskConfig,
+	conf := &BackendService{
+		svc: &svc{
+			name: testBackendSvcManifest.Name,
+			env:  testEnvName,
+			app:  testAppName,
+			tc:   testBackendSvcManifest.TaskConfig,
 			rc: RuntimeConfig{
 				ImageRepoURL: testImageRepoURL,
 				ImageTag:     testImageTag,
 			},
 		},
-		manifest: testBackendAppManifest,
+		manifest: testBackendSvcManifest,
 	}
 
 	// WHEN
@@ -148,43 +148,43 @@ func TestBackendApp_Parameters(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(AppProjectNameParamKey),
+			ParameterKey:   aws.String(ServiceAppNameParamKey),
 			ParameterValue: aws.String("phonetool"),
 		},
 		{
-			ParameterKey:   aws.String(AppEnvNameParamKey),
+			ParameterKey:   aws.String(ServiceEnvNameParamKey),
 			ParameterValue: aws.String("test"),
 		},
 		{
-			ParameterKey:   aws.String(AppNameParamKey),
+			ParameterKey:   aws.String(ServiceNameParamKey),
 			ParameterValue: aws.String("frontend"),
 		},
 		{
-			ParameterKey:   aws.String(AppContainerImageParamKey),
+			ParameterKey:   aws.String(ServiceContainerImageParamKey),
 			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
-			ParameterKey:   aws.String(BackendAppContainerPortParamKey),
+			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String("8080"),
 		},
 		{
-			ParameterKey:   aws.String(AppTaskCPUParamKey),
+			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
 		{
-			ParameterKey:   aws.String(AppTaskMemoryParamKey),
+			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
 			ParameterValue: aws.String("512"),
 		},
 		{
-			ParameterKey:   aws.String(AppTaskCountParamKey),
+			ParameterKey:   aws.String(ServiceTaskCountParamKey),
 			ParameterValue: aws.String("1"),
 		},
 		{
-			ParameterKey:   aws.String(AppLogRetentionParamKey),
+			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
 			ParameterValue: aws.String("30"),
 		},
 		{
-			ParameterKey:   aws.String(AppAddonsTemplateURLParamKey),
+			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
 			ParameterValue: aws.String(""),
 		},
 	}, params)

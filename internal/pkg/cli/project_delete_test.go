@@ -250,7 +250,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			Name: "staging",
 		},
 	}
-	mockProject := &archer.Project{
+	mockApp := &archer.Project{
 		Name: "badgoose",
 	}
 	mockResources := []*archer.ProjectRegionalResources{
@@ -280,8 +280,8 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
 					// emptyS3bucket
-					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
-					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
+					mocks.deployer.EXPECT().GetRegionalProjectResources(mockApp).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),
@@ -322,8 +322,8 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
 					// emptyS3bucket
-					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockProject, nil),
-					mocks.deployer.EXPECT().GetRegionalProjectResources(mockProject).Return(mockResources, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
+					mocks.deployer.EXPECT().GetRegionalProjectResources(mockApp).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),

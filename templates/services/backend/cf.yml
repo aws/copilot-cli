@@ -1,13 +1,13 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation template that represents a backend application on Amazon ECS.
+Description: CloudFormation template that represents a backend service on Amazon ECS.
 Parameters:
-  ProjectName:
+  AppName:
     Type: String
   EnvName:
     Type: String
-  AppName:
+  ServiceName:
     Type: String
   ContainerImage:
     Type: String
@@ -38,7 +38,7 @@ Resources:
     Properties:
 {{include "fargate-taskdef-base-properties" . | indent 6}}
       ContainerDefinitions:
-        - Name: !Ref AppName
+        - Name: !Ref ServiceName
           Image: !Ref ContainerImage
           PortMappings:
             - ContainerPort: !Ref ContainerPort
@@ -48,7 +48,7 @@ Resources:
             Options:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: ecs{{if .HealthCheck}}
+              awslogs-stream-prefix: copilot{{if .HealthCheck}}
           HealthCheck:
             Command: {{quoteAll .HealthCheck.Command | stringifySlice}}
             Interval: {{.HealthCheck.Interval}}

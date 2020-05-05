@@ -3,8 +3,8 @@ AddonsStack:
   Condition: HasAddons
   Properties:
     Parameters:
-      Project: !Ref ProjectName
-      Env: !Ref EnvName
       App: !Ref AppName
+      Env: !Ref EnvName
+      Service: !Ref ServiceName
     TemplateURL:
       !Ref AddonsTemplateURL

@@ -23,8 +23,8 @@ TaskRole:
                 - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
               Condition:
                 StringEquals:
-                  'iam:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                  'iam:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
       - PolicyName: 'AllowPrefixedResources'
         PolicyDocument:
           Version: '2012-10-17'
@@ -32,17 +32,17 @@ TaskRole:
             - Effect: 'Allow'
               Action: '*'
               Resource:
-                - !Sub 'arn:aws:s3:::${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:redshift:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:*:${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:kinesis:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
-                - !Sub 'arn:aws:kinesisanalytics:${AWS::Region}:${AWS::AccountId}:*/${ProjectName}-${EnvName}-*'
+                - !Sub 'arn:aws:s3:::${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:redshift:${AWS::Region}:${AWS::AccountId}:*:${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:rds:${AWS::Region}:${AWS::AccountId}:*:${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:kinesis:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:firehose:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
+                - !Sub 'arn:aws:kinesisanalytics:${AWS::Region}:${AWS::AccountId}:*/${AppName}-${EnvName}-*'
       - PolicyName: 'AllowTaggedResources' # See https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_actions-resources-contextkeys.html
         PolicyDocument:
           Version: '2012-10-17'
@@ -52,15 +52,15 @@ TaskRole:
               Resource: '*'
               Condition:
                 StringEquals:
-                  'aws:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                  'aws:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
             - Effect: 'Allow'
               Action: '*'
               Resource: '*'
               Condition:
                 StringEquals:
-                  'secretsmanager:ResourceTag/ecs-project': !Sub '${ProjectName}'
-                  'secretsmanager:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
       - PolicyName: 'CloudWatchMetricsAndDashboard'
         PolicyDocument:
           Version: '2012-10-17'

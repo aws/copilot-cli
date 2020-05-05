@@ -74,7 +74,7 @@ func (d *BackendAppDescriber) URI(envName string) (string, error) {
 	}
 	s := serviceDiscovery{
 		AppName:     d.app.Name,
-		Port:        appParams[stack.LBWebAppContainerPortParamKey],
+		Port:        appParams[stack.LBWebServiceContainerPortParamKey],
 		ProjectName: d.app.Project,
 	}
 	return s.String(), nil
@@ -104,15 +104,15 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		services = appendServiceDiscovery(services, serviceDiscovery{
 			AppName:     d.app.Name,
-			Port:        appParams[stack.LBWebAppContainerPortParamKey],
+			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
 			ProjectName: d.app.Project,
 		}, env.Name)
 		configs = append(configs, &AppConfig{
 			Environment: env.Name,
-			Port:        appParams[stack.LBWebAppContainerPortParamKey],
-			Tasks:       appParams[stack.AppTaskCountParamKey],
-			CPU:         appParams[stack.AppTaskCPUParamKey],
-			Memory:      appParams[stack.AppTaskMemoryParamKey],
+			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
+			Tasks:       appParams[stack.ServiceTaskCountParamKey],
+			CPU:         appParams[stack.ServiceTaskCPUParamKey],
+			Memory:      appParams[stack.ServiceTaskMemoryParamKey],
 		})
 		backendAppEnvVars, err := d.appDescriber.EnvVars()
 		if err != nil {

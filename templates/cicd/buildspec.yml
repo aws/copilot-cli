@@ -54,7 +54,7 @@ phases:
       #     - Login and push the image.
       - >
         for app in $apps; do
-          for docker_dir in $(cat $CODEBUILD_SRC_DIR/ecs-project/$app/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
+          for docker_dir in $(cat $CODEBUILD_SRC_DIR/copilot/$app/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
           cd $CODEBUILD_SRC_DIR/$docker_dir;
           docker build -t $app:$tag .;
           image_id=$(docker images -q $app:$tag);

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -185,7 +186,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-		"ecs-project": o.ProjectName(),
+		stack.AppTagKey: o.ProjectName(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)

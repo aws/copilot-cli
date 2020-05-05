@@ -29,7 +29,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
-        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for app package
+        - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
   BuildProjectPolicy:
     Type: AWS::IAM::Policy
     DependsOn: BuildProjectRole
@@ -86,7 +86,7 @@ Resources:
               - ecr:UploadLayerPart
               - ecr:CompleteLayerUpload
             Resource: '*'
-            Condition: {StringEquals: {'ecr:ResourceTag/ecs-project': {{$.ProjectName}}}}
+            Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.ProjectName}}}}
       Roles:
         - !Ref BuildProjectRole
   BuildProject:
@@ -111,7 +111,7 @@ Resources:
         Image: aws/codebuild/amazonlinux2-x86_64-standard:1.0
       Source:
         Type: CODEPIPELINE
-        BuildSpec: ecs-project/buildspec.yml
+        BuildSpec: copilot/buildspec.yml
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role

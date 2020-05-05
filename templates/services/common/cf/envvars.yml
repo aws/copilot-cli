@@ -2,18 +2,18 @@
 # This lets customers have access to, for example, their LB endpoint - which they'd
 # have no way of otherwise determining.
 Environment:
-- Name: ECS_CLI_PROJECT_NAME
-  Value: !Sub '${ProjectName}'
-- Name: ECS_SVC_DISCOVERY_ENDPOINT
-  Value: !Sub '${ProjectName}.local'
-- Name: ECS_CLI_ENVIRONMENT_NAME
-  Value: !Sub '${EnvName}'
-- Name: ECS_CLI_APP_NAME
+- Name: COPILOT_APPLICATION_NAME
   Value: !Sub '${AppName}'
-- Name: ECS_CLI_LB_DNS
+- Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+  Value: !Sub '${AppName}.local'
+- Name: COPILOT_ENVIRONMENT_NAME
+  Value: !Sub '${EnvName}'
+- Name: COPILOT_SERVICE_NAME
+  Value: !Sub '${ServiceName}'
+- Name: COPILOT_LB_DNS
   Value:
     Fn::ImportValue:
-      !Sub "${ProjectName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
+      !Sub "${AppName}-${EnvName}-PublicLoadBalancerDNS" {{if .Variables}}{{range $name, $value := .Variables}}
 - Name: {{$name}}
   Value: {{$value}}{{end}}{{end}}{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $var := .NestedStack.VariableOutputs}}
 - Name: {{toSnakeCase $var}}

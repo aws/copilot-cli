@@ -44,7 +44,7 @@ var secretTags = func() []*secretsmanager.Tag {
 	timestamp := time.Now().UTC().Format(time.UnixDate)
 	return []*secretsmanager.Tag{
 		{
-			Key:   aws.String("ecs-project"),
+			Key:   aws.String("copilot-application"),
 			Value: aws.String(timestamp),
 		},
 	}
