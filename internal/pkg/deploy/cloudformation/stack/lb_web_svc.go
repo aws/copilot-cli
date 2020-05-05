@@ -79,18 +79,18 @@ func NewHTTPSLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, a
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
-func (c *LoadBalancedWebService) Template() (string, error) {
-	rulePriorityLambda, err := c.parser.Read(lbWebSvcRulePriorityGeneratorPath)
+func (s *LoadBalancedWebService) Template() (string, error) {
+	rulePriorityLambda, err := s.parser.Read(lbWebSvcRulePriorityGeneratorPath)
 	if err != nil {
 		return "", err
 	}
-	outputs, err := c.addonsOutputs()
+	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
-	content, err := c.parser.ParseLoadBalancedWebService(template.ServiceOpts{
-		Variables:          c.manifest.Variables,
-		Secrets:            c.manifest.Secrets,
+	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
+		Variables:          s.manifest.Variables,
+		Secrets:            s.manifest.Secrets,
 		NestedStack:        outputs,
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
@@ -101,29 +101,29 @@ func (c *LoadBalancedWebService) Template() (string, error) {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (c *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
-	return append(c.svc.Parameters(), []*cloudformation.Parameter{
+func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(c.manifest.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: aws.String(c.manifest.Path),
+			ParameterValue: aws.String(s.manifest.Path),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: aws.String(c.manifest.HealthCheckPath),
+			ParameterValue: aws.String(s.manifest.HealthCheckPath),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(c.httpsEnabled)),
+			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
 	}...)
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
-func (c *LoadBalancedWebService) SerializedParameters() (string, error) {
-	return c.svc.templateConfiguration(c)
+func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
+	return s.svc.templateConfiguration(s)
 }

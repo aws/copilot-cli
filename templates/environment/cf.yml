@@ -63,14 +63,14 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
 
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -87,7 +87,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-pub0'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub0'
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -98,7 +98,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-pub1'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub1'
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
@@ -109,7 +109,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-priv0'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv0'
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
@@ -120,7 +120,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-priv1'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv1'
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
@@ -128,7 +128,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
 
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -180,7 +180,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
 
   # Only accept requests coming from the public ALB or other containers in the same security group.
   EnvironmentSecurityGroup:
@@ -190,7 +190,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'ecs-${AppName}-${EnvironmentName}-env'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
 
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
@@ -337,8 +337,8 @@ Resources:
             Resource: "*"
             Condition: 
               StringEquals:
-                'aws:ResourceTag/ecs-project': !Sub '${AppName}'
-                'aws:ResourceTag/ecs-environment': !Sub '${EnvironmentName}'
+                'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
           - Sid: ECS
             Effect: Allow
             Action: [

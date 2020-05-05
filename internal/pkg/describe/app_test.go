@@ -64,11 +64,11 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 							&ecsapi.ContainerDefinition{
 								Environment: []*ecsapi.KeyValuePair{
 									&ecsapi.KeyValuePair{
-										Name:  aws.String("ECS_CLI_SERVICE_NAME"),
+										Name:  aws.String("COPILOT_SERVICE_NAME"),
 										Value: aws.String("my-app"),
 									},
 									&ecsapi.KeyValuePair{
-										Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+										Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 										Value: aws.String("prod"),
 									},
 								},
@@ -78,8 +78,8 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 				)
 			},
 			wantedEnvVars: map[string]string{
-				"ECS_CLI_SERVICE_NAME":     "my-app",
-				"ECS_CLI_ENVIRONMENT_NAME": "prod",
+				"COPILOT_SERVICE_NAME":     "my-app",
+				"COPILOT_ENVIRONMENT_NAME": "prod",
 			},
 		},
 	}

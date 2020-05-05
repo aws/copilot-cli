@@ -58,40 +58,40 @@ type svc struct {
 }
 
 // StackName returns the name of the stack.
-func (a *svc) StackName() string {
-	return NameForService(a.app, a.env, a.name)
+func (s *svc) StackName() string {
+	return NameForService(s.app, s.env, s.name)
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (a *svc) Parameters() []*cloudformation.Parameter {
+func (s *svc) Parameters() []*cloudformation.Parameter {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(ServiceAppNameParamKey),
-			ParameterValue: aws.String(a.app),
+			ParameterValue: aws.String(s.app),
 		},
 		{
 			ParameterKey:   aws.String(ServiceEnvNameParamKey),
-			ParameterValue: aws.String(a.env),
+			ParameterValue: aws.String(s.env),
 		},
 		{
 			ParameterKey:   aws.String(ServiceNameParamKey),
-			ParameterValue: aws.String(a.name),
+			ParameterValue: aws.String(s.name),
 		},
 		{
 			ParameterKey:   aws.String(ServiceContainerImageParamKey),
-			ParameterValue: aws.String(fmt.Sprintf("%s:%s", a.rc.ImageRepoURL, a.rc.ImageTag)),
+			ParameterValue: aws.String(fmt.Sprintf("%s:%s", s.rc.ImageRepoURL, s.rc.ImageTag)),
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(a.tc.CPU)),
+			ParameterValue: aws.String(strconv.Itoa(s.tc.CPU)),
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(a.tc.Memory)),
+			ParameterValue: aws.String(strconv.Itoa(s.tc.Memory)),
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*a.tc.Count)),
+			ParameterValue: aws.String(strconv.Itoa(*s.tc.Count)),
 		},
 		{
 			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
@@ -99,17 +99,17 @@ func (a *svc) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
-			ParameterValue: aws.String(a.rc.AddonsTemplateURL),
+			ParameterValue: aws.String(s.rc.AddonsTemplateURL),
 		},
 	}
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
-func (a *svc) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(a.rc.AdditionalTags, map[string]string{
-		AppTagKey:     a.app,
-		EnvTagKey:     a.env,
-		ServiceTagKey: a.name,
+func (s *svc) Tags() []*cloudformation.Tag {
+	return mergeAndFlattenTags(s.rc.AdditionalTags, map[string]string{
+		AppTagKey:     s.app,
+		EnvTagKey:     s.env,
+		ServiceTagKey: s.name,
 	})
 }
 
@@ -118,8 +118,8 @@ type templateConfigurer interface {
 	Tags() []*cloudformation.Tag
 }
 
-func (a *svc) templateConfiguration(tc templateConfigurer) (string, error) {
-	doc, err := a.parser.Parse(svcParamsTemplatePath, struct {
+func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
+	doc, err := s.parser.Parse(svcParamsTemplatePath, struct {
 		Parameters []*cloudformation.Parameter
 		Tags       []*cloudformation.Tag
 	}{
@@ -134,19 +134,19 @@ func (a *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 	return doc.String(), nil
 }
 
-func (a *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
-	stack, err := a.addons.Template()
+func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
+	stack, err := s.addons.Template()
 	if err != nil {
 		var noAddonsErr *addons.ErrDirNotExist
 		if !errors.As(err, &noAddonsErr) {
-			return nil, fmt.Errorf("generate addons template for service %s: %w", a.name, err)
+			return nil, fmt.Errorf("generate addons template for service %s: %w", s.name, err)
 		}
 		return nil, nil // Addons directory does not exist, so there are no outputs and error.
 	}
 
 	out, err := addons.Outputs(stack)
 	if err != nil {
-		return nil, fmt.Errorf("get addons outputs for service %s: %w", a.name, err)
+		return nil, fmt.Errorf("get addons outputs for service %s: %w", s.name, err)
 	}
 	return &template.ServiceNestedStackOpts{
 		StackName:       addons.StackName,

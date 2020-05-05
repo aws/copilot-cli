@@ -23,8 +23,8 @@ TaskRole:
                 - !Sub 'arn:aws:iam::${AWS::AccountId}:role/*'
               Condition:
                 StringEquals:
-                  'iam:ResourceTag/ecs-project': !Sub '${AppName}'
-                  'iam:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
       - PolicyName: 'AllowPrefixedResources'
         PolicyDocument:
           Version: '2012-10-17'
@@ -52,15 +52,15 @@ TaskRole:
               Resource: '*'
               Condition:
                 StringEquals:
-                  'aws:ResourceTag/ecs-project': !Sub '${AppName}'
-                  'aws:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'aws:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'aws:ResourceTag/copilot-environment': !Sub '${EnvName}'
             - Effect: 'Allow'
               Action: '*'
               Resource: '*'
               Condition:
                 StringEquals:
-                  'secretsmanager:ResourceTag/ecs-project': !Sub '${AppName}'
-                  'secretsmanager:ResourceTag/ecs-environment': !Sub '${EnvName}'
+                  'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
       - PolicyName: 'CloudWatchMetricsAndDashboard'
         PolicyDocument:
           Version: '2012-10-17'

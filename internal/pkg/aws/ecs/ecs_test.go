@@ -46,11 +46,11 @@ func TestECS_TaskDefinition(t *testing.T) {
 							{
 								Environment: []*ecs.KeyValuePair{
 									{
-										Name:  aws.String("ECS_CLI_SERVICE_NAME"),
+										Name:  aws.String("COPILOT_SERVICE_NAME"),
 										Value: aws.String("my-app"),
 									},
 									{
-										Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+										Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 										Value: aws.String("prod"),
 									},
 								},
@@ -64,11 +64,11 @@ func TestECS_TaskDefinition(t *testing.T) {
 					{
 						Environment: []*ecs.KeyValuePair{
 							{
-								Name:  aws.String("ECS_CLI_SERVICE_NAME"),
+								Name:  aws.String("COPILOT_SERVICE_NAME"),
 								Value: aws.String("my-app"),
 							},
 							{
-								Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+								Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 								Value: aws.String("prod"),
 							},
 						},
@@ -339,11 +339,11 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 				{
 					Environment: []*ecs.KeyValuePair{
 						{
-							Name:  aws.String("ECS_CLI_SERVICE_NAME"),
-							Value: aws.String("my-app"),
+							Name:  aws.String("COPILOT_SERVICE_NAME"),
+							Value: aws.String("my-svc"),
 						},
 						{
-							Name:  aws.String("ECS_CLI_ENVIRONMENT_NAME"),
+							Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 							Value: aws.String("prod"),
 						},
 					},
@@ -351,8 +351,8 @@ func TestTaskDefinition_EnvVars(t *testing.T) {
 			},
 
 			wantEnvVars: map[string]string{
-				"ECS_CLI_SERVICE_NAME":     "my-app",
-				"ECS_CLI_ENVIRONMENT_NAME": "prod",
+				"COPILOT_SERVICE_NAME":     "my-svc",
+				"COPILOT_ENVIRONMENT_NAME": "prod",
 			},
 		},
 	}

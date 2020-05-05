@@ -146,7 +146,7 @@ Resources:
     Condition: DelegateDNS
     Properties:
       HostedZoneConfig:
-        Comment: !Sub "Hosted zone for ecs-cli application ${AppName}: ${AppName}.${AppDomainName}"
+        Comment: !Sub "Hosted zone for copilot application ${AppName}: ${AppName}.${AppDomainName}"
       Name: !Sub ${AppName}.${AppDomainName}
 
   AppDomainDelegationRecordSet:
@@ -154,7 +154,7 @@ Resources:
     Condition: DelegateDNS
     Properties:
       HostedZoneName: !Sub ${AppDomainName}.
-      Comment: !Sub "Record for ecs-cli domain delegation for application ${AppDomainName}"
+      Comment: !Sub "Record for copilot domain delegation for application ${AppDomainName}"
       Name: !Sub ${AppName}.${AppDomainName}.
       Type: NS
       TTL: '900'

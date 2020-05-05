@@ -48,7 +48,7 @@ Resources:
             Options:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: ecs{{if .HealthCheck}}
+              awslogs-stream-prefix: copilot{{if .HealthCheck}}
           HealthCheck:
             Command: {{quoteAll .HealthCheck.Command | stringifySlice}}
             Interval: {{.HealthCheck.Interval}}

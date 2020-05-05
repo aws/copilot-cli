@@ -1,7 +1,7 @@
 DiscoveryService:
   Type: AWS::ServiceDiscovery::Service
   Properties:
-    Description: Discovery Service for the ECS CLI V2 services
+    Description: Discovery Service for the Copilot services
     DnsConfig:
       RoutingPolicy: MULTIVALUE
       DnsRecords:

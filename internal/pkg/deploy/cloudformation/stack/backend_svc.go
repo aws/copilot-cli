@@ -57,16 +57,16 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 }
 
 // Template returns the CloudFormation template for the backend service.
-func (a *BackendService) Template() (string, error) {
-	outputs, err := a.addonsOutputs()
+func (s *BackendService) Template() (string, error) {
+	outputs, err := s.addonsOutputs()
 	if err != nil {
 		return "", err
 	}
-	content, err := a.parser.ParseBackendService(template.ServiceOpts{
-		Variables:   a.manifest.Variables,
-		Secrets:     a.manifest.Secrets,
+	content, err := s.parser.ParseBackendService(template.ServiceOpts{
+		Variables:   s.manifest.Variables,
+		Secrets:     s.manifest.Secrets,
 		NestedStack: outputs,
-		HealthCheck: a.manifest.Image.HealthCheckOpts(),
+		HealthCheck: s.manifest.Image.HealthCheckOpts(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -75,17 +75,17 @@ func (a *BackendService) Template() (string, error) {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (a *BackendService) Parameters() []*cloudformation.Parameter {
-	return append(a.svc.Parameters(), []*cloudformation.Parameter{
+func (s *BackendService) Parameters() []*cloudformation.Parameter {
+	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(a.manifest.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
 		},
 	}...)
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
-func (a *BackendService) SerializedParameters() (string, error) {
-	return a.svc.templateConfiguration(a)
+func (s *BackendService) SerializedParameters() (string, error) {
+	return s.svc.templateConfiguration(s)
 }

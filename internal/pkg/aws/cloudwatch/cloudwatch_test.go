@@ -34,7 +34,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 	mockTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	mockError := errors.New("some error")
 	testTags := map[string]string{
-		"ecs-project": projectName,
+		"copilot-application": projectName,
 	}
 
 	testCases := map[string]struct {
