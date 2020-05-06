@@ -250,7 +250,7 @@ func TestAppStatus_Ask(t *testing.T) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
+				m.EXPECT().SelectOne(appStatusAppNamePrompt, appStatusAppNameHelpPrompt,
 					[]string{"mockApp (mockEnv1)", "mockApp (mockEnv2)"}).Return("", mockError)
 			},
 
@@ -279,7 +279,7 @@ func TestAppStatus_Ask(t *testing.T) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
+				m.EXPECT().SelectOne(appStatusAppNamePrompt, appStatusAppNameHelpPrompt,
 					[]string{"mockApp (mockEnv1)", "mockApp (mockEnv2)"}).Return("mockApp (mockEnv1)", nil)
 			},
 		},
