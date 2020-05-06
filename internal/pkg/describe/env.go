@@ -22,6 +22,7 @@ const (
 	cloudformationResourceType = "AWS::CloudFormation::Stack"
 )
 
+// EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment  *archer.Environment   `json:"environment"`
 	Applications []*archer.Application `json:"applications"`
