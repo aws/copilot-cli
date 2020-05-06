@@ -138,5 +138,12 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
 	}
 	writer.Flush()
+	fmt.Fprintf(writer, color.Bold.Sprint("Tags\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
+	for key, value := range e.Tags {
+		fmt.Fprintf(writer, "  %s\t%s\n", key, value)
+	}
+	writer.Flush()
 	return b.String()
 }
