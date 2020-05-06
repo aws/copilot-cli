@@ -200,8 +200,8 @@ func Test_App_Infrastructure(t *testing.T) {
 		require.True(t, len(resources) == 1, "One stack should exist.")
 		stackResources := resources[0]
 		require.True(t, len(stackResources.RepositoryURLs) == 2, "Two repos should exist")
-		require.True(t, stackResources.RepositoryURLs["myapp-frontend"] != "", "Repo URL shouldn't be blank")
-		require.True(t, stackResources.RepositoryURLs["myapp"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.RepositoryURLs["mysvc-frontend"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.RepositoryURLs["mysvc"] != "", "Repo URL shouldn't be blank")
 		require.True(t, stackResources.S3Bucket != "", "S3 Bucket shouldn't be blank")
 		require.True(t, stackResources.KMSKeyARN != "", "KMSKey ARN shouldn't be blank")
 
@@ -230,16 +230,16 @@ func Test_App_Infrastructure(t *testing.T) {
 					*output.OutputValue,
 					"PipelineBucket should not be nil")
 			},
-			"ECRRepomyapp": func(output *awsCF.Output) {
+			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp", app.Name)),
-					fmt.Sprintf("ECRRepomyapp should be suffixed with repository/{app}/myapp but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/mysvc", app.Name)),
+					fmt.Sprintf("ECRRepomysvc should be suffixed with repository/{app}/mysvc but was %s", *output.OutputValue))
 			},
 			// We replace dashes with the word DASH for logical IDss
-			"ECRRepomyappDASHfrontend": func(output *awsCF.Output) {
+			"ECRRepomysvcDASHfrontend": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp-frontend", app.Name)),
-					fmt.Sprintf("ECRRepomyappDASHfrontend should be suffixed with repository/{app}/myapp but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/mysvc-frontend", app.Name)),
+					fmt.Sprintf("ECRRepomysvcDASHfrontend should be suffixed with repository/{app}/mysvc but was %s", *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
