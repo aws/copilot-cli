@@ -248,10 +248,10 @@ func (o *deleteAppOpts) deleteStacks() error {
 		cfClient := o.getAppDeployer(sess)
 
 		o.spinner.Start(fmt.Sprintf(fmtDeleteAppStart, o.AppName, env.Name))
-		if err := cfClient.DeleteApp(deploy.DeleteAppInput{
-			AppName:     o.AppName,
-			EnvName:     env.Name,
-			ProjectName: o.projectName,
+		if err := cfClient.DeleteApp(deploy.DeleteServiceInput{
+			Name:    o.AppName,
+			EnvName: env.Name,
+			AppName: o.projectName,
 		}); err != nil {
 			o.spinner.Stop(log.Serrorf(fmtDeleteAppFailed, o.AppName, env.Name, err))
 			return err

@@ -179,7 +179,7 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     o.EnvName,
-		Project:                  o.ProjectName(),
+		AppName:                  o.ProjectName(),
 		Prod:                     o.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,

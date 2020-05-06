@@ -240,7 +240,7 @@ type environmentDeployer interface {
 
 type appDeployer interface {
 	// DeployApp // TODO ADD
-	DeleteApp(in deploy.DeleteAppInput) error
+	DeleteApp(in deploy.DeleteServiceInput) error
 }
 
 type appRemover interface {
@@ -262,7 +262,7 @@ type pipelineDeployer interface {
 }
 
 type projectDeployer interface {
-	DeployProject(in *deploy.CreateProjectInput) error
+	DeployProject(in *deploy.CreateAppInput) error
 	AddAppToProject(project *archer.Project, appName string) error
 	AddEnvToProject(project *archer.Project, env *archer.Environment) error
 	DelegateDNSPermissions(project *archer.Project, accountID string) error

@@ -122,8 +122,8 @@ func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEn
 
 func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
-		ProjectName: projectName,
-		Name:        pipelineName,
+		AppName: projectName,
+		Name:    pipelineName,
 		Source: &deploy.Source{
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{
@@ -135,11 +135,11 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
-				LocalApplications:     []string{"frontend", "backend"},
+				LocalServices:         []string{"frontend", "backend"},
 			},
 			{
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
-				LocalApplications:     []string{"frontend", "backend"},
+				LocalServices:         []string{"frontend", "backend"},
 			},
 		},
 		ArtifactBuckets: []deploy.ArtifactBucket{

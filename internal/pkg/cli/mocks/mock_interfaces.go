@@ -6,6 +6,9 @@ package mocks
 
 import (
 	encoding "encoding"
+	io "io"
+	reflect "reflect"
+
 	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
@@ -18,8 +21,6 @@ import (
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
-	io "io"
-	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface
@@ -2184,7 +2185,7 @@ func (m *MockappDeployer) EXPECT() *MockappDeployerMockRecorder {
 }
 
 // DeleteApp mocks base method
-func (m *MockappDeployer) DeleteApp(in deploy.DeleteAppInput) error {
+func (m *MockappDeployer) DeleteApp(in deploy.DeleteServiceInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteApp", in)
 	ret0, _ := ret[0].(error)
@@ -2419,7 +2420,7 @@ func (m *MockprojectDeployer) EXPECT() *MockprojectDeployerMockRecorder {
 }
 
 // DeployProject mocks base method
-func (m *MockprojectDeployer) DeployProject(in *deploy.CreateProjectInput) error {
+func (m *MockprojectDeployer) DeployProject(in *deploy.CreateAppInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployProject", in)
 	ret0, _ := ret[0].(error)
@@ -2623,7 +2624,7 @@ func (mr *MockdeployerMockRecorder) GetEnvironment(projectName, envName interfac
 }
 
 // DeployProject mocks base method
-func (m *Mockdeployer) DeployProject(in *deploy.CreateProjectInput) error {
+func (m *Mockdeployer) DeployProject(in *deploy.CreateAppInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployProject", in)
 	ret0, _ := ret[0].(error)

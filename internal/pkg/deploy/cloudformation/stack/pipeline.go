@@ -42,6 +42,6 @@ func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {
 
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(p.AdditionalTags, map[string]string{
-		AppTagKey: p.ProjectName,
+		AppTagKey: p.AppName,
 	})
 }

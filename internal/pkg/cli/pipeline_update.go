@@ -109,7 +109,7 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 		}
 
 		pipelineStage := deploy.PipelineStage{
-			LocalApplications: appNames,
+			LocalServices: appNames,
 			AssociatedEnvironment: &deploy.AssociatedEnvironment{
 				Name:      stage.Name,
 				Region:    env.Region,
@@ -227,7 +227,7 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		ProjectName:     o.ProjectName(),
+		AppName:         o.ProjectName(),
 		Name:            pipeline.Name,
 		Source:          source,
 		Stages:          stages,

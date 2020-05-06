@@ -299,8 +299,8 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(&deploy.CreateProjectInput{
-						Project:    "project",
+					DeployProject(&deploy.CreateAppInput{
+						Name:       "project",
 						AccountID:  "12345",
 						DomainName: "amazon.com",
 						AdditionalTags: map[string]string{

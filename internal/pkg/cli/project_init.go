@@ -152,8 +152,8 @@ func (o *initProjectOpts) Execute() error {
 		return err
 	}
 	o.prog.Start(fmt.Sprintf(fmtDeployProjectStart, color.HighlightUserInput(o.ProjectName)))
-	err = o.deployer.DeployProject(&deploy.CreateProjectInput{
-		Project:        o.ProjectName,
+	err = o.deployer.DeployProject(&deploy.CreateAppInput{
+		Name:           o.ProjectName,
 		AccountID:      caller.Account,
 		DomainName:     o.DomainName,
 		AdditionalTags: o.ResourceTags,

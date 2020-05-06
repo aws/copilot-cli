@@ -36,6 +36,6 @@ func (cf CloudFormation) DeployApp(conf StackConfiguration, opts ...cloudformati
 }
 
 // DeleteApp removes the CloudFormation stack of a deployed application.
-func (cf CloudFormation) DeleteApp(in deploy.DeleteAppInput) error {
-	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.ProjectName, in.EnvName, in.AppName))
+func (cf CloudFormation) DeleteApp(in deploy.DeleteServiceInput) error {
+	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
 }

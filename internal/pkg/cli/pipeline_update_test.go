@@ -59,7 +59,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						AccountID: "123456789012",
 						Prod:      false,
 					},
-					LocalApplications: []string{"frontend", "backend"},
+					LocalServices: []string{"frontend", "backend"},
 				},
 			},
 			expectedError: nil,

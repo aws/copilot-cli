@@ -464,7 +464,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectDeployer: func(m *climocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
 					Name:                     "test",
-					Project:                  "phonetool",
+					AppName:                  "phonetool",
 					PublicLoadBalancer:       true,
 					ToolsAccountPrincipalARN: "some arn",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
