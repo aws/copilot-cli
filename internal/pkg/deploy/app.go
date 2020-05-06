@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package deploy holds the structures to deploy infrastructure resources.
-// This file defines service deployment resources.
+// This file defines application deployment resources.
 package deploy
 
-// DeleteServiceInput holds the fields required to delete a service.
-type DeleteServiceInput struct {
-	Name    string // Name of the service that needs to be deleted.
-	EnvName string // Name of the environment that service deployed in.
-	AppName string // Name of the application that service belongs to.
+// CreateAppInput holds the fields required to create an application stack set.
+type CreateAppInput struct {
+	Name                  string            // Name of the application that needs to be created.
+	AccountID             string            // AWS account ID to administrate the application.
+	DNSDelegationAccounts []string          // Accounts to grant DNS access to for this application.
+	DomainName            string            // DNS Name used for this application.
+	AdditionalTags        map[string]string // AdditionalTags are labels applied to resources under the application.
 }

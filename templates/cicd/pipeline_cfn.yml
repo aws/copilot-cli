@@ -6,7 +6,7 @@
 # CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and
 # limitations under the License.
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CodePipeline for the {{$.AppName}}
+Description: CodePipeline for {{$.AppName}}
 Parameters:
   # TODO: #273 make this source-provider-agnostic
   GitHubAccessTokenSecretId:
