@@ -25,8 +25,8 @@ const (
 
 // CreatePipelineInput represents the fields required to deploy a pipeline.
 type CreatePipelineInput struct {
-	// Name of the project this pipeline belongs to
-	ProjectName string
+	// Name of the application this pipeline belongs to
+	AppName string
 
 	// Name of the pipeline
 	Name string
@@ -42,7 +42,7 @@ type CreatePipelineInput struct {
 	// be used in this pipeline.
 	ArtifactBuckets []ArtifactBucket
 
-	// AdditionalTags are labels applied to resources under the project.
+	// AdditionalTags are labels applied to resources under the application.
 	AdditionalTags map[string]string
 }
 
@@ -159,30 +159,30 @@ func (s *Source) Owner() (string, error) {
 
 // PipelineStage represents configuration for each deployment stage
 // of a workspace. A stage consists of the Archer Environment the pipeline
-// is deloying to and the containerized applications that will be deployed.
+// is deloying to and the containerized services that will be deployed.
 type PipelineStage struct {
 	*AssociatedEnvironment
-	LocalApplications []string
+	LocalServices []string
 }
 
-// AppTemplatePath returns the full path to the application CFN template
+// ServiceTemplatePath returns the full path to the service CFN template
 // built during the build stage.
-func (s *PipelineStage) AppTemplatePath(appName string) string {
-	return fmt.Sprintf(archer.AppCfnTemplateNameFormat, appName)
+func (s *PipelineStage) ServiceTemplatePath(svcName string) string {
+	return fmt.Sprintf(archer.AppCfnTemplateNameFormat, svcName)
 }
 
-// AppTemplateConfigurationPath returns the full path to the application CFN
+// ServiceTemplateConfigurationPath returns the full path to the service CFN
 // template configuration file built during the build stage.
-func (s *PipelineStage) AppTemplateConfigurationPath(appName string) string {
+func (s *PipelineStage) ServiceTemplateConfigurationPath(svcName string) string {
 	return fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat,
-		appName, s.Name,
+		svcName, s.Name,
 	)
 }
 
 // AssociatedEnvironment defines the necessary information a pipline stage
 // needs for an Archer Environment.
 type AssociatedEnvironment struct {
-	// Name of the environment, must be unique within a project.
+	// Name of the environment, must be unique within an application.
 	// This is also the name of the pipeline stage.
 	Name string
 

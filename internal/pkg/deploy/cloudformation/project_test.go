@@ -24,8 +24,8 @@ import (
 )
 
 func TestCloudFormation_DeployProject(t *testing.T) {
-	mockApp := &deploy.CreateProjectInput{
-		Project:   "testproject",
+	mockApp := &deploy.CreateAppInput{
+		Name:      "testproject",
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {

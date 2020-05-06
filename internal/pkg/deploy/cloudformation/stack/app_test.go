@@ -72,24 +72,24 @@ func TestAppTemplate(t *testing.T) {
 
 func TestDNSDelegationAccounts(t *testing.T) {
 	testCases := map[string]struct {
-		given *deploy.CreateProjectInput
+		given *deploy.CreateAppInput
 		want  []string
 	}{
 		"should append app account": {
-			given: &deploy.CreateProjectInput{
+			given: &deploy.CreateAppInput{
 				AccountID: "1234",
 			},
 			want: []string{"1234"},
 		},
 		"should ignore duplicates": {
-			given: &deploy.CreateProjectInput{
+			given: &deploy.CreateAppInput{
 				AccountID:             "1234",
 				DNSDelegationAccounts: []string{"1234"},
 			},
 			want: []string{"1234"},
 		},
 		"should return a set": {
-			given: &deploy.CreateProjectInput{
+			given: &deploy.CreateAppInput{
 				AccountID:             "1234",
 				DNSDelegationAccounts: []string{"4567"},
 			},
@@ -100,7 +100,7 @@ func TestDNSDelegationAccounts(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			appStack := &AppStackConfig{
-				CreateProjectInput: tc.given,
+				CreateAppInput: tc.given,
 			}
 			got := appStack.dnsDelegationAccounts()
 			require.ElementsMatch(t, tc.want, got)
@@ -161,7 +161,7 @@ func TestAppResourceTemplate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			appStack := &AppStackConfig{
-				CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
+				CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234"},
 			}
 			tc.mockDependencies(ctrl, appStack)
 
@@ -201,15 +201,15 @@ func TestAppParameters(t *testing.T) {
 		},
 	}
 	app := &AppStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234", DomainName: "amazon.com"},
+		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234", DomainName: "amazon.com"},
 	}
 	require.ElementsMatch(t, expectedParams, app.Parameters())
 }
 
 func TestAppTags(t *testing.T) {
 	app := &AppStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{
-			Project:   "testapp",
+		CreateAppInput: &deploy.CreateAppInput{
+			Name:      "testapp",
 			AccountID: "1234",
 			AdditionalTags: map[string]string{
 				"confidentiality": "public",
@@ -221,7 +221,7 @@ func TestAppTags(t *testing.T) {
 	expectedTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String(AppTagKey),
-			Value: aws.String(app.Project),
+			Value: aws.String(app.Name),
 		},
 		{
 			Key:   aws.String("confidentiality"),
@@ -348,16 +348,16 @@ func mockAppRolesStack(stackArn string, parameters map[string]string) *cloudform
 
 func TestAppStackName(t *testing.T) {
 	app := &AppStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
+		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234"},
 	}
-	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", app.Project), app.StackName())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure-roles", app.Name), app.StackName())
 }
 
 func TestAppStackSetName(t *testing.T) {
 	app := &AppStackConfig{
-		CreateProjectInput: &deploy.CreateProjectInput{Project: "testapp", AccountID: "1234"},
+		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234"},
 	}
-	require.Equal(t, fmt.Sprintf("%s-infrastructure", app.Project), app.StackSetName())
+	require.Equal(t, fmt.Sprintf("%s-infrastructure", app.Name), app.StackSetName())
 }
 
 func TestTemplateToAppConfig(t *testing.T) {

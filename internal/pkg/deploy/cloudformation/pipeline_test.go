@@ -17,8 +17,8 @@ import (
 
 func TestCloudFormation_PipelineExists(t *testing.T) {
 	in := &deploy.CreatePipelineInput{
-		ProjectName: "kudos",
-		Name:        "cicd",
+		AppName: "kudos",
+		Name:    "cicd",
 	}
 	testCases := map[string]struct {
 		createMock   func(ctrl *gomock.Controller) cfnClient
@@ -72,8 +72,8 @@ func TestCloudFormation_PipelineExists(t *testing.T) {
 
 func TestCloudFormation_UpdatePipeline(t *testing.T) {
 	in := &deploy.CreatePipelineInput{
-		ProjectName: "kudos",
-		Name:        "cicd",
+		AppName: "kudos",
+		Name:    "cicd",
 		Source: &deploy.Source{
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{

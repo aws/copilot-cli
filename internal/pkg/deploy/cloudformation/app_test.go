@@ -114,14 +114,14 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 
 func TestCloudFormation_DeleteApp(t *testing.T) {
 	testCases := map[string]struct {
-		in         deploy.DeleteAppInput
+		in         deploy.DeleteServiceInput
 		createMock func(ctrl *gomock.Controller) cfnClient
 	}{
 		"calls delete with the appropriate stack name": {
-			in: deploy.DeleteAppInput{
-				AppName:     "webhook",
-				EnvName:     "test",
-				ProjectName: "kudos",
+			in: deploy.DeleteServiceInput{
+				Name:    "webhook",
+				EnvName: "test",
+				AppName: "kudos",
 			},
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)

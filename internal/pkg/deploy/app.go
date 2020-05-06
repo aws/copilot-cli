@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package deploy holds the structures to deploy infrastructure resources.
-// This file defines app deployment resources.
+// This file defines service deployment resources.
 package deploy
 
-// DeleteAppInput holds the fields required to delete an application.
-type DeleteAppInput struct {
-	AppName     string
-	EnvName     string
-	ProjectName string
+// DeleteServiceInput holds the fields required to delete a service.
+type DeleteServiceInput struct {
+	Name    string // Name of the service that needs to be deleted.
+	EnvName string // Name of the environment that service deployed in.
+	AppName string // Name of the application that service belongs to.
 }

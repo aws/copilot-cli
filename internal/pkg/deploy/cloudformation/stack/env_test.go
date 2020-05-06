@@ -96,7 +96,7 @@ func TestEnvParameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String(deploymentInput.Project),
+					ParameterValue: aws.String(deploymentInput.AppName),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
@@ -125,7 +125,7 @@ func TestEnvParameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.Project),
+					ParameterValue: aws.String(deploymentInputWithDNS.AppName),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
@@ -211,7 +211,7 @@ func TestEnvTags(t *testing.T) {
 	env := &EnvStackConfig{
 		CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 			Name:    "env",
-			Project: "project",
+			AppName: "project",
 			AdditionalTags: map[string]string{
 				"owner":   "boss",
 				AppTagKey: "overrideproject",
@@ -240,7 +240,7 @@ func TestStackName(t *testing.T) {
 	env := &EnvStackConfig{
 		CreateEnvironmentInput: deploymentInput,
 	}
-	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name), env.StackName())
+	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.AppName, deploymentInput.Name), env.StackName())
 }
 
 func TestToEnv(t *testing.T) {
@@ -261,7 +261,7 @@ func TestToEnv(t *testing.T) {
 				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),
 			expectedEnv: archer.Environment{
 				Name:             mockDeployInput.Name,
-				Project:          mockDeployInput.Project,
+				Project:          mockDeployInput.AppName,
 				Prod:             mockDeployInput.Prod,
 				AccountID:        "902697171733",
 				Region:           "eu-west-3",
@@ -307,7 +307,7 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 	return &deploy.CreateEnvironmentInput{
 		Name:                     "env",
-		Project:                  "project",
+		AppName:                  "project",
 		Prod:                     true,
 		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",

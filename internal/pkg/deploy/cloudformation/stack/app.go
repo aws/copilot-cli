@@ -35,7 +35,7 @@ type AppResourcesConfig struct {
 // AppStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type AppStackConfig struct {
-	*deploy.CreateProjectInput
+	*deploy.CreateAppInput
 	parser template.ReadParser
 }
 
@@ -64,10 +64,10 @@ func AppConfigFrom(template *string) (*AppResourcesConfig, error) {
 
 // NewAppStackConfig sets up a struct which can provide values to CloudFormation for
 // spinning up an environment.
-func NewAppStackConfig(in *deploy.CreateProjectInput) *AppStackConfig {
+func NewAppStackConfig(in *deploy.CreateAppInput) *AppStackConfig {
 	return &AppStackConfig{
-		CreateProjectInput: in,
-		parser:             template.New(),
+		CreateAppInput: in,
+		parser:         template.New(),
 	}
 }
 
@@ -120,11 +120,11 @@ func (c *AppStackConfig) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(appNameKey),
-			ParameterValue: aws.String(c.Project),
+			ParameterValue: aws.String(c.Name),
 		},
 		{
 			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
-			ParameterValue: aws.String(dnsDelegationRoleName(c.Project)),
+			ParameterValue: aws.String(dnsDelegationRoleName(c.Name)),
 		},
 	}
 }
@@ -132,18 +132,18 @@ func (c *AppStackConfig) Parameters() []*cloudformation.Parameter {
 // Tags returns the tags that should be applied to the Application CloudFormation stack.
 func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{
-		AppTagKey: c.Project,
+		AppTagKey: c.Name,
 	})
 }
 
 // StackName returns the name of the CloudFormation stack (based on the application name).
 func (c *AppStackConfig) StackName() string {
-	return fmt.Sprintf("%s-infrastructure-roles", c.Project)
+	return fmt.Sprintf("%s-infrastructure-roles", c.Name)
 }
 
 // StackSetName returns the name of the CloudFormation StackSet (based on the application name).
 func (c *AppStackConfig) StackSetName() string {
-	return fmt.Sprintf("%s-infrastructure", c.Project)
+	return fmt.Sprintf("%s-infrastructure", c.Name)
 }
 
 // StackSetDescription returns the description of the StackSet for application resources.
@@ -152,7 +152,7 @@ func (c *AppStackConfig) StackSetDescription() string {
 }
 
 func (c *AppStackConfig) stackSetAdminRoleName() string {
-	return fmt.Sprintf("%s-adminrole", c.Project)
+	return fmt.Sprintf("%s-adminrole", c.Name)
 }
 
 // StackSetAdminRoleARN returns the role ARN of the role used to administer the Application
@@ -165,11 +165,11 @@ func (c *AppStackConfig) StackSetAdminRoleARN() string {
 // StackSetExecutionRoleName returns the role name of the role used to actually create
 // Application resources.
 func (c *AppStackConfig) StackSetExecutionRoleName() string {
-	return fmt.Sprintf("%s-executionrole", c.Project)
+	return fmt.Sprintf("%s-executionrole", c.Name)
 }
 
 func (c *AppStackConfig) dnsDelegationAccounts() []string {
-	accounts := append(c.CreateProjectInput.DNSDelegationAccounts, c.CreateProjectInput.AccountID)
+	accounts := append(c.CreateAppInput.DNSDelegationAccounts, c.CreateAppInput.AccountID)
 	accountIDs := make(map[string]bool)
 	var uniqueAccountIDs []string
 	for _, entry := range accounts {

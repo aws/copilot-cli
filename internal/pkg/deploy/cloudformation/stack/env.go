@@ -94,7 +94,7 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
-			ParameterValue: aws.String(e.Project),
+			ParameterValue: aws.String(e.AppName),
 		},
 		{
 			ParameterKey:   aws.String(envParamEnvNameKey),
@@ -118,7 +118,7 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
-		AppTagKey: e.Project,
+		AppTagKey: e.AppName,
 		EnvTagKey: e.Name,
 	})
 }
@@ -132,12 +132,12 @@ func (e *EnvStackConfig) dnsDelegationRole() string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.Project))
+	return fmt.Sprintf("arn:aws:iam::%s:role/%s", appRole.AccountID, dnsDelegationRoleName(e.AppName))
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
 func (e *EnvStackConfig) StackName() string {
-	return NameForEnv(e.Project, e.Name)
+	return NameForEnv(e.AppName, e.Name)
 }
 
 // ToEnv inspects an environment cloudformation stack and constructs an environment
@@ -155,7 +155,7 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 
 	return &archer.Environment{
 		Name:             e.Name,
-		Project:          e.Project,
+		Project:          e.AppName,
 		Prod:             e.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
