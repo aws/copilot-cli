@@ -231,11 +231,6 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
-type envDescriber interface {
-	Describe() (*describe.EnvDescription, error)
-	StackResources(envName string) ([]*describe.CfnResource, error)
-}
-
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelinesForProject(projectName string) ([]string, error)
