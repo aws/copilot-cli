@@ -124,7 +124,7 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 }
 
 func (o *updatePipelineOpts) getArtifactBuckets() ([]deploy.ArtifactBucket, error) {
-	regionalResources, err := o.pipelineDeployer.GetRegionalProjectResources(o.project)
+	regionalResources, err := o.pipelineDeployer.GetRegionalAppResources(o.project)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
 	o.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(o.ProjectName())))
-	err := o.pipelineDeployer.AddPipelineResourcesToProject(o.project, o.region)
+	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.project, o.region)
 	if err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(o.ProjectName())))
 		return fmt.Errorf("add pipeline resources to project %s in %s: %w", o.ProjectName(), o.region, err)

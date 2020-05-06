@@ -384,7 +384,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				}, nil)
 
 				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(&archer.Project{
+				mockProjDeployer.EXPECT().AddServiceToApp(&archer.Project{
 					Name:      "project",
 					AccountID: "1234",
 				}, "frontend")
@@ -478,7 +478,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProg.EXPECT().Stop(log.Serrorf(fmtAddAppToProjectFailed, "frontend"))
 
 				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				mockProjDeployer.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
 				opts.ws = mockWriter
 				opts.appStore = mockAppStore
@@ -508,7 +508,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProjGetter.EXPECT().GetApplication(gomock.Any()).Return(&archer.Project{}, nil)
 
 				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(gomock.Any(), gomock.Any()).Return(nil)
+				mockProjDeployer.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
 
 				mockProg := climocks.NewMockprogress(ctrl)
 				mockProg.EXPECT().Start(gomock.Any())

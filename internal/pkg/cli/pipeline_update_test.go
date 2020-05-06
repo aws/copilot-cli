@@ -117,7 +117,7 @@ func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 						KMSKeyARN: "someKey",
 					},
 				}
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 			},
 			expectedOut: []deploy.ArtifactBucket{
 				{
@@ -237,8 +237,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(nil)
 			},
@@ -269,8 +269,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil)
 			},
@@ -303,8 +303,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil).Times(0)
 			},
@@ -331,8 +331,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 			},
 			mockPrompt: func(m *climocks.Mockprompter) {
@@ -352,7 +352,7 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(0)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(errors.New("some error"))
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(errors.New("some error"))
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("add pipeline resources to project %s in %s: some error", projectName, region),
@@ -371,7 +371,7 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
@@ -391,7 +391,7 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
@@ -411,7 +411,7 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("convert environments to deployment stage: some error"),
@@ -434,8 +434,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, errors.New("some error"))
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error"))
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
 			expectedError: fmt.Errorf("get cross-regional resources: some error"),
@@ -458,8 +458,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error"))
 			},
 			mockPrompt:    func(m *climocks.Mockprompter) {},
@@ -489,8 +489,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},
@@ -521,8 +521,8 @@ stages:
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
 			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToProject(&project, region).Return(nil)
-				m.EXPECT().GetRegionalProjectResources(gomock.Any()).Return(mockResources, nil)
+				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
+				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},

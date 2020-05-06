@@ -70,7 +70,7 @@ type initPipelineOpts struct {
 	secretsmanager archer.SecretsManager
 	parser         template.Parser
 	runner         runner
-	cfnClient      archer.ProjectResourceStore
+	cfnClient      projectResourcesGetter
 	storeSvc       storeReader
 
 	// Outputs stored on successful actions.
@@ -331,7 +331,7 @@ func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
 	}
-	regionalResources, err := o.cfnClient.GetRegionalProjectResources(proj)
+	regionalResources, err := o.cfnClient.GetRegionalAppResources(proj)
 	if err != nil {
 		return nil, fmt.Errorf("get regional project resources: %w", err)
 	}

@@ -219,7 +219,7 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 
 func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environment) error {
 	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
-	if err := o.projDeployer.AddEnvToProject(project, env); err != nil {
+	if err := o.projDeployer.AddEnvToApp(project, env); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
 		return fmt.Errorf("deploy env %s to project %s: %w", env.Name, project.Name, err)
 	}

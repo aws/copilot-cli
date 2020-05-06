@@ -281,7 +281,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// emptyS3bucket
 					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
-					mocks.deployer.EXPECT().GetRegionalProjectResources(mockApp).Return(mockResources, nil),
+					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),
@@ -291,7 +291,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// deleteProjectResources
 					mocks.spinner.EXPECT().Start(deleteProjectResourcesStartMsg),
-					mocks.deployer.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.deployer.EXPECT().DeleteApp(mockProjectName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectResourcesStopMsg)),
 
 					// deleteProjectParams
@@ -323,7 +323,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// emptyS3bucket
 					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
-					mocks.deployer.EXPECT().GetRegionalProjectResources(mockApp).Return(mockResources, nil),
+					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
 					mocks.spinner.EXPECT().Start(cleanResourcesStartMsg),
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(cleanResourcesStopMsg)),
@@ -333,7 +333,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 
 					// deleteProjectResources
 					mocks.spinner.EXPECT().Start(deleteProjectResourcesStartMsg),
-					mocks.deployer.EXPECT().DeleteProject(mockProjectName).Return(nil),
+					mocks.deployer.EXPECT().DeleteApp(mockProjectName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteProjectResourcesStopMsg)),
 
 					// deleteProjectParams

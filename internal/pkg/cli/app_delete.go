@@ -248,7 +248,7 @@ func (o *deleteAppOpts) deleteStacks() error {
 		cfClient := o.getAppDeployer(sess)
 
 		o.spinner.Start(fmt.Sprintf(fmtDeleteAppStart, o.AppName, env.Name))
-		if err := cfClient.DeleteApp(deploy.DeleteServiceInput{
+		if err := cfClient.DeleteService(deploy.DeleteServiceInput{
 			Name:    o.AppName,
 			EnvName: env.Name,
 			AppName: o.projectName,
@@ -297,7 +297,7 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 	}
 
 	o.spinner.Start(fmt.Sprintf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
-	if err := o.appRemover.RemoveAppFromProject(proj, o.AppName); err != nil {
+	if err := o.appRemover.RemoveServiceFromApp(proj, o.AppName); err != nil {
 		if !isStackSetNotExistsErr(err) {
 			o.spinner.Stop(log.Serrorf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
 			return err

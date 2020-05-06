@@ -379,7 +379,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.projectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
 					// emptyECRRepos
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -387,7 +387,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					// removeAppProjectResources
 					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockApp, mockAppName).Return(nil),
+					mocks.appRemover.EXPECT().RemoveServiceFromApp(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
@@ -409,7 +409,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
+					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
 					// emptyECRRepos
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
@@ -417,7 +417,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					// removeAppProjectResources
 					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockApp, mockAppName).Return(nil),
+					mocks.appRemover.EXPECT().RemoveServiceFromApp(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
@@ -439,7 +439,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(testError),
+					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(testError),
 					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtDeleteAppFailed, mockAppName, mockEnvName, testError)),
 				)
 			},

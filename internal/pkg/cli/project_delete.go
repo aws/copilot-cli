@@ -255,7 +255,7 @@ func (o *deleteProjOpts) emptyS3Bucket() error {
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
-	projResources, err := o.deployer.GetRegionalProjectResources(proj)
+	projResources, err := o.deployer.GetRegionalAppResources(proj)
 	if err != nil {
 		return fmt.Errorf("get regional resources for %s: %w", proj.Name, err)
 	}
@@ -288,7 +288,7 @@ func (o *deleteProjOpts) deleteProjectPipeline() error {
 
 func (o *deleteProjOpts) deleteProjectResources() error {
 	o.spinner.Start(deleteProjectResourcesStartMsg)
-	if err := o.deployer.DeleteProject(o.ProjectName()); err != nil {
+	if err := o.deployer.DeleteApp(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project resources."))
 		return fmt.Errorf("delete project resources: %w", err)
 	}

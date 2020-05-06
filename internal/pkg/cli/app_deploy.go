@@ -378,7 +378,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-	resources, err := o.projectCFSvc.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
+	resources, err := o.projectCFSvc.GetAppResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
 	if err != nil {
 		return "", fmt.Errorf("get project resources: %w", err)
 	}
@@ -404,7 +404,7 @@ func (o *appDeployOpts) manifest() (interface{}, error) {
 }
 
 func (o *appDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
-	resources, err := o.projectCFSvc.GetProjectResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
+	resources, err := o.projectCFSvc.GetAppResourcesByRegion(o.targetProject, o.targetEnvironment.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get project %s resources from region %s: %w", o.targetProject.Name, o.targetEnvironment.Region, err)
 	}
@@ -462,7 +462,7 @@ func (o *appDeployOpts) deployApp(addonsURL string) error {
 			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.AppName), color.HighlightUserInput(o.ImageTag)),
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
-	if err := o.appCFSvc.DeployApp(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
+	if err := o.appCFSvc.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
 		o.spinner.Stop("Error!")
 		return fmt.Errorf("deploy application: %w", err)
 	}

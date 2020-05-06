@@ -185,7 +185,7 @@ func (o *initAppOpts) Execute() error {
 	o.manifestPath = manifestPath
 
 	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
-	if err := o.projDeployer.AddAppToProject(o.proj, o.AppName); err != nil {
+	if err := o.projDeployer.AddServiceToApp(o.proj, o.AppName); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
 		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
 	}

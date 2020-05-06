@@ -331,7 +331,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					Project:   "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToProject(&archer.Project{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
+				m.EXPECT().AddEnvToApp(&archer.Project{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
@@ -379,7 +379,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					Project:   "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{
@@ -433,7 +433,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Prod:      false,
 					Project:   "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{
@@ -474,7 +474,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					Project:   "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{
@@ -547,7 +547,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					Project:   "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToProject(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
 				m.EXPECT().CreateEnvironment(&archer.Environment{

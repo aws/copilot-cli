@@ -49,10 +49,10 @@ type stackSetClient interface {
 
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
-	cfnClient       cfnClient
-	regionalClient  func(region string) cfnClient
-	projectStackSet stackSetClient
-	box             packd.Box
+	cfnClient      cfnClient
+	regionalClient func(region string) cfnClient
+	appStackSet    stackSetClient
+	box            packd.Box
 }
 
 // New returns a configured CloudFormation client.
@@ -64,8 +64,8 @@ func New(sess *session.Session) CloudFormation {
 				Region: aws.String(region),
 			}))
 		},
-		projectStackSet: stackset.New(sess),
-		box:             templates.Box(),
+		appStackSet: stackset.New(sess),
+		box:         templates.Box(),
 	}
 }
 

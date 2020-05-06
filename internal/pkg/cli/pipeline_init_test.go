@@ -307,7 +307,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockWsWriter                func(m *climocks.MockwsPipelineWriter)
 		mockParser                  func(m *templatemocks.MockParser)
 		mockFileSystem              func(mockFS afero.Fs)
-		mockRegionalResourcesGetter func(m *archermocks.MockProjectResourceStore)
+		mockRegionalResourcesGetter func(m *climocks.MockprojectResourcesGetter)
 		mockStoreSvc                func(m *climocks.MockstoreReader)
 
 		expectedError error
@@ -336,8 +336,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return([]*archer.ProjectRegionalResources{
 					&archer.ProjectRegionalResources{
@@ -373,8 +373,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return([]*archer.ProjectRegionalResources{
 					&archer.ProjectRegionalResources{
@@ -401,7 +401,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
 			mockStoreSvc:                func(m *climocks.MockstoreReader) {},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {},
 			expectedError:               errors.New("write manifest to workspace: some error"),
 		},
 		"returns an error if project cannot be retrieved": {
@@ -421,7 +421,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockStoreSvc: func(m *climocks.MockstoreReader) {
 				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {},
 			expectedError:               errors.New("get project metadata badgoose: some error"),
 		},
 		"returns an error if can't get regional project resources": {
@@ -443,8 +443,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return(nil, errors.New("some error"))
 			},
@@ -472,8 +472,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return([]*archer.ProjectRegionalResources{
 					&archer.ProjectRegionalResources{
@@ -508,8 +508,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return([]*archer.ProjectRegionalResources{
 					&archer.ProjectRegionalResources{
@@ -544,8 +544,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&archer.Project{
 					Name: "badgoose",
 				}).Return([]*archer.ProjectRegionalResources{
 					&archer.ProjectRegionalResources{
@@ -567,7 +567,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
 			mockWriter := climocks.NewMockwsPipelineWriter(ctrl)
 			mockParser := templatemocks.NewMockParser(ctrl)
-			mockRegionalResourcesGetter := archermocks.NewMockProjectResourceStore(ctrl)
+			mockRegionalResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
 			mockStoreReader := climocks.NewMockstoreReader(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)
