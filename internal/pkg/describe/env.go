@@ -65,7 +65,6 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		store:          svc,
 		proj:           proj,
 		apps:           apps,
-		sessProvider:   sess,
 		rgClient:       resourcegroups.New(sess),
 		cloudformation: cloudformation.New(sess),
 	}, nil
