@@ -39,9 +39,9 @@ func (cf CloudFormation) StreamEnvironmentCreation(env *deploy.CreateEnvironment
 }
 
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
-func (cf CloudFormation) DeleteEnvironment(projectName, envName string) error {
+func (cf CloudFormation) DeleteEnvironment(appName, envName string) error {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
-		AppName: projectName,
+		AppName: appName,
 		Name:    envName,
 	})
 	return cf.cfnClient.DeleteAndWait(conf.StackName())
@@ -68,9 +68,9 @@ func (cf CloudFormation) streamEnvironmentResponse(done chan struct{}, resp chan
 }
 
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
-func (cf CloudFormation) GetEnvironment(projectName, envName string) (*archer.Environment, error) {
+func (cf CloudFormation) GetEnvironment(appName, envName string) (*archer.Environment, error) {
 	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
-		AppName: projectName,
+		AppName: appName,
 		Name:    envName,
 	})
 	descr, err := cf.cfnClient.Describe(conf.StackName())

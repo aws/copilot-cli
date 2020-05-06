@@ -26,7 +26,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func Test_Project_Infrastructure(t *testing.T) {
+func Test_App_Infrastructure(t *testing.T) {
 	sess, err := testSession(nil)
 	require.NoError(t, err)
 	identity := identity.New(sess)
@@ -37,68 +37,68 @@ func Test_Project_Infrastructure(t *testing.T) {
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
 
-	t.Run("Deploys Project Admin Roles to CloudFormation and Creates StackSet", func(t *testing.T) {
-		project := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
-		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
-		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
+	t.Run("Deploys Application Admin Roles to CloudFormation and Creates StackSet", func(t *testing.T) {
+		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
+		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
 		// Given our stack doesn't exist
 		roleStackOutput, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
-			StackName: aws.String(projectRoleStackName),
+			StackName: aws.String(appRoleStackName),
 		})
 
-		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", projectRoleStackName)
+		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", appRoleStackName)
 
 		// Make sure we delete the stacks after the test is done
 		defer func() {
 			cfClient.DeleteStack(&awsCF.DeleteStackInput{
-				StackName: aws.String(projectRoleStackName),
+				StackName: aws.String(appRoleStackName),
 			})
 
 			cfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
-				StackSetName: aws.String(projectStackSetName),
+				StackSetName: aws.String(appStackSetName),
 			})
 
 			cfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-				StackName: aws.String(projectRoleStackName),
+				StackName: aws.String(appRoleStackName),
 			})
 		}()
 
-		err = deployer.DeployProject(&deploy.CreateProjectInput{
-			Project:   project.Name,
-			AccountID: project.AccountID,
+		err = deployer.DeployApp(&deploy.CreateAppInput{
+			Name:      app.Name,
+			AccountID: app.AccountID,
 		})
 		require.NoError(t, err)
 
 		// Query using our resources as well:
-		resources, err := deployer.GetRegionalProjectResources(&project)
+		resources, err := deployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
-		require.True(t, len(resources) == 0, "No resources for %s should exist.", projectRoleStackName)
+		require.True(t, len(resources) == 0, "No resources for %s should exist.", appRoleStackName)
 
-		// We should create the project StackSet
+		// We should create the application StackSet
 		_, err = cfClient.DescribeStackSet(&awsCF.DescribeStackSetInput{
-			StackSetName: aws.String(projectStackSetName),
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
 
-		// We should create the project roles stack
+		// We should create the application roles stack
 		roleStackOutput, err = cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
-			StackName: aws.String(projectRoleStackName),
+			StackName: aws.String(appRoleStackName),
 		})
 		require.NoError(t, err)
 
-		require.True(t, len(roleStackOutput.Stacks) == 1, "Stack %s should have been deployed.", projectRoleStackName)
+		require.True(t, len(roleStackOutput.Stacks) == 1, "Stack %s should have been deployed.", appRoleStackName)
 		deployedStack := roleStackOutput.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"ExecutionRoleARN": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-executionrole", project.Name)),
-					fmt.Sprintf("ExecutionRoleARN should be named {project}-executionrole but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-executionrole", app.Name)),
+					fmt.Sprintf("ExecutionRoleARN should be named {app}-executionrole but was %s", *output.OutputValue))
 			},
 			"AdministrationRoleARN": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-adminrole", project.Name)),
-					fmt.Sprintf("AdministrationRoleARN should be named {project}-adminrole but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("role/%s-adminrole", app.Name)),
+					fmt.Sprintf("AdministrationRoleARN should be named {app}-adminrole but was %s", *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -115,78 +115,78 @@ func Test_Project_Infrastructure(t *testing.T) {
 		}
 	})
 
-	t.Run("Deploys Project Infrastructure (KMS Key, ECR Repo, S3 Bucket)", func(t *testing.T) {
-		project := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
-		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
-		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
+	t.Run("Deploys Application Infrastructure (KMS Key, ECR Repo, S3 Bucket)", func(t *testing.T) {
+		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
+		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
 		// Make sure we delete the stacks after the test is done
 		defer func() {
 			// Clean up any StackInstances we may have created.
 			if stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-				StackSetName: aws.String(projectStackSetName),
+				StackSetName: aws.String(appStackSetName),
 			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
-				projectStackInstance := stackInstances.Summaries[0]
+				appStackInstance := stackInstances.Summaries[0]
 				cfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
-					Accounts:     []*string{projectStackInstance.Account},
-					Regions:      []*string{projectStackInstance.Region},
+					Accounts:     []*string{appStackInstance.Account},
+					Regions:      []*string{appStackInstance.Region},
 					RetainStacks: aws.Bool(false),
-					StackSetName: projectStackInstance.StackSetId,
+					StackSetName: appStackInstance.StackSetId,
 				})
 
 				cfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-					StackName: projectStackInstance.StackId,
+					StackName: appStackInstance.StackId,
 				})
 			}
 			// Delete the StackSet once all the StackInstances are cleaned up
 			cfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
-				StackSetName: aws.String(projectStackSetName),
+				StackSetName: aws.String(appStackSetName),
 			})
 
 			cfClient.DeleteStack(&awsCF.DeleteStackInput{
-				StackName: aws.String(projectRoleStackName),
+				StackName: aws.String(appRoleStackName),
 			})
 		}()
 
 		// Given our stack doesn't exist
 		roleStackOutput, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
-			StackName: aws.String(projectRoleStackName),
+			StackName: aws.String(appRoleStackName),
 		})
 
-		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", projectRoleStackName)
+		require.True(t, len(roleStackOutput.Stacks) == 0, "Stack %s should not exist.", appRoleStackName)
 
-		err = deployer.DeployProject(&deploy.CreateProjectInput{
-			Project:   project.Name,
-			AccountID: project.AccountID,
+		err = deployer.DeployApp(&deploy.CreateAppInput{
+			Name:      app.Name,
+			AccountID: app.AccountID,
 		})
 		require.NoError(t, err)
 
-		// Add an application only
-		err = deployer.AddAppToProject(
-			&project,
-			"myapp",
+		// Add a service only
+		err = deployer.AddServiceToApp(
+			&app,
+			"mysvc",
 		)
 
 		require.NoError(t, err)
 
-		// Add an application with dash
-		err = deployer.AddAppToProject(
-			&project,
-			"myapp-frontend",
+		// Add a service with dash
+		err = deployer.AddServiceToApp(
+			&app,
+			"mysvc-frontend",
 		)
 
 		require.NoError(t, err)
 
 		// No new substacks should be created
 		stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-			StackSetName: aws.String(projectStackSetName),
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
-		require.Equal(t, 0, len(stackInstances.Summaries), "Adding apps to a project without any envs shouldn't create any stack instancess.")
+		require.Equal(t, 0, len(stackInstances.Summaries), "Adding apps to an application without any envs shouldn't create any stack instances.")
 
-		// Add an application only
-		err = deployer.AddEnvToProject(
-			&project,
+		// Add an environment only
+		err = deployer.AddEnvToApp(
+			&app,
 			&archer.Environment{
 				Name:      "test",
 				Region:    *sess.Config.Region,
@@ -194,31 +194,31 @@ func Test_Project_Infrastructure(t *testing.T) {
 			},
 		)
 
-		// Query using our GetRegionalProjectResources function.
-		resources, err := deployer.GetRegionalProjectResources(&project)
+		// Query using our GetRegionalAppResources function.
+		resources, err := deployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
 		require.True(t, len(resources) == 1, "One stack should exist.")
 		stackResources := resources[0]
 		require.True(t, len(stackResources.RepositoryURLs) == 2, "Two repos should exist")
-		require.True(t, stackResources.RepositoryURLs["myapp-frontend"] != "", "Repo URL shouldn't be blank")
-		require.True(t, stackResources.RepositoryURLs["myapp"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.RepositoryURLs["mysvc-frontend"] != "", "Repo URL shouldn't be blank")
+		require.True(t, stackResources.RepositoryURLs["mysvc"] != "", "Repo URL shouldn't be blank")
 		require.True(t, stackResources.S3Bucket != "", "S3 Bucket shouldn't be blank")
 		require.True(t, stackResources.KMSKeyARN != "", "KMSKey ARN shouldn't be blank")
 
 		// Validate resources by comparing physical output of the stacks.
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-			StackSetName: aws.String(projectStackSetName),
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(stackInstances.Summaries), "Adding an env should create a new stack instance.")
-		projectStackInstance := stackInstances.Summaries[0]
-		// We should create the project roles stack
-		projectInfraStacks, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
-			StackName: projectStackInstance.StackId,
+		appStackInstance := stackInstances.Summaries[0]
+		// We should create the application roles stack
+		appInfraStacks, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
+			StackName: appStackInstance.StackId,
 		})
 		require.NoError(t, err)
 
-		deployedStack := projectInfraStacks.Stacks[0]
+		deployedStack := appInfraStacks.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"KMSKeyARN": func(output *awsCF.Output) {
 				require.NotNil(t,
@@ -230,16 +230,16 @@ func Test_Project_Infrastructure(t *testing.T) {
 					*output.OutputValue,
 					"PipelineBucket should not be nil")
 			},
-			"ECRRepomyapp": func(output *awsCF.Output) {
+			"ECRRepomysvc": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp", project.Name)),
-					fmt.Sprintf("ECRRepomyapp should be suffixed with repository/{project}/myapp but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/mysvc", app.Name)),
+					fmt.Sprintf("ECRRepomysvc should be suffixed with repository/{app}/mysvc but was %s", *output.OutputValue))
 			},
 			// We replace dashes with the word DASH for logical IDss
-			"ECRRepomyappDASHfrontend": func(output *awsCF.Output) {
+			"ECRRepomysvcDASHfrontend": func(output *awsCF.Output) {
 				require.True(t,
-					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/myapp-frontend", project.Name)),
-					fmt.Sprintf("ECRRepomyappDASHfrontend should be suffixed with repository/{project}/myapp but was %s", *output.OutputValue))
+					strings.HasSuffix(*output.OutputValue, fmt.Sprintf("repository/%s/mysvc-frontend", app.Name)),
+					fmt.Sprintf("ECRRepomysvcDASHfrontend should be suffixed with repository/{app}/mysvc but was %s", *output.OutputValue))
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
@@ -257,41 +257,41 @@ func Test_Project_Infrastructure(t *testing.T) {
 	})
 
 	t.Run("Deploys supporting infrastructure for pipeline (KMS Key, S3 Bucket)", func(t *testing.T) {
-		project := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
-		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
-		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
+		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
+		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
 		// Make sure we delete the stacks after the test is done
 		defer func() {
 			// Clean up any StackInstances we may have created.
 			if stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-				StackSetName: aws.String(projectStackSetName),
+				StackSetName: aws.String(appStackSetName),
 			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
-				projectStackInstance := stackInstances.Summaries[0]
+				appStackInstance := stackInstances.Summaries[0]
 				cfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
-					Accounts:     []*string{projectStackInstance.Account},
-					Regions:      []*string{projectStackInstance.Region},
+					Accounts:     []*string{appStackInstance.Account},
+					Regions:      []*string{appStackInstance.Region},
 					RetainStacks: aws.Bool(false),
-					StackSetName: projectStackInstance.StackSetId,
+					StackSetName: appStackInstance.StackSetId,
 				})
 
 				cfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-					StackName: projectStackInstance.StackId,
+					StackName: appStackInstance.StackId,
 				})
 			}
 			// Delete the StackSet once all the StackInstances are cleaned up
 			cfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
-				StackSetName: aws.String(projectStackSetName),
+				StackSetName: aws.String(appStackSetName),
 			})
 
 			cfClient.DeleteStack(&awsCF.DeleteStackInput{
-				StackName: aws.String(projectRoleStackName),
+				StackName: aws.String(appRoleStackName),
 			})
 		}()
 
 		// Given our stack doesn't exist
 		_, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
-			StackName: aws.String(projectRoleStackName),
+			StackName: aws.String(appRoleStackName),
 		})
 		require.Error(t, err, "DescribeStacks should return an error because the stack does not exist")
 		awsErr, ok := err.(awserr.Error)
@@ -300,30 +300,30 @@ func Test_Project_Infrastructure(t *testing.T) {
 		require.Contains(t, awsErr.Message(), "does not exist", "the returned error should indicate that the stack does not exist")
 
 		// create a stackset
-		err = deployer.DeployProject(&deploy.CreateProjectInput{
-			Project:   project.Name,
-			AccountID: project.AccountID,
+		err = deployer.DeployApp(&deploy.CreateAppInput{
+			Name:      app.Name,
+			AccountID: app.AccountID,
 		})
 		require.NoError(t, err)
 
 		// Add resources needed to support a pipeline in a region
-		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
+		err = deployer.AddPipelineResourcesToApp(&app, *sess.Config.Region)
 		require.NoError(t, err)
 
-		// Add another pipeline to the same project and region. This should not create
+		// Add another pipeline to the same application and region. This should not create
 		// Additional stack instance
-		err = deployer.AddPipelineResourcesToProject(&project, *sess.Config.Region)
+		err = deployer.AddPipelineResourcesToApp(&app, *sess.Config.Region)
 		require.NoError(t, err)
 
 		stackInstances, err := cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-			StackSetName: aws.String(projectStackSetName),
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same project should not create 2 stack instances")
+		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same application should not create 2 stack instances")
 
 		// add an environment should not create new stack instance in the same region
-		err = deployer.AddEnvToProject(
-			&project,
+		err = deployer.AddEnvToApp(
+			&app,
 			&archer.Environment{
 				Name:      "test",
 				Region:    *sess.Config.Region,
@@ -332,13 +332,13 @@ func Test_Project_Infrastructure(t *testing.T) {
 		)
 
 		stackInstances, err = cfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-			StackSetName: aws.String(projectStackSetName),
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
-		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same project should not create 2 stack instances")
+		require.Equal(t, 1, len(stackInstances.Summaries), "Adding 2 pipelines to the same application should not create 2 stack instances")
 
 		// Ensure the bucket and KMS key were created
-		resources, err := deployer.GetRegionalProjectResources(&project)
+		resources, err := deployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
 		require.True(t, len(resources) == 1, "One stack should exist.")
 		stackResources := resources[0]
@@ -361,8 +361,8 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	id, err := identity.Get()
 	require.NoError(t, err)
 
-	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), Project: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.RootUserARN}
-	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.Project, environmentToDeploy.Name)
+	environmentToDeploy := deploy.CreateEnvironmentInput{Name: randStringBytes(10), AppName: randStringBytes(10), PublicLoadBalancer: true, ToolsAccountPrincipalARN: id.RootUserARN}
+	envStackName := fmt.Sprintf("%s-%s", environmentToDeploy.AppName, environmentToDeploy.Name)
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
 		// Given our stack doesn't exist

@@ -299,7 +299,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(&deploy.CreateAppInput{
+					DeployApp(&deploy.CreateAppInput{
 						Name:       "project",
 						AccountID:  "12345",
 						DomainName: "amazon.com",
@@ -343,7 +343,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(gomock.Any()).Return(mockError)
+					DeployApp(gomock.Any()).Return(mockError)
 				mockProgress.EXPECT().Stop(log.Serrorf(fmtDeployProjectFailed, "project"))
 			},
 		},
@@ -367,7 +367,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Create(gomock.Eq("project")).Return(nil)
 				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
 				mockDeployer.EXPECT().
-					DeployProject(gomock.Any()).Return(nil)
+					DeployApp(gomock.Any()).Return(nil)
 				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
 			},
 		},

@@ -289,7 +289,7 @@ func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTempla
 	if err != nil {
 		return nil, err
 	}
-	resources, err := o.describer.GetProjectResourcesByRegion(proj, env.Region)
+	resources, err := o.describer.GetAppResourcesByRegion(proj, env.Region)
 	if err != nil {
 		return nil, err
 	}

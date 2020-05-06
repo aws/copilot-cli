@@ -240,11 +240,11 @@ type environmentDeployer interface {
 
 type appDeployer interface {
 	// DeployApp // TODO ADD
-	DeleteApp(in deploy.DeleteServiceInput) error
+	DeleteService(in deploy.DeleteServiceInput) error
 }
 
 type appRemover interface {
-	RemoveAppFromProject(project *archer.Project, appName string) error
+	RemoveServiceFromApp(project *archer.Project, appName string) error
 }
 
 type imageRemover interface {
@@ -256,22 +256,22 @@ type pipelineDeployer interface {
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
-	AddPipelineResourcesToProject(project *archer.Project, region string) error
+	AddPipelineResourcesToApp(project *archer.Project, region string) error
 	projectResourcesGetter
 	// TODO: Add StreamPipelineCreation method
 }
 
 type projectDeployer interface {
-	DeployProject(in *deploy.CreateAppInput) error
-	AddAppToProject(project *archer.Project, appName string) error
-	AddEnvToProject(project *archer.Project, env *archer.Environment) error
+	DeployApp(in *deploy.CreateAppInput) error
+	AddServiceToApp(project *archer.Project, appName string) error
+	AddEnvToApp(project *archer.Project, env *archer.Environment) error
 	DelegateDNSPermissions(project *archer.Project, accountID string) error
-	DeleteProject(name string) error
+	DeleteApp(name string) error
 }
 
 type projectResourcesGetter interface {
-	GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
-	GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
+	GetAppResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
+	GetRegionalAppResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
 }
 
 type deployer interface {

@@ -428,7 +428,7 @@ count: 1`), nil)
 
 				mockCfn := climocks.NewMockprojectResourcesGetter(ctrl)
 				mockCfn.EXPECT().
-					GetProjectResourcesByRegion(mockApp, "us-west-2").
+					GetAppResourcesByRegion(mockApp, "us-west-2").
 					Return(&archer.ProjectRegionalResources{
 						RepositoryURLs: map[string]string{
 							"api": "some url",

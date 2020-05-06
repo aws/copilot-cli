@@ -366,7 +366,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				Name: "mockApp",
 			},
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
 					Name: "mockApp",
 				}, "us-west-2").Return(&archer.ProjectRegionalResources{
 					S3Bucket: "mockBucket",
@@ -392,7 +392,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				Name: "mockApp",
 			},
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
 					Name: "mockApp",
 				}, "us-west-2").Return(nil, mockError)
 			},
@@ -414,7 +414,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			},
 
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(&archer.Project{
+				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
 					Name: "mockApp",
 				}, "us-west-2").Return(&archer.ProjectRegionalResources{
 					S3Bucket: "mockBucket",
@@ -437,7 +437,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				})
 			},
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -450,7 +450,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				m.EXPECT().Template().Return("", mockError)
 			},
 			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetProjectResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockS3Svc: func(m *climocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)

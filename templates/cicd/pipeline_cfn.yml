@@ -88,7 +88,7 @@ Resources:
             Resource: '*'
             Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
       Roles:
-        - !Ref BuildAppRole
+        - !Ref BuildProjectRole
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
