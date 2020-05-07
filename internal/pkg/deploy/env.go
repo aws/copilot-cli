@@ -5,7 +5,7 @@
 // This file defines environment deployment resources.
 package deploy
 
-import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
@@ -21,6 +21,6 @@ type CreateEnvironmentInput struct {
 // CreateEnvironmentResponse holds the created environment on successful deployment.
 // Otherwise, the environment is set to nil and a descriptive error is returned.
 type CreateEnvironmentResponse struct {
-	Env *archer.Environment
+	Env *config.Environment
 	Err error
 }

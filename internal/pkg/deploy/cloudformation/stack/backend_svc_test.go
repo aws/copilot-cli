@@ -59,7 +59,7 @@ func TestBackendService_Template(t *testing.T) {
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 
-				m := mocks.NewMockbackendAppReadParser(ctrl)
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockTemplater{
@@ -72,7 +72,7 @@ func TestBackendService_Template(t *testing.T) {
 		},
 		"render template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendAppReadParser(ctrl)
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().ParseBackendService(template.ServiceOpts{
 					HealthCheck: &ecs.HealthCheck{
 						Command:     aws.StringSlice([]string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"}),

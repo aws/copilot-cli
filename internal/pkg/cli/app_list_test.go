@@ -8,9 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -18,9 +17,8 @@ import (
 func TestAppList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockAppStore := mocks.NewMockApplicationStore(ctrl)
-	mockProjectStore := mocks.NewMockProjectStore(ctrl)
-	mockWorkspace := climocks.NewMockwsAppReader(ctrl)
+	mockStoreClient := mocks.NewMockstoreClient(ctrl)
+	mockWorkspace := mocks.NewMockwsAppReader(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -37,22 +35,21 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				storeClient: mockStoreClient,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
+				mockStoreClient.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
+					Return(&config.Application{}, nil)
+				mockStoreClient.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
+					Return([]*config.Service{
 						{Name: "my-app"},
 						{Name: "lb-app"},
 					}, nil)
 			},
-			expectedContent: `{"applications":[{"project":"","name":"my-app","type":""},{"project":"","name":"lb-app","type":""}]}` + "\n",
+			expectedContent: "{\"applications\":[{\"App\":\"\",\"name\":\"my-app\",\"type\":\"\"},{\"App\":\"\",\"name\":\"lb-app\",\"type\":\"\"}]}\n",
 		},
 		"with human outputs": {
 			listOpts: listAppOpts{
@@ -61,17 +58,16 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				storeClient: mockStoreClient,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
+				mockStoreClient.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
+					Return(&config.Application{}, nil)
+				mockStoreClient.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
+					Return([]*config.Service{
 						{Name: "my-app", Type: "Load Balanced Web Service"},
 						{Name: "lb-app", Type: "Load Balanced Web Service"},
 					}, nil)
@@ -86,15 +82,14 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				storeClient: mockStoreClient,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
+				mockStoreClient.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 
-				mockAppStore.
+				mockStoreClient.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Times(0)
@@ -108,15 +103,14 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				storeClient: mockStoreClient,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
+				mockStoreClient.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
+					Return(&config.Application{}, nil)
 
-				mockAppStore.
+				mockStoreClient.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return(nil, mockError)
@@ -131,18 +125,17 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
-				ws:            mockWorkspace,
+				storeClient: mockStoreClient,
+				ws:          mockWorkspace,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
+				mockStoreClient.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
+					Return(&config.Application{}, nil)
+				mockStoreClient.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
+					Return([]*config.Service{
 						{Name: "my-app", Type: "Load Balanced Web Service"},
 						{Name: "lb-app", Type: "Load Balanced Web Service"},
 					}, nil)
@@ -173,28 +166,28 @@ func TestAppList_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject string
 
-		mockProjectLister func(m *mocks.MockProjectLister)
-		mockPrompt        func(m *climocks.Mockprompter)
+		mockStoreClient func(m *mocks.MockstoreClient)
+		mockPrompt      func(m *mocks.Mockprompter)
 
 		wantedProject string
 	}{
 		"with no flags set": {
-			mockProjectLister: func(m *mocks.MockProjectLister) {
-				m.EXPECT().ListApplications().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
+			mockStoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().ListApplications().Return([]*config.Application{
+					&config.Application{Name: "my-project"},
+					&config.Application{Name: "archer-project"},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(applicationListProjectNamePrompt, applicationListProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
 			},
 			wantedProject: "my-project",
 		},
 		"with project flags set": {
-			mockProjectLister: func(m *mocks.MockProjectLister) {},
-			mockPrompt:        func(m *climocks.Mockprompter) {},
-			inputProject:      "my-project",
-			wantedProject:     "my-project",
+			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockPrompt:      func(m *mocks.Mockprompter) {},
+			inputProject:    "my-project",
+			wantedProject:   "my-project",
 		},
 	}
 
@@ -203,9 +196,9 @@ func TestAppList_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockProjectLister := mocks.NewMockProjectLister(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			tc.mockProjectLister(mockProjectLister)
+			mockStoreClient := mocks.NewMockstoreClient(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			tc.mockStoreClient(mockStoreClient)
 			tc.mockPrompt(mockPrompter)
 
 			listApps := &listAppOpts{
@@ -215,7 +208,7 @@ func TestAppList_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				projectLister: mockProjectLister,
+				storeClient: mockStoreClient,
 			}
 
 			err := listApps.Ask()

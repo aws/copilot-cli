@@ -11,10 +11,10 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -75,7 +75,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ssm, err := store.New()
+	ssm, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +97,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initProjectVars: initProjectVars{
 			ProjectName: vars.projectName,
 		},
-		projectStore: ssm,
-		ws:           ws,
-		prompt:       prompt,
-		identity:     id,
-		deployer:     deployer,
-		prog:         spin,
+		storeClient: ssm,
+		ws:          ws,
+		prompt:      prompt,
+		identity:    id,
+		deployer:    deployer,
+		prog:        spin,
 	}
 	initApp := &initAppOpts{
 		initAppVars: initAppVars{
@@ -114,8 +114,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		},
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		ws:           ws,
-		appStore:     ssm,
-		projGetter:   ssm,
+		storeClient:  ssm,
 		projDeployer: deployer,
 		prog:         spin,
 		setupParser: func(o *initAppOpts) {
@@ -129,8 +128,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			EnvProfile:   vars.profile,
 			IsProduction: false,
 		},
-		envCreator:    ssm,
-		projectGetter: ssm,
+		storeClient:   ssm,
 		projDeployer:  deployer,
 		profileConfig: cfg,
 		prog:          spin,
@@ -146,7 +144,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			GlobalOpts: NewGlobalOpts(),
 		},
 
-		projectService:   ssm,
+		storeClient:      ssm,
 		workspaceService: ws,
 		spinner:          spin,
 		dockerService:    docker.New(),

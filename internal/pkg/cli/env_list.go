@@ -10,8 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -30,30 +29,26 @@ type listEnvVars struct {
 type listEnvOpts struct {
 	listEnvVars
 
-	manager       archer.EnvironmentLister
-	projectGetter archer.ProjectGetter
-	projectLister archer.ProjectLister
+	storeClient storeClient
 
 	w io.Writer
 }
 
 func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
 
 	return &listEnvOpts{
-		listEnvVars:   vars,
-		manager:       ssmStore,
-		projectGetter: ssmStore,
-		projectLister: ssmStore,
-		w:             os.Stdout,
+		listEnvVars: vars,
+		storeClient: ssmStore,
+		w:           os.Stdout,
 	}, nil
 }
 
 func (o *listEnvOpts) selectProject() (string, error) {
-	projs, err := o.projectLister.ListApplications()
+	projs, err := o.storeClient.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -90,11 +85,11 @@ func (o *listEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := o.projectGetter.GetApplication(o.ProjectName()); err != nil {
+	if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
 		return err
 	}
 
-	envs, err := o.manager.ListEnvironments(o.ProjectName())
+	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -114,7 +109,7 @@ func (o *listEnvOpts) Execute() error {
 	return nil
 }
 
-func (o *listEnvOpts) humanOutput(envs []*archer.Environment) string {
+func (o *listEnvOpts) humanOutput(envs []*config.Environment) string {
 	b := &strings.Builder{}
 	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
@@ -127,9 +122,9 @@ func (o *listEnvOpts) humanOutput(envs []*archer.Environment) string {
 	return b.String()
 }
 
-func (o *listEnvOpts) jsonOutput(envs []*archer.Environment) (string, error) {
+func (o *listEnvOpts) jsonOutput(envs []*config.Environment) (string, error) {
 	type serializedEnvs struct {
-		Environments []*archer.Environment `json:"environments"`
+		Environments []*config.Environment `json:"environments"`
 	}
 	b, err := json.Marshal(serializedEnvs{Environments: envs})
 	if err != nil {

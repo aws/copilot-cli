@@ -8,17 +8,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -79,12 +78,12 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 		inputProfile string
 		inputProject string
 
-		setupMocks func(*climocks.Mockprompter, *climocks.MockprofileNames)
+		setupMocks func(*mocks.Mockprompter, *mocks.MockprofileNames)
 
 		wantedError error
 	}{
 		"with no flags set": {
-			setupMocks: func(mockPrompter *climocks.Mockprompter, mockCfg *climocks.MockprofileNames) {
+			setupMocks: func(mockPrompter *mocks.Mockprompter, mockCfg *mocks.MockprofileNames) {
 				mockPrompter.EXPECT().
 					Get(
 						gomock.Eq(envInitNamePrompt),
@@ -101,7 +100,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 		},
 		"with no existing named profiles": {
-			setupMocks: func(mockPrompter *climocks.Mockprompter, mockCfg *climocks.MockprofileNames) {
+			setupMocks: func(mockPrompter *mocks.Mockprompter, mockCfg *mocks.MockprofileNames) {
 				mockPrompter.EXPECT().
 					Get(
 						gomock.Eq(envInitNamePrompt),
@@ -119,8 +118,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockCfg := climocks.NewMockprofileNames(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockCfg := mocks.NewMockprofileNames(ctrl)
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
@@ -155,11 +154,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		inEnvName     string
 		inProd        bool
 
-		expectProjectGetter func(m *mocks.MockProjectGetter)
-		expectEnvCreator    func(m *mocks.MockEnvironmentCreator)
-		expectDeployer      func(m *climocks.Mockdeployer)
-		expectIdentity      func(m *climocks.MockidentityService)
-		expectProgress      func(m *climocks.Mockprogress)
+		expectstoreClient func(m *mocks.MockstoreClient)
+		expectDeployer    func(m *mocks.Mockdeployer)
+		expectIdentity    func(m *mocks.MockidentityService)
+		expectProgress    func(m *mocks.Mockprogress)
 
 		wantedErrorS string
 	}{
@@ -167,7 +165,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
+			expectstoreClient: func(m *mocks.MockstoreClient) {
 				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 
@@ -177,10 +175,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{}, errors.New("some identity error"))
 			},
 			wantedErrorS: "get identity: some identity error",
@@ -189,17 +187,17 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop(log.Serrorf(fmtDeployEnvFailed, "test"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(errors.New("some deploy error"))
 			},
 			wantedErrorS: "some deploy error",
@@ -208,13 +206,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Events([]termprogress.TabRow{
@@ -229,7 +227,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				})
 				m.EXPECT().Stop(log.Serrorf(fmtStreamEnvFailed, "test"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
@@ -256,24 +254,25 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				env := &archer.Environment{
-					Project:   "phonetool",
+				env := &config.Environment{
+					App:       "phonetool",
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -286,35 +285,33 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				close(responses)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("some error"))
 			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
-			},
 			wantedErrorS: "get environment struct for test: some error",
 		},
 		"failed to create stack set instance": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToProjectFailed, "1234", "mars-1", "phonetool"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
-				env := &archer.Environment{
-					Project:   "phonetool",
+				env := &config.Environment{
+					App:       "phonetool",
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -325,16 +322,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Project:   "phonetool",
+					App:       "phonetool",
 				}, nil)
-				m.EXPECT().AddEnvToApp(&archer.Project{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
-			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
+				m.EXPECT().AddEnvToApp(&config.Application{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
 			},
 			wantedErrorS: "deploy env test to project phonetool: some cfn error",
 		},
@@ -342,29 +336,35 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
 				}, nil)
+				m.EXPECT().CreateEnvironment(&config.Environment{
+					App:       "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
+				}).Return(errors.New("some create error"))
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				responses <- deploy.CreateEnvironmentResponse{
-					Env: &archer.Environment{
-						Project:   "phonetool",
+					Env: &config.Environment{
+						App:       "phonetool",
 						Name:      "test",
 						AccountID: "1234",
 						Region:    "mars-1",
@@ -373,21 +373,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Project:   "phonetool",
+					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}).Return(errors.New("some create error"))
 			},
 			wantedErrorS: "store environment: some create error",
 		},
@@ -396,27 +388,34 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 			inProd:        true,
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				m.EXPECT().CreateEnvironment(&config.Environment{
+					App:       "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Prod:      true,
+					Region:    "mars-1",
+				}).Return(nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				responses <- deploy.CreateEnvironmentResponse{
-					Env: &archer.Environment{
-						Project:   "phonetool",
+					Env: &config.Environment{
+						App:       "phonetool",
 						Name:      "test",
 						AccountID: "1234",
 						Prod:      true,
@@ -426,96 +425,90 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
 					Prod:      false,
-					Project:   "phonetool",
+					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Prod:      true,
-					Region:    "mars-1",
-				}).Return(nil)
 			},
 		},
 		"skips creating stack if environment stack already exists": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				m.EXPECT().CreateEnvironment(&config.Environment{
+					App:       "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
+				}).Return(nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop("")
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
 					Name:                     "test",
 					AppName:                  "phonetool",
 					PublicLoadBalancer:       true,
 					ToolsAccountPrincipalARN: "some arn",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Project:   "phonetool",
+					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}).Return(nil)
 			},
 		},
 		"failed to delegate DNS (project has Domain and env and project are different)": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(1)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Serrorf(fmtDNSDelegationFailed, "4567"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(errors.New("some error"))
 			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {},
-			wantedErrorS:     "granting DNS permissions: some error",
+			wantedErrorS: "granting DNS permissions: some error",
 		},
 		"success with DNS Delegation (project has Domain and env and project are different)": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectProjectGetter: func(m *mocks.MockProjectGetter) {
-				m.EXPECT().GetApplication("phonetool").Return(&archer.Project{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+			expectstoreClient: func(m *mocks.MockstoreClient) {
+				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
+				m.EXPECT().CreateEnvironment(&config.Environment{
+					App:       "phonetool",
+					Name:      "test",
+					AccountID: "1234",
+					Region:    "mars-1",
+				}).Return(nil)
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtDNSDelegationComplete, "4567"))
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
@@ -524,15 +517,15 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
 				events := make(chan []deploy.ResourceEvent, 1)
 				responses := make(chan deploy.CreateEnvironmentResponse, 1)
 				m.EXPECT().StreamEnvironmentCreation(gomock.Any()).Return(events, responses)
 				responses <- deploy.CreateEnvironmentResponse{
-					Env: &archer.Environment{
-						Project:   "phonetool",
+					Env: &config.Environment{
+						App:       "phonetool",
 						Name:      "test",
 						AccountID: "1234",
 						Region:    "mars-1",
@@ -541,21 +534,13 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}
 				close(events)
 				close(responses)
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(&archer.Environment{
+				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
 					Name:      "test",
-					Project:   "phonetool",
+					App:       "phonetool",
 				}, nil)
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			expectEnvCreator: func(m *mocks.MockEnvironmentCreator) {
-				m.EXPECT().CreateEnvironment(&archer.Environment{
-					Project:   "phonetool",
-					Name:      "test",
-					AccountID: "1234",
-					Region:    "mars-1",
-				}).Return(nil)
 			},
 		},
 	}
@@ -566,16 +551,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockProjectGetter := mocks.NewMockProjectGetter(ctrl)
-			mockEnvCreator := mocks.NewMockEnvironmentCreator(ctrl)
-			mockDeployer := climocks.NewMockdeployer(ctrl)
-			mockIdentity := climocks.NewMockidentityService(ctrl)
-			mockProgress := climocks.NewMockprogress(ctrl)
-			if tc.expectProjectGetter != nil {
-				tc.expectProjectGetter(mockProjectGetter)
-			}
-			if tc.expectEnvCreator != nil {
-				tc.expectEnvCreator(mockEnvCreator)
+			mockstoreClient := mocks.NewMockstoreClient(ctrl)
+			mockDeployer := mocks.NewMockdeployer(ctrl)
+			mockIdentity := mocks.NewMockidentityService(ctrl)
+			mockProgress := mocks.NewMockprogress(ctrl)
+			if tc.expectstoreClient != nil {
+				tc.expectstoreClient(mockstoreClient)
 			}
 			if tc.expectDeployer != nil {
 				tc.expectDeployer(mockDeployer)
@@ -593,13 +574,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					GlobalOpts:   &GlobalOpts{projectName: tc.inProjectName},
 					IsProduction: tc.inProd,
 				},
-				projectGetter: mockProjectGetter,
-				envCreator:    mockEnvCreator,
-				envDeployer:   mockDeployer,
-				projDeployer:  mockDeployer,
-				identity:      mockIdentity,
-				envIdentity:   mockIdentity,
-				prog:          mockProgress,
+				storeClient:  mockstoreClient,
+				envDeployer:  mockDeployer,
+				projDeployer: mockDeployer,
+				identity:     mockIdentity,
+				envIdentity:  mockIdentity,
+				prog:         mockProgress,
 				initProfileClients: func(o *initEnvOpts) error {
 					return nil
 				},
@@ -620,76 +600,76 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 	testCases := map[string]struct {
-		project        *archer.Project
-		expectDeployer func(m *climocks.Mockdeployer)
-		expectIdentity func(m *climocks.MockidentityService)
-		expectProgress func(m *climocks.Mockprogress)
+		project        *config.Application
+		expectDeployer func(m *mocks.Mockdeployer)
+		expectIdentity func(m *mocks.MockidentityService)
+		expectProgress func(m *mocks.Mockprogress)
 		wantedErr      string
 	}{
 		"should call DelegateDNSPermissions when project and env are in different accounts": {
-			project: &archer.Project{
+			project: &config.Application{
 				AccountID: "1234",
 				Name:      "crossaccountproject",
 				Domain:    "amazon.com",
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtDNSDelegationComplete, "4567"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
 			},
 		},
 		"should skip updating when project and env are in same account": {
-			project: &archer.Project{
+			project: &config.Application{
 				AccountID: "1234",
 				Name:      "crossaccountproject",
 				Domain:    "amazon.com",
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{Account: "1234"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(gomock.Any()).Times(0)
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"should return errors from identity": {
-			project: &archer.Project{
+			project: &config.Application{
 				AccountID: "1234",
 				Name:      "crossaccountproject",
 				Domain:    "amazon.com",
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{}, fmt.Errorf("error"))
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(gomock.Any()).Times(0)
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedErr: "getting environment account ID for DNS Delegation: error",
 		},
 		"should return errors from DelegateDNSPermissions": {
-			project: &archer.Project{
+			project: &config.Application{
 				AccountID: "1234",
 				Name:      "crossaccountproject",
 				Domain:    "amazon.com",
 			},
-			expectIdentity: func(m *climocks.MockidentityService) {
+			expectIdentity: func(m *mocks.MockidentityService) {
 				m.EXPECT().Get().Return(identity.Caller{Account: "4567"}, nil)
 			},
-			expectProgress: func(m *climocks.Mockprogress) {
+			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.EXPECT().Stop(log.Serrorf(fmtDNSDelegationFailed, "4567"))
 			},
-			expectDeployer: func(m *climocks.Mockdeployer) {
+			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
 			},
 			wantedErr: "error",
@@ -703,9 +683,9 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockDeployer := climocks.NewMockdeployer(ctrl)
-			mockIdentity := climocks.NewMockidentityService(ctrl)
-			mockProgress := climocks.NewMockprogress(ctrl)
+			mockDeployer := mocks.NewMockdeployer(ctrl)
+			mockIdentity := mocks.NewMockidentityService(ctrl)
+			mockProgress := mocks.NewMockprogress(ctrl)
 			if tc.expectDeployer != nil {
 				tc.expectDeployer(mockDeployer)
 			}

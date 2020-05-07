@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/cobra"
@@ -32,20 +32,20 @@ type showEnvOpts struct {
 	showEnvVars
 
 	w                io.Writer
-	storeSvc         storeReader
+	storeClient      storeClient
 	describer        envDescriber
 	initEnvDescriber func(*showEnvOpts) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
 
 	return &showEnvOpts{
 		showEnvVars: vars,
-		storeSvc:    ssmStore,
+		storeClient: ssmStore,
 		w:           log.OutputWriter,
 		initEnvDescriber: func(o *showEnvOpts) error {
 			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
@@ -61,12 +61,12 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -163,7 +163,7 @@ func (o *showEnvOpts) askEnvName() error {
 }
 
 func (o *showEnvOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListApplications()
+	projs, err := o.storeClient.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -175,7 +175,7 @@ func (o *showEnvOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showEnvOpts) retrieveAllEnvironments() ([]string, error) {
-	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
+	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
 	}

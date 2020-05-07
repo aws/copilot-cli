@@ -8,15 +8,15 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProjectList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockProjectStore := mocks.NewMockProjectStore(ctrl)
+	mockStoreClient := mocks.NewMockstoreClient(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -26,27 +26,27 @@ func TestProjectList_Execute(t *testing.T) {
 	}{
 		"with projects": {
 			listOpts: listProjectOpts{
-				store: mockProjectStore,
+				store: mockStoreClient,
 				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockProjectStore.
+				mockStoreClient.
 					EXPECT().
 					ListApplications().
-					Return([]*archer.Project{
-						&archer.Project{Name: "project1"},
-						&archer.Project{Name: "project2"},
+					Return([]*config.Application{
+						{Name: "project1"},
+						{Name: "project2"},
 					}, nil).
 					Times(1)
 			},
 		},
 		"with an error": {
 			listOpts: listProjectOpts{
-				store: mockProjectStore,
+				store: mockStoreClient,
 				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockProjectStore.
+				mockStoreClient.
 					EXPECT().
 					ListApplications().
 					Return(nil, fmt.Errorf("error fetching projects")).

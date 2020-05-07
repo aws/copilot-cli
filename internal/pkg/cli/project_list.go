@@ -8,13 +8,12 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/spf13/cobra"
 )
 
 type listProjectOpts struct {
-	store archer.ProjectLister
+	store applicationLister
 	w     io.Writer
 }
 
@@ -44,7 +43,7 @@ func BuildProjectListCommand() *cobra.Command {
 			opts := listProjectOpts{
 				w: os.Stdout,
 			}
-			ssmStore, err := store.New()
+			ssmStore, err := config.NewStore()
 			if err != nil {
 				return err
 			}

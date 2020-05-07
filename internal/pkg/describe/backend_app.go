@@ -10,15 +10,14 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
 
 // BackendAppDescriber retrieves information about a backend application.
 type BackendAppDescriber struct {
-	app             *archer.Application
+	app             *config.Service
 	enableResources bool
 
 	store            storeSvc
@@ -28,7 +27,7 @@ type BackendAppDescriber struct {
 
 // NewBackendAppDescriber instantiates a backend application describer.
 func NewBackendAppDescriber(project, app string) (*BackendAppDescriber, error) {
-	svc, err := store.New()
+	svc, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
@@ -75,16 +74,16 @@ func (d *BackendAppDescriber) URI(envName string) (string, error) {
 	s := serviceDiscovery{
 		AppName:     d.app.Name,
 		Port:        appParams[stack.LBWebServiceContainerPortParamKey],
-		ProjectName: d.app.Project,
+		ProjectName: d.app.App,
 	}
 	return s.String(), nil
 }
 
 // Describe returns info of a backend application.
 func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.app.Project)
+	environments, err := d.store.ListEnvironments(d.app.App)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", d.app.Project, err)
+		return nil, fmt.Errorf("list environments for project %s: %w", d.app.App, err)
 	}
 
 	var configs []*AppConfig
@@ -105,7 +104,7 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 		services = appendServiceDiscovery(services, serviceDiscovery{
 			AppName:     d.app.Name,
 			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
-			ProjectName: d.app.Project,
+			ProjectName: d.app.App,
 		}, env.Name)
 		configs = append(configs, &AppConfig{
 			Environment: env.Name,
@@ -140,7 +139,7 @@ func (d *BackendAppDescriber) Describe() (HumanJSONStringer, error) {
 	return &backendAppDesc{
 		AppName:          d.app.Name,
 		Type:             d.app.Type,
-		Project:          d.app.Project,
+		Project:          d.app.App,
 		Configurations:   configs,
 		ServiceDiscovery: services,
 		Variables:        envVars,

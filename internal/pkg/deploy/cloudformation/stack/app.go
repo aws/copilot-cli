@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -37,6 +36,14 @@ type AppResourcesConfig struct {
 type AppStackConfig struct {
 	*deploy.CreateAppInput
 	parser template.ReadParser
+}
+
+// AppRegionalResources represent application resources that are regional.
+type AppRegionalResources struct {
+	Region         string            // The region these resources are in.
+	KMSKeyARN      string            // A KMS Key ARN for encrypting Pipeline artifacts.
+	S3Bucket       string            // S3 bucket for Pipeline artifacts.
+	RepositoryURLs map[string]string // The image repository URLs by service name.
 }
 
 const (
@@ -183,8 +190,8 @@ func (c *AppStackConfig) dnsDelegationAccounts() []string {
 
 // ToAppRegionalResources takes an Application Resource Stack Instance stack, reads the output resources
 // and returns a modeled  ProjectRegionalResources.
-func ToAppRegionalResources(stack *cloudformation.Stack) (*archer.ProjectRegionalResources, error) {
-	regionalResources := archer.ProjectRegionalResources{
+func ToAppRegionalResources(stack *cloudformation.Stack) (*AppRegionalResources, error) {
+	regionalResources := AppRegionalResources{
 		RepositoryURLs: map[string]string{},
 	}
 	for _, output := range stack.Outputs {

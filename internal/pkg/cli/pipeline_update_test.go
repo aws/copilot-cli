@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	archermocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
@@ -23,8 +23,8 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 		stages        []manifest.PipelineStage
 		inProjectName string
 
-		mockWorkspace func(m *climocks.MockwsPipelineReader)
-		mockEnvStore  func(m *archermocks.MockEnvironmentStore)
+		mockWorkspace func(m *mocks.MockwsPipelineReader)
+		mockEnvStore  func(m *mocks.MockenvironmentStore)
 
 		expectedStages []deploy.PipelineStage
 		expectedError  error
@@ -36,13 +36,13 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 				},
 			},
 			inProjectName: "badgoose",
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
-				mockEnv := &archer.Environment{
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
+				mockEnv := &config.Environment{
 					Name:      "test",
-					Project:   "badgoose",
+					App:       "badgoose",
 					Region:    "us-west-2",
 					AccountID: "123456789012",
 					Prod:      false,
@@ -72,8 +72,8 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := climocks.NewMockwsPipelineReader(ctrl)
+			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockWorkspace(mockWorkspace)
@@ -103,15 +103,15 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 
 func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 	testCases := map[string]struct {
-		mockDeployer func(m *climocks.MockpipelineDeployer)
+		mockDeployer func(m *mocks.MockpipelineDeployer)
 
 		expectedOut []deploy.ArtifactBucket
 
 		expectedError error
 	}{
 		"getsBucketInfo": {
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
-				mockResources := []*archer.ProjectRegionalResources{
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
+				mockResources := []*stack.AppRegionalResources{
 					{
 						S3Bucket:  "someBucket",
 						KMSKeyARN: "someKey",
@@ -133,7 +133,7 @@ func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPipelineDeployer := climocks.NewMockpipelineDeployer(ctrl)
+			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
 			tc.mockDeployer(mockPipelineDeployer)
 
 			opts := &updatePipelineOpts{
@@ -179,53 +179,53 @@ stages:
 `
 	)
 
-	project := archer.Project{
+	project := config.Application{
 		AccountID: accountID,
 		Name:      projectName,
 		Domain:    "amazon.com",
 	}
 
-	mockResources := []*archer.ProjectRegionalResources{
+	mockResources := []*stack.AppRegionalResources{
 		{
 			S3Bucket:  "someBucket",
 			KMSKeyARN: "someKey",
 		},
 	}
 
-	mockEnv := &archer.Environment{
+	mockEnv := &config.Environment{
 		Name:      "test",
-		Project:   projectName,
+		App:       projectName,
 		Region:    region,
 		AccountID: accountID,
 		Prod:      false,
 	}
 
 	testCases := map[string]struct {
-		inProject      *archer.Project
+		inProject      *config.Application
 		inProjectName  string
 		inPipelineName string
 		inRegion       string
 		inPipelineFile string
-		mockDeployer   func(m *climocks.MockpipelineDeployer)
-		mockWorkspace  func(m *climocks.MockwsPipelineReader)
-		mockEnvStore   func(m *archermocks.MockEnvironmentStore)
-		mockProgress   func(m *climocks.Mockprogress)
-		mockPrompt     func(m *climocks.Mockprompter)
+		mockDeployer   func(m *mocks.MockpipelineDeployer)
+		mockWorkspace  func(m *mocks.MockwsPipelineReader)
+		mockEnvStore   func(m *mocks.MockenvironmentStore)
+		mockProgress   func(m *mocks.Mockprogress)
+		mockPrompt     func(m *mocks.Mockprompter)
 		expectedError  error
 	}{
 		"create and deploy pipeline": {
 			inProject:     &project,
 			inProjectName: projectName,
 			inRegion:      region,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
@@ -236,28 +236,28 @@ stages:
 				m.EXPECT().Stop(log.Serrorf(fmtUpdatePipelineFailed, pipelineName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(nil)
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: nil,
 		},
 		"update and deploy pipeline": {
 			inProject:     &project,
 			inProjectName: projectName,
 			inRegion:      region,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
@@ -268,13 +268,13 @@ stages:
 				m.EXPECT().Stop(log.Serrorf(fmtUpdatePipelineFailed, pipelineName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, pipelineName), "").Return(true, nil)
 			},
 			expectedError: nil,
@@ -283,15 +283,15 @@ stages:
 			inProject:     &project,
 			inProjectName: projectName,
 			inRegion:      region,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
@@ -302,13 +302,13 @@ stages:
 				m.EXPECT().Stop(log.Serrorf(fmtUpdatePipelineFailed, pipelineName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil).Times(0)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, pipelineName), "").Return(false, nil)
 			},
 			expectedError: nil,
@@ -317,25 +317,25 @@ stages:
 			inProject:     &project,
 			inProjectName: projectName,
 			inRegion:      region,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, pipelineName), "").Return(false, errors.New("some error"))
 			},
 			expectedError: fmt.Errorf("prompt for pipeline update: some error"),
@@ -344,140 +344,140 @@ stages:
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {},
-			mockEnvStore:  func(m *archermocks.MockEnvironmentStore) {},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {},
+			mockEnvStore:  func(m *mocks.MockenvironmentStore) {},
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(1)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(0)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(errors.New("some error"))
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("add pipeline resources to project %s in %s: some error", projectName, region),
 		},
 		"returns an error if fail to read pipeline file": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), errors.New("some error"))
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
 		},
 		"returns an error if unable to unmarshal pipeline file": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				content := ""
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
 		"returns an error if unable to convert environments to deployment stage": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error")).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("convert environments to deployment stage: some error"),
 		},
 		"returns an error if fails to get cross-regional resources": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error"))
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("get cross-regional resources: some error"),
 		},
 		"returns an error if fails to check if pipeline exists": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error"))
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("check if pipeline exists: some error"),
 		},
 		"returns an error if fails to create pipeline": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
@@ -488,28 +488,28 @@ stages:
 				m.EXPECT().Stop(log.Serrorf(fmtUpdatePipelineFailed, pipelineName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
 				m.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},
-			mockPrompt:    func(m *climocks.Mockprompter) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("create pipeline: some error"),
 		},
 		"returns an error if fails to update pipeline": {
 			inProject:     &project,
 			inRegion:      region,
 			inProjectName: projectName,
-			mockWorkspace: func(m *climocks.MockwsPipelineReader) {
+			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
 				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
 			},
-			mockEnvStore: func(m *archermocks.MockEnvironmentStore) {
+			mockEnvStore: func(m *mocks.MockenvironmentStore) {
 				m.EXPECT().GetEnvironment(projectName, "chicken").Return(mockEnv, nil).Times(1)
 				m.EXPECT().GetEnvironment(projectName, "wings").Return(mockEnv, nil).Times(1)
 			},
-			mockProgress: func(m *climocks.Mockprogress) {
+			mockProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddPipelineResourcesStart, projectName)).Times(1)
 				m.EXPECT().Stop(log.Serrorf(fmtAddPipelineResourcesFailed, projectName)).Times(0)
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, projectName)).Times(1)
@@ -520,13 +520,13 @@ stages:
 				m.EXPECT().Stop(log.Serrorf(fmtUpdatePipelineFailed, pipelineName)).Times(1)
 				m.EXPECT().Stop(log.Ssuccessf(fmtUpdatePipelineComplete, pipelineName)).Times(0)
 			},
-			mockDeployer: func(m *climocks.MockpipelineDeployer) {
+			mockDeployer: func(m *mocks.MockpipelineDeployer) {
 				m.EXPECT().AddPipelineResourcesToApp(&project, region).Return(nil)
 				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
 				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
 				m.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error"))
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(fmt.Sprintf(fmtUpdateEnvPrompt, pipelineName), "").Return(true, nil)
 			},
 			expectedError: fmt.Errorf("update pipeline: some error"),
@@ -538,11 +538,11 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPipelineDeployer := climocks.NewMockpipelineDeployer(ctrl)
-			mockEnvStore := archermocks.NewMockEnvironmentStore(ctrl)
-			mockWorkspace := climocks.NewMockwsPipelineReader(ctrl)
-			mockProgress := climocks.NewMockprogress(ctrl)
-			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockPipelineDeployer := mocks.NewMockpipelineDeployer(ctrl)
+			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mockProgress := mocks.NewMockprogress(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 			tc.mockDeployer(mockPipelineDeployer)
 			tc.mockEnvStore(mockEnvStore)
 			tc.mockWorkspace(mockWorkspace)

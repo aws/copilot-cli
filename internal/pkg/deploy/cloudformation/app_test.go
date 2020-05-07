@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -100,19 +100,19 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 }
 
 func TestCloudFormation_AddEnvToApp(t *testing.T) {
-	mockApp := archer.Project{
+	mockApp := config.Application{
 		Name:      "testapp",
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
 		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
-		app          *archer.Project
-		env          *archer.Environment
+		app          *config.Application
+		env          *config.Environment
 		want         error
 	}{
 		"with no existing deployments and adding an env": {
 			app: &mockApp,
-			env: &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
+			env: &config.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
@@ -136,7 +136,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 		},
 		"with no new account ID added": {
 			app: &mockApp,
-			env: &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
+			env: &config.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				body, err := yaml.Marshal(stack.DeployedAppMetadata{
@@ -157,7 +157,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 		},
 		"with existing stack instances in same region but different account (no new stack instances, but update stackset)": {
 			app: &mockApp,
-			env: &archer.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
+			env: &config.Environment{Name: "test", AccountID: "1234", Region: "us-west-2"},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				body, err := yaml.Marshal(stack.DeployedAppMetadata{
@@ -212,12 +212,12 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 }
 
 func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
-	mockApp := archer.Project{
+	mockApp := config.Application{
 		Name:      "testapp",
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		app                 *archer.Project
+		app                 *config.Application
 		mockStackSet        func(t *testing.T, ctrl *gomock.Controller) stackSetClient
 		getRegionFromClient func(client cloudformationiface.CloudFormationAPI) (string, error)
 		expectedErr         error
@@ -277,12 +277,12 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 }
 
 func TestCloudFormation_AddServiceToApp(t *testing.T) {
-	mockApp := archer.Project{
+	mockApp := config.Application{
 		Name:      "testapp",
 		AccountID: "1234",
 	}
 	testCases := map[string]struct {
-		app          *archer.Project
+		app          *config.Application
 		svcName      string
 		mockStackSet func(t *testing.T, ctrl *gomock.Controller) stackSetClient
 		want         error
@@ -376,7 +376,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 }
 
 func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
-	mockApp := &archer.Project{
+	mockApp := &config.Application{
 		Name:      "testapp",
 		AccountID: "1234",
 	}
@@ -430,16 +430,16 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 }
 
 func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
-	mockApp := archer.Project{Name: "app", AccountID: "12345"}
+	mockApp := config.Application{Name: "app", AccountID: "12345"}
 
 	testCases := map[string]struct {
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
 		mockStackSet             func(t *testing.T, ctrl *gomock.Controller) stackSetClient
-		wantedResource           archer.ProjectRegionalResources
+		wantedResource           stack.AppRegionalResources
 		want                     error
 	}{
-		"should describe stack instances and convert to ProjectRegionalResources": {
-			wantedResource: archer.ProjectRegionalResources{
+		"should describe stack instances and convert to AppRegionalResources": {
+			wantedResource: stack.AppRegionalResources{
 				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:       "tests3-bucket-us-west-2",
 				Region:         "us-east-9",
@@ -529,17 +529,17 @@ func TestCloudFormation_GetRegionalAppResources(t *testing.T) {
 }
 
 func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
-	mockApp := archer.Project{Name: "app", AccountID: "12345"}
+	mockApp := config.Application{Name: "app", AccountID: "12345"}
 
 	testCases := map[string]struct {
 		createRegionalMockClient func(ctrl *gomock.Controller) cfnClient
 		mockStackSet             func(t *testing.T, ctrl *gomock.Controller) stackSetClient
-		wantedResource           archer.ProjectRegionalResources
+		wantedResource           stack.AppRegionalResources
 		region                   string
 		want                     error
 	}{
-		"should describe stack instances and convert to ProjectRegionalResources": {
-			wantedResource: archer.ProjectRegionalResources{
+		"should describe stack instances and convert to AppRegionalResources": {
+			wantedResource: stack.AppRegionalResources{
 				KMSKeyARN:      "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:       "tests3-bucket-us-west-2",
 				Region:         "us-east-9",
@@ -615,13 +615,13 @@ func TestCloudFormation_GetAppResourcesByRegion(t *testing.T) {
 
 func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 	testCases := map[string]struct {
-		app        *archer.Project
+		app        *config.Application
 		accountID  string
 		createMock func(ctrl *gomock.Controller) cfnClient
 		want       error
 	}{
 		"Calls Update Stack": {
-			app: &archer.Project{
+			app: &config.Application{
 				AccountID: "1234",
 				Name:      "app",
 				Domain:    "amazon.com",
@@ -637,7 +637,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 		},
 
 		"Returns error from Describe Stack": {
-			app: &archer.Project{
+			app: &config.Application{
 				AccountID: "1234",
 				Name:      "app",
 				Domain:    "amazon.com",
@@ -650,7 +650,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			},
 		},
 		"Returns nil if there are no changeset updates from deployChangeSet": {
-			app: &archer.Project{
+			app: &config.Application{
 				AccountID: "1234",
 				Name:      "app",
 				Domain:    "amazon.com",
@@ -666,7 +666,7 @@ func TestCloudFormation_DelegateDNSPermissions(t *testing.T) {
 			},
 		},
 		"Returns error from Update Stack": {
-			app: &archer.Project{
+			app: &config.Application{
 				AccountID: "1234",
 				Name:      "app",
 				Domain:    "amazon.com",

@@ -9,18 +9,17 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPackageAppOpts_Validate(t *testing.T) {
 	var (
-		mockWorkspace      *climocks.MockwsAppReader
-		mockProjectService *climocks.MockprojectService
+		mockWorkspace      *mocks.MockwsAppReader
+		mockProjectService *mocks.MockstoreClient
 	)
 
 	testCases := map[string]struct {
@@ -65,13 +64,13 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			setupMocks: func() {
 				mockWorkspace.EXPECT().ServiceNames().Times(0)
-				mockProjectService.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &store.ErrNoSuchEnvironment{
+				mockProjectService.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{
 					ApplicationName: "phonetool",
 					EnvironmentName: "test",
 				})
 			},
 
-			wantedErrorS: (&store.ErrNoSuchEnvironment{
+			wantedErrorS: (&config.ErrNoSuchEnvironment{
 				ApplicationName: "phonetool",
 				EnvironmentName: "test",
 			}).Error(),
@@ -84,8 +83,8 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace = climocks.NewMockwsAppReader(ctrl)
-			mockProjectService = climocks.NewMockprojectService(ctrl)
+			mockWorkspace = mocks.NewMockwsAppReader(ctrl)
+			mockProjectService = mocks.NewMockstoreClient(ctrl)
 
 			tc.setupMocks()
 
@@ -118,10 +117,10 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		inEnvName string
 		inTag     string
 
-		expectWS     func(m *climocks.MockwsAppReader)
-		expectStore  func(m *climocks.MockprojectService)
-		expectPrompt func(m *climocks.Mockprompter)
-		expectRunner func(m *climocks.Mockrunner)
+		expectWS     func(m *mocks.MockwsAppReader)
+		expectStore  func(m *mocks.MockstoreClient)
+		expectPrompt func(m *mocks.Mockprompter)
+		expectRunner func(m *mocks.Mockrunner)
 
 		wantedAppName string
 		wantedEnvName string
@@ -129,71 +128,71 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		wantedErrorS  string
 	}{
 		"wrap list apps error": {
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedErrorS: "list applications in workspace: some error",
 		},
 		"empty workspace error": {
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedErrorS: "there are no applications in the workspace, run `ecs-preview init` first",
 		},
 		"wrap list envs error": {
 			inAppName: "frontend",
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, errors.New("some ssm error"))
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedErrorS:  "list environments for project : some ssm error",
 		},
 		"empty environments error": {
 			inAppName: "frontend",
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, nil)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedErrorS:  "there are no environments in project ",
 		},
 		"prompt for all options": {
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
+			expectStore: func(m *mocks.MockstoreClient) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
 					},
@@ -202,10 +201,10 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {
+			expectRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
 				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
 				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
@@ -219,16 +218,16 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inEnvName: "test",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageAppNamePrompt, gomock.Any(), []string{"frontend", "backend"}).Return("frontend", nil)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
@@ -238,11 +237,11 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inAppName: "frontend",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
+			expectStore: func(m *mocks.MockstoreClient) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
 					},
@@ -251,10 +250,10 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(appPackageEnvNamePrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
@@ -265,36 +264,36 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inEnvName: "test",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {},
+			expectRunner: func(m *mocks.Mockrunner) {},
 
 			wantedAppName: "frontend",
 			wantedEnvName: "test",
 			wantedTag:     "v1.0.0",
 		},
 		"don't prompt if only one app or one env": {
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*archer.Environment{
+			expectStore: func(m *mocks.MockstoreClient) {
+				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
 					},
 				}, nil)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {
+			expectRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not a git repo"))
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
 			},
@@ -306,16 +305,16 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"prompt for image if there is a runner error": {
 			inAppName: "frontend",
 			inEnvName: "test",
-			expectWS: func(m *climocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *climocks.MockprojectService) {
+			expectStore: func(m *mocks.MockstoreClient) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
-			expectPrompt: func(m *climocks.Mockprompter) {
+			expectPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
 			},
-			expectRunner: func(m *climocks.Mockrunner) {
+			expectRunner: func(m *mocks.Mockrunner) {
 				m.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedAppName: "frontend",
@@ -330,10 +329,10 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
-			mockStore := climocks.NewMockprojectService(ctrl)
-			mockPrompt := climocks.NewMockprompter(ctrl)
-			mockRunner := climocks.NewMockrunner(ctrl)
+			mockWorkspace := mocks.NewMockwsAppReader(ctrl)
+			mockStore := mocks.NewMockstoreClient(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockRunner := mocks.NewMockrunner(ctrl)
 
 			tc.expectWS(mockWorkspace)
 			tc.expectStore(mockStore)
@@ -392,16 +391,16 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				Tag:     "1234",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageAppOpts) {
-				mockStore := climocks.NewMockprojectService(ctrl)
+				mockStore := mocks.NewMockstoreClient(ctrl)
 				mockStore.EXPECT().
 					GetEnvironment("ecs-kudos", "test").
-					Return(&archer.Environment{
-						Project:   "ecs-kudos",
+					Return(&config.Environment{
+						App:       "ecs-kudos",
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "1111",
 					}, nil)
-				mockApp := &archer.Project{
+				mockApp := &config.Application{
 					Name:      "ecs-kudos",
 					AccountID: "1112",
 					Tags: map[string]string{
@@ -412,7 +411,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 					GetApplication("ecs-kudos").
 					Return(mockApp, nil)
 
-				mockWs := climocks.NewMockwsAppReader(ctrl)
+				mockWs := mocks.NewMockwsAppReader(ctrl)
 				mockWs.EXPECT().
 					ReadServiceManifest("api").
 					Return([]byte(`name: api
@@ -426,16 +425,16 @@ cpu: 256
 memory: 512
 count: 1`), nil)
 
-				mockCfn := climocks.NewMockprojectResourcesGetter(ctrl)
+				mockCfn := mocks.NewMockprojectResourcesGetter(ctrl)
 				mockCfn.EXPECT().
 					GetAppResourcesByRegion(mockApp, "us-west-2").
-					Return(&archer.ProjectRegionalResources{
+					Return(&stack.AppRegionalResources{
 						RepositoryURLs: map[string]string{
 							"api": "some url",
 						},
 					}, nil)
 
-				mockAddons := climocks.NewMocktemplater(ctrl)
+				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
 					Return("", &addons.ErrDirNotExist{})
 
@@ -446,8 +445,8 @@ count: 1`), nil)
 					opts.addonsSvc = mockAddons
 					return nil
 				}
-				opts.stackSerializer = func(_ interface{}, _ *archer.Environment, _ *archer.Project, _ stack.RuntimeConfig) (stackSerializer, error) {
-					mockStackSerializer := climocks.NewMockstackSerializer(ctrl)
+				opts.stackSerializer = func(_ interface{}, _ *config.Environment, _ *config.Application, _ stack.RuntimeConfig) (stackSerializer, error) {
+					mockStackSerializer := mocks.NewMockstackSerializer(ctrl)
 					mockStackSerializer.EXPECT().Template().Return("mystack", nil)
 					mockStackSerializer.EXPECT().SerializedParameters().Return("myparams", nil)
 					return mockStackSerializer, nil

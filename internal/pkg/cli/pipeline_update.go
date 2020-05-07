@@ -7,13 +7,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -50,15 +49,15 @@ type updatePipelineOpts struct {
 	updatePipelineVars
 
 	pipelineDeployer pipelineDeployer
-	project          *archer.Project
+	project          *config.Application
 	prog             progress
 	region           string
-	envStore         archer.EnvironmentStore
+	envStore         environmentStore
 	ws               wsPipelineReader
 }
 
 func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
 	}

@@ -14,10 +14,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -67,8 +66,8 @@ func (s *serviceDiscovery) String() string {
 }
 
 type storeSvc interface {
-	GetEnvironment(projectName string, environmentName string) (*archer.Environment, error)
-	ListEnvironments(projectName string) ([]*archer.Environment, error)
+	GetEnvironment(projectName string, environmentName string) (*config.Environment, error)
+	ListEnvironments(projectName string) ([]*config.Environment, error)
 }
 
 type appDescriber interface {
@@ -87,7 +86,7 @@ type HumanJSONStringer interface {
 
 // WebAppDescriber retrieves information about a load balanced web application.
 type WebAppDescriber struct {
-	app             *archer.Application
+	app             *config.Service
 	enableResources bool
 
 	store            storeSvc
@@ -97,7 +96,7 @@ type WebAppDescriber struct {
 
 // NewWebAppDescriber instantiates a load balanced application describer.
 func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
-	svc, err := store.New()
+	svc, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
@@ -133,7 +132,7 @@ func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, err
 
 // Describe returns info of a web app application.
 func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.app.Project)
+	environments, err := d.store.ListEnvironments(d.app.App)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
@@ -172,7 +171,7 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 		services = appendServiceDiscovery(services, serviceDiscovery{
 			AppName:     d.app.Name,
 			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
-			ProjectName: d.app.Project,
+			ProjectName: d.app.App,
 		}, env.Name)
 		webAppEnvVars, err := d.appDescriber.EnvVars()
 		if err != nil {
@@ -200,7 +199,7 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 	return &webAppDesc{
 		AppName:          d.app.Name,
 		Type:             d.app.Type,
-		Project:          d.app.Project,
+		Project:          d.app.App,
 		Configurations:   configs,
 		Routes:           routes,
 		ServiceDiscovery: services,

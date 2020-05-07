@@ -19,10 +19,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
@@ -40,7 +41,7 @@ func TestPipelineCreation(t *testing.T) {
 		createMockSecret(t, sm, secretId)
 		appCfClient := awsCF.New(appSess)
 
-		app := archer.Project{
+		app := config.Application{
 			Name:      randStringBytes(10),
 			AccountID: appCallerInfo.Account,
 		}
@@ -152,7 +153,7 @@ func TestPipelineCreation(t *testing.T) {
 		assertStackExists(t, envCfClient, envStackName)
 
 		// Provision resources needed to support a pipeline in a region with
-		// no existing archer environment.
+		// no existing copilot environment.
 		err = appDeployer.AddPipelineResourcesToApp(
 			&app,
 			*appSess.Config.Region)
@@ -250,7 +251,7 @@ func assertStackExists(t *testing.T, cfClient *awsCF.CloudFormation, stackName s
 	return resp
 }
 
-func regionalResourcesToArtifactBuckets(t *testing.T, resources []*archer.ProjectRegionalResources) []deploy.ArtifactBucket {
+func regionalResourcesToArtifactBuckets(t *testing.T, resources []*stack.AppRegionalResources) []deploy.ArtifactBucket {
 	buckets := make([]deploy.ArtifactBucket, 0, len(resources))
 	for _, res := range resources {
 		require.True(t, res.S3Bucket != "", "S3 Bucket shouldn't be blank")

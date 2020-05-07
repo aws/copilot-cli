@@ -7,13 +7,13 @@ import (
 	"encoding"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -35,78 +35,96 @@ type actionCommand interface {
 	RecommendedActions() []string
 }
 
-// Config interfaces
+// SSM store interface.
+
+type serviceStore interface {
+	serviceCreator
+	serviceGetter
+	serviceLister
+	serviceDeleter
+}
+
+type serviceCreator interface {
+	CreateService(svc *config.Service) error
+}
+
+type serviceGetter interface {
+	GetService(appName, svcName string) (*config.Service, error)
+}
 
 type serviceLister interface {
-	ListServices(appName string) ([]*archer.Application, error)
+	ListServices(appName string) ([]*config.Service, error)
 }
 
-type appLister interface {
-	ListApps() ([]*archer.Project, error)
+type serviceDeleter interface {
+	DeleteService(appName, svcName string) error
 }
 
-// ApplicationStore is an interface for creating and listing apps.
 type applicationStore interface {
-	applicationLister
-	applicationGetter
 	applicationCreator
+	applicationGetter
+	applicationLister
 	applicationDeleter
 }
 
-// applicationLister lists all the apps .
-type applicationLister interface {
-	ListApplications() ([]*config.Application, error)
-}
-
-// applicationCreator creates a app in the underlying app manager.
 type applicationCreator interface {
 	CreateApplication(app *config.Application) error
 }
 
-// applicationGetter fetches an individual app from the underlying app manager.
 type applicationGetter interface {
 	GetApplication(appName string) (*config.Application, error)
 }
 
-// applicationDeleter deletes app resources.
+type applicationLister interface {
+	ListApplications() ([]*config.Application, error)
+}
+
 type applicationDeleter interface {
 	DeleteApplication(name string) error
 }
 
-// environmentStore can List, Create, Get, and Delete environments in an underlying app management store.
 type environmentStore interface {
-	environmentLister
-	environmentGetter
 	environmentCreator
+	environmentGetter
+	environmentLister
 	environmentDeleter
 }
 
-// EnvironmentLister fetches and returns a list of environments from an underlying project management store.
-type environmentLister interface {
-	ListEnvironments(appName string) ([]*config.Environment, error)
-}
-
-// EnvironmentGetter fetches and returns an environment from an underlying project management store.
-type environmentGetter interface {
-	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
-}
-
-// EnvironmentCreator creates an environment in the underlying project management store.
 type environmentCreator interface {
 	CreateEnvironment(env *config.Environment) error
 }
 
-// EnvironmentDeleter deletes an environment from the underlying project management store.
+type environmentGetter interface {
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+}
+
+type environmentLister interface {
+	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
 type environmentDeleter interface {
 	DeleteEnvironment(appName, environmentName string) error
 }
 
-// Legacy config interfaces
+type storeClient interface {
+	applicationStore
+	environmentStore
+	serviceStore
+}
 
-type projectService interface {
-	archer.ProjectStore
-	archer.EnvironmentStore
-	archer.ApplicationStore
+// Secretsmanager interface.
+
+type secretsManager interface {
+	secretCreator
+	secretDeleter
+}
+
+type secretCreator interface {
+	CreateSecret(secretName, secretString string) (string, error)
+}
+
+type secretDeleter interface {
+	DeleteSecret(secretName string) error
 }
 
 type ecrService interface {
@@ -162,15 +180,6 @@ type sessionProvider interface {
 
 type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
-}
-
-type storeReader interface {
-	archer.ProjectLister
-	archer.ProjectGetter
-	archer.EnvironmentLister
-	archer.EnvironmentGetter
-	archer.ApplicationLister
-	archer.ApplicationGetter
 }
 
 type workspaceDeleter interface {
@@ -235,7 +244,7 @@ type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(projName, envName string) error
-	GetEnvironment(projectName, envName string) (*archer.Environment, error)
+	GetEnvironment(projectName, envName string) (*config.Environment, error)
 }
 
 type appDeployer interface {
@@ -244,7 +253,7 @@ type appDeployer interface {
 }
 
 type appRemover interface {
-	RemoveServiceFromApp(project *archer.Project, appName string) error
+	RemoveServiceFromApp(project *config.Application, appName string) error
 }
 
 type imageRemover interface {
@@ -256,22 +265,22 @@ type pipelineDeployer interface {
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
-	AddPipelineResourcesToApp(project *archer.Project, region string) error
+	AddPipelineResourcesToApp(app *config.Application, region string) error
 	projectResourcesGetter
 	// TODO: Add StreamPipelineCreation method
 }
 
 type projectDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
-	AddServiceToApp(project *archer.Project, appName string) error
-	AddEnvToApp(project *archer.Project, env *archer.Environment) error
-	DelegateDNSPermissions(project *archer.Project, accountID string) error
+	AddServiceToApp(app *config.Application, svcName string) error
+	AddEnvToApp(app *config.Application, env *config.Environment) error
+	DelegateDNSPermissions(app *config.Application, accountID string) error
 	DeleteApp(name string) error
 }
 
 type projectResourcesGetter interface {
-	GetAppResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
-	GetRegionalAppResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
+	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
+	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
 type deployer interface {

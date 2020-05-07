@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
@@ -126,9 +125,6 @@ func TestSelector_SelectWorkspaceService(t *testing.T) {
 	}
 }
 
-// TODO Once the serviceLister interface is updated,
-// stop using archer.Application and instead move to
-// config.Service.
 func TestSelector_Service(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockServiceLister := mocks.NewMockserviceLister(ctrl)
@@ -147,7 +143,7 @@ func TestSelector_Service(t *testing.T) {
 				mockServiceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
-					Return([]*archer.Application{}, nil).
+					Return([]*config.Service{}, nil).
 					Times(1)
 				mockPrompt.
 					EXPECT().
@@ -162,11 +158,11 @@ func TestSelector_Service(t *testing.T) {
 				mockServiceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
-					Return([]*archer.Application{
-						&archer.Application{
-							Project: appName,
-							Name:    "service1",
-							Type:    "load balanced web service",
+					Return([]*config.Service{
+						&config.Service{
+							App:  appName,
+							Name: "service1",
+							Type: "load balanced web service",
 						},
 					}, nil).
 					Times(1)
@@ -183,16 +179,16 @@ func TestSelector_Service(t *testing.T) {
 				mockServiceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
-					Return([]*archer.Application{
-						&archer.Application{
-							Project: appName,
-							Name:    "service1",
-							Type:    "load balanced web service",
+					Return([]*config.Service{
+						&config.Service{
+							App:  appName,
+							Name: "service1",
+							Type: "load balanced web service",
 						},
-						&archer.Application{
-							Project: appName,
-							Name:    "service2",
-							Type:    "backend service",
+						&config.Service{
+							App:  appName,
+							Name: "service2",
+							Type: "backend service",
 						},
 					}, nil).
 					Times(1)
@@ -212,16 +208,16 @@ func TestSelector_Service(t *testing.T) {
 				mockServiceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
-					Return([]*archer.Application{
-						&archer.Application{
-							Project: appName,
-							Name:    "service1",
-							Type:    "load balanced web service",
+					Return([]*config.Service{
+						&config.Service{
+							App:  appName,
+							Name: "service1",
+							Type: "load balanced web service",
 						},
-						&archer.Application{
-							Project: appName,
-							Name:    "service2",
-							Type:    "backend service",
+						&config.Service{
+							App:  appName,
+							Name: "service2",
+							Type: "backend service",
 						},
 					}, nil).
 					Times(1)

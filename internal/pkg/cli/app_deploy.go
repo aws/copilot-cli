@@ -9,18 +9,17 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	awscloudformation "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
@@ -48,7 +47,7 @@ type appDeployVars struct {
 type appDeployOpts struct {
 	appDeployVars
 
-	projectService   projectService
+	storeClient      storeClient
 	workspaceService wsAppReader
 	ecrService       ecrService
 	dockerService    dockerService
@@ -62,13 +61,13 @@ type appDeployOpts struct {
 	spinner progress
 
 	// cached variables
-	targetEnvironment *archer.Environment
-	targetProject     *archer.Project
-	targetApplication *archer.Application
+	targetEnvironment *config.Environment
+	targetProject     *config.Application
+	targetApplication *config.Service
 }
 
 func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
-	projectService, err := store.New()
+	storeClient, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("create project service: %w", err)
 	}
@@ -81,7 +80,7 @@ func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
 	return &appDeployOpts{
 		appDeployVars: vars,
 
-		projectService:   projectService,
+		storeClient:      storeClient,
 		workspaceService: workspaceService,
 		spinner:          termprogress.NewSpinner(),
 		dockerService:    docker.New(),
@@ -130,13 +129,13 @@ func (o *appDeployOpts) Execute() error {
 	}
 	o.targetEnvironment = env
 
-	proj, err := o.projectService.GetApplication(o.ProjectName())
+	proj, err := o.storeClient.GetApplication(o.ProjectName())
 	if err != nil {
 		return err
 	}
 	o.targetProject = proj
 
-	app, err := o.projectService.GetService(o.ProjectName(), o.AppName)
+	app, err := o.storeClient.GetService(o.ProjectName(), o.AppName)
 	if err != nil {
 		return fmt.Errorf("get application metadata: %w", err)
 	}
@@ -188,8 +187,8 @@ func (o *appDeployOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *appDeployOpts) targetEnv() (*archer.Environment, error) {
-	env, err := o.projectService.GetEnvironment(o.ProjectName(), o.EnvName)
+func (o *appDeployOpts) targetEnv() (*config.Environment, error) {
+	env, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
 	}
@@ -227,7 +226,7 @@ func (o *appDeployOpts) askEnvName() error {
 		return nil
 	}
 
-	envs, err := o.projectService.ListEnvironments(o.ProjectName())
+	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get environments for project %s from metadata store: %w", o.ProjectName(), err)
 	}
@@ -384,7 +383,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName), reader)
+	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.AppName), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -437,12 +436,12 @@ func (o *appDeployOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	switch t := mft.(type) {
 	case *manifest.LoadBalancedWebService:
 		if o.targetProject.RequiresDNSDelegation() {
-			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+			conf, err = stack.NewHTTPSLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		} else {
-			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+			conf, err = stack.NewLoadBalancedWebService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 		}
 	case *manifest.BackendService:
-		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.Project, *rc)
+		conf, err = stack.NewBackendService(t, o.targetEnvironment.Name, o.targetEnvironment.App, *rc)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}

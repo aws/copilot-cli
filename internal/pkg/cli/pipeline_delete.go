@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -49,7 +48,7 @@ type deletePipelineOpts struct {
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
 	prog             progress
-	secretsmanager   archer.SecretsManager
+	secretsmanager   secretsManager
 	ws               wsPipelineDeleter
 }
 

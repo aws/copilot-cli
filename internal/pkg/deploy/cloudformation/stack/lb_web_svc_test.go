@@ -100,7 +100,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	}{
 		"unavailable rule priority lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -109,7 +109,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		},
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockTemplater{err: errors.New("some error")}
 				c.parser = m
@@ -120,7 +120,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockTemplater{
@@ -137,7 +137,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		},
 		"render template without addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					RulePriorityLambda: "lambda",
@@ -152,7 +152,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		},
 		"render template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					NestedStack: &template.ServiceNestedStackOpts{
@@ -331,7 +331,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 	}{
 		"unavailable template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 				c.svc.parser = m
 			},
@@ -340,7 +340,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 		},
 		"render params template": {
 			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebAppReadParser(ctrl)
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
 				m.EXPECT().Parse(svcParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
 				c.svc.parser = m
 			},

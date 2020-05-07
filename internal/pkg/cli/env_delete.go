@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -55,7 +54,7 @@ type deleteEnvVars struct {
 type deleteEnvOpts struct {
 	deleteEnvVars
 	// Interfaces for dependencies.
-	storeClient   archer.EnvironmentStore
+	storeClient   environmentStore
 	rgClient      resourceGetter
 	deployClient  environmentDeployer
 	profileConfig profileNames
@@ -66,7 +65,7 @@ type deleteEnvOpts struct {
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 	}
