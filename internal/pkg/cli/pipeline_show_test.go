@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
@@ -24,7 +24,7 @@ var (
 )
 
 type showPipelineMocks struct {
-	store       *mocks.MockstoreReader
+	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
 	prompt      *mocks.Mockprompter
 	pipelineSvc *mocks.MockpipelineGetter
@@ -43,7 +43,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&archer.Project{
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
 					mocks.pipelineSvc.EXPECT().GetPipeline(mockPipelineName).Return(nil, nil),
@@ -66,7 +66,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			inPipelineName: "bad-pipeline",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&archer.Project{
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(&config.Application{
 						Name: "dinder",
 					}, nil),
 					mocks.pipelineSvc.EXPECT().GetPipeline("bad-pipeline").Return(nil, mockError),
@@ -82,7 +82,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showPipelineMocks{
@@ -189,7 +189,7 @@ stages:
 			inPipelineName: mockPipelineName,
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{{Name: "dinder"}}, nil),
+					mocks.store.EXPECT().ListApplications().Return([]*config.Application{{Name: "dinder"}}, nil),
 				)
 			},
 			expectedProject:  mockProjectName,
@@ -238,7 +238,7 @@ stages:
 			inProjectName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{}, nil),
+					mocks.store.EXPECT().ListApplications().Return([]*config.Application{}, nil),
 				)
 			},
 			expectedErr: fmt.Errorf("no project found: run %s please", color.HighlightCode("project init")),
@@ -247,7 +247,7 @@ stages:
 			inProjectName: "",
 			setupMocks: func(mocks showPipelineMocks) {
 				gomock.InOrder(
-					mocks.store.EXPECT().ListApplications().Return([]*archer.Project{
+					mocks.store.EXPECT().ListApplications().Return([]*config.Application{
 						{Name: "dinder"},
 						{Name: "badgoose"},
 					}, nil),
@@ -290,7 +290,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)

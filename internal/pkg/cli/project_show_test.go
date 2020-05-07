@@ -9,15 +9,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type showProjectMocks struct {
-	storeSvc *climocks.MockstoreReader
-	prompt   *climocks.Mockprompter
+	storeSvc *mocks.Mockstore
+	prompt   *mocks.Mockprompter
 }
 
 func TestProjectShow_Validate(t *testing.T) {
@@ -31,7 +31,7 @@ func TestProjectShow_Validate(t *testing.T) {
 			inputProject: "my-project",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name: "my-project",
 				}, nil)
 			},
@@ -54,8 +54,8 @@ func TestProjectShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showProjectMocks{
 				storeSvc: mockStoreReader,
@@ -70,7 +70,7 @@ func TestProjectShow_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeSvc: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -108,9 +108,9 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showProjectMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
-						&archer.Project{Name: "my-project"},
-						&archer.Project{Name: "archer-project"},
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
+						{Name: "my-project"},
+						{Name: "archer-project"},
 					}, nil),
 
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
@@ -131,7 +131,7 @@ func TestProjectShow_Ask(t *testing.T) {
 			inputProject: "",
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
+				m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{}, nil)
 			},
 
 			wantedError: fmt.Errorf("no project found: run `project init` to set one up, or `cd` into your workspace please"),
@@ -141,9 +141,9 @@ func TestProjectShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showProjectMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
-						&archer.Project{Name: "my-project"},
-						&archer.Project{Name: "archer-project"},
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
+						{Name: "my-project"},
+						{Name: "archer-project"},
 					}, nil),
 
 					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
@@ -159,8 +159,8 @@ func TestProjectShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showProjectMocks{
 				storeSvc: mockStoreReader,
@@ -175,7 +175,7 @@ func TestProjectShow_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeSvc: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -207,24 +207,24 @@ func TestProjectShow_Execute(t *testing.T) {
 			shouldOutputJSON: true,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
-					&archer.Application{
+				m.storeSvc.EXPECT().ListServices("my-project").Return([]*config.Service{
+					{
 						Name: "my-app",
 						Type: "lb-web-app",
 					},
 				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
+					{
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789",
 						Prod:      false,
 					},
-					&archer.Environment{
+					{
 						Name:      "prod",
 						AccountID: "123456789",
 						Region:    "us-west-1",
@@ -233,29 +233,29 @@ func TestProjectShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"project\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"project\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"project\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
+			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"App\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
 		},
 		"correctly shows human output": {
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListServices("my-project").Return([]*archer.Application{
-					&archer.Application{
+				m.storeSvc.EXPECT().ListServices("my-project").Return([]*config.Service{
+					{
 						Name: "my-app",
 						Type: "lb-web-app",
 					},
 				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
+					{
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789",
 					},
-					&archer.Environment{
+					{
 						Name:      "prod",
 						AccountID: "123456789",
 						Region:    "us-west-1",
@@ -293,7 +293,7 @@ Applications
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
@@ -306,17 +306,17 @@ Applications
 			shouldOutputJSON: false,
 
 			setupMocks: func(m showProjectMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+				m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name:   "my-project",
 					Domain: "example.com",
 				}, nil)
-				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-					&archer.Environment{
+				m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
+					{
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789",
 					},
-					&archer.Environment{
+					{
 						Name:      "prod",
 						AccountID: "123456789",
 						Region:    "us-west-1",
@@ -335,7 +335,7 @@ Applications
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showProjectMocks{
 				storeSvc: mockStoreReader,
@@ -349,8 +349,8 @@ Applications
 						projectName: projectName,
 					},
 				},
-				storeSvc: mockStoreReader,
-				w:        b,
+				store: mockStoreReader,
+				w:     b,
 			}
 
 			// WHEN

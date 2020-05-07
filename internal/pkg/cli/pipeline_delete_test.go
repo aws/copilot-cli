@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks" // TODO refactor
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
@@ -24,11 +23,11 @@ const (
 )
 
 type deletePipelineMocks struct {
-	prompt         *climocks.Mockprompter
-	prog           *climocks.Mockprogress
-	secretsmanager *awsmocks.MockSecretsManager
-	deployer       *climocks.MockpipelineDeployer
-	ws             *climocks.MockwsPipelineDeleter
+	prompt         *mocks.Mockprompter
+	prog           *mocks.Mockprogress
+	secretsmanager *mocks.MocksecretsManager
+	deployer       *mocks.MockpipelineDeployer
+	ws             *mocks.MockwsPipelineDeleter
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
@@ -87,7 +86,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
 			mocks := deletePipelineMocks{
 				ws: mockWorkspace,
 			}
@@ -154,7 +153,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt: mockPrompt,
@@ -286,11 +285,11 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSecretsManager := awsmocks.NewMockSecretsManager(ctrl)
-			mockProg := climocks.NewMockprogress(ctrl)
-			mockDeployer := climocks.NewMockpipelineDeployer(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
+			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
+			mockProg := mocks.NewMockprogress(ctrl)
+			mockDeployer := mocks.NewMockpipelineDeployer(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,

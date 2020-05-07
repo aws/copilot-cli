@@ -8,8 +8,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -44,7 +44,7 @@ type AppDescriber struct {
 
 // NewAppDescriber instantiates a new application.
 func NewAppDescriber(project, env, app string) (*AppDescriber, error) {
-	svc, err := store.New()
+	svc, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}

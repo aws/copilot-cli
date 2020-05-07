@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -35,14 +35,14 @@ type showAppOpts struct {
 	showAppVars
 
 	w             io.Writer
-	storeSvc      storeReader
+	store         store
 	describer     describer
 	ws            wsAppReader
 	initDescriber func(bool) error // Overriden in tests.
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
@@ -53,13 +53,13 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 
 	opts := &showAppOpts{
 		showAppVars: vars,
-		storeSvc:    ssmStore,
+		store:       ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
 		var d describer
-		app, err := opts.storeSvc.GetService(opts.ProjectName(), opts.appName)
+		app, err := opts.store.GetService(opts.ProjectName(), opts.appName)
 		if err != nil {
 			return err
 		}
@@ -92,12 +92,12 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.storeSvc.GetService(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
@@ -201,7 +201,7 @@ func (o *showAppOpts) askAppName() error {
 }
 
 func (o *showAppOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -224,7 +224,7 @@ func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
 }
 
 func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
-	apps, err := o.storeSvc.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}

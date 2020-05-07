@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
@@ -238,7 +237,7 @@ func TestAppTags(t *testing.T) {
 func TestToRegionalResources(t *testing.T) {
 	testCases := map[string]struct {
 		givenStackOutputs map[string]string
-		wantedResource    archer.ProjectRegionalResources
+		wantedResource    AppRegionalResources
 		wantedErr         error
 	}{
 		"should generate fully formed resource": {
@@ -248,7 +247,7 @@ func TestToRegionalResources(t *testing.T) {
 				"ECRRepofrontDASHend": "arn:aws:ecr:us-west-2:0123456789:repository/app/front-end",
 				"ECRRepobackDASHend":  "arn:aws:ecr:us-west-2:0123456789:repository/app/back-end",
 			},
-			wantedResource: archer.ProjectRegionalResources{
+			wantedResource: AppRegionalResources{
 				KMSKeyARN: "arn:aws:kms:us-west-2:01234567890:key/0000",
 				S3Bucket:  "tests3-bucket-us-west-2",
 				RepositoryURLs: map[string]string{

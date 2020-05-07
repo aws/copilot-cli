@@ -8,12 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -75,14 +74,13 @@ type initAppOpts struct {
 	// Interfaces to interact with dependencies.
 	fs           afero.Fs
 	ws           wsAppManifestWriter
-	appStore     archer.ApplicationStore
-	projGetter   archer.ProjectGetter
+	store        store
 	projDeployer projectDeployer
 	prog         progress
 	df           dockerfileParser
 
 	// Caches variables
-	proj *archer.Project
+	proj *config.Application
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -92,7 +90,7 @@ type initAppOpts struct {
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
 	}
@@ -112,8 +110,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		initAppVars: vars,
 
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		appStore:     store,
-		projGetter:   store,
+		store:        store,
 		ws:           ws,
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
@@ -172,7 +169,7 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	proj, err := o.projGetter.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
@@ -191,10 +188,10 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	if err := o.appStore.CreateService(&archer.Application{
-		Project: o.ProjectName(),
-		Name:    o.AppName,
-		Type:    o.AppType,
+	if err := o.store.CreateService(&config.Service{
+		App:  o.ProjectName(),
+		Name: o.AppName,
+		Type: o.AppType,
 	}); err != nil {
 		return fmt.Errorf("saving application %s: %w", o.AppName, err)
 	}
@@ -253,7 +250,7 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 		Port: o.AppPort,
 		Path: "/",
 	}
-	existingApps, err := o.appStore.ListServices(o.ProjectName())
+	existingApps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, err
 	}

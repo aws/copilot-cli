@@ -9,24 +9,23 @@ import (
 	"fmt"
 	"text/tabwriter"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	sess "github.com/aws/aws-sdk-go/aws/session"
 )
 
 type EnvDescription struct {
-	Environment  *archer.Environment   `json:"environment"`
-	Applications []*archer.Application `json:"applications"`
-	Tags         map[string]string     `json:"tags,omitempty"`
+	Environment  *config.Environment `json:"environment"`
+	Applications []*config.Service   `json:"applications"`
+	Tags         map[string]string   `json:"tags,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	env  *archer.Environment
-	apps []*archer.Application
+	env  *config.Environment
+	apps []*config.Service
 
 	store        storeSvc
 	sessProvider *sess.Session
@@ -34,7 +33,7 @@ type EnvDescriber struct {
 
 // NewEnvDescriber instantiates an environment describer.
 func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) {
-	svc, err := store.New()
+	svc, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}

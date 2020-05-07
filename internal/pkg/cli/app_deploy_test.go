@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
 
 func TestAppDeployOpts_Validate(t *testing.T) {
@@ -22,42 +23,42 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		inAppName     string
 		inEnvName     string
 
-		mockWs    func(m *climocks.MockwsAppReader)
-		mockStore func(m *climocks.MockprojectService)
+		mockWs    func(m *mocks.MockwsAppReader)
+		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing projects": {
-			mockWs:    func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {},
+			mockWs:    func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoProjectInWorkspace,
 		},
 		"with workspace error": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
-			mockStore: func(m *climocks.MockprojectService) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errors.New("list applications in the workspace: some error"),
 		},
 		"with application not in workspace": {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			mockStore: func(m *climocks.MockprojectService) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errors.New("application frontend not found in the workspace"),
 		},
 		"with unknown environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
-			mockWs:        func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {
+			mockWs:        func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
 			},
@@ -68,12 +69,12 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inEnvName:     "test",
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			mockStore: func(m *climocks.MockprojectService) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&archer.Environment{Name: "test"}, nil)
+					Return(&config.Environment{Name: "test"}, nil)
 			},
 		},
 	}
@@ -83,8 +84,8 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := climocks.NewMockwsAppReader(ctrl)
-			mockStore := climocks.NewMockprojectService(ctrl)
+			mockWs := mocks.NewMockwsAppReader(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			opts := appDeployOpts{
@@ -96,7 +97,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 					EnvName: tc.inEnvName,
 				},
 				workspaceService: mockWs,
-				projectService:   mockStore,
+				store:            mockStore,
 			}
 
 			// WHEN
@@ -119,9 +120,9 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		inEnvName     string
 		inImageTag    string
 
-		mockWs     func(m *climocks.MockwsAppReader)
-		mockStore  func(m *climocks.MockprojectService)
-		mockPrompt func(m *climocks.Mockprompter)
+		mockWs     func(m *mocks.MockwsAppReader)
+		mockStore  func(m *mocks.Mockstore)
+		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedAppName  string
 		wantedEnvName  string
@@ -129,22 +130,22 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		wantedError    error
 	}{
 		"no applications in the workspace": {
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			mockStore:  func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			mockStore:  func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedError: errors.New("no applications found in the workspace"),
 		},
 		"default to single application": {
 			inEnvName:  "test",
 			inImageTag: "latest",
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			mockStore:  func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			mockStore:  func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedAppName:  "frontend",
 			wantedEnvName:  "test",
@@ -153,11 +154,11 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		"prompts for application name if there are more than one option": {
 			inEnvName:  "test",
 			inImageTag: "latest",
-			mockWs: func(m *climocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "webhook"}, nil)
 			},
-			mockStore: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockStore: func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne("Select an application", "", []string{"frontend", "webhook"}).
 					Return("frontend", nil)
 			},
@@ -170,11 +171,11 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {
+			mockWs:        func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("phonetool").Return(nil, errors.New("some error"))
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 
 			wantedError: errors.New("get environments for project phonetool from metadata store: some error"),
@@ -183,11 +184,11 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{}, nil)
+			mockWs:        func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 
 			wantedError: errors.New("no environments found in project phonetool"),
@@ -196,15 +197,15 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
+			mockWs:        func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name: "test",
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 			},
 
 			wantedAppName:  "frontend",
@@ -215,9 +216,9 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inProjectName: "phonetool",
 			inAppName:     "frontend",
 			inImageTag:    "latest",
-			mockWs:        func(m *climocks.MockwsAppReader) {},
-			mockStore: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*archer.Environment{
+			mockWs:        func(m *mocks.MockwsAppReader) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name: "test",
 					},
@@ -226,7 +227,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne("Select an environment", "", []string{"test", "prod-iad"}).
 					Return("prod-iad", nil)
 			},
@@ -242,9 +243,9 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := climocks.NewMockwsAppReader(ctrl)
-			mockStore := climocks.NewMockprojectService(ctrl)
-			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockWs := mocks.NewMockwsAppReader(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			tc.mockPrompt(mockPrompt)
@@ -260,7 +261,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 					ImageTag: tc.inImageTag,
 				},
 				workspaceService: mockWs,
-				projectService:   mockStore,
+				store:            mockStore,
 			}
 
 			// WHEN
@@ -280,7 +281,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 }
 
 func TestAppDeployOpts_getAppDockerfilePath(t *testing.T) {
-	var mockWorkspace *climocks.MockwsAppReader
+	var mockWorkspace *mocks.MockwsAppReader
 
 	mockError := errors.New("mockError")
 	mockManifest := []byte(`name: appA
@@ -299,7 +300,7 @@ image:
 		"should return error if workspaceService ReadFile returns error": {
 			inputApp: "appA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = climocks.NewMockwsAppReader(controller)
+				mockWorkspace = mocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
 					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(nil, mockError),
@@ -311,7 +312,7 @@ image:
 		"should trim the manifest DockerfilePath if it contains /Dockerfile": {
 			inputApp: "appA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = climocks.NewMockwsAppReader(controller)
+				mockWorkspace = mocks.NewMockwsAppReader(controller)
 
 				gomock.InOrder(
 					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(mockManifest, nil),
@@ -346,36 +347,36 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inputApp      string
-		inEnvironment *archer.Environment
-		inProject     *archer.Project
+		inEnvironment *config.Environment
+		inProject     *config.Application
 
-		mockProjectResourcesGetter func(m *climocks.MockprojectResourcesGetter)
-		mockS3Svc                  func(m *climocks.MockartifactUploader)
-		mockAddons                 func(m *climocks.Mocktemplater)
+		mockProjectResourcesGetter func(m *mocks.MockprojectResourcesGetter)
+		mockS3Svc                  func(m *mocks.MockartifactUploader)
+		mockAddons                 func(m *mocks.Mocktemplater)
 
 		wantPath string
 		wantErr  error
 	}{
 		"should push addons template to S3 bucket": {
 			inputApp: "mockSvc",
-			inEnvironment: &archer.Environment{
+			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &archer.Project{
+			inProject: &config.Application{
 				Name: "mockApp",
 			},
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
+			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
-				}, "us-west-2").Return(&archer.ProjectRegionalResources{
+				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
 			},
-			mockAddons: func(m *climocks.Mocktemplater) {
+			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactUploader) {
+			mockS3Svc: func(m *mocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact("mockBucket", "mockSvc.addons.stack.yml", gomock.Any()).Return("https://mockS3DomainName/mockPath", nil)
 			},
 
@@ -384,46 +385,46 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		},
 		"should return error if fail to get project resources": {
 			inputApp: "mockSvc",
-			inEnvironment: &archer.Environment{
+			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &archer.Project{
+			inProject: &config.Application{
 				Name: "mockApp",
 			},
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
+			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
 				}, "us-west-2").Return(nil, mockError)
 			},
-			mockAddons: func(m *climocks.Mocktemplater) {
+			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactUploader) {},
+			mockS3Svc: func(m *mocks.MockartifactUploader) {},
 
 			wantErr: fmt.Errorf("get project resources: some error"),
 		},
 		"should return error if fail to upload to S3 bucket": {
 			inputApp: "mockSvc",
-			inEnvironment: &archer.Environment{
+			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &archer.Project{
+			inProject: &config.Application{
 				Name: "mockApp",
 			},
 
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&archer.Project{
+			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
-				}, "us-west-2").Return(&archer.ProjectRegionalResources{
+				}, "us-west-2").Return(&stack.AppRegionalResources{
 					S3Bucket: "mockBucket",
 				}, nil)
 			},
-			mockAddons: func(m *climocks.Mocktemplater) {
+			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("some data", nil)
 			},
-			mockS3Svc: func(m *climocks.MockartifactUploader) {
+			mockS3Svc: func(m *mocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact("mockBucket", "mockSvc.addons.stack.yml", gomock.Any()).Return("", mockError)
 			},
 
@@ -431,28 +432,28 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		},
 		"should return empty url if the application doesn't have any addons": {
 			inputApp: "mockSvc",
-			mockAddons: func(m *climocks.Mocktemplater) {
+			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("", &addons.ErrDirNotExist{
 					SvcName: "mockSvc",
 				})
 			},
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
-			mockS3Svc: func(m *climocks.MockartifactUploader) {
+			mockS3Svc: func(m *mocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantPath: "",
 		},
 		"should fail if addons cannot be retrieved from workspace": {
 			inputApp: "mockSvc",
-			mockAddons: func(m *climocks.Mocktemplater) {
+			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("", mockError)
 			},
-			mockProjectResourcesGetter: func(m *climocks.MockprojectResourcesGetter) {
+			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
-			mockS3Svc: func(m *climocks.MockartifactUploader) {
+			mockS3Svc: func(m *mocks.MockartifactUploader) {
 				m.EXPECT().PutArtifact(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
@@ -464,10 +465,10 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockProjectSvc := climocks.NewMockprojectService(ctrl)
-			mockProjectResourcesGetter := climocks.NewMockprojectResourcesGetter(ctrl)
-			mockS3Svc := climocks.NewMockartifactUploader(ctrl)
-			mockAddons := climocks.NewMocktemplater(ctrl)
+			mockProjectSvc := mocks.NewMockstore(ctrl)
+			mockProjectResourcesGetter := mocks.NewMockprojectResourcesGetter(ctrl)
+			mockS3Svc := mocks.NewMockartifactUploader(ctrl)
+			mockAddons := mocks.NewMocktemplater(ctrl)
 			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
 			tc.mockS3Svc(mockS3Svc)
 			tc.mockAddons(mockAddons)
@@ -476,7 +477,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				appDeployVars: appDeployVars{
 					AppName: tc.inputApp,
 				},
-				projectService:    mockProjectSvc,
+				store:             mockProjectSvc,
 				projectCFSvc:      mockProjectResourcesGetter,
 				addonsSvc:         mockAddons,
 				s3Service:         mockS3Svc,

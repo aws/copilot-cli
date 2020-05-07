@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -142,7 +142,7 @@ func (e *EnvStackConfig) StackName() string {
 
 // ToEnv inspects an environment cloudformation stack and constructs an environment
 // struct out of it (including resources like ECR Repo)
-func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment, error) {
+func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment, error) {
 	stackARN, err := arn.Parse(*stack.StackId)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract region and account from stack ID %s: %w", *stack.StackId, err)
@@ -153,9 +153,9 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*archer.Environment
 		stackOutputs[*output.OutputKey] = *output.OutputValue
 	}
 
-	return &archer.Environment{
+	return &config.Environment{
 		Name:             e.Name,
-		Project:          e.AppName,
+		App:              e.AppName,
 		Prod:             e.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,

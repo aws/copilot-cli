@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/cobra"
@@ -32,7 +32,7 @@ type appStatusOpts struct {
 	appStatusVars
 
 	w                   io.Writer
-	storeSvc            storeReader
+	store               store
 	appDescriber        serviceArnGetter
 	statusDescriber     statusDescriber
 	initAppDescriber    func(*appStatusOpts, string, string) error
@@ -40,14 +40,14 @@ type appStatusOpts struct {
 }
 
 func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
 
 	return &appStatusOpts{
 		appStatusVars: vars,
-		storeSvc:      ssmStore,
+		store:         ssmStore,
 		w:             log.OutputWriter,
 		initAppDescriber: func(o *appStatusOpts, envName, appName string) error {
 			d, err := describe.NewAppDescriber(o.ProjectName(), envName, appName)
@@ -71,17 +71,17 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appStatusOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.storeSvc.GetService(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -144,7 +144,7 @@ func (o *appStatusOpts) askProject() error {
 }
 
 func (o *appStatusOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -230,7 +230,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 }
 
 func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeSvc.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}
@@ -243,7 +243,7 @@ func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
 }
 
 func (o *appStatusOpts) retrieveAllEnvNames() ([]string, error) {
-	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
 	}

@@ -8,10 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/golang/mock/gomock"
@@ -25,25 +24,25 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		inProjectName string
 		inAppName     string
 		inEnvName     string
-		setupMocks    func(m *climocks.MockprojectService)
+		setupMocks    func(m *mocks.Mockstore)
 
 		want error
 	}{
 		"should return errNoProjectInWorkspace": {
-			setupMocks: func(m *climocks.MockprojectService) {},
+			setupMocks: func(m *mocks.Mockstore) {},
 			inAppName:  "my-app",
 			want:       errNoProjectInWorkspace,
 		},
 		"with no flag set": {
 			inProjectName: "phonetool",
-			setupMocks:    func(m *climocks.MockprojectService) {},
+			setupMocks:    func(m *mocks.Mockstore) {},
 			want:          nil,
 		},
 		"with all flag set": {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
-			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetService("phonetool", "my-app").Times(1).Return(&archer.Application{
+			setupMocks: func(m *mocks.Mockstore) {
+				m.EXPECT().GetService("phonetool", "my-app").Times(1).Return(&config.Service{
 					Name: "my-app",
 				}, nil)
 			},
@@ -52,16 +51,16 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		"with env flag set": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
-			setupMocks: func(m *climocks.MockprojectService) {
+			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&archer.Environment{Name: "test"}, nil)
+					Return(&config.Environment{Name: "test"}, nil)
 			},
 			want: nil,
 		},
 		"with unknown environment": {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
-			setupMocks: func(m *climocks.MockprojectService) {
+			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("unknown env"))
 			},
 			want: errors.New("get environment test from metadata store: unknown env"),
@@ -69,7 +68,7 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		"should return error if fail to get app name": {
 			inProjectName: "phonetool",
 			inAppName:     "my-app",
-			setupMocks: func(m *climocks.MockprojectService) {
+			setupMocks: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("phonetool", "my-app").Times(1).Return(nil, mockError)
 			},
 			want: errors.New("some error"),
@@ -80,9 +79,9 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockProjectService := climocks.NewMockprojectService(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 
-			test.setupMocks(mockProjectService)
+			test.setupMocks(mockstore)
 
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
@@ -92,7 +91,7 @@ func TestDeleteAppOpts_Validate(t *testing.T) {
 					AppName: test.inAppName,
 					EnvName: test.inEnvName,
 				},
-				projectService: mockProjectService,
+				store: mockstore,
 			}
 
 			err := opts.Validate()
@@ -118,8 +117,8 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 		skipConfirmation bool
 		inAppName        string
 
-		mockProjectService func(m *climocks.MockprojectService)
-		mockPrompt         func(m *climocks.Mockprompter)
+		mockstore  func(m *mocks.Mockstore)
+		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedApp   string
 		wantedError error
@@ -127,17 +126,17 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 		"should ask for app name": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListServices(mockProjectName).Return([]*config.Service{
+					{
 						Name: "my-app",
 					},
-					&archer.Application{
+					{
 						Name: "test-app",
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(appDeleteNamePrompt, "", []string{"my-app", "test-app"}).Times(1).Return("my-app", nil)
 			},
 
@@ -146,59 +145,59 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 		"should skip asking for app name if only one app found": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListServices(mockProjectName).Return([]*config.Service{
+					{
 						Name: "my-app",
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedApp: testAppName,
 		},
 		"returns error if no application found": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{}, nil)
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListServices(mockProjectName).Return([]*config.Service{}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedError: fmt.Errorf("couldn't find any application in the project phonetool"),
 		},
 		"returns error if fail to select application": {
 			inAppName:        "",
 			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListServices(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
+			mockstore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListServices(mockProjectName).Return([]*config.Service{
+					{
 						Name: "my-app",
 					},
-					&archer.Application{
+					{
 						Name: "test-app",
 					},
 				}, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(appDeleteNamePrompt, "", []string{"my-app", "test-app"}).Times(1).Return("", mockError)
 			},
 
 			wantedError: fmt.Errorf("select application to delete: %w", mockError),
 		},
 		"should skip confirmation": {
-			inAppName:          testAppName,
-			skipConfirmation:   true,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt:         func(m *climocks.Mockprompter) {},
+			inAppName:        testAppName,
+			skipConfirmation: true,
+			mockstore:        func(m *mocks.Mockstore) {},
+			mockPrompt:       func(m *mocks.Mockprompter) {},
 
 			wantedApp: testAppName,
 		},
 		"should wrap error returned from prompter confirmation": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			inAppName:        testAppName,
+			skipConfirmation: false,
+			mockstore:        func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
 					appDeleteConfirmHelp,
@@ -208,10 +207,10 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("app delete confirmation prompt: %w", mockError),
 		},
 		"should return error if user does not confirm app deletion": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			inAppName:        testAppName,
+			skipConfirmation: false,
+			mockstore:        func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
 					appDeleteConfirmHelp,
@@ -221,10 +220,10 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			wantedError: errAppDeleteCancelled,
 		},
 		"should return error nil if user confirms app delete": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
+			inAppName:        testAppName,
+			skipConfirmation: false,
+			mockstore:        func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
 					appDeleteConfirmHelp,
@@ -240,10 +239,10 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockProjectService := climocks.NewMockprojectService(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 			test.mockPrompt(mockPrompter)
-			test.mockProjectService(mockProjectService)
+			test.mockstore(mockstore)
 
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
@@ -254,7 +253,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 					},
 					AppName: test.inAppName,
 				},
-				projectService: mockProjectService,
+				store: mockstore,
 			}
 
 			got := opts.Ask()
@@ -272,12 +271,12 @@ func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockProjectService := climocks.NewMockprojectService(ctrl)
+	mockstore := mocks.NewMockstore(ctrl)
 	mockProjectName := "mockProjectName"
 	mockEnvName := "mockEnvName"
 	mockError := errors.New("mockError")
-	mockEnvElement := &archer.Environment{Project: mockProjectName, Name: mockEnvName}
-	mockEnvList := []*archer.Environment{
+	mockEnvElement := &config.Environment{App: mockProjectName, Name: mockEnvName}
+	mockEnvList := []*config.Environment{
 		mockEnvElement,
 	}
 
@@ -285,25 +284,25 @@ func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 		setupMocks      func()
 		inEnvName       string
 		want            error
-		wantOptsEnvList []*archer.Environment
+		wantOptsEnvList []*config.Environment
 	}{
 		"should wrap error returned from call to ListEnvironments()": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(nil, mockError)
+				mockstore.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(nil, mockError)
 			},
 			want:            fmt.Errorf("get environments: %w", mockError),
 			wantOptsEnvList: nil,
 		},
 		"should set the opts environment list": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvList, nil)
+				mockstore.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvList, nil)
 			},
 			want:            nil,
 			wantOptsEnvList: mockEnvList,
 		},
 		"should set one element to opts environment list": {
 			setupMocks: func() {
-				mockProjectService.EXPECT().GetEnvironment(gomock.Eq(mockProjectName), gomock.Eq(mockEnvName)).Return(mockEnvElement, nil)
+				mockstore.EXPECT().GetEnvironment(gomock.Eq(mockProjectName), gomock.Eq(mockEnvName)).Return(mockEnvElement, nil)
 			},
 			inEnvName:       mockEnvName,
 			want:            nil,
@@ -321,7 +320,7 @@ func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 					},
 					EnvName: test.inEnvName,
 				},
-				projectService: mockProjectService,
+				store: mockstore,
 			}
 
 			got := opts.getProjectEnvironments()
@@ -333,28 +332,28 @@ func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
 }
 
 type deleteAppMocks struct {
-	projectService *climocks.MockprojectService
-	secretsmanager *awsmocks.MockSecretsManager
+	store          *mocks.Mockstore
+	secretsmanager *mocks.MocksecretsManager
 	sessProvider   *session.Provider
-	deployer       *climocks.MockappDeployer
-	ws             *climocks.MockwsAppDeleter
-	spinner        *climocks.Mockprogress
-	appRemover     *climocks.MockappRemover
-	imageRemover   *climocks.MockimageRemover
+	deployer       *mocks.MockappDeployer
+	ws             *mocks.MockwsAppDeleter
+	spinner        *mocks.Mockprogress
+	appRemover     *mocks.MockappRemover
+	imageRemover   *mocks.MockimageRemover
 }
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
 	mockEnvName := "test"
 	mockAppName := "backend"
 	mockProjectName := "badgoose"
-	mockEnv := &archer.Environment{
-		Project:        mockProjectName,
+	mockEnv := &config.Environment{
+		App:            mockProjectName,
 		Name:           mockEnvName,
 		ManagerRoleARN: "some-arn",
 		Region:         "us-west-2",
 	}
-	mockEnvs := []*archer.Environment{mockEnv}
-	mockApp := &archer.Project{
+	mockEnvs := []*config.Environment{mockEnv}
+	mockApp := &config.Application{
 		Name: mockProjectName,
 	}
 
@@ -376,7 +375,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// getProjectEnvironments
-					mocks.projectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil),
+					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
 					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(nil),
@@ -385,13 +384,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
 					mocks.appRemover.EXPECT().RemoveServiceFromApp(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
+					mocks.store.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
 					mocks.ws.EXPECT().DeleteService(mockAppName).Return(nil),
@@ -406,7 +405,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// getProjectEnvironments
-					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.store.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
 					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(nil),
@@ -415,13 +414,13 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
 
 					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
+					mocks.store.EXPECT().GetApplication(mockProjectName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
 					mocks.appRemover.EXPECT().RemoveServiceFromApp(mockApp, mockAppName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
 
 					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
+					mocks.store.EXPECT().DeleteService(mockProjectName, mockAppName).Return(nil),
 
 					// deleteWorkspaceFile
 					mocks.ws.EXPECT().DeleteService(mockAppName).Return(nil),
@@ -436,7 +435,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
 					// getProjectEnvironments
-					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.store.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
 					mocks.deployer.EXPECT().DeleteService(gomock.Any()).Return(testError),
@@ -453,14 +452,14 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			// GIVEN
-			mockProjectService := climocks.NewMockprojectService(ctrl)
-			mockSecretsManager := awsmocks.NewMockSecretsManager(ctrl)
-			mockWorkspace := climocks.NewMockwsAppDeleter(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
+			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
+			mockWorkspace := mocks.NewMockwsAppDeleter(ctrl)
 			mockSession := session.NewProvider()
-			mockAppDeployer := climocks.NewMockappDeployer(ctrl)
-			mockAppRemover := climocks.NewMockappRemover(ctrl)
-			mockSpinner := climocks.NewMockprogress(ctrl)
-			mockImageRemover := climocks.NewMockimageRemover(ctrl)
+			mockAppDeployer := mocks.NewMockappDeployer(ctrl)
+			mockAppRemover := mocks.NewMockappRemover(ctrl)
+			mockSpinner := mocks.NewMockprogress(ctrl)
+			mockImageRemover := mocks.NewMockimageRemover(ctrl)
 			mockGetAppDeployer := func(session *awssession.Session) appDeployer {
 				return mockAppDeployer
 			}
@@ -470,7 +469,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			}
 
 			mocks := deleteAppMocks{
-				projectService: mockProjectService,
+				store:          mockstore,
 				secretsmanager: mockSecretsManager,
 				ws:             mockWorkspace,
 				sessProvider:   mockSession,
@@ -490,7 +489,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					AppName: test.inAppName,
 					EnvName: test.inEnvName,
 				},
-				projectService:   mockProjectService,
+				store:            mockstore,
 				workspaceService: mockWorkspace,
 				sessProvider:     mockSession,
 				spinner:          mockSpinner,

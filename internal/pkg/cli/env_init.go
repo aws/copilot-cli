@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -59,8 +58,7 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	projectGetter archer.ProjectGetter
-	envCreator    archer.EnvironmentCreator
+	store         store
 	envDeployer   deployer
 	projDeployer  deployer
 	identity      identityService
@@ -83,7 +81,7 @@ var initEnvProfileClients = func(o *initEnvOpts) error {
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +97,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 	return &initEnvOpts{
 		initEnvVars:        vars,
-		projectGetter:      store,
-		envCreator:         store,
+		store:              store,
 		projDeployer:       deploycfn.New(defaultSession),
 		identity:           identity.New(defaultSession),
 		profileConfig:      cfg,
@@ -132,7 +129,7 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	project, err := o.projectGetter.GetApplication(o.ProjectName())
+	project, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		// Ensure the project actually exists before we do a deployment.
 		return err
@@ -164,15 +161,15 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 4. Store the environment in SSM.
-	if err := o.envCreator.CreateEnvironment(env); err != nil {
+	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
 	log.Successf("Created environment %s in region %s under project %s.\n",
-		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.Project))
+		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.App))
 	return nil
 }
 
-func (o *initEnvOpts) deployEnv(project *archer.Project) error {
+func (o *initEnvOpts) deployEnv(project *config.Application) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -217,7 +214,7 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 	return nil
 }
 
-func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environment) error {
+func (o *initEnvOpts) addToStackset(project *config.Application, env *config.Environment) error {
 	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
 	if err := o.projDeployer.AddEnvToApp(project, env); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
@@ -228,7 +225,7 @@ func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environ
 	return nil
 }
 
-func (o *initEnvOpts) delegateDNSFromProject(project *archer.Project) error {
+func (o *initEnvOpts) delegateDNSFromProject(project *config.Application) error {
 	envAccount, err := o.envIdentity.Get()
 	if err != nil {
 		return fmt.Errorf("getting environment account ID for DNS Delegation: %w", err)

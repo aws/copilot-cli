@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/aws-sdk-go/aws"
@@ -38,7 +38,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("Deploys Application Admin Roles to CloudFormation and Creates StackSet", func(t *testing.T) {
-		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		app := config.Application{Name: randStringBytes(10), AccountID: callerInfo.Account}
 		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
 		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
@@ -116,7 +116,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	})
 
 	t.Run("Deploys Application Infrastructure (KMS Key, ECR Repo, S3 Bucket)", func(t *testing.T) {
-		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		app := config.Application{Name: randStringBytes(10), AccountID: callerInfo.Account}
 		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
 		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
@@ -187,7 +187,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		// Add an environment only
 		err = deployer.AddEnvToApp(
 			&app,
-			&archer.Environment{
+			&config.Environment{
 				Name:      "test",
 				Region:    *sess.Config.Region,
 				AccountID: "000312697014",
@@ -257,7 +257,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	})
 
 	t.Run("Deploys supporting infrastructure for pipeline (KMS Key, S3 Bucket)", func(t *testing.T) {
-		app := archer.Project{Name: randStringBytes(10), AccountID: callerInfo.Account}
+		app := config.Application{Name: randStringBytes(10), AccountID: callerInfo.Account}
 		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
 		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
@@ -324,7 +324,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		// add an environment should not create new stack instance in the same region
 		err = deployer.AddEnvToApp(
 			&app,
-			&archer.Environment{
+			&config.Environment{
 				Name:      "test",
 				Region:    *sess.Config.Region,
 				AccountID: "000312697014",

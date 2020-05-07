@@ -7,13 +7,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/route53"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -37,13 +36,13 @@ type initProjectVars struct {
 type initProjectOpts struct {
 	initProjectVars
 
-	identity     identityService
-	projectStore archer.ProjectStore
-	route53Svc   domainValidator
-	ws           wsProjectManager
-	deployer     projectDeployer
-	prompt       prompter
-	prog         progress
+	identity   identityService
+	store      applicationStore
+	route53Svc domainValidator
+	ws         wsProjectManager
+	deployer   projectDeployer
+	prompt     prompter
+	prog       progress
 }
 
 func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
@@ -51,7 +50,7 @@ func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +62,7 @@ func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
 	return &initProjectOpts{
 		initProjectVars: vars,
 		identity:        identity.New(sess),
-		projectStore:    store,
+		store:           store,
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
 		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
 		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
@@ -120,7 +119,7 @@ func (o *initProjectOpts) Ask() error {
 		return nil
 	}
 
-	existingProjects, _ := o.projectStore.ListApplications()
+	existingProjects, _ := o.store.ListApplications()
 	if len(existingProjects) == 0 {
 		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
 		return o.askNewProjectName()
@@ -164,7 +163,7 @@ func (o *initProjectOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(o.ProjectName)))
 
-	return o.projectStore.CreateApplication(&archer.Project{
+	return o.store.CreateApplication(&config.Application{
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
@@ -176,9 +175,9 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 	if err := validateProjectName(projectName); err != nil {
 		return err
 	}
-	proj, err := o.projectStore.GetApplication(projectName)
+	proj, err := o.store.GetApplication(projectName)
 	if err != nil {
-		var noSuchProjectErr *store.ErrNoSuchApplication
+		var noSuchProjectErr *config.ErrNoSuchApplication
 		if errors.As(err, &noSuchProjectErr) {
 			return nil
 		}
@@ -222,7 +221,7 @@ func (o *initProjectOpts) askNewProjectName() error {
 	return nil
 }
 
-func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*archer.Project) error {
+func (o *initProjectOpts) askSelectExistingProjectName(existingProjects []*config.Application) error {
 	var projectNames []string
 	for _, p := range existingProjects {
 		projectNames = append(projectNames, p.Name)

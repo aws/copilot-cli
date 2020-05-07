@@ -8,20 +8,20 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type showEnvMocks struct {
-	storeSvc  *climocks.MockstoreReader
-	prompt    *climocks.Mockprompter
-	describer *climocks.MockenvDescriber
+	storeSvc  *mocks.Mockstore
+	prompt    *mocks.Mockprompter
+	describer *mocks.MockenvDescriber
 }
 
 func TestEnvShow_Validate(t *testing.T) {
@@ -38,10 +38,10 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 						Name: "my-project",
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(&archer.Environment{
+					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
 				)
@@ -65,7 +65,7 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-project").Return(&archer.Project{
+					m.storeSvc.EXPECT().GetApplication("my-project").Return(&config.Application{
 						Name: "my-project",
 					}, nil),
 					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(nil, errors.New("some error")),
@@ -81,7 +81,7 @@ func TestEnvShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showEnvMocks{
 				storeSvc: mockStoreReader,
@@ -96,7 +96,7 @@ func TestEnvShow_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeSvc: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -140,14 +140,14 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
 					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 
 					// askEnvName
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
 						{Name: "my-env"},
 						{Name: "archer-env"},
 					}, nil),
@@ -165,7 +165,7 @@ func TestEnvShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
 						{
 							Name: "my-project",
 						},
@@ -183,7 +183,7 @@ func TestEnvShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
 						{
 							Name: "my-env",
 						},
@@ -212,7 +212,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			inputEnv:     "",
 
 			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{}, nil)
+				m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{}, nil)
 			},
 
 			wantedProject: "my-project",
@@ -226,7 +226,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -245,7 +245,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
@@ -265,13 +265,13 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
 					// askProject
-					m.storeSvc.EXPECT().ListApplications().Return([]*archer.Project{
+					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
 						{Name: "my-project"},
 						{Name: "archer-project"},
 					}, nil),
 					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 					//askEnvName
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*config.Environment{
 						{Name: "my-env"},
 						{Name: "archer-env"},
 					}, nil),
@@ -289,8 +289,8 @@ func TestEnvShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showEnvMocks{
 				storeSvc: mockStoreReader,
@@ -307,7 +307,7 @@ func TestEnvShow_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeSvc: mockStoreReader,
+				store: mockStoreReader,
 			}
 			// WHEN
 			err := showEnvs.Ask()
@@ -325,19 +325,19 @@ func TestEnvShow_Ask(t *testing.T) {
 
 func TestEnvShow_Execute(t *testing.T) {
 
-	mockApplications := []*archer.Application{
-		{Project: "my-project",
+	mockApplications := []*config.Service{
+		{App: "my-project",
 			Name: "my-app",
 			Type: "lb-web-app"},
-		{Project: "my-project",
+		{App: "my-project",
 			Name: "copilot-app",
 			Type: "lb-web-app"},
 	}
 	mockTags := map[string]string{"tag1": "value1", "tag2": "value2"}
 
 	mockEnv := &describe.EnvDescription{
-		Environment: &archer.Environment{
-			Project:          "my-project",
+		Environment: &config.Environment{
+			App:              "my-project",
 			Name:             "test",
 			Region:           "us-west-2",
 			AccountID:        "123456789",
@@ -353,7 +353,7 @@ func TestEnvShow_Execute(t *testing.T) {
 		inputEnv         string
 		shouldOutputJSON bool
 
-		mockEnvDescriber func(m *climocks.MockenvDescriber)
+		mockEnvDescriber func(m *mocks.MockenvDescriber)
 
 		wantedContent string
 		wantedError   error
@@ -362,18 +362,18 @@ func TestEnvShow_Execute(t *testing.T) {
 			inputEnv:         "test",
 			shouldOutputJSON: true,
 
-			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
 				gomock.InOrder(
 					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
 
-			wantedContent: "{\"environment\":{\"project\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"project\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
+			wantedContent: "{\"environment\":{\"app\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"App\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"App\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
 		},
 		"correctly shows human output": {
 			inputEnv:         "test",
 			shouldOutputJSON: false,
 
-			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
 				gomock.InOrder(
 					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
@@ -400,8 +400,8 @@ Applications
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			tc.mockEnvDescriber(mockEnvDescriber)
 
 			showEnvs := &showEnvOpts{
@@ -409,7 +409,7 @@ Applications
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts:       &GlobalOpts{},
 				},
-				storeSvc:         mockStoreReader,
+				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
 				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
 				w:                b,

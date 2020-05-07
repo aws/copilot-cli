@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
@@ -246,7 +246,7 @@ func TestStackName(t *testing.T) {
 func TestToEnv(t *testing.T) {
 	mockDeployInput := mockDeployEnvironmentInput()
 	testCases := map[string]struct {
-		expectedEnv archer.Environment
+		expectedEnv config.Environment
 		mockStack   *cloudformation.Stack
 		want        error
 	}{
@@ -259,9 +259,9 @@ func TestToEnv(t *testing.T) {
 				"arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env",
 				"arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
 				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),
-			expectedEnv: archer.Environment{
+			expectedEnv: config.Environment{
 				Name:             mockDeployInput.Name,
-				Project:          mockDeployInput.AppName,
+				App:              mockDeployInput.AppName,
 				Prod:             mockDeployInput.Prod,
 				AccountID:        "902697171733",
 				Region:           "eu-west-3",

@@ -9,8 +9,8 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -51,7 +51,7 @@ type deleteProjOpts struct {
 	deleteProjVars
 	spinner progress
 
-	store                        projectService
+	store                        store
 	ws                           workspaceDeleter
 	sessProvider                 sessionProvider
 	deployer                     deployer
@@ -62,7 +62,7 @@ type deleteProjOpts struct {
 }
 
 func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}

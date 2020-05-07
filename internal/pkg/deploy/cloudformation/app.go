@@ -7,9 +7,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -51,7 +51,7 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 
 // DelegateDNSPermissions grants the provided account ID the ability to write to this application's
 // DNS HostedZone. This allows us to perform cross account DNS delegation.
-func (cf CloudFormation) DelegateDNSPermissions(app *archer.Project, accountID string) error {
+func (cf CloudFormation) DelegateDNSPermissions(app *config.Application, accountID string) error {
 	deployApp := deploy.CreateAppInput{
 		Name:       app.Name,
 		AccountID:  app.AccountID,
@@ -82,7 +82,7 @@ func (cf CloudFormation) DelegateDNSPermissions(app *archer.Project, accountID s
 }
 
 // GetAppResourcesByRegion fetches all the regional resources for a particular region.
-func (cf CloudFormation) GetAppResourcesByRegion(app *archer.Project, region string) (*archer.ProjectRegionalResources, error) {
+func (cf CloudFormation) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
 	resources, err := cf.getResourcesForStackInstances(app, &region)
 	if err != nil {
 		return nil, fmt.Errorf("describing application resources: %w", err)
@@ -95,7 +95,7 @@ func (cf CloudFormation) GetAppResourcesByRegion(app *archer.Project, region str
 }
 
 // GetRegionalAppResources fetches all the regional resources for a particular application.
-func (cf CloudFormation) GetRegionalAppResources(app *archer.Project) ([]*archer.ProjectRegionalResources, error) {
+func (cf CloudFormation) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
 	resources, err := cf.getResourcesForStackInstances(app, nil)
 	if err != nil {
 		return nil, fmt.Errorf("describing application resources: %w", err)
@@ -103,7 +103,7 @@ func (cf CloudFormation) GetRegionalAppResources(app *archer.Project) ([]*archer
 	return resources, nil
 }
 
-func (cf CloudFormation) getResourcesForStackInstances(app *archer.Project, region *string) ([]*archer.ProjectRegionalResources, error) {
+func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, region *string) ([]*stack.AppRegionalResources, error) {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
@@ -119,7 +119,7 @@ func (cf CloudFormation) getResourcesForStackInstances(app *archer.Project, regi
 	if err != nil {
 		return nil, err
 	}
-	var regionalResources []*archer.ProjectRegionalResources
+	var regionalResources []*stack.AppRegionalResources
 	for _, summary := range summaries {
 		// Since these stacks will likely be in another region, we can't use
 		// the default cf client. Instead, we'll have to create a new client
@@ -143,7 +143,7 @@ func (cf CloudFormation) getResourcesForStackInstances(app *archer.Project, regi
 // AddServiceToApp attempts to add new service specific resources to the application resource stack.
 // Currently, this means that we'll set up an ECR repo with a policy for all envs to be able
 // to pull from it.
-func (cf CloudFormation) AddServiceToApp(app *archer.Project, svcName string) error {
+func (cf CloudFormation) AddServiceToApp(app *config.Application, svcName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
 		AccountID:      app.AccountID,
@@ -186,7 +186,7 @@ func (cf CloudFormation) AddServiceToApp(app *archer.Project, svcName string) er
 }
 
 // RemoveServiceFromApp attempts to remove service specific resources (ECR repositories) from the application resource stack.
-func (cf CloudFormation) RemoveServiceFromApp(app *archer.Project, svcName string) error {
+func (cf CloudFormation) RemoveServiceFromApp(app *config.Application, svcName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,
@@ -228,7 +228,7 @@ func (cf CloudFormation) RemoveServiceFromApp(app *archer.Project, svcName strin
 // AddEnvToApp takes a new environment and updates the application configuration
 // with new Account IDs in resource policies (KMS Keys and ECR Repos) - and
 // sets up a new stack instance if the environment is in a new region.
-func (cf CloudFormation) AddEnvToApp(app *archer.Project, env *archer.Environment) error {
+func (cf CloudFormation) AddEnvToApp(app *config.Application, env *config.Environment) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:           app.Name,
 		AccountID:      app.AccountID,
@@ -285,7 +285,7 @@ var getRegionFromClient = func(client sdkcloudformationiface.CloudFormationAPI) 
 // a pipeline in the application region (i.e. the same region that hosts our SSM store).
 // This is necessary because the application region might not contain any environment.
 func (cf CloudFormation) AddPipelineResourcesToApp(
-	app *archer.Project, appRegion string) error {
+	app *config.Application, appRegion string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
 		Name:      app.Name,
 		AccountID: app.AccountID,

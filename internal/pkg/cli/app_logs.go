@@ -9,10 +9,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/cobra"
@@ -49,13 +48,13 @@ type appLogsOpts struct {
 	endTime   int64
 
 	w             io.Writer
-	storeSvc      storeReader
-	initCwLogsSvc func(*appLogsOpts, *archer.Environment) error // Overriden in tests.
+	store         store
+	initCwLogsSvc func(*appLogsOpts, *config.Environment) error // Overriden in tests.
 	cwlogsSvc     map[string]cwlogService
 }
 
 func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
@@ -63,8 +62,8 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 	return &appLogsOpts{
 		appLogsVars: vars,
 		w:           log.OutputWriter,
-		storeSvc:    ssmStore,
-		initCwLogsSvc: func(o *appLogsOpts, env *archer.Environment) error {
+		store:       ssmStore,
+		initCwLogsSvc: func(o *appLogsOpts, env *config.Environment) error {
 			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err
@@ -79,7 +78,7 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appLogsOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeSvc.GetApplication(o.ProjectName())
+		_, err := o.store.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -197,7 +196,7 @@ func (o *appLogsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpt
 
 func (o *appLogsOpts) askAppEnvName() error {
 	var appNames []string
-	var envs []*archer.Environment
+	var envs []*config.Environment
 	var err error
 	if o.appName == "" {
 		appNames, err = o.retrieveAllAppNames()
@@ -208,7 +207,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.ProjectName()))
 		}
 	} else {
-		app, err := o.storeSvc.GetService(o.ProjectName(), o.appName)
+		app, err := o.store.GetService(o.ProjectName(), o.appName)
 		if err != nil {
 			return fmt.Errorf("get application: %w", err)
 		}
@@ -216,7 +215,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 	}
 
 	if o.envName == "" {
-		envs, err = o.storeSvc.ListEnvironments(o.ProjectName())
+		envs, err = o.store.ListEnvironments(o.ProjectName())
 		if err != nil {
 			return fmt.Errorf("list environments: %w", err)
 		}
@@ -224,11 +223,11 @@ func (o *appLogsOpts) askAppEnvName() error {
 			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.ProjectName()))
 		}
 	} else {
-		env, err := o.storeSvc.GetEnvironment(o.ProjectName(), o.envName)
+		env, err := o.store.GetEnvironment(o.ProjectName(), o.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
-		envs = []*archer.Environment{env}
+		envs = []*config.Environment{env}
 	}
 
 	appEnvs := make(map[string]appEnv)
@@ -282,7 +281,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 }
 
 func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
-	projs, err := o.storeSvc.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -294,7 +293,7 @@ func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
 }
 
 func (o *appLogsOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeSvc.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}

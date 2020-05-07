@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	archer "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	config "github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -36,10 +36,10 @@ func (m *MockstoreSvc) EXPECT() *MockstoreSvcMockRecorder {
 }
 
 // GetEnvironment mocks base method
-func (m *MockstoreSvc) GetEnvironment(projectName, environmentName string) (*archer.Environment, error) {
+func (m *MockstoreSvc) GetEnvironment(projectName, environmentName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEnvironment", projectName, environmentName)
-	ret0, _ := ret[0].(*archer.Environment)
+	ret0, _ := ret[0].(*config.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -51,10 +51,10 @@ func (mr *MockstoreSvcMockRecorder) GetEnvironment(projectName, environmentName 
 }
 
 // ListEnvironments mocks base method
-func (m *MockstoreSvc) ListEnvironments(projectName string) ([]*archer.Environment, error) {
+func (m *MockstoreSvc) ListEnvironments(projectName string) ([]*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEnvironments", projectName)
-	ret0, _ := ret[0].([]*archer.Environment)
+	ret0, _ := ret[0].([]*config.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

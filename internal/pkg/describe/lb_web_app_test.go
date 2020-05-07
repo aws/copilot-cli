@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
@@ -143,9 +143,9 @@ func TestWebAppDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WebAppDescriber{
-				app: &archer.Application{
-					Project: testProject,
-					Name:    testApp,
+				app: &config.Service{
+					App:  testProject,
+					Name: testApp,
 				},
 				appDescriber:     mockAppDescriber,
 				initAppDescriber: func(string) error { return nil },
@@ -178,13 +178,13 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 	)
 	mockErr := errors.New("some error")
 	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
-	testEnvironment := archer.Environment{
-		Project: testProject,
-		Name:    testEnv,
+	testEnvironment := config.Environment{
+		App:  testProject,
+		Name: testEnv,
 	}
-	prodEnvironment := archer.Environment{
-		Project: testProject,
-		Name:    prodEnv,
+	prodEnvironment := config.Environment{
+		App:  testProject,
+		Name: prodEnv,
 	}
 	testCases := map[string]struct {
 		shouldOutputResources bool
@@ -205,7 +205,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve URI": {
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
 					m.appDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
@@ -216,7 +216,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve application deployment configuration": {
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -240,7 +240,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
 					m.appDescriber.EXPECT().EnvOutputs().Return(map[string]string{
@@ -268,7 +268,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
 					m.appDescriber.EXPECT().EnvOutputs().Return(nil, mockNotExistErr),
@@ -290,7 +290,7 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m webAppDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*archer.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
 						&testEnvironment,
 						&prodEnvironment,
 					}, nil),
@@ -424,9 +424,9 @@ func TestWebAppDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WebAppDescriber{
-				app: &archer.Application{
-					Project: testProject,
-					Name:    testApp,
+				app: &config.Service{
+					App:  testProject,
+					Name: testApp,
 				},
 				enableResources:  tc.shouldOutputResources,
 				store:            mockStore,

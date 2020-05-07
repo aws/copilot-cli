@@ -7,9 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"text/tabwriter"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
 
@@ -17,8 +17,8 @@ import (
 type Project struct {
 	Name string                `json:"name"`
 	URI  string                `json:"uri"`
-	Envs []*archer.Environment `json:"environments"`
-	Apps []*archer.Application `json:"applications"`
+	Envs []*config.Environment `json:"environments"`
+	Apps []*config.Service     `json:"applications"`
 }
 
 // JSONString returns the stringified Project struct with json format.

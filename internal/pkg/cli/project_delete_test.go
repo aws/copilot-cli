@@ -4,12 +4,14 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
@@ -19,6 +21,7 @@ import (
 )
 
 func TestDeleteProjectOpts_Validate(t *testing.T) {
+	const mockProjectName = "phonetool"
 	tests := map[string]struct {
 		projectName string
 
@@ -52,9 +55,9 @@ func TestDeleteProjectOpts_Validate(t *testing.T) {
 }
 
 func TestDeleteProjectOpts_Ask(t *testing.T) {
-
+	const mockProjectName = "phonetool"
 	var mockPrompter *mocks.Mockprompter
-
+	mockError := errors.New("some error")
 	tests := map[string]struct {
 		skipConfirmation bool
 
@@ -126,15 +129,16 @@ func TestDeleteProjectOpts_Ask(t *testing.T) {
 }
 
 func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
-	var mockStore *mocks.MockprojectService
-
+	var mockStore *mocks.Mockstore
+	const mockProjectName = "phonetool"
+	mockError := errors.New("some error")
 	tests := map[string]struct {
 		setupMocks func(ctrl *gomock.Controller)
 		want       error
 	}{
 		"return error is listing applications fails": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockprojectService(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -144,7 +148,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 		},
 		"return nil if no apps returned from listing applications": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockprojectService(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -176,8 +180,9 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 }
 
 func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
-
-	var mockStore *mocks.MockprojectService
+	const mockProjectName = "phonetool"
+	mockError := errors.New("some error")
+	var mockStore *mocks.Mockstore
 
 	tests := map[string]struct {
 		setupMocks func(ctrl *gomock.Controller)
@@ -185,7 +190,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 	}{
 		"return error is listing applications fails": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockprojectService(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -195,7 +200,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 		},
 		"return nil if no apps returned from listing applications": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockprojectService(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -229,7 +234,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 
 type deleteProjectMocks struct {
 	spinner         *mocks.Mockprogress
-	store           *mocks.MockprojectService
+	store           *mocks.Mockstore
 	ws              *mocks.MockworkspaceDeleter
 	sessProvider    *session.Provider
 	deployer        *mocks.Mockdeployer
@@ -240,21 +245,22 @@ type deleteProjectMocks struct {
 }
 
 func TestDeleteProjectOpts_Execute(t *testing.T) {
-	mockApps := []*archer.Application{
-		&archer.Application{
+	const mockProjectName = "phonetool"
+	mockApps := []*config.Service{
+		{
 			Name: "webapp",
 		},
 	}
-	mockEnvs := []*archer.Environment{
-		&archer.Environment{
+	mockEnvs := []*config.Environment{
+		{
 			Name: "staging",
 		},
 	}
-	mockApp := &archer.Project{
+	mockApp := &config.Application{
 		Name: "badgoose",
 	}
-	mockResources := []*archer.ProjectRegionalResources{
-		&archer.ProjectRegionalResources{
+	mockResources := []*stack.AppRegionalResources{
+		&stack.AppRegionalResources{
 			Region:   "us-west-2",
 			S3Bucket: "goose-bucket",
 		},
@@ -358,7 +364,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSpinner := mocks.NewMockprogress(ctrl)
-			mockStore := mocks.NewMockprojectService(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockworkspaceDeleter(ctrl)
 			mockSession := session.NewProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)

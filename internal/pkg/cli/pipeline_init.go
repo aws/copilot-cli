@@ -11,12 +11,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
@@ -67,17 +66,17 @@ type initPipelineOpts struct {
 	initPipelineVars
 	// Interfaces to interact with dependencies.
 	workspace      wsPipelineWriter
-	secretsmanager archer.SecretsManager
+	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
 	cfnClient      projectResourcesGetter
-	storeSvc       storeReader
+	store          store
 
 	// Outputs stored on successful actions.
 	secretName string
 
 	// Caches variables
-	projectEnvs []*archer.Environment
+	projectEnvs []*config.Environment
 	repoURLs    []string
 	fsUtils     *afero.Afero
 	buffer      bytes.Buffer
@@ -96,11 +95,11 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		fsUtils:          &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
-	opts.storeSvc = ssmStore
+	opts.store = ssmStore
 
 	projectEnvs, err := opts.getEnvs()
 	if err != nil {
@@ -327,7 +326,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	proj, err := o.storeSvc.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
 	}
@@ -489,8 +488,8 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 	return nil
 }
 
-func (o *initPipelineOpts) getEnvs() ([]*archer.Environment, error) {
-	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
+func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("could not list environments for project %s: %w", o.ProjectName(), err)
 	}

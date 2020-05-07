@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
@@ -158,7 +158,7 @@ func (s *Source) Owner() (string, error) {
 }
 
 // PipelineStage represents configuration for each deployment stage
-// of a workspace. A stage consists of the Archer Environment the pipeline
+// of a workspace. A stage consists of the Config Environment the pipeline
 // is deloying to and the containerized services that will be deployed.
 type PipelineStage struct {
 	*AssociatedEnvironment
@@ -168,19 +168,19 @@ type PipelineStage struct {
 // ServiceTemplatePath returns the full path to the service CFN template
 // built during the build stage.
 func (s *PipelineStage) ServiceTemplatePath(svcName string) string {
-	return fmt.Sprintf(archer.AppCfnTemplateNameFormat, svcName)
+	return fmt.Sprintf(config.ServiceCfnTemplateNameFormat, svcName)
 }
 
 // ServiceTemplateConfigurationPath returns the full path to the service CFN
 // template configuration file built during the build stage.
 func (s *PipelineStage) ServiceTemplateConfigurationPath(svcName string) string {
-	return fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat,
+	return fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat,
 		svcName, s.Name,
 	)
 }
 
 // AssociatedEnvironment defines the necessary information a pipline stage
-// needs for an Archer Environment.
+// needs for an Config Environment.
 type AssociatedEnvironment struct {
 	// Name of the environment, must be unique within an application.
 	// This is also the name of the pipeline stage.

@@ -8,12 +8,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -51,7 +50,7 @@ type deleteAppOpts struct {
 	deleteAppVars
 
 	// Interfaces to dependencies.
-	projectService   projectService
+	store            store
 	workspaceService wsAppDeleter
 	sessProvider     sessionProvider
 	spinner          progress
@@ -60,7 +59,7 @@ type deleteAppOpts struct {
 	getImageRemover  func(session *awssession.Session) imageRemover
 
 	// Internal state.
-	projectEnvironments []*archer.Environment
+	projectEnvironments []*config.Environment
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
@@ -69,7 +68,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		return nil, fmt.Errorf("intialize workspace service: %w", err)
 	}
 
-	projectService, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("create project service: %w", err)
 	}
@@ -84,7 +83,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		deleteAppVars: vars,
 
 		workspaceService: workspaceService,
-		projectService:   projectService,
+		store:            store,
 		spinner:          termprogress.NewSpinner(),
 		sessProvider:     provider,
 		appRemover:       cloudformation.New(defaultSession),
@@ -103,7 +102,7 @@ func (o *deleteAppOpts) Validate() error {
 		return errNoProjectInWorkspace
 	}
 	if o.AppName != "" {
-		if _, err := o.projectService.GetService(o.ProjectName(), o.AppName); err != nil {
+		if _, err := o.store.GetService(o.ProjectName(), o.AppName); err != nil {
 			return err
 		}
 	}
@@ -173,8 +172,8 @@ func (o *deleteAppOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *deleteAppOpts) targetEnv() (*archer.Environment, error) {
-	env, err := o.projectService.GetEnvironment(o.ProjectName(), o.EnvName)
+func (o *deleteAppOpts) targetEnv() (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
 	}
@@ -207,7 +206,7 @@ func (o *deleteAppOpts) askAppName() error {
 }
 
 func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
-	apps, err := o.projectService.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get app names: %w", err)
 	}
@@ -226,7 +225,7 @@ func (o *deleteAppOpts) getProjectEnvironments() error {
 		}
 		o.projectEnvironments = append(o.projectEnvironments, env)
 	} else {
-		envs, err := o.projectService.ListEnvironments(o.ProjectName())
+		envs, err := o.store.ListEnvironments(o.ProjectName())
 
 		if err != nil {
 			return fmt.Errorf("get environments: %w", err)
@@ -291,7 +290,7 @@ func (o *deleteAppOpts) emptyECRRepos() error {
 }
 
 func (o *deleteAppOpts) removeAppProjectResources() error {
-	proj, err := o.projectService.GetApplication(o.projectName)
+	proj, err := o.store.GetApplication(o.projectName)
 	if err != nil {
 		return err
 	}
@@ -309,7 +308,7 @@ func (o *deleteAppOpts) removeAppProjectResources() error {
 }
 
 func (o *deleteAppOpts) deleteSSMParam() error {
-	if err := o.projectService.DeleteService(o.projectName, o.AppName); err != nil {
+	if err := o.store.DeleteService(o.projectName, o.AppName); err != nil {
 		return fmt.Errorf("delete app %s from project %s: %w", o.AppName, o.projectName, err)
 	}
 

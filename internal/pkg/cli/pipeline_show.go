@@ -9,9 +9,9 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -37,12 +37,12 @@ type showPipelineOpts struct {
 
 	// Interfaces to dependencies
 	ws          wsPipelineReader
-	store       storeReader
+	store       applicationStore
 	pipelineSvc pipelineGetter
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}

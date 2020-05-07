@@ -12,12 +12,11 @@ import (
 	"path/filepath"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -54,14 +53,14 @@ type packageAppOpts struct {
 	addonsSvc       templater
 	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
 	ws              wsAppReader
-	store           projectService
+	store           store
 	describer       projectResourcesGetter
 	stackWriter     io.Writer
 	paramsWriter    io.Writer
 	addonsWriter    io.Writer
 	fs              afero.Fs
 	runner          runner
-	stackSerializer func(mft interface{}, env *archer.Environment, proj *archer.Project, rc stack.RuntimeConfig) (stackSerializer, error)
+	stackSerializer func(mft interface{}, env *config.Environment, proj *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
 func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
@@ -69,7 +68,7 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't connect to application datastore: %w", err)
 	}
@@ -92,7 +91,7 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
-	opts.stackSerializer = func(mft interface{}, env *archer.Environment, proj *archer.Project, rc stack.RuntimeConfig) (stackSerializer, error) {
+	opts.stackSerializer = func(mft interface{}, env *config.Environment, proj *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
@@ -275,7 +274,7 @@ type appCfnTemplates struct {
 }
 
 // getAppTemplates returns the CloudFormation stack's template and its parameters for the application.
-func (o *packageAppOpts) getAppTemplates(env *archer.Environment) (*appCfnTemplates, error) {
+func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTemplates, error) {
 	raw, err := o.ws.ReadServiceManifest(o.AppName)
 	if err != nil {
 		return nil, err
@@ -328,7 +327,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(archer.AppCfnTemplateNameFormat, o.AppName))
+		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.AppName))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -336,7 +335,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 	o.stackWriter = templateFile
 
 	paramsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(archer.AppCfnTemplateConfigurationNameFormat, o.AppName, o.EnvName))
+		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.AppName, o.EnvName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
@@ -348,7 +347,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 
 func (o *packageAppOpts) setAddonsFileWriter() error {
 	addonsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(archer.AddonsCfnTemplateNameFormat, o.AppName))
+		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.AppName))
 	addonsFile, err := o.fs.Create(addonsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", addonsPath, err)

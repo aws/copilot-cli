@@ -8,12 +8,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -55,7 +54,7 @@ type deleteEnvVars struct {
 type deleteEnvOpts struct {
 	deleteEnvVars
 	// Interfaces for dependencies.
-	storeClient   archer.EnvironmentStore
+	store         environmentStore
 	rgClient      resourceGetter
 	deployClient  environmentDeployer
 	profileConfig profileNames
@@ -66,7 +65,7 @@ type deleteEnvOpts struct {
 }
 
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to ecs-cli metadata store: %w", err)
 	}
@@ -77,7 +76,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 
 	return &deleteEnvOpts{
 		deleteEnvVars: vars,
-		storeClient:   store,
+		store:         store,
 		profileConfig: cfg,
 		prog:          termprogress.NewSpinner(),
 		initProfileClients: func(o *deleteEnvOpts) error {
@@ -151,7 +150,7 @@ func (o *deleteEnvOpts) RecommendedActions() []string {
 }
 
 func (o *deleteEnvOpts) validateEnvName() error {
-	if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
+	if _, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
 		return err
 	}
 	return nil
@@ -198,7 +197,7 @@ func (o *deleteEnvOpts) askEnvName() error {
 		return nil
 	}
 
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("list environments under project %s: %w", o.ProjectName(), err)
 	}
@@ -272,7 +271,7 @@ func (o *deleteEnvOpts) deleteStack() bool {
 }
 
 func (o *deleteEnvOpts) deleteFromStore() {
-	if err := o.storeClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
+	if err := o.store.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
 		log.Infof("Failed to remove environment %s from project %s store: %v\n", o.EnvName, o.ProjectName(), err)
 	}
 }

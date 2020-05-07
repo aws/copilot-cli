@@ -12,8 +12,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -40,17 +39,15 @@ type listAppVars struct {
 type listAppOpts struct {
 	listAppVars
 
-	applications  []*archer.Application
-	appLister     archer.ApplicationLister
-	projectGetter archer.ProjectGetter
-	projectLister archer.ProjectLister
+	applications []*config.Service
+	store        store
 
 	ws wsAppReader
 	w  io.Writer
 }
 
 func newListAppOpts(vars listAppVars) (*listAppOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -62,16 +59,14 @@ func newListAppOpts(vars listAppVars) (*listAppOpts, error) {
 	return &listAppOpts{
 		listAppVars: vars,
 
-		projectGetter: ssmStore,
-		appLister:     ssmStore,
-		projectLister: ssmStore,
-		ws:            ws,
-		w:             os.Stdout,
+		store: ssmStore,
+		ws:    ws,
+		w:     os.Stdout,
 	}, nil
 }
 
 func (opts *listAppOpts) selectProject() (string, error) {
-	projs, err := opts.projectLister.ListApplications()
+	projs, err := opts.store.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -92,7 +87,7 @@ func (opts *listAppOpts) selectProject() (string, error) {
 }
 
 func (opts *listAppOpts) localAppsFilter(appNames []string) {
-	var filtered []*archer.Application
+	var filtered []*config.Service
 	isLocal := make(map[string]bool)
 	for _, name := range appNames {
 		isLocal[name] = true
@@ -123,11 +118,11 @@ func (opts *listAppOpts) Ask() error {
 // Execute lists the applications through the prompt.
 func (opts *listAppOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its applications.
-	if _, err := opts.projectGetter.GetApplication(opts.ProjectName()); err != nil {
+	if _, err := opts.store.GetApplication(opts.ProjectName()); err != nil {
 		return err
 	}
 
-	apps, err := opts.appLister.ListServices(opts.ProjectName())
+	apps, err := opts.store.ListServices(opts.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -174,7 +169,7 @@ func (opts *listAppOpts) humanOutput() {
 
 func (opts *listAppOpts) jsonOutput() (string, error) {
 	type serializedApps struct {
-		Applications []*archer.Application `json:"applications"`
+		Applications []*config.Service `json:"applications"`
 	}
 	b, err := json.Marshal(serializedApps{Applications: opts.applications})
 	if err != nil {

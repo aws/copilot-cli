@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/cobra"
@@ -24,19 +23,19 @@ type showProjectVars struct {
 type showProjectOpts struct {
 	showProjectVars
 
-	storeSvc storeReader
-	w        io.Writer
+	store store
+	w     io.Writer
 }
 
 func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
-	ssmStore, err := store.New()
+	ssmStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
 
 	return &showProjectOpts{
 		showProjectVars: vars,
-		storeSvc:        ssmStore,
+		store:           ssmStore,
 		w:               log.OutputWriter,
 	}, nil
 }
@@ -44,7 +43,7 @@ func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showProjectOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeSvc.GetApplication(o.ProjectName())
+		_, err := o.store.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -82,30 +81,30 @@ func (o *showProjectOpts) Execute() error {
 }
 
 func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
-	proj, err := o.storeSvc.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
-	envs, err := o.storeSvc.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environment: %w", err)
 	}
-	apps, err := o.storeSvc.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
-	var envsToSerialize []*archer.Environment
+	var envsToSerialize []*config.Environment
 	for _, env := range envs {
-		envsToSerialize = append(envsToSerialize, &archer.Environment{
+		envsToSerialize = append(envsToSerialize, &config.Environment{
 			Name:      env.Name,
 			AccountID: env.AccountID,
 			Region:    env.Region,
 			Prod:      env.Prod,
 		})
 	}
-	var appsToSerialize []*archer.Application
+	var appsToSerialize []*config.Service
 	for _, app := range apps {
-		appsToSerialize = append(appsToSerialize, &archer.Application{
+		appsToSerialize = append(appsToSerialize, &config.Service{
 			Name: app.Name,
 			Type: app.Type,
 		})
@@ -143,7 +142,7 @@ func (o *showProjectOpts) askProject() error {
 }
 
 func (o *showProjectOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list project: %w", err)
 	}
