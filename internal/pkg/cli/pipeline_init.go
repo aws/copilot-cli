@@ -70,7 +70,7 @@ type initPipelineOpts struct {
 	parser         template.Parser
 	runner         runner
 	cfnClient      projectResourcesGetter
-	storeClient    storeClient
+	store          store
 
 	// Outputs stored on successful actions.
 	secretName string
@@ -99,7 +99,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
-	opts.storeClient = ssmStore
+	opts.store = ssmStore
 
 	projectEnvs, err := opts.getEnvs()
 	if err != nil {
@@ -326,7 +326,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	proj, err := o.storeClient.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
 	}
@@ -489,7 +489,7 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 }
 
 func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("could not list environments for project %s: %w", o.ProjectName(), err)
 	}

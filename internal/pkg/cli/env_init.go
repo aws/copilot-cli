@@ -58,7 +58,7 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	storeClient   storeClient
+	store         store
 	envDeployer   deployer
 	projDeployer  deployer
 	identity      identityService
@@ -97,7 +97,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 	return &initEnvOpts{
 		initEnvVars:        vars,
-		storeClient:        store,
+		store:              store,
 		projDeployer:       deploycfn.New(defaultSession),
 		identity:           identity.New(defaultSession),
 		profileConfig:      cfg,
@@ -129,7 +129,7 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	project, err := o.storeClient.GetApplication(o.ProjectName())
+	project, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		// Ensure the project actually exists before we do a deployment.
 		return err
@@ -161,7 +161,7 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 4. Store the environment in SSM.
-	if err := o.storeClient.CreateEnvironment(env); err != nil {
+	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
 	log.Successf("Created environment %s in region %s under project %s.\n",

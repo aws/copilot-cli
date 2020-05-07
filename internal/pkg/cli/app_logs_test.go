@@ -38,7 +38,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		inputEndTime     string
 		inputSince       time.Duration
 
-		mockStoreClient  func(m *mocks.MockstoreClient)
+		mockstore        func(m *mocks.Mockstore)
 		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
 
 		wantedError error
@@ -47,7 +47,7 @@ func TestAppLogs_Validate(t *testing.T) {
 			// default value for limit and since flags
 			inputLimit: 10,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -57,7 +57,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"invalid project name": {
 			inputProject: "my-project",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
@@ -70,7 +70,7 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputSince:     mockSince,
 			inputStartTime: mockStartTime,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -81,7 +81,7 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputFollow:  true,
 			inputEndTime: mockEndTime,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -91,7 +91,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"returns error if invalid start time flag value": {
 			inputStartTime: mockBadStartTime,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -101,7 +101,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"returns error if invalid end time flag value": {
 			inputEndTime: mockBadEndTime,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -111,7 +111,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"returns error if invalid since flag value": {
 			inputSince: -mockSince,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -121,7 +121,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"returns error if limit value is below limit": {
 			inputLimit: -1,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -131,7 +131,7 @@ func TestAppLogs_Validate(t *testing.T) {
 		"returns error if limit value is above limit": {
 			inputLimit: 10001,
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
+			mockstore: func(m *mocks.Mockstore) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -145,8 +145,8 @@ func TestAppLogs_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreClient := mocks.NewMockstoreClient(ctrl)
-			tc.mockStoreClient(mockStoreClient)
+			mockstore := mocks.NewMockstore(ctrl)
+			tc.mockstore(mockstore)
 
 			appLogs := &appLogsOpts{
 				appLogsVars: appLogsVars{
@@ -161,7 +161,7 @@ func TestAppLogs_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient:   mockStoreClient,
+				store:         mockstore,
 				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),
 			}
@@ -185,7 +185,7 @@ func TestAppLogs_Ask(t *testing.T) {
 		inputApplication string
 		inputEnvName     string
 
-		mockStoreClient  func(m *mocks.MockstoreClient)
+		mockstore        func(m *mocks.Mockstore)
 		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
 		mockPrompter     func(m *mocks.Mockprompter)
 
@@ -196,7 +196,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvName:     "mockEnv",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
 					Name: "mockSvc",
 				}, nil)
@@ -220,7 +220,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvName:     "mockEnv",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
@@ -235,7 +235,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvName:     "mockEnv",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
 					Name: "mockSvc",
 				}, nil)
@@ -252,7 +252,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputProject:     "mockApp",
 			inputApplication: "mockSvc",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
 					Name: "mockSvc",
 				}, nil)
@@ -289,7 +289,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			inputProject: "mockApp",
 			inputEnvName: "mockEnv",
 
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 					Name: "mockEnv",
 				}, nil)
@@ -317,7 +317,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: nil,
 		},
 		"retrieve app name from ssm store": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -354,7 +354,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: nil,
 		},
 		"skip selecting if only one deployed app found": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -390,7 +390,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: nil,
 		},
 		"returns error if fail to list projects": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return(nil, errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
@@ -401,7 +401,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("list projects: some error"),
 		},
 		"returns error if no project found": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{}, nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
@@ -412,7 +412,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("no project found: run %s please", color.HighlightCode("project init")),
 		},
 		"returns error if fail to select project": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -429,7 +429,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("select projects: some error"),
 		},
 		"returns error if fail to retrieve application": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -447,7 +447,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("list applications for project mockApp: some error"),
 		},
 		"returns error if no applications found": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -465,7 +465,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("no applications found in project %s", color.HighlightUserInput("mockApp")),
 		},
 		"returns error if fail to list environments": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -488,7 +488,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("list environments: some error"),
 		},
 		"returns error if no environment found": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -510,7 +510,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("no environments found in project %s", color.HighlightUserInput("mockApp")),
 		},
 		"returns error if fail to check application deployed or not": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -541,7 +541,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("check if the log group exists: some error"),
 		},
 		"returns error if no deployed application found": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -572,7 +572,7 @@ func TestAppLogs_Ask(t *testing.T) {
 			wantedError: fmt.Errorf("no deployed applications found in project %s", color.HighlightUserInput("mockApp")),
 		},
 		"returns error if fail to select app env name": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{
 						Name: "mockApp",
@@ -615,9 +615,9 @@ func TestAppLogs_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreClient := mocks.NewMockstoreClient(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			tc.mockStoreClient(mockStoreClient)
+			tc.mockstore(mockstore)
 			tc.mockPrompter(mockPrompter)
 
 			appLogs := &appLogsOpts{
@@ -629,7 +629,7 @@ func TestAppLogs_Ask(t *testing.T) {
 						prompt:      mockPrompter,
 					},
 				},
-				storeClient:   mockStoreClient,
+				store:         mockstore,
 				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),
 			}

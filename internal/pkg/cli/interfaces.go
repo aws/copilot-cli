@@ -106,7 +106,7 @@ type environmentDeleter interface {
 	DeleteEnvironment(appName, environmentName string) error
 }
 
-type storeClient interface {
+type store interface {
 	applicationStore
 	environmentStore
 	serviceStore

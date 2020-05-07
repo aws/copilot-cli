@@ -32,7 +32,7 @@ type showEnvOpts struct {
 	showEnvVars
 
 	w                io.Writer
-	storeClient      storeClient
+	store            store
 	describer        envDescriber
 	initEnvDescriber func(*showEnvOpts) error
 }
@@ -45,7 +45,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 
 	return &showEnvOpts{
 		showEnvVars: vars,
-		storeClient: ssmStore,
+		store:       ssmStore,
 		w:           log.OutputWriter,
 		initEnvDescriber: func(o *showEnvOpts) error {
 			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
@@ -61,12 +61,12 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -163,7 +163,7 @@ func (o *showEnvOpts) askEnvName() error {
 }
 
 func (o *showEnvOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -175,7 +175,7 @@ func (o *showEnvOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showEnvOpts) retrieveAllEnvironments() ([]string, error) {
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
 	}

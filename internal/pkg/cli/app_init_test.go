@@ -364,9 +364,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
-				mockStoreClient.EXPECT().CreateService(gomock.Any()).
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
+				mockstore.EXPECT().CreateService(gomock.Any()).
 					Do(func(app *config.Service) {
 						require.Equal(t, &config.Service{
 							Name: "frontend",
@@ -376,7 +376,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					}).
 					Return(nil)
 
-				mockStoreClient.EXPECT().GetApplication("project").Return(&config.Application{
+				mockstore.EXPECT().GetApplication("project").Return(&config.Application{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -392,7 +392,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProg.EXPECT().Stop(log.Ssuccessf(fmtAddAppToProjectComplete, "frontend"))
 
 				opts.ws = mockWriter
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 				opts.projDeployer = mockProjDeployer
 				opts.prog = mockProg
 			},
@@ -408,10 +408,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
 
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
 
-				mockStoreClient.EXPECT().GetApplication("project").Return(&config.Application{
+				mockstore.EXPECT().GetApplication("project").Return(&config.Application{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -421,7 +421,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProg := mocks.NewMockprogress(ctrl)
 
 				opts.ws = mockWriter
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 				opts.projDeployer = mockProjDeployer
 				opts.prog = mockProg
 			},
@@ -437,12 +437,12 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
 
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
+				mockstore := mocks.NewMockstore(ctrl)
 
-				mockStoreClient.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
+				mockstore.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
 
 				opts.ws = mockWriter
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 			},
 			wantedErr: errors.New("get project project: some error"),
 		},
@@ -457,9 +457,9 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
-				mockStoreClient.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
+				mockstore.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{
 					Name:      "project",
 					AccountID: "1234",
 				}, nil)
@@ -472,7 +472,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProjDeployer.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
 				opts.ws = mockWriter
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 				opts.projDeployer = mockProjDeployer
 				opts.prog = mockProg
 			},
@@ -489,11 +489,11 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
 
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
-				mockStoreClient.EXPECT().CreateService(gomock.Any()).
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
+				mockstore.EXPECT().CreateService(gomock.Any()).
 					Return(fmt.Errorf("oops"))
-				mockStoreClient.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
+				mockstore.EXPECT().GetApplication(gomock.Any()).Return(&config.Application{}, nil)
 
 				mockProjDeployer := mocks.NewMockprojectDeployer(ctrl)
 				mockProjDeployer.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
@@ -503,7 +503,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 				mockProg.EXPECT().Stop(gomock.Any())
 
 				opts.ws = mockWriter
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 				opts.projDeployer = mockProjDeployer
 				opts.prog = mockProg
 			},
@@ -558,9 +558,9 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
-				opts.storeClient = mockStoreClient
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
+				opts.store = mockstore
 			},
 		},
 		"creates manifest with / as the path when it's the only app": {
@@ -570,14 +570,14 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{
 					&config.Service{
 						Name: "frontend",
 						Type: manifest.LoadBalancedWebServiceType,
 					},
 				}, nil)
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 			},
 		},
 		"creates manifest with / as the path when it's the only LBWebApp": {
@@ -587,14 +587,14 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedPath:       "/",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{
 					&config.Service{
 						Name: "another-app",
 						Type: "backend",
 					},
 				}, nil)
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 			},
 		},
 		"creates manifest with {app name} as the path if there's another LBWebApp": {
@@ -604,14 +604,14 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 			wantedPath:       "frontend",
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockStoreClient := mocks.NewMockstoreClient(ctrl)
-				mockStoreClient.EXPECT().ListServices("project").Return([]*config.Service{
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().ListServices("project").Return([]*config.Service{
 					&config.Service{
 						Name: "another-app",
 						Type: manifest.LoadBalancedWebServiceType,
 					},
 				}, nil)
-				opts.storeClient = mockStoreClient
+				opts.store = mockstore
 			},
 		},
 	}

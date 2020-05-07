@@ -24,13 +24,13 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		inEnvName     string
 
 		mockWs    func(m *mocks.MockwsAppReader)
-		mockStore func(m *mocks.MockstoreClient)
+		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing projects": {
 			mockWs:    func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoProjectInWorkspace,
 		},
@@ -40,7 +40,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
-			mockStore: func(m *mocks.MockstoreClient) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errors.New("list applications in the workspace: some error"),
 		},
@@ -50,7 +50,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			mockStore: func(m *mocks.MockstoreClient) {},
+			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errors.New("application frontend not found in the workspace"),
 		},
@@ -58,7 +58,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
 			},
@@ -72,7 +72,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(&config.Environment{Name: "test"}, nil)
 			},
@@ -85,7 +85,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockWs := mocks.NewMockwsAppReader(ctrl)
-			mockStore := mocks.NewMockstoreClient(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
 			opts := appDeployOpts{
@@ -97,7 +97,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 					EnvName: tc.inEnvName,
 				},
 				workspaceService: mockWs,
-				storeClient:      mockStore,
+				store:            mockStore,
 			}
 
 			// WHEN
@@ -121,7 +121,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 		inImageTag    string
 
 		mockWs     func(m *mocks.MockwsAppReader)
-		mockStore  func(m *mocks.MockstoreClient)
+		mockStore  func(m *mocks.Mockstore)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedAppName  string
@@ -133,7 +133,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			mockStore:  func(m *mocks.MockstoreClient) {},
+			mockStore:  func(m *mocks.Mockstore) {},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedError: errors.New("no applications found in the workspace"),
@@ -144,7 +144,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			mockStore:  func(m *mocks.MockstoreClient) {},
+			mockStore:  func(m *mocks.Mockstore) {},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
 			wantedAppName:  "frontend",
@@ -157,7 +157,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "webhook"}, nil)
 			},
-			mockStore: func(m *mocks.MockstoreClient) {},
+			mockStore: func(m *mocks.Mockstore) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne("Select an application", "", []string{"frontend", "webhook"}).
 					Return("frontend", nil)
@@ -172,7 +172,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inAppName:     "frontend",
 			inImageTag:    "latest",
 			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("phonetool").Return(nil, errors.New("some error"))
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -185,7 +185,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inAppName:     "frontend",
 			inImageTag:    "latest",
 			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -198,7 +198,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inAppName:     "frontend",
 			inImageTag:    "latest",
 			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name: "test",
@@ -217,7 +217,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			inAppName:     "frontend",
 			inImageTag:    "latest",
 			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.MockstoreClient) {
+			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name: "test",
@@ -244,7 +244,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockWs := mocks.NewMockwsAppReader(ctrl)
-			mockStore := mocks.NewMockstoreClient(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -261,7 +261,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 					ImageTag: tc.inImageTag,
 				},
 				workspaceService: mockWs,
-				storeClient:      mockStore,
+				store:            mockStore,
 			}
 
 			// WHEN
@@ -465,7 +465,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockProjectSvc := mocks.NewMockstoreClient(ctrl)
+			mockProjectSvc := mocks.NewMockstore(ctrl)
 			mockProjectResourcesGetter := mocks.NewMockprojectResourcesGetter(ctrl)
 			mockS3Svc := mocks.NewMockartifactUploader(ctrl)
 			mockAddons := mocks.NewMocktemplater(ctrl)
@@ -477,7 +477,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 				appDeployVars: appDeployVars{
 					AppName: tc.inputApp,
 				},
-				storeClient:       mockProjectSvc,
+				store:             mockProjectSvc,
 				projectCFSvc:      mockProjectResourcesGetter,
 				addonsSvc:         mockAddons,
 				s3Service:         mockS3Svc,

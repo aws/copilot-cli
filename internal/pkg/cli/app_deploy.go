@@ -47,7 +47,7 @@ type appDeployVars struct {
 type appDeployOpts struct {
 	appDeployVars
 
-	storeClient      storeClient
+	store            store
 	workspaceService wsAppReader
 	ecrService       ecrService
 	dockerService    dockerService
@@ -67,7 +67,7 @@ type appDeployOpts struct {
 }
 
 func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
-	storeClient, err := config.NewStore()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("create project service: %w", err)
 	}
@@ -80,7 +80,7 @@ func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
 	return &appDeployOpts{
 		appDeployVars: vars,
 
-		storeClient:      storeClient,
+		store:            store,
 		workspaceService: workspaceService,
 		spinner:          termprogress.NewSpinner(),
 		dockerService:    docker.New(),
@@ -129,13 +129,13 @@ func (o *appDeployOpts) Execute() error {
 	}
 	o.targetEnvironment = env
 
-	proj, err := o.storeClient.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return err
 	}
 	o.targetProject = proj
 
-	app, err := o.storeClient.GetService(o.ProjectName(), o.AppName)
+	app, err := o.store.GetService(o.ProjectName(), o.AppName)
 	if err != nil {
 		return fmt.Errorf("get application metadata: %w", err)
 	}
@@ -188,7 +188,7 @@ func (o *appDeployOpts) validateEnvName() error {
 }
 
 func (o *appDeployOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.storeClient.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
 	}
@@ -226,7 +226,7 @@ func (o *appDeployOpts) askEnvName() error {
 		return nil
 	}
 
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get environments for project %s from metadata store: %w", o.ProjectName(), err)
 	}

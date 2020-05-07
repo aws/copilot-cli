@@ -129,7 +129,7 @@ func TestDeleteProjectOpts_Ask(t *testing.T) {
 }
 
 func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
-	var mockStore *mocks.MockstoreClient
+	var mockStore *mocks.Mockstore
 	const mockProjectName = "phonetool"
 	mockError := errors.New("some error")
 	tests := map[string]struct {
@@ -138,7 +138,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 	}{
 		"return error is listing applications fails": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockstoreClient(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -148,7 +148,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 		},
 		"return nil if no apps returned from listing applications": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockstoreClient(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -169,7 +169,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 						projectName: mockProjectName,
 					},
 				},
-				storeClient: mockStore,
+				store: mockStore,
 			}
 
 			got := opts.deleteApps()
@@ -182,7 +182,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 	const mockProjectName = "phonetool"
 	mockError := errors.New("some error")
-	var mockStore *mocks.MockstoreClient
+	var mockStore *mocks.Mockstore
 
 	tests := map[string]struct {
 		setupMocks func(ctrl *gomock.Controller)
@@ -190,7 +190,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 	}{
 		"return error is listing applications fails": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockstoreClient(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -200,7 +200,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 		},
 		"return nil if no apps returned from listing applications": {
 			setupMocks: func(ctrl *gomock.Controller) {
-				mockStore = mocks.NewMockstoreClient(ctrl)
+				mockStore = mocks.NewMockstore(ctrl)
 
 				mockStore.EXPECT().
 					ListServices(mockProjectName).
@@ -222,7 +222,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 						projectName: mockProjectName,
 					},
 				},
-				storeClient: mockStore,
+				store: mockStore,
 			}
 
 			got := opts.deleteApps()
@@ -234,7 +234,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 
 type deleteProjectMocks struct {
 	spinner         *mocks.Mockprogress
-	store           *mocks.MockstoreClient
+	store           *mocks.Mockstore
 	ws              *mocks.MockworkspaceDeleter
 	sessProvider    *session.Provider
 	deployer        *mocks.Mockdeployer
@@ -364,7 +364,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSpinner := mocks.NewMockprogress(ctrl)
-			mockStore := mocks.NewMockstoreClient(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockworkspaceDeleter(ctrl)
 			mockSession := session.NewProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
@@ -413,7 +413,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 					},
 				},
 				spinner:                      mockSpinner,
-				storeClient:                  mockStore,
+				store:                        mockStore,
 				ws:                           mockWorkspace,
 				sessProvider:                 mockSession,
 				deployer:                     mockDeployer,

@@ -35,7 +35,7 @@ type showAppOpts struct {
 	showAppVars
 
 	w             io.Writer
-	storeClient   storeClient
+	store         store
 	describer     describer
 	ws            wsAppReader
 	initDescriber func(bool) error // Overriden in tests.
@@ -53,13 +53,13 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 
 	opts := &showAppOpts{
 		showAppVars: vars,
-		storeClient: ssmStore,
+		store:       ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
 	}
 	opts.initDescriber = func(enableResources bool) error {
 		var d describer
-		app, err := opts.storeClient.GetService(opts.ProjectName(), opts.appName)
+		app, err := opts.store.GetService(opts.ProjectName(), opts.appName)
 		if err != nil {
 			return err
 		}
@@ -92,12 +92,12 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.storeClient.GetService(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
@@ -201,7 +201,7 @@ func (o *showAppOpts) askAppName() error {
 }
 
 func (o *showAppOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -224,7 +224,7 @@ func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
 }
 
 func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
-	apps, err := o.storeClient.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}

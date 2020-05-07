@@ -16,7 +16,7 @@ import (
 )
 
 type showProjectMocks struct {
-	storeSvc *mocks.MockstoreClient
+	storeSvc *mocks.Mockstore
 	prompt   *mocks.Mockprompter
 }
 
@@ -54,7 +54,7 @@ func TestProjectShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showProjectMocks{
@@ -70,7 +70,7 @@ func TestProjectShow_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -159,7 +159,7 @@ func TestProjectShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showProjectMocks{
@@ -175,7 +175,7 @@ func TestProjectShow_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -335,7 +335,7 @@ Applications
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showProjectMocks{
 				storeSvc: mockStoreReader,
@@ -349,8 +349,8 @@ Applications
 						projectName: projectName,
 					},
 				},
-				storeClient: mockStoreReader,
-				w:           b,
+				store: mockStoreReader,
+				w:     b,
 			}
 
 			// WHEN

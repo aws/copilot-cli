@@ -48,7 +48,7 @@ type appLogsOpts struct {
 	endTime   int64
 
 	w             io.Writer
-	storeClient   storeClient
+	store         store
 	initCwLogsSvc func(*appLogsOpts, *config.Environment) error // Overriden in tests.
 	cwlogsSvc     map[string]cwlogService
 }
@@ -62,7 +62,7 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 	return &appLogsOpts{
 		appLogsVars: vars,
 		w:           log.OutputWriter,
-		storeClient: ssmStore,
+		store:       ssmStore,
 		initCwLogsSvc: func(o *appLogsOpts, env *config.Environment) error {
 			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
@@ -78,7 +78,7 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appLogsOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeClient.GetApplication(o.ProjectName())
+		_, err := o.store.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -207,7 +207,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.ProjectName()))
 		}
 	} else {
-		app, err := o.storeClient.GetService(o.ProjectName(), o.appName)
+		app, err := o.store.GetService(o.ProjectName(), o.appName)
 		if err != nil {
 			return fmt.Errorf("get application: %w", err)
 		}
@@ -215,7 +215,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 	}
 
 	if o.envName == "" {
-		envs, err = o.storeClient.ListEnvironments(o.ProjectName())
+		envs, err = o.store.ListEnvironments(o.ProjectName())
 		if err != nil {
 			return fmt.Errorf("list environments: %w", err)
 		}
@@ -223,7 +223,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.ProjectName()))
 		}
 	} else {
-		env, err := o.storeClient.GetEnvironment(o.ProjectName(), o.envName)
+		env, err := o.store.GetEnvironment(o.ProjectName(), o.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -281,7 +281,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 }
 
 func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -293,7 +293,7 @@ func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
 }
 
 func (o *appLogsOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeClient.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}

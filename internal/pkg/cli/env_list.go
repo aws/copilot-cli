@@ -29,7 +29,7 @@ type listEnvVars struct {
 type listEnvOpts struct {
 	listEnvVars
 
-	storeClient storeClient
+	store store
 
 	w io.Writer
 }
@@ -42,13 +42,13 @@ func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 
 	return &listEnvOpts{
 		listEnvVars: vars,
-		storeClient: ssmStore,
+		store:       ssmStore,
 		w:           os.Stdout,
 	}, nil
 }
 
 func (o *listEnvOpts) selectProject() (string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -85,11 +85,11 @@ func (o *listEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
+	if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 		return err
 	}
 
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return err
 	}

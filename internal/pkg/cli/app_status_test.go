@@ -26,14 +26,14 @@ func TestAppStatus_Validate(t *testing.T) {
 		inputProject     string
 		inputApplication string
 		inputEnvironment string
-		mockStoreReader  func(m *mocks.MockstoreClient)
+		mockStoreReader  func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"invalid project name": {
 			inputProject: "my-project",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
 			},
 
@@ -43,7 +43,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputProject:     "my-project",
 			inputApplication: "my-app",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name: "my-project",
 				}, nil)
@@ -56,7 +56,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputProject:     "my-project",
 			inputEnvironment: "test",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name: "my-project",
 				}, nil)
@@ -70,7 +70,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			inputApplication: "my-app",
 			inputEnvironment: "test",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-project").Return(&config.Application{
 					Name: "my-project",
 				}, nil)
@@ -89,7 +89,7 @@ func TestAppStatus_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			tc.mockStoreReader(mockStoreReader)
 
 			appStatus := &appStatusOpts{
@@ -100,7 +100,7 @@ func TestAppStatus_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -125,7 +125,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		inputProject        string
 		inputApplication    string
 		inputEnvironment    string
-		mockStoreReader     func(m *mocks.MockstoreClient)
+		mockStoreReader     func(m *mocks.Mockstore)
 		mockWebAppDescriber func(m *mocks.MockserviceArnGetter)
 		mockPrompt          func(m *mocks.Mockprompter)
 
@@ -136,7 +136,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {},
+			mockStoreReader: func(m *mocks.Mockstore) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
@@ -144,7 +144,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		},
 		"errors if failed to list project": {
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{}, mockError)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
@@ -154,7 +154,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		},
 		"errors if no project found": {
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{}, nil)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
@@ -164,7 +164,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		},
 		"errors if failed to select project": {
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					{
 						Name: "mockApp",
@@ -181,7 +181,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if failed to list applications": {
 			inputProject: "mockApp",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, mockError)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
@@ -192,7 +192,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if no available application found": {
 			inputProject: "mockApp",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, nil)
 			},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
@@ -205,7 +205,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {},
+			mockStoreReader: func(m *mocks.Mockstore) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(nil, mockError)
 			},
@@ -218,7 +218,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			inputApplication: "mockSvc",
 			inputEnvironment: "mockEnv",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {},
+			mockStoreReader: func(m *mocks.Mockstore) {},
 			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(nil, mockStackNotFoundErr)
 			},
@@ -229,7 +229,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"errors if failed to select deployed application": {
 			inputProject: "mockApp",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
 					{
 						Name: "mockSvc",
@@ -258,7 +258,7 @@ func TestAppStatus_Ask(t *testing.T) {
 		"success": {
 			inputProject: "mockApp",
 
-			mockStoreReader: func(m *mocks.MockstoreClient) {
+			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
 					{
 						Name: "mockSvc",
@@ -289,7 +289,7 @@ func TestAppStatus_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockWebAppDescriber := mocks.NewMockserviceArnGetter(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			tc.mockStoreReader(mockStoreReader)
@@ -307,7 +307,7 @@ func TestAppStatus_Ask(t *testing.T) {
 				},
 				appDescriber:     mockWebAppDescriber,
 				initAppDescriber: func(*appStatusOpts, string, string) error { return nil },
-				storeClient:      mockStoreReader,
+				store:            mockStoreReader,
 			}
 
 			// WHEN

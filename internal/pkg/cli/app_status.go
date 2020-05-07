@@ -32,7 +32,7 @@ type appStatusOpts struct {
 	appStatusVars
 
 	w                   io.Writer
-	storeClient         storeClient
+	store               store
 	appDescriber        serviceArnGetter
 	statusDescriber     statusDescriber
 	initAppDescriber    func(*appStatusOpts, string, string) error
@@ -47,7 +47,7 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 
 	return &appStatusOpts{
 		appStatusVars: vars,
-		storeClient:   ssmStore,
+		store:         ssmStore,
 		w:             log.OutputWriter,
 		initAppDescriber: func(o *appStatusOpts, envName, appName string) error {
 			d, err := describe.NewAppDescriber(o.ProjectName(), envName, appName)
@@ -71,17 +71,17 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appStatusOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.storeClient.GetService(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.storeClient.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.ProjectName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -144,7 +144,7 @@ func (o *appStatusOpts) askProject() error {
 }
 
 func (o *appStatusOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}
@@ -230,7 +230,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 }
 
 func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.storeClient.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
 	}
@@ -243,7 +243,7 @@ func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
 }
 
 func (o *appStatusOpts) retrieveAllEnvNames() ([]string, error) {
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
 	}

@@ -68,7 +68,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 					EnvName:    tc.inEnv,
 					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
 				},
-				storeClient: tc.mockStore(ctrl),
+				store: tc.mockStore(ctrl),
 			}
 
 			// WHEN
@@ -123,7 +123,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 					envDeleteProfileHelpPrompt, []string{testProfile1, testProfile2}).Return(testProfile1, nil)
 				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv1, testProject), gomock.Any()).Return(true, nil)
 
-				o.storeClient = mockEnvStore
+				o.store = mockEnvStore
 				o.profileConfig = mockCfg
 				o.GlobalOpts.prompt = mockPrompter
 			},
@@ -145,7 +145,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
 
-				o.storeClient = mockEnvStore
+				o.store = mockEnvStore
 				o.profileConfig = mockCfg
 				o.GlobalOpts.prompt = mockPrompter
 			},
@@ -182,7 +182,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				mockPrompter := mocks.NewMockprompter(ctrl)
 				mockPrompter.EXPECT().SelectOne(envDeleteNamePrompt, "", gomock.Any()).Return("", errors.New("some error"))
 
-				o.storeClient = mockEnvStore
+				o.store = mockEnvStore
 				o.GlobalOpts.prompt = mockPrompter
 			},
 
@@ -196,7 +196,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
 
-				o.storeClient = mockEnvStore
+				o.store = mockEnvStore
 				o.GlobalOpts.prompt = mockPrompter
 			},
 
@@ -388,7 +388,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 						projectName: testProject,
 					},
 				},
-				storeClient:  tc.mockStore(ctrl),
+				store:        tc.mockStore(ctrl),
 				deployClient: tc.mockDeploy(ctrl),
 				rgClient:     tc.mockRG(ctrl),
 				prog:         tc.mockProg(ctrl),

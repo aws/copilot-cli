@@ -17,7 +17,7 @@ import (
 func TestAppList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
-	mockStoreClient := mocks.NewMockstoreClient(ctrl)
+	mockstore := mocks.NewMockstore(ctrl)
 	mockWorkspace := mocks.NewMockwsAppReader(ctrl)
 	defer ctrl.Finish()
 
@@ -35,13 +35,13 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				storeClient: mockStoreClient,
+				store: mockstore,
 			},
 			mocking: func() {
-				mockStoreClient.EXPECT().
+				mockstore.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(&config.Application{}, nil)
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return([]*config.Service{
@@ -58,13 +58,13 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				storeClient: mockStoreClient,
+				store: mockstore,
 			},
 			mocking: func() {
-				mockStoreClient.EXPECT().
+				mockstore.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(&config.Application{}, nil)
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return([]*config.Service{
@@ -82,14 +82,14 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				storeClient: mockStoreClient,
+				store: mockstore,
 			},
 			mocking: func() {
-				mockStoreClient.EXPECT().
+				mockstore.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(nil, mockError)
 
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Times(0)
@@ -103,14 +103,14 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				storeClient: mockStoreClient,
+				store: mockstore,
 			},
 			mocking: func() {
-				mockStoreClient.EXPECT().
+				mockstore.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(&config.Application{}, nil)
 
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return(nil, mockError)
@@ -125,14 +125,14 @@ func TestAppList_Execute(t *testing.T) {
 						projectName: "coolproject",
 					},
 				},
-				storeClient: mockStoreClient,
-				ws:          mockWorkspace,
+				store: mockstore,
+				ws:    mockWorkspace,
 			},
 			mocking: func() {
-				mockStoreClient.EXPECT().
+				mockstore.EXPECT().
 					GetApplication(gomock.Eq("coolproject")).
 					Return(&config.Application{}, nil)
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListServices(gomock.Eq("coolproject")).
 					Return([]*config.Service{
@@ -166,13 +166,13 @@ func TestAppList_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputProject string
 
-		mockStoreClient func(m *mocks.MockstoreClient)
-		mockPrompt      func(m *mocks.Mockprompter)
+		mockstore  func(m *mocks.Mockstore)
+		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedProject string
 	}{
 		"with no flags set": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {
+			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListApplications().Return([]*config.Application{
 					&config.Application{Name: "my-project"},
 					&config.Application{Name: "archer-project"},
@@ -184,10 +184,10 @@ func TestAppList_Ask(t *testing.T) {
 			wantedProject: "my-project",
 		},
 		"with project flags set": {
-			mockStoreClient: func(m *mocks.MockstoreClient) {},
-			mockPrompt:      func(m *mocks.Mockprompter) {},
-			inputProject:    "my-project",
-			wantedProject:   "my-project",
+			mockstore:     func(m *mocks.Mockstore) {},
+			mockPrompt:    func(m *mocks.Mockprompter) {},
+			inputProject:  "my-project",
+			wantedProject: "my-project",
 		},
 	}
 
@@ -196,9 +196,9 @@ func TestAppList_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreClient := mocks.NewMockstoreClient(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			tc.mockStoreClient(mockStoreClient)
+			tc.mockstore(mockstore)
 			tc.mockPrompt(mockPrompter)
 
 			listApps := &listAppOpts{
@@ -208,7 +208,7 @@ func TestAppList_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreClient,
+				store: mockstore,
 			}
 
 			err := listApps.Ask()

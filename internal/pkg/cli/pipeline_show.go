@@ -37,7 +37,7 @@ type showPipelineOpts struct {
 
 	// Interfaces to dependencies
 	ws          wsPipelineReader
-	storeClient applicationStore
+	store       applicationStore
 	pipelineSvc pipelineGetter
 }
 
@@ -61,7 +61,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
 		ws:               ws,
-		storeClient:      ssmStore,
+		store:            ssmStore,
 		pipelineSvc:      codepipeline.New(defaultSession),
 	}
 
@@ -71,7 +71,7 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
 	if o.ProjectName() != "" {
-		if _, err := o.storeClient.GetApplication(o.ProjectName()); err != nil {
+		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
 			return err
 		}
 	}
@@ -124,7 +124,7 @@ func (o *showPipelineOpts) askProject() error {
 }
 
 func (o *showPipelineOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list projects: %w", err)
 	}

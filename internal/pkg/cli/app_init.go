@@ -74,7 +74,7 @@ type initAppOpts struct {
 	// Interfaces to interact with dependencies.
 	fs           afero.Fs
 	ws           wsAppManifestWriter
-	storeClient  storeClient
+	store        store
 	projDeployer projectDeployer
 	prog         progress
 	df           dockerfileParser
@@ -110,7 +110,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		initAppVars: vars,
 
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		storeClient:  store,
+		store:        store,
 		ws:           ws,
 		projDeployer: cloudformation.New(sess),
 		prog:         termprogress.NewSpinner(),
@@ -169,7 +169,7 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	proj, err := o.storeClient.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
@@ -188,7 +188,7 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
 
-	if err := o.storeClient.CreateService(&config.Service{
+	if err := o.store.CreateService(&config.Service{
 		App:  o.ProjectName(),
 		Name: o.AppName,
 		Type: o.AppType,
@@ -250,7 +250,7 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 		Port: o.AppPort,
 		Path: "/",
 	}
-	existingApps, err := o.storeClient.ListServices(o.ProjectName())
+	existingApps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, err
 	}

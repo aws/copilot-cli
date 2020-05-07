@@ -97,12 +97,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initProjectVars: initProjectVars{
 			ProjectName: vars.projectName,
 		},
-		storeClient: ssm,
-		ws:          ws,
-		prompt:      prompt,
-		identity:    id,
-		deployer:    deployer,
-		prog:        spin,
+		store:    ssm,
+		ws:       ws,
+		prompt:   prompt,
+		identity: id,
+		deployer: deployer,
+		prog:     spin,
 	}
 	initApp := &initAppOpts{
 		initAppVars: initAppVars{
@@ -114,7 +114,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		},
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		ws:           ws,
-		storeClient:  ssm,
+		store:        ssm,
 		projDeployer: deployer,
 		prog:         spin,
 		setupParser: func(o *initAppOpts) {
@@ -128,7 +128,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			EnvProfile:   vars.profile,
 			IsProduction: false,
 		},
-		storeClient:   ssm,
+		store:         ssm,
 		projDeployer:  deployer,
 		profileConfig: cfg,
 		prog:          spin,
@@ -144,7 +144,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			GlobalOpts: NewGlobalOpts(),
 		},
 
-		storeClient:      ssm,
+		store:            ssm,
 		workspaceService: ws,
 		spinner:          spin,
 		dockerService:    docker.New(),

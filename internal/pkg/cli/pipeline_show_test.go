@@ -24,7 +24,7 @@ var (
 )
 
 type showPipelineMocks struct {
-	store       *mocks.MockstoreClient
+	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
 	prompt      *mocks.Mockprompter
 	pipelineSvc *mocks.MockpipelineGetter
@@ -82,7 +82,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPipelineGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := showPipelineMocks{
@@ -99,7 +99,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 					},
 					pipelineName: tc.inPipelineName,
 				},
-				storeClient: mockStoreReader,
+				store:       mockStoreReader,
 				pipelineSvc: mockPipelineGetter,
 			}
 
@@ -290,7 +290,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockPipelineSvc := mocks.NewMockpipelineGetter(ctrl)
@@ -312,7 +312,7 @@ stages:
 					},
 					pipelineName: tc.inPipelineName,
 				},
-				storeClient: mockStoreReader,
+				store:       mockStoreReader,
 				ws:          mockWorkspace,
 				pipelineSvc: mockPipelineSvc,
 			}

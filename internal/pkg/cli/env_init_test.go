@@ -154,10 +154,10 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 		inEnvName     string
 		inProd        bool
 
-		expectstoreClient func(m *mocks.MockstoreClient)
-		expectDeployer    func(m *mocks.Mockdeployer)
-		expectIdentity    func(m *mocks.MockidentityService)
-		expectProgress    func(m *mocks.Mockprogress)
+		expectstore    func(m *mocks.Mockstore)
+		expectDeployer func(m *mocks.Mockdeployer)
+		expectIdentity func(m *mocks.MockidentityService)
+		expectProgress func(m *mocks.Mockprogress)
 
 		wantedErrorS string
 	}{
@@ -165,7 +165,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
 			},
 
@@ -175,7 +175,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -187,7 +187,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -206,7 +206,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -254,7 +254,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
@@ -291,7 +291,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 			},
@@ -336,7 +336,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
 					Name: "phonetool",
 				}, nil)
@@ -388,7 +388,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inEnvName:     "test",
 			inProd:        true,
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -439,7 +439,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -477,7 +477,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -496,7 +496,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			inProjectName: "phonetool",
 			inEnvName:     "test",
 
-			expectstoreClient: func(m *mocks.MockstoreClient) {
+			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 				m.EXPECT().CreateEnvironment(&config.Environment{
 					App:       "phonetool",
@@ -551,12 +551,12 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockstoreClient := mocks.NewMockstoreClient(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 			mockIdentity := mocks.NewMockidentityService(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
-			if tc.expectstoreClient != nil {
-				tc.expectstoreClient(mockstoreClient)
+			if tc.expectstore != nil {
+				tc.expectstore(mockstore)
 			}
 			if tc.expectDeployer != nil {
 				tc.expectDeployer(mockDeployer)
@@ -574,7 +574,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					GlobalOpts:   &GlobalOpts{projectName: tc.inProjectName},
 					IsProduction: tc.inProd,
 				},
-				storeClient:  mockstoreClient,
+				store:        mockstore,
 				envDeployer:  mockDeployer,
 				projDeployer: mockDeployer,
 				identity:     mockIdentity,

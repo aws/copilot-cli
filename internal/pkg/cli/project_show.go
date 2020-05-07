@@ -23,8 +23,8 @@ type showProjectVars struct {
 type showProjectOpts struct {
 	showProjectVars
 
-	storeClient storeClient
-	w           io.Writer
+	store store
+	w     io.Writer
 }
 
 func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
@@ -35,7 +35,7 @@ func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
 
 	return &showProjectOpts{
 		showProjectVars: vars,
-		storeClient:     ssmStore,
+		store:           ssmStore,
 		w:               log.OutputWriter,
 	}, nil
 }
@@ -43,7 +43,7 @@ func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showProjectOpts) Validate() error {
 	if o.ProjectName() != "" {
-		_, err := o.storeClient.GetApplication(o.ProjectName())
+		_, err := o.store.GetApplication(o.ProjectName())
 		if err != nil {
 			return err
 		}
@@ -81,15 +81,15 @@ func (o *showProjectOpts) Execute() error {
 }
 
 func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
-	proj, err := o.storeClient.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list environment: %w", err)
 	}
-	apps, err := o.storeClient.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
@@ -142,7 +142,7 @@ func (o *showProjectOpts) askProject() error {
 }
 
 func (o *showProjectOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeClient.ListApplications()
+	projs, err := o.store.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list project: %w", err)
 	}

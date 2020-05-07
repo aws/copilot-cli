@@ -16,7 +16,7 @@ import (
 
 func TestProjectList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockStoreClient := mocks.NewMockstoreClient(ctrl)
+	mockstore := mocks.NewMockstore(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {
@@ -26,11 +26,11 @@ func TestProjectList_Execute(t *testing.T) {
 	}{
 		"with projects": {
 			listOpts: listProjectOpts{
-				store: mockStoreClient,
+				store: mockstore,
 				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{
@@ -42,11 +42,11 @@ func TestProjectList_Execute(t *testing.T) {
 		},
 		"with an error": {
 			listOpts: listProjectOpts{
-				store: mockStoreClient,
+				store: mockstore,
 				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockStoreClient.
+				mockstore.
 					EXPECT().
 					ListApplications().
 					Return(nil, fmt.Errorf("error fetching projects")).

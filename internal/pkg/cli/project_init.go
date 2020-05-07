@@ -36,13 +36,13 @@ type initProjectVars struct {
 type initProjectOpts struct {
 	initProjectVars
 
-	identity    identityService
-	storeClient applicationStore
-	route53Svc  domainValidator
-	ws          wsProjectManager
-	deployer    projectDeployer
-	prompt      prompter
-	prog        progress
+	identity   identityService
+	store      applicationStore
+	route53Svc domainValidator
+	ws         wsProjectManager
+	deployer   projectDeployer
+	prompt     prompter
+	prog       progress
 }
 
 func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
@@ -62,7 +62,7 @@ func newInitProjectOpts(vars initProjectVars) (*initProjectOpts, error) {
 	return &initProjectOpts{
 		initProjectVars: vars,
 		identity:        identity.New(sess),
-		storeClient:     store,
+		store:           store,
 		// See https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html#limits-service-quotas
 		// > To view limits and request higher limits for Route 53, you must change the Region to US East (N. Virginia).
 		// So we have to set the region to us-east-1 to be able to find out if a domain name exists in the account.
@@ -119,7 +119,7 @@ func (o *initProjectOpts) Ask() error {
 		return nil
 	}
 
-	existingProjects, _ := o.storeClient.ListApplications()
+	existingProjects, _ := o.store.ListApplications()
 	if len(existingProjects) == 0 {
 		log.Infoln("Looks like you don't have any existing projects. Let's create one!")
 		return o.askNewProjectName()
@@ -163,7 +163,7 @@ func (o *initProjectOpts) Execute() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeployProjectComplete, color.HighlightUserInput(o.ProjectName)))
 
-	return o.storeClient.CreateApplication(&config.Application{
+	return o.store.CreateApplication(&config.Application{
 		AccountID: caller.Account,
 		Name:      o.ProjectName,
 		Domain:    o.DomainName,
@@ -175,7 +175,7 @@ func (o *initProjectOpts) validateProject(projectName string) error {
 	if err := validateProjectName(projectName); err != nil {
 		return err
 	}
-	proj, err := o.storeClient.GetApplication(projectName)
+	proj, err := o.store.GetApplication(projectName)
 	if err != nil {
 		var noSuchProjectErr *config.ErrNoSuchApplication
 		if errors.As(err, &noSuchProjectErr) {

@@ -308,7 +308,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockParser                  func(m *templatemocks.MockParser)
 		mockFileSystem              func(mockFS afero.Fs)
 		mockRegionalResourcesGetter func(m *mocks.MockprojectResourcesGetter)
-		mockStoreSvc                func(m *mocks.MockstoreClient)
+		mockStoreSvc                func(m *mocks.Mockstore)
 
 		expectedError error
 	}{
@@ -331,7 +331,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -368,7 +368,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -400,7 +400,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", errors.New("some error"))
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
-			mockStoreSvc:                func(m *mocks.MockstoreClient) {},
+			mockStoreSvc:                func(m *mocks.Mockstore) {},
 			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {},
 			expectedError:               errors.New("write manifest to workspace: some error"),
 		},
@@ -418,7 +418,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
 			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {},
@@ -438,7 +438,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -467,7 +467,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -503,7 +503,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -539,7 +539,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *mocks.MockstoreClient) {
+			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -568,13 +568,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockWriter := mocks.NewMockwsPipelineWriter(ctrl)
 			mockParser := templatemocks.NewMockParser(ctrl)
 			mockRegionalResourcesGetter := mocks.NewMockprojectResourcesGetter(ctrl)
-			mockStoreClient := mocks.NewMockstoreClient(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockWsWriter(mockWriter)
 			tc.mockParser(mockParser)
 			tc.mockRegionalResourcesGetter(mockRegionalResourcesGetter)
-			tc.mockStoreSvc(mockStoreClient)
+			tc.mockStoreSvc(mockstore)
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
 			opts := &initPipelineOpts{
@@ -588,7 +588,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 				secretsmanager: mockSecretsManager,
 				cfnClient:      mockRegionalResourcesGetter,
-				storeClient:    mockStoreClient,
+				store:          mockstore,
 				workspace:      mockWriter,
 				parser:         mockParser,
 				fsUtils:        memFs,

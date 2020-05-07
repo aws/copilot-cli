@@ -19,7 +19,7 @@ import (
 func TestPackageAppOpts_Validate(t *testing.T) {
 	var (
 		mockWorkspace      *mocks.MockwsAppReader
-		mockProjectService *mocks.MockstoreClient
+		mockProjectService *mocks.Mockstore
 	)
 
 	testCases := map[string]struct {
@@ -84,7 +84,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWorkspace = mocks.NewMockwsAppReader(ctrl)
-			mockProjectService = mocks.NewMockstoreClient(ctrl)
+			mockProjectService = mocks.NewMockstore(ctrl)
 
 			tc.setupMocks()
 
@@ -118,7 +118,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		inTag     string
 
 		expectWS     func(m *mocks.MockwsAppReader)
-		expectStore  func(m *mocks.MockstoreClient)
+		expectStore  func(m *mocks.Mockstore)
 		expectPrompt func(m *mocks.Mockprompter)
 		expectRunner func(m *mocks.Mockrunner)
 
@@ -131,7 +131,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -145,7 +145,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -160,7 +160,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, errors.New("some ssm error"))
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -176,7 +176,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return(nil, nil)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -191,7 +191,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
@@ -221,7 +221,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -240,7 +240,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
@@ -267,7 +267,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -283,7 +283,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Return([]*config.Environment{
 					{
 						Name: "test",
@@ -308,7 +308,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			expectWS: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
-			expectStore: func(m *mocks.MockstoreClient) {
+			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).Times(0)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
@@ -330,7 +330,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockWorkspace := mocks.NewMockwsAppReader(ctrl)
-			mockStore := mocks.NewMockstoreClient(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
 
@@ -391,7 +391,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 				Tag:     "1234",
 			},
 			mockDependencies: func(ctrl *gomock.Controller, opts *packageAppOpts) {
-				mockStore := mocks.NewMockstoreClient(ctrl)
+				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().
 					GetEnvironment("ecs-kudos", "test").
 					Return(&config.Environment{

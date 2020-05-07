@@ -19,7 +19,7 @@ import (
 )
 
 type showEnvMocks struct {
-	storeSvc  *mocks.MockstoreClient
+	storeSvc  *mocks.Mockstore
 	prompt    *mocks.Mockprompter
 	describer *mocks.MockenvDescriber
 }
@@ -81,7 +81,7 @@ func TestEnvShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showEnvMocks{
 				storeSvc: mockStoreReader,
@@ -96,7 +96,7 @@ func TestEnvShow_Validate(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -289,7 +289,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showEnvMocks{
@@ -307,7 +307,7 @@ func TestEnvShow_Ask(t *testing.T) {
 						projectName: tc.inputProject,
 					},
 				},
-				storeClient: mockStoreReader,
+				store: mockStoreReader,
 			}
 			// WHEN
 			err := showEnvs.Ask()
@@ -400,7 +400,7 @@ Applications
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := mocks.NewMockstoreClient(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			tc.mockEnvDescriber(mockEnvDescriber)
 
@@ -409,7 +409,7 @@ Applications
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts:       &GlobalOpts{},
 				},
-				storeClient:      mockStoreReader,
+				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
 				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
 				w:                b,

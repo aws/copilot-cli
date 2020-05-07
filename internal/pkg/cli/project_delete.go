@@ -51,7 +51,7 @@ type deleteProjOpts struct {
 	deleteProjVars
 	spinner progress
 
-	storeClient                  storeClient
+	store                        store
 	ws                           workspaceDeleter
 	sessProvider                 sessionProvider
 	deployer                     deployer
@@ -83,7 +83,7 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 	return &deleteProjOpts{
 		deleteProjVars: vars,
 		spinner:        termprogress.NewSpinner(),
-		storeClient:    store,
+		store:          store,
 		ws:             ws,
 		sessProvider:   provider,
 		deployer:       cf,
@@ -204,7 +204,7 @@ func (o *deleteProjOpts) Execute() error {
 }
 
 func (o *deleteProjOpts) deleteApps() error {
-	apps, err := o.storeClient.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (o *deleteProjOpts) deleteApps() error {
 }
 
 func (o *deleteProjOpts) deleteEnvs() error {
-	envs, err := o.storeClient.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.ProjectName())
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (o *deleteProjOpts) deleteEnvs() error {
 }
 
 func (o *deleteProjOpts) emptyS3Bucket() error {
-	proj, err := o.storeClient.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
 	}
@@ -299,7 +299,7 @@ func (o *deleteProjOpts) deleteProjectResources() error {
 
 func (o *deleteProjOpts) deleteProjectParams() error {
 	o.spinner.Start(deleteProjectParamsStartMsg)
-	if err := o.storeClient.DeleteApplication(o.ProjectName()); err != nil {
+	if err := o.store.DeleteApplication(o.ProjectName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project metadata."))
 
 		return err

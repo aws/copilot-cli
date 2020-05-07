@@ -40,7 +40,7 @@ type listAppOpts struct {
 	listAppVars
 
 	applications []*config.Service
-	storeClient  storeClient
+	store        store
 
 	ws wsAppReader
 	w  io.Writer
@@ -59,14 +59,14 @@ func newListAppOpts(vars listAppVars) (*listAppOpts, error) {
 	return &listAppOpts{
 		listAppVars: vars,
 
-		storeClient: ssmStore,
-		ws:          ws,
-		w:           os.Stdout,
+		store: ssmStore,
+		ws:    ws,
+		w:     os.Stdout,
 	}, nil
 }
 
 func (opts *listAppOpts) selectProject() (string, error) {
-	projs, err := opts.storeClient.ListApplications()
+	projs, err := opts.store.ListApplications()
 	if err != nil {
 		return "", err
 	}
@@ -118,11 +118,11 @@ func (opts *listAppOpts) Ask() error {
 // Execute lists the applications through the prompt.
 func (opts *listAppOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its applications.
-	if _, err := opts.storeClient.GetApplication(opts.ProjectName()); err != nil {
+	if _, err := opts.store.GetApplication(opts.ProjectName()); err != nil {
 		return err
 	}
 
-	apps, err := opts.storeClient.ListServices(opts.ProjectName())
+	apps, err := opts.store.ListServices(opts.ProjectName())
 	if err != nil {
 		return err
 	}

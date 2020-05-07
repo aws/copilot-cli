@@ -53,7 +53,7 @@ type packageAppOpts struct {
 	addonsSvc       templater
 	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
 	ws              wsAppReader
-	store           storeClient
+	store           store
 	describer       projectResourcesGetter
 	stackWriter     io.Writer
 	paramsWriter    io.Writer
