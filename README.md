@@ -33,8 +33,8 @@ During preview, we're distributing binaries from our GitHub releases. Instructio
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.8/ecs-preview-darwin-v0.0.8 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
-| Linux | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.8/ecs-preview-linux-v0.0.8 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
+| macOS | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.9/ecs-preview-darwin-v0.0.9 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
+| Linux | `curl -Lo /usr/local/bin/ecs-preview https://github.com/aws/amazon-ecs-cli-v2/releases/download/v0.0.9/ecs-preview-linux-v0.0.9 && chmod +x /usr/local/bin/ecs-preview && ecs-preview --help` |
 
 </details>
 
