@@ -14,11 +14,9 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	sess "github.com/aws/aws-sdk-go/aws/session"
 )
 
 const (
@@ -39,9 +37,7 @@ type EnvDescriber struct {
 	apps []*archer.Application
 
 	store          storeSvc
-	sessProvider   *sess.Session
 	rgClient       resourcegroups.ResourceGroupsClient
-	cloudformation *cloudformation.CloudFormation
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -69,7 +65,6 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		proj:           proj,
 		apps:           apps,
 		rgClient:       resourcegroups.New(sess),
-		cloudformation: cloudformation.New(sess),
 	}, nil
 }
 
