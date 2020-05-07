@@ -93,24 +93,21 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 		return nil, err
 	}
 
-	var stacksOfEnvironment []string
+	stacksOfEnvironment := make(map[string]bool)
 	for _, arn := range arns {
 		stack, err := e.parseARN(arn)
 		if err != nil {
 			return nil, err
 		}
-		stacksOfEnvironment = append(stacksOfEnvironment, stack)
+		stacksOfEnvironment[stack] = true
 	}
 
 	for _, app := range e.apps {
 		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
-		for _, stack := range stacksOfEnvironment {
-			if stack == stackName {
-				appObjects = append(appObjects, app)
-			}
+		if stacksOfEnvironment[stackName] {
+			appObjects = append(appObjects, app)
 		}
 	}
-
 	return appObjects, nil
 }
 
@@ -120,6 +117,9 @@ func (e *EnvDescriber) parseARN(resourceArn string) (string, error) {
 		return "", fmt.Errorf("parse ARN: #{resourceArn}")
 	}
 	stack := strings.Split(parsedArn.Resource, "/")
+	if len(stack) < 2 {
+		return nil, fmt.Errorf("cannot parse ARN resource #{parsedArn.Resource}")
+	}
 	return stack[1], nil
 }
 
