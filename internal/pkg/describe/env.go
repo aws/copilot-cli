@@ -91,7 +91,7 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 	var appObjects []*archer.Application
 
 	tags := map[string]string{
-		"ecs-environment": e.env.Name,
+		stack.EnvTagKey: e.env.Name,
 	}
 	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
