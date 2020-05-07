@@ -388,6 +388,12 @@ Applications
   Name              Type
   my-app            lb-web-app
   copilot-app       lb-web-app
+
+Tags
+
+  Key               Value
+  tag1              value1
+  tag2              value2
 `,
 		},
 	}

@@ -7,7 +7,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -86,30 +89,43 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 
 func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 	var appObjects []*archer.Application
+
 	tags := map[string]string{
 		"ecs-environment": e.env.Name,
 	}
-	stackNames, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
+	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
 		return nil, err
 	}
-	for _, singleStack := range stackNames {
-		stackDesc, err := e.cloudformation.Describe(singleStack)
+
+	var stacksOfEnvironment []string
+	for _, arn := range arns {
+		stack, err := e.parseARN(arn)
 		if err != nil {
 			return nil, err
 		}
-		params := make(map[string]string)
-		for _, param := range stackDesc.Parameters {
-			params[*param.ParameterKey] = *param.ParameterValue
-		}
-		appName := params["AppName"]
-		for _, app := range e.apps {
-			if appName == app.Name {
+		stacksOfEnvironment = append(stacksOfEnvironment, stack)
+	}
+
+	for _, app := range e.apps {
+		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
+		for _, stack := range stacksOfEnvironment {
+			if stack == stackName {
 				appObjects = append(appObjects, app)
 			}
 		}
 	}
+
 	return appObjects, nil
+}
+
+func (e *EnvDescriber) parseARN(resourceArn string) (string, error) {
+	parsedArn, err := arn.Parse(resourceArn)
+	if err != nil {
+		return "", fmt.Errorf("parse ARN: #{resourceArn}")
+	}
+	stack := strings.Split(parsedArn.Resource, "/")
+	return stack[1], nil
 }
 
 // JSONString returns the stringified EnvDescription struct with json format.
@@ -138,7 +154,7 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
 	}
 	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("Tags\n\n"))
+	fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
 	for key, value := range e.Tags {
