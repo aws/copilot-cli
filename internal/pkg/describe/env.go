@@ -95,7 +95,7 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 
 	stacksOfEnvironment := make(map[string]bool)
 	for _, arn := range arns {
-		stack, err := e.parseARN(arn)
+		stack, err := e.getStackName(arn)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 	return appObjects, nil
 }
 
-func (e *EnvDescriber) parseARN(resourceArn string) (string, error) {
+func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 	parsedArn, err := arn.Parse(resourceArn)
 	if err != nil {
 		return "", fmt.Errorf("parse ARN: #{resourceArn}: #{err}")
