@@ -50,7 +50,7 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 		store:         ssmStore,
 		w:             log.OutputWriter,
 		initAppDescriber: func(o *appStatusOpts, envName, appName string) error {
-			d, err := describe.NewAppDescriber(o.ProjectName(), envName, appName)
+			d, err := describe.NewServiceDescriber(o.ProjectName(), envName, appName)
 			if err != nil {
 				return fmt.Errorf("creating stack describer for project %s: %w", o.ProjectName(), err)
 			}

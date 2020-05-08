@@ -18,90 +18,90 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type backendAppDescriberMocks struct {
+type backendSvcDescriberMocks struct {
 	storeSvc     *mocks.MockstoreSvc
-	appDescriber *mocks.MockappDescriber
+	svcDescriber *mocks.MocksvcDescriber
 }
 
-func TestBackendAppDescriber_Describe(t *testing.T) {
+func TestBackendServiceDescriber_Describe(t *testing.T) {
 	const (
-		testProject = "phonetool"
+		testApp     = "phonetool"
 		testEnv     = "test"
-		testApp     = "jobs"
-		testAppPath = "*"
+		testSvc     = "jobs"
+		testSvcPath = "*"
 		prodEnv     = "prod"
-		prodAppPath = "*"
+		prodSvcPath = "*"
 	)
 	mockErr := errors.New("some error")
 	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
 	testEnvironment := config.Environment{
-		App:  testProject,
+		App:  testApp,
 		Name: testEnv,
 	}
 	prodEnvironment := config.Environment{
-		App:  testProject,
+		App:  testApp,
 		Name: prodEnv,
 	}
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
-		setupMocks func(mocks backendAppDescriberMocks)
+		setupMocks func(mocks backendSvcDescriberMocks)
 
-		wantedBackendApp *backendAppDesc
+		wantedBackendSvc *backendSvcDesc
 		wantedError      error
 	}{
 		"return error if fail to list environment": {
-			setupMocks: func(m backendAppDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return(nil, mockErr),
+					m.storeSvc.EXPECT().ListEnvironments(testApp).Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("list environments for project phonetool: some error"),
+			wantedError: fmt.Errorf("list environments for application phonetool: some error"),
 		},
-		"return error if fail to retrieve application deployment configuration": {
-			setupMocks: func(m backendAppDescriberMocks) {
+		"return error if fail to retrieve service deployment configuration": {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
-					m.appDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve application deployment configuration: some error"),
+			wantedError: fmt.Errorf("retrieve service deployment configuration: some error"),
 		},
 		"return error if fail to retrieve environment variables": {
-			setupMocks: func(m backendAppDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
-					m.appDescriber.EXPECT().Params().Return(map[string]string{
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
-					m.appDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
 		"skip if not deployed": {
 			shouldOutputResources: true,
-			setupMocks: func(m backendAppDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
 						&testEnvironment,
 					}, nil),
-					m.appDescriber.EXPECT().Params().Return(nil, mockNotExistErr),
-					m.appDescriber.EXPECT().AppStackResources().Return(nil, mockNotExistErr),
+					m.svcDescriber.EXPECT().Params().Return(nil, mockNotExistErr),
+					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockNotExistErr),
 				)
 			},
-			wantedBackendApp: &backendAppDesc{
-				AppName:          testApp,
+			wantedBackendSvc: &backendSvcDesc{
+				Service:          testSvc,
 				Type:             "",
-				Project:          testProject,
-				Configurations:   []*AppConfig(nil),
+				App:              testApp,
+				Configurations:   []*ServiceConfig(nil),
 				ServiceDiscovery: []*ServiceDiscovery(nil),
 				Variables:        []*EnvVars(nil),
 				Resources:        make(map[string][]*CfnResource),
@@ -109,42 +109,42 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 		},
 		"success": {
 			shouldOutputResources: true,
-			setupMocks: func(m backendAppDescriberMocks) {
+			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
+					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
 						&testEnvironment,
 						&prodEnvironment,
 					}, nil),
 
-					m.appDescriber.EXPECT().Params().Return(map[string]string{
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "5000",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
-					m.appDescriber.EXPECT().EnvVars().Return(
+					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": testEnv,
 						}, nil),
 
-					m.appDescriber.EXPECT().Params().Return(map[string]string{
+					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "5000",
 						stack.ServiceTaskCountParamKey:          "2",
 						stack.ServiceTaskCPUParamKey:            "512",
 						stack.ServiceTaskMemoryParamKey:         "1024",
 					}, nil),
-					m.appDescriber.EXPECT().EnvVars().Return(
+					m.svcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": prodEnv,
 						}, nil),
 
-					m.appDescriber.EXPECT().AppStackResources().Return([]*cloudformation.StackResource{
+					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
 							PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
 						},
 					}, nil),
-					m.appDescriber.EXPECT().AppStackResources().Return([]*cloudformation.StackResource{
+					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -152,11 +152,11 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedBackendApp: &backendAppDesc{
-				AppName: testApp,
+			wantedBackendSvc: &backendSvcDesc{
+				Service: testSvc,
 				Type:    "",
-				Project: testProject,
-				Configurations: []*AppConfig{
+				App:     testApp,
+				Configurations: []*ServiceConfig{
 					{
 						CPU:         "256",
 						Environment: "test",
@@ -214,40 +214,40 @@ func TestBackendAppDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockstoreSvc(ctrl)
-			mockAppDescriber := mocks.NewMockappDescriber(ctrl)
-			mocks := backendAppDescriberMocks{
+			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
+			mocks := backendSvcDescriberMocks{
 				storeSvc:     mockStore,
-				appDescriber: mockAppDescriber,
+				svcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &BackendAppDescriber{
-				app: &config.Service{
-					App:  testProject,
-					Name: testApp,
+			d := &BackendServiceDescriber{
+				service: &config.Service{
+					App:  testApp,
+					Name: testSvc,
 				},
-				enableResources:  tc.shouldOutputResources,
-				store:            mockStore,
-				appDescriber:     mockAppDescriber,
-				initAppDescriber: func(string) error { return nil },
+				enableResources:      tc.shouldOutputResources,
+				store:                mockStore,
+				svcDescriber:         mockSvcDescriber,
+				initServiceDescriber: func(string) error { return nil },
 			}
 
 			// WHEN
-			backendapp, err := d.Describe()
+			backendsvc, err := d.Describe()
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedBackendApp, backendapp, "expected output content match")
+				require.Equal(t, tc.wantedBackendSvc, backendsvc, "expected output content match")
 			}
 		})
 	}
 }
 
-func TestBackendAppDesc_String(t *testing.T) {
+func TestBackendSvcDesc_String(t *testing.T) {
 	testCases := map[string]struct {
 		wantedHumanString string
 		wantedJSONString  string
@@ -255,8 +255,8 @@ func TestBackendAppDesc_String(t *testing.T) {
 		"correct output": {
 			wantedHumanString: `About
 
-  Project           my-project
-  Name              my-app
+  Application       my-app
+  Name              my-svc
   Type              Backend Service
 
 Configurations
@@ -268,7 +268,7 @@ Configurations
 Service Discovery
 
   Environment       Namespace
-  test, prod        http://my-app.my-project.local:5000
+  test, prod        http://my-svc.my-app.local:5000
 
 Variables
 
@@ -284,13 +284,13 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"appName\":\"my-app\",\"type\":\"Backend Service\",\"project\":\"my-project\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-app.my-project.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"tasks\":\"1\",\"cpu\":\"256\",\"memory\":\"512\"},{\"environment\":\"prod\",\"port\":\"5000\",\"tasks\":\"3\",\"cpu\":\"512\",\"memory\":\"1024\"}],\"serviceDiscovery\":[{\"environment\":[\"test\",\"prod\"],\"namespace\":\"http://my-svc.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			config := []*AppConfig{
+			config := []*ServiceConfig{
 				{
 					CPU:         "256",
 					Environment: "test",
@@ -321,7 +321,7 @@ Resources
 			sds := []*ServiceDiscovery{
 				{
 					Environment: []string{"test", "prod"},
-					Namespace:   "http://my-app.my-project.local:5000",
+					Namespace:   "http://my-svc.my-app.local:5000",
 				},
 			}
 			resources := map[string][]*CfnResource{
@@ -338,17 +338,17 @@ Resources
 					},
 				},
 			}
-			backendApp := &backendAppDesc{
-				AppName:          "my-app",
+			backendSvc := &backendSvcDesc{
+				Service:          "my-svc",
 				Type:             "Backend Service",
 				Configurations:   config,
-				Project:          "my-project",
+				App:              "my-app",
 				Variables:        envVars,
 				ServiceDiscovery: sds,
 				Resources:        resources,
 			}
-			human := backendApp.HumanString()
-			json, _ := backendApp.JSONString()
+			human := backendSvc.HumanString()
+			json, _ := backendSvc.JSONString()
 
 			require.Equal(t, tc.wantedHumanString, human)
 			require.Equal(t, tc.wantedJSONString, json)

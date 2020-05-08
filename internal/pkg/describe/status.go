@@ -52,7 +52,7 @@ type AppStatusDesc struct {
 
 // NewAppStatus instantiates a new AppStatus struct.
 func NewAppStatus(projectName, envName, appName string) (*AppStatus, error) {
-	d, err := NewAppDescriber(projectName, envName, appName)
+	d, err := NewServiceDescriber(projectName, envName, appName)
 	if err != nil {
 		return nil, err
 	}

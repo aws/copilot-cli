@@ -32,16 +32,16 @@ type EnvDescriber struct {
 }
 
 // NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) {
+func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
 	svc, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	env, err := svc.GetEnvironment(projectName, envName)
+	env, err := svc.GetEnvironment(appName, envName)
 	if err != nil {
 		return nil, err
 	}
-	apps, err := svc.ListServices(projectName)
+	apps, err := svc.ListServices(appName)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}, nil
 }
 
-// Describe returns info about a project's environment.
+// Describe returns info about an application's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	var tags map[string]string
 	return &EnvDescription{

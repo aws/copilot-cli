@@ -66,15 +66,15 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		switch app.Type {
 		case manifest.LoadBalancedWebServiceType:
 			if enableResources {
-				d, err = describe.NewWebAppDescriberWithResources(opts.ProjectName(), opts.appName)
+				d, err = describe.NewWebServiceDescriberWithResources(opts.ProjectName(), opts.appName)
 			} else {
-				d, err = describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
+				d, err = describe.NewWebServiceDescriber(opts.ProjectName(), opts.appName)
 			}
 		case manifest.BackendServiceType:
 			if enableResources {
-				d, err = describe.NewBackendAppDescriberWithResources(opts.ProjectName(), opts.appName)
+				d, err = describe.NewBackendServiceDescriberWithResources(opts.ProjectName(), opts.appName)
 			} else {
-				d, err = describe.NewBackendAppDescriber(opts.ProjectName(), opts.appName)
+				d, err = describe.NewBackendServiceDescriber(opts.ProjectName(), opts.appName)
 			}
 		default:
 			return fmt.Errorf("invalid application type %s", app.Type)

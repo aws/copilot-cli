@@ -18,48 +18,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type appDescriberMocks struct {
+type svcDescriberMocks struct {
 	mockStackDescriber *mocks.MockstackAndResourcesDescriber
-	mockEcsService     *mocks.MockecsService
+	mockecsClient      *mocks.MockecsClient
 }
 
-func TestAppDescriber_EnvVars(t *testing.T) {
+func TestServiceDescriber_EnvVars(t *testing.T) {
 	const (
-		testProject        = "phonetool"
-		testApp            = "jobs"
+		testApp            = "phonetool"
+		testSvc            = "jobs"
 		testEnv            = "test"
 		testRegion         = "us-west-2"
 		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
 	)
 	testCases := map[string]struct {
-		project string
-		app     string
-		env     string
-
-		setupMocks func(mocks appDescriberMocks)
+		setupMocks func(mocks svcDescriberMocks)
 
 		wantedEnvVars map[string]string
 		wantedError   error
 	}{
 		"returns error if fails to get environment variables": {
-			project: testProject,
-			app:     testApp,
-			env:     testEnv,
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockEcsService.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(nil, errors.New("some error")),
 				)
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"get environment variables": {
-			project: testProject,
-			app:     testApp,
-			env:     testEnv,
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockEcsService.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
+					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
 							&ecsapi.ContainerDefinition{
 								Environment: []*ecsapi.KeyValuePair{
@@ -90,21 +80,21 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockEcsService := mocks.NewMockecsService(ctrl)
+			mockecsClient := mocks.NewMockecsClient(ctrl)
 			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
-			mocks := appDescriberMocks{
-				mockEcsService:     mockEcsService,
+			mocks := svcDescriberMocks{
+				mockecsClient:      mockecsClient,
 				mockStackDescriber: mockStackDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &AppDescriber{
-				project: tc.project,
-				app:     tc.app,
-				env:     tc.env,
+			d := &ServiceDescriber{
+				app:     testApp,
+				service: testSvc,
+				env:     testEnv,
 
-				ecsClient:      mockEcsService,
+				ecsClient:      mockecsClient,
 				stackDescriber: mockStackDescriber,
 			}
 
@@ -122,12 +112,12 @@ func TestAppDescriber_EnvVars(t *testing.T) {
 	}
 }
 
-func TestAppDescriber_AppStackResources(t *testing.T) {
+func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 	const (
-		testProject        = "phonetool"
+		testApp            = "phonetool"
 		testEnv            = "test"
 		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
-		testApp            = "jobs"
+		testSvc            = "jobs"
 	)
 	testCfnResources := []*cloudformation.StackResource{
 		{
@@ -136,24 +126,24 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		setupMocks func(mocks appDescriberMocks)
+		setupMocks func(mocks svcDescriberMocks)
 
 		wantedResources []*cloudformation.StackResource
 		wantedError     error
 	}{
 		"returns error when fail to describe stack resources": {
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).Return(nil, errors.New("some error")),
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return(nil, errors.New("some error")),
 				)
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"ignores dummy stack resources": {
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).Return([]*cloudformation.StackResource{
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return([]*cloudformation.StackResource{
 						&cloudformation.StackResource{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -185,21 +175,21 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
-			mocks := appDescriberMocks{
+			mocks := svcDescriberMocks{
 				mockStackDescriber: mockStackDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &AppDescriber{
-				project:        testProject,
+			d := &ServiceDescriber{
 				app:            testApp,
+				service:        testSvc,
 				env:            testEnv,
 				stackDescriber: mockStackDescriber,
 			}
 
 			// WHEN
-			actual, err := d.AppStackResources()
+			actual, err := d.ServiceStackResources()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -212,24 +202,24 @@ func TestAppDescriber_AppStackResources(t *testing.T) {
 	}
 }
 
-func TestAppDescriber_GetServiceArn(t *testing.T) {
+func TestServiceDescriber_GetServiceArn(t *testing.T) {
 	const (
-		testProject        = "phonetool"
+		testApp            = "phonetool"
 		testEnv            = "test"
 		testManagerRoleARN = "arn:aws:iam::1111:role/manager"
-		testApp            = "jobs"
+		testSvc            = "jobs"
 	)
 	mockServiceArn := ecs.ServiceArn("mockServiceArn")
 	testCases := map[string]struct {
-		setupMocks func(mocks appDescriberMocks)
+		setupMocks func(mocks svcDescriberMocks)
 
 		wantedServiceArn *ecs.ServiceArn
 		wantedError      error
 	}{
 		"success": {
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).
 						Return([]*cloudformation.StackResource{
 							{
 								LogicalResourceId:  aws.String("Service"),
@@ -242,19 +232,19 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 			wantedServiceArn: &mockServiceArn,
 		},
 		"error if cannot find service arn": {
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).
 						Return([]*cloudformation.StackResource{}, nil),
 				)
 			},
 
-			wantedError: fmt.Errorf("cannot find service arn in app stack resource"),
+			wantedError: fmt.Errorf("cannot find service arn in service stack resource"),
 		},
 		"error if fail to describe stack resources": {
-			setupMocks: func(m appDescriberMocks) {
+			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
-					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testProject, testEnv, testApp)).
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).
 						Return(nil, errors.New("some error")),
 				)
 			},
@@ -270,15 +260,15 @@ func TestAppDescriber_GetServiceArn(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
-			mocks := appDescriberMocks{
+			mocks := svcDescriberMocks{
 				mockStackDescriber: mockStackDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
-			d := &AppDescriber{
-				project:        testProject,
+			d := &ServiceDescriber{
 				app:            testApp,
+				service:        testSvc,
 				env:            testEnv,
 				stackDescriber: mockStackDescriber,
 			}
