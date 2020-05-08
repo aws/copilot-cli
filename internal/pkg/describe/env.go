@@ -23,6 +23,10 @@ const (
 	cloudformationResourceType = "AWS::CloudFormation::Stack"
 )
 
+type resourceGroupsClient interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+}
+
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment  *archer.Environment   `json:"environment"`
@@ -37,7 +41,7 @@ type EnvDescriber struct {
 	apps []*archer.Application
 
 	store          storeSvc
-	rgClient       resourcegroups.ResourceGroupsClient
+	rgClient       resourceGroupsClient
 }
 
 // NewEnvDescriber instantiates an environment describer.
