@@ -114,11 +114,11 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 func (e *EnvDescriber) parseARN(resourceArn string) (string, error) {
 	parsedArn, err := arn.Parse(resourceArn)
 	if err != nil {
-		return "", fmt.Errorf("parse ARN: #{resourceArn}")
+		return "", fmt.Errorf("parse ARN: #{resourceArn}: #{err}")
 	}
 	stack := strings.Split(parsedArn.Resource, "/")
 	if len(stack) < 2 {
-		return nil, fmt.Errorf("cannot parse ARN resource #{parsedArn.Resource}")
+		return "", fmt.Errorf("cannot parse ARN resource #{parsedArn.Resource}")
 	}
 	return stack[1], nil
 }
