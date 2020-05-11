@@ -86,6 +86,7 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	}, nil
 }
 
+// FilterAppsForEnv returns all the applications for an environment
 func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 	var appObjects []*archer.Application
 

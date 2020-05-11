@@ -231,6 +231,10 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
+type resourceGroupsClient interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+}
+
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	ListPipelinesForProject(projectName string) ([]string, error)

@@ -2443,6 +2443,44 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// MockresourceGroupsClient is a mock of resourceGroupsClient interface
+type MockresourceGroupsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockresourceGroupsClientMockRecorder
+}
+
+// MockresourceGroupsClientMockRecorder is the mock recorder for MockresourceGroupsClient
+type MockresourceGroupsClientMockRecorder struct {
+	mock *MockresourceGroupsClient
+}
+
+// NewMockresourceGroupsClient creates a new mock instance
+func NewMockresourceGroupsClient(ctrl *gomock.Controller) *MockresourceGroupsClient {
+	mock := &MockresourceGroupsClient{ctrl: ctrl}
+	mock.recorder = &MockresourceGroupsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockresourceGroupsClient) EXPECT() *MockresourceGroupsClientMockRecorder {
+	return m.recorder
+}
+
+// GetResourcesByTags mocks base method
+func (m *MockresourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetResourcesByTags indicates an expected call of GetResourcesByTags
+func (mr *MockresourceGroupsClientMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGroupsClient)(nil).GetResourcesByTags), resourceType, tags)
+}
+
 // MockpipelineGetter is a mock of pipelineGetter interface
 type MockpipelineGetter struct {
 	ctrl     *gomock.Controller
