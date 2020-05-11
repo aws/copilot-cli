@@ -29,7 +29,7 @@ func TestDeleteProjectOpts_Validate(t *testing.T) {
 	}{
 		"should return error if not in a workspace": {
 			projectName: "",
-			want:        errNoProjectInWorkspace,
+			want:        errNoAppInWorkspace,
 		},
 		"should return nil if project name is set": {
 			projectName: mockProjectName,
@@ -42,7 +42,7 @@ func TestDeleteProjectOpts_Validate(t *testing.T) {
 			opts := deleteProjOpts{
 				deleteProjVars: deleteProjVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: test.projectName,
+						appName: test.projectName,
 					},
 				},
 			}
@@ -114,8 +114,8 @@ func TestDeleteProjectOpts_Ask(t *testing.T) {
 			opts := deleteProjOpts{
 				deleteProjVars: deleteProjVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
-						prompt:      mockPrompter,
+						appName: mockProjectName,
+						prompt:  mockPrompter,
 					},
 					skipConfirmation: test.skipConfirmation,
 				},
@@ -166,7 +166,7 @@ func TestDeleteProjectOpts_DeleteApps(t *testing.T) {
 			opts := deleteProjOpts{
 				deleteProjVars: deleteProjVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
+						appName: mockProjectName,
 					},
 				},
 				store: mockStore,
@@ -219,7 +219,7 @@ func TestDeleteProjectOpts_EmptyS3Bucket(t *testing.T) {
 			opts := deleteProjOpts{
 				deleteProjVars: deleteProjVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
+						appName: mockProjectName,
 					},
 				},
 				store: mockStore,
@@ -409,7 +409,7 @@ func TestDeleteProjectOpts_Execute(t *testing.T) {
 			opts := deleteProjOpts{
 				deleteProjVars: deleteProjVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
+						appName: mockProjectName,
 					},
 				},
 				spinner:                      mockSpinner,

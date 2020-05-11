@@ -50,17 +50,17 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 		store:         ssmStore,
 		w:             log.OutputWriter,
 		initAppDescriber: func(o *appStatusOpts, envName, appName string) error {
-			d, err := describe.NewServiceDescriber(o.ProjectName(), envName, appName)
+			d, err := describe.NewServiceDescriber(o.AppName(), envName, appName)
 			if err != nil {
-				return fmt.Errorf("creating stack describer for project %s: %w", o.ProjectName(), err)
+				return fmt.Errorf("creating stack describer for project %s: %w", o.AppName(), err)
 			}
 			o.appDescriber = d
 			return nil
 		},
 		initStatusDescriber: func(o *appStatusOpts) error {
-			d, err := describe.NewAppStatus(o.ProjectName(), o.envName, o.appName)
+			d, err := describe.NewAppStatus(o.AppName(), o.envName, o.appName)
 			if err != nil {
-				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.ProjectName(), err)
+				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.AppName(), err)
 			}
 			o.statusDescriber = d
 			return nil
@@ -70,18 +70,18 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appStatusOpts) Validate() error {
-	if o.ProjectName() != "" {
-		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
+	if o.AppName() != "" {
+		if _, err := o.store.GetApplication(o.AppName()); err != nil {
 			return err
 		}
 	}
 	if o.appName != "" {
-		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
+		if _, err := o.store.GetService(o.AppName(), o.appName); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.AppName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -120,7 +120,7 @@ func (o *appStatusOpts) Execute() error {
 }
 
 func (o *appStatusOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjects()
@@ -138,7 +138,7 @@ func (o *appStatusOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select project: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
@@ -164,7 +164,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 			return err
 		}
 		if len(appNames) == 0 {
-			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.ProjectName()))
+			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.AppName()))
 		}
 	}
 
@@ -175,7 +175,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 			return err
 		}
 		if len(envNames) == 0 {
-			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.ProjectName()))
+			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.AppName()))
 		}
 	}
 
@@ -203,7 +203,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 		}
 	}
 	if len(appEnvNames) == 0 {
-		return fmt.Errorf("no deployed apps found in project %s", color.HighlightUserInput(o.ProjectName()))
+		return fmt.Errorf("no deployed apps found in project %s", color.HighlightUserInput(o.AppName()))
 	}
 
 	// return if only one deployed app found
@@ -221,7 +221,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 		appEnvNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select deployed applications for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select deployed applications for project %s: %w", o.AppName(), err)
 	}
 	o.appName = appEnvs[appEnvName].appName
 	o.envName = appEnvs[appEnvName].envName
@@ -230,9 +230,9 @@ func (o *appStatusOpts) askAppEnvName() error {
 }
 
 func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.store.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list applications for project %s: %w", o.AppName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -243,9 +243,9 @@ func (o *appStatusOpts) retrieveAllAppNames() ([]string, error) {
 }
 
 func (o *appStatusOpts) retrieveAllEnvNames() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list environments for project %s: %w", o.AppName(), err)
 	}
 	envNames := make([]string, len(envs))
 	for ind, env := range envs {
@@ -283,9 +283,9 @@ func BuildAppStatusCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	return cmd
 }

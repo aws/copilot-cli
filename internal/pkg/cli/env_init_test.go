@@ -51,7 +51,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
 					EnvName:    tc.inEnvName,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
 				},
 			}
 
@@ -126,8 +126,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					EnvName:    tc.inputEnv,
 					EnvProfile: tc.inputProfile,
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				profileConfig: mockCfg,
@@ -571,7 +571,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
 					EnvName:      tc.inEnvName,
-					GlobalOpts:   &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:   &GlobalOpts{appName: tc.inProjectName},
 					IsProduction: tc.inProd,
 				},
 				store:        mockstore,
@@ -697,7 +697,7 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			}
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					GlobalOpts: &GlobalOpts{projectName: tc.project.Name},
+					GlobalOpts: &GlobalOpts{appName: tc.project.Name},
 				},
 				envIdentity:  mockIdentity,
 				projDeployer: mockDeployer,

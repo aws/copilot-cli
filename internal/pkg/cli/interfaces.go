@@ -203,7 +203,7 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsAppDeleter interface {
+type wsSvcDeleter interface {
 	DeleteService(name string) error
 }
 
@@ -247,12 +247,11 @@ type environmentDeployer interface {
 	GetEnvironment(projectName, envName string) (*config.Environment, error)
 }
 
-type appDeployer interface {
-	// DeployApp // TODO ADD
+type svcDeleter interface {
 	DeleteService(in deploy.DeleteServiceInput) error
 }
 
-type appRemover interface {
+type svcRemoverFromApp interface {
 	RemoveServiceFromApp(project *config.Application, appName string) error
 }
 

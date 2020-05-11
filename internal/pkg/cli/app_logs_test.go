@@ -156,9 +156,9 @@ func TestAppLogs_Validate(t *testing.T) {
 					humanStartTime: tc.inputStartTime,
 					humanEndTime:   tc.inputEndTime,
 					since:          tc.inputSince,
-					appName:        tc.inputApplication,
+					svcName:        tc.inputApplication,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputProject,
 					},
 				},
 				store:         mockstore,
@@ -623,10 +623,10 @@ func TestAppLogs_Ask(t *testing.T) {
 			appLogs := &appLogsOpts{
 				appLogsVars: appLogsVars{
 					envName: tc.inputEnvName,
-					appName: tc.inputApplication,
+					svcName: tc.inputApplication,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
-						prompt:      mockPrompter,
+						appName: tc.inputProject,
+						prompt:  mockPrompter,
 					},
 				},
 				store:         mockstore,
@@ -784,10 +784,10 @@ func TestAppLogs_Execute(t *testing.T) {
 				appLogsVars: appLogsVars{
 					follow:           tc.inputFollow,
 					envName:          tc.inputEnvName,
-					appName:          tc.inputApplication,
+					svcName:          tc.inputApplication,
 					shouldOutputJSON: tc.inputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputProject,
 					},
 				},
 				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },

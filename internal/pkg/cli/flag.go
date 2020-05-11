@@ -71,7 +71,7 @@ var (
 
 const (
 	projectFlagDescription  = "Name of the project."
-	appFlagDescription      = "Name of the application."
+	svcFlagDescription      = "Name of the service."
 	envFlagDescription      = "Name of the environment."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."

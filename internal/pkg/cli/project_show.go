@@ -42,8 +42,8 @@ func newShowProjectOpts(vars showProjectVars) (*showProjectOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showProjectOpts) Validate() error {
-	if o.ProjectName() != "" {
-		_, err := o.store.GetApplication(o.ProjectName())
+	if o.AppName() != "" {
+		_, err := o.store.GetApplication(o.AppName())
 		if err != nil {
 			return err
 		}
@@ -81,15 +81,15 @@ func (o *showProjectOpts) Execute() error {
 }
 
 func (o *showProjectOpts) retrieveData() (*describe.App, error) {
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
 	}
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
 		return nil, fmt.Errorf("list environment: %w", err)
 	}
-	apps, err := o.store.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.AppName())
 	if err != nil {
 		return nil, fmt.Errorf("list application: %w", err)
 	}
@@ -118,7 +118,7 @@ func (o *showProjectOpts) retrieveData() (*describe.App, error) {
 }
 
 func (o *showProjectOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjects()
@@ -136,7 +136,7 @@ func (o *showProjectOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select project: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
@@ -185,6 +185,6 @@ func BuildProjectShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, nameFlag, nameFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "" /* default */, projectFlagDescription)
 	return cmd
 }

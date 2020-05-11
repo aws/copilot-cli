@@ -29,7 +29,7 @@ const (
 )
 
 var initPackageAddonsSvc = func(o *packageAppOpts) error {
-	addonsSvc, err := addons.New(o.AppName)
+	addonsSvc, err := addons.New(o.Name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -40,7 +40,7 @@ var initPackageAddonsSvc = func(o *packageAppOpts) error {
 
 type packageAppVars struct {
 	*GlobalOpts
-	AppName   string
+	Name      string
 	EnvName   string
 	Tag       string
 	OutputDir string
@@ -120,20 +120,20 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *packageAppOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
-	if o.AppName != "" {
+	if o.Name != "" {
 		names, err := o.ws.ServiceNames()
 		if err != nil {
 			return fmt.Errorf("list applications in workspace: %w", err)
 		}
-		if !contains(o.AppName, names) {
-			return fmt.Errorf("application '%s' does not exist in the workspace", o.AppName)
+		if !contains(o.Name, names) {
+			return fmt.Errorf("application '%s' does not exist in the workspace", o.Name)
 		}
 	}
 	if o.EnvName != "" {
-		if _, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
+		if _, err := o.store.GetEnvironment(o.AppName(), o.EnvName); err != nil {
 			return err
 		}
 	}
@@ -153,7 +153,7 @@ func (o *packageAppOpts) Ask() error {
 
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageAppOpts) Execute() error {
-	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (o *packageAppOpts) Execute() error {
 }
 
 func (o *packageAppOpts) askAppName() error {
-	if o.AppName != "" {
+	if o.Name != "" {
 		return nil
 	}
 
@@ -209,14 +209,14 @@ func (o *packageAppOpts) askAppName() error {
 		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
 	}
 	if len(appNames) == 1 {
-		o.AppName = appNames[0]
+		o.Name = appNames[0]
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", appNames)
 	if err != nil {
 		return fmt.Errorf("prompt application name: %w", err)
 	}
-	o.AppName = appName
+	o.Name = appName
 	return nil
 }
 
@@ -230,7 +230,7 @@ func (o *packageAppOpts) askEnvName() error {
 		return err
 	}
 	if len(envNames) == 0 {
-		return fmt.Errorf("there are no environments in project %s", o.ProjectName())
+		return fmt.Errorf("there are no environments in project %s", o.AppName())
 	}
 	if len(envNames) == 1 {
 		o.EnvName = envNames[0]
@@ -275,7 +275,7 @@ type appCfnTemplates struct {
 
 // getAppTemplates returns the CloudFormation stack's template and its parameters for the application.
 func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTemplates, error) {
-	raw, err := o.ws.ReadServiceManifest(o.AppName)
+	raw, err := o.ws.ReadServiceManifest(o.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +284,7 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 		return nil, err
 	}
 
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		return nil, err
 	}
@@ -293,10 +293,10 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 		return nil, err
 	}
 
-	repoURL, ok := resources.RepositoryURLs[o.AppName]
+	repoURL, ok := resources.RepositoryURLs[o.Name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			appName:       o.AppName,
+			appName:       o.Name,
 			envRegion:     env.Region,
 			projAccountID: proj.AccountID,
 		}
@@ -327,7 +327,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 	}
 
 	templatePath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.AppName))
+		fmt.Sprintf(config.ServiceCfnTemplateNameFormat, o.Name))
 	templateFile, err := o.fs.Create(templatePath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", templatePath, err)
@@ -335,7 +335,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 	o.stackWriter = templateFile
 
 	paramsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.AppName, o.EnvName))
+		fmt.Sprintf(config.ServiceCfnTemplateConfigurationNameFormat, o.Name, o.EnvName))
 	paramsFile, err := o.fs.Create(paramsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", paramsPath, err)
@@ -347,7 +347,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 
 func (o *packageAppOpts) setAddonsFileWriter() error {
 	addonsPath := filepath.Join(o.OutputDir,
-		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.AppName))
+		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.Name))
 	addonsFile, err := o.fs.Create(addonsPath)
 	if err != nil {
 		return fmt.Errorf("create file %s: %w", addonsPath, err)
@@ -367,9 +367,9 @@ func contains(s string, items []string) bool {
 }
 
 func (o *packageAppOpts) listEnvNames() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list environments for project %s: %w", o.AppName(), err)
 	}
 	var names []string
 	for _, env := range envs {
@@ -431,7 +431,7 @@ func BuildAppPackageCmd() *cobra.Command {
 		}),
 	}
 	// Set the defaults to opts.{Field} otherwise cobra overrides the values set by the constructor.
-	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.Tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringVar(&vars.OutputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)

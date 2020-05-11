@@ -48,9 +48,9 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		store:       ssmStore,
 		w:           log.OutputWriter,
 		initEnvDescriber: func(o *showEnvOpts) error {
-			d, err := describe.NewEnvDescriber(o.ProjectName(), o.envName)
+			d, err := describe.NewEnvDescriber(o.AppName(), o.envName)
 			if err != nil {
-				return fmt.Errorf("creating describer for environment %s in project %s: %w", o.envName, o.ProjectName(), err)
+				return fmt.Errorf("creating describer for environment %s in project %s: %w", o.envName, o.AppName(), err)
 			}
 			o.describer = d
 			return nil
@@ -60,13 +60,13 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showEnvOpts) Validate() error {
-	if o.ProjectName() != "" {
-		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
+	if o.AppName() != "" {
+		if _, err := o.store.GetApplication(o.AppName()); err != nil {
 			return err
 		}
 	}
 	if o.envName != "" {
-		if _, err := o.store.GetEnvironment(o.ProjectName(), o.envName); err != nil {
+		if _, err := o.store.GetEnvironment(o.AppName(), o.envName); err != nil {
 			return err
 		}
 	}
@@ -105,7 +105,7 @@ func (o *showEnvOpts) Execute() error {
 }
 
 func (o *showEnvOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjects()
@@ -116,7 +116,7 @@ func (o *showEnvOpts) askProject() error {
 		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
 	}
 	if len(projNames) == 1 {
-		o.projectName = projNames[0]
+		o.appName = projNames[0]
 		return nil
 	}
 	proj, err := o.prompt.SelectOne(
@@ -127,7 +127,7 @@ func (o *showEnvOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select projects: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
@@ -144,7 +144,7 @@ func (o *showEnvOpts) askEnvName() error {
 	}
 
 	if len(envNames) == 0 {
-		log.Infof("No environments found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
+		log.Infof("No environments found in project %s\n.", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 	if len(envNames) == 1 {
@@ -152,10 +152,10 @@ func (o *showEnvOpts) askEnvName() error {
 		return nil
 	}
 	envName, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, color.HighlightUserInput(o.ProjectName())), environmentShowEnvNameHelpPrompt, envNames,
+		fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, color.HighlightUserInput(o.AppName())), environmentShowEnvNameHelpPrompt, envNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select environment for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select environment for project %s: %w", o.AppName(), err)
 	}
 	o.envName = envName
 
@@ -175,9 +175,9 @@ func (o *showEnvOpts) retrieveProjects() ([]string, error) {
 }
 
 func (o *showEnvOpts) retrieveAllEnvironments() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list environments for project %s: %w", o.AppName(), err)
 	}
 	envNames := make([]string, len(envs))
 	for ind, env := range envs {
@@ -219,6 +219,6 @@ func BuildEnvShowCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.envName, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	return cmd
 }

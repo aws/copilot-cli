@@ -62,9 +62,9 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		return nil, fmt.Errorf("couldn't connect to project datastore: %w", err)
 	}
 
-	project, err := store.GetApplication(vars.ProjectName())
+	project, err := store.GetApplication(vars.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("get project %s: %w", vars.ProjectName(), err)
+		return nil, fmt.Errorf("get project %s: %w", vars.AppName(), err)
 	}
 
 	p := session.NewProvider()
@@ -102,7 +102,7 @@ func (o *updatePipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 	}
 
 	for _, stage := range manifestStages {
-		env, err := o.envStore.GetEnvironment(o.ProjectName(), stage.Name)
+		env, err := o.envStore.GetEnvironment(o.AppName(), stage.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -190,13 +190,13 @@ func (o *updatePipelineOpts) deployPipeline(in *deploy.CreatePipelineInput) erro
 // Execute create a new pipeline or update the current pipeline if it already exists.
 func (o *updatePipelineOpts) Execute() error {
 	// bootstrap pipeline resources
-	o.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(o.ProjectName())))
+	o.prog.Start(fmt.Sprintf(fmtAddPipelineResourcesStart, color.HighlightUserInput(o.AppName())))
 	err := o.pipelineDeployer.AddPipelineResourcesToApp(o.project, o.region)
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(o.ProjectName())))
-		return fmt.Errorf("add pipeline resources to project %s in %s: %w", o.ProjectName(), o.region, err)
+		o.prog.Stop(log.Serrorf(fmtAddPipelineResourcesFailed, color.HighlightUserInput(o.AppName())))
+		return fmt.Errorf("add pipeline resources to project %s in %s: %w", o.AppName(), o.region, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(o.ProjectName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddPipelineResourcesComplete, color.HighlightUserInput(o.AppName())))
 
 	// read pipeline manifest
 	data, err := o.ws.ReadPipelineManifest()
@@ -226,7 +226,7 @@ func (o *updatePipelineOpts) Execute() error {
 	}
 
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		AppName:         o.ProjectName(),
+		AppName:         o.AppName(),
 		Name:            pipeline.Name,
 		Source:          source,
 		Stages:          stages,

@@ -113,7 +113,7 @@ func (o *initEnvOpts) Validate() error {
 			return err
 		}
 	}
-	if o.ProjectName() == "" {
+	if o.AppName() == "" {
 		return fmt.Errorf("no project found: run %s or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	return nil
@@ -129,7 +129,7 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	project, err := o.store.GetApplication(o.ProjectName())
+	project, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		// Ensure the project actually exists before we do a deployment.
 		return err
@@ -149,7 +149,7 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.envDeployer.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
 	}
@@ -176,7 +176,7 @@ func (o *initEnvOpts) deployEnv(project *config.Application) error {
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     o.EnvName,
-		AppName:                  o.ProjectName(),
+		AppName:                  o.AppName(),
 		Prod:                     o.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
@@ -191,7 +191,7 @@ func (o *initEnvOpts) deployEnv(project *config.Application) error {
 			// Do nothing if the stack already exists.
 			o.prog.Stop("")
 			log.Successf("CloudFormation stack for env %s already exists under project %s! Do nothing.\n",
-				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.ProjectName()))
+				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.AppName()))
 			return nil
 		}
 		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.EnvName)))
@@ -215,12 +215,12 @@ func (o *initEnvOpts) deployEnv(project *config.Application) error {
 }
 
 func (o *initEnvOpts) addToStackset(project *config.Application, env *config.Environment) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
 	if err := o.projDeployer.AddEnvToApp(project, env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
 		return fmt.Errorf("deploy env %s to project %s: %w", env.Name, project.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
 
 	return nil
 }

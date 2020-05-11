@@ -28,7 +28,7 @@ type showAppVars struct {
 	*GlobalOpts
 	shouldOutputJSON      bool
 	shouldOutputResources bool
-	appName               string
+	svcName               string
 }
 
 type showAppOpts struct {
@@ -59,29 +59,29 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 	}
 	opts.initDescriber = func(enableResources bool) error {
 		var d describer
-		app, err := opts.store.GetService(opts.ProjectName(), opts.appName)
+		app, err := opts.store.GetService(opts.AppName(), opts.appName)
 		if err != nil {
 			return err
 		}
 		switch app.Type {
 		case manifest.LoadBalancedWebServiceType:
 			if enableResources {
-				d, err = describe.NewWebServiceDescriberWithResources(opts.ProjectName(), opts.appName)
+				d, err = describe.NewWebServiceDescriberWithResources(opts.AppName(), opts.svcName)
 			} else {
-				d, err = describe.NewWebServiceDescriber(opts.ProjectName(), opts.appName)
+				d, err = describe.NewWebServiceDescriber(opts.AppName(), opts.svcName)
 			}
 		case manifest.BackendServiceType:
 			if enableResources {
-				d, err = describe.NewBackendServiceDescriberWithResources(opts.ProjectName(), opts.appName)
+				d, err = describe.NewBackendServiceDescriberWithResources(opts.AppName(), opts.svcName)
 			} else {
-				d, err = describe.NewBackendServiceDescriber(opts.ProjectName(), opts.appName)
+				d, err = describe.NewBackendServiceDescriber(opts.AppName(), opts.svcName)
 			}
 		default:
 			return fmt.Errorf("invalid application type %s", app.Type)
 		}
 
 		if err != nil {
-			return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
+			return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.AppName(), err)
 		}
 		opts.describer = d
 		return nil
@@ -91,13 +91,13 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
-	if o.ProjectName() != "" {
-		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
+	if o.AppName() != "" {
+		if _, err := o.store.GetApplication(o.AppName()); err != nil {
 			return err
 		}
 	}
-	if o.appName != "" {
-		if _, err := o.store.GetService(o.ProjectName(), o.appName); err != nil {
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.AppName(), o.svcName); err != nil {
 			return err
 		}
 	}
@@ -115,7 +115,7 @@ func (o *showAppOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *showAppOpts) Execute() error {
-	if o.appName == "" {
+	if o.svcName == "" {
 		// If there are no local applications in the workspace, we exit without error.
 		return nil
 	}
@@ -125,7 +125,7 @@ func (o *showAppOpts) Execute() error {
 	}
 	app, err := o.describer.Describe()
 	if err != nil {
-		return fmt.Errorf("describe application %s: %w", o.appName, err)
+		return fmt.Errorf("describe application %s: %w", o.svcName, err)
 	}
 
 	if o.shouldOutputJSON {
@@ -142,7 +142,7 @@ func (o *showAppOpts) Execute() error {
 }
 
 func (o *showAppOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjects()
@@ -160,14 +160,14 @@ func (o *showAppOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select projects: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
 
 func (o *showAppOpts) askAppName() error {
 	// return if app name is set by flag
-	if o.appName != "" {
+	if o.svcName != "" {
 		return nil
 	}
 
@@ -180,22 +180,22 @@ func (o *showAppOpts) askAppName() error {
 	}
 
 	if len(appNames) == 0 {
-		log.Infof("No applications found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
+		log.Infof("No applications found in project %s\n.", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 	if len(appNames) == 1 {
-		o.appName = appNames[0]
+		o.svcName = appNames[0]
 		return nil
 	}
 	appName, err := o.prompt.SelectOne(
-		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(o.ProjectName())),
+		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(o.AppName())),
 		applicationShowAppNameHelpPrompt,
 		appNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select applications for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select applications for project %s: %w", o.AppName(), err)
 	}
-	o.appName = appName
+	o.svcName = appName
 
 	return nil
 }
@@ -224,9 +224,9 @@ func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
 }
 
 func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
-	apps, err := o.store.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list applications for project %s: %w", o.AppName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -264,9 +264,9 @@ func BuildAppShowCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	return cmd
 }

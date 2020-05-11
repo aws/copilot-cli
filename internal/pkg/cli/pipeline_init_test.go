@@ -264,7 +264,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 	}{
 		"invalid project name": {
 			inProjectName: "",
-			expectedError: errNoProjectInWorkspace,
+			expectedError: errNoAppInWorkspace,
 		},
 	}
 
@@ -276,7 +276,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
 				},
 			}
 
@@ -583,7 +583,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					GitHubRepo:        tc.inGitHubRepo,
 					GitHubAccessToken: tc.inGitHubToken,
 					GitBranch:         tc.inGitBranch,
-					GlobalOpts:        &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:        &GlobalOpts{appName: tc.inProjectName},
 				},
 
 				secretsmanager: mockSecretsManager,
@@ -628,7 +628,7 @@ func TestInitPipelineOpts_createSecretName(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					GitHubRepo: tc.inGitHubRepo,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
 				},
 			}
 
@@ -664,7 +664,7 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					GitHubRepo:  tc.inGitHubRepo,
-					GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:  &GlobalOpts{appName: tc.inProjectName},
 					GitHubOwner: tc.inProjectOwner,
 				},
 			}

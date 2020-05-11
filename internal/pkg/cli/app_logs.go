@@ -32,7 +32,7 @@ type appLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
 	limit            int
-	appName          string
+	svcName          string
 	envName          string
 	humanStartTime   string
 	humanEndTime     string
@@ -77,8 +77,8 @@ func newAppLogOpts(vars appLogsVars) (*appLogsOpts, error) {
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *appLogsOpts) Validate() error {
-	if o.ProjectName() != "" {
-		_, err := o.store.GetApplication(o.ProjectName())
+	if o.AppName() != "" {
+		_, err := o.store.GetApplication(o.AppName())
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func (o *appLogsOpts) Ask() error {
 
 // Execute shows the applications through the prompt.
 func (o *appLogsOpts) Execute() error {
-	logGroupName := fmt.Sprintf(logGroupNamePattern, o.ProjectName(), o.envName, o.appName)
+	logGroupName := fmt.Sprintf(logGroupNamePattern, o.AppName(), o.envName, o.svcName)
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
 		LastEventTime: make(map[string]int64),
 	}
@@ -158,7 +158,7 @@ func (o *appLogsOpts) Execute() error {
 }
 
 func (o *appLogsOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjectNames()
@@ -176,7 +176,7 @@ func (o *appLogsOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select projects: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
@@ -198,16 +198,16 @@ func (o *appLogsOpts) askAppEnvName() error {
 	var appNames []string
 	var envs []*config.Environment
 	var err error
-	if o.appName == "" {
+	if o.svcName == "" {
 		appNames, err = o.retrieveAllAppNames()
 		if err != nil {
 			return err
 		}
 		if len(appNames) == 0 {
-			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.ProjectName()))
+			return fmt.Errorf("no applications found in project %s", color.HighlightUserInput(o.AppName()))
 		}
 	} else {
-		app, err := o.store.GetService(o.ProjectName(), o.appName)
+		app, err := o.store.GetService(o.AppName(), o.svcName)
 		if err != nil {
 			return fmt.Errorf("get application: %w", err)
 		}
@@ -215,15 +215,15 @@ func (o *appLogsOpts) askAppEnvName() error {
 	}
 
 	if o.envName == "" {
-		envs, err = o.store.ListEnvironments(o.ProjectName())
+		envs, err = o.store.ListEnvironments(o.AppName())
 		if err != nil {
 			return fmt.Errorf("list environments: %w", err)
 		}
 		if len(envs) == 0 {
-			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.ProjectName()))
+			return fmt.Errorf("no environments found in project %s", color.HighlightUserInput(o.AppName()))
 		}
 	} else {
-		env, err := o.store.GetEnvironment(o.ProjectName(), o.envName)
+		env, err := o.store.GetEnvironment(o.AppName(), o.envName)
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -237,7 +237,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 			if err := o.initCwLogsSvc(o, env); err != nil {
 				return err
 			}
-			deployed, err := o.cwlogsSvc[env.Name].LogGroupExists(fmt.Sprintf(logGroupNamePattern, o.ProjectName(), env.Name, appName))
+			deployed, err := o.cwlogsSvc[env.Name].LogGroupExists(fmt.Sprintf(logGroupNamePattern, o.AppName(), env.Name, appName))
 			if err != nil {
 				return fmt.Errorf("check if the log group exists: %w", err)
 			}
@@ -254,13 +254,13 @@ func (o *appLogsOpts) askAppEnvName() error {
 		}
 	}
 	if len(appEnvNames) == 0 {
-		return fmt.Errorf("no deployed applications found in project %s", color.HighlightUserInput(o.ProjectName()))
+		return fmt.Errorf("no deployed applications found in project %s", color.HighlightUserInput(o.AppName()))
 	}
 
 	// return if only one deployed app found
 	if len(appEnvNames) == 1 {
 		log.Infof("Only found one deployed app, defaulting to: %s\n", color.HighlightUserInput(appEnvNames[0]))
-		o.appName = appEnvs[appEnvNames[0]].appName
+		o.svcName = appEnvs[appEnvNames[0]].appName
 		o.envName = appEnvs[appEnvNames[0]].envName
 
 		return nil
@@ -272,7 +272,7 @@ func (o *appLogsOpts) askAppEnvName() error {
 		appEnvNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select deployed applications for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select deployed applications for project %s: %w", o.AppName(), err)
 	}
 	o.appName = appEnvs[appEnvName].appName
 	o.envName = appEnvs[appEnvName].envName
@@ -293,9 +293,9 @@ func (o *appLogsOpts) retrieveProjectNames() ([]string, error) {
 }
 
 func (o *appLogsOpts) retrieveAllAppNames() ([]string, error) {
-	apps, err := o.store.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("list applications for project %s: %w", o.AppName(), err)
 	}
 	appNames := make([]string, len(apps))
 	for ind, app := range apps {
@@ -367,7 +367,7 @@ func BuildAppLogsCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.humanStartTime, startTimeFlag, "", startTimeFlagDescription)
 	cmd.Flags().StringVar(&vars.humanEndTime, endTimeFlag, "", endTimeFlagDescription)
@@ -375,6 +375,6 @@ func BuildAppLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 10, limitFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, projectFlag, projectFlagShort, "", projectFlagDescription)
 	return cmd
 }

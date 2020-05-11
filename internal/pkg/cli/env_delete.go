@@ -113,7 +113,7 @@ func (o *deleteEnvOpts) Ask() error {
 	if o.SkipConfirmation {
 		return nil
 	}
-	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.EnvName, o.ProjectName()), "")
+	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.EnvName, o.AppName()), "")
 	if err != nil {
 		return fmt.Errorf("prompt for environment deletion: %w", err)
 	}
@@ -150,7 +150,7 @@ func (o *deleteEnvOpts) RecommendedActions() []string {
 }
 
 func (o *deleteEnvOpts) validateEnvName() error {
-	if _, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName); err != nil {
+	if _, err := o.store.GetEnvironment(o.AppName(), o.EnvName); err != nil {
 		return err
 	}
 	return nil
@@ -170,7 +170,7 @@ func (o *deleteEnvOpts) validateNoRunningApps() error {
 			},
 			{
 				Key:    aws.String(stack.AppTagKey),
-				Values: []*string{aws.String(o.ProjectName())},
+				Values: []*string{aws.String(o.AppName())},
 			},
 		},
 	})
@@ -197,16 +197,16 @@ func (o *deleteEnvOpts) askEnvName() error {
 		return nil
 	}
 
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return fmt.Errorf("list environments under project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("list environments under project %s: %w", o.AppName(), err)
 	}
 	var names []string
 	for _, env := range envs {
 		names = append(names, env.Name)
 	}
 	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any environment in the project %s", o.ProjectName())
+		return fmt.Errorf("couldn't find any environment in the project %s", o.AppName())
 	}
 	if len(names) == 1 {
 		o.EnvName = names[0]
@@ -261,18 +261,18 @@ func (o *deleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
 
 // deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
 func (o *deleteEnvOpts) deleteStack() bool {
-	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.ProjectName()))
-	if err := o.deployClient.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.EnvName, o.ProjectName(), err))
+	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.EnvName, o.AppName()))
+	if err := o.deployClient.DeleteEnvironment(o.AppName(), o.EnvName); err != nil {
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.EnvName, o.AppName(), err))
 		return false
 	}
-	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.EnvName, o.ProjectName()))
+	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.EnvName, o.AppName()))
 	return true
 }
 
 func (o *deleteEnvOpts) deleteFromStore() {
-	if err := o.store.DeleteEnvironment(o.ProjectName(), o.EnvName); err != nil {
-		log.Infof("Failed to remove environment %s from project %s store: %v\n", o.EnvName, o.ProjectName(), err)
+	if err := o.store.DeleteEnvironment(o.AppName(), o.EnvName); err != nil {
+		log.Infof("Failed to remove environment %s from project %s store: %v\n", o.EnvName, o.AppName(), err)
 	}
 }
 

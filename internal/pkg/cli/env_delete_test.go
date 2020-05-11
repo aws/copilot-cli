@@ -66,7 +66,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
 					EnvName:    tc.inEnv,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
 				},
 				store: tc.mockStore(ctrl),
 			}
@@ -242,7 +242,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 					EnvName:    tc.inEnvName,
 					EnvProfile: tc.inEnvProfile,
 					GlobalOpts: &GlobalOpts{
-						projectName: testProject,
+						appName: testProject,
 					},
 					SkipConfirmation: tc.inSkipConfirmation,
 				},
@@ -385,7 +385,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				deleteEnvVars: deleteEnvVars{
 					EnvName: testEnv,
 					GlobalOpts: &GlobalOpts{
-						projectName: testProject,
+						appName: testProject,
 					},
 				},
 				store:        tc.mockStore(ctrl),

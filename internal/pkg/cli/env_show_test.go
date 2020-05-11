@@ -93,7 +93,7 @@ func TestEnvShow_Validate(t *testing.T) {
 				showEnvVars: showEnvVars{
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -303,8 +303,8 @@ func TestEnvShow_Ask(t *testing.T) {
 				showEnvVars: showEnvVars{
 					envName: tc.inputEnv,
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -316,7 +316,7 @@ func TestEnvShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showEnvs.ProjectName(), "expected project name to match")
+				require.Equal(t, tc.wantedProject, showEnvs.AppName(), "expected project name to match")
 				require.Equal(t, tc.wantedEnv, showEnvs.envName, "expected environment name to match")
 			}
 		})

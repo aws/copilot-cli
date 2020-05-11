@@ -147,8 +147,8 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initPipelineOpts) Validate() error {
 	// TODO add validation for flags
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
 
 	return nil
@@ -229,11 +229,11 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 }
 
 func (o *initPipelineOpts) createSecretName() string {
-	return fmt.Sprintf("github-token-%s-%s", o.projectName, o.GitHubRepo)
+	return fmt.Sprintf("github-token-%s-%s", o.appName, o.GitHubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineName() string {
-	return fmt.Sprintf("pipeline-%s-%s-%s", o.projectName, o.GitHubOwner, o.GitHubRepo)
+	return fmt.Sprintf("pipeline-%s-%s-%s", o.appName, o.GitHubOwner, o.GitHubRepo)
 }
 
 func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
@@ -326,9 +326,9 @@ func (o *initPipelineOpts) createBuildspec() error {
 }
 
 func (o *initPipelineOpts) artifactBuckets() ([]artifactBucket, error) {
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("get project metadata %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("get project metadata %s: %w", o.AppName(), err)
 	}
 	regionalResources, err := o.cfnClient.GetRegionalAppResources(proj)
 	if err != nil {
@@ -489,9 +489,9 @@ func (o *initPipelineOpts) getGitHubAccessToken() error {
 }
 
 func (o *initPipelineOpts) getEnvs() ([]*config.Environment, error) {
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("could not list environments for project %s: %w", o.ProjectName(), err)
+		return nil, fmt.Errorf("could not list environments for project %s: %w", o.AppName(), err)
 	}
 
 	if len(envs) == 0 {

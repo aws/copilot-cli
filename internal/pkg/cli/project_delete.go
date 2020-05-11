@@ -91,13 +91,13 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 			return s3.New(session)
 		},
 		executorProvider: func(appName string) (executor, error) {
-			vars := deleteAppVars{
+			vars := deleteSvcVars{
 				SkipConfirmation: true, // always skip sub-confirmations
 				GlobalOpts:       NewGlobalOpts(),
-				AppName:          appName,
+				Name:             appName,
 			}
 
-			deleteAppOpts, err := newDeleteAppOpts(vars)
+			deleteAppOpts, err := newDeleteSvcOpts(vars)
 			if err != nil {
 				return nil, err
 			}
@@ -138,8 +138,8 @@ func newDeleteProjOpts(vars deleteProjVars) (*deleteProjOpts, error) {
 }
 
 func (o *deleteProjOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
 
 	return nil
@@ -151,7 +151,7 @@ func (o *deleteProjOpts) Ask() error {
 	}
 
 	manualConfirm, err := o.prompt.Confirm(
-		fmt.Sprintf(fmtConfirmProjectDeletePrompt, o.ProjectName()),
+		fmt.Sprintf(fmtConfirmProjectDeletePrompt, o.AppName()),
 		confirmProjectDeleteHelp,
 		prompt.WithTrueDefault())
 
@@ -204,7 +204,7 @@ func (o *deleteProjOpts) Execute() error {
 }
 
 func (o *deleteProjOpts) deleteApps() error {
-	apps, err := o.store.ListServices(o.ProjectName())
+	apps, err := o.store.ListServices(o.AppName())
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func (o *deleteProjOpts) deleteApps() error {
 }
 
 func (o *deleteProjOpts) deleteEnvs() error {
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
 		return err
 	}
@@ -251,9 +251,9 @@ func (o *deleteProjOpts) deleteEnvs() error {
 }
 
 func (o *deleteProjOpts) emptyS3Bucket() error {
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
-		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("get project %s: %w", o.AppName(), err)
 	}
 	projResources, err := o.deployer.GetRegionalAppResources(proj)
 	if err != nil {
@@ -288,7 +288,7 @@ func (o *deleteProjOpts) deleteProjectPipeline() error {
 
 func (o *deleteProjOpts) deleteProjectResources() error {
 	o.spinner.Start(deleteProjectResourcesStartMsg)
-	if err := o.deployer.DeleteApp(o.ProjectName()); err != nil {
+	if err := o.deployer.DeleteApp(o.AppName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project resources."))
 		return fmt.Errorf("delete project resources: %w", err)
 	}
@@ -299,7 +299,7 @@ func (o *deleteProjOpts) deleteProjectResources() error {
 
 func (o *deleteProjOpts) deleteProjectParams() error {
 	o.spinner.Start(deleteProjectParamsStartMsg)
-	if err := o.store.DeleteApplication(o.ProjectName()); err != nil {
+	if err := o.store.DeleteApplication(o.AppName()); err != nil {
 		o.spinner.Stop(log.Serror("Error deleting project metadata."))
 
 		return err

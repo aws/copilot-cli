@@ -87,7 +87,7 @@ func (o *deletePipelineOpts) Ask() error {
 	}
 
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.ProjectName()),
+		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.AppName()),
 		pipelineDeleteConfirmHelp)
 
 	if err != nil {
@@ -103,8 +103,8 @@ func (o *deletePipelineOpts) Ask() error {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *deletePipelineOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
 
 	if err := o.readPipelineManifest(); err != nil {
@@ -180,14 +180,14 @@ func (o *deletePipelineOpts) deleteSecret() error {
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.ProjectName()))
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.AppName()))
 
 	if err := o.pipelineDeployer.DeletePipeline(o.PipelineName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.ProjectName(), err))
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.AppName(), err))
 		return err
 	}
 
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.ProjectName()))
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.AppName()))
 
 	return nil
 }
