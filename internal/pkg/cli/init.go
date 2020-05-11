@@ -107,7 +107,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	initApp := &initAppOpts{
 		initAppVars: initAppVars{
 			AppType:        vars.appType,
-			AppName:        vars.appName,
+			Name:           vars.appName,
 			DockerfilePath: vars.dockerfilePath,
 			AppPort:        vars.port,
 			GlobalOpts:     NewGlobalOpts(),
@@ -162,7 +162,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		projectName:    &initProject.ProjectName,
 		appType:        &initApp.AppType,
-		appName:        &initApp.AppName,
+		appName:        &initApp.Name,
 		appPort:        &initApp.AppPort,
 		dockerfilePath: &initApp.DockerfilePath,
 
@@ -210,7 +210,7 @@ func (o *initOpts) loadProject() error {
 		return err
 	}
 	// Write the project name to viper so that sub-commands can retrieve its value.
-	viper.Set(projectFlag, o.projectName)
+	viper.Set(appFlag, o.projectName)
 	return nil
 }
 
@@ -243,7 +243,7 @@ func (o *initOpts) deployApp() error {
 	}
 	if deployOpts, ok := o.appDeploy.(*appDeployOpts); ok {
 		// Set the application's name to the deploy sub-command.
-		deployOpts.AppName = *o.appName
+		deployOpts.Name = *o.appName
 	}
 
 	if err := o.appDeploy.Ask(); err != nil {
@@ -288,8 +288,8 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, svcFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)

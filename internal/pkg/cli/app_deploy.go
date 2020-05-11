@@ -38,7 +38,7 @@ var (
 
 type appDeployVars struct {
 	*GlobalOpts
-	AppName      string
+	Name         string
 	EnvName      string
 	ImageTag     string
 	ResourceTags map[string]string
@@ -91,10 +91,10 @@ func newAppDeployOpts(vars appDeployVars) (*appDeployOpts, error) {
 
 // Validate returns an error if the user inputs are invalid.
 func (o *appDeployOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
-	if o.AppName != "" {
+	if o.Name != "" {
 		if err := o.validateAppName(); err != nil {
 			return err
 		}
@@ -129,13 +129,13 @@ func (o *appDeployOpts) Execute() error {
 	}
 	o.targetEnvironment = env
 
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		return err
 	}
 	o.targetProject = proj
 
-	app, err := o.store.GetService(o.ProjectName(), o.AppName)
+	app, err := o.store.GetService(o.AppName(), o.Name)
 	if err != nil {
 		return fmt.Errorf("get application metadata: %w", err)
 	}
@@ -173,11 +173,11 @@ func (o *appDeployOpts) validateAppName() error {
 		return fmt.Errorf("list applications in the workspace: %w", err)
 	}
 	for _, name := range names {
-		if o.AppName == name {
+		if o.Name == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("application %s not found in the workspace", color.HighlightUserInput(o.AppName))
+	return fmt.Errorf("application %s not found in the workspace", color.HighlightUserInput(o.Name))
 }
 
 func (o *appDeployOpts) validateEnvName() error {
@@ -188,7 +188,7 @@ func (o *appDeployOpts) validateEnvName() error {
 }
 
 func (o *appDeployOpts) targetEnv() (*config.Environment, error) {
-	env, err := o.store.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
 	}
@@ -196,7 +196,7 @@ func (o *appDeployOpts) targetEnv() (*config.Environment, error) {
 }
 
 func (o *appDeployOpts) askAppName() error {
-	if o.AppName != "" {
+	if o.Name != "" {
 		return nil
 	}
 
@@ -208,8 +208,8 @@ func (o *appDeployOpts) askAppName() error {
 		return errors.New("no applications found in the workspace")
 	}
 	if len(names) == 1 {
-		o.AppName = names[0]
-		log.Infof("Only found one app, defaulting to: %s\n", color.HighlightUserInput(o.AppName))
+		o.Name = names[0]
+		log.Infof("Only found one app, defaulting to: %s\n", color.HighlightUserInput(o.Name))
 		return nil
 	}
 
@@ -217,7 +217,7 @@ func (o *appDeployOpts) askAppName() error {
 	if err != nil {
 		return fmt.Errorf("select app name: %w", err)
 	}
-	o.AppName = selectedAppName
+	o.Name = selectedAppName
 	return nil
 }
 
@@ -226,15 +226,15 @@ func (o *appDeployOpts) askEnvName() error {
 		return nil
 	}
 
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
-		return fmt.Errorf("get environments for project %s from metadata store: %w", o.ProjectName(), err)
+		return fmt.Errorf("get environments for project %s from metadata store: %w", o.AppName(), err)
 	}
 	if len(envs) == 0 {
 		log.Infof("Couldn't find any environments associated with project %s, try initializing one: %s\n",
-			color.HighlightUserInput(o.ProjectName()),
+			color.HighlightUserInput(o.AppName()),
 			color.HighlightCode("ecs-preview env init"))
-		return fmt.Errorf("no environments found in project %s", o.ProjectName())
+		return fmt.Errorf("no environments found in project %s", o.AppName())
 	}
 	if len(envs) == 1 {
 		o.EnvName = envs[0].Name
@@ -299,7 +299,7 @@ func (o *appDeployOpts) configureClients() error {
 	// app deploy CF client against env account profile AND target environment region
 	o.appCFSvc = cloudformation.New(envSession)
 
-	addonsSvc, err := addons.New(o.AppName)
+	addonsSvc, err := addons.New(o.Name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -315,7 +315,7 @@ func (o *appDeployOpts) configureClients() error {
 }
 
 func (o *appDeployOpts) pushToECRRepo() error {
-	repoName := fmt.Sprintf("%s/%s", o.projectName, o.AppName)
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
 
 	uri, err := o.ecrService.GetRepository(repoName)
 	if err != nil {
@@ -347,9 +347,9 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 		DockerfilePath() string
 	}
 
-	manifestBytes, err := o.workspaceService.ReadServiceManifest(o.AppName)
+	manifestBytes, err := o.workspaceService.ReadServiceManifest(o.Name)
 	if err != nil {
-		return "", fmt.Errorf("read manifest file %s: %w", o.AppName, err)
+		return "", fmt.Errorf("read manifest file %s: %w", o.Name, err)
 	}
 
 	app, err := manifest.UnmarshalService(manifestBytes)
@@ -359,7 +359,7 @@ func (o *appDeployOpts) getAppDockerfilePath() (string, error) {
 
 	mf, ok := app.(dfPath)
 	if !ok {
-		return "", fmt.Errorf("application %s does not have a dockerfile path", o.AppName)
+		return "", fmt.Errorf("application %s does not have a dockerfile path", o.Name)
 	}
 	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
 }
@@ -383,7 +383,7 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	reader := strings.NewReader(template)
-	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.AppName), reader)
+	url, err := o.s3Service.PutArtifact(resources.S3Bucket, fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.Name), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -391,13 +391,13 @@ func (o *appDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 }
 
 func (o *appDeployOpts) manifest() (interface{}, error) {
-	raw, err := o.workspaceService.ReadServiceManifest(o.AppName)
+	raw, err := o.workspaceService.ReadServiceManifest(o.Name)
 	if err != nil {
-		return nil, fmt.Errorf("read app %s manifest from workspace: %w", o.AppName, err)
+		return nil, fmt.Errorf("read app %s manifest from workspace: %w", o.Name, err)
 	}
 	mft, err := manifest.UnmarshalService(raw)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal app %s manifest: %w", o.AppName, err)
+		return nil, fmt.Errorf("unmarshal app %s manifest: %w", o.Name, err)
 	}
 	return mft, nil
 }
@@ -407,10 +407,10 @@ func (o *appDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	if err != nil {
 		return nil, fmt.Errorf("get project %s resources from region %s: %w", o.targetProject.Name, o.targetEnvironment.Region, err)
 	}
-	repoURL, ok := resources.RepositoryURLs[o.AppName]
+	repoURL, ok := resources.RepositoryURLs[o.Name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			appName:       o.AppName,
+			appName:       o.Name,
 			envRegion:     o.targetEnvironment.Region,
 			projAccountID: o.targetProject.AccountID,
 		}
@@ -458,7 +458,7 @@ func (o *appDeployOpts) deployApp(addonsURL string) error {
 	}
 	o.spinner.Start(
 		fmt.Sprintf("Deploying %s to %s.",
-			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.AppName), color.HighlightUserInput(o.ImageTag)),
+			fmt.Sprintf("%s:%s", color.HighlightUserInput(o.Name), color.HighlightUserInput(o.ImageTag)),
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	if err := o.appCFSvc.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
@@ -478,9 +478,9 @@ func (o *appDeployOpts) showAppURI() error {
 	var err error
 	switch o.targetApplication.Type {
 	case manifest.LoadBalancedWebServiceType:
-		appDescriber, err = describe.NewWebServiceDescriber(o.ProjectName(), o.AppName)
+		appDescriber, err = describe.NewWebServiceDescriber(o.AppName(), o.Name)
 	case manifest.BackendServiceType:
-		appDescriber, err = describe.NewBackendServiceDescriber(o.ProjectName(), o.AppName)
+		appDescriber, err = describe.NewBackendServiceDescriber(o.AppName(), o.Name)
 	default:
 		err = errors.New("unexpected application type")
 	}
@@ -494,9 +494,9 @@ func (o *appDeployOpts) showAppURI() error {
 	}
 	switch o.targetApplication.Type {
 	case manifest.BackendServiceType:
-		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
+		log.Successf("Deployed %s, its service discovery endpoint is %s.\n", color.HighlightUserInput(o.Name), color.HighlightResource(uri))
 	default:
-		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.AppName), color.HighlightResource(uri))
+		log.Successf("Deployed %s, you can access it at %s.\n", color.HighlightUserInput(o.Name), color.HighlightResource(uri))
 	}
 	return nil
 }
@@ -532,7 +532,7 @@ func BuildAppDeployCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.ImageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.ResourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errNoProjectInWorkspace = errors.New("could not find a project attached to this workspace, please run `project init` first")
+var errNoAppInWorkspace = errors.New("could not find an application attached to this workspace, please run `app init` first")
 
 // BuildAppCmd is the top level command for applications.
 func BuildAppCmd() *cobra.Command {
@@ -26,7 +26,7 @@ An application represents an Amazon ECS service or task.`,
 	cmd.AddCommand(BuildAppListCmd())
 	cmd.AddCommand(BuildAppPackageCmd())
 	cmd.AddCommand(BuildAppDeployCmd())
-	cmd.AddCommand(BuildAppDeleteCmd())
+	cmd.AddCommand(BuildSvcDeleteCmd())
 	cmd.AddCommand(BuildAppShowCmd())
 	cmd.AddCommand(BuildAppStatusCmd())
 	cmd.AddCommand(BuildAppLogsCmd())

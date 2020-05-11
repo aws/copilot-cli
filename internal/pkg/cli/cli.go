@@ -20,56 +20,51 @@ import (
 
 // GlobalOpts holds fields that are used across multiple commands.
 type GlobalOpts struct {
-	projectName string
-	prompt      prompter
+	appName string
+	prompt  prompter
 }
 
-// NewGlobalOpts returns a GlobalOpts with the project name retrieved from viper.
+// NewGlobalOpts returns a GlobalOpts with the application name retrieved from viper.
 func NewGlobalOpts() *GlobalOpts {
-	bindProjectName()
+	bindAppName()
 
 	return &GlobalOpts{
-		// Leave the projectName as empty in case it's overwritten by a global flag.
+		// Leave the appName as empty in case it's overwritten by a global flag.
 		// See https://github.com/aws/amazon-ecs-cli-v2/issues/570#issuecomment-569133741
 		prompt: prompt.New(),
 	}
 }
 
-// ProjectName returns the project name.
+// AppName returns the application name.
 // If the name is empty, it caches it after querying viper.
-func (o *GlobalOpts) ProjectName() string {
-	if o.projectName != "" {
-		return o.projectName
+func (o *GlobalOpts) AppName() string {
+	if o.appName != "" {
+		return o.appName
 	}
-	o.projectName = viper.GetString(projectFlag)
-	return o.projectName
+	o.appName = viper.GetString(appFlag)
+	return o.appName
 }
 
-// bindProjectName loads the project's name to viper.
+// bindAppName loads the application's name to viper.
 // If there is an error, we swallow the error and leave the default value as empty string.
-func bindProjectName() {
-	name, err := loadProjectName()
+func bindAppName() {
+	name, err := loadAppName()
 	if err != nil {
 		return
 	}
-	viper.SetDefault(projectFlag, name)
+	viper.SetDefault(appFlag, name)
 }
 
-// loadProjectName retrieves the project's name from the workspace if it exists and returns it.
+// loadAppName retrieves the application's name from the workspace if it exists and returns it.
 // If there is an error, it returns an empty string and the error.
-func loadProjectName() (string, error) {
-	// Load the workspace and set the project flag.
+func loadAppName() (string, error) {
 	ws, err := workspace.New()
 	if err != nil {
-		// If there's an error fetching the workspace, fall back to requiring
-		// the project flag be set.
 		return "", fmt.Errorf("fetching workspace: %w", err)
 	}
 
 	summary, err := ws.Summary()
 	if err != nil {
-		// If there's an error reading from the workspace, fall back to requiring
-		// the project flag be set.
 		return "", fmt.Errorf("reading from workspace: %w", err)
 	}
 	return summary.Application, nil

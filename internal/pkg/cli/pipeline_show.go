@@ -70,8 +70,8 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *showPipelineOpts) Validate() error {
-	if o.ProjectName() != "" {
-		if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
+	if o.AppName() != "" {
+		if _, err := o.store.GetApplication(o.AppName()); err != nil {
 			return err
 		}
 	}
@@ -94,7 +94,7 @@ func (o *showPipelineOpts) Ask() error {
 }
 
 func (o *showPipelineOpts) askProject() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projNames, err := o.retrieveProjects()
@@ -106,7 +106,7 @@ func (o *showPipelineOpts) askProject() error {
 	}
 
 	if len(projNames) == 1 {
-		o.projectName = projNames[0]
+		o.appName = projNames[0]
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func (o *showPipelineOpts) askProject() error {
 	if err != nil {
 		return fmt.Errorf("select projects: %w", err)
 	}
-	o.projectName = proj
+	o.appName = proj
 
 	return nil
 }
@@ -149,7 +149,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for project %s, looking for deployed pipelines\n", color.HighlightUserInput(o.ProjectName()))
+		log.Infof("No pipeline manifest in workspace for project %s, looking for deployed pipelines\n", color.HighlightUserInput(o.AppName()))
 	}
 
 	// find deployed pipelines
@@ -159,7 +159,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for project %s\n.", color.HighlightUserInput(o.ProjectName()))
+		log.Infof("No pipelines found for project %s\n.", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 
@@ -173,10 +173,10 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 	// select from list of deployed pipelines
 	pipelineName, err = o.prompt.SelectOne(
-		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.ProjectName())), pipelineShowPipelineNameHelpPrompt, pipelineNames,
+		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.AppName())), pipelineShowPipelineNameHelpPrompt, pipelineNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select pipeline for project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("select pipeline for project %s: %w", o.AppName(), err)
 	}
 	o.pipelineName = pipelineName
 
@@ -186,7 +186,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-		stack.AppTagKey: o.ProjectName(),
+		stack.AppTagKey: o.AppName(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
@@ -242,7 +242,7 @@ func BuildPipelineShowCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.pipelineName, nameFlag, nameFlagShort, "", pipelineFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
 

@@ -70,14 +70,14 @@ func (o *listEnvOpts) selectProject() (string, error) {
 
 // Ask asks for fields that are required but not passed in.
 func (o *listEnvOpts) Ask() error {
-	if o.ProjectName() != "" {
+	if o.AppName() != "" {
 		return nil
 	}
 	projectName, err := o.selectProject()
 	if err != nil {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
-	o.projectName = projectName
+	o.appName = projectName
 
 	return nil
 }
@@ -85,11 +85,11 @@ func (o *listEnvOpts) Ask() error {
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its environments.
-	if _, err := o.store.GetApplication(o.ProjectName()); err != nil {
+	if _, err := o.store.GetApplication(o.AppName()); err != nil {
 		return err
 	}
 
-	envs, err := o.store.ListEnvironments(o.ProjectName())
+	envs, err := o.store.ListEnvironments(o.AppName())
 	if err != nil {
 		return err
 	}

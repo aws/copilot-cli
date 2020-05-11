@@ -63,7 +63,7 @@ const (
 type initAppVars struct {
 	*GlobalOpts
 	AppType        string
-	AppName        string
+	Name           string
 	DockerfilePath string
 	AppPort        uint16
 }
@@ -123,16 +123,16 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *initAppOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
 	if o.AppType != "" {
 		if err := validateApplicationType(o.AppType); err != nil {
 			return err
 		}
 	}
-	if o.AppName != "" {
-		if err := validateApplicationName(o.AppName); err != nil {
+	if o.Name != "" {
+		if err := validateApplicationName(o.Name); err != nil {
 			return err
 		}
 	}
@@ -169,9 +169,9 @@ func (o *initAppOpts) Ask() error {
 
 // Execute writes the application's manifest file and stores the application in SSM.
 func (o *initAppOpts) Execute() error {
-	proj, err := o.store.GetApplication(o.ProjectName())
+	proj, err := o.store.GetApplication(o.AppName())
 	if err != nil {
-		return fmt.Errorf("get project %s: %w", o.ProjectName(), err)
+		return fmt.Errorf("get project %s: %w", o.AppName(), err)
 	}
 	o.proj = proj
 
@@ -181,19 +181,19 @@ func (o *initAppOpts) Execute() error {
 	}
 	o.manifestPath = manifestPath
 
-	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.AppName))
-	if err := o.projDeployer.AddServiceToApp(o.proj, o.AppName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.AppName))
-		return fmt.Errorf("add app %s to project %s: %w", o.AppName, o.ProjectName(), err)
+	o.prog.Start(fmt.Sprintf(fmtAddAppToProjectStart, o.Name))
+	if err := o.projDeployer.AddServiceToApp(o.proj, o.Name); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddAppToProjectFailed, o.Name))
+		return fmt.Errorf("add app %s to project %s: %w", o.Name, o.AppName(), err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.AppName))
+	o.prog.Stop(log.Ssuccessf(fmtAddAppToProjectComplete, o.Name))
 
 	if err := o.store.CreateService(&config.Service{
-		App:  o.ProjectName(),
-		Name: o.AppName,
+		App:  o.AppName(),
+		Name: o.Name,
 		Type: o.AppType,
 	}); err != nil {
-		return fmt.Errorf("saving application %s: %w", o.AppName, err)
+		return fmt.Errorf("saving application %s: %w", o.Name, err)
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func (o *initAppOpts) createManifest() (string, error) {
 		return "", err
 	}
 	var manifestExists bool
-	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.AppName)
+	manifestPath, err := o.ws.WriteServiceManifest(manifest, o.Name)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
@@ -223,7 +223,7 @@ func (o *initAppOpts) createManifest() (string, error) {
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s app already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.AppName), color.HighlightResource(manifestPath))
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.Name), color.HighlightResource(manifestPath))
 	log.Infoln("Your manifest contains configurations like your container size and ports.")
 	log.Infoln()
 
@@ -244,21 +244,21 @@ func (o *initAppOpts) newManifest() (encoding.BinaryMarshaler, error) {
 func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWebService, error) {
 	props := &manifest.LoadBalancedWebServiceProps{
 		ServiceProps: &manifest.ServiceProps{
-			Name:       o.AppName,
+			Name:       o.Name,
 			Dockerfile: o.DockerfilePath,
 		},
 		Port: o.AppPort,
 		Path: "/",
 	}
-	existingApps, err := o.store.ListServices(o.ProjectName())
+	existingApps, err := o.store.ListServices(o.AppName())
 	if err != nil {
 		return nil, err
 	}
 	// We default to "/" for the first service, but if there's another
 	// Load Balanced Web Service, we use the svc name as the default, instead.
 	for _, existingApp := range existingApps {
-		if existingApp.Type == manifest.LoadBalancedWebServiceType && existingApp.Name != o.AppName {
-			props.Path = o.AppName
+		if existingApp.Type == manifest.LoadBalancedWebServiceType && existingApp.Name != o.Name {
+			props.Path = o.Name
 			break
 		}
 	}
@@ -268,7 +268,7 @@ func (o *initAppOpts) newLoadBalancedWebAppManifest() (*manifest.LoadBalancedWeb
 func (o *initAppOpts) newBackendAppManifest() (*manifest.BackendService, error) {
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
-			Name:       o.AppName,
+			Name:       o.Name,
 			Dockerfile: o.DockerfilePath,
 		},
 		Port: o.AppPort,
@@ -293,18 +293,18 @@ func (o *initAppOpts) askAppType() error {
 }
 
 func (o *initAppOpts) askAppName() error {
-	if o.AppName != "" {
+	if o.Name != "" {
 		return nil
 	}
 
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtAppInitAppNamePrompt, color.HighlightUserInput(o.AppType)),
-		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, o.ProjectName()),
+		fmt.Sprintf(fmtAppInitAppNameHelpPrompt, o.AppName()),
 		validateApplicationName)
 	if err != nil {
 		return fmt.Errorf("failed to get application name: %w", err)
 	}
-	o.AppName = name
+	o.Name = name
 	return nil
 }
 
@@ -322,7 +322,7 @@ func (o *initAppOpts) askDockerfile() error {
 	}
 
 	sel, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(o.AppName)),
+		fmt.Sprintf(fmtAppInitDockerfilePrompt, color.HighlightUserInput(o.Name)),
 		appInitDockerfileHelpPrompt,
 		dockerfiles,
 	)
@@ -343,7 +343,7 @@ func (o *initAppOpts) askAppPort() error {
 
 	log.Infof(fmtParsePortFromDockerfileStart,
 		color.HighlightUserInput(o.DockerfilePath),
-		color.HighlightUserInput(o.AppName),
+		color.HighlightUserInput(o.Name),
 	)
 
 	o.setupParser(o)
@@ -356,7 +356,7 @@ func (o *initAppOpts) askAppPort() error {
 	switch len(ports) {
 	case 0:
 		log.Infof(fmtParseFromDockerfileNoPort,
-			color.HighlightUserInput(o.AppName),
+			color.HighlightUserInput(o.Name),
 		)
 	case 1:
 		o.AppPort = ports[0]
@@ -394,7 +394,7 @@ func (o *initAppOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.manifestPath)),
 		fmt.Sprintf("Run %s to deploy your application to a %s environment.",
-			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", o.AppName, defaultEnvironmentName)),
+			color.HighlightCode(fmt.Sprintf("ecs-preview app deploy --name %s --env %s", o.Name, defaultEnvironmentName)),
 			defaultEnvironmentName),
 	}
 }
@@ -437,7 +437,7 @@ This command is also run as part of "ecs-preview init".`,
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.AppType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.DockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().Uint16Var(&vars.AppPort, appPortFlag, 0, appPortFlagDescription)

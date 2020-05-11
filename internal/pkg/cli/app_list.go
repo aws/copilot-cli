@@ -103,14 +103,14 @@ func (opts *listAppOpts) localAppsFilter(appNames []string) {
 
 // Ask asks for fields that are required but not passed in.
 func (opts *listAppOpts) Ask() error {
-	if opts.ProjectName() != "" {
+	if opts.AppName() != "" {
 		return nil
 	}
 	projectName, err := opts.selectProject()
 	if err != nil {
 		return fmt.Errorf("failed to get project name: %w", err)
 	}
-	opts.projectName = projectName
+	opts.appName = projectName
 
 	return nil
 }
@@ -118,11 +118,11 @@ func (opts *listAppOpts) Ask() error {
 // Execute lists the applications through the prompt.
 func (opts *listAppOpts) Execute() error {
 	// Ensure the project actually exists before we try to list its applications.
-	if _, err := opts.store.GetApplication(opts.ProjectName()); err != nil {
+	if _, err := opts.store.GetApplication(opts.AppName()); err != nil {
 		return err
 	}
 
-	apps, err := opts.store.ListServices(opts.ProjectName())
+	apps, err := opts.store.ListServices(opts.AppName())
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func BuildAppListCmd() *cobra.Command {
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&vars.ShouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.ShouldShowLocalApps, localAppFlag, false, localAppFlagDescription)
 	return cmd

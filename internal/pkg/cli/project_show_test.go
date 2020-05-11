@@ -66,8 +66,8 @@ func TestProjectShow_Validate(t *testing.T) {
 			showProjects := &showProjectOpts{
 				showProjectVars: showProjectVars{
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -171,8 +171,8 @@ func TestProjectShow_Ask(t *testing.T) {
 			showProjects := &showProjectOpts{
 				showProjectVars: showProjectVars{
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -186,7 +186,7 @@ func TestProjectShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showProjects.ProjectName(), "expected project name to match")
+				require.Equal(t, tc.wantedProject, showProjects.AppName(), "expected project name to match")
 
 			}
 		})
@@ -346,7 +346,7 @@ Services
 				showProjectVars: showProjectVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: projectName,
+						appName: projectName,
 					},
 				},
 				store: mockStoreReader,

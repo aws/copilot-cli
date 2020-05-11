@@ -102,9 +102,9 @@ func TestAppShow_Validate(t *testing.T) {
 
 			showApps := &showAppOpts{
 				showAppVars: showAppVars{
-					appName: tc.inputApplication,
+					svcName: tc.inputApplication,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -355,10 +355,10 @@ func TestAppShow_Ask(t *testing.T) {
 
 			showApps := &showAppOpts{
 				showAppVars: showAppVars{
-					appName: tc.inputApp,
+					svcName: tc.inputApp,
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -373,8 +373,8 @@ func TestAppShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showApps.ProjectName(), "expected project name to match")
-				require.Equal(t, tc.wantedApp, showApps.appName, "expected application name to match")
+				require.Equal(t, tc.wantedProject, showApps.AppName(), "expected project name to match")
+				require.Equal(t, tc.wantedApp, showApps.svcName, "expected application name to match")
 			}
 		})
 	}
@@ -452,10 +452,10 @@ func TestAppShow_Execute(t *testing.T) {
 
 			showApps := &showAppOpts{
 				showAppVars: showAppVars{
-					appName:          tc.inputApp,
+					svcName:          tc.inputApp,
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: projectName,
+						appName: projectName,
 					},
 				},
 				describer:     mockAppDescriber,

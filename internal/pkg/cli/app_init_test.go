@@ -44,7 +44,7 @@ func TestAppInitOpts_Validate(t *testing.T) {
 		},
 		"invalid project name": {
 			inProjectName: "",
-			wantedErr:     errNoProjectInWorkspace,
+			wantedErr:     errNoAppInWorkspace,
 		},
 		"valid flags": {
 			inAppName:        "frontend",
@@ -65,10 +65,10 @@ func TestAppInitOpts_Validate(t *testing.T) {
 			opts := initAppOpts{
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
+					Name:           tc.inAppName,
 					DockerfilePath: tc.inDockerfilePath,
 					AppPort:        tc.inAppPort,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:     &GlobalOpts{appName: tc.inProjectName},
 				},
 				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
 			}
@@ -312,7 +312,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
+					Name:           tc.inAppName,
 					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
 					GlobalOpts: &GlobalOpts{
@@ -336,7 +336,7 @@ func TestAppInitOpts_Ask(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, wantedAppType, opts.AppType)
-				require.Equal(t, wantedAppName, opts.AppName)
+				require.Equal(t, wantedAppName, opts.Name)
 				require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
 			}
 		})
@@ -362,7 +362,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)
 				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
@@ -406,7 +406,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", errors.New("some error"))
 
 				mockstore := mocks.NewMockstore(ctrl)
 				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
@@ -455,7 +455,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)
 				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
@@ -487,7 +487,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
 				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)
 				mockstore.EXPECT().ListServices("project").Return([]*config.Service{}, nil)
@@ -521,10 +521,10 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			opts := initAppOpts{
 				initAppVars: initAppVars{
 					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
+					Name:           tc.inAppName,
 					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:     &GlobalOpts{appName: tc.inProjectName},
 				},
 			}
 			tc.mockDependencies(ctrl, &opts)
@@ -625,10 +625,10 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			opts := initAppOpts{
 				initAppVars: initAppVars{
 					AppType:        manifest.LoadBalancedWebServiceType,
-					AppName:        tc.inAppName,
+					Name:           tc.inAppName,
 					AppPort:        tc.inAppPort,
 					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:     &GlobalOpts{appName: tc.inProjectName},
 				},
 			}
 			tc.mockDependencies(ctrl, &opts)

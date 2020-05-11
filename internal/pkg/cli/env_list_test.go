@@ -31,7 +31,7 @@ func TestEnvList_Execute(t *testing.T) {
 				listEnvVars: listEnvVars{
 					ShouldOutputJSON: true,
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -54,7 +54,7 @@ func TestEnvList_Execute(t *testing.T) {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -78,7 +78,7 @@ func TestEnvList_Execute(t *testing.T) {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -99,7 +99,7 @@ func TestEnvList_Execute(t *testing.T) {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -119,7 +119,7 @@ func TestEnvList_Execute(t *testing.T) {
 			listOpts: listEnvOpts{
 				listEnvVars: listEnvVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -198,8 +198,8 @@ func TestEnvList_Ask(t *testing.T) {
 			listEnvs := &listEnvOpts{
 				listEnvVars: listEnvVars{
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockstore,
@@ -208,7 +208,7 @@ func TestEnvList_Ask(t *testing.T) {
 			err := listEnvs.Ask()
 
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedProject, listEnvs.ProjectName(), "expected project names to match")
+			require.Equal(t, tc.wantedProject, listEnvs.AppName(), "expected project names to match")
 		})
 	}
 }

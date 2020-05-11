@@ -1888,31 +1888,31 @@ func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler)
 }
 
-// MockwsAppDeleter is a mock of wsAppDeleter interface
-type MockwsAppDeleter struct {
+// MockwsSvcDeleter is a mock of wsSvcDeleter interface
+type MockwsSvcDeleter struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsAppDeleterMockRecorder
+	recorder *MockwsSvcDeleterMockRecorder
 }
 
-// MockwsAppDeleterMockRecorder is the mock recorder for MockwsAppDeleter
-type MockwsAppDeleterMockRecorder struct {
-	mock *MockwsAppDeleter
+// MockwsSvcDeleterMockRecorder is the mock recorder for MockwsSvcDeleter
+type MockwsSvcDeleterMockRecorder struct {
+	mock *MockwsSvcDeleter
 }
 
-// NewMockwsAppDeleter creates a new mock instance
-func NewMockwsAppDeleter(ctrl *gomock.Controller) *MockwsAppDeleter {
-	mock := &MockwsAppDeleter{ctrl: ctrl}
-	mock.recorder = &MockwsAppDeleterMockRecorder{mock}
+// NewMockwsSvcDeleter creates a new mock instance
+func NewMockwsSvcDeleter(ctrl *gomock.Controller) *MockwsSvcDeleter {
+	mock := &MockwsSvcDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsSvcDeleterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsAppDeleter) EXPECT() *MockwsAppDeleterMockRecorder {
+func (m *MockwsSvcDeleter) EXPECT() *MockwsSvcDeleterMockRecorder {
 	return m.recorder
 }
 
 // DeleteService mocks base method
-func (m *MockwsAppDeleter) DeleteService(name string) error {
+func (m *MockwsSvcDeleter) DeleteService(name string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteService", name)
 	ret0, _ := ret[0].(error)
@@ -1920,9 +1920,9 @@ func (m *MockwsAppDeleter) DeleteService(name string) error {
 }
 
 // DeleteService indicates an expected call of DeleteService
-func (mr *MockwsAppDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
+func (mr *MockwsSvcDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsAppDeleter)(nil).DeleteService), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsSvcDeleter)(nil).DeleteService), name)
 }
 
 // MockwsServiceLister is a mock of wsServiceLister interface
@@ -2329,31 +2329,31 @@ func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(projectName, envNa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), projectName, envName)
 }
 
-// MockappDeployer is a mock of appDeployer interface
-type MockappDeployer struct {
+// MocksvcDeleter is a mock of svcDeleter interface
+type MocksvcDeleter struct {
 	ctrl     *gomock.Controller
-	recorder *MockappDeployerMockRecorder
+	recorder *MocksvcDeleterMockRecorder
 }
 
-// MockappDeployerMockRecorder is the mock recorder for MockappDeployer
-type MockappDeployerMockRecorder struct {
-	mock *MockappDeployer
+// MocksvcDeleterMockRecorder is the mock recorder for MocksvcDeleter
+type MocksvcDeleterMockRecorder struct {
+	mock *MocksvcDeleter
 }
 
-// NewMockappDeployer creates a new mock instance
-func NewMockappDeployer(ctrl *gomock.Controller) *MockappDeployer {
-	mock := &MockappDeployer{ctrl: ctrl}
-	mock.recorder = &MockappDeployerMockRecorder{mock}
+// NewMocksvcDeleter creates a new mock instance
+func NewMocksvcDeleter(ctrl *gomock.Controller) *MocksvcDeleter {
+	mock := &MocksvcDeleter{ctrl: ctrl}
+	mock.recorder = &MocksvcDeleterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockappDeployer) EXPECT() *MockappDeployerMockRecorder {
+func (m *MocksvcDeleter) EXPECT() *MocksvcDeleterMockRecorder {
 	return m.recorder
 }
 
 // DeleteService mocks base method
-func (m *MockappDeployer) DeleteService(in deploy.DeleteServiceInput) error {
+func (m *MocksvcDeleter) DeleteService(in deploy.DeleteServiceInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteService", in)
 	ret0, _ := ret[0].(error)
@@ -2361,36 +2361,36 @@ func (m *MockappDeployer) DeleteService(in deploy.DeleteServiceInput) error {
 }
 
 // DeleteService indicates an expected call of DeleteService
-func (mr *MockappDeployerMockRecorder) DeleteService(in interface{}) *gomock.Call {
+func (mr *MocksvcDeleterMockRecorder) DeleteService(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockappDeployer)(nil).DeleteService), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MocksvcDeleter)(nil).DeleteService), in)
 }
 
-// MockappRemover is a mock of appRemover interface
-type MockappRemover struct {
+// MocksvcRemoverFromApp is a mock of svcRemoverFromApp interface
+type MocksvcRemoverFromApp struct {
 	ctrl     *gomock.Controller
-	recorder *MockappRemoverMockRecorder
+	recorder *MocksvcRemoverFromAppMockRecorder
 }
 
-// MockappRemoverMockRecorder is the mock recorder for MockappRemover
-type MockappRemoverMockRecorder struct {
-	mock *MockappRemover
+// MocksvcRemoverFromAppMockRecorder is the mock recorder for MocksvcRemoverFromApp
+type MocksvcRemoverFromAppMockRecorder struct {
+	mock *MocksvcRemoverFromApp
 }
 
-// NewMockappRemover creates a new mock instance
-func NewMockappRemover(ctrl *gomock.Controller) *MockappRemover {
-	mock := &MockappRemover{ctrl: ctrl}
-	mock.recorder = &MockappRemoverMockRecorder{mock}
+// NewMocksvcRemoverFromApp creates a new mock instance
+func NewMocksvcRemoverFromApp(ctrl *gomock.Controller) *MocksvcRemoverFromApp {
+	mock := &MocksvcRemoverFromApp{ctrl: ctrl}
+	mock.recorder = &MocksvcRemoverFromAppMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockappRemover) EXPECT() *MockappRemoverMockRecorder {
+func (m *MocksvcRemoverFromApp) EXPECT() *MocksvcRemoverFromAppMockRecorder {
 	return m.recorder
 }
 
 // RemoveServiceFromApp mocks base method
-func (m *MockappRemover) RemoveServiceFromApp(project *config.Application, appName string) error {
+func (m *MocksvcRemoverFromApp) RemoveServiceFromApp(project *config.Application, appName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RemoveServiceFromApp", project, appName)
 	ret0, _ := ret[0].(error)
@@ -2398,9 +2398,9 @@ func (m *MockappRemover) RemoveServiceFromApp(project *config.Application, appNa
 }
 
 // RemoveServiceFromApp indicates an expected call of RemoveServiceFromApp
-func (mr *MockappRemoverMockRecorder) RemoveServiceFromApp(project, appName interface{}) *gomock.Call {
+func (mr *MocksvcRemoverFromAppMockRecorder) RemoveServiceFromApp(project, appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MockappRemover)(nil).RemoveServiceFromApp), project, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MocksvcRemoverFromApp)(nil).RemoveServiceFromApp), project, appName)
 }
 
 // MockimageRemover is a mock of imageRemover interface

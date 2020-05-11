@@ -32,7 +32,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			mockWs:    func(m *mocks.MockwsAppReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
-			wantedError: errNoProjectInWorkspace,
+			wantedError: errNoAppInWorkspace,
 		},
 		"with workspace error": {
 			inProjectName: "phonetool",
@@ -91,9 +91,9 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
+						appName: tc.inProjectName,
 					},
-					AppName: tc.inAppName,
+					Name:    tc.inAppName,
 					EnvName: tc.inEnvName,
 				},
 				workspaceService: mockWs,
@@ -253,10 +253,10 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
-						prompt:      mockPrompt,
+						appName: tc.inProjectName,
+						prompt:  mockPrompt,
 					},
-					AppName:  tc.inAppName,
+					Name:     tc.inAppName,
 					EnvName:  tc.inEnvName,
 					ImageTag: tc.inImageTag,
 				},
@@ -270,7 +270,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedAppName, opts.AppName)
+				require.Equal(t, tc.wantedAppName, opts.Name)
 				require.Equal(t, tc.wantedEnvName, opts.EnvName)
 				require.Equal(t, tc.wantedImageTag, opts.ImageTag)
 			} else {
@@ -330,7 +330,7 @@ image:
 			test.setupMocks(ctrl)
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
-					AppName: test.inputApp,
+					Name: test.inputApp,
 				},
 				workspaceService: mockWorkspace,
 			}
@@ -475,7 +475,7 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			opts := appDeployOpts{
 				appDeployVars: appDeployVars{
-					AppName: tc.inputApp,
+					Name: tc.inputApp,
 				},
 				store:             mockProjectSvc,
 				projectCFSvc:      mockProjectResourcesGetter,

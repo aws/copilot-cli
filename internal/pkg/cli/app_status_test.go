@@ -97,7 +97,7 @@ func TestAppStatus_Validate(t *testing.T) {
 					appName: tc.inputApplication,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockStoreReader,
@@ -301,8 +301,8 @@ func TestAppStatus_Ask(t *testing.T) {
 					appName: tc.inputApplication,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
-						prompt:      mockPrompt,
+						appName: tc.inputProject,
+						prompt:  mockPrompt,
 					},
 				},
 				appDescriber:     mockWebAppDescriber,
@@ -483,7 +483,7 @@ Alarms
 					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: "mockApp",
+						appName: "mockApp",
 					},
 				},
 				statusDescriber:     mockStatusDescriber,

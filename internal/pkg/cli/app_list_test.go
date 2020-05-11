@@ -32,7 +32,7 @@ func TestAppList_Execute(t *testing.T) {
 				listAppVars: listAppVars{
 					ShouldOutputJSON: true,
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -55,7 +55,7 @@ func TestAppList_Execute(t *testing.T) {
 			listOpts: listAppOpts{
 				listAppVars: listAppVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -79,7 +79,7 @@ func TestAppList_Execute(t *testing.T) {
 			listOpts: listAppOpts{
 				listAppVars: listAppVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -100,7 +100,7 @@ func TestAppList_Execute(t *testing.T) {
 			listOpts: listAppOpts{
 				listAppVars: listAppVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -122,7 +122,7 @@ func TestAppList_Execute(t *testing.T) {
 				listAppVars: listAppVars{
 					ShouldShowLocalApps: true,
 					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
+						appName: "coolproject",
 					},
 				},
 				store: mockstore,
@@ -204,8 +204,8 @@ func TestAppList_Ask(t *testing.T) {
 			listApps := &listAppOpts{
 				listAppVars: listAppVars{
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inputProject,
 					},
 				},
 				store: mockstore,
@@ -214,7 +214,7 @@ func TestAppList_Ask(t *testing.T) {
 			err := listApps.Ask()
 
 			require.NoError(t, err)
-			require.Equal(t, tc.wantedProject, listApps.ProjectName(), "expected project names to match")
+			require.Equal(t, tc.wantedProject, listApps.AppName(), "expected project names to match")
 		})
 	}
 }

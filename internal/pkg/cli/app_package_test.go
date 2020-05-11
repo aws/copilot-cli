@@ -36,7 +36,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 				mockWorkspace.EXPECT().ServiceNames().Times(0)
 				mockProjectService.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErrorS: "could not find a project attached to this workspace, please run `project init` first",
+			wantedErrorS: "could not find an application attached to this workspace, please run `app init` first",
 		},
 		"error while fetching application": {
 			inProjectName: "phonetool",
@@ -90,9 +90,9 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 
 			opts := &packageAppOpts{
 				packageAppVars: packageAppVars{
-					AppName:    tc.inAppName,
+					Name:       tc.inAppName,
 					EnvName:    tc.inEnvName,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
 				},
 				ws:    mockWorkspace,
 				store: mockProjectService,
@@ -341,7 +341,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 
 			opts := &packageAppOpts{
 				packageAppVars: packageAppVars{
-					AppName: tc.inAppName,
+					Name:    tc.inAppName,
 					EnvName: tc.inEnvName,
 					Tag:     tc.inTag,
 					GlobalOpts: &GlobalOpts{
@@ -357,7 +357,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			err := opts.Ask()
 
 			// THEN
-			require.Equal(t, tc.wantedAppName, opts.AppName)
+			require.Equal(t, tc.wantedAppName, opts.Name)
 			require.Equal(t, tc.wantedEnvName, opts.EnvName)
 			require.Equal(t, tc.wantedTag, opts.Tag)
 
@@ -384,9 +384,9 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 		"writes application template without addons": {
 			inVars: packageAppVars{
 				GlobalOpts: &GlobalOpts{
-					projectName: "ecs-kudos",
+					appName: "ecs-kudos",
 				},
-				AppName: "api",
+				Name:    "api",
 				EnvName: "test",
 				Tag:     "1234",
 			},

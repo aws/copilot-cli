@@ -76,7 +76,7 @@ stages:
 			inProjectName: "",
 			callMocks:     func(m deletePipelineMocks) {},
 
-			wantedError: errNoProjectInWorkspace,
+			wantedError: errNoAppInWorkspace,
 		},
 	}
 
@@ -96,7 +96,7 @@ stages:
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
+						appName: tc.inProjectName,
 					},
 				},
 				ws: mockWorkspace,
@@ -165,8 +165,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					SkipConfirmation: tc.skipConfirmation,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
-						prompt:      mockPrompt,
+						appName: tc.inProjectName,
+						prompt:  mockPrompt,
 					},
 				},
 				PipelineName: tc.inPipelineName,
@@ -305,8 +305,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					DeleteSecret: tc.deleteSecret,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
-						prompt:      mockPrompter,
+						appName: tc.inProjectName,
+						prompt:  mockPrompter,
 					},
 				},
 				PipelineName:     tc.inPipelineName,
