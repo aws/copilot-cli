@@ -478,9 +478,9 @@ func (o *appDeployOpts) showAppURI() error {
 	var err error
 	switch o.targetApplication.Type {
 	case manifest.LoadBalancedWebServiceType:
-		appDescriber, err = describe.NewWebAppDescriber(o.ProjectName(), o.AppName)
+		appDescriber, err = describe.NewWebServiceDescriber(o.ProjectName(), o.AppName)
 	case manifest.BackendServiceType:
-		appDescriber, err = describe.NewBackendAppDescriber(o.ProjectName(), o.AppName)
+		appDescriber, err = describe.NewBackendServiceDescriber(o.ProjectName(), o.AppName)
 	default:
 		err = errors.New("unexpected application type")
 	}

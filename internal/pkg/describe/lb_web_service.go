@@ -31,98 +31,98 @@ const (
 	noAdditionalFormatting = 0
 )
 
-// WebAppURI represents the unique identifier to access a web application.
-type WebAppURI struct {
-	DNSName string // The environment's subdomain if the application is served on HTTPS. Otherwise, the public load balancer's DNS.
-	Path    string // Empty if the application is served on HTTPS. Otherwise, the pattern used to match the application.
+// WebServiceURI represents the unique identifier to access a web service.
+type WebServiceURI struct {
+	DNSName string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
+	Path    string // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
 }
 
-func (uri *WebAppURI) String() string {
+func (uri *WebServiceURI) String() string {
 	switch uri.Path {
-	// When the app is using host based routing, the app
-	// is included in the DNS name (app.myenv.myproj.dns.com)
+	// When the service is using host based routing, the service
+	// is included in the DNS name (svc.myenv.myproj.dns.com)
 	case "":
 		return fmt.Sprintf("https://%s", uri.DNSName)
-	// When the app is using the root path, there is no "path"
+	// When the service is using the root path, there is no "path"
 	// (for example http://lb.us-west-2.amazon.com/)
 	case "/":
 		return fmt.Sprintf("http://%s", uri.DNSName)
-	// Otherwise, if there is a path for the app, link to the
+	// Otherwise, if there is a path for the service, link to the
 	// LoadBalancer DNS name and the path
-	// (for example http://lb.us-west-2.amazon.com/app)
+	// (for example http://lb.us-west-2.amazon.com/svc)
 	default:
 		return fmt.Sprintf("http://%s/%s", uri.DNSName, uri.Path)
 	}
 }
 
 type serviceDiscovery struct {
-	AppName     string
-	ProjectName string
-	Port        string
+	Service string
+	App     string
+	Port    string
 }
 
 func (s *serviceDiscovery) String() string {
-	return fmt.Sprintf("%s.%s.local:%s", s.AppName, s.ProjectName, s.Port)
+	return fmt.Sprintf("%s.%s.local:%s", s.Service, s.App, s.Port)
 }
 
 type storeSvc interface {
-	GetEnvironment(projectName string, environmentName string) (*config.Environment, error)
-	ListEnvironments(projectName string) ([]*config.Environment, error)
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+	ListEnvironments(appName string) ([]*config.Environment, error)
 }
 
-type appDescriber interface {
+type svcDescriber interface {
 	Params() (map[string]string, error)
 	EnvOutputs() (map[string]string, error)
 	EnvVars() (map[string]string, error)
 	GetServiceArn() (*ecs.ServiceArn, error)
-	AppStackResources() ([]*cloudformation.StackResource, error)
+	ServiceStackResources() ([]*cloudformation.StackResource, error)
 }
 
-// HumanJSONStringer contains methods that stringify app info for output.
+// HumanJSONStringer contains methods to stringify a description into human or machine-readable formats.
 type HumanJSONStringer interface {
 	HumanString() string
 	JSONString() (string, error)
 }
 
-// WebAppDescriber retrieves information about a load balanced web application.
-type WebAppDescriber struct {
-	app             *config.Service
+// WebServiceDescriber retrieves information about a load balanced web service.
+type WebServiceDescriber struct {
+	service         *config.Service
 	enableResources bool
 
-	store            storeSvc
-	appDescriber     appDescriber
-	initAppDescriber func(string) error
+	store                storeSvc
+	svcDescriber         svcDescriber
+	initServiceDescriber func(string) error
 }
 
-// NewWebAppDescriber instantiates a load balanced application describer.
-func NewWebAppDescriber(project, app string) (*WebAppDescriber, error) {
-	svc, err := config.NewStore()
+// NewWebServiceDescriber instantiates a load balanced service describer.
+func NewWebServiceDescriber(app, svc string) (*WebServiceDescriber, error) {
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := svc.GetService(project, app)
+	meta, err := store.GetService(app, svc)
 	if err != nil {
 		return nil, err
 	}
-	opts := &WebAppDescriber{
-		app:             meta,
+	opts := &WebServiceDescriber{
+		service:         meta,
 		enableResources: false,
-		store:           svc,
+		store:           store,
 	}
-	opts.initAppDescriber = func(env string) error {
-		d, err := NewAppDescriber(project, env, app)
+	opts.initServiceDescriber = func(env string) error {
+		d, err := NewServiceDescriber(app, env, svc)
 		if err != nil {
 			return err
 		}
-		opts.appDescriber = d
+		opts.svcDescriber = d
 		return nil
 	}
 	return opts, nil
 }
 
-// NewWebAppDescriberWithResources instantiates a load balanced application with stack resources.
-func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, error) {
-	d, err := NewWebAppDescriber(project, app)
+// NewWebServiceDescriberWithResources instantiates a load balanced service with stack resources.
+func NewWebServiceDescriberWithResources(app, svc string) (*WebServiceDescriber, error) {
+	d, err := NewWebServiceDescriber(app, svc)
 	if err != nil {
 		return nil, err
 	}
@@ -130,54 +130,54 @@ func NewWebAppDescriberWithResources(project, app string) (*WebAppDescriber, err
 	return d, nil
 }
 
-// Describe returns info of a web app application.
-func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.app.App)
+// Describe returns info of a web service.
+func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
+	environments, err := d.store.ListEnvironments(d.service.App)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
 
-	var routes []*WebAppRoute
-	var configs []*AppConfig
-	var services []*ServiceDiscovery
+	var routes []*WebServiceRoute
+	var configs []*ServiceConfig
+	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initAppDescriber(env.Name)
+		err := d.initServiceDescriber(env.Name)
 		if err != nil {
 			return nil, err
 		}
-		webAppURI, err := d.URI(env.Name)
+		webServiceURI, err := d.URI(env.Name)
 		if err != nil && !IsStackNotExistsErr(err) {
-			return nil, fmt.Errorf("retrieve application URI: %w", err)
+			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
 		if err != nil {
 			continue
 		}
-		routes = append(routes, &WebAppRoute{
+		routes = append(routes, &WebServiceRoute{
 			Environment: env.Name,
-			URL:         webAppURI,
+			URL:         webServiceURI,
 		})
-		appParams, err := d.appDescriber.Params()
+		svcParams, err := d.svcDescriber.Params()
 		if err != nil {
-			return nil, fmt.Errorf("retrieve application deployment configuration: %w", err)
+			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
-		configs = append(configs, &AppConfig{
+		configs = append(configs, &ServiceConfig{
 			Environment: env.Name,
-			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       appParams[stack.ServiceTaskCountParamKey],
-			CPU:         appParams[stack.ServiceTaskCPUParamKey],
-			Memory:      appParams[stack.ServiceTaskMemoryParamKey],
+			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
+			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
+			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
+			Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
 		})
-		services = appendServiceDiscovery(services, serviceDiscovery{
-			AppName:     d.app.Name,
-			Port:        appParams[stack.LBWebServiceContainerPortParamKey],
-			ProjectName: d.app.App,
+		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
+			Service: d.service.Name,
+			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
+			App:     d.service.App,
 		}, env.Name)
-		webAppEnvVars, err := d.appDescriber.EnvVars()
+		webSvcEnvVars, err := d.svcDescriber.EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env.Name, webAppEnvVars)...)
+		envVars = append(envVars, flattenEnvVars(env.Name, webSvcEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -185,9 +185,9 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
 		for _, env := range environments {
-			stackResources, err := d.appDescriber.AppStackResources()
+			stackResources, err := d.svcDescriber.ServiceStackResources()
 			if err != nil && !IsStackNotExistsErr(err) {
-				return nil, fmt.Errorf("retrieve application resources: %w", err)
+				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
 			if err != nil {
 				continue
@@ -196,49 +196,49 @@ func (d *WebAppDescriber) Describe() (HumanJSONStringer, error) {
 		}
 	}
 
-	return &webAppDesc{
-		AppName:          d.app.Name,
-		Type:             d.app.Type,
-		Project:          d.app.App,
+	return &webSvcDesc{
+		Service:          d.service.Name,
+		Type:             d.service.Type,
+		App:              d.service.App,
 		Configurations:   configs,
 		Routes:           routes,
-		ServiceDiscovery: services,
+		ServiceDiscovery: serviceDiscoveries,
 		Variables:        envVars,
 		Resources:        resources,
 	}, nil
 }
 
-// URI returns the WebAppURI to identify this application uniquely given an environment name.
-func (d *WebAppDescriber) URI(envName string) (string, error) {
-	err := d.initAppDescriber(envName)
+// URI returns the WebServiceURI to identify this service uniquely given an environment name.
+func (d *WebServiceDescriber) URI(envName string) (string, error) {
+	err := d.initServiceDescriber(envName)
 	if err != nil {
 		return "", err
 	}
 
-	envOutputs, err := d.appDescriber.EnvOutputs()
+	envOutputs, err := d.svcDescriber.EnvOutputs()
 	if err != nil {
 		return "", fmt.Errorf("get output for environment %s: %w", envName, err)
 	}
-	appParams, err := d.appDescriber.Params()
+	svcParams, err := d.svcDescriber.Params()
 	if err != nil {
-		return "", fmt.Errorf("get parameters for application %s: %w", d.app.Name, err)
+		return "", fmt.Errorf("get parameters for service %s: %w", d.service.Name, err)
 	}
 
-	uri := &WebAppURI{
+	uri := &WebServiceURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
-		Path:    appParams[stack.LBWebServiceRulePathParamKey],
+		Path:    svcParams[stack.LBWebServiceRulePathParamKey],
 	}
 	_, isHTTPS := envOutputs[stack.EnvOutputSubdomain]
 	if isHTTPS {
-		dnsName := fmt.Sprintf("%s.%s", d.app.Name, envOutputs[stack.EnvOutputSubdomain])
-		uri = &WebAppURI{
+		dnsName := fmt.Sprintf("%s.%s", d.service.Name, envOutputs[stack.EnvOutputSubdomain])
+		uri = &WebServiceURI{
 			DNSName: dnsName,
 		}
 	}
 	return uri.String(), nil
 }
 
-// EnvVars contains serialized environment variables for an application.
+// EnvVars contains serialized environment variables for a service.
 type EnvVars struct {
 	Environment string `json:"environment"`
 	Name        string `json:"name"`
@@ -271,7 +271,7 @@ func (e envVars) humanString(w io.Writer) {
 	}
 }
 
-// CfnResource contains application resources created by cloudformation.
+// CfnResource contains service resources created by cloudformation.
 type CfnResource struct {
 	Type       string `json:"type"`
 	PhysicalID string `json:"physicalID"`
@@ -279,7 +279,7 @@ type CfnResource struct {
 
 type cfnResources map[string][]*CfnResource
 
-func (c cfnResources) humanString(w io.Writer, configs []*AppConfig) {
+func (c cfnResources) humanString(w io.Writer, configs []*ServiceConfig) {
 	// Go maps don't have a guaranteed order.
 	// Show the resources by the order of environments displayed under Configuration for a consistent view.
 	for _, config := range configs {
@@ -292,8 +292,8 @@ func (c cfnResources) humanString(w io.Writer, configs []*AppConfig) {
 	}
 }
 
-// AppConfig contains serialized configuration parameters for an application.
-type AppConfig struct {
+// ServiceConfig contains serialized configuration parameters for a service.
+type ServiceConfig struct {
 	Environment string `json:"environment"`
 	Port        string `json:"port"`
 	Tasks       string `json:"tasks"`
@@ -301,7 +301,7 @@ type AppConfig struct {
 	Memory      string `json:"memory"`
 }
 
-type configurations []*AppConfig
+type configurations []*ServiceConfig
 
 func (c configurations) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
@@ -310,13 +310,13 @@ func (c configurations) humanString(w io.Writer) {
 	}
 }
 
-// WebAppRoute contains serialized route parameters for a web application.
-type WebAppRoute struct {
+// WebServiceRoute contains serialized route parameters for a web service.
+type WebServiceRoute struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
 }
 
-// ServiceDiscovery contains serialized service discovery info for an application.
+// ServiceDiscovery contains serialized service discovery info for an service.
 type ServiceDiscovery struct {
 	Environment []string `json:"environment"`
 	Namespace   string   `json:"namespace"`
@@ -331,35 +331,35 @@ func (s serviceDiscoveries) humanString(w io.Writer) {
 	}
 }
 
-// webAppDesc contains serialized parameters for a web application.
-type webAppDesc struct {
-	AppName          string             `json:"appName"`
+// webSvcDesc contains serialized parameters for a web service.
+type webSvcDesc struct {
+	Service          string             `json:"service"`
 	Type             string             `json:"type"`
-	Project          string             `json:"project"`
+	App              string             `json:"application"`
 	Configurations   configurations     `json:"configurations"`
-	Routes           []*WebAppRoute     `json:"routes"`
+	Routes           []*WebServiceRoute `json:"routes"`
 	ServiceDiscovery serviceDiscoveries `json:"serviceDiscovery"`
 	Variables        envVars            `json:"variables"`
 	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
-// JSONString returns the stringified WebApp struct with json format.
-func (w *webAppDesc) JSONString() (string, error) {
+// JSONString returns the stringified webSvcDesc struct in json format.
+func (w *webSvcDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
-		return "", fmt.Errorf("marshal applications: %w", err)
+		return "", fmt.Errorf("marshal web service description: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified WebApp struct with human readable format.
-func (w *webAppDesc) HumanString() string {
+// HumanString returns the stringified webService struct in human readable format.
+func (w *webSvcDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Project", w.Project)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.AppName)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()

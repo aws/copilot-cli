@@ -80,7 +80,7 @@ func (o *showProjectOpts) Execute() error {
 	return nil
 }
 
-func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
+func (o *showProjectOpts) retrieveData() (*describe.App, error) {
 	proj, err := o.store.GetApplication(o.ProjectName())
 	if err != nil {
 		return nil, fmt.Errorf("get project: %w", err)
@@ -109,11 +109,11 @@ func (o *showProjectOpts) retrieveData() (*describe.Project, error) {
 			Type: app.Type,
 		})
 	}
-	return &describe.Project{
-		Name: proj.Name,
-		URI:  proj.Domain,
-		Envs: envsToSerialize,
-		Apps: appsToSerialize,
+	return &describe.App{
+		Name:     proj.Name,
+		URI:      proj.Domain,
+		Envs:     envsToSerialize,
+		Services: appsToSerialize,
 	}, nil
 }
 

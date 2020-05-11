@@ -233,7 +233,7 @@ func TestProjectShow_Execute(t *testing.T) {
 				}, nil)
 			},
 
-			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"applications\":[{\"App\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
+			wantedContent: "{\"name\":\"my-project\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"App\":\"\",\"name\":\"my-app\",\"type\":\"lb-web-app\"}]}\n",
 		},
 		"correctly shows human output": {
 			shouldOutputJSON: false,
@@ -274,7 +274,7 @@ Environments
   test              123456789           us-west-2
   prod              123456789           us-west-1
 
-Applications
+Services
 
   Name              Type
   my-app            lb-web-app

@@ -64,31 +64,31 @@ func (mr *MockstackAndResourcesDescriberMockRecorder) StackResources(stackName i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockstackAndResourcesDescriber)(nil).StackResources), stackName)
 }
 
-// MockecsService is a mock of ecsService interface
-type MockecsService struct {
+// MockecsClient is a mock of ecsClient interface
+type MockecsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockecsServiceMockRecorder
+	recorder *MockecsClientMockRecorder
 }
 
-// MockecsServiceMockRecorder is the mock recorder for MockecsService
-type MockecsServiceMockRecorder struct {
-	mock *MockecsService
+// MockecsClientMockRecorder is the mock recorder for MockecsClient
+type MockecsClientMockRecorder struct {
+	mock *MockecsClient
 }
 
-// NewMockecsService creates a new mock instance
-func NewMockecsService(ctrl *gomock.Controller) *MockecsService {
-	mock := &MockecsService{ctrl: ctrl}
-	mock.recorder = &MockecsServiceMockRecorder{mock}
+// NewMockecsClient creates a new mock instance
+func NewMockecsClient(ctrl *gomock.Controller) *MockecsClient {
+	mock := &MockecsClient{ctrl: ctrl}
+	mock.recorder = &MockecsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockecsService) EXPECT() *MockecsServiceMockRecorder {
+func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
 // TaskDefinition mocks base method
-func (m *MockecsService) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
+func (m *MockecsClient) TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TaskDefinition", taskDefName)
 	ret0, _ := ret[0].(*ecs.TaskDefinition)
@@ -97,7 +97,7 @@ func (m *MockecsService) TaskDefinition(taskDefName string) (*ecs.TaskDefinition
 }
 
 // TaskDefinition indicates an expected call of TaskDefinition
-func (mr *MockecsServiceMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
+func (mr *MockecsClientMockRecorder) TaskDefinition(taskDefName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsService)(nil).TaskDefinition), taskDefName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskDefinition", reflect.TypeOf((*MockecsClient)(nil).TaskDefinition), taskDefName)
 }
