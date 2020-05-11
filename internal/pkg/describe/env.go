@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"sort"
 	"strings"
 	"text/tabwriter"
 
@@ -154,11 +155,19 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
 	}
 	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
-	for key, value := range e.Tags {
-		fmt.Fprintf(writer, "  %s\t%s\n", key, value)
+	if len(e.Tags) != 0 {
+		fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
+		writer.Flush()
+		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
+		// sort Tags in alpha order by keys
+		keys := make([]string, 0, len(e.Tags))
+		for k := range e.Tags {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			fmt.Fprintf(writer, "  %s\t%s\n", key, e.Tags[key])
+		}
 	}
 	writer.Flush()
 	return b.String()
