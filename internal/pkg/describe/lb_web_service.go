@@ -78,7 +78,7 @@ type svcDescriber interface {
 	ServiceStackResources() ([]*cloudformation.StackResource, error)
 }
 
-// HumanJSONStringer contains methods that stringify service info for output.
+// HumanJSONStringer contains methods to stringify a description into human or machine-readable formats.
 type HumanJSONStringer interface {
 	HumanString() string
 	JSONString() (string, error)
@@ -343,16 +343,16 @@ type webSvcDesc struct {
 	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
-// JSONString returns the stringified WebService struct with json format.
+// JSONString returns the stringified webSvcDesc struct in json format.
 func (w *webSvcDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
-		return "", fmt.Errorf("marshal service: %w", err)
+		return "", fmt.Errorf("marshal web service description: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified WebService struct with human readable format.
+// HumanString returns the stringified webService struct in human readable format.
 func (w *webSvcDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)

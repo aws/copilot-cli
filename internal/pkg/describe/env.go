@@ -17,15 +17,15 @@ import (
 )
 
 type EnvDescription struct {
-	Environment  *config.Environment `json:"environment"`
-	Applications []*config.Service   `json:"applications"`
-	Tags         map[string]string   `json:"tags,omitempty"`
+	Environment *config.Environment `json:"environment"`
+	Services    []*config.Service   `json:"services"`
+	Tags        map[string]string   `json:"tags,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
 	env  *config.Environment
-	apps []*config.Service
+	svcs []*config.Service
 
 	store        storeSvc
 	sessProvider *sess.Session
@@ -33,15 +33,15 @@ type EnvDescriber struct {
 
 // NewEnvDescriber instantiates an environment describer.
 func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
-	svc, err := config.NewStore()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	env, err := svc.GetEnvironment(appName, envName)
+	env, err := store.GetEnvironment(appName, envName)
 	if err != nil {
 		return nil, err
 	}
-	apps, err := svc.ListServices(appName)
+	svcs, err := store.ListServices(appName)
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +51,8 @@ func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
 	}
 	return &EnvDescriber{
 		env:          env,
-		store:        svc,
-		apps:         apps,
+		store:        store,
+		svcs:         svcs,
 		sessProvider: sess,
 	}, nil
 }
@@ -61,9 +61,9 @@ func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	var tags map[string]string
 	return &EnvDescription{
-		Environment:  e.env,
-		Applications: e.apps,
-		Tags:         tags,
+		Environment: e.env,
+		Services:    e.svcs,
+		Tags:        tags,
 	}, nil
 }
 
@@ -71,7 +71,7 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
 	if err != nil {
-		return "", fmt.Errorf("marshal applications: %w", err)
+		return "", fmt.Errorf("marshal environment description: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
@@ -86,11 +86,11 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nApplications\n\n"))
+	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	for _, app := range e.Applications {
-		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
+	for _, svc := range e.Services {
+		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
 	writer.Flush()
 	return b.String()

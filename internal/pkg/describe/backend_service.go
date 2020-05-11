@@ -51,7 +51,7 @@ func NewBackendServiceDescriber(app, svc string) (*BackendServiceDescriber, erro
 	return opts, nil
 }
 
-// NewBackendServiceDescriberWithResources instantiates a backend service with stack resources.
+// NewBackendServiceDescriberWithResources instantiates a backend service describer with stack resources.
 func NewBackendServiceDescriberWithResources(app, svc string) (*BackendServiceDescriber, error) {
 	d, err := NewBackendServiceDescriber(app, svc)
 	if err != nil {
@@ -158,16 +158,16 @@ type backendSvcDesc struct {
 	Resources        cfnResources       `json:"resources,omitempty"`
 }
 
-// JSONString returns the stringified BackendService struct with json format.
+// JSONString returns the stringified backendService struct with json format.
 func (w *backendSvcDesc) JSONString() (string, error) {
 	b, err := json.Marshal(w)
 	if err != nil {
-		return "", fmt.Errorf("marshal service: %w", err)
+		return "", fmt.Errorf("marshal backend service description: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// HumanString returns the stringified BackendService struct with human readable format.
+// HumanString returns the stringified backendService struct with human readable format.
 func (w *backendSvcDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)

@@ -346,8 +346,8 @@ func TestEnvShow_Execute(t *testing.T) {
 			ExecutionRoleARN: "",
 			ManagerRoleARN:   "",
 		},
-		Applications: mockApplications,
-		Tags:         mockTags}
+		Services: mockApplications,
+		Tags:     mockTags}
 
 	testCases := map[string]struct {
 		inputEnv         string
@@ -367,7 +367,7 @@ func TestEnvShow_Execute(t *testing.T) {
 					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
 
-			wantedContent: "{\"environment\":{\"app\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"App\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"App\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
+			wantedContent: "{\"environment\":{\"app\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"App\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"App\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
 		},
 		"correctly shows human output": {
 			inputEnv:         "test",
@@ -385,7 +385,7 @@ func TestEnvShow_Execute(t *testing.T) {
   Region            us-west-2
   Account ID        123456789
 
-Applications
+Services
 
   Name              Type
   my-app            lb-web-app

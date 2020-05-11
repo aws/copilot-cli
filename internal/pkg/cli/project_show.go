@@ -110,10 +110,10 @@ func (o *showProjectOpts) retrieveData() (*describe.App, error) {
 		})
 	}
 	return &describe.App{
-		Name: proj.Name,
-		URI:  proj.Domain,
-		Envs: envsToSerialize,
-		Apps: appsToSerialize,
+		Name:     proj.Name,
+		URI:      proj.Domain,
+		Envs:     envsToSerialize,
+		Services: appsToSerialize,
 	}, nil
 }
 
