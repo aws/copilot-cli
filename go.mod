@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
 	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.9.0
+	github.com/onsi/gomega v1.10.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.7
@@ -27,6 +27,6 @@ require (
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/text v0.3.2 // indirect
-	gopkg.in/ini.v1 v1.55.0
+	gopkg.in/ini.v1 v1.56.0
 	gopkg.in/yaml.v3 v3.0.0-20190905181640-827449938966
 )
