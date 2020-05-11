@@ -185,6 +185,6 @@ func BuildProjectShowCmd() *cobra.Command {
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "" /* default */, projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
 	return cmd
 }

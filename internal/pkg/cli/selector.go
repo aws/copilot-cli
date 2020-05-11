@@ -41,8 +41,7 @@ type selectAppRequest struct {
 	Lister applicationLister // lists all apps in an account and region
 }
 
-// WorkspaceService fetches all services in the workspace and then prompts the
-// user select one.
+// SelectWorkspaceService fetches all services in the workspace and then prompts the user to select one.
 func (s *selector) SelectWorkspaceService(req *selectWorkspaceServiceRequest) (string, error) {
 	serviceNames, err := s.retrieveWorkspaceServices(req.Lister)
 	if err != nil {
@@ -60,7 +59,7 @@ func (s *selector) SelectWorkspaceService(req *selectWorkspaceServiceRequest) (s
 	return selectedServiceName, nil
 }
 
-// Service fetches all services in an app and prompts the user select one.
+// SelectService fetches all services in an app and prompts the user to select one.
 func (s *selector) SelectService(req *selectServiceRequest) (string, error) {
 	services, err := s.retrieveServices(req.App, req.Lister)
 	if err != nil {
@@ -85,7 +84,7 @@ func (s *selector) SelectService(req *selectServiceRequest) (string, error) {
 	return selectedAppName, nil
 }
 
-// Environment fetches all the environments in an app and prompts the user to select one.
+// SelectEnvironment fetches all the environments in an app and prompts the user to select one.
 func (s *selector) SelectEnvironment(req *selectEnvRequest) (string, error) {
 	envs, err := s.retrieveEnvironments(req.App, req.Lister)
 	if err != nil {
@@ -110,7 +109,7 @@ func (s *selector) SelectEnvironment(req *selectEnvRequest) (string, error) {
 	return selectedEnvName, nil
 }
 
-// Application fetches all the apps in an account/region and prompts the user to select one.
+// SelectApplication fetches all the apps in an account/region and prompts the user to select one.
 func (s *selector) SelectApplication(req *selectAppRequest) (string, error) {
 	appNames, err := s.retrieveApps(req.Lister)
 	if err != nil {

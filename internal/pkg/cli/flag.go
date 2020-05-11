@@ -14,9 +14,9 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	projectFlag = "project"
-	nameFlag    = "name"
 	appFlag     = "app"
+	nameFlag    = "name"
+	svcFlag     = "svc"
 	envFlag     = "env"
 	appTypeFlag = "app-type"
 	profileFlag = "profile"
@@ -50,9 +50,9 @@ const (
 // Short flag names.
 // A short flag only exists if the flag is mandatory by the command.
 const (
-	projectFlagShort = "p"
-	nameFlagShort    = "n"
 	appFlagShort     = "a"
+	nameFlagShort    = "n"
+	svcFlagShort     = "s"
 	envFlagShort     = "e"
 	appTypeFlagShort = "t"
 
@@ -70,7 +70,7 @@ var (
 )
 
 const (
-	projectFlagDescription  = "Name of the project."
+	appFlagDescription      = "Name of the application."
 	svcFlagDescription      = "Name of the service."
 	envFlagDescription      = "Name of the environment."
 	pipelineFlagDescription = "Name of the pipeline."

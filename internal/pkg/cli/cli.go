@@ -41,7 +41,7 @@ func (o *GlobalOpts) AppName() string {
 	if o.appName != "" {
 		return o.appName
 	}
-	o.appName = viper.GetString(projectFlag)
+	o.appName = viper.GetString(appFlag)
 	return o.appName
 }
 
@@ -52,7 +52,7 @@ func bindAppName() {
 	if err != nil {
 		return
 	}
-	viper.SetDefault(projectFlag, name)
+	viper.SetDefault(appFlag, name)
 }
 
 // loadAppName retrieves the application's name from the workspace if it exists and returns it.

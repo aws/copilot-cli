@@ -210,7 +210,7 @@ func (o *initOpts) loadProject() error {
 		return err
 	}
 	// Write the project name to viper so that sub-commands can retrieve its value.
-	viper.Set(projectFlag, o.projectName)
+	viper.Set(appFlag, o.projectName)
 	return nil
 }
 
@@ -288,8 +288,8 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.projectName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, svcFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
