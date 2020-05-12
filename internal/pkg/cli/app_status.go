@@ -18,7 +18,7 @@ const (
 	appStatusProjectNamePrompt     = "Which project's applications status would you like to show?"
 	appStatusProjectNameHelpPrompt = "A project groups all of your applications together."
 	appStatusAppNamePrompt         = "Which application's status would you like to show?"
-	appStatusAppNameHelpPrompt     = "Displays the service's, tasks and CloudWatch alarms status."
+	appStatusAppNameHelpPrompt     = "Name of the application whose service, tasks, and CloudWatch alarms status to display."
 )
 
 type appStatusVars struct {
@@ -216,8 +216,8 @@ func (o *appStatusOpts) askAppEnvName() error {
 	}
 
 	appEnvName, err := o.prompt.SelectOne(
-		applicationLogAppNamePrompt,
-		applicationLogAppNameHelpPrompt,
+		appStatusAppNamePrompt,
+		appStatusAppNameHelpPrompt,
 		appEnvNames,
 	)
 	if err != nil {
