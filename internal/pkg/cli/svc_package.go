@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -24,21 +25,20 @@ import (
 )
 
 const (
-	appPackageAppNamePrompt = "Which application would you like to generate a CloudFormation template for?"
-	appPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
+	svcPackageSvcNamePrompt = "Which service would you like to generate a CloudFormation template for?"
+	svcPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
 )
 
-var initPackageAddonsSvc = func(o *packageAppOpts) error {
+var initPackageAddonsSvc = func(o *packageSvcOpts) error {
 	addonsSvc, err := addons.New(o.Name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
 	o.addonsSvc = addonsSvc
-
 	return nil
 }
 
-type packageAppVars struct {
+type packageSvcVars struct {
 	*GlobalOpts
 	Name      string
 	EnvName   string
@@ -46,69 +46,71 @@ type packageAppVars struct {
 	OutputDir string
 }
 
-type packageAppOpts struct {
-	packageAppVars
+type packageSvcOpts struct {
+	packageSvcVars
 
 	// Interfaces to interact with dependencies.
 	addonsSvc       templater
-	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
+	initAddonsSvc   func(*packageSvcOpts) error // Overriden in tests.
 	ws              wsSvcReader
 	store           store
-	describer       appResourcesGetter
+	appCFN          appResourcesGetter
 	stackWriter     io.Writer
 	paramsWriter    io.Writer
 	addonsWriter    io.Writer
 	fs              afero.Fs
 	runner          runner
-	stackSerializer func(mft interface{}, env *config.Environment, proj *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
+	sel             wsSelector
+	stackSerializer func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error)
 }
 
-func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
+func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to application datastore: %w", err)
+		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
 	p := session.NewProvider()
 	sess, err := p.Default()
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving default session: %w", err)
+		return nil, fmt.Errorf("retrieve default session: %w", err)
 	}
 
-	opts := &packageAppOpts{
-		packageAppVars: vars,
+	opts := &packageSvcOpts{
+		packageSvcVars: vars,
 		initAddonsSvc:  initPackageAddonsSvc,
 		ws:             ws,
 		store:          store,
-		describer:      cloudformation.New(sess),
+		appCFN:         cloudformation.New(sess),
 		runner:         command.New(),
+		sel:            selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		stackWriter:    os.Stdout,
 		paramsWriter:   ioutil.Discard,
 		addonsWriter:   ioutil.Discard,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
 	}
 
-	opts.stackSerializer = func(mft interface{}, env *config.Environment, proj *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
+	opts.stackSerializer = func(mft interface{}, env *config.Environment, app *config.Application, rc stack.RuntimeConfig) (stackSerializer, error) {
 		var serializer stackSerializer
 		switch v := mft.(type) {
 		case *manifest.LoadBalancedWebService:
-			if proj.RequiresDNSDelegation() {
-				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, proj.Name, rc)
+			if app.RequiresDNSDelegation() {
+				serializer, err = stack.NewHTTPSLoadBalancedWebService(v, env.Name, app.Name, rc)
 				if err != nil {
-					return nil, fmt.Errorf("init https load balanced web app stack serializer: %w", err)
+					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
 			}
-			serializer, err = stack.NewLoadBalancedWebService(v, env.Name, proj.Name, rc)
+			serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
 			if err != nil {
-				return nil, fmt.Errorf("init load balanced web app stack serializer: %w", err)
+				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
 			}
 		case *manifest.BackendService:
-			serializer, err = stack.NewBackendService(v, env.Name, proj.Name, rc)
+			serializer, err = stack.NewBackendService(v, env.Name, app.Name, rc)
 			if err != nil {
-				return nil, fmt.Errorf("init backend app stack serializer: %w", err)
+				return nil, fmt.Errorf("init backend service stack serializer: %w", err)
 			}
 		default:
 			return nil, fmt.Errorf("create stack serializer for manifest of type %T", v)
@@ -119,17 +121,17 @@ func newPackageAppOpts(vars packageAppVars) (*packageAppOpts, error) {
 }
 
 // Validate returns an error if the values provided by the user are invalid.
-func (o *packageAppOpts) Validate() error {
+func (o *packageSvcOpts) Validate() error {
 	if o.AppName() == "" {
 		return errNoAppInWorkspace
 	}
 	if o.Name != "" {
 		names, err := o.ws.ServiceNames()
 		if err != nil {
-			return fmt.Errorf("list applications in workspace: %w", err)
+			return fmt.Errorf("list services in the workspace: %w", err)
 		}
 		if !contains(o.Name, names) {
-			return fmt.Errorf("application '%s' does not exist in the workspace", o.Name)
+			return fmt.Errorf("service '%s' does not exist in the workspace", o.Name)
 		}
 	}
 	if o.EnvName != "" {
@@ -141,7 +143,7 @@ func (o *packageAppOpts) Validate() error {
 }
 
 // Ask prompts the user for any missing required fields.
-func (o *packageAppOpts) Ask() error {
+func (o *packageSvcOpts) Ask() error {
 	if err := o.askAppName(); err != nil {
 		return err
 	}
@@ -152,19 +154,19 @@ func (o *packageAppOpts) Ask() error {
 }
 
 // Execute prints the CloudFormation template of the application for the environment.
-func (o *packageAppOpts) Execute() error {
+func (o *packageSvcOpts) Execute() error {
 	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return err
 	}
 
 	if o.OutputDir != "" {
-		if err := o.setAppFileWriters(); err != nil {
+		if err := o.setOutputFileWriters(); err != nil {
 			return err
 		}
 	}
 
-	appTemplates, err := o.getAppTemplates(env)
+	appTemplates, err := o.getSvcTemplates(env)
 	if err != nil {
 		return err
 	}
@@ -196,55 +198,33 @@ func (o *packageAppOpts) Execute() error {
 	return err
 }
 
-func (o *packageAppOpts) askAppName() error {
+func (o *packageSvcOpts) askAppName() error {
 	if o.Name != "" {
 		return nil
 	}
 
-	appNames, err := o.ws.ServiceNames()
+	name, err := o.sel.Service(svcPackageSvcNamePrompt, "")
 	if err != nil {
-		return fmt.Errorf("list applications in workspace: %w", err)
+		return fmt.Errorf("select service: %w", err)
 	}
-	if len(appNames) == 0 {
-		return errors.New("there are no applications in the workspace, run `ecs-preview init` first")
-	}
-	if len(appNames) == 1 {
-		o.Name = appNames[0]
-		return nil
-	}
-	appName, err := o.prompt.SelectOne(appPackageAppNamePrompt, "", appNames)
-	if err != nil {
-		return fmt.Errorf("prompt application name: %w", err)
-	}
-	o.Name = appName
+	o.Name = name
 	return nil
 }
 
-func (o *packageAppOpts) askEnvName() error {
+func (o *packageSvcOpts) askEnvName() error {
 	if o.EnvName != "" {
 		return nil
 	}
 
-	envNames, err := o.listEnvNames()
+	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.AppName())
 	if err != nil {
-		return err
+		return fmt.Errorf("select environment: %w", err)
 	}
-	if len(envNames) == 0 {
-		return fmt.Errorf("there are no environments in project %s", o.AppName())
-	}
-	if len(envNames) == 1 {
-		o.EnvName = envNames[0]
-		return nil
-	}
-	envName, err := o.prompt.SelectOne(appPackageEnvNamePrompt, "", envNames)
-	if err != nil {
-		return fmt.Errorf("prompt environment name: %w", err)
-	}
-	o.EnvName = envName
+	o.EnvName = name
 	return nil
 }
 
-func (o *packageAppOpts) askTag() error {
+func (o *packageSvcOpts) askTag() error {
 	if o.Tag != "" {
 		return nil
 	}
@@ -261,20 +241,20 @@ func (o *packageAppOpts) askTag() error {
 	return nil
 }
 
-func (o *packageAppOpts) getAddonsTemplate() (string, error) {
+func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
 	if err := o.initAddonsSvc(o); err != nil {
 		return "", err
 	}
 	return o.addonsSvc.Template()
 }
 
-type appCfnTemplates struct {
+type svcCfnTemplates struct {
 	stack         string
 	configuration string
 }
 
-// getAppTemplates returns the CloudFormation stack's template and its parameters for the application.
-func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTemplates, error) {
+// getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
+func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*svcCfnTemplates, error) {
 	raw, err := o.ws.ReadServiceManifest(o.Name)
 	if err != nil {
 		return nil, err
@@ -284,11 +264,11 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 		return nil, err
 	}
 
-	proj, err := o.store.GetApplication(o.AppName())
+	app, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		return nil, err
 	}
-	resources, err := o.describer.GetAppResourcesByRegion(proj, env.Region)
+	resources, err := o.appCFN.GetAppResourcesByRegion(app, env.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -296,15 +276,15 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 	repoURL, ok := resources.RepositoryURLs[o.Name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:       o.Name,
-			envRegion:     env.Region,
-			projAccountID: proj.AccountID,
+			svcName:      o.Name,
+			envRegion:    env.Region,
+			appAccountID: app.AccountID,
 		}
 	}
-	serializer, err := o.stackSerializer(mft, env, proj, stack.RuntimeConfig{
+	serializer, err := o.stackSerializer(mft, env, app, stack.RuntimeConfig{
 		ImageRepoURL:   repoURL,
 		ImageTag:       o.Tag,
-		AdditionalTags: proj.Tags,
+		AdditionalTags: app.Tags,
 	})
 	if err != nil {
 		return nil, err
@@ -317,11 +297,11 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template configuration: %w", err)
 	}
-	return &appCfnTemplates{stack: tpl, configuration: params}, nil
+	return &svcCfnTemplates{stack: tpl, configuration: params}, nil
 }
 
-// setAppFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
-func (o *packageAppOpts) setAppFileWriters() error {
+// setOutputFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
+func (o *packageSvcOpts) setOutputFileWriters() error {
 	if err := o.fs.MkdirAll(o.OutputDir, 0755); err != nil {
 		return fmt.Errorf("create directory %s: %w", o.OutputDir, err)
 	}
@@ -345,7 +325,7 @@ func (o *packageAppOpts) setAppFileWriters() error {
 	return nil
 }
 
-func (o *packageAppOpts) setAddonsFileWriter() error {
+func (o *packageSvcOpts) setAddonsFileWriter() error {
 	addonsPath := filepath.Join(o.OutputDir,
 		fmt.Sprintf(config.AddonsCfnTemplateNameFormat, o.Name))
 	addonsFile, err := o.fs.Create(addonsPath)
@@ -366,26 +346,14 @@ func contains(s string, items []string) bool {
 	return false
 }
 
-func (o *packageAppOpts) listEnvNames() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.AppName())
-	if err != nil {
-		return nil, fmt.Errorf("list environments for project %s: %w", o.AppName(), err)
-	}
-	var names []string
-	for _, env := range envs {
-		names = append(names, env.Name)
-	}
-	return names, nil
-}
-
 type errRepoNotFound struct {
-	svcName       string
-	envRegion     string
-	projAccountID string
+	svcName      string
+	envRegion    string
+	appAccountID string
 }
 
 func (e *errRepoNotFound) Error() string {
-	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.svcName, e.envRegion, e.projAccountID)
+	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.svcName, e.envRegion, e.appAccountID)
 }
 
 func (e *errRepoNotFound) Is(target error) bool {
@@ -395,28 +363,28 @@ func (e *errRepoNotFound) Is(target error) bool {
 	}
 	return e.svcName == t.svcName &&
 		e.envRegion == t.envRegion &&
-		e.projAccountID == t.projAccountID
+		e.appAccountID == t.appAccountID
 }
 
-// BuildAppPackageCmd builds the command for printing an application's CloudFormation template.
-func BuildAppPackageCmd() *cobra.Command {
-	vars := packageAppVars{
+// BuildSvcPackageCmd builds the command for printing a service's CloudFormation template.
+func BuildSvcPackageCmd() *cobra.Command {
+	vars := packageSvcVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "package",
-		Short: "Prints the AWS CloudFormation template of an application.",
-		Long:  `Prints the CloudFormation template used to deploy an application to an environment.`,
+		Short: "Prints the AWS CloudFormation template of a service.",
+		Long:  `Prints the CloudFormation template used to deploy a service to an environment.`,
 		Example: `
-  Print the CloudFormation template for the "frontend" application parametrized for the "test" environment.
-  /code $ ecs-preview app package -n frontend -e test
+  Print the CloudFormation template for the "frontend" service parametrized for the "test" environment.
+  /code $ copilot svc package -n frontend -e test
 
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ ecs-preview app package -n frontend -e test --output-dir ./infrastructure
+  /code $ copilot svc package -n frontend -e test --output-dir ./infrastructure
   /code $ ls ./infrastructure
   /code frontend.stack.yml      frontend-test.config.yml`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newPackageAppOpts(vars)
+			opts, err := newPackageSvcOpts(vars)
 			if err != nil {
 				return err
 			}

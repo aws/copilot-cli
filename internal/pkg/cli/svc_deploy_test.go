@@ -88,8 +88,8 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
-			opts := svcDeployOpts{
-				svcDeployVars: svcDeployVars{
+			opts := deploySvcOpts{
+				deploySvcVars: deploySvcVars{
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inAppName,
 					},
@@ -163,8 +163,8 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 			mockSel := mocks.NewMockwsSelector(ctrl)
 
 			tc.wantedCalls(mockSel)
-			opts := svcDeployOpts{
-				svcDeployVars: svcDeployVars{
+			opts := deploySvcOpts{
+				deploySvcVars: deploySvcVars{
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inAppName,
 					},
@@ -239,8 +239,8 @@ image:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
-			opts := svcDeployOpts{
-				svcDeployVars: svcDeployVars{
+			opts := deploySvcOpts{
+				deploySvcVars: deploySvcVars{
 					Name: test.inputSvc,
 				},
 				ws: mockWorkspace,
@@ -384,8 +384,8 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			tc.mockS3Svc(mockS3Svc)
 			tc.mockAddons(mockAddons)
 
-			opts := svcDeployOpts{
-				svcDeployVars: svcDeployVars{
+			opts := deploySvcOpts{
+				deploySvcVars: deploySvcVars{
 					Name: tc.inputSvc,
 				},
 				store:             mockProjectSvc,
