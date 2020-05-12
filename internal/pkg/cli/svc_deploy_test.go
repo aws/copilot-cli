@@ -19,56 +19,56 @@ import (
 
 func TestAppDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
-		inAppName     string
-		inEnvName     string
+		inAppName string
+		inEnvName string
+		inSvcName string
 
 		mockWs    func(m *mocks.MockwsAppReader)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
-		"no existing projects": {
+		"no existing applications": {
 			mockWs:    func(m *mocks.MockwsAppReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoAppInWorkspace,
 		},
 		"with workspace error": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
+			inAppName: "phonetool",
+			inSvcName: "frontend",
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
-			wantedError: errors.New("list applications in the workspace: some error"),
+			wantedError: errors.New("list services in the workspace: some error"),
 		},
-		"with application not in workspace": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
+		"with service not in workspace": {
+			inAppName: "phonetool",
+			inSvcName: "frontend",
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
 
-			wantedError: errors.New("application frontend not found in the workspace"),
+			wantedError: errors.New("service frontend not found in the workspace"),
 		},
 		"with unknown environment": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			mockWs:        func(m *mocks.MockwsAppReader) {},
+			inAppName: "phonetool",
+			inEnvName: "test",
+			mockWs:    func(m *mocks.MockwsAppReader) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
 			},
 
-			wantedError: errors.New("get environment test from metadata store: unknown env"),
+			wantedError: errors.New("get environment test configuration: unknown env"),
 		},
 		"successful validation": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inSvcName: "frontend",
+			inEnvName: "test",
 			mockWs: func(m *mocks.MockwsAppReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
@@ -88,16 +88,16 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
-			opts := appDeployOpts{
-				appDeployVars: appDeployVars{
+			opts := svcDeployOpts{
+				svcDeployVars: svcDeployVars{
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inProjectName,
+						appName: tc.inAppName,
 					},
-					Name:    tc.inAppName,
+					Name:    tc.inSvcName,
 					EnvName: tc.inEnvName,
 				},
-				workspaceService: mockWs,
-				store:            mockStore,
+				ws:    mockWs,
+				store: mockStore,
 			}
 
 			// WHEN
@@ -115,124 +115,41 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 
 func TestAppDeployOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
-		inAppName     string
-		inEnvName     string
-		inImageTag    string
+		inAppName  string
+		inEnvName  string
+		inSvcName  string
+		inImageTag string
 
-		mockWs     func(m *mocks.MockwsAppReader)
-		mockStore  func(m *mocks.Mockstore)
-		mockPrompt func(m *mocks.Mockprompter)
+		wantedCalls func(m *mocks.MockwsSelector)
 
-		wantedAppName  string
+		wantedSvcName  string
 		wantedEnvName  string
 		wantedImageTag string
 		wantedError    error
 	}{
-		"no applications in the workspace": {
-			mockWs: func(m *mocks.MockwsAppReader) {
-				m.EXPECT().ServiceNames().Return([]string{}, nil)
-			},
-			mockStore:  func(m *mocks.Mockstore) {},
-			mockPrompt: func(m *mocks.Mockprompter) {},
-
-			wantedError: errors.New("no applications found in the workspace"),
-		},
-		"default to single application": {
-			inEnvName:  "test",
+		"prompts for environment name and service names": {
+			inAppName:  "phonetool",
 			inImageTag: "latest",
-			mockWs: func(m *mocks.MockwsAppReader) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
+			wantedCalls: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service("Select a service in your workspace", "").Return("frontend", nil)
+				m.EXPECT().Environment("Select an environment", "", "phonetool").Return("prod-iad", nil)
 			},
-			mockStore:  func(m *mocks.Mockstore) {},
-			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedAppName:  "frontend",
-			wantedEnvName:  "test",
+			wantedSvcName:  "frontend",
+			wantedEnvName:  "prod-iad",
 			wantedImageTag: "latest",
 		},
-		"prompts for application name if there are more than one option": {
-			inEnvName:  "test",
+		"don't call selector if flags are provided": {
+			inAppName:  "phonetool",
+			inEnvName:  "prod-iad",
+			inSvcName:  "frontend",
 			inImageTag: "latest",
-			mockWs: func(m *mocks.MockwsAppReader) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "webhook"}, nil)
-			},
-			mockStore: func(m *mocks.Mockstore) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne("Select an application", "", []string{"frontend", "webhook"}).
-					Return("frontend", nil)
+			wantedCalls: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedAppName:  "frontend",
-			wantedEnvName:  "test",
-			wantedImageTag: "latest",
-		},
-		"fails to list environments": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
-			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("phonetool").Return(nil, errors.New("some error"))
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-			},
-
-			wantedError: errors.New("get environments for project phonetool from metadata store: some error"),
-		},
-		"no existing environments": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
-			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-			},
-
-			wantedError: errors.New("no environments found in project phonetool"),
-		},
-		"defaults to single environment": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
-			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-			},
-
-			wantedAppName:  "frontend",
-			wantedEnvName:  "test",
-			wantedImageTag: "latest",
-		},
-		"prompts for environment name if there are more than one option": {
-			inProjectName: "phonetool",
-			inAppName:     "frontend",
-			inImageTag:    "latest",
-			mockWs:        func(m *mocks.MockwsAppReader) {},
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
-					{
-						Name: "test",
-					},
-					{
-						Name: "prod-iad",
-					},
-				}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne("Select an environment", "", []string{"test", "prod-iad"}).
-					Return("prod-iad", nil)
-			},
-
-			wantedAppName:  "frontend",
+			wantedSvcName:  "frontend",
 			wantedEnvName:  "prod-iad",
 			wantedImageTag: "latest",
 		},
@@ -243,25 +160,19 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockwsAppReader(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			tc.mockWs(mockWs)
-			tc.mockStore(mockStore)
-			tc.mockPrompt(mockPrompt)
+			mockSel := mocks.NewMockwsSelector(ctrl)
 
-			opts := appDeployOpts{
-				appDeployVars: appDeployVars{
+			tc.wantedCalls(mockSel)
+			opts := svcDeployOpts{
+				svcDeployVars: svcDeployVars{
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inProjectName,
-						prompt:  mockPrompt,
+						appName: tc.inAppName,
 					},
-					Name:     tc.inAppName,
+					Name:     tc.inSvcName,
 					EnvName:  tc.inEnvName,
 					ImageTag: tc.inImageTag,
 				},
-				workspaceService: mockWs,
-				store:            mockStore,
+				sel: mockSel,
 			}
 
 			// WHEN
@@ -270,7 +181,7 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedAppName, opts.Name)
+				require.Equal(t, tc.wantedSvcName, opts.Name)
 				require.Equal(t, tc.wantedEnvName, opts.EnvName)
 				require.Equal(t, tc.wantedImageTag, opts.ImageTag)
 			} else {
@@ -297,7 +208,7 @@ image:
 		wantPath string
 		wantErr  error
 	}{
-		"should return error if workspaceService ReadFile returns error": {
+		"should return error if ws ReadFile returns error": {
 			inputApp: "appA",
 			setupMocks: func(controller *gomock.Controller) {
 				mockWorkspace = mocks.NewMockwsAppReader(controller)
@@ -328,14 +239,14 @@ image:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			test.setupMocks(ctrl)
-			opts := appDeployOpts{
-				appDeployVars: appDeployVars{
+			opts := svcDeployOpts{
+				svcDeployVars: svcDeployVars{
 					Name: test.inputApp,
 				},
-				workspaceService: mockWorkspace,
+				ws: mockWorkspace,
 			}
 
-			gotPath, gotErr := opts.getAppDockerfilePath()
+			gotPath, gotErr := opts.getDockerfilePath()
 
 			require.Equal(t, test.wantPath, gotPath)
 			require.Equal(t, test.wantErr, gotErr)
@@ -473,16 +384,16 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			tc.mockS3Svc(mockS3Svc)
 			tc.mockAddons(mockAddons)
 
-			opts := appDeployOpts{
-				appDeployVars: appDeployVars{
+			opts := svcDeployOpts{
+				svcDeployVars: svcDeployVars{
 					Name: tc.inputApp,
 				},
 				store:             mockProjectSvc,
-				projectCFSvc:      mockProjectResourcesGetter,
-				addonsSvc:         mockAddons,
-				s3Service:         mockS3Svc,
+				appCFN:            mockProjectResourcesGetter,
+				addons:            mockAddons,
+				s3:                mockS3Svc,
 				targetEnvironment: tc.inEnvironment,
-				targetProject:     tc.inProject,
+				targetApp:         tc.inProject,
 			}
 
 			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket()

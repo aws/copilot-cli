@@ -325,3 +325,18 @@ type askExecutor interface {
 	Ask() error
 	executor
 }
+
+type appEnvSelector interface {
+	Application(prompt, help string) (string, error)
+	Environment(prompt, help, app string) (string, error)
+}
+
+type configSelector interface {
+	appEnvSelector
+	Service(prompt, help, app string) (string, error)
+}
+
+type wsSelector interface {
+	appEnvSelector
+	Service(prompt, help string) (string, error)
+}
