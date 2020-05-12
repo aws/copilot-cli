@@ -73,7 +73,7 @@ type initAppOpts struct {
 
 	// Interfaces to interact with dependencies.
 	fs           afero.Fs
-	ws           wsAppManifestWriter
+	ws           svcManifestWriter
 	store        store
 	projDeployer projectDeployer
 	prog         progress

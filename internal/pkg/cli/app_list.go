@@ -42,7 +42,7 @@ type listAppOpts struct {
 	applications []*config.Service
 	store        store
 
-	ws wsAppReader
+	ws wsSvcReader
 	w  io.Writer
 }
 

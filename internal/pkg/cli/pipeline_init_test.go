@@ -307,7 +307,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		mockWsWriter                func(m *mocks.MockwsPipelineWriter)
 		mockParser                  func(m *templatemocks.MockParser)
 		mockFileSystem              func(mockFS afero.Fs)
-		mockRegionalResourcesGetter func(m *mocks.MockprojectResourcesGetter)
+		mockRegionalResourcesGetter func(m *mocks.MockappResourcesGetter)
 		mockStoreSvc                func(m *mocks.Mockstore)
 
 		expectedError error
@@ -336,7 +336,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
@@ -373,7 +373,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
@@ -401,7 +401,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
 			mockStoreSvc:                func(m *mocks.Mockstore) {},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {},
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			expectedError:               errors.New("write manifest to workspace: some error"),
 		},
 		"returns an error if project cannot be retrieved": {
@@ -421,7 +421,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockStoreSvc: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {},
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
 			expectedError:               errors.New("get project metadata badgoose: some error"),
 		},
 		"returns an error if can't get regional project resources": {
@@ -443,7 +443,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return(nil, errors.New("some error"))
@@ -472,7 +472,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
@@ -508,7 +508,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
@@ -544,7 +544,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
@@ -567,7 +567,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
 			mockWriter := mocks.NewMockwsPipelineWriter(ctrl)
 			mockParser := templatemocks.NewMockParser(ctrl)
-			mockRegionalResourcesGetter := mocks.NewMockprojectResourcesGetter(ctrl)
+			mockRegionalResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
 			mockstore := mocks.NewMockstore(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)

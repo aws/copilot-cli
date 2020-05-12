@@ -49,13 +49,13 @@ type svcDeployOpts struct {
 	svcDeployVars
 
 	store        store
-	ws           wsAppReader
+	ws           wsSvcReader
 	ecr          ecrService
 	docker       dockerService
 	s3           artifactUploader
 	cmd          runner
 	addons       templater
-	appCFN       projectResourcesGetter
+	appCFN       appResourcesGetter
 	svcCFN       cloudformation.CloudFormation
 	sessProvider sessionProvider
 
@@ -346,7 +346,7 @@ func (o *svcDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
-		return "", fmt.Errorf("get project resources: %w", err)
+		return "", fmt.Errorf("get app resources: %w", err)
 	}
 
 	reader := strings.NewReader(template)
@@ -468,8 +468,8 @@ func (o *svcDeployOpts) showAppURI() error {
 	return nil
 }
 
-// BuildAppDeployCmd builds the `app deploy` subcommand.
-func BuildAppDeployCmd() *cobra.Command {
+// BuildSvcDeployCmd builds the `svc deploy` subcommand.
+func BuildSvcDeployCmd() *cobra.Command {
 	vars := svcDeployVars{
 		GlobalOpts: NewGlobalOpts(),
 	}

@@ -19,7 +19,7 @@ type showAppMocks struct {
 	storeSvc  *mocks.Mockstore
 	prompt    *mocks.Mockprompter
 	describer *mocks.Mockdescriber
-	ws        *mocks.MockwsAppReader
+	ws        *mocks.MockwsSvcReader
 }
 
 type mockDescribeData struct {
@@ -343,7 +343,7 @@ func TestAppShow_Ask(t *testing.T) {
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockWorkspace := mocks.NewMockwsAppReader(ctrl)
+			mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
 
 			mocks := showAppMocks{
 				storeSvc: mockStoreReader,

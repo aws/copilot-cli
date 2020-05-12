@@ -17,19 +17,19 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 )
 
-func TestAppDeployOpts_Validate(t *testing.T) {
+func TestSvcDeployOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string
 		inEnvName string
 		inSvcName string
 
-		mockWs    func(m *mocks.MockwsAppReader)
+		mockWs    func(m *mocks.MockwsSvcReader)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing applications": {
-			mockWs:    func(m *mocks.MockwsAppReader) {},
+			mockWs:    func(m *mocks.MockwsSvcReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoAppInWorkspace,
@@ -37,7 +37,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		"with workspace error": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -47,7 +47,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		"with service not in workspace": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -57,7 +57,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 		"with unknown environment": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			mockWs:    func(m *mocks.MockwsAppReader) {},
+			mockWs:    func(m *mocks.MockwsSvcReader) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
@@ -69,7 +69,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			inEnvName: "test",
-			mockWs: func(m *mocks.MockwsAppReader) {
+			mockWs: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -84,7 +84,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockwsAppReader(ctrl)
+			mockWs := mocks.NewMockwsSvcReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -113,7 +113,7 @@ func TestAppDeployOpts_Validate(t *testing.T) {
 	}
 }
 
-func TestAppDeployOpts_Ask(t *testing.T) {
+func TestSvcDeployOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName  string
 		inEnvName  string
@@ -191,45 +191,45 @@ func TestAppDeployOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestAppDeployOpts_getAppDockerfilePath(t *testing.T) {
-	var mockWorkspace *mocks.MockwsAppReader
+func TestSvcDeployOpts_getDockerfilePath(t *testing.T) {
+	var mockWorkspace *mocks.MockwsSvcReader
 
 	mockError := errors.New("mockError")
-	mockManifest := []byte(`name: appA
+	mockManifest := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
-  build: appA/Dockerfile
+  build: serviceA/Dockerfile
 `)
 
 	tests := map[string]struct {
-		inputApp   string
+		inputSvc   string
 		setupMocks func(controller *gomock.Controller)
 
 		wantPath string
 		wantErr  error
 	}{
 		"should return error if ws ReadFile returns error": {
-			inputApp: "appA",
+			inputSvc: "serviceA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockwsAppReader(controller)
+				mockWorkspace = mocks.NewMockwsSvcReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(nil, mockError),
+					mockWorkspace.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError),
 				)
 			},
 			wantPath: "",
-			wantErr:  fmt.Errorf("read manifest file %s: %w", "appA", mockError),
+			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
 		},
 		"should trim the manifest DockerfilePath if it contains /Dockerfile": {
-			inputApp: "appA",
+			inputSvc: "serviceA",
 			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockwsAppReader(controller)
+				mockWorkspace = mocks.NewMockwsSvcReader(controller)
 
 				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadServiceManifest("appA").Times(1).Return(mockManifest, nil),
+					mockWorkspace.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil),
 				)
 			},
-			wantPath: "appA",
+			wantPath: "serviceA",
 			wantErr:  nil,
 		},
 	}
@@ -241,7 +241,7 @@ image:
 			test.setupMocks(ctrl)
 			opts := svcDeployOpts{
 				svcDeployVars: svcDeployVars{
-					Name: test.inputApp,
+					Name: test.inputSvc,
 				},
 				ws: mockWorkspace,
 			}
@@ -254,30 +254,30 @@ image:
 	}
 }
 
-func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
+func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 	mockError := errors.New("some error")
 	tests := map[string]struct {
-		inputApp      string
+		inputSvc      string
 		inEnvironment *config.Environment
-		inProject     *config.Application
+		inApp         *config.Application
 
-		mockProjectResourcesGetter func(m *mocks.MockprojectResourcesGetter)
-		mockS3Svc                  func(m *mocks.MockartifactUploader)
-		mockAddons                 func(m *mocks.Mocktemplater)
+		mockAppResourcesGetter func(m *mocks.MockappResourcesGetter)
+		mockS3Svc              func(m *mocks.MockartifactUploader)
+		mockAddons             func(m *mocks.Mocktemplater)
 
 		wantPath string
 		wantErr  error
 	}{
 		"should push addons template to S3 bucket": {
-			inputApp: "mockSvc",
+			inputSvc: "mockSvc",
 			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &config.Application{
+			inApp: &config.Application{
 				Name: "mockApp",
 			},
-			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
@@ -294,16 +294,16 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			wantErr:  nil,
 			wantPath: "https://mockS3DomainName/mockPath",
 		},
-		"should return error if fail to get project resources": {
-			inputApp: "mockSvc",
+		"should return error if fail to get app resources": {
+			inputSvc: "mockSvc",
 			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &config.Application{
+			inApp: &config.Application{
 				Name: "mockApp",
 			},
-			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
 				}, "us-west-2").Return(nil, mockError)
@@ -313,19 +313,19 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			},
 			mockS3Svc: func(m *mocks.MockartifactUploader) {},
 
-			wantErr: fmt.Errorf("get project resources: some error"),
+			wantErr: fmt.Errorf("get app resources: some error"),
 		},
 		"should return error if fail to upload to S3 bucket": {
-			inputApp: "mockSvc",
+			inputSvc: "mockSvc",
 			inEnvironment: &config.Environment{
 				Name:   "mockEnv",
 				Region: "us-west-2",
 			},
-			inProject: &config.Application{
+			inApp: &config.Application{
 				Name: "mockApp",
 			},
 
-			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{
 					Name: "mockApp",
 				}, "us-west-2").Return(&stack.AppRegionalResources{
@@ -341,14 +341,14 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 
 			wantErr: fmt.Errorf("put addons artifact to bucket mockBucket: some error"),
 		},
-		"should return empty url if the application doesn't have any addons": {
-			inputApp: "mockSvc",
+		"should return empty url if the service doesn't have any addons": {
+			inputSvc: "mockSvc",
 			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("", &addons.ErrDirNotExist{
 					SvcName: "mockSvc",
 				})
 			},
-			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockS3Svc: func(m *mocks.MockartifactUploader) {
@@ -357,11 +357,11 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			wantPath: "",
 		},
 		"should fail if addons cannot be retrieved from workspace": {
-			inputApp: "mockSvc",
+			inputSvc: "mockSvc",
 			mockAddons: func(m *mocks.Mocktemplater) {
 				m.EXPECT().Template().Return("", mockError)
 			},
-			mockProjectResourcesGetter: func(m *mocks.MockprojectResourcesGetter) {
+			mockAppResourcesGetter: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Times(0)
 			},
 			mockS3Svc: func(m *mocks.MockartifactUploader) {
@@ -377,23 +377,23 @@ func TestAppDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockProjectSvc := mocks.NewMockstore(ctrl)
-			mockProjectResourcesGetter := mocks.NewMockprojectResourcesGetter(ctrl)
+			mockProjectResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
 			mockS3Svc := mocks.NewMockartifactUploader(ctrl)
 			mockAddons := mocks.NewMocktemplater(ctrl)
-			tc.mockProjectResourcesGetter(mockProjectResourcesGetter)
+			tc.mockAppResourcesGetter(mockProjectResourcesGetter)
 			tc.mockS3Svc(mockS3Svc)
 			tc.mockAddons(mockAddons)
 
 			opts := svcDeployOpts{
 				svcDeployVars: svcDeployVars{
-					Name: tc.inputApp,
+					Name: tc.inputSvc,
 				},
 				store:             mockProjectSvc,
 				appCFN:            mockProjectResourcesGetter,
 				addons:            mockAddons,
 				s3:                mockS3Svc,
 				targetEnvironment: tc.inEnvironment,
-				targetApp:         tc.inProject,
+				targetApp:         tc.inApp,
 			}
 
 			gotPath, gotErr := opts.pushAddonsTemplateToS3Bucket()

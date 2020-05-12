@@ -52,9 +52,9 @@ type packageAppOpts struct {
 	// Interfaces to interact with dependencies.
 	addonsSvc       templater
 	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
-	ws              wsAppReader
+	ws              wsSvcReader
 	store           store
-	describer       projectResourcesGetter
+	describer       appResourcesGetter
 	stackWriter     io.Writer
 	paramsWriter    io.Writer
 	addonsWriter    io.Writer

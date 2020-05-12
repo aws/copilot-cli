@@ -1721,31 +1721,31 @@ func (mr *MockworkspaceDeleterMockRecorder) DeleteAll() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteAll))
 }
 
-// MockwsAppManifestReader is a mock of wsAppManifestReader interface
-type MockwsAppManifestReader struct {
+// MocksvcManifestReader is a mock of svcManifestReader interface
+type MocksvcManifestReader struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsAppManifestReaderMockRecorder
+	recorder *MocksvcManifestReaderMockRecorder
 }
 
-// MockwsAppManifestReaderMockRecorder is the mock recorder for MockwsAppManifestReader
-type MockwsAppManifestReaderMockRecorder struct {
-	mock *MockwsAppManifestReader
+// MocksvcManifestReaderMockRecorder is the mock recorder for MocksvcManifestReader
+type MocksvcManifestReaderMockRecorder struct {
+	mock *MocksvcManifestReader
 }
 
-// NewMockwsAppManifestReader creates a new mock instance
-func NewMockwsAppManifestReader(ctrl *gomock.Controller) *MockwsAppManifestReader {
-	mock := &MockwsAppManifestReader{ctrl: ctrl}
-	mock.recorder = &MockwsAppManifestReaderMockRecorder{mock}
+// NewMocksvcManifestReader creates a new mock instance
+func NewMocksvcManifestReader(ctrl *gomock.Controller) *MocksvcManifestReader {
+	mock := &MocksvcManifestReader{ctrl: ctrl}
+	mock.recorder = &MocksvcManifestReaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsAppManifestReader) EXPECT() *MockwsAppManifestReaderMockRecorder {
+func (m *MocksvcManifestReader) EXPECT() *MocksvcManifestReaderMockRecorder {
 	return m.recorder
 }
 
 // ReadServiceManifest mocks base method
-func (m *MockwsAppManifestReader) ReadServiceManifest(appName string) ([]byte, error) {
+func (m *MocksvcManifestReader) ReadServiceManifest(appName string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
 	ret0, _ := ret[0].([]byte)
@@ -1754,36 +1754,36 @@ func (m *MockwsAppManifestReader) ReadServiceManifest(appName string) ([]byte, e
 }
 
 // ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsAppManifestReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
+func (mr *MocksvcManifestReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAppManifestReader)(nil).ReadServiceManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadServiceManifest), appName)
 }
 
-// MockwsAppManifestWriter is a mock of wsAppManifestWriter interface
-type MockwsAppManifestWriter struct {
+// MocksvcManifestWriter is a mock of svcManifestWriter interface
+type MocksvcManifestWriter struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsAppManifestWriterMockRecorder
+	recorder *MocksvcManifestWriterMockRecorder
 }
 
-// MockwsAppManifestWriterMockRecorder is the mock recorder for MockwsAppManifestWriter
-type MockwsAppManifestWriterMockRecorder struct {
-	mock *MockwsAppManifestWriter
+// MocksvcManifestWriterMockRecorder is the mock recorder for MocksvcManifestWriter
+type MocksvcManifestWriterMockRecorder struct {
+	mock *MocksvcManifestWriter
 }
 
-// NewMockwsAppManifestWriter creates a new mock instance
-func NewMockwsAppManifestWriter(ctrl *gomock.Controller) *MockwsAppManifestWriter {
-	mock := &MockwsAppManifestWriter{ctrl: ctrl}
-	mock.recorder = &MockwsAppManifestWriterMockRecorder{mock}
+// NewMocksvcManifestWriter creates a new mock instance
+func NewMocksvcManifestWriter(ctrl *gomock.Controller) *MocksvcManifestWriter {
+	mock := &MocksvcManifestWriter{ctrl: ctrl}
+	mock.recorder = &MocksvcManifestWriterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsAppManifestWriter) EXPECT() *MockwsAppManifestWriterMockRecorder {
+func (m *MocksvcManifestWriter) EXPECT() *MocksvcManifestWriterMockRecorder {
 	return m.recorder
 }
 
 // WriteServiceManifest mocks base method
-func (m *MockwsAppManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
+func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, appName)
 	ret0, _ := ret[0].(string)
@@ -1792,9 +1792,9 @@ func (m *MockwsAppManifestWriter) WriteServiceManifest(marshaler encoding.Binary
 }
 
 // WriteServiceManifest indicates an expected call of WriteServiceManifest
-func (mr *MockwsAppManifestWriterMockRecorder) WriteServiceManifest(marshaler, appName interface{}) *gomock.Call {
+func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MockwsAppManifestWriter)(nil).WriteServiceManifest), marshaler, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, appName)
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
@@ -1963,31 +1963,31 @@ func (mr *MockwsServiceListerMockRecorder) ServiceNames() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsServiceLister)(nil).ServiceNames))
 }
 
-// MockwsAppReader is a mock of wsAppReader interface
-type MockwsAppReader struct {
+// MockwsSvcReader is a mock of wsSvcReader interface
+type MockwsSvcReader struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsAppReaderMockRecorder
+	recorder *MockwsSvcReaderMockRecorder
 }
 
-// MockwsAppReaderMockRecorder is the mock recorder for MockwsAppReader
-type MockwsAppReaderMockRecorder struct {
-	mock *MockwsAppReader
+// MockwsSvcReaderMockRecorder is the mock recorder for MockwsSvcReader
+type MockwsSvcReaderMockRecorder struct {
+	mock *MockwsSvcReader
 }
 
-// NewMockwsAppReader creates a new mock instance
-func NewMockwsAppReader(ctrl *gomock.Controller) *MockwsAppReader {
-	mock := &MockwsAppReader{ctrl: ctrl}
-	mock.recorder = &MockwsAppReaderMockRecorder{mock}
+// NewMockwsSvcReader creates a new mock instance
+func NewMockwsSvcReader(ctrl *gomock.Controller) *MockwsSvcReader {
+	mock := &MockwsSvcReader{ctrl: ctrl}
+	mock.recorder = &MockwsSvcReaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsAppReader) EXPECT() *MockwsAppReaderMockRecorder {
+func (m *MockwsSvcReader) EXPECT() *MockwsSvcReaderMockRecorder {
 	return m.recorder
 }
 
 // ServiceNames mocks base method
-func (m *MockwsAppReader) ServiceNames() ([]string, error) {
+func (m *MockwsSvcReader) ServiceNames() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ServiceNames")
 	ret0, _ := ret[0].([]string)
@@ -1996,13 +1996,13 @@ func (m *MockwsAppReader) ServiceNames() ([]string, error) {
 }
 
 // ServiceNames indicates an expected call of ServiceNames
-func (mr *MockwsAppReaderMockRecorder) ServiceNames() *gomock.Call {
+func (mr *MockwsSvcReaderMockRecorder) ServiceNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAppReader)(nil).ServiceNames))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcReader)(nil).ServiceNames))
 }
 
 // ReadServiceManifest mocks base method
-func (m *MockwsAppReader) ReadServiceManifest(appName string) ([]byte, error) {
+func (m *MockwsSvcReader) ReadServiceManifest(appName string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
 	ret0, _ := ret[0].([]byte)
@@ -2011,9 +2011,9 @@ func (m *MockwsAppReader) ReadServiceManifest(appName string) ([]byte, error) {
 }
 
 // ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsAppReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
+func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAppReader)(nil).ReadServiceManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), appName)
 }
 
 // MockwsPipelineDeleter is a mock of wsPipelineDeleter interface
@@ -2657,31 +2657,31 @@ func (mr *MockprojectDeployerMockRecorder) DeleteApp(name interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteApp", reflect.TypeOf((*MockprojectDeployer)(nil).DeleteApp), name)
 }
 
-// MockprojectResourcesGetter is a mock of projectResourcesGetter interface
-type MockprojectResourcesGetter struct {
+// MockappResourcesGetter is a mock of appResourcesGetter interface
+type MockappResourcesGetter struct {
 	ctrl     *gomock.Controller
-	recorder *MockprojectResourcesGetterMockRecorder
+	recorder *MockappResourcesGetterMockRecorder
 }
 
-// MockprojectResourcesGetterMockRecorder is the mock recorder for MockprojectResourcesGetter
-type MockprojectResourcesGetterMockRecorder struct {
-	mock *MockprojectResourcesGetter
+// MockappResourcesGetterMockRecorder is the mock recorder for MockappResourcesGetter
+type MockappResourcesGetterMockRecorder struct {
+	mock *MockappResourcesGetter
 }
 
-// NewMockprojectResourcesGetter creates a new mock instance
-func NewMockprojectResourcesGetter(ctrl *gomock.Controller) *MockprojectResourcesGetter {
-	mock := &MockprojectResourcesGetter{ctrl: ctrl}
-	mock.recorder = &MockprojectResourcesGetterMockRecorder{mock}
+// NewMockappResourcesGetter creates a new mock instance
+func NewMockappResourcesGetter(ctrl *gomock.Controller) *MockappResourcesGetter {
+	mock := &MockappResourcesGetter{ctrl: ctrl}
+	mock.recorder = &MockappResourcesGetterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockprojectResourcesGetter) EXPECT() *MockprojectResourcesGetterMockRecorder {
+func (m *MockappResourcesGetter) EXPECT() *MockappResourcesGetterMockRecorder {
 	return m.recorder
 }
 
 // GetAppResourcesByRegion mocks base method
-func (m *MockprojectResourcesGetter) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
+func (m *MockappResourcesGetter) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAppResourcesByRegion", app, region)
 	ret0, _ := ret[0].(*stack.AppRegionalResources)
@@ -2690,13 +2690,13 @@ func (m *MockprojectResourcesGetter) GetAppResourcesByRegion(app *config.Applica
 }
 
 // GetAppResourcesByRegion indicates an expected call of GetAppResourcesByRegion
-func (mr *MockprojectResourcesGetterMockRecorder) GetAppResourcesByRegion(app, region interface{}) *gomock.Call {
+func (mr *MockappResourcesGetterMockRecorder) GetAppResourcesByRegion(app, region interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetAppResourcesByRegion), app, region)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MockappResourcesGetter)(nil).GetAppResourcesByRegion), app, region)
 }
 
 // GetRegionalAppResources mocks base method
-func (m *MockprojectResourcesGetter) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
+func (m *MockappResourcesGetter) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRegionalAppResources", app)
 	ret0, _ := ret[0].([]*stack.AppRegionalResources)
@@ -2705,9 +2705,9 @@ func (m *MockprojectResourcesGetter) GetRegionalAppResources(app *config.Applica
 }
 
 // GetRegionalAppResources indicates an expected call of GetRegionalAppResources
-func (mr *MockprojectResourcesGetterMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
+func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockprojectResourcesGetter)(nil).GetRegionalAppResources), app)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
 }
 
 // Mockdeployer is a mock of deployer interface
