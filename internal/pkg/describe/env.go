@@ -41,8 +41,8 @@ type EnvDescriber struct {
 	proj *archer.Project
 	apps []*archer.Application
 
-	store          storeSvc
-	rgClient       resourceGroupsClient
+	store    storeSvc
+	rgClient resourceGroupsClient
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -65,17 +65,17 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
-		env:            env,
-		store:          svc,
-		proj:           proj,
-		apps:           apps,
-		rgClient:       resourcegroups.New(sess),
+		env:      env,
+		store:    svc,
+		proj:     proj,
+		apps:     apps,
+		rgClient: resourcegroups.New(sess),
 	}, nil
 }
 
 // Describe returns info about a project's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	appsForEnv, err := e.FilterAppsForEnv()
+	appsForEnv, err := e.filterAppsForEnv()
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +87,7 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	}, nil
 }
 
-// FilterAppsForEnv returns all the applications for an environment
-func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
+func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 	var appObjects []*archer.Application
 
 	tags := map[string]string{
@@ -120,11 +119,11 @@ func (e *EnvDescriber) FilterAppsForEnv() ([]*archer.Application, error) {
 func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 	parsedArn, err := arn.Parse(resourceArn)
 	if err != nil {
-		return "", fmt.Errorf("parse ARN: #{resourceArn}: #{err}")
+		return "", fmt.Errorf("parse ARN %s: %w", resourceArn, err)
 	}
 	stack := strings.Split(parsedArn.Resource, "/")
 	if len(stack) < 2 {
-		return "", fmt.Errorf("cannot parse ARN resource #{parsedArn.Resource}")
+		return "", fmt.Errorf("cannot parse ARN resource %s", parsedArn.Resource)
 	}
 	return stack[1], nil
 }
