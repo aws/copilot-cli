@@ -18,7 +18,7 @@ func TestAppList_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockError := fmt.Errorf("error")
 	mockstore := mocks.NewMockstore(ctrl)
-	mockWorkspace := mocks.NewMockwsAppReader(ctrl)
+	mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
 	defer ctrl.Finish()
 
 	testCases := map[string]struct {

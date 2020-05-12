@@ -186,11 +186,11 @@ type workspaceDeleter interface {
 	DeleteAll() error
 }
 
-type wsAppManifestReader interface {
+type svcManifestReader interface {
 	ReadServiceManifest(appName string) ([]byte, error)
 }
 
-type wsAppManifestWriter interface {
+type svcManifestWriter interface {
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
 }
 
@@ -211,9 +211,9 @@ type wsServiceLister interface {
 	ServiceNames() ([]string, error)
 }
 
-type wsAppReader interface {
+type wsSvcReader interface {
 	wsServiceLister
-	wsAppManifestReader
+	svcManifestReader
 }
 
 type wsPipelineDeleter interface {
@@ -265,7 +265,7 @@ type pipelineDeployer interface {
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
-	projectResourcesGetter
+	appResourcesGetter
 	// TODO: Add StreamPipelineCreation method
 }
 
@@ -277,7 +277,7 @@ type projectDeployer interface {
 	DeleteApp(name string) error
 }
 
-type projectResourcesGetter interface {
+type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
@@ -324,4 +324,19 @@ type deletePipelineRunner interface {
 type askExecutor interface {
 	Ask() error
 	executor
+}
+
+type appEnvSelector interface {
+	Application(prompt, help string) (string, error)
+	Environment(prompt, help, app string) (string, error)
+}
+
+type configSelector interface {
+	appEnvSelector
+	Service(prompt, help, app string) (string, error)
+}
+
+type wsSelector interface {
+	appEnvSelector
+	Service(prompt, help string) (string, error)
 }

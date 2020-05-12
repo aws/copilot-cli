@@ -69,7 +69,7 @@ type initPipelineOpts struct {
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         runner
-	cfnClient      projectResourcesGetter
+	cfnClient      appResourcesGetter
 	store          store
 
 	// Outputs stored on successful actions.

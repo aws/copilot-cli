@@ -37,7 +37,7 @@ type showAppOpts struct {
 	w             io.Writer
 	store         store
 	describer     describer
-	ws            wsAppReader
+	ws            wsSvcReader
 	initDescriber func(bool) error // Overriden in tests.
 }
 

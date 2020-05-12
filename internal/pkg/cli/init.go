@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker"
@@ -137,19 +138,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initProfileClients: initEnvProfileClients,
 	}
 
-	appDeploy := &appDeployOpts{
-		appDeployVars: appDeployVars{
+	appDeploy := &svcDeployOpts{
+		svcDeployVars: svcDeployVars{
 			EnvName:    defaultEnvironmentName,
 			ImageTag:   vars.imageTag,
 			GlobalOpts: NewGlobalOpts(),
 		},
 
-		store:            ssm,
-		workspaceService: ws,
-		spinner:          spin,
-		dockerService:    docker.New(),
-		runner:           command.New(),
-		sessProvider:     sessProvider,
+		store:        ssm,
+		ws:           ws,
+		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
+		spinner:      spin,
+		docker:       docker.New(),
+		cmd:          command.New(),
+		sessProvider: sessProvider,
 	}
 
 	return &initOpts{
@@ -241,7 +243,7 @@ func (o *initOpts) deployApp() error {
 	if !o.ShouldDeploy {
 		return nil
 	}
-	if deployOpts, ok := o.appDeploy.(*appDeployOpts); ok {
+	if deployOpts, ok := o.appDeploy.(*svcDeployOpts); ok {
 		// Set the application's name to the deploy sub-command.
 		deployOpts.Name = *o.appName
 	}

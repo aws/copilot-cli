@@ -12,7 +12,7 @@ import (
 // BuildDeployCmd is the deploy command - which is
 // an alias for app deploy.
 func BuildDeployCmd() *cobra.Command {
-	deployCmd := BuildAppDeployCmd()
+	deployCmd := BuildSvcDeployCmd()
 	deployCmd.Use = "deploy"
 	deployCmd.Short = "Deploy your app."
 	deployCmd.Long = `Command for deploying apps to your environments.`

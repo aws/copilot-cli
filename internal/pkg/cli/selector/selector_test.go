@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package cli
+package selector
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelector_SelectWorkspaceService(t *testing.T) {
+func TestWorkspaceSelect_Service(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockServiceLister := mocks.NewMockwsServiceLister(ctrl)
 	mockPrompt := mocks.NewMockprompter(ctrl)
@@ -105,17 +105,18 @@ func TestSelector_SelectWorkspaceService(t *testing.T) {
 		},
 	}
 
-	slct := selector{prompt: mockPrompt}
+	sel := WorkspaceSelect{
+		Select: &Select{
+			prompt: mockPrompt,
+		},
+		svcLister: mockServiceLister,
+	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 
-			got, err := slct.SelectWorkspaceService(&selectWorkspaceServiceRequest{
-				Prompt: "Select a local service",
-				Help:   "Help text",
-				Lister: mockServiceLister,
-			})
+			got, err := sel.Service("Select a local service", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -125,7 +126,7 @@ func TestSelector_SelectWorkspaceService(t *testing.T) {
 	}
 }
 
-func TestSelector_Service(t *testing.T) {
+func TestConfigSelect_Service(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockServiceLister := mocks.NewMockserviceLister(ctrl)
 	mockPrompt := mocks.NewMockprompter(ctrl)
@@ -231,18 +232,18 @@ func TestSelector_Service(t *testing.T) {
 		},
 	}
 
-	slct := selector{prompt: mockPrompt}
+	sel := ConfigSelect{
+		Select: &Select{
+			prompt: mockPrompt,
+		},
+		svcLister: mockServiceLister,
+	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 
-			got, err := slct.SelectService(&selectServiceRequest{
-				Prompt: "Select a service",
-				Help:   "Help text",
-				Lister: mockServiceLister,
-				App:    appName,
-			})
+			got, err := sel.Service("Select a service", "Help text", appName)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -252,9 +253,9 @@ func TestSelector_Service(t *testing.T) {
 	}
 }
 
-func TestSelector_SelectEnvironment(t *testing.T) {
+func TestSelect_Environment(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockEnvLister := mocks.NewMockenvironmentLister(ctrl)
+	mockEnvLister := mocks.NewMockstore(ctrl)
 	mockPrompt := mocks.NewMockprompter(ctrl)
 	defer ctrl.Finish()
 
@@ -353,18 +354,16 @@ func TestSelector_SelectEnvironment(t *testing.T) {
 		},
 	}
 
-	slct := selector{prompt: mockPrompt}
+	sel := Select{
+		prompt: mockPrompt,
+		lister: mockEnvLister,
+	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 
-			got, err := slct.SelectEnvironment(&selectEnvRequest{
-				Prompt: "Select an environment",
-				Help:   "Help text",
-				Lister: mockEnvLister,
-				App:    appName,
-			})
+			got, err := sel.Environment("Select an environment", "Help text", appName)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -374,9 +373,9 @@ func TestSelector_SelectEnvironment(t *testing.T) {
 	}
 }
 
-func TestSelector_SelectApplication(t *testing.T) {
+func TestSelect_Application(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockAppLister := mocks.NewMockapplicationLister(ctrl)
+	mockAppLister := mocks.NewMockstore(ctrl)
 	mockPrompt := mocks.NewMockprompter(ctrl)
 	defer ctrl.Finish()
 
@@ -464,21 +463,20 @@ func TestSelector_SelectApplication(t *testing.T) {
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
-			wantErr: fmt.Errorf("select app: error selecting"),
+			wantErr: fmt.Errorf("select application: error selecting"),
 		},
 	}
 
-	slct := selector{prompt: mockPrompt}
+	sel := Select{
+		prompt: mockPrompt,
+		lister: mockAppLister,
+	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			tc.mocking()
 
-			got, err := slct.SelectApplication(&selectAppRequest{
-				Prompt: "Select an app",
-				Help:   "Help text",
-				Lister: mockAppLister,
-			})
+			got, err := sel.Application("Select an app", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {

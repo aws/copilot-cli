@@ -361,7 +361,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inAppPort:        80,
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)
@@ -405,7 +405,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inAppPort:        80,
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", errors.New("some error"))
 
 				mockstore := mocks.NewMockstore(ctrl)
@@ -435,7 +435,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
 
 				mockstore := mocks.NewMockstore(ctrl)
 
@@ -454,7 +454,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)
@@ -486,7 +486,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := mocks.NewMockwsAppManifestWriter(ctrl)
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
 				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).Return("/frontend/manifest.yml", nil)
 
 				mockstore := mocks.NewMockstore(ctrl)

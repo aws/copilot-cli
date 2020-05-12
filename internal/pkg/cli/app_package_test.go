@@ -18,7 +18,7 @@ import (
 
 func TestPackageAppOpts_Validate(t *testing.T) {
 	var (
-		mockWorkspace      *mocks.MockwsAppReader
+		mockWorkspace      *mocks.MockwsSvcReader
 		mockProjectService *mocks.Mockstore
 	)
 
@@ -83,7 +83,7 @@ func TestPackageAppOpts_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace = mocks.NewMockwsAppReader(ctrl)
+			mockWorkspace = mocks.NewMockwsSvcReader(ctrl)
 			mockProjectService = mocks.NewMockstore(ctrl)
 
 			tc.setupMocks()
@@ -117,7 +117,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		inEnvName string
 		inTag     string
 
-		expectWS     func(m *mocks.MockwsAppReader)
+		expectWS     func(m *mocks.MockwsSvcReader)
 		expectStore  func(m *mocks.Mockstore)
 		expectPrompt func(m *mocks.Mockprompter)
 		expectRunner func(m *mocks.Mockrunner)
@@ -128,7 +128,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		wantedErrorS  string
 	}{
 		"wrap list apps error": {
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -142,7 +142,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			wantedErrorS: "list applications in workspace: some error",
 		},
 		"empty workspace error": {
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -157,7 +157,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		},
 		"wrap list envs error": {
 			inAppName: "frontend",
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -173,7 +173,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		},
 		"empty environments error": {
 			inAppName: "frontend",
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -188,7 +188,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			wantedErrorS:  "there are no environments in project ",
 		},
 		"prompt for all options": {
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -218,7 +218,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inEnvName: "test",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -237,7 +237,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inAppName: "frontend",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -264,7 +264,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			inEnvName: "test",
 			inTag:     "v1.0.0",
 
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -280,7 +280,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			wantedTag:     "v1.0.0",
 		},
 		"don't prompt if only one app or one env": {
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -305,7 +305,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 		"prompt for image if there is a runner error": {
 			inAppName: "frontend",
 			inEnvName: "test",
-			expectWS: func(m *mocks.MockwsAppReader) {
+			expectWS: func(m *mocks.MockwsSvcReader) {
 				m.EXPECT().ServiceNames().Times(0)
 			},
 			expectStore: func(m *mocks.Mockstore) {
@@ -329,7 +329,7 @@ func TestPackageAppOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockwsAppReader(ctrl)
+			mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
 			mockRunner := mocks.NewMockrunner(ctrl)
@@ -411,7 +411,7 @@ func TestPackageAppOpts_Execute(t *testing.T) {
 					GetApplication("ecs-kudos").
 					Return(mockApp, nil)
 
-				mockWs := mocks.NewMockwsAppReader(ctrl)
+				mockWs := mocks.NewMockwsSvcReader(ctrl)
 				mockWs.EXPECT().
 					ReadServiceManifest("api").
 					Return([]byte(`name: api
@@ -425,7 +425,7 @@ cpu: 256
 memory: 512
 count: 1`), nil)
 
-				mockCfn := mocks.NewMockprojectResourcesGetter(ctrl)
+				mockCfn := mocks.NewMockappResourcesGetter(ctrl)
 				mockCfn.EXPECT().
 					GetAppResourcesByRegion(mockApp, "us-west-2").
 					Return(&stack.AppRegionalResources{

@@ -52,9 +52,9 @@ type packageAppOpts struct {
 	// Interfaces to interact with dependencies.
 	addonsSvc       templater
 	initAddonsSvc   func(*packageAppOpts) error // Overriden in tests.
-	ws              wsAppReader
+	ws              wsSvcReader
 	store           store
-	describer       projectResourcesGetter
+	describer       appResourcesGetter
 	stackWriter     io.Writer
 	paramsWriter    io.Writer
 	addonsWriter    io.Writer
@@ -296,7 +296,7 @@ func (o *packageAppOpts) getAppTemplates(env *config.Environment) (*appCfnTempla
 	repoURL, ok := resources.RepositoryURLs[o.Name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			appName:       o.Name,
+			svcName:       o.Name,
 			envRegion:     env.Region,
 			projAccountID: proj.AccountID,
 		}
@@ -379,13 +379,13 @@ func (o *packageAppOpts) listEnvNames() ([]string, error) {
 }
 
 type errRepoNotFound struct {
-	appName       string
+	svcName       string
 	envRegion     string
 	projAccountID string
 }
 
 func (e *errRepoNotFound) Error() string {
-	return fmt.Sprintf("ECR repository not found for application %s in region %s and account %s", e.appName, e.envRegion, e.projAccountID)
+	return fmt.Sprintf("ECR repository not found for service %s in region %s and account %s", e.svcName, e.envRegion, e.projAccountID)
 }
 
 func (e *errRepoNotFound) Is(target error) bool {
@@ -393,7 +393,7 @@ func (e *errRepoNotFound) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.appName == t.appName &&
+	return e.svcName == t.svcName &&
 		e.envRegion == t.envRegion &&
 		e.projAccountID == t.projAccountID
 }
