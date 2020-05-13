@@ -76,7 +76,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 						Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("get resources for env testEnv: some error"),
+			wantedError: fmt.Errorf("get AWS::CloudFormation::Stack resources for env testEnv: some error"),
 		},
 		"error if getStackName fails because can't parse resource ARN": {
 			setupMocks: func(m envDescriberMocks) {
