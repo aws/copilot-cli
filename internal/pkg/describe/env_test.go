@@ -142,30 +142,39 @@ func TestEnvDescriber_Describe(t *testing.T) {
 }
 
 func TestEnvDescriber_JSONString(t *testing.T) {
-	mockApplications := []*archer.Application{
-		{Project: "my-project",
-			Name: "my-app",
-			Type: "lb-web-app"},
-		{Project: "my-project",
-			Name: "copilot-app",
-			Type: "lb-web-app"},
+	testProject := &archer.Project{
+		Name: "testProject",
+		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
-	mockProject := &archer.Project{
-		Name: "my-project",
-		Tags: map[string]string{"tag1": "value1", "tag2": "value2"},
-	}
-	mockEnv := &archer.Environment{
-		Project:          "my-project",
-		Name:             "test",
+	testEnv := &archer.Environment{
+		Project:          "testProject",
+		Name:             "testEnv",
 		Region:           "us-west-2",
-		AccountID:        "123456789",
+		AccountID:        "123456789012",
 		Prod:             false,
 		RegistryURL:      "",
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-
+	testApp1 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp1",
+		Type:    "load-balanced",
+	}
+	testApp2 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp2",
+		Type:    "load-balanced",
+	}
+	testApp3 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp3",
+		Type:    "load-balanced",
+	}
+	allApps := []*archer.Application{testApp1, testApp2, testApp3}
 	testCases := map[string]struct {
+		setupMocks func(mocks envDescriberMocks)
+
 		shouldOutputJSON bool
 		wantedError      error
 		wantedContent    string
@@ -182,14 +191,14 @@ func TestEnvDescriber_JSONString(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			d := &EnvDescriber{
-				env:  mockEnv,
-				proj: mockProject,
-				apps: mockApplications,
+			d := &EnvDescription{
+				Environment:  testEnv,
+				Applications: allApps,
+				Tags: testProject.Tags,
 			}
 
 			// WHEN
-			actual, err := d.Describe()
+			actual, err := d.JSONString()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -203,30 +212,39 @@ func TestEnvDescriber_JSONString(t *testing.T) {
 }
 
 func TestEnvDescriber_HumanString(t *testing.T) {
-	mockApplications := []*archer.Application{
-		{Project: "my-project",
-			Name: "my-app",
-			Type: "lb-web-app"},
-		{Project: "my-project",
-			Name: "copilot-app",
-			Type: "lb-web-app"},
+	testProject := &archer.Project{
+		Name: "testProject",
+		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
-	mockProject := &archer.Project{
-		Name: "my-project",
-		Tags: map[string]string{"tag1": "value1", "tag2": "value2"},
-	}
-	mockEnv := &archer.Environment{
-		Project:          "my-project",
-		Name:             "test",
+	testEnv := &archer.Environment{
+		Project:          "testProject",
+		Name:             "testEnv",
 		Region:           "us-west-2",
-		AccountID:        "123456789",
+		AccountID:        "123456789012",
 		Prod:             false,
 		RegistryURL:      "",
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
+	testApp1 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp1",
+		Type:    "load-balanced",
+	}
+	testApp2 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp2",
+		Type:    "load-balanced",
+	}
+	testApp3 := &archer.Application{
+		Project: "testProject",
+		Name:    "testApp3",
+		Type:    "load-balanced",
+	}
+	allApps := []*archer.Application{testApp1, testApp2, testApp3}
 
 	testCases := map[string]struct {
+
 		shouldOutputJSON bool
 		wantedError      error
 		wantedContent    string
@@ -260,22 +278,17 @@ Tags
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			d := &EnvDescriber{
-				env:  mockEnv,
-				proj: mockProject,
-				apps: mockApplications,
+			d := &EnvDescription{
+				Environment:  testEnv,
+				Applications: allApps,
+				Tags: testProject.Tags,
 			}
 
 			// WHEN
-			actual, err := d.Describe()
+			actual := d.HumanString()
 
 			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantedContent, actual)
-			}
+			require.Equal(t, tc.wantedContent, actual)
 		})
 	}
 }
