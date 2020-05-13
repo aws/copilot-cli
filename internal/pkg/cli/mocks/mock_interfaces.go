@@ -3330,6 +3330,44 @@ func (mr *MockaskExecutorMockRecorder) Execute() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockaskExecutor)(nil).Execute))
 }
 
+// MockappSelector is a mock of appSelector interface
+type MockappSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockappSelectorMockRecorder
+}
+
+// MockappSelectorMockRecorder is the mock recorder for MockappSelector
+type MockappSelectorMockRecorder struct {
+	mock *MockappSelector
+}
+
+// NewMockappSelector creates a new mock instance
+func NewMockappSelector(ctrl *gomock.Controller) *MockappSelector {
+	mock := &MockappSelector{ctrl: ctrl}
+	mock.recorder = &MockappSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappSelector) EXPECT() *MockappSelectorMockRecorder {
+	return m.recorder
+}
+
+// Application mocks base method
+func (m *MockappSelector) Application(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Application", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Application indicates an expected call of Application
+func (mr *MockappSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappSelector)(nil).Application), prompt, help)
+}
+
 // MockappEnvSelector is a mock of appEnvSelector interface
 type MockappEnvSelector struct {
 	ctrl     *gomock.Controller
