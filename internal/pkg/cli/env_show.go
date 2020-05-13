@@ -89,7 +89,7 @@ func (o *showEnvOpts) Execute() error {
 	}
 	env, err := o.describer.Describe()
 	if err != nil {
-		return err
+		return fmt.Errorf("describe environment %s: %w", o.envName, err)
 	}
 	if o.shouldOutputJSON {
 		data, err := env.JSONString()

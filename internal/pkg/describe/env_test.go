@@ -181,7 +181,7 @@ func TestEnvDescriber_JSONString(t *testing.T) {
 	}{
 		"correctly shows json output": {
 			shouldOutputJSON: true,
-			wantedContent:    "{\"environment\":{\"project\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"project\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
+			wantedContent:    "{\"environment\":{\"project\":\"testProject\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"testProject\",\"name\":\"testApp1\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp2\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n",
 		},
 	}
 
@@ -194,7 +194,7 @@ func TestEnvDescriber_JSONString(t *testing.T) {
 			d := &EnvDescription{
 				Environment:  testEnv,
 				Applications: allApps,
-				Tags: testProject.Tags,
+				Tags:         testProject.Tags,
 			}
 
 			// WHEN
@@ -244,7 +244,6 @@ func TestEnvDescriber_HumanString(t *testing.T) {
 	allApps := []*archer.Application{testApp1, testApp2, testApp3}
 
 	testCases := map[string]struct {
-
 		shouldOutputJSON bool
 		wantedError      error
 		wantedContent    string
@@ -253,22 +252,23 @@ func TestEnvDescriber_HumanString(t *testing.T) {
 			shouldOutputJSON: false,
 			wantedContent: `About
 
-  Name              test
+  Name              testEnv
   Production        false
   Region            us-west-2
-  Account ID        123456789
+  Account ID        123456789012
 
 Applications
 
   Name              Type
-  my-app            lb-web-app
-  copilot-app       lb-web-app
+  testApp1          load-balanced
+  testApp2          load-balanced
+  testApp3          load-balanced
 
 Tags
 
   Key               Value
-  tag1              value1
-  tag2              value2
+  key1              value1
+  key2              value2
 `,
 		},
 	}
@@ -281,7 +281,7 @@ Tags
 			d := &EnvDescription{
 				Environment:  testEnv,
 				Applications: allApps,
-				Tags: testProject.Tags,
+				Tags:         testProject.Tags,
 			}
 
 			// WHEN

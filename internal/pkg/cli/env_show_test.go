@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
@@ -322,31 +320,7 @@ func TestEnvShow_Ask(t *testing.T) {
 }
 
 func TestEnvShow_Execute(t *testing.T) {
-
-	mockApplications := []*archer.Application{
-		{Project: "my-project",
-			Name: "my-app",
-			Type: "lb-web-app"},
-		{Project: "my-project",
-			Name: "copilot-app",
-			Type: "lb-web-app"},
-	}
-	mockTags := map[string]string{"tag1": "value1", "tag2": "value2"}
-
-	mockEnv := &describe.EnvDescription{
-		Environment: &archer.Environment{
-			Project:          "my-project",
-			Name:             "test",
-			Region:           "us-west-2",
-			AccountID:        "123456789",
-			Prod:             false,
-			RegistryURL:      "",
-			ExecutionRoleARN: "",
-			ManagerRoleARN:   "",
-		},
-		Applications: mockApplications,
-		Tags:         mockTags}
-
+	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		inputEnv         string
 		shouldOutputJSON bool
@@ -356,39 +330,11 @@ func TestEnvShow_Execute(t *testing.T) {
 		wantedContent string
 		wantedError   error
 	}{
-		"correctly shows json output": {
-			inputEnv:         "test",
-			shouldOutputJSON: true,
-
+		"errors if failed to describe the env": {
 			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
-				gomock.InOrder(
-					m.EXPECT().Describe().Return(mockEnv, nil))
+				m.EXPECT().Describe().Return(nil, mockError)
 			},
-
-			wantedContent: "{\"environment\":{\"project\":\"my-project\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"my-project\",\"name\":\"my-app\",\"type\":\"lb-web-app\"},{\"project\":\"my-project\",\"name\":\"copilot-app\",\"type\":\"lb-web-app\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
-		},
-		"correctly shows human output": {
-			inputEnv:         "test",
-			shouldOutputJSON: false,
-
-			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
-				gomock.InOrder(
-					m.EXPECT().Describe().Return(mockEnv, nil))
-			},
-
-			wantedContent: `About
-
-  Name              test
-  Production        false
-  Region            us-west-2
-  Account ID        123456789
-
-Applications
-
-  Name              Type
-  my-app            lb-web-app
-  copilot-app       lb-web-app
-`,
+			wantedError: fmt.Errorf("describe environment mockEnv: some error"),
 		},
 	}
 
@@ -404,8 +350,9 @@ Applications
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts:       &GlobalOpts{},
+					shouldOutputJSON: tc.shouldOutputJSON,
+					envName:          "mockEnv",
 				},
 				storeSvc:         mockStoreReader,
 				describer:        mockEnvDescriber,
