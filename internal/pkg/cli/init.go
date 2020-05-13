@@ -105,20 +105,20 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		deployer: deployer,
 		prog:     spin,
 	}
-	initApp := &initAppOpts{
-		initAppVars: initAppVars{
-			AppType:        vars.appType,
+	initApp := &initSvcOpts{
+		initSvcVars: initSvcVars{
+			ServiceType:    vars.appType,
 			Name:           vars.appName,
 			DockerfilePath: vars.dockerfilePath,
-			AppPort:        vars.port,
+			Port:           vars.port,
 			GlobalOpts:     NewGlobalOpts(),
 		},
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
-		ws:           ws,
-		store:        ssm,
-		projDeployer: deployer,
-		prog:         spin,
-		setupParser: func(o *initAppOpts) {
+		fs:          &afero.Afero{Fs: afero.NewOsFs()},
+		ws:          ws,
+		store:       ssm,
+		appDeployer: deployer,
+		prog:        spin,
+		setupParser: func(o *initSvcOpts) {
 			o.df = dockerfile.New(o.fs, o.DockerfilePath)
 		},
 	}
@@ -163,9 +163,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		appDeploy:   appDeploy,
 
 		projectName:    &initProject.ProjectName,
-		appType:        &initApp.AppType,
+		appType:        &initApp.ServiceType,
 		appName:        &initApp.Name,
-		appPort:        &initApp.AppPort,
+		appPort:        &initApp.Port,
 		dockerfilePath: &initApp.DockerfilePath,
 
 		prompt: prompt,
@@ -292,11 +292,11 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.projectName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, svcFlag, svcFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.appType, appTypeFlag, appTypeFlagShort, "", appTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.appType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
-	cmd.Flags().Uint16Var(&vars.port, appPortFlag, 0, appPortFlagDescription)
+	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
