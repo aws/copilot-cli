@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	ECSAPI "github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -239,6 +240,144 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantedContent, statusDesc, "expected output content match")
 			}
+		})
+	}
+}
+
+func TestAppStatusDesc_HumanString(t *testing.T) {
+	// Override humanize.Time.
+	// By default humanize.Time compares "then" with time.Now, however as time passes on the output
+	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
+	// we want to seed the value of time.Now therefore we override the function to hard code "time.Now".
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-01-01T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
+
+	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
+	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
+	updateTime := time.Unix(1584129030, 0)
+
+	testCases := map[string]struct {
+		desc   *AppStatusDesc
+		wanted string
+	}{
+		"while provisioning": {
+			desc: &AppStatusDesc{
+				Service: ecs.ServiceStatus{
+					DesiredCount:     1,
+					RunningCount:     0,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime.Unix(),
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Alarms: []cloudwatch.AlarmStatus{
+					{
+						Arn:          "mockAlarmArn",
+						Name:         "mockAlarm",
+						Reason:       "Threshold Crossed",
+						Status:       "OK",
+						Type:         "Metric",
+						UpdatedTimes: updateTime.Unix(),
+					},
+				},
+				Tasks: []ecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "PROVISIONING",
+						ID:         "1234567890123456789",
+					},
+				},
+			},
+			wanted: `Service Status
+
+  ACTIVE 0 / 1 running tasks (1 pending)
+
+Last Deployment
+
+  Updated At        14 years ago
+  Task Definition   mockTaskDefinition
+
+Task Status
+
+  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
+  12345678          -                   PROVISIONING        HEALTHY             -                   -
+
+Alarms
+
+  Name              Health              Last Updated        Reason
+  mockAlarm         OK                  2 months from now   Threshold Crossed
+`,
+		},
+		"running": {
+			desc: &AppStatusDesc{
+				Service: ecs.ServiceStatus{
+					DesiredCount:     1,
+					RunningCount:     1,
+					Status:           "ACTIVE",
+					LastDeploymentAt: startTime.Unix(),
+					TaskDefinition:   "mockTaskDefinition",
+				},
+				Alarms: []cloudwatch.AlarmStatus{
+					{
+						Arn:          "mockAlarmArn",
+						Name:         "mockAlarm",
+						Reason:       "Threshold Crossed",
+						Status:       "OK",
+						Type:         "Metric",
+						UpdatedTimes: updateTime.Unix(),
+					},
+				},
+				Tasks: []ecs.TaskStatus{
+					{
+						Health:     "HEALTHY",
+						LastStatus: "RUNNING",
+						ID:         "1234567890123456789",
+						Images: []ecs.Image{
+							{
+								Digest: "69671a968e8ec3648e2697417750e",
+								ID:     "mockImageID1",
+							},
+							{
+								ID:     "mockImageID2",
+								Digest: "ca27a44e25ce17fea7b07940ad793",
+							},
+						},
+						StartedAt:     startTime.Unix(),
+						StoppedAt:     stopTime.Unix(),
+						StoppedReason: "some reason",
+					},
+				},
+			},
+			wanted: `Service Status
+
+  ACTIVE 1 / 1 running tasks (0 pending)
+
+Last Deployment
+
+  Updated At        14 years ago
+  Task Definition   mockTaskDefinition
+
+Task Status
+
+  ID                Image Digest        Last Status         Health Status       Started At          Stopped At
+  12345678          69671a96,ca27a44e   RUNNING             HEALTHY             14 years ago        14 years ago
+
+Alarms
+
+  Name              Health              Last Updated        Reason
+  mockAlarm         OK                  2 months from now   Threshold Crossed
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.desc.HumanString())
 		})
 	}
 }

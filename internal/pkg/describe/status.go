@@ -16,8 +16,11 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 )
+
+// humanizeTime is overriden in tests so that its output is constant as time passes.
+var humanizeTime = humanize.Time
 
 type alarmStatusGetter interface {
 	GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)
@@ -145,7 +148,7 @@ func (w *AppStatusDesc) HumanString() string {
 		w.Service.RunningCount, w.Service.DesiredCount, w.Service.DesiredCount-w.Service.RunningCount)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanize.Time(time.Unix(w.Service.LastDeploymentAt, 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(time.Unix(w.Service.LastDeploymentAt, 0)))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", w.Service.TaskDefinition)
 	fmt.Fprintf(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
@@ -157,7 +160,7 @@ func (w *AppStatusDesc) HumanString() string {
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Health", "Last Updated", "Reason")
 	for _, alarm := range w.Alarms {
-		updatedTimeSince := humanize.Time(time.Unix(alarm.UpdatedTimes, 0))
+		updatedTimeSince := humanizeTime(time.Unix(alarm.UpdatedTimes, 0))
 		fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", alarm.Name, alarm.Status, updatedTimeSince, alarm.Reason)
 	}
 	writer.Flush()
