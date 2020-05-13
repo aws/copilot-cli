@@ -24,7 +24,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	const (
 		testARN1 = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
 		testARN2 = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
-		badARN   = "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		unparsableARN = "aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
+		noSlashARN   = "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
 	)
 	testProject := &archer.Project{
 		Name: "testProject",
@@ -74,17 +75,28 @@ func TestEnvDescriber_Describe(t *testing.T) {
 						Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("get resources for env testEnv: some error"),
+
+			wantedError: fmt.Errorf("get AWS::CloudFormation::Stack resources for env testEnv: some error"),
 		},
-		"error if getStackName fails because cannot parse resourceARN": {
+		"error if getStackName fails because can't parse resource ARN": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
-						badARN,
+						unparsableARN,
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("get stack name from arn arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd: cannot parse ARN resource stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"),
+			wantedError: fmt.Errorf("parse ARN aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: arn: invalid prefix"),
+		},
+		"error if getStackName fails because resource ARN can't be split": {
+			setupMocks: func(m envDescriberMocks) {
+				gomock.InOrder(
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
+						noSlashARN,
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("invalid ARN resource format stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd. Ex: arn:partition:service:region:account-id:resource-type/resource-id"),
 		},
 		"success": {
 			setupMocks: func(m envDescriberMocks) {

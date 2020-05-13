@@ -85,31 +85,30 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 }
 
 func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
-	var appObjects []*archer.Application
-
 	tags := map[string]string{
 		stack.EnvTagKey: e.env.Name,
 	}
 	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
-		return nil, fmt.Errorf("get resources for env %s: %w", e.env.Name, err)
+		return nil, fmt.Errorf("get %s resources for env %s: %w", cloudformationResourceType, e.env.Name, err)
 	}
 
 	stacksOfEnvironment := make(map[string]bool)
 	for _, arn := range arns {
 		stack, err := e.getStackName(arn)
 		if err != nil {
-			return nil, fmt.Errorf("get stack name from arn %s: %w", arn, err)
+			return nil, err
 		}
 		stacksOfEnvironment[stack] = true
 	}
+	var apps []*archer.Application
 	for _, app := range e.apps {
 		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
 		if stacksOfEnvironment[stackName] {
-			appObjects = append(appObjects, app)
+			apps = append(apps, app)
 		}
 	}
-	return appObjects, nil
+	return apps, nil
 }
 
 func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
@@ -119,7 +118,7 @@ func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 	}
 	stack := strings.Split(parsedArn.Resource, "/")
 	if len(stack) < 2 {
-		return "", fmt.Errorf("cannot parse ARN resource %s", parsedArn.Resource)
+		return "", fmt.Errorf("invalid ARN resource format %s. Ex: arn:partition:service:region:account-id:resource-type/resource-id", parsedArn.Resource)
 	}
 	return stack[1], nil
 }
