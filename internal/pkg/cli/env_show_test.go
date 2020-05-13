@@ -356,6 +356,17 @@ func TestEnvShow_Execute(t *testing.T) {
 		wantedContent string
 		wantedError   error
 	}{
+		"return error if fail to describe environment": {
+			inputEnv: "test",
+
+			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+				gomock.InOrder(
+					m.EXPECT().Describe().Return(nil, errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("some error"),
+		},
 		"correctly shows json output": {
 			inputEnv:         "test",
 			shouldOutputJSON: true,
@@ -388,6 +399,12 @@ Applications
   Name              Type
   my-app            lb-web-app
   copilot-app       lb-web-app
+
+Tags
+
+  Key               Value
+  tag1              value1
+  tag2              value2
 `,
 		},
 	}
