@@ -439,7 +439,7 @@ Task Status
 Alarms
 
   Name              Health              Last Updated        Reason
-  mockAlarm         OK                  %s         Threshold Crossed
+  mockAlarm         OK                  %s        Threshold Crossed
 `, humanize.Time(startTime), humanize.Time(startTime), humanize.Time(stopTime), humanize.Time(updateTime)),
 		},
 		"success with human output when task is provisioning": {
@@ -464,7 +464,7 @@ Task Status
 Alarms
 
   Name              Health              Last Updated        Reason
-  mockAlarm         OK                  %s         Threshold Crossed
+  mockAlarm         OK                  %s        Threshold Crossed
 `, humanize.Time(startTime), humanize.Time(updateTime)),
 		},
 	}
