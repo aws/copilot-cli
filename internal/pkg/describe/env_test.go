@@ -4,7 +4,9 @@
 package describe
 
 import (
-	//"errors"
+	"errors"
+	"fmt"
+
 	//"fmt"
 	"testing"
 
@@ -22,19 +24,17 @@ type envDescriberMocks struct {
 
 func TestEnvDescriber_Describe(t *testing.T) {
 	const (
-		testARN1         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv1-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
-		testARN2         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv1-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
-		testParsedStack1 = "testProject-test-app1"
-		testParsedStack2 = "testProject-prod-app2"
-		testParsedStack3 = "testProject-test-app3"
-	)
+		testARN1         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		testARN2         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
+		badARN =  "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		)
 	testProject := &archer.Project{
 		Name: "testProject",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
 	testEnv := &archer.Environment{
 		Project:          "testProject",
-		Name:             "testEnv1",
+		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
 		Prod:             false,
@@ -57,11 +57,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		Name:    "testApp3",
 		Type:    "load-balanced",
 	}
-	appList := []*archer.Application{testApp1, testApp2, testApp3}
 
 	allApps := []*archer.Application{testApp1, testApp2, testApp3}
-	env1Apps := []*archer.Application{testApp1, testApp2}
-	//mockError := errors.New("some error")
+	envApps := []*archer.Application{testApp1, testApp2}
+	rgTags := map[string]string{stack.EnvTagKey: "testEnv"}
+	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		setupMocks func(mocks envDescriberMocks)
 
@@ -69,11 +69,29 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		wantedApps  []*archer.Application
 		wantedError error
 	}{
+		"error if GetResourcesByTags fails": {
+			setupMocks: func(m envDescriberMocks) {
+				gomock.InOrder(
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).
+						Return(nil, mockError),
+				)
+			},
+			wantedError: fmt.Errorf("get resources for env testEnv: some error"),
+		},
+		"error if getStackName fails because cannot parse resourceARN": {
+			setupMocks: func(m envDescriberMocks) {
+				gomock.InOrder(
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
+						badARN,
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("get stack name from arn arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd: cannot parse ARN resource stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"),
+		},
 		"success": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-
-					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, map[string]string{stack.EnvTagKey: "testEnv1"}).Return([]string{
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
 						testARN1,
 						testARN2,
 					}, nil),
@@ -81,7 +99,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			},
 			wantedEnv: &EnvDescription{
 				Environment:  testEnv,
-				Applications: env1Apps,
+				Applications: envApps,
 				Tags:         map[string]string{"key1": "value1", "key2": "value2"},
 			},
 		},
@@ -119,7 +137,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedApps, actual)
+				require.Equal(t, tc.wantedEnv, actual)
 			}
 		})
 	}

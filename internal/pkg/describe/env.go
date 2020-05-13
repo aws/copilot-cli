@@ -53,7 +53,7 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 	}
 	env, err := svc.GetEnvironment(projectName, envName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get environment: %w", err)
 	}
 	proj, err := svc.GetProject(projectName)
 	apps, err := svc.ListApplications(projectName)
@@ -95,18 +95,17 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 	}
 	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get resources for env %s: %w", e.env.Name, err)
 	}
 
 	stacksOfEnvironment := make(map[string]bool)
 	for _, arn := range arns {
 		stack, err := e.getStackName(arn)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get stack name from arn %s: %w", arn, err)
 		}
 		stacksOfEnvironment[stack] = true
 	}
-
 	for _, app := range e.apps {
 		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
 		if stacksOfEnvironment[stackName] {
