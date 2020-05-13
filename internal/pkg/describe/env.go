@@ -102,7 +102,7 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 	for _, arn := range arns {
 		stack, err := e.getStackName(arn)
 		if err != nil {
-			return nil, fmt.Errorf("get stack name from arn %s: %w", arn, err)
+			return nil, fmt.Errorf("get stack name from ARN %s: %w", arn, err)
 		}
 		stacksOfEnvironment[stack] = true
 	}
