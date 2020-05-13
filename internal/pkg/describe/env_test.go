@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	//"fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
@@ -24,10 +23,10 @@ type envDescriberMocks struct {
 
 func TestEnvDescriber_Describe(t *testing.T) {
 	const (
-		testARN1         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
-		testARN2         = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
-		badARN =  "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
-		)
+		testARN1 = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		testARN2 = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
+		badARN   = "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+	)
 	testProject := &archer.Project{
 		Name: "testProject",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
