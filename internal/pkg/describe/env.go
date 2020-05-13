@@ -88,8 +88,6 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 }
 
 func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
-	var appObjects []*archer.Application
-
 	tags := map[string]string{
 		stack.EnvTagKey: e.env.Name,
 	}
@@ -106,13 +104,14 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 		}
 		stacksOfEnvironment[stack] = true
 	}
+	var apps []*archer.Application
 	for _, app := range e.apps {
 		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
 		if stacksOfEnvironment[stackName] {
-			appObjects = append(appObjects, app)
+			apps = append(apps, app)
 		}
 	}
-	return appObjects, nil
+	return apps, nil
 }
 
 func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
