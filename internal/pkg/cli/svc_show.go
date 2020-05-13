@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -38,6 +39,7 @@ type showSvcOpts struct {
 	store         store
 	describer     describer
 	ws            wsSvcReader
+	sel           configSelector
 	initDescriber func(bool) error // Overriden in tests.
 }
 
@@ -56,6 +58,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		store:       ssmStore,
 		ws:          ws,
 		w:           log.OutputWriter,
+		sel:         selector.NewConfigSelect(vars.prompt, ssmStore),
 	}
 	opts.initDescriber = func(enableResources bool) error {
 		var d describer
@@ -145,22 +148,11 @@ func (o *showSvcOpts) askApp() error {
 	if o.AppName() != "" {
 		return nil
 	}
-	appNames, err := o.retrieveApps()
+	appName, err := o.sel.Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt)
 	if err != nil {
-		return err
+		return fmt.Errorf("select application name: %w", err)
 	}
-	if len(appNames) == 0 {
-		return fmt.Errorf("no application found: run %s please", color.HighlightCode("app init"))
-	}
-	app, err := o.prompt.SelectOne(
-		svcShowAppNamePrompt,
-		svcShowAppNameHelpPrompt,
-		appNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select applications: %w", err)
-	}
-	o.appName = app
+	o.appName = appName
 
 	return nil
 }
@@ -198,18 +190,6 @@ func (o *showSvcOpts) askSvcName() error {
 	o.svcName = svcName
 
 	return nil
-}
-
-func (o *showSvcOpts) retrieveApps() ([]string, error) {
-	apps, err := o.store.ListApplications()
-	if err != nil {
-		return nil, fmt.Errorf("list applications: %w", err)
-	}
-	appNames := make([]string, len(apps))
-	for ind, app := range apps {
-		appNames[ind] = app.Name
-	}
-	return appNames, nil
 }
 
 func (o *showSvcOpts) retrieveLocalService() ([]string, error) {

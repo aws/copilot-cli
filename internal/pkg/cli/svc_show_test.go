@@ -20,6 +20,7 @@ type showSvcMocks struct {
 	prompt    *mocks.Mockprompter
 	describer *mocks.Mockdescriber
 	ws        *mocks.MockwsSvcReader
+	sel       *mocks.MockconfigSelector
 }
 
 type mockDescribeData struct {
@@ -149,11 +150,7 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-svc"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-svc"}).Return("my-app", nil).Times(1),
+					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
 
 					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
@@ -174,14 +171,8 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-svc"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-svc"}).Return("my-app", nil).Times(1),
+					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
 
-					// askAppName
 					m.ws.EXPECT().ServiceNames().Return([]string{}, nil),
 					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
 						{Name: "my-svc"},
@@ -202,11 +193,7 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-svc"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-svc"}).Return("my-app", nil).Times(1),
+					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
 
 					m.ws.EXPECT().ServiceNames().Return([]string{"my-svc", "archer-svc"}, nil),
 					m.prompt.EXPECT().SelectOne(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, []string{"my-svc", "archer-svc"}).Return("my-svc", nil).Times(1),
@@ -236,41 +223,15 @@ func TestSvcShow_Ask(t *testing.T) {
 			wantedSvc:   "my-svc",
 			wantedError: nil,
 		},
-		"returns error when fail to list apps": {
+		"returns error when fail to select apps": {
 			inputApp: "",
 			inputSvc: "",
 
 			setupMocks: func(m showSvcMocks) {
-				m.storeSvc.EXPECT().ListApplications().Return(nil, errors.New("some error"))
+				m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 
-			wantedError: fmt.Errorf("list applications: some error"),
-		},
-		"returns error when no app found": {
-			inputApp: "",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{}, nil)
-			},
-
-			wantedError: fmt.Errorf("no application found: run `app init` please"),
-		},
-		"returns error when fail to select app": {
-			inputApp: "",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", errors.New("some error")).Times(1),
-				)
-			},
-
-			wantedError: fmt.Errorf("select applications: some error"),
+			wantedError: fmt.Errorf("select application name: some error"),
 		},
 		"returns error when fail to list services": {
 			inputApp: "",
@@ -278,13 +239,8 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
+					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
 
-					// askAskName
 					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-app").Return(nil, fmt.Errorf("some error")),
 				)
@@ -298,11 +254,7 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListApplications().Return([]*config.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(svcShowAppNamePrompt, svcShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
+					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
 
 					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
 					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
@@ -326,11 +278,13 @@ func TestSvcShow_Ask(t *testing.T) {
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 			mockWorkspace := mocks.NewMockwsSvcReader(ctrl)
+			mockSelector := mocks.NewMockconfigSelector(ctrl)
 
 			mocks := showSvcMocks{
 				storeSvc: mockStoreReader,
 				prompt:   mockPrompter,
 				ws:       mockWorkspace,
+				sel:      mockSelector,
 			}
 
 			tc.setupMocks(mocks)
@@ -345,6 +299,7 @@ func TestSvcShow_Ask(t *testing.T) {
 				},
 				store: mockStoreReader,
 				ws:    mockWorkspace,
+				sel:   mockSelector,
 			}
 
 			// WHEN
