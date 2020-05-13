@@ -93,7 +93,7 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 	}
 	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
-		return nil, fmt.Errorf("get resources for env %s: %w", e.env.Name, err)
+		return nil, fmt.Errorf("get %s resources for env %s: %w", cloudformationResourceType, e.env.Name, err)
 	}
 
 	stacksOfEnvironment := make(map[string]bool)
