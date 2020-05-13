@@ -15,6 +15,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	appShowAppNamePrompt     = "Which application would you like to show?"
+	appShowAppNameHelpPrompt = "An application groups all of your services together."
+)
+
 type showProjectVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
@@ -129,8 +134,8 @@ func (o *showProjectOpts) askProject() error {
 		return fmt.Errorf("no project found: run %s to set one up, or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	proj, err := o.prompt.SelectOne(
-		applicationShowProjectNamePrompt,
-		applicationShowProjectNameHelpPrompt,
+		appShowAppNamePrompt,
+		appShowAppNameHelpPrompt,
 		projNames,
 	)
 	if err != nil {
