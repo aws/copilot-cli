@@ -100,7 +100,7 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 	for _, arn := range arns {
 		stack, err := e.getStackName(arn)
 		if err != nil {
-			return nil, fmt.Errorf("get stack name from ARN %s: %w", arn, err)
+			return nil, err
 		}
 		stacksOfEnvironment[stack] = true
 	}
@@ -121,7 +121,7 @@ func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 	}
 	stack := strings.Split(parsedArn.Resource, "/")
 	if len(stack) < 2 {
-		return "", fmt.Errorf("cannot parse ARN resource %s", parsedArn.Resource)
+		return "", fmt.Errorf("invalid ARN resource format %s. Ex: arn:partition:service:region:account-id:resource-type/resource-id", parsedArn.Resource)
 	}
 	return stack[1], nil
 }

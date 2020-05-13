@@ -86,7 +86,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("get stack name from ARN aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: parse ARN aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: arn: invalid prefix"),
+			wantedError: fmt.Errorf("parse ARN aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: arn: invalid prefix"),
 		},
 		"error if getStackName fails because resource ARN can't be split": {
 			setupMocks: func(m envDescriberMocks) {
@@ -96,7 +96,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("get stack name from ARN arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd: cannot parse ARN resource stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"),
+			wantedError: fmt.Errorf("invalid ARN resource format stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd. Ex: arn:partition:service:region:account-id:resource-type/resource-id"),
 		},
 		"success": {
 			setupMocks: func(m envDescriberMocks) {
