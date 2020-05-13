@@ -102,7 +102,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localAppFlagDescription          = "Only show applications in the current directory."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	svcPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
+	svcPortFlagDescription           = "Optional. The port on which your service listens."
 )
 
 func quoteAll(elems []string) []string {

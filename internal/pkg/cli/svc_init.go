@@ -89,7 +89,7 @@ type initSvcOpts struct {
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to app datastore: %w", err)
+		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
 	}
 
 	ws, err := workspace.New()
@@ -409,7 +409,7 @@ This command is also run as part of "copilot init".`,
   Create a "frontend" load balanced web service.
   /code $ copilot svc init --name frontend --svc-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile
 
-  Create an "subscribers" backend service.
+  Create a "subscribers" backend service.
   /code $ copilot svc init --name subscribers --svc-type "Backend Service"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitSvcOpts(vars)
