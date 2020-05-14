@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -14,18 +15,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProjectList_Execute(t *testing.T) {
+func TestListAppOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockstore := mocks.NewMockstore(ctrl)
 	defer ctrl.Finish()
+	testError := errors.New("error fetching apps")
 
 	testCases := map[string]struct {
-		listOpts listProjectOpts
+		listOpts listAppOpts
 		mocking  func()
 		want     error
 	}{
-		"with projects": {
-			listOpts: listProjectOpts{
+		"with applications": {
+			listOpts: listAppOpts{
 				store: mockstore,
 				w:     ioutil.Discard,
 			},
@@ -34,14 +36,14 @@ func TestProjectList_Execute(t *testing.T) {
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{
-						{Name: "project1"},
-						{Name: "project2"},
+						{Name: "app1"},
+						{Name: "app2"},
 					}, nil).
 					Times(1)
 			},
 		},
 		"with an error": {
-			listOpts: listProjectOpts{
+			listOpts: listAppOpts{
 				store: mockstore,
 				w:     ioutil.Discard,
 			},
@@ -49,10 +51,10 @@ func TestProjectList_Execute(t *testing.T) {
 				mockstore.
 					EXPECT().
 					ListApplications().
-					Return(nil, fmt.Errorf("error fetching projects")).
+					Return(nil, testError).
 					Times(1)
 			},
-			want: fmt.Errorf("error fetching projects"),
+			want: fmt.Errorf("list applications: %w", testError),
 		},
 	}
 

@@ -12,35 +12,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type listProjectOpts struct {
+type listAppOpts struct {
 	store applicationLister
 	w     io.Writer
 }
 
-// Execute lists the existing projects to the prompt.
-func (o *listProjectOpts) Execute() error {
-	projects, err := o.store.ListApplications()
+// Execute writes the existing applications.
+func (o *listAppOpts) Execute() error {
+	apps, err := o.store.ListApplications()
 	if err != nil {
-		return err
+		return fmt.Errorf("list applications: %w", err)
 	}
 
-	for _, proj := range projects {
-		fmt.Fprintln(o.w, proj.Name)
+	for _, app := range apps {
+		fmt.Fprintln(o.w, app.Name)
 	}
 
 	return nil
 }
 
-// BuildProjectListCommand builds the command to list existing projects.
-func BuildProjectListCommand() *cobra.Command {
+// BuildAppListCommand builds the command to list existing applications.
+func BuildAppListCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all projects in your account.",
+		Short: "Lists all the applications in your account.",
 		Example: `
-  List all the projects in your account and region
-  /code $ ecs-preview project ls`,
+  List all the applications in your account and region.
+  /code $ copilot app ls`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts := listProjectOpts{
+			opts := listAppOpts{
 				w: os.Stdout,
 			}
 			ssmStore, err := config.NewStore()
