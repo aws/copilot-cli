@@ -19,24 +19,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWebAppStatus_Describe(t *testing.T) {
+func TestServiceStatus_Describe(t *testing.T) {
 	badMockServiceArn := ecs.ServiceArn("badMockArn")
 	mockServiceArn := ecs.ServiceArn("arn:aws:ecs:us-west-2:1234567890:service/mockCluster/mockService")
 	startTime, _ := time.Parse(time.RFC3339, "2006-01-02T15:04:05+00:00")
 	stopTime, _ := time.Parse(time.RFC3339, "2006-01-02T16:04:05+00:00")
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
-		mockecsSvc          func(m *mocks.MockecsServiceGetter)
-		mockcwSvc           func(m *mocks.MockalarmStatusGetter)
-		mockWebAppDescriber func(m *mocks.MockserviceArnGetter)
+		mockecsSvc           func(m *mocks.MockecsServiceGetter)
+		mockcwSvc            func(m *mocks.MockalarmStatusGetter)
+		mockServiceDescriber func(m *mocks.MockserviceArnGetter)
 
 		wantedError   error
-		wantedContent *AppStatusDesc
+		wantedContent *ServiceStatusDesc
 	}{
 		"errors if failed to get service ARN": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(nil, mockError)
 			},
 
@@ -45,36 +45,36 @@ func TestWebAppStatus_Describe(t *testing.T) {
 		"errors if failed to get cluster name": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {},
 			mockcwSvc:  func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&badMockServiceArn, nil)
 			},
 
 			wantedError: fmt.Errorf("get cluster name: arn: invalid prefix"),
 		},
-		"errors if failed to get ECS service info": {
+		"errors if failed to get service info": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(nil, mockError)
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 
-			wantedError: fmt.Errorf("get ECS service mockService: some error"),
+			wantedError: fmt.Errorf("get service mockService: some error"),
 		},
-		"errors if failed to get ECS running tasks info": {
+		"errors if failed to get running tasks info": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return(nil, mockError)
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 
-			wantedError: fmt.Errorf("get ECS tasks for service mockService: some error"),
+			wantedError: fmt.Errorf("get tasks for service mockService: some error"),
 		},
-		"errors if failed to get ECS running tasks status": {
+		"errors if failed to get running tasks status": {
 			mockecsSvc: func(m *mocks.MockecsServiceGetter) {
 				m.EXPECT().Service("mockCluster", "mockService").Return(&ecs.Service{}, nil)
 				m.EXPECT().ServiceTasks("mockCluster", "mockService").Return([]*ecs.Task{
@@ -84,7 +84,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 				}, nil)
 			},
 			mockcwSvc: func(m *mocks.MockalarmStatusGetter) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 
@@ -107,7 +107,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 					"copilot-service":     "mockSvc",
 				}).Return(nil, mockError)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 
@@ -163,11 +163,11 @@ func TestWebAppStatus_Describe(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 
-			wantedContent: &AppStatusDesc{
+			wantedContent: &ServiceStatusDesc{
 				Service: ecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     1,
@@ -216,22 +216,22 @@ func TestWebAppStatus_Describe(t *testing.T) {
 
 			mockecsSvc := mocks.NewMockecsServiceGetter(ctrl)
 			mockcwSvc := mocks.NewMockalarmStatusGetter(ctrl)
-			mockWebAppDescriber := mocks.NewMockserviceArnGetter(ctrl)
+			mockServiceDescriber := mocks.NewMockserviceArnGetter(ctrl)
 			tc.mockecsSvc(mockecsSvc)
 			tc.mockcwSvc(mockcwSvc)
-			tc.mockWebAppDescriber(mockWebAppDescriber)
+			tc.mockServiceDescriber(mockServiceDescriber)
 
-			appStatus := &AppStatus{
-				AppName:     "mockSvc",
-				EnvName:     "mockEnv",
-				ProjectName: "mockApp",
-				CwSvc:       mockcwSvc,
-				EcsSvc:      mockecsSvc,
-				Describer:   mockWebAppDescriber,
+			svcStatus := &ServiceStatus{
+				SvcName:   "mockSvc",
+				EnvName:   "mockEnv",
+				AppName:   "mockApp",
+				CwSvc:     mockcwSvc,
+				EcsSvc:    mockecsSvc,
+				Describer: mockServiceDescriber,
 			}
 
 			// WHEN
-			statusDesc, err := appStatus.Describe()
+			statusDesc, err := svcStatus.Describe()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -244,7 +244,7 @@ func TestWebAppStatus_Describe(t *testing.T) {
 	}
 }
 
-func TestAppStatusDesc_HumanString(t *testing.T) {
+func TestServiceStatusDesc_HumanString(t *testing.T) {
 	// Override humanize.Time.
 	// By default humanize.Time compares "then" with time.Now, however as time passes on the output
 	// from the function changes (ex: from "1 month ago" to "2 months ago"). To make our tests stable,
@@ -263,11 +263,11 @@ func TestAppStatusDesc_HumanString(t *testing.T) {
 	updateTime := time.Unix(1584129030, 0)
 
 	testCases := map[string]struct {
-		desc   *AppStatusDesc
+		desc   *ServiceStatusDesc
 		wanted string
 	}{
 		"while provisioning": {
-			desc: &AppStatusDesc{
+			desc: &ServiceStatusDesc{
 				Service: ecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     0,
@@ -314,7 +314,7 @@ Alarms
 `,
 		},
 		"running": {
-			desc: &AppStatusDesc{
+			desc: &ServiceStatusDesc{
 				Service: ecs.ServiceStatus{
 					DesiredCount:     1,
 					RunningCount:     1,

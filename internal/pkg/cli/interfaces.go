@@ -301,7 +301,7 @@ type serviceArnGetter interface {
 }
 
 type statusDescriber interface {
-	Describe() (*describe.AppStatusDesc, error)
+	Describe() (*describe.ServiceStatusDesc, error)
 }
 
 type envDescriber interface {

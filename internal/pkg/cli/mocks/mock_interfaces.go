@@ -6,6 +6,9 @@ package mocks
 
 import (
 	encoding "encoding"
+	io "io"
+	reflect "reflect"
+
 	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
@@ -18,8 +21,6 @@ import (
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
-	io "io"
-	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface
@@ -3100,10 +3101,10 @@ func (m *MockstatusDescriber) EXPECT() *MockstatusDescriberMockRecorder {
 }
 
 // Describe mocks base method
-func (m *MockstatusDescriber) Describe() (*describe.AppStatusDesc, error) {
+func (m *MockstatusDescriber) Describe() (*describe.ServiceStatusDesc, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.AppStatusDesc)
+	ret0, _ := ret[0].(*describe.ServiceStatusDesc)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
