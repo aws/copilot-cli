@@ -153,7 +153,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	}
 }
 
-func TestEnvDescriber_JSONString(t *testing.T) {
+func TestEnvDescription_JSONString(t *testing.T) {
 	testProject := &archer.Project{
 		Name: "testProject",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
@@ -184,46 +184,28 @@ func TestEnvDescriber_JSONString(t *testing.T) {
 		Type:    "load-balanced",
 	}
 	allApps := []*archer.Application{testApp1, testApp2, testApp3}
-	testCases := map[string]struct {
-		setupMocks func(mocks envDescriberMocks)
+	wantedContent := "{\"environment\":{\"project\":\"testProject\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"testProject\",\"name\":\"testApp1\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp2\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n"
 
-		shouldOutputJSON bool
-		wantedError      error
-		wantedContent    string
-	}{
-		"correctly shows json output": {
-			shouldOutputJSON: true,
-			wantedContent:    "{\"environment\":{\"project\":\"testProject\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"testProject\",\"name\":\"testApp1\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp2\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n",
-		},
-	}
+	t.Run(wantedContent, func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+		d := &EnvDescription{
+			Environment:  testEnv,
+			Applications: allApps,
+			Tags:         testProject.Tags,
+		}
 
-			d := &EnvDescription{
-				Environment:  testEnv,
-				Applications: allApps,
-				Tags:         testProject.Tags,
-			}
+		// WHEN
+		actual, _ := d.JSONString()
 
-			// WHEN
-			actual, err := d.JSONString()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantedContent, actual)
-			}
-		})
-	}
+		// THEN
+		require.Equal(t, wantedContent, actual)
+	})
 }
 
-func TestEnvDescriber_HumanString(t *testing.T) {
+func TestEnvDescription_HumanString(t *testing.T) {
 	testProject := &archer.Project{
 		Name: "testProject",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
@@ -255,14 +237,7 @@ func TestEnvDescriber_HumanString(t *testing.T) {
 	}
 	allApps := []*archer.Application{testApp1, testApp2, testApp3}
 
-	testCases := map[string]struct {
-		shouldOutputJSON bool
-		wantedError      error
-		wantedContent    string
-	}{
-		"correctly shows human output": {
-			shouldOutputJSON: false,
-			wantedContent: `About
+	wantedContent := `About
 
   Name              testEnv
   Production        false
@@ -281,26 +256,22 @@ Tags
   Key               Value
   key1              value1
   key2              value2
-`,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+`
+	t.Run(wantedContent, func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			d := &EnvDescription{
-				Environment:  testEnv,
-				Applications: allApps,
-				Tags:         testProject.Tags,
-			}
+		d := &EnvDescription{
+			Environment:  testEnv,
+			Applications: allApps,
+			Tags:         testProject.Tags,
+		}
 
-			// WHEN
-			actual := d.HumanString()
+		// WHEN
+		actual := d.HumanString()
 
-			// THEN
-			require.Equal(t, tc.wantedContent, actual)
-		})
-	}
+		// THEN
+		require.Equal(t, wantedContent, actual)
+	})
 }
