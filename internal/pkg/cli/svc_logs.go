@@ -56,16 +56,16 @@ type svcLogsOpts struct {
 }
 
 func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
-	ssmStore, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+		return nil, fmt.Errorf("connect to environment config store: %w", err)
 	}
 
 	return &svcLogsOpts{
 		svcLogsVars: vars,
 		w:           log.OutputWriter,
-		store:       ssmStore,
-		sel:         selector.NewConfigSelect(vars.prompt, ssmStore),
+		store:       configStore,
+		sel:         selector.NewConfigSelect(vars.prompt, configStore),
 		initCwLogsSvc: func(o *svcLogsOpts, env *config.Environment) error {
 			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
@@ -134,7 +134,7 @@ func (o *svcLogsOpts) Ask() error {
 	return o.askSvcEnvName()
 }
 
-// Execute shows log of the service.
+// Execute outputs logs of the service.
 func (o *svcLogsOpts) Execute() error {
 	logGroupName := fmt.Sprintf(logGroupNamePattern, o.AppName(), o.envName, o.svcName)
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
@@ -166,7 +166,7 @@ func (o *svcLogsOpts) askApp() error {
 	}
 	app, err := o.sel.Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt)
 	if err != nil {
-		return fmt.Errorf("select applications: %w", err)
+		return fmt.Errorf("select application: %w", err)
 	}
 	o.appName = app
 	return nil
@@ -326,12 +326,12 @@ func BuildSvcLogsCmd() *cobra.Command {
 		Short: "Displays logs of a deployed service.",
 
 		Example: `
-  Displays logs of the service "my-svc" in environment "test"
-	/code $ copilot svc logs -n my-svc -e test
-  Displays logs in the last hour
-	/code $ copilot svc logs --since 1h
-  Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05
-	/code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`,
+  Displays logs of the service "my-svc" in environment "test".
+  /code $ copilot svc logs -n my-svc -e test
+  Displays logs in the last hour.
+  /code $ copilot svc logs --since 1h
+  Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
+  /code $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newSvcLogOpts(vars)
 			if err != nil {

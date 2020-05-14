@@ -359,7 +359,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 
 			wantedError: nil,
 		},
-		"returns error if fail to select applications": {
+		"returns error if fail to select application": {
 			mockstore: func(m *mocks.Mockstore) {},
 			mockSelector: func(m *mocks.MockconfigSelector) {
 				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("", errors.New("some error"))
@@ -369,7 +369,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("select applications: some error"),
+			wantedError: fmt.Errorf("select application: some error"),
 		},
 		"returns error if fail to retrieve services": {
 			mockstore: func(m *mocks.Mockstore) {
