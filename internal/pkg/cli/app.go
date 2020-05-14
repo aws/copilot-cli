@@ -10,13 +10,13 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 )
 
-// BuildProjCmd builds the top level project command and related subcommands.
-func BuildProjCmd() *cobra.Command {
+// BuildAppCmd builds the top level app command and related subcommands.
+func BuildAppCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "project",
-		Short: "Project commands.",
-		Long: `Command for working with projects.
-A Project represents all of your deployment environments.`,
+		Use:   "app",
+		Short: "Manage your applications.",
+		Long: `Manage your applications.
+Applications are a collection of services, and deployment environments.`,
 	}
 
 	cmd.AddCommand(BuildAppInitCommand())
