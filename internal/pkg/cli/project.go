@@ -22,7 +22,7 @@ A Project represents all of your deployment environments.`,
 	cmd.AddCommand(BuildAppInitCommand())
 	cmd.AddCommand(BuildProjectListCommand())
 	cmd.AddCommand(BuildProjectShowCmd())
-	cmd.AddCommand(BuildProjectDeleteCommand())
+	cmd.AddCommand(BuildAppDeleteCommand())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
