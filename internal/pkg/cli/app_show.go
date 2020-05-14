@@ -17,7 +17,7 @@ import (
 
 const (
 	appShowNamePrompt     = "Which application would you like to show?"
-	appShowNameHelpPrompt = "An application groups all of your services together."
+	appShowNameHelpPrompt = "An application is a collection of related services."
 )
 
 type showAppVars struct {
