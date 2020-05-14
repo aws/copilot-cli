@@ -20,8 +20,8 @@ A Project represents all of your deployment environments.`,
 	}
 
 	cmd.AddCommand(BuildAppInitCommand())
-	cmd.AddCommand(BuildProjectListCommand())
-	cmd.AddCommand(BuildProjectShowCmd())
+	cmd.AddCommand(BuildAppListCommand())
+	cmd.AddCommand(BuildAppShowCmd())
 	cmd.AddCommand(BuildAppDeleteCommand())
 
 	cmd.SetUsageTemplate(template.Usage)
