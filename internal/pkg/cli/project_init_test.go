@@ -267,14 +267,14 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 		expectedError error
 		mocking       func(t *testing.T,
 			mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
-			mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockprojectDeployer,
+			mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 			mockProgress *mocks.Mockprogress)
 	}{
 		"with a successful call to add project": {
 			inDomainName: "amazon.com",
 
 			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockprojectDeployer,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
@@ -311,7 +311,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 		"should return error from workspace.Create": {
 			expectedError: mockError,
 			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockprojectDeployer,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
@@ -328,7 +328,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 		"with an error while deploying project": {
 			expectedError: mockError,
 			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockprojectDeployer,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
@@ -348,7 +348,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 		"should return error from CreateProject": {
 			expectedError: mockError,
 			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockprojectDeployer,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
 					EXPECT().
@@ -378,7 +378,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			mockstore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsProjectManager(ctrl)
 			mockIdentityService := mocks.NewMockidentityService(ctrl)
-			mockDeployer := mocks.NewMockprojectDeployer(ctrl)
+			mockDeployer := mocks.NewMockappDeployer(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 
 			opts := &initProjectOpts{

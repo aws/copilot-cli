@@ -31,28 +31,28 @@ func validateProjectName(val interface{}) error {
 	return nil
 }
 
-func validateApplicationName(val interface{}) error {
+func validateSvcName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
-		return fmt.Errorf("application name %v is invalid: %w", val, err)
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
 	return nil
 }
 
-func validateApplicationPort(val interface{}) error {
+func validateSvcPort(val interface{}) error {
 
 	if err := basicPortValidation(val); err != nil {
-		return fmt.Errorf("application port %v is invalid: %w", val, err)
+		return fmt.Errorf("port %v is invalid: %w", val, err)
 	}
 	return nil
 }
 
-func validateApplicationType(val interface{}) error {
-	appType, ok := val.(string)
+func validateSvcType(val interface{}) error {
+	svcType, ok := val.(string)
 	if !ok {
 		return errValueNotAString
 	}
 	for _, validType := range manifest.ServiceTypes {
-		if appType == validType {
+		if svcType == validType {
 			return nil
 		}
 	}
@@ -60,7 +60,7 @@ func validateApplicationType(val interface{}) error {
 	for _, validType := range manifest.ServiceTypes {
 		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
 	}
-	return fmt.Errorf("invalid app type %s: must be one of %s", appType, strings.Join(prettyTypes, ", "))
+	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, strings.Join(prettyTypes, ", "))
 }
 
 func validateEnvironmentName(val interface{}) error {

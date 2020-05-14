@@ -40,7 +40,7 @@ type initProjectOpts struct {
 	store      applicationStore
 	route53Svc domainValidator
 	ws         wsProjectManager
-	deployer   projectDeployer
+	deployer   appDeployer
 	prompt     prompter
 	prog       progress
 }

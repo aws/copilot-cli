@@ -269,7 +269,7 @@ type pipelineDeployer interface {
 	// TODO: Add StreamPipelineCreation method
 }
 
-type projectDeployer interface {
+type appDeployer interface {
 	DeployApp(in *deploy.CreateAppInput) error
 	AddServiceToApp(app *config.Application, svcName string) error
 	AddEnvToApp(app *config.Application, env *config.Environment) error
@@ -284,7 +284,7 @@ type appResourcesGetter interface {
 
 type deployer interface {
 	environmentDeployer
-	projectDeployer
+	appDeployer
 	pipelineDeployer
 }
 

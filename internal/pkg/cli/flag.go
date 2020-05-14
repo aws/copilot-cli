@@ -18,7 +18,7 @@ const (
 	nameFlag    = "name"
 	svcFlag     = "svc"
 	envFlag     = "env"
-	appTypeFlag = "app-type"
+	svcTypeFlag = "svc-type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
@@ -44,7 +44,7 @@ const (
 	domainNameFlag        = "domain"
 	localAppFlag          = "local"
 	deleteSecretFlag      = "delete-secret"
-	appPortFlag           = "port"
+	svcPortFlag           = "port"
 )
 
 // Short flag names.
@@ -54,7 +54,7 @@ const (
 	nameFlagShort    = "n"
 	svcFlagShort     = "s"
 	envFlagShort     = "e"
-	appTypeFlagShort = "t"
+	svcTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	githubURLFlagShort         = "u"
@@ -65,7 +65,7 @@ const (
 
 // Descriptions for flags.
 var (
-	appTypeFlagDescription = fmt.Sprintf(`Type of application to create. Must be one of:
+	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
 %s`, strings.Join(quoteAll(manifest.ServiceTypes), ", "))
 )
 
@@ -102,7 +102,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localAppFlagDescription          = "Only show applications in the current directory."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	appPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
+	svcPortFlagDescription           = "Optional. The port on which your service listens."
 )
 
 func quoteAll(elems []string) []string {

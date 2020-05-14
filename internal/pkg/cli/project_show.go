@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	appShowAppNamePrompt     = "Which application would you like to show?"
-	appShowAppNameHelpPrompt = "An application groups all of your services together."
+	appShowNamePrompt     = "Which application would you like to show?"
+	appShowNameHelpPrompt = "An application groups all of your services together."
 )
 
 type showProjectVars struct {
@@ -134,8 +134,8 @@ func (o *showProjectOpts) askProject() error {
 		return fmt.Errorf("no project found: run %s to set one up, or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
 	}
 	proj, err := o.prompt.SelectOne(
-		appShowAppNamePrompt,
-		appShowAppNameHelpPrompt,
+		appShowNamePrompt,
+		appShowNameHelpPrompt,
 		projNames,
 	)
 	if err != nil {

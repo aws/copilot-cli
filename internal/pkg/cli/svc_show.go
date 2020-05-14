@@ -22,7 +22,7 @@ const (
 	svcShowAppNamePrompt     = "Which application's service would you like to show?"
 	svcShowAppNameHelpPrompt = "An application groups all of your services together."
 	svcShowSvcNamePrompt     = "Which service of %s would you like to show?"
-	svcShowSvcNameHelpPrompt = "The detail of a service will be shown (e.g., endpoint URL, CPU, Memory)."
+	svcShowSvcNameHelpPrompt = "The details of a service will be shown (e.g., endpoint URL, CPU, Memory)."
 )
 
 type showSvcVars struct {

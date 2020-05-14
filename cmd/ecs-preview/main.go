@@ -54,7 +54,7 @@ func buildRootCmd() *cobra.Command {
 	// "Develop" command group.
 	cmd.AddCommand(cli.BuildProjCmd())
 	cmd.AddCommand(cli.BuildEnvCmd())
-	cmd.AddCommand(cli.BuildAppCmd())
+	cmd.AddCommand(cli.BuildSvcCmd())
 
 	// "Settings" command group.
 	cmd.AddCommand(cli.BuildVersionCmd())

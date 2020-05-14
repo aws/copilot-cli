@@ -113,7 +113,7 @@ func TestProjectShow_Ask(t *testing.T) {
 						{Name: "archer-project"},
 					}, nil),
 
-					m.prompt.EXPECT().SelectOne(appShowAppNamePrompt, appShowAppNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
+					m.prompt.EXPECT().SelectOne(appShowNamePrompt, appShowNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
 				)
 			},
 			wantedProject: "my-project",
@@ -146,7 +146,7 @@ func TestProjectShow_Ask(t *testing.T) {
 						{Name: "archer-project"},
 					}, nil),
 
-					m.prompt.EXPECT().SelectOne(appShowAppNamePrompt, appShowAppNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
+					m.prompt.EXPECT().SelectOne(appShowNamePrompt, appShowNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
 				)
 			},
 

@@ -13,16 +13,16 @@ import (
 
 var errNoAppInWorkspace = errors.New("could not find an application attached to this workspace, please run `app init` first")
 
-// BuildAppCmd is the top level command for applications.
-func BuildAppCmd() *cobra.Command {
+// BuildSvcCmd is the top level command for service.
+func BuildSvcCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "app",
-		Short: "Application commands.",
-		Long: `Command for working with applications.
-An application represents an Amazon ECS service or task.`,
+		Use:   "svc",
+		Short: "Service commands.",
+		Long: `Command for working with long-running services.
+A service represents an Amazon ECS service.`,
 	}
 
-	cmd.AddCommand(BuildAppInitCmd())
+	cmd.AddCommand(BuildSvcInitCmd())
 	cmd.AddCommand(BuildAppListCmd())
 	cmd.AddCommand(BuildSvcPackageCmd())
 	cmd.AddCommand(BuildSvcDeployCmd())
