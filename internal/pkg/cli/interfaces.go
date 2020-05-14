@@ -187,11 +187,11 @@ type workspaceDeleter interface {
 }
 
 type svcManifestReader interface {
-	ReadServiceManifest(appName string) ([]byte, error)
+	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
 type svcManifestWriter interface {
-	WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
+	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -243,8 +243,8 @@ type bucketEmptier interface {
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
-	DeleteEnvironment(projName, envName string) error
-	GetEnvironment(projectName, envName string) (*config.Environment, error)
+	DeleteEnvironment(appName, envName string) error
+	GetEnvironment(appName, envName string) (*config.Environment, error)
 }
 
 type svcDeleter interface {
@@ -252,7 +252,7 @@ type svcDeleter interface {
 }
 
 type svcRemoverFromApp interface {
-	RemoveServiceFromApp(project *config.Application, appName string) error
+	RemoveServiceFromApp(app *config.Application, svcName string) error
 }
 
 type imageRemover interface {
