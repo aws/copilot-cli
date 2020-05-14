@@ -56,7 +56,7 @@ type svcLogsOpts struct {
 }
 
 func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
-	configStore, err := config.NewStore()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment config store: %w", err)
 	}
@@ -64,8 +64,8 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 	return &svcLogsOpts{
 		svcLogsVars: vars,
 		w:           log.OutputWriter,
-		store:       configStore,
-		sel:         selector.NewConfigSelect(vars.prompt, configStore),
+		store:       store,
+		sel:         selector.NewConfigSelect(vars.prompt, store),
 		initCwLogsSvc: func(o *svcLogsOpts, env *config.Environment) error {
 			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
@@ -251,10 +251,9 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 
 	// return if only one deployed service found
 	if len(svcEnvNames) == 1 {
-		log.Infof("Only found one deployed service, defaulting to: %s\n", color.HighlightUserInput(svcEnvNames[0]))
 		o.svcName = svcEnvs[svcEnvNames[0]].svcName
 		o.envName = svcEnvs[svcEnvNames[0]].envName
-
+		log.Infof("Show logs of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
 		return nil
 	}
 

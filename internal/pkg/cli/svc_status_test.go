@@ -18,64 +18,64 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppStatus_Validate(t *testing.T) {
+func TestSvcStatus_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
+		inputApp         string
+		inputSvc         string
 		inputEnvironment string
 		mockStoreReader  func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
-		"invalid project name": {
-			inputProject: "my-project",
+		"invalid app name": {
+			inputApp: "my-app",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
+				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
-		"invalid application name": {
-			inputProject:     "my-project",
-			inputApplication: "my-app",
+		"invalid service name": {
+			inputApp: "my-app",
+			inputSvc: "my-svc",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-project").Return(&config.Application{
-					Name: "my-project",
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name: "my-app",
 				}, nil)
-				m.EXPECT().GetService("my-project", "my-app").Return(nil, errors.New("some error"))
+				m.EXPECT().GetService("my-app", "my-svc").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"invalid environment name": {
-			inputProject:     "my-project",
+			inputApp:         "my-app",
 			inputEnvironment: "test",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-project").Return(&config.Application{
-					Name: "my-project",
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name: "my-app",
 				}, nil)
-				m.EXPECT().GetEnvironment("my-project", "test").Return(nil, errors.New("some error"))
+				m.EXPECT().GetEnvironment("my-app", "test").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"success": {
-			inputProject:     "my-project",
-			inputApplication: "my-app",
+			inputApp:         "my-app",
+			inputSvc:         "my-svc",
 			inputEnvironment: "test",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-project").Return(&config.Application{
-					Name: "my-project",
+				m.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name: "my-app",
 				}, nil)
-				m.EXPECT().GetEnvironment("my-project", "test").Return(&config.Environment{
+				m.EXPECT().GetEnvironment("my-app", "test").Return(&config.Environment{
 					Name: "test",
 				}, nil)
-				m.EXPECT().GetService("my-project", "my-app").Return(&config.Service{
-					Name: "my-app",
+				m.EXPECT().GetService("my-app", "my-svc").Return(&config.Service{
+					Name: "my-svc",
 				}, nil)
 			},
 		},
@@ -89,19 +89,19 @@ func TestAppStatus_Validate(t *testing.T) {
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			tc.mockStoreReader(mockStoreReader)
 
-			appStatus := &appStatusOpts{
-				appStatusVars: appStatusVars{
-					svcName: tc.inputApplication,
+			svcStatus := &svcStatusOpts{
+				svcStatusVars: svcStatusVars{
+					svcName: tc.inputSvc,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
 				store: mockStoreReader,
 			}
 
 			// WHEN
-			err := appStatus.Validate()
+			err := svcStatus.Validate()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -113,118 +113,98 @@ func TestAppStatus_Validate(t *testing.T) {
 	}
 }
 
-func TestAppStatus_Ask(t *testing.T) {
+func TestSvcStatus_Ask(t *testing.T) {
 	mockServiceArn := ecs.ServiceArn("mockArn")
 	mockError := errors.New("some error")
-	mockStackNotFoundErr := fmt.Errorf("describe stack my-project-test-my-app: %w",
-		awserr.New("ValidationError", "Stack with id my-project-test-my-app does not exist", nil))
+	mockStackNotFoundErr := fmt.Errorf("describe stack my-app-test-my-svc: %w",
+		awserr.New("ValidationError", "Stack with id my-app-test-my-svc does not exist", nil))
 	testCases := map[string]struct {
-		inputProject        string
-		inputApplication    string
-		inputEnvironment    string
-		mockStoreReader     func(m *mocks.Mockstore)
-		mockWebAppDescriber func(m *mocks.MockserviceArnGetter)
-		mockPrompt          func(m *mocks.Mockprompter)
+		inputApp             string
+		inputSvc             string
+		inputEnvironment     string
+		mockSelector         func(m *mocks.MockconfigSelector)
+		mockStoreReader      func(m *mocks.Mockstore)
+		mockServiceDescriber func(m *mocks.MockserviceArnGetter)
+		mockPrompt           func(m *mocks.Mockprompter)
 
 		wantedError error
 	}{
 		"skip asking": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *mocks.Mockstore) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockSelector:    func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 		},
-		"errors if failed to list project": {
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{}, mockError)
+		"errors if failed to select application": {
+			mockStoreReader: func(m *mocks.Mockstore) {},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcStatusAppNamePrompt, svcStatusAppNameHelpPrompt).Return("", mockError)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-			mockPrompt:          func(m *mocks.Mockprompter) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {},
+			mockPrompt:           func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("list projects: some error"),
+			wantedError: fmt.Errorf("select application: some error"),
 		},
-		"errors if no project found": {
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{}, nil)
-			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-			mockPrompt:          func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("no project found: run `project init` please"),
-		},
-		"errors if failed to select project": {
-
-			mockStoreReader: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					{
-						Name: "mockApp",
-					},
-				}, nil)
-			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(appStatusProjectNamePrompt, appStatusProjectNameHelpPrompt, []string{"mockApp"}).Return("", mockError)
-			},
-
-			wantedError: fmt.Errorf("select project: some error"),
-		},
-		"errors if failed to list applications": {
-			inputProject: "mockApp",
+		"errors if failed to list service": {
+			inputApp: "mockApp",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, mockError)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-			mockPrompt:          func(m *mocks.Mockprompter) {},
+			mockSelector:         func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {},
+			mockPrompt:           func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("list applications for project mockApp: some error"),
+			wantedError: fmt.Errorf("list services for application mockApp: some error"),
 		},
-		"errors if no available application found": {
-			inputProject: "mockApp",
+		"errors if no available service found": {
+			inputApp: "mockApp",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, nil)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {},
-			mockPrompt:          func(m *mocks.Mockprompter) {},
+			mockSelector:         func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {},
+			mockPrompt:           func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no applications found in project mockApp"),
+			wantedError: fmt.Errorf("no services found in application mockApp"),
 		},
-		"errors if failed to check if app deployed in env": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
+		"errors if failed to check if service deployed in env": {
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *mocks.Mockstore) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockSelector:    func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(nil, mockError)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("check if app mockSvc is deployed in env mockEnv: some error"),
+			wantedError: fmt.Errorf("check if service mockSvc is deployed in env mockEnv: some error"),
 		},
-		"errors if no deployed application found": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
+		"errors if no deployed service found": {
+			inputApp:         "mockApp",
+			inputSvc:         "mockSvc",
 			inputEnvironment: "mockEnv",
 
 			mockStoreReader: func(m *mocks.Mockstore) {},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockSelector:    func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(nil, mockStackNotFoundErr)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no deployed apps found in project mockApp"),
+			wantedError: fmt.Errorf("no deployed services found in application mockApp"),
 		},
-		"errors if failed to select deployed application": {
-			inputProject: "mockApp",
+		"errors if failed to select deployed service": {
+			inputApp: "mockApp",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
@@ -241,7 +221,8 @@ func TestAppStatus_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockSelector: func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
@@ -250,10 +231,10 @@ func TestAppStatus_Ask(t *testing.T) {
 					[]string{"mockSvc (mockEnv1)", "mockSvc (mockEnv2)"}).Return("", mockError)
 			},
 
-			wantedError: fmt.Errorf("select deployed applications for project mockApp: some error"),
+			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
 		},
 		"success": {
-			inputProject: "mockApp",
+			inputApp: "mockApp",
 
 			mockStoreReader: func(m *mocks.Mockstore) {
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
@@ -270,7 +251,8 @@ func TestAppStatus_Ask(t *testing.T) {
 					},
 				}, nil)
 			},
-			mockWebAppDescriber: func(m *mocks.MockserviceArnGetter) {
+			mockSelector: func(m *mocks.MockconfigSelector) {},
+			mockServiceDescriber: func(m *mocks.MockserviceArnGetter) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
@@ -287,28 +269,31 @@ func TestAppStatus_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
-			mockWebAppDescriber := mocks.NewMockserviceArnGetter(ctrl)
+			mockServiceDescriber := mocks.NewMockserviceArnGetter(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
+			mockSelector := mocks.NewMockconfigSelector(ctrl)
 			tc.mockStoreReader(mockStoreReader)
-			tc.mockWebAppDescriber(mockWebAppDescriber)
+			tc.mockServiceDescriber(mockServiceDescriber)
 			tc.mockPrompt(mockPrompt)
+			tc.mockSelector(mockSelector)
 
-			appStatus := &appStatusOpts{
-				appStatusVars: appStatusVars{
-					svcName: tc.inputApplication,
+			svcStatus := &svcStatusOpts{
+				svcStatusVars: svcStatusVars{
+					svcName: tc.inputSvc,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 						prompt:  mockPrompt,
 					},
 				},
-				appDescriber:     mockWebAppDescriber,
-				initAppDescriber: func(*appStatusOpts, string, string) error { return nil },
+				svcDescriber:     mockServiceDescriber,
+				sel:              mockSelector,
+				initSvcDescriber: func(*svcStatusOpts, string, string) error { return nil },
 				store:            mockStoreReader,
 			}
 
 			// WHEN
-			err := appStatus.Ask()
+			err := svcStatus.Ask()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -320,30 +305,30 @@ func TestAppStatus_Ask(t *testing.T) {
 	}
 }
 
-func TestAppStatus_Execute(t *testing.T) {
+func TestSvcStatus_Execute(t *testing.T) {
 	mockError := errors.New("some error")
-	mockAppStatus := &describe.AppStatusDesc{}
+	mockServiceStatus := &describe.ServiceStatusDesc{}
 	testCases := map[string]struct {
 		shouldOutputJSON    bool
 		mockStatusDescriber func(m *mocks.MockstatusDescriber)
 		wantedError         error
 	}{
-		"errors if failed to describe the status of the app": {
+		"errors if failed to describe the status of the service": {
 			mockStatusDescriber: func(m *mocks.MockstatusDescriber) {
 				m.EXPECT().Describe().Return(nil, mockError)
 			},
-			wantedError: fmt.Errorf("describe status of application mockSvc: some error"),
+			wantedError: fmt.Errorf("describe status of service mockSvc: some error"),
 		},
 		"success with JSON output": {
 			shouldOutputJSON: true,
 
 			mockStatusDescriber: func(m *mocks.MockstatusDescriber) {
-				m.EXPECT().Describe().Return(mockAppStatus, nil)
+				m.EXPECT().Describe().Return(mockServiceStatus, nil)
 			},
 		},
 		"success with HumanString": {
 			mockStatusDescriber: func(m *mocks.MockstatusDescriber) {
-				m.EXPECT().Describe().Return(mockAppStatus, nil)
+				m.EXPECT().Describe().Return(mockServiceStatus, nil)
 			},
 		},
 	}
@@ -357,8 +342,8 @@ func TestAppStatus_Execute(t *testing.T) {
 			mockStatusDescriber := mocks.NewMockstatusDescriber(ctrl)
 			tc.mockStatusDescriber(mockStatusDescriber)
 
-			appStatus := &appStatusOpts{
-				appStatusVars: appStatusVars{
+			svcStatus := &svcStatusOpts{
+				svcStatusVars: svcStatusVars{
 					svcName:          "mockSvc",
 					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
@@ -367,12 +352,12 @@ func TestAppStatus_Execute(t *testing.T) {
 					},
 				},
 				statusDescriber:     mockStatusDescriber,
-				initStatusDescriber: func(*appStatusOpts) error { return nil },
+				initStatusDescriber: func(*svcStatusOpts) error { return nil },
 				w:                   b,
 			}
 
 			// WHEN
-			err := appStatus.Execute()
+			err := svcStatus.Execute()
 
 			// THEN
 			if tc.wantedError != nil {
