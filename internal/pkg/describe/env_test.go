@@ -186,7 +186,6 @@ func TestEnvDescription_JSONString(t *testing.T) {
 	allApps := []*archer.Application{testApp1, testApp2, testApp3}
 	wantedContent := "{\"environment\":{\"project\":\"testProject\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"testProject\",\"name\":\"testApp1\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp2\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n"
 
-	t.Run(wantedContent, func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -202,7 +201,6 @@ func TestEnvDescription_JSONString(t *testing.T) {
 
 		// THEN
 		require.Equal(t, wantedContent, actual)
-	})
 }
 
 func TestEnvDescription_HumanString(t *testing.T) {
@@ -257,7 +255,6 @@ Tags
   key1              value1
   key2              value2
 `
-	t.Run(wantedContent, func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -273,5 +270,4 @@ Tags
 
 		// THEN
 		require.Equal(t, wantedContent, actual)
-	})
 }
