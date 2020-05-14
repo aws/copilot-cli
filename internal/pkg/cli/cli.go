@@ -118,13 +118,13 @@ func isStackSetNotExistsErr(err error) bool {
 	}
 }
 
-type appEnv struct {
-	appName string
+type svcEnv struct {
+	svcName string
 	envName string
 }
 
-func (a *appEnv) String() string {
-	return fmt.Sprintf("%s (%s)", a.appName, a.envName)
+func (s *svcEnv) String() string {
+	return fmt.Sprintf("%s (%s)", s.svcName, s.envName)
 }
 
 // relPath returns the path relative to the current working directory.
