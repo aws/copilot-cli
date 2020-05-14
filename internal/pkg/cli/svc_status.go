@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	svcStatusAppNamePrompt     = "Which application's services status would you like to show?"
+	svcStatusAppNamePrompt     = "Which application is the service in?"
 	svcStatusAppNameHelpPrompt = "An application groups all of your services together."
 	svcStatusNamePrompt        = "Which service's status would you like to show?"
-	svcStatusNameHelpPrompt    = "Displays the service, tasks and CloudWatch alarms status."
+	svcStatusNameHelpPrompt    = "Displays the service's task status, most recent deployment and alarm statuses."
 )
 
 type svcStatusVars struct {
@@ -241,7 +241,7 @@ func BuildSvcStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Shows status of a deployed service.",
-		Long:  "Shows status of a deployed service, including service status, task status, and related CloudWatch alarms.",
+		Long:  "Shows status of a deployed service's task status, most recent deployment and alarm statuses.",
 
 		Example: `
   Shows status of the deployed service "my-svc"
