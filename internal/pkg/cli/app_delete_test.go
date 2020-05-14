@@ -188,7 +188,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
-					// deleteProjectPipline
+					// delete pipeline
 					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
 
 					// deleteAppResources
@@ -229,7 +229,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
-					// deleteProjectPipline
+					// delete pipeline
 					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
 
 					// deleteAppResources
