@@ -227,7 +227,7 @@ type wsPipelineReader interface {
 }
 
 type wsAppManager interface {
-	Create(projectName string) error
+	Create(appName string) error
 	Summary() (*workspace.Summary, error)
 }
 
