@@ -55,7 +55,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 		initSvcDescriber: func(o *svcStatusOpts, envName, svcName string) error {
 			d, err := describe.NewServiceDescriber(o.AppName(), envName, svcName)
 			if err != nil {
-				return fmt.Errorf("creating stack describer for application %s: %w", o.AppName(), err)
+				return fmt.Errorf("creating service describer for application %s, environment %s, and service %s: %w", o.AppName(), envName, svcName, err)
 			}
 			o.svcDescriber = d
 			return nil
@@ -189,7 +189,7 @@ func (o *svcStatusOpts) askSvcEnvName() error {
 	if len(svcEnvNames) == 1 {
 		o.svcName = svcEnvs[svcEnvNames[0]].svcName
 		o.envName = svcEnvs[svcEnvNames[0]].envName
-		log.Infof("Show status of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
+		log.Infof("Showing status of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
 		return nil
 	}
 

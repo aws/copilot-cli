@@ -253,7 +253,7 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 	if len(svcEnvNames) == 1 {
 		o.svcName = svcEnvs[svcEnvNames[0]].svcName
 		o.envName = svcEnvs[svcEnvNames[0]].envName
-		log.Infof("Show logs of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
+		log.Infof("Showing logs of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
 		return nil
 	}
 
