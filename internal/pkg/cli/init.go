@@ -138,8 +138,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initProfileClients: initEnvProfileClients,
 	}
 
-	appDeploy := &svcDeployOpts{
-		svcDeployVars: svcDeployVars{
+	appDeploy := &deploySvcOpts{
+		deploySvcVars: deploySvcVars{
 			EnvName:    defaultEnvironmentName,
 			ImageTag:   vars.imageTag,
 			GlobalOpts: NewGlobalOpts(),
@@ -243,7 +243,7 @@ func (o *initOpts) deployApp() error {
 	if !o.ShouldDeploy {
 		return nil
 	}
-	if deployOpts, ok := o.appDeploy.(*svcDeployOpts); ok {
+	if deployOpts, ok := o.appDeploy.(*deploySvcOpts); ok {
 		// Set the application's name to the deploy sub-command.
 		deployOpts.Name = *o.appName
 	}
