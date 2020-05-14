@@ -26,7 +26,7 @@ import (
 
 const (
 	svcPackageSvcNamePrompt = "Which service would you like to generate a CloudFormation template for?"
-	svcPackageEnvNamePrompt = "Which environment would you like to create this stack for?"
+	svcPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
 
 var initPackageAddonsSvc = func(o *packageSvcOpts) error {
