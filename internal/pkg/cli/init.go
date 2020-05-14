@@ -94,15 +94,15 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 
-	initProject := &initProjectOpts{
-		initProjectVars: initProjectVars{
-			ProjectName: vars.projectName,
+	initProject := &initAppOpts{
+		initAppVars: initAppVars{
+			AppName: vars.projectName,
 		},
 		store:    ssm,
 		ws:       ws,
 		prompt:   prompt,
 		identity: id,
-		deployer: deployer,
+		cfn:      deployer,
 		prog:     spin,
 	}
 	initApp := &initSvcOpts{
@@ -162,7 +162,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnv:     initEnv,
 		appDeploy:   appDeploy,
 
-		projectName:    &initProject.ProjectName,
+		projectName:    &initProject.AppName,
 		appType:        &initApp.ServiceType,
 		appName:        &initApp.Name,
 		appPort:        &initApp.Port,

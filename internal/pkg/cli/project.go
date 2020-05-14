@@ -19,7 +19,7 @@ func BuildProjCmd() *cobra.Command {
 A Project represents all of your deployment environments.`,
 	}
 
-	cmd.AddCommand(BuildProjectInitCommand())
+	cmd.AddCommand(BuildAppInitCommand())
 	cmd.AddCommand(BuildProjectListCommand())
 	cmd.AddCommand(BuildProjectShowCmd())
 	cmd.AddCommand(BuildProjectDeleteCommand())

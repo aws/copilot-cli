@@ -18,53 +18,53 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitProjectOpts_Ask(t *testing.T) {
+func TestInitAppOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
-		expect        func(opts *initProjectOpts)
+		inAppName string
+		expect    func(opts *initAppOpts)
 
-		wantedProjectName string
-		wantedErr         string
+		wantedAppName string
+		wantedErr     string
 	}{
-		"errors if summary exists and differs from project flag": {
-			inProjectName: "testname",
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics"}, nil)
+		"errors if summary exists and differs from app argument": {
+			inAppName: "testname",
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics"}, nil)
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
 			},
 			wantedErr: "workspace already registered with metrics",
 		},
-		"use flag if there is no summary": {
-			inProjectName: "metrics",
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"use argument if there is no summary": {
+			inAppName: "metrics",
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
 			},
-			wantedProjectName: "metrics",
+			wantedAppName: "metrics",
 		},
-		"return error from new project name": {
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"return error from new app name": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{}, nil)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: "prompt get project name: my error",
+			wantedErr: "prompt get application name: my error",
 		},
-		"enter new project name if no existing projects": {
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"enter new app name if no existing apps": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{}, nil)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedProjectName: "metrics",
+			wantedAppName: "metrics",
 		},
-		"return error from project selection": {
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"return error from app selection": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
 					{
 						Name: "metrics",
@@ -76,11 +76,11 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
 			},
-			wantedErr: "prompt select project name: my error",
+			wantedErr: "prompt select application name: my error",
 		},
-		"use existing projects": {
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"use from existing apps": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
 					{
 						Name: "metrics",
@@ -92,11 +92,11 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
 			},
-			wantedProjectName: "metrics",
+			wantedAppName: "metrics",
 		},
-		"enter new project name if user opts out of selection": {
-			expect: func(opts *initProjectOpts) {
-				opts.ws.(*mocks.MockwsProjectManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+		"enter new app name if user opts out of selection": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
 					{
 						Name: "metrics",
@@ -109,7 +109,7 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
 			},
-			wantedProjectName: "metrics",
+			wantedAppName: "metrics",
 		},
 	}
 
@@ -119,12 +119,12 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			opts := &initProjectOpts{
-				initProjectVars: initProjectVars{
-					ProjectName: tc.inProjectName,
+			opts := &initAppOpts{
+				initAppVars: initAppVars{
+					AppName: tc.inAppName,
 				},
 				store:  mocks.NewMockstore(ctrl),
-				ws:     mocks.NewMockwsProjectManager(ctrl),
+				ws:     mocks.NewMockwsAppManager(ctrl),
 				prompt: mocks.NewMockprompter(ctrl),
 			}
 			tc.expect(opts)
@@ -137,15 +137,15 @@ func TestInitProjectOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProjectName, opts.ProjectName)
+				require.Equal(t, tc.wantedAppName, opts.AppName)
 			}
 		})
 	}
 }
 
-func TestInitProjectOpts_Validate(t *testing.T) {
+func TestInitAppOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName  string
+		inAppName      string
 		inDomainName   string
 		mockRoute53Svc func(m *mocks.MockdomainValidator)
 		mockStore      func(m *mocks.Mockstore)
@@ -158,26 +158,25 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 
 			wantedError: "",
 		},
-		"valid project name": {
-			inProjectName:  "metrics",
+		"valid app name": {
+			inAppName:      "metrics",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
 					ApplicationName: "metrics",
 				})
 			},
-
 			wantedError: "",
 		},
-		"invalid project name": {
-			inProjectName:  "123chicken",
+		"invalid app name": {
+			inAppName:      "123chicken",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
 			mockStore:      func(m *mocks.Mockstore) {},
 
-			wantedError: "project name 123chicken is invalid: value must start with a letter and contain only lower-case letters, numbers, and hyphens",
+			wantedError: "application name 123chicken is invalid: value must start with a letter and contain only lower-case letters, numbers, and hyphens",
 		},
-		"errors if project with different domain already exists": {
-			inProjectName:  "metrics",
+		"errors if application with different domain already exists": {
+			inAppName:      "metrics",
 			inDomainName:   "badDomain.com",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
 			mockStore: func(m *mocks.Mockstore) {
@@ -187,24 +186,23 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 				}, nil)
 			},
 
-			wantedError: "project named metrics already exists with a different domain name domain.com",
+			wantedError: "application named metrics already exists with a different domain name domain.com",
 		},
-		"errors if failed to get project": {
-			inProjectName:  "metrics",
+		"errors if failed to get application": {
+			inAppName:      "metrics",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("metrics").Return(nil, errors.New("some error"))
 			},
 
-			wantedError: "get project metrics: some error",
+			wantedError: "get application metrics: some error",
 		},
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
 				m.EXPECT().DomainExists("mockDomain.com").Return(true, nil)
 			},
-			mockStore: func(m *mocks.Mockstore) {},
-
+			mockStore:   func(m *mocks.Mockstore) {},
 			wantedError: "",
 		},
 		"invalid domain name that does not exist": {
@@ -236,12 +234,12 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockRoute53Svc(mockRoute53Svc)
 			tc.mockStore(mockStore)
-			opts := &initProjectOpts{
-				route53Svc: mockRoute53Svc,
-				store:      mockStore,
-				initProjectVars: initProjectVars{
-					ProjectName: tc.inProjectName,
-					DomainName:  tc.inDomainName,
+			opts := &initAppOpts{
+				route53: mockRoute53Svc,
+				store:   mockStore,
+				initAppVars: initAppVars{
+					AppName:    tc.inAppName,
+					DomainName: tc.inDomainName,
 				},
 			}
 
@@ -258,7 +256,7 @@ func TestInitProjectOpts_Validate(t *testing.T) {
 	}
 }
 
-func TestInitProjectOpts_Execute(t *testing.T) {
+func TestInitAppOpts_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
@@ -266,14 +264,14 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 
 		expectedError error
 		mocking       func(t *testing.T,
-			mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
+			mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 			mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 			mockProgress *mocks.Mockprogress)
 	}{
-		"with a successful call to add project": {
+		"with a successful call to add app": {
 			inDomainName: "amazon.com",
 
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
@@ -286,7 +284,7 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					EXPECT().
 					CreateApplication(&config.Application{
 						AccountID: "12345",
-						Name:      "project",
+						Name:      "myapp",
 						Domain:    "amazon.com",
 						Tags: map[string]string{
 							"owner": "boss",
@@ -294,23 +292,23 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					})
 				mockWorkspace.
 					EXPECT().
-					Create(gomock.Eq("project")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(&deploy.CreateAppInput{
-						Name:       "project",
+						Name:       "myapp",
 						AccountID:  "12345",
 						DomainName: "amazon.com",
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},
 					}).Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},
 		},
 		"should return error from workspace.Create": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
@@ -321,13 +319,13 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					}, nil)
 				mockWorkspace.
 					EXPECT().
-					Create(gomock.Eq("project")).
+					Create(gomock.Eq("myapp")).
 					Return(mockError)
 			},
 		},
-		"with an error while deploying project": {
+		"with an error while deploying myapp": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
@@ -338,16 +336,16 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					}, nil)
 				mockWorkspace.
 					EXPECT().
-					Create(gomock.Eq("project")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(gomock.Any()).Return(mockError)
-				mockProgress.EXPECT().Stop(log.Serrorf(fmtDeployProjectFailed, "project"))
+				mockProgress.EXPECT().Stop(log.Serrorf(fmtAppInitFailed, "myapp"))
 			},
 		},
-		"should return error from CreateProject": {
+		"should return error from CreateApplication": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsProjectManager,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
 				mockProgress *mocks.Mockprogress) {
 				mockIdentityService.
@@ -362,11 +360,11 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 					Return(mockError)
 				mockWorkspace.
 					EXPECT().
-					Create(gomock.Eq("project")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtDeployProjectStart, "project"))
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(gomock.Any()).Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtDeployProjectComplete, "project"))
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},
 		},
 	}
@@ -376,22 +374,22 @@ func TestInitProjectOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			mockstore := mocks.NewMockstore(ctrl)
-			mockWorkspace := mocks.NewMockwsProjectManager(ctrl)
+			mockWorkspace := mocks.NewMockwsAppManager(ctrl)
 			mockIdentityService := mocks.NewMockidentityService(ctrl)
 			mockDeployer := mocks.NewMockappDeployer(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 
-			opts := &initProjectOpts{
-				initProjectVars: initProjectVars{
-					ProjectName: "project",
-					DomainName:  tc.inDomainName,
+			opts := &initAppOpts{
+				initAppVars: initAppVars{
+					AppName:    "myapp",
+					DomainName: tc.inDomainName,
 					ResourceTags: map[string]string{
 						"owner": "boss",
 					},
 				},
 				store:    mockstore,
 				identity: mockIdentityService,
-				deployer: mockDeployer,
+				cfn:      mockDeployer,
 				ws:       mockWorkspace,
 				prog:     mockProgress,
 			}
