@@ -24,9 +24,9 @@ var (
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
-func validateProjectName(val interface{}) error {
+func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
-		return fmt.Errorf("project name %v is invalid: %w", val, err)
+		return fmt.Errorf("application name %v is invalid: %w", val, err)
 	}
 	return nil
 }

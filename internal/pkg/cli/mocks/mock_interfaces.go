@@ -2121,31 +2121,31 @@ func (mr *MockwsPipelineReaderMockRecorder) ReadPipelineManifest() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineReader)(nil).ReadPipelineManifest))
 }
 
-// MockwsProjectManager is a mock of wsProjectManager interface
-type MockwsProjectManager struct {
+// MockwsAppManager is a mock of wsAppManager interface
+type MockwsAppManager struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsProjectManagerMockRecorder
+	recorder *MockwsAppManagerMockRecorder
 }
 
-// MockwsProjectManagerMockRecorder is the mock recorder for MockwsProjectManager
-type MockwsProjectManagerMockRecorder struct {
-	mock *MockwsProjectManager
+// MockwsAppManagerMockRecorder is the mock recorder for MockwsAppManager
+type MockwsAppManagerMockRecorder struct {
+	mock *MockwsAppManager
 }
 
-// NewMockwsProjectManager creates a new mock instance
-func NewMockwsProjectManager(ctrl *gomock.Controller) *MockwsProjectManager {
-	mock := &MockwsProjectManager{ctrl: ctrl}
-	mock.recorder = &MockwsProjectManagerMockRecorder{mock}
+// NewMockwsAppManager creates a new mock instance
+func NewMockwsAppManager(ctrl *gomock.Controller) *MockwsAppManager {
+	mock := &MockwsAppManager{ctrl: ctrl}
+	mock.recorder = &MockwsAppManagerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsProjectManager) EXPECT() *MockwsProjectManagerMockRecorder {
+func (m *MockwsAppManager) EXPECT() *MockwsAppManagerMockRecorder {
 	return m.recorder
 }
 
 // Create mocks base method
-func (m *MockwsProjectManager) Create(projectName string) error {
+func (m *MockwsAppManager) Create(projectName string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", projectName)
 	ret0, _ := ret[0].(error)
@@ -2153,13 +2153,13 @@ func (m *MockwsProjectManager) Create(projectName string) error {
 }
 
 // Create indicates an expected call of Create
-func (mr *MockwsProjectManagerMockRecorder) Create(projectName interface{}) *gomock.Call {
+func (mr *MockwsAppManagerMockRecorder) Create(projectName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockwsProjectManager)(nil).Create), projectName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockwsAppManager)(nil).Create), projectName)
 }
 
 // Summary mocks base method
-func (m *MockwsProjectManager) Summary() (*workspace.Summary, error) {
+func (m *MockwsAppManager) Summary() (*workspace.Summary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Summary")
 	ret0, _ := ret[0].(*workspace.Summary)
@@ -2168,9 +2168,9 @@ func (m *MockwsProjectManager) Summary() (*workspace.Summary, error) {
 }
 
 // Summary indicates an expected call of Summary
-func (mr *MockwsProjectManagerMockRecorder) Summary() *gomock.Call {
+func (mr *MockwsAppManagerMockRecorder) Summary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsProjectManager)(nil).Summary))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManager)(nil).Summary))
 }
 
 // MockartifactUploader is a mock of artifactUploader interface
