@@ -37,7 +37,7 @@ var (
 	errNoLocalManifestsFound = errors.New("no manifest files found")
 )
 
-type svcDeployVars struct {
+type deploySvcVars struct {
 	*GlobalOpts
 	Name         string
 	EnvName      string
@@ -45,8 +45,8 @@ type svcDeployVars struct {
 	ResourceTags map[string]string
 }
 
-type svcDeployOpts struct {
-	svcDeployVars
+type deploySvcOpts struct {
+	deploySvcVars
 
 	store        store
 	ws           wsSvcReader
@@ -68,7 +68,7 @@ type svcDeployOpts struct {
 	targetSvc         *config.Service
 }
 
-func newSvcDeployOpts(vars svcDeployVars) (*svcDeployOpts, error) {
+func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
@@ -79,8 +79,8 @@ func newSvcDeployOpts(vars svcDeployVars) (*svcDeployOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	return &svcDeployOpts{
-		svcDeployVars: vars,
+	return &deploySvcOpts{
+		deploySvcVars: vars,
 
 		store:        store,
 		ws:           ws,
@@ -93,7 +93,7 @@ func newSvcDeployOpts(vars svcDeployVars) (*svcDeployOpts, error) {
 }
 
 // Validate returns an error if the user inputs are invalid.
-func (o *svcDeployOpts) Validate() error {
+func (o *deploySvcOpts) Validate() error {
 	if o.AppName() == "" {
 		return errNoAppInWorkspace
 	}
@@ -111,7 +111,7 @@ func (o *svcDeployOpts) Validate() error {
 }
 
 // Ask prompts the user for any required fields that are not provided.
-func (o *svcDeployOpts) Ask() error {
+func (o *deploySvcOpts) Ask() error {
 	if err := o.askSvcName(); err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (o *svcDeployOpts) Ask() error {
 }
 
 // Execute builds and pushes the container image for the service,
-func (o *svcDeployOpts) Execute() error {
+func (o *deploySvcOpts) Execute() error {
 	env, err := o.targetEnv()
 	if err != nil {
 		return err
@@ -166,11 +166,11 @@ func (o *svcDeployOpts) Execute() error {
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *svcDeployOpts) RecommendedActions() []string {
+func (o *deploySvcOpts) RecommendedActions() []string {
 	return nil
 }
 
-func (o *svcDeployOpts) validateSvcName() error {
+func (o *deploySvcOpts) validateSvcName() error {
 	names, err := o.ws.ServiceNames()
 	if err != nil {
 		return fmt.Errorf("list services in the workspace: %w", err)
@@ -183,14 +183,14 @@ func (o *svcDeployOpts) validateSvcName() error {
 	return fmt.Errorf("service %s not found in the workspace", color.HighlightUserInput(o.Name))
 }
 
-func (o *svcDeployOpts) validateEnvName() error {
+func (o *deploySvcOpts) validateEnvName() error {
 	if _, err := o.targetEnv(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (o *svcDeployOpts) targetEnv() (*config.Environment, error) {
+func (o *deploySvcOpts) targetEnv() (*config.Environment, error) {
 	env, err := o.store.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s configuration: %w", o.EnvName, err)
@@ -198,7 +198,7 @@ func (o *svcDeployOpts) targetEnv() (*config.Environment, error) {
 	return env, nil
 }
 
-func (o *svcDeployOpts) askSvcName() error {
+func (o *deploySvcOpts) askSvcName() error {
 	if o.Name != "" {
 		return nil
 	}
@@ -211,7 +211,7 @@ func (o *svcDeployOpts) askSvcName() error {
 	return nil
 }
 
-func (o *svcDeployOpts) askEnvName() error {
+func (o *deploySvcOpts) askEnvName() error {
 	if o.EnvName != "" {
 		return nil
 	}
@@ -224,7 +224,7 @@ func (o *svcDeployOpts) askEnvName() error {
 	return nil
 }
 
-func (o *svcDeployOpts) askImageTag() error {
+func (o *deploySvcOpts) askImageTag() error {
 	if o.ImageTag != "" {
 		return nil
 	}
@@ -247,7 +247,7 @@ func (o *svcDeployOpts) askImageTag() error {
 	return nil
 }
 
-func (o *svcDeployOpts) configureClients() error {
+func (o *deploySvcOpts) configureClients() error {
 	defaultSessEnvRegion, err := o.sessProvider.DefaultWithRegion(o.targetEnvironment.Region)
 	if err != nil {
 		return fmt.Errorf("create ECR session with region %s: %w", o.targetEnvironment.Region, err)
@@ -281,7 +281,7 @@ func (o *svcDeployOpts) configureClients() error {
 	return nil
 }
 
-func (o *svcDeployOpts) pushToECRRepo() error {
+func (o *deploySvcOpts) pushToECRRepo() error {
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
 
 	uri, err := o.ecr.GetRepository(repoName)
@@ -309,7 +309,7 @@ func (o *svcDeployOpts) pushToECRRepo() error {
 	return o.docker.Push(uri, o.ImageTag)
 }
 
-func (o *svcDeployOpts) getDockerfilePath() (string, error) {
+func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 	type dfPath interface {
 		DockerfilePath() string
 	}
@@ -334,7 +334,7 @@ func (o *svcDeployOpts) getDockerfilePath() (string, error) {
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
 // If the service doesn't have any addons, it returns the empty string and no errors.
 // If the service has addons, it returns the URL of the S3 object storing the addons template.
-func (o *svcDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
+func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
 		var notExistErr *addons.ErrDirNotExist
@@ -357,7 +357,7 @@ func (o *svcDeployOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	return url, nil
 }
 
-func (o *svcDeployOpts) manifest() (interface{}, error) {
+func (o *deploySvcOpts) manifest() (interface{}, error) {
 	raw, err := o.ws.ReadServiceManifest(o.Name)
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
@@ -369,7 +369,7 @@ func (o *svcDeployOpts) manifest() (interface{}, error) {
 	return mft, nil
 }
 
-func (o *svcDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
+func (o *deploySvcOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, error) {
 	resources, err := o.appCFN.GetAppResourcesByRegion(o.targetApp, o.targetEnvironment.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", o.targetApp.Name, o.targetEnvironment.Region, err)
@@ -377,9 +377,9 @@ func (o *svcDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	repoURL, ok := resources.RepositoryURLs[o.Name]
 	if !ok {
 		return nil, &errRepoNotFound{
-			svcName:       o.Name,
-			envRegion:     o.targetEnvironment.Region,
-			projAccountID: o.targetApp.AccountID,
+			svcName:      o.Name,
+			envRegion:    o.targetEnvironment.Region,
+			appAccountID: o.targetApp.AccountID,
 		}
 	}
 	return &stack.RuntimeConfig{
@@ -390,7 +390,7 @@ func (o *svcDeployOpts) runtimeConfig(addonsURL string) (*stack.RuntimeConfig, e
 	}, nil
 }
 
-func (o *svcDeployOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
+func (o *deploySvcOpts) stackConfiguration(addonsURL string) (cloudformation.StackConfiguration, error) {
 	mft, err := o.manifest()
 	if err != nil {
 		return nil, err
@@ -418,7 +418,7 @@ func (o *svcDeployOpts) stackConfiguration(addonsURL string) (cloudformation.Sta
 	return conf, nil
 }
 
-func (o *svcDeployOpts) deploySvc(addonsURL string) error {
+func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 	conf, err := o.stackConfiguration(addonsURL)
 	if err != nil {
 		return err
@@ -436,7 +436,7 @@ func (o *svcDeployOpts) deploySvc(addonsURL string) error {
 	return nil
 }
 
-func (o *svcDeployOpts) showAppURI() error {
+func (o *deploySvcOpts) showAppURI() error {
 	type identifier interface {
 		URI(string) (string, error)
 	}
@@ -470,7 +470,7 @@ func (o *svcDeployOpts) showAppURI() error {
 
 // BuildSvcDeployCmd builds the `svc deploy` subcommand.
 func BuildSvcDeployCmd() *cobra.Command {
-	vars := svcDeployVars{
+	vars := deploySvcVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
