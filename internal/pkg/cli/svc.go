@@ -29,7 +29,7 @@ A service represents an Amazon ECS service.`,
 	cmd.AddCommand(BuildSvcDeleteCmd())
 	cmd.AddCommand(BuildSvcShowCmd())
 	cmd.AddCommand(BuildAppStatusCmd())
-	cmd.AddCommand(BuildAppLogsCmd())
+	cmd.AddCommand(BuildSvcLogsCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

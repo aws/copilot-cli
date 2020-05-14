@@ -91,7 +91,7 @@ func TestAppStatus_Validate(t *testing.T) {
 
 			appStatus := &appStatusOpts{
 				appStatusVars: appStatusVars{
-					appName: tc.inputApplication,
+					svcName: tc.inputApplication,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inputProject,
@@ -246,7 +246,7 @@ func TestAppStatus_Ask(t *testing.T) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
+				m.EXPECT().SelectOne(svcLogNamePrompt, svcLogNameHelpPrompt,
 					[]string{"mockSvc (mockEnv1)", "mockSvc (mockEnv2)"}).Return("", mockError)
 			},
 
@@ -275,7 +275,7 @@ func TestAppStatus_Ask(t *testing.T) {
 				m.EXPECT().GetServiceArn().Return(&mockServiceArn, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogAppNamePrompt, applicationLogAppNameHelpPrompt,
+				m.EXPECT().SelectOne(svcLogNamePrompt, svcLogNameHelpPrompt,
 					[]string{"mockSvc (mockEnv1)", "mockSvc (mockEnv2)"}).Return("mockSvc (mockEnv1)", nil)
 			},
 		},
@@ -295,7 +295,7 @@ func TestAppStatus_Ask(t *testing.T) {
 
 			appStatus := &appStatusOpts{
 				appStatusVars: appStatusVars{
-					appName: tc.inputApplication,
+					svcName: tc.inputApplication,
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inputProject,
@@ -359,7 +359,7 @@ func TestAppStatus_Execute(t *testing.T) {
 
 			appStatus := &appStatusOpts{
 				appStatusVars: appStatusVars{
-					appName:          "mockSvc",
+					svcName:          "mockSvc",
 					envName:          "mockEnv",
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{

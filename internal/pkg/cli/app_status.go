@@ -24,7 +24,7 @@ const (
 type appStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
-	appName          string
+	svcName          string
 	envName          string
 }
 
@@ -49,8 +49,8 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 		appStatusVars: vars,
 		store:         ssmStore,
 		w:             log.OutputWriter,
-		initAppDescriber: func(o *appStatusOpts, envName, appName string) error {
-			d, err := describe.NewServiceDescriber(o.AppName(), envName, appName)
+		initAppDescriber: func(o *appStatusOpts, envName, svcName string) error {
+			d, err := describe.NewServiceDescriber(o.AppName(), envName, svcName)
 			if err != nil {
 				return fmt.Errorf("creating stack describer for project %s: %w", o.AppName(), err)
 			}
@@ -58,9 +58,9 @@ func newAppStatusOpts(vars appStatusVars) (*appStatusOpts, error) {
 			return nil
 		},
 		initStatusDescriber: func(o *appStatusOpts) error {
-			d, err := describe.NewAppStatus(o.AppName(), o.envName, o.appName)
+			d, err := describe.NewAppStatus(o.AppName(), o.envName, o.svcName)
 			if err != nil {
-				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.appName, o.AppName(), err)
+				return fmt.Errorf("creating status describer for application %s in project %s: %w", o.svcName, o.AppName(), err)
 			}
 			o.statusDescriber = d
 			return nil
@@ -75,8 +75,8 @@ func (o *appStatusOpts) Validate() error {
 			return err
 		}
 	}
-	if o.appName != "" {
-		if _, err := o.store.GetService(o.AppName(), o.appName); err != nil {
+	if o.svcName != "" {
+		if _, err := o.store.GetService(o.AppName(), o.svcName); err != nil {
 			return err
 		}
 	}
@@ -104,7 +104,7 @@ func (o *appStatusOpts) Execute() error {
 	}
 	appStatus, err := o.statusDescriber.Describe()
 	if err != nil {
-		return fmt.Errorf("describe status of application %s: %w", o.appName, err)
+		return fmt.Errorf("describe status of application %s: %w", o.svcName, err)
 	}
 	if o.shouldOutputJSON {
 		data, err := appStatus.JSONString()
@@ -157,8 +157,8 @@ func (o *appStatusOpts) retrieveProjects() ([]string, error) {
 
 func (o *appStatusOpts) askAppEnvName() error {
 	var err error
-	appNames := []string{o.appName}
-	if o.appName == "" {
+	appNames := []string{o.svcName}
+	if o.svcName == "" {
 		appNames, err = o.retrieveAllAppNames()
 		if err != nil {
 			return err
@@ -179,7 +179,7 @@ func (o *appStatusOpts) askAppEnvName() error {
 		}
 	}
 
-	appEnvs := make(map[string]appEnv)
+	appEnvs := make(map[string]svcEnv)
 	var appEnvNames []string
 	for _, appName := range appNames {
 		for _, envName := range envNames {
@@ -193,8 +193,8 @@ func (o *appStatusOpts) askAppEnvName() error {
 				}
 				return fmt.Errorf("check if app %s is deployed in env %s: %w", appName, envName, err)
 			}
-			appEnv := appEnv{
-				appName: appName,
+			appEnv := svcEnv{
+				svcName: appName,
 				envName: envName,
 			}
 			appEnvName := appEnv.String()
@@ -209,21 +209,21 @@ func (o *appStatusOpts) askAppEnvName() error {
 	// return if only one deployed app found
 	if len(appEnvNames) == 1 {
 		log.Infof("Only found one deployed app, defaulting to: %s\n", color.HighlightUserInput(appEnvNames[0]))
-		o.appName = appEnvs[appEnvNames[0]].appName
+		o.svcName = appEnvs[appEnvNames[0]].svcName
 		o.envName = appEnvs[appEnvNames[0]].envName
 
 		return nil
 	}
 
 	appEnvName, err := o.prompt.SelectOne(
-		applicationLogAppNamePrompt,
-		applicationLogAppNameHelpPrompt,
+		svcLogNamePrompt,
+		svcLogNameHelpPrompt,
 		appEnvNames,
 	)
 	if err != nil {
 		return fmt.Errorf("select deployed applications for project %s: %w", o.AppName(), err)
 	}
-	o.appName = appEnvs[appEnvName].appName
+	o.svcName = appEnvs[appEnvName].svcName
 	o.envName = appEnvs[appEnvName].envName
 
 	return nil

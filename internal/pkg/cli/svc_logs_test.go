@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppLogs_Validate(t *testing.T) {
+func TestSvcLogs_Validate(t *testing.T) {
 	const (
 		mockLimit        = 3
 		mockSince        = 1 * time.Minute
@@ -29,17 +29,16 @@ func TestAppLogs_Validate(t *testing.T) {
 		mockBadEndTime   = "badEndTime"
 	)
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
-		inputLimit       int
-		inputFollow      bool
-		inputEnvName     string
-		inputStartTime   string
-		inputEndTime     string
-		inputSince       time.Duration
+		inputApp       string
+		inputSvc       string
+		inputLimit     int
+		inputFollow    bool
+		inputEnvName   string
+		inputStartTime string
+		inputEndTime   string
+		inputSince     time.Duration
 
-		mockstore        func(m *mocks.Mockstore)
-		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
+		mockstore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
@@ -48,20 +47,14 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputLimit: 10,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: nil,
 		},
 		"invalid project name": {
-			inputProject: "my-project",
+			inputApp: "my-app",
 
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("my-project").Return(nil, errors.New("some error"))
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
+				m.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
@@ -71,9 +64,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputStartTime: mockStartTime,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("only one of --since or --start-time may be used"),
 		},
@@ -82,9 +72,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputEndTime: mockEndTime,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("only one of --follow or --end-time may be used"),
 		},
@@ -92,9 +79,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputStartTime: mockBadStartTime,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("invalid argument badStartTime for \"--start-time\" flag: reading time value badStartTime: parsing time \"badStartTime\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"badStartTime\" as \"2006\""),
 		},
@@ -102,9 +86,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputEndTime: mockBadEndTime,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("invalid argument badEndTime for \"--end-time\" flag: reading time value badEndTime: parsing time \"badEndTime\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"badEndTime\" as \"2006\""),
 		},
@@ -112,9 +93,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputSince: -mockSince,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("--since must be greater than 0"),
 		},
@@ -122,9 +100,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputLimit: -1,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("--limit -1 is out-of-bounds, value must be between 1 and 10000"),
 		},
@@ -132,9 +107,6 @@ func TestAppLogs_Validate(t *testing.T) {
 			inputLimit: 10001,
 
 			mockstore: func(m *mocks.Mockstore) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
 
 			wantedError: fmt.Errorf("--limit 10001 is out-of-bounds, value must be between 1 and 10000"),
 		},
@@ -148,26 +120,25 @@ func TestAppLogs_Validate(t *testing.T) {
 			mockstore := mocks.NewMockstore(ctrl)
 			tc.mockstore(mockstore)
 
-			appLogs := &appLogsOpts{
-				appLogsVars: appLogsVars{
+			svcLogs := &svcLogsOpts{
+				svcLogsVars: svcLogsVars{
 					follow:         tc.inputFollow,
 					limit:          tc.inputLimit,
 					envName:        tc.inputEnvName,
 					humanStartTime: tc.inputStartTime,
 					humanEndTime:   tc.inputEndTime,
 					since:          tc.inputSince,
-					svcName:        tc.inputApplication,
+					svcName:        tc.inputSvc,
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
 				store:         mockstore,
-				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },
-				cwlogsSvc:     tc.mockcwlogService(ctrl),
+				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
 			}
 
 			// WHEN
-			err := appLogs.Validate()
+			err := svcLogs.Validate()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -179,22 +150,23 @@ func TestAppLogs_Validate(t *testing.T) {
 	}
 }
 
-func TestAppLogs_Ask(t *testing.T) {
+func TestSvcLogs_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
-		inputEnvName     string
+		inputApp     string
+		inputSvc     string
+		inputEnvName string
 
 		mockstore        func(m *mocks.Mockstore)
 		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
+		mockSelector     func(m *mocks.MockconfigSelector)
 		mockPrompter     func(m *mocks.Mockprompter)
 
 		wantedError error
 	}{
 		"with all flag set": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
 
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
@@ -204,6 +176,7 @@ func TestAppLogs_Ask(t *testing.T) {
 					Name: "mockEnv",
 				}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
@@ -215,25 +188,26 @@ func TestAppLogs_Ask(t *testing.T) {
 
 			wantedError: nil,
 		},
-		"with all flag set and return error if fail to get application": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
+		"with all flag set and return error if fail to get service": {
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
 
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(nil, errors.New("some error"))
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("get application: some error"),
+			wantedError: fmt.Errorf("get service: some error"),
 		},
 		"with all flag set and return error if fail to get environment": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
 
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
@@ -241,6 +215,7 @@ func TestAppLogs_Ask(t *testing.T) {
 				}, nil)
 				m.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, errors.New("some error"))
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
@@ -248,26 +223,27 @@ func TestAppLogs_Ask(t *testing.T) {
 
 			wantedError: fmt.Errorf("get environment: some error"),
 		},
-		"with only app flag set and not deployed in one of envs": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
+		"with only service flag set and not deployed in one of envs": {
+			inputApp: "mockApp",
+			inputSvc: "mockSvc",
 
 			mockstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
 					Name: "mockSvc",
 				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockEnv",
 					},
-					&config.Environment{
+					{
 						Name: "mockTestEnv",
 					},
-					&config.Environment{
+					{
 						Name: "mockProdEnv",
 					},
 				}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
@@ -280,13 +256,13 @@ func TestAppLogs_Ask(t *testing.T) {
 				return cwlogServices
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationLogAppNamePrompt), applicationLogAppNameHelpPrompt, []string{"mockSvc (mockEnv)", "mockSvc (mockTestEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockEnv)", "mockSvc (mockTestEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
 			},
 
 			wantedError: nil,
 		},
 		"with only env flag set": {
-			inputProject: "mockApp",
+			inputApp:     "mockApp",
 			inputEnvName: "mockEnv",
 
 			mockstore: func(m *mocks.Mockstore) {
@@ -294,14 +270,15 @@ func TestAppLogs_Ask(t *testing.T) {
 					Name: "mockEnv",
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockFrontend",
 					},
-					&config.Service{
+					{
 						Name: "mockBackend",
 					},
 				}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
 				cwlogServices := make(map[string]cwlogService)
@@ -311,31 +288,29 @@ func TestAppLogs_Ask(t *testing.T) {
 				return cwlogServices
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationLogAppNamePrompt), applicationLogAppNameHelpPrompt, []string{"mockFrontend (mockEnv)", "mockBackend (mockEnv)"}).Return("mockFrontend (mockEnv)", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockFrontend (mockEnv)", "mockBackend (mockEnv)"}).Return("mockFrontend (mockEnv)", nil).Times(1)
 			},
 
 			wantedError: nil,
 		},
-		"retrieve app name from ssm store": {
+		"retrieve service name from ssm store": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockTestEnv",
 					},
-					&config.Environment{
+					{
 						Name: "mockProdEnv",
 					},
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
+			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -347,32 +322,29 @@ func TestAppLogs_Ask(t *testing.T) {
 				return cwlogServices
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationLogAppNamePrompt), applicationLogAppNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
 			},
 
 			wantedError: nil,
 		},
-		"skip selecting if only one deployed app found": {
+		"skip selecting if only one deployed service found": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockTestEnv",
 					},
-					&config.Environment{
+					{
 						Name: "mockProdEnv",
 					},
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
+			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -383,149 +355,103 @@ func TestAppLogs_Ask(t *testing.T) {
 				cwlogServices["mockProdEnv"] = m
 				return cwlogServices
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
 			wantedError: nil,
 		},
-		"returns error if fail to list projects": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return(nil, errors.New("some error"))
+		"returns error if fail to select applications": {
+			mockstore: func(m *mocks.Mockstore) {},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("list projects: some error"),
+			wantedError: fmt.Errorf("select applications: some error"),
 		},
-		"returns error if no project found": {
+		"returns error if fail to retrieve services": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{}, nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("no project found: run %s please", color.HighlightCode("project init")),
-		},
-		"returns error if fail to select project": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("", errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf("select projects: some error"),
-		},
-		"returns error if fail to retrieve application": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListServices("mockApp").Return(nil, errors.New("some error"))
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
+			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("list applications for project mockApp: some error"),
+			wantedError: fmt.Errorf("list services for application mockApp: some error"),
 		},
-		"returns error if no applications found": {
+		"returns error if no services found": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
+			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no applications found in project %s", color.HighlightUserInput("mockApp")),
+			wantedError: fmt.Errorf("no services found in application %s", color.HighlightUserInput("mockApp")),
 		},
 		"returns error if fail to list environments": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return(nil, errors.New("some error"))
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
+			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
 			wantedError: fmt.Errorf("list environments: some error"),
 		},
 		"returns error if no environment found": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
 			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
+			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				return nil
-			}, mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
 			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no environments found in project %s", color.HighlightUserInput("mockApp")),
+			wantedError: fmt.Errorf("no environments found in application %s", color.HighlightUserInput("mockApp")),
 		},
-		"returns error if fail to check application deployed or not": {
+		"returns error if fail to check service deployed or not": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockEnv",
 					},
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
+			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -534,29 +460,25 @@ func TestAppLogs_Ask(t *testing.T) {
 				cwlogServices["mockEnv"] = m
 				return cwlogServices
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("check if the log group exists: some error"),
+			wantedError: fmt.Errorf("check if the log group /copilot/mockApp-mockEnv-mockSvc exists: some error"),
 		},
-		"returns error if no deployed application found": {
+		"returns error if no deployed service found": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockEnv",
 					},
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
+			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -565,32 +487,28 @@ func TestAppLogs_Ask(t *testing.T) {
 				cwlogServices["mockEnv"] = m
 				return cwlogServices
 			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-			},
+			mockPrompter: func(m *mocks.Mockprompter) {},
 
-			wantedError: fmt.Errorf("no deployed applications found in project %s", color.HighlightUserInput("mockApp")),
+			wantedError: fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput("mockApp")),
 		},
-		"returns error if fail to select app env name": {
+		"returns error if fail to select service env name": {
 			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListApplications().Return([]*config.Application{
-					&config.Application{
-						Name: "mockApp",
-					},
-				}, nil)
 				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					&config.Environment{
+					{
 						Name: "mockTestEnv",
 					},
-					&config.Environment{
+					{
 						Name: "mockProdEnv",
 					},
 				}, nil)
 				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					&config.Service{
+					{
 						Name: "mockSvc",
 					},
 				}, nil)
+			},
+			mockSelector: func(m *mocks.MockconfigSelector) {
+				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
 			},
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -602,11 +520,10 @@ func TestAppLogs_Ask(t *testing.T) {
 				return cwlogServices
 			},
 			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationLogProjectNamePrompt, applicationLogProjectNameHelpPrompt, []string{"mockApp"}).Return("mockApp", nil)
-				m.EXPECT().SelectOne(fmt.Sprintf(applicationLogAppNamePrompt), applicationLogAppNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("", errors.New("some error")).Times(1)
+				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("", errors.New("some error")).Times(1)
 			},
 
-			wantedError: fmt.Errorf("select deployed applications for project mockApp: some error"),
+			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
 		},
 	}
 
@@ -617,25 +534,28 @@ func TestAppLogs_Ask(t *testing.T) {
 
 			mockstore := mocks.NewMockstore(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockSel := mocks.NewMockconfigSelector(ctrl)
 			tc.mockstore(mockstore)
 			tc.mockPrompter(mockPrompter)
+			tc.mockSelector(mockSel)
 
-			appLogs := &appLogsOpts{
-				appLogsVars: appLogsVars{
+			svcLogs := &svcLogsOpts{
+				svcLogsVars: svcLogsVars{
 					envName: tc.inputEnvName,
-					svcName: tc.inputApplication,
+					svcName: tc.inputSvc,
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 						prompt:  mockPrompter,
 					},
 				},
 				store:         mockstore,
-				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },
+				sel:           mockSel,
+				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),
 			}
 
 			// WHEN
-			err := appLogs.Ask()
+			err := svcLogs.Ask()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -647,26 +567,26 @@ func TestAppLogs_Ask(t *testing.T) {
 	}
 }
 
-func TestAppLogs_Execute(t *testing.T) {
+func TestSvcLogs_Execute(t *testing.T) {
 	mockLastEventTime := map[string]int64{
 		"mockLogStreamName": 123456,
 	}
 	logEvents := []*cloudwatchlogs.Event{
-		&cloudwatchlogs.Event{
+		{
 			TaskID:  "123456789",
 			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -`,
 		},
-		&cloudwatchlogs.Event{
+		{
 			TaskID:  "123456789",
 			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -`,
 		},
-		&cloudwatchlogs.Event{
+		{
 			TaskID:  "123456789",
 			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -`,
 		},
 	}
 	moreLogEvents := []*cloudwatchlogs.Event{
-		&cloudwatchlogs.Event{
+		{
 			TaskID:  "123456789",
 			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -`,
 		},
@@ -677,11 +597,11 @@ func TestAppLogs_Execute(t *testing.T) {
 `
 	logEventsJSONString := "{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"GET / HTTP/1.1\\\" 200 -\",\"timestamp\":0}\n{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"FATA some error\\\" - -\",\"timestamp\":0}\n{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"WARN some warning\\\" - -\",\"timestamp\":0}\n"
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
-		inputFollow      bool
-		inputEnvName     string
-		inputJSON        bool
+		inputApp     string
+		inputSvc     string
+		inputFollow  bool
+		inputEnvName string
+		inputJSON    bool
 
 		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
 
@@ -689,9 +609,9 @@ func TestAppLogs_Execute(t *testing.T) {
 		wantedContent string
 	}{
 		"with no optional flags set": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
 
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -709,10 +629,10 @@ func TestAppLogs_Execute(t *testing.T) {
 			wantedContent: logEventsHumanString,
 		},
 		"with json flag set": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
-			inputJSON:        true,
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
+			inputJSON:    true,
 
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -730,10 +650,10 @@ func TestAppLogs_Execute(t *testing.T) {
 			wantedContent: logEventsJSONString,
 		},
 		"with follow flag set": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
-			inputFollow:      true,
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
+			inputFollow:  true,
 
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -758,9 +678,9 @@ func TestAppLogs_Execute(t *testing.T) {
 `,
 		},
 		"returns error if fail to get event logs": {
-			inputProject:     "mockApp",
-			inputApplication: "mockSvc",
-			inputEnvName:     "mockEnv",
+			inputApp:     "mockApp",
+			inputSvc:     "mockSvc",
+			inputEnvName: "mockEnv",
 
 			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
 				m := mocks.NewMockcwlogService(ctrl)
@@ -780,23 +700,23 @@ func TestAppLogs_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			appLogs := &appLogsOpts{
-				appLogsVars: appLogsVars{
+			svcLogs := &svcLogsOpts{
+				svcLogsVars: svcLogsVars{
 					follow:           tc.inputFollow,
 					envName:          tc.inputEnvName,
-					svcName:          tc.inputApplication,
+					svcName:          tc.inputSvc,
 					shouldOutputJSON: tc.inputJSON,
 					GlobalOpts: &GlobalOpts{
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
-				initCwLogsSvc: func(*appLogsOpts, *config.Environment) error { return nil },
+				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),
 				w:             b,
 			}
 
 			// WHEN
-			err := appLogs.Execute()
+			err := svcLogs.Execute()
 
 			// THEN
 			if tc.wantedError != nil {
