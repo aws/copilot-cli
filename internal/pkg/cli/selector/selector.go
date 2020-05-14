@@ -50,13 +50,18 @@ type WorkspaceSelect struct {
 	svcLister wsSvcLister
 }
 
+// NewSelect returns a selector that chooses applications or environments.
+func NewSelect(prompt Prompter, store *config.Store) *Select {
+	return &Select{
+		prompt: prompt,
+		lister: store,
+	}
+}
+
 // NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
 func NewConfigSelect(prompt Prompter, store *config.Store) *ConfigSelect {
 	return &ConfigSelect{
-		Select: &Select{
-			prompt: prompt,
-			lister: store,
-		},
+		Select:    NewSelect(prompt, store),
 		svcLister: store,
 	}
 }
@@ -65,10 +70,7 @@ func NewConfigSelect(prompt Prompter, store *config.Store) *ConfigSelect {
 // services from the local workspace.
 func NewWorkspaceSelect(prompt Prompter, store *config.Store, ws *workspace.Workspace) *WorkspaceSelect {
 	return &WorkspaceSelect{
-		Select: &Select{
-			prompt: prompt,
-			lister: store,
-		},
+		Select:    NewSelect(prompt, store),
 		svcLister: ws,
 	}
 }
