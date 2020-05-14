@@ -64,7 +64,7 @@ func TestShowAppOpts_Validate(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			showProjects := &showAppOpts{
+			opts := &showAppOpts{
 				showAppVars: showAppVars{
 					GlobalOpts: &GlobalOpts{
 						prompt:  mockPrompter,
@@ -75,7 +75,7 @@ func TestShowAppOpts_Validate(t *testing.T) {
 			}
 
 			// WHEN
-			err := showProjects.Validate()
+			err := opts.Validate()
 
 			// THEN
 			if tc.wantedError != nil {
@@ -135,7 +135,7 @@ func TestShowAppOpts_Ask(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			showProjects := &showAppOpts{
+			opts := &showAppOpts{
 				showAppVars: showAppVars{
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inApp,
@@ -145,14 +145,14 @@ func TestShowAppOpts_Ask(t *testing.T) {
 			}
 
 			// WHEN
-			err := showProjects.Ask()
+			err := opts.Ask()
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedApp, showProjects.AppName(), "expected app names to match")
+				require.Equal(t, tc.wantedApp, opts.AppName(), "expected app names to match")
 
 			}
 		})
@@ -305,7 +305,7 @@ Services
 			}
 			tc.setupMocks(mocks)
 
-			showProjects := &showAppOpts{
+			opts := &showAppOpts{
 				showAppVars: showAppVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
@@ -317,7 +317,7 @@ Services
 			}
 
 			// WHEN
-			err := showProjects.Execute()
+			err := opts.Execute()
 
 			// THEN
 			if tc.wantedError != nil {
