@@ -6,9 +6,6 @@ package mocks
 
 import (
 	encoding "encoding"
-	io "io"
-	reflect "reflect"
-
 	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
@@ -21,6 +18,8 @@ import (
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
+	io "io"
+	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface
@@ -1746,18 +1745,18 @@ func (m *MocksvcManifestReader) EXPECT() *MocksvcManifestReaderMockRecorder {
 }
 
 // ReadServiceManifest mocks base method
-func (m *MocksvcManifestReader) ReadServiceManifest(appName string) ([]byte, error) {
+func (m *MocksvcManifestReader) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MocksvcManifestReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
+func (mr *MocksvcManifestReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadServiceManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MocksvcManifestReader)(nil).ReadServiceManifest), svcName)
 }
 
 // MocksvcManifestWriter is a mock of svcManifestWriter interface
@@ -1784,18 +1783,18 @@ func (m *MocksvcManifestWriter) EXPECT() *MocksvcManifestWriterMockRecorder {
 }
 
 // WriteServiceManifest mocks base method
-func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error) {
+func (m *MocksvcManifestWriter) WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, appName)
+	ret := m.ctrl.Call(m, "WriteServiceManifest", marshaler, svcName)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WriteServiceManifest indicates an expected call of WriteServiceManifest
-func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, appName interface{}) *gomock.Call {
+func (mr *MocksvcManifestWriterMockRecorder) WriteServiceManifest(marshaler, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteServiceManifest", reflect.TypeOf((*MocksvcManifestWriter)(nil).WriteServiceManifest), marshaler, svcName)
 }
 
 // MockwsPipelineManifestReader is a mock of wsPipelineManifestReader interface
@@ -2003,18 +2002,18 @@ func (mr *MockwsSvcReaderMockRecorder) ServiceNames() *gomock.Call {
 }
 
 // ReadServiceManifest mocks base method
-func (m *MockwsSvcReader) ReadServiceManifest(appName string) ([]byte, error) {
+func (m *MockwsSvcReader) ReadServiceManifest(svcName string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadServiceManifest", appName)
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReadServiceManifest indicates an expected call of ReadServiceManifest
-func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(appName interface{}) *gomock.Call {
+func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
 }
 
 // MockwsPipelineDeleter is a mock of wsPipelineDeleter interface
@@ -2302,32 +2301,32 @@ func (mr *MockenvironmentDeployerMockRecorder) StreamEnvironmentCreation(env int
 }
 
 // DeleteEnvironment mocks base method
-func (m *MockenvironmentDeployer) DeleteEnvironment(projName, envName string) error {
+func (m *MockenvironmentDeployer) DeleteEnvironment(appName, envName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEnvironment", projName, envName)
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteEnvironment indicates an expected call of DeleteEnvironment
-func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), projName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName)
 }
 
 // GetEnvironment mocks base method
-func (m *MockenvironmentDeployer) GetEnvironment(projectName, envName string) (*config.Environment, error) {
+func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret := m.ctrl.Call(m, "GetEnvironment", appName, envName)
 	ret0, _ := ret[0].(*config.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEnvironment indicates an expected call of GetEnvironment
-func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), projectName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
 }
 
 // MocksvcDeleter is a mock of svcDeleter interface
@@ -2391,17 +2390,17 @@ func (m *MocksvcRemoverFromApp) EXPECT() *MocksvcRemoverFromAppMockRecorder {
 }
 
 // RemoveServiceFromApp mocks base method
-func (m *MocksvcRemoverFromApp) RemoveServiceFromApp(project *config.Application, appName string) error {
+func (m *MocksvcRemoverFromApp) RemoveServiceFromApp(app *config.Application, svcName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveServiceFromApp", project, appName)
+	ret := m.ctrl.Call(m, "RemoveServiceFromApp", app, svcName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveServiceFromApp indicates an expected call of RemoveServiceFromApp
-func (mr *MocksvcRemoverFromAppMockRecorder) RemoveServiceFromApp(project, appName interface{}) *gomock.Call {
+func (mr *MocksvcRemoverFromAppMockRecorder) RemoveServiceFromApp(app, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MocksvcRemoverFromApp)(nil).RemoveServiceFromApp), project, appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveServiceFromApp", reflect.TypeOf((*MocksvcRemoverFromApp)(nil).RemoveServiceFromApp), app, svcName)
 }
 
 // MockimageRemover is a mock of imageRemover interface
@@ -2764,32 +2763,32 @@ func (mr *MockdeployerMockRecorder) StreamEnvironmentCreation(env interface{}) *
 }
 
 // DeleteEnvironment mocks base method
-func (m *Mockdeployer) DeleteEnvironment(projName, envName string) error {
+func (m *Mockdeployer) DeleteEnvironment(appName, envName string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteEnvironment", projName, envName)
+	ret := m.ctrl.Call(m, "DeleteEnvironment", appName, envName)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteEnvironment indicates an expected call of DeleteEnvironment
-func (mr *MockdeployerMockRecorder) DeleteEnvironment(projName, envName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) DeleteEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), projName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeleteEnvironment), appName, envName)
 }
 
 // GetEnvironment mocks base method
-func (m *Mockdeployer) GetEnvironment(projectName, envName string) (*config.Environment, error) {
+func (m *Mockdeployer) GetEnvironment(appName, envName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEnvironment", projectName, envName)
+	ret := m.ctrl.Call(m, "GetEnvironment", appName, envName)
 	ret0, _ := ret[0].(*config.Environment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEnvironment indicates an expected call of GetEnvironment
-func (mr *MockdeployerMockRecorder) GetEnvironment(projectName, envName interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*Mockdeployer)(nil).GetEnvironment), projectName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*Mockdeployer)(nil).GetEnvironment), appName, envName)
 }
 
 // DeployApp mocks base method
