@@ -20,8 +20,8 @@ phases:
     commands:
       - ls -l
       - export COLOR="false"
-      # Find all the local applications in the workspace.
-      - apps=$(./ecs-preview app ls --local --json | jq '.applications[].name' | sed 's/"//g')
+      # Find all the local services in the workspace.
+      - svcs=$(./ecs-preview svc ls --local --json | jq '.services[].name' | sed 's/"//g')
       # Find all the environments.
       - envs=$(./ecs-preview env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
@@ -29,20 +29,20 @@ phases:
       - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
       - >
         for env in $envs; do
-          for app in $apps; do
-          ./ecs-preview app package -n $app -e $env --output-dir './infrastructure' --tag $tag;
+          for svc in svcs; do
+          ./ecs-preview svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
           done;
         done;
       - ls -lah ./infrastructure
       # If addons exists, upload addons templates to each S3 bucket and write template URL to template config files.
       - |
-        for app in $apps; do
-          ADDONSFILE=./infrastructure/$app.addons.stack.yml
+        for svc in $svcs; do
+          ADDONSFILE=./infrastructure/$svc.addons.stack.yml
           if [ -f "$ADDONSFILE" ]; then
             tmp=$(mktemp)
             timestamp=$(date +%s){{range $bucket := .ArtifactBuckets}}
-            aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$app.addons.stack.yml";{{range $envName := $bucket.Environments}}
-            jq --arg a "https://{{$bucket.BucketName}}.s3-{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$app.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$app-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$app-{{$envName}}.params.json{{end}}{{end}}
+            aws s3 cp "$ADDONSFILE" "s3://{{$bucket.BucketName}}/manual/$timestamp/$svc.addons.stack.yml";{{range $envName := $bucket.Environments}}
+            jq --arg a "https://{{$bucket.BucketName}}.s3-{{$bucket.Region}}.amazonaws.com/manual/$timestamp/$svc.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$svc-{{$envName}}.params.json > "$tmp" && mv "$tmp" ./infrastructure/$svc-{{$envName}}.params.json{{end}}{{end}}
           fi
         done;
       # Build images
@@ -53,14 +53,14 @@ phases:
       #     - Retrieve the ECR repository.
       #     - Login and push the image.
       - >
-        for app in $apps; do
-          for df_rel_path in $(cat $CODEBUILD_SRC_DIR/ecs-project/$app/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
+        for svc in $svcs; do
+          for df_rel_path in $(cat $CODEBUILD_SRC_DIR/ecs-project/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
           df_path=$CODEBUILD_SRC_DIR/$df_rel_path
           df_dir_path=$(dirname "$df_path")
-          docker build -t $app:$tag -f $df_path $df_dir_path;
-          image_id=$(docker images -q $app:$tag);
+          docker build -t $svc:$tag -f $df_path $df_dir_path;
+          image_id=$(docker images -q $svc:$tag);
             for env in $envs; do
-            repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$app-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
+            repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$svc-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
             region=$(echo $repo | cut -d'.' -f4);
             $(aws ecr get-login --no-include-email --region $region);
             docker tag $image_id $repo;

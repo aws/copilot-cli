@@ -9,81 +9,44 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type showAppMocks struct {
-	storeSvc  *climocks.MockstoreReader
-	prompt    *climocks.Mockprompter
-	describer *climocks.Mockdescriber
-	ws        *climocks.MockwsAppReader
+	storeSvc *mocks.Mockstore
+	prompt   *mocks.Mockprompter
+	sel      *mocks.MockappSelector
 }
 
-type mockDescribeData struct {
-	data string
-	err  error
-}
-
-func (m *mockDescribeData) HumanString() string {
-	return m.data
-}
-
-func (m *mockDescribeData) JSONString() (string, error) {
-	return m.data, m.err
-}
-
-func TestAppShow_Validate(t *testing.T) {
+func TestShowAppOpts_Validate(t *testing.T) {
+	testError := errors.New("some error")
 	testCases := map[string]struct {
-		inputProject     string
-		inputApplication string
-		setupMocks       func(mocks showAppMocks)
+		inAppName  string
+		setupMocks func(mocks showAppMocks)
 
 		wantedError error
 	}{
-		"valid project name and application name": {
-			inputProject:     "my-project",
-			inputApplication: "my-app",
+		"valid app name": {
+			inAppName: "my-app",
 
 			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-						Name: "my-project",
-					}, nil),
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(&archer.Application{
-						Name: "my-app",
-					}, nil),
-				)
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name: "my-app",
+				}, nil)
 			},
-
 			wantedError: nil,
 		},
-		"invalid project name": {
-			inputProject:     "my-project",
-			inputApplication: "my-app",
+		"invalid app name": {
+			inAppName: "my-app",
 
 			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, testError)
 			},
 
-			wantedError: fmt.Errorf("some error"),
-		},
-		"invalid application name": {
-			inputProject:     "my-project",
-			inputApplication: "my-app",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-						Name: "my-project",
-					}, nil),
-					m.storeSvc.EXPECT().GetApplication("my-project", "my-app").Return(nil, errors.New("some error")),
-				)
-			},
-
-			wantedError: fmt.Errorf("some error"),
+			wantedError: fmt.Errorf("get application %s: %w", "my-app", testError),
 		},
 	}
 
@@ -92,302 +55,114 @@ func TestAppShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-
-			mocks := showAppMocks{
-				storeSvc: mockStoreReader,
-			}
-
-			tc.setupMocks(mocks)
-
-			showApps := &showAppOpts{
-				showAppVars: showAppVars{
-					appName: tc.inputApplication,
-					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
-					},
-				},
-				storeSvc: mockStoreReader,
-			}
-
-			// WHEN
-			err := showApps.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-			}
-		})
-	}
-}
-
-func TestAppShow_Ask(t *testing.T) {
-	testCases := map[string]struct {
-		inputProject string
-		inputApp     string
-
-		setupMocks func(mocks showAppMocks)
-
-		wantedProject string
-		wantedApp     string
-		wantedError   error
-	}{
-		"with all flags": {
-			inputProject: "my-project",
-			inputApp:     "my-app",
-			setupMocks:   func(mocks showAppMocks) {},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"retrieve all app names if fail to retrieve app name from local": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askAppName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"retrieve all app names if no app found in local dir": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askAppName
-					m.ws.EXPECT().AppNames().Return([]string{}, nil),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"retrieve local app names": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askAppName
-					m.ws.EXPECT().AppNames().Return([]string{"my-app", "archer-app"}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("my-app", nil).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"skip selecting if only one application found": {
-			inputProject: "my-project",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						{
-							Name: "my-app",
-						},
-					}, nil),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   nil,
-		},
-		"returns error when fail to list project": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("list projects: some error"),
-		},
-		"returns error when no project found": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("no project found: run `project init` please"),
-		},
-		"returns error when fail to select project": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("select projects: some error"),
-		},
-		"returns error when fail to list applications": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askAskName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return(nil, fmt.Errorf("some error")),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("list applications for project my-project: some error"),
-		},
-		"returns error when fail to select application": {
-			inputProject: "",
-			inputApp:     "",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(applicationShowProjectNamePrompt, applicationShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askAppName
-					m.ws.EXPECT().AppNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListApplications("my-project").Return([]*archer.Application{
-						{Name: "my-app"},
-						{Name: "archer-app"},
-					}, nil),
-
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(applicationShowAppNamePrompt, "my-project"), applicationShowAppNameHelpPrompt, []string{"my-app", "archer-app"}).Return("", fmt.Errorf("some error")).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedApp:     "my-app",
-			wantedError:   fmt.Errorf("select applications for project my-project: some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockWorkspace := climocks.NewMockwsAppReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			mocks := showAppMocks{
 				storeSvc: mockStoreReader,
 				prompt:   mockPrompter,
-				ws:       mockWorkspace,
 			}
-
 			tc.setupMocks(mocks)
 
-			showApps := &showAppOpts{
+			opts := &showAppOpts{
 				showAppVars: showAppVars{
-					appName: tc.inputApp,
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						prompt:  mockPrompter,
+						appName: tc.inAppName,
 					},
 				},
-				storeSvc: mockStoreReader,
-				ws:       mockWorkspace,
+				store: mockStoreReader,
 			}
 
 			// WHEN
-			err := showApps.Ask()
+			err := opts.Validate()
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showApps.ProjectName(), "expected project name to match")
-				require.Equal(t, tc.wantedApp, showApps.appName, "expected application name to match")
 			}
 		})
 	}
 }
 
-func TestAppShow_Execute(t *testing.T) {
-	projectName := "my-project"
-	webApp := mockDescribeData{
-		data: "mockData",
-		err:  errors.New("some error"),
-	}
+func TestShowAppOpts_Ask(t *testing.T) {
+	testError := errors.New("some error")
 	testCases := map[string]struct {
-		inputApp         string
+		inApp string
+
+		setupMocks func(mocks showAppMocks)
+
+		wantedApp   string
+		wantedError error
+	}{
+		"with all flags": {
+			inApp: "my-app",
+
+			setupMocks: func(m showAppMocks) {},
+
+			wantedApp:   "my-app",
+			wantedError: nil,
+		},
+		"prompt for all input": {
+			inApp: "",
+
+			setupMocks: func(m showAppMocks) {
+				m.sel.EXPECT().Application(appShowNamePrompt, appShowNameHelpPrompt).Return("my-app", nil)
+			},
+			wantedApp:   "my-app",
+			wantedError: nil,
+		},
+		"returns error if failed to select application": {
+			inApp: "",
+
+			setupMocks: func(m showAppMocks) {
+				m.sel.EXPECT().Application(gomock.Any(), gomock.Any()).Return("", testError)
+			},
+
+			wantedError: fmt.Errorf("select application: %w", testError),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mocks := showAppMocks{
+				sel: mocks.NewMockappSelector(ctrl),
+			}
+			tc.setupMocks(mocks)
+
+			opts := &showAppOpts{
+				showAppVars: showAppVars{
+					GlobalOpts: &GlobalOpts{
+						appName: tc.inApp,
+					},
+				},
+				sel: mocks.sel,
+			}
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedApp, opts.AppName(), "expected app names to match")
+
+			}
+		})
+	}
+}
+
+func TestShowAppOpts_Execute(t *testing.T) {
+	testAppName := "my-app"
+	testError := errors.New("some error")
+	testCases := map[string]struct {
 		shouldOutputJSON bool
 
 		setupMocks func(mocks showAppMocks)
@@ -395,44 +170,125 @@ func TestAppShow_Execute(t *testing.T) {
 		wantedContent string
 		wantedError   error
 	}{
-		"noop if app name is empty": {
-			setupMocks: func(m showAppMocks) {
-				m.describer.EXPECT().Describe().Times(0)
-			},
-		},
-		"success": {
-			inputApp: "my-app",
-
-			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(&webApp, nil),
-				)
-			},
-
-			wantedContent: "mockData",
-		},
-		"return error if fail to generate JSON output": {
-			inputApp:         "my-app",
+		"correctly shows json output": {
 			shouldOutputJSON: true,
 
 			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(&webApp, nil),
-				)
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+						Prod:      false,
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+						Prod:      true,
+					},
+				}, nil)
 			},
 
-			wantedError: fmt.Errorf("some error"),
+			wantedContent: "{\"name\":\"my-app\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"prod\":true,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}]}\n",
 		},
-		"return error if fail to describe application": {
-			inputApp: "my-app",
+		"correctly shows human output": {
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
+					{
+						Name: "my-svc",
+						Type: "lb-web-svc",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+			},
+
+			wantedContent: `About
+
+  Name              my-app
+  URI               example.com
+
+Environments
+
+  Name              AccountID           Region
+  test              123456789           us-west-2
+  prod              123456789           us-west-1
+
+Services
+
+  Name              Type
+  my-svc            lb-web-svc
+`,
+		},
+		"returns error if fail to get application": {
+			shouldOutputJSON: false,
 
 			setupMocks: func(m showAppMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(nil, errors.New("some error")),
-				)
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, testError)
 			},
 
-			wantedError: fmt.Errorf("describe application my-app: some error"),
+			wantedError: fmt.Errorf("get application %s: %w", "my-app", testError),
+		},
+		"returns error if fail to list environment": {
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return(nil, testError)
+			},
+
+			wantedError: fmt.Errorf("list environments in application %s: %w", "my-app", testError),
+		},
+		"returns error if fail to list services": {
+			shouldOutputJSON: false,
+
+			setupMocks: func(m showAppMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+					Name:   "my-app",
+					Domain: "example.com",
+				}, nil)
+				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789",
+					},
+					{
+						Name:      "prod",
+						AccountID: "123456789",
+						Region:    "us-west-1",
+					},
+				}, nil)
+				m.storeSvc.EXPECT().ListServices("my-app").Return(nil, testError)
+			},
+
+			wantedError: fmt.Errorf("list services in application %s: %w", "my-app", testError),
 		},
 	}
 
@@ -442,29 +298,26 @@ func TestAppShow_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockAppDescriber := climocks.NewMockdescriber(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showAppMocks{
-				describer: mockAppDescriber,
+				storeSvc: mockStoreReader,
 			}
-
 			tc.setupMocks(mocks)
 
-			showApps := &showAppOpts{
+			opts := &showAppOpts{
 				showAppVars: showAppVars{
-					appName:          tc.inputApp,
 					shouldOutputJSON: tc.shouldOutputJSON,
 					GlobalOpts: &GlobalOpts{
-						projectName: projectName,
+						appName: testAppName,
 					},
 				},
-				describer:     mockAppDescriber,
-				initDescriber: func(bool) error { return nil },
-				w:             b,
+				store: mockStoreReader,
+				w:     b,
 			}
 
 			// WHEN
-			err := showApps.Execute()
+			err := opts.Execute()
 
 			// THEN
 			if tc.wantedError != nil {

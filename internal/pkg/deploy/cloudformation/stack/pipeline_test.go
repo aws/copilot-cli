@@ -42,7 +42,7 @@ func TestPipelineTags(t *testing.T) {
 
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String(projectName),
 		},
 		{
@@ -122,8 +122,8 @@ func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEn
 
 func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
-		ProjectName: projectName,
-		Name:        pipelineName,
+		AppName: projectName,
+		Name:    pipelineName,
 		Source: &deploy.Source{
 			ProviderName: "GitHub",
 			Properties: map[string]interface{}{
@@ -135,11 +135,11 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		Stages: []deploy.PipelineStage{
 			{
 				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
-				LocalApplications:     []string{"frontend", "backend"},
+				LocalServices:         []string{"frontend", "backend"},
 			},
 			{
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
-				LocalApplications:     []string{"frontend", "backend"},
+				LocalServices:         []string{"frontend", "backend"},
 			},
 		},
 		ArtifactBuckets: []deploy.ArtifactBucket{
@@ -151,7 +151,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 				BucketName: "chicken-us-west-2",
 				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-2:%s:key/80de5f7f-422d-4dff-8f4d-01f6ec5715bc", toolsAccountID),
 			},
-			// assume the pipeline is hosted in a region that does not contain any archer environment
+			// assume the pipeline is hosted in a region that does not contain any copilot environment
 			{
 				BucketName: "chicken-us-west-1",
 				KeyArn:     fmt.Sprintf("arn:aws:kms:us-west-1:%s:key/75668c57-ec4b-4d0c-b880-8dc3fa78f6d1", toolsAccountID),

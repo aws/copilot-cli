@@ -120,18 +120,14 @@ tools:
 gen-mocks: tools
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
-	${GOBIN}/mockgen -source=./internal/pkg/archer/app.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_app.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/env.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_env.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/project.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_project.go
-	${GOBIN}/mockgen -source=./internal/pkg/archer/secret.go -package=mocks -destination=./internal/pkg/archer/mocks/mock_secret.go
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_lb_web_app.go -source=./internal/pkg/describe/lb_web_app.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_app.go -source=./internal/pkg/describe/app.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_lb_web_service.go -source=./internal/pkg/describe/lb_web_service.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_service.go -source=./internal/pkg/describe/service.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_env.go -source=./internal/pkg/describe/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_stack.go -source=./internal/pkg/describe/stack.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_status.go -source=./internal/pkg/describe/status.go
@@ -150,7 +146,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addons/mocks/mock_addons.go -source=./internal/pkg/addons/addons.go
 	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/docker/docker.go -destination=./internal/pkg/docker/mocks/mock_docker.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_lb_web_app.go -source=./internal/pkg/deploy/cloudformation/stack/lb_web_app.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_backend_app.go -source=./internal/pkg/deploy/cloudformation/stack/backend_app.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_lb_web_svc.go -source=./internal/pkg/deploy/cloudformation/stack/lb_web_svc.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_backend_svc.go -source=./internal/pkg/deploy/cloudformation/stack/backend_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/store/mocks/mock_store.go -source=./internal/pkg/store/store.go

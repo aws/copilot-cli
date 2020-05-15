@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
@@ -20,14 +19,14 @@ import (
 )
 
 const (
-	pipelineDeleteConfirmPrompt       = "Are you sure you want to delete pipeline %s from project %s?"
-	pipelineDeleteConfirmHelp         = "This will delete the deployment pipeline for the app(s) in the current project workspace."
+	pipelineDeleteConfirmPrompt       = "Are you sure you want to delete pipeline %s from application %s?"
+	pipelineDeleteConfirmHelp         = "This will delete the deployment pipeline for the services in the workspace."
 	pipelineSecretDeleteConfirmPrompt = "Are you sure you want to delete the source secret %s associated with pipeline %s?"
-	pipelineDeleteSecretConfirmHelp   = "This will delete the secret that stores the token associated with the source of your pipeline in the current project workspace."
+	pipelineDeleteSecretConfirmHelp   = "This will delete the token associated with the source of your pipeline."
 
-	fmtDeletePipelineStart    = "Deleting pipeline %s from project %s."
-	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from project %s: %v."
-	fmtDeletePipelineComplete = "Deleted pipeline %s from project %s."
+	fmtDeletePipelineStart    = "Deleting pipeline %s from application %s."
+	fmtDeletePipelineFailed   = "Failed to delete pipeline %s from application %s: %v."
+	fmtDeletePipelineComplete = "Deleted pipeline %s from application %s."
 )
 
 var (
@@ -49,36 +48,48 @@ type deletePipelineOpts struct {
 	// Interfaces to dependencies
 	pipelineDeployer pipelineDeployer
 	prog             progress
-	secretsmanager   archer.SecretsManager
+	secretsmanager   secretsManager
 	ws               wsPipelineDeleter
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
 	ws, err := workspace.New()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
 	secretsmanager, err := secretsmanager.New()
 	if err != nil {
-		return nil, fmt.Errorf("couldn't create secrets manager: %w", err)
+		return nil, fmt.Errorf("new secrets manager client: %w", err)
 	}
 
-	p := session.NewProvider()
-	defaultSession, err := p.Default()
+	defaultSess, err := session.NewProvider().Default()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("default session: %w", err)
 	}
 
 	opts := &deletePipelineOpts{
 		deletePipelineVars: vars,
 		prog:               termprogress.NewSpinner(),
 		secretsmanager:     secretsmanager,
-		pipelineDeployer:   cloudformation.New(defaultSession),
+		pipelineDeployer:   cloudformation.New(defaultSess),
 		ws:                 ws,
 	}
 
 	return opts, nil
+}
+
+// Validate returns an error if the flag values passed by the user are invalid.
+func (o *deletePipelineOpts) Validate() error {
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
+	}
+
+	if err := o.readPipelineManifest(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Ask prompts for fields that are required but not passed in.
@@ -88,7 +99,7 @@ func (o *deletePipelineOpts) Ask() error {
 	}
 
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.ProjectName()),
+		fmt.Sprintf(pipelineDeleteConfirmPrompt, o.PipelineName, o.AppName()),
 		pipelineDeleteConfirmHelp)
 
 	if err != nil {
@@ -102,13 +113,17 @@ func (o *deletePipelineOpts) Ask() error {
 	return nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
-func (o *deletePipelineOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
+// Execute deletes the secret and pipeline stack.
+func (o *deletePipelineOpts) Execute() error {
+	if err := o.deleteSecret(); err != nil {
+		return err
 	}
 
-	if err := o.readPipelineManifest(); err != nil {
+	if err := o.deleteStack(); err != nil {
+		return err
+	}
+
+	if err := o.deletePipelineFile(); err != nil {
 		return err
 	}
 
@@ -133,23 +148,6 @@ func (o *deletePipelineOpts) readPipelineManifest() error {
 
 	if secret, ok := (pipeline.Source.Properties["access_token_secret"]).(string); ok {
 		o.PipelineSecret = secret
-	}
-
-	return nil
-}
-
-// Execute deletes the secret and pipeline stack
-func (o *deletePipelineOpts) Execute() error {
-	if err := o.deleteSecret(); err != nil {
-		return err
-	}
-
-	if err := o.deleteStack(); err != nil {
-		return err
-	}
-
-	if err := o.deletePipelineFile(); err != nil {
-		return err
 	}
 
 	return nil
@@ -181,15 +179,12 @@ func (o *deletePipelineOpts) deleteSecret() error {
 }
 
 func (o *deletePipelineOpts) deleteStack() error {
-	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.ProjectName()))
-
+	o.prog.Start(fmt.Sprintf(fmtDeletePipelineStart, o.PipelineName, o.AppName()))
 	if err := o.pipelineDeployer.DeletePipeline(o.PipelineName); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.ProjectName(), err))
+		o.prog.Stop(log.Serrorf(fmtDeletePipelineFailed, o.PipelineName, o.AppName(), err))
 		return err
 	}
-
-	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.ProjectName()))
-
+	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.AppName()))
 	return nil
 }
 
@@ -198,7 +193,6 @@ func (o *deletePipelineOpts) deletePipelineFile() error {
 	if err == nil {
 		log.Successln("Deleted pipeline manifest from workspace.")
 	}
-
 	return err
 }
 
@@ -207,6 +201,7 @@ func (o *deletePipelineOpts) RecommendedActions() []string {
 	return nil
 }
 
+// Run validates user input, asks for any missing flags, and then executes the command.
 func (o *deletePipelineOpts) Run() error {
 	if err := o.Validate(); err != nil {
 		return err
@@ -229,8 +224,8 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes the pipeline associated with your workspace.",
 		Example: `
-			Delete the pipeline associated with your workspace:
-			/code $ ecs-preview pipeline delete`,
+  Delete the pipeline associated with your workspace.
+  /code $ copilot pipeline delete`,
 
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeletePipelineOpts(vars)
@@ -242,6 +237,5 @@ func BuildPipelineDeleteCmd() *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
 	cmd.Flags().BoolVar(&vars.DeleteSecret, deleteSecretFlag, false, deleteSecretFlagDescription)
-
 	return cmd
 }

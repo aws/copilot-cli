@@ -19,38 +19,39 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
 
 func TestPipelineCreation(t *testing.T) {
-	projectSess, err := testSession(nil)
+	appSess, err := testSession(nil)
 	require.NoError(t, err)
-	projectId := identity.New(projectSess)
-	projectCallerInfo, err := projectId.Get()
+	appId := identity.New(appSess)
+	appCallerInfo, err := appId.Get()
 	require.NoError(t, err)
-	projectDeployer := cloudformation.New(projectSess)
-	sm := secretsmanager.New(projectSess)
+	appDeployer := cloudformation.New(appSess)
+	sm := secretsmanager.New(appSess)
 	secretId := "testGitHubSecret" + randStringBytes(10)
 
 	t.Run("creates a cross-region pipeline in a region with no environment", func(t *testing.T) {
 		createMockSecret(t, sm, secretId)
-		projCfClient := awsCF.New(projectSess)
+		appCfClient := awsCF.New(appSess)
 
-		project := archer.Project{
+		app := config.Application{
 			Name:      randStringBytes(10),
-			AccountID: projectCallerInfo.Account,
+			AccountID: appCallerInfo.Account,
 		}
-		pipelineStackName := project.Name + "-pipepiper"
-		projectRoleStackName := fmt.Sprintf("%s-infrastructure-roles", project.Name)
-		projectStackSetName := fmt.Sprintf("%s-infrastructure", project.Name)
+		pipelineStackName := app.Name + "-pipepiper"
+		appRoleStackName := fmt.Sprintf("%s-infrastructure-roles", app.Name)
+		appStackSetName := fmt.Sprintf("%s-infrastructure", app.Name)
 
-		// find another region (different from the project region,
+		// find another region (different from the application region,
 		// i.e. *sess.Config.Region) for us to deploy an environment in.
-		envRegion, err := findUnusedRegion("us-west", *projectSess.Config.Region)
+		envRegion, err := findUnusedRegion("us-west", *appSess.Config.Region)
 		require.NoError(t, err)
 		envSess, err := testSession(aws.String(envRegion.ID()))
 		require.NoError(t, err)
@@ -62,56 +63,56 @@ func TestPipelineCreation(t *testing.T) {
 
 		environmentToDeploy := deploy.CreateEnvironmentInput{
 			Name:                     randStringBytes(10),
-			Project:                  project.Name,
+			AppName:                  app.Name,
 			PublicLoadBalancer:       true,
 			ToolsAccountPrincipalARN: envCallerInfo.RootUserARN,
 		}
 		envStackName := fmt.Sprintf("%s-%s",
-			environmentToDeploy.Project,
+			environmentToDeploy.AppName,
 			environmentToDeploy.Name)
 
 		// Make sure we delete the stacks after the test is done
 		defer func() {
 			// delete the pipeline first because it relies on stackset
-			_, err := projCfClient.DeleteStack(&awsCF.DeleteStackInput{
+			_, err := appCfClient.DeleteStack(&awsCF.DeleteStackInput{
 				StackName: aws.String(pipelineStackName),
 			})
 			require.NoError(t, err)
-			err = projCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
+			err = appCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
 				StackName: aws.String(pipelineStackName),
 			})
 			require.NoError(t, err)
 
 			// Clean up any StackInstances we may have created.
-			if stackInstances, err := projCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-				StackSetName: aws.String(projectStackSetName),
+			if stackInstances, err := appCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+				StackSetName: aws.String(appStackSetName),
 			}); err == nil && stackInstances.Summaries != nil && stackInstances.Summaries[0] != nil {
-				projectStackInstance := stackInstances.Summaries[0]
-				_, err := projCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
-					Accounts:     []*string{projectStackInstance.Account},
-					Regions:      []*string{projectStackInstance.Region},
+				appStackInstance := stackInstances.Summaries[0]
+				_, err := appCfClient.DeleteStackInstances(&awsCF.DeleteStackInstancesInput{
+					Accounts:     []*string{appStackInstance.Account},
+					Regions:      []*string{appStackInstance.Region},
 					RetainStacks: aws.Bool(false),
-					StackSetName: projectStackInstance.StackSetId,
+					StackSetName: appStackInstance.StackSetId,
 				})
 				require.NoError(t, err)
 
-				err = projCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-					StackName: projectStackInstance.StackId,
+				err = appCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
+					StackName: appStackInstance.StackId,
 				})
 				require.NoError(t, err)
 			}
 			// Delete the StackSet once all the StackInstances are cleaned up
-			_, err = projCfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
-				StackSetName: aws.String(projectStackSetName),
+			_, err = appCfClient.DeleteStackSet(&awsCF.DeleteStackSetInput{
+				StackSetName: aws.String(appStackSetName),
 			})
 			require.NoError(t, err)
 
-			_, err = projCfClient.DeleteStack(&awsCF.DeleteStackInput{
-				StackName: aws.String(projectRoleStackName),
+			_, err = appCfClient.DeleteStack(&awsCF.DeleteStackInput{
+				StackName: aws.String(appRoleStackName),
 			})
 			require.NoError(t, err)
-			err = projCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
-				StackName: aws.String(projectRoleStackName),
+			err = appCfClient.WaitUntilStackDeleteComplete(&awsCF.DescribeStacksInput{
+				StackName: aws.String(appRoleStackName),
 			})
 			require.NoError(t, err)
 
@@ -128,15 +129,15 @@ func TestPipelineCreation(t *testing.T) {
 			deleteMockSecretImmediately(t, sm, secretId)
 		}()
 
-		// Given both the project stack and env we are deploying to do not
+		// Given both the application stack and env we are deploying to do not
 		// exist
-		assertStackDoesNotExist(t, projCfClient, projectRoleStackName)
+		assertStackDoesNotExist(t, appCfClient, appRoleStackName)
 		assertStackDoesNotExist(t, envCfClient, envStackName)
 
 		// create a stackset
-		err = projectDeployer.DeployProject(&deploy.CreateProjectInput{
-			Project:   project.Name,
-			AccountID: project.AccountID,
+		err = appDeployer.DeployApp(&deploy.CreateAppInput{
+			Name:      app.Name,
+			AccountID: app.AccountID,
 		})
 		require.NoError(t, err)
 
@@ -152,26 +153,26 @@ func TestPipelineCreation(t *testing.T) {
 		assertStackExists(t, envCfClient, envStackName)
 
 		// Provision resources needed to support a pipeline in a region with
-		// no existing archer environment.
-		err = projectDeployer.AddPipelineResourcesToProject(
-			&project,
-			*projectSess.Config.Region)
+		// no existing copilot environment.
+		err = appDeployer.AddPipelineResourcesToApp(
+			&app,
+			*appSess.Config.Region)
 		require.NoError(t, err)
 
-		stackInstances, err := projCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
-			StackSetName: aws.String(projectStackSetName),
+		stackInstances, err := appCfClient.ListStackInstances(&awsCF.ListStackInstancesInput{
+			StackSetName: aws.String(appStackSetName),
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(stackInstances.Summaries),
-			"project stack instance should exist")
+			"application stack instance should exist")
 
-		resources, err := projectDeployer.GetRegionalProjectResources(&project)
+		resources, err := appDeployer.GetRegionalAppResources(&app)
 		require.NoError(t, err)
 		artifactBuckets := regionalResourcesToArtifactBuckets(t, resources)
 
 		pipelineInput := &deploy.CreatePipelineInput{
-			ProjectName: project.Name,
-			Name:        pipelineStackName,
+			AppName: app.Name,
+			Name:    pipelineStackName,
 			Source: &deploy.Source{
 				ProviderName: manifest.GithubProviderName,
 				Properties: map[string]interface{}{
@@ -184,19 +185,19 @@ func TestPipelineCreation(t *testing.T) {
 				{
 					AssociatedEnvironment: &deploy.AssociatedEnvironment{
 						Name:      environmentToDeploy.Name,
-						Region:    *projectSess.Config.Region,
-						AccountID: project.AccountID,
+						Region:    *appSess.Config.Region,
+						AccountID: app.AccountID,
 						Prod:      true,
 					},
-					LocalApplications: []string{"frontend", "backend"},
+					LocalServices: []string{"frontend", "backend"},
 				},
 			},
 			ArtifactBuckets: artifactBuckets,
 		}
-		require.NoError(t, projectDeployer.CreatePipeline(pipelineInput))
+		require.NoError(t, appDeployer.CreatePipeline(pipelineInput))
 
 		// Ensure that the new stack exists
-		assertStackExists(t, projCfClient, pipelineStackName)
+		assertStackExists(t, appCfClient, pipelineStackName)
 	})
 }
 
@@ -250,7 +251,7 @@ func assertStackExists(t *testing.T, cfClient *awsCF.CloudFormation, stackName s
 	return resp
 }
 
-func regionalResourcesToArtifactBuckets(t *testing.T, resources []*archer.ProjectRegionalResources) []deploy.ArtifactBucket {
+func regionalResourcesToArtifactBuckets(t *testing.T, resources []*stack.AppRegionalResources) []deploy.ArtifactBucket {
 	buckets := make([]deploy.ArtifactBucket, 0, len(resources))
 	for _, res := range resources {
 		require.True(t, res.S3Bucket != "", "S3 Bucket shouldn't be blank")

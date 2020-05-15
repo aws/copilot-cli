@@ -13,8 +13,9 @@ import (
 func BuildPipelineCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pipeline",
-		Short: "Pipeline commands.",
-		Long:  `Command for working with pipelines.`,
+		Short: "Manage your pipelines.",
+		Long: `Manage your pipelines.
+Continuous delivery pipelines to release the services in your applications.`,
 	}
 
 	cmd.AddCommand(BuildPipelineInitCmd())

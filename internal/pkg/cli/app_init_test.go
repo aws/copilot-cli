@@ -1,4 +1,5 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 package cli
 
@@ -7,656 +8,401 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppInitOpts_Validate(t *testing.T) {
+func TestInitAppOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
-		inAppType        string
-		inAppName        string
-		inDockerfilePath string
-		inProjectName    string
-		inAppPort        uint16
+		inAppName string
+		expect    func(opts *initAppOpts)
 
-		mockFileSystem func(mockFS afero.Fs)
-		wantedErr      error
+		wantedAppName string
+		wantedErr     string
 	}{
-		"invalid app type": {
-			inProjectName: "phonetool",
-			inAppType:     "TestAppType",
-			wantedErr:     errors.New(`invalid app type TestAppType: must be one of "Load Balanced Web App", "Backend App"`),
-		},
-		"invalid app name": {
-			inProjectName: "phonetool",
-			inAppName:     "1234",
-			wantedErr:     fmt.Errorf("application name 1234 is invalid: %s", errValueBadFormat),
-		},
-		"invalid dockerfile directory path": {
-			inProjectName:    "phonetool",
-			inDockerfilePath: "./hello/Dockerfile",
-			wantedErr:        errors.New("open hello/Dockerfile: file does not exist"),
-		},
-		"invalid project name": {
-			inProjectName: "",
-			wantedErr:     errNoProjectInWorkspace,
-		},
-		"valid flags": {
-			inAppName:        "frontend",
-			inAppType:        "Load Balanced Web App",
-			inDockerfilePath: "./hello/Dockerfile",
-			inProjectName:    "phonetool",
-
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("hello", 0755)
-				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+		"errors if summary exists and differs from app argument": {
+			inAppName: "testname",
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics"}, nil)
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
 			},
-			wantedErr: nil,
+			wantedErr: "workspace already registered with metrics",
+		},
+		"use argument if there is no summary": {
+			inAppName: "metrics",
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
+			},
+			wantedAppName: "metrics",
+		},
+		"return error from new app name": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{}, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "prompt get application name: my error",
+		},
+		"enter new app name if no existing apps": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{}, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedAppName: "metrics",
+		},
+		"return error from app selection": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("my error"))
+			},
+			wantedErr: "prompt select application name: my error",
+		},
+		"use from existing apps": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+			},
+			wantedAppName: "metrics",
+		},
+		"enter new app name if user opts out of selection": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(nil, errors.New("no existing workspace"))
+				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				opts.prompt.(*mocks.Mockprompter).EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+			},
+			wantedAppName: "metrics",
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			opts := initAppOpts{
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &initAppOpts{
 				initAppVars: initAppVars{
-					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
-					DockerfilePath: tc.inDockerfilePath,
-					AppPort:        tc.inAppPort,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
+					AppName: tc.inAppName,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				store:  mocks.NewMockstore(ctrl),
+				ws:     mocks.NewMockwsAppManager(ctrl),
+				prompt: mocks.NewMockprompter(ctrl),
 			}
-			if tc.mockFileSystem != nil {
-				tc.mockFileSystem(opts.fs)
+			tc.expect(opts)
+
+			// WHEN
+			err := opts.Ask()
+
+			// THEN
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedAppName, opts.AppName)
+			}
+		})
+	}
+}
+
+func TestInitAppOpts_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName      string
+		inDomainName   string
+		mockRoute53Svc func(m *mocks.MockdomainValidator)
+		mockStore      func(m *mocks.Mockstore)
+
+		wantedError string
+	}{
+		"skip everything": {
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore:      func(m *mocks.Mockstore) {},
+
+			wantedError: "",
+		},
+		"valid app name": {
+			inAppName:      "metrics",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+			},
+			wantedError: "",
+		},
+		"invalid app name": {
+			inAppName:      "123chicken",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore:      func(m *mocks.Mockstore) {},
+
+			wantedError: "application name 123chicken is invalid: value must start with a letter and contain only lower-case letters, numbers, and hyphens",
+		},
+		"errors if application with different domain already exists": {
+			inAppName:      "metrics",
+			inDomainName:   "badDomain.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("metrics").Return(&config.Application{
+					Name:   "metrics",
+					Domain: "domain.com",
+				}, nil)
+			},
+
+			wantedError: "application named metrics already exists with a different domain name domain.com",
+		},
+		"errors if failed to get application": {
+			inAppName:      "metrics",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("metrics").Return(nil, errors.New("some error"))
+			},
+
+			wantedError: "get application metrics: some error",
+		},
+		"valid domain name": {
+			inDomainName: "mockDomain.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
+				m.EXPECT().DomainExists("mockDomain.com").Return(true, nil)
+			},
+			mockStore:   func(m *mocks.Mockstore) {},
+			wantedError: "",
+		},
+		"invalid domain name that does not exist": {
+			inDomainName: "badMockDomain.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
+				m.EXPECT().DomainExists("badMockDomain.com").Return(false, nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {},
+
+			wantedError: "no hosted zone found for badMockDomain.com",
+		},
+		"errors if failed to validate domain name": {
+			inDomainName: "mockDomain.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
+				m.EXPECT().DomainExists("mockDomain.com").Return(false, errors.New("some error"))
+			},
+			mockStore: func(m *mocks.Mockstore) {},
+
+			wantedError: "some error",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockRoute53Svc := mocks.NewMockdomainValidator(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			tc.mockRoute53Svc(mockRoute53Svc)
+			tc.mockStore(mockStore)
+			opts := &initAppOpts{
+				route53: mockRoute53Svc,
+				store:   mockStore,
+				initAppVars: initAppVars{
+					AppName:    tc.inAppName,
+					DomainName: tc.inDomainName,
+				},
 			}
 
 			// WHEN
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
+			if tc.wantedError != "" {
+				require.EqualError(t, err, tc.wantedError)
 			} else {
 				require.Nil(t, err)
 			}
 		})
 	}
 }
-func TestAppInitOpts_Ask(t *testing.T) {
-	const (
-		wantedAppType        = manifest.LoadBalancedWebApplication
-		wantedAppName        = "frontend"
-		wantedDockerfilePath = "frontend/Dockerfile"
-		wantedAppPort        = 80
-	)
+
+func TestInitAppOpts_Execute(t *testing.T) {
+	mockError := fmt.Errorf("error")
+
 	testCases := map[string]struct {
-		inAppType        string
-		inAppName        string
-		inDockerfilePath string
-		inAppPort        uint16
+		inDomainName string
 
-		mockFileSystem func(mockFS afero.Fs)
-		mockPrompt     func(m *climocks.Mockprompter)
-		mockDockerfile func(m *climocks.MockdockerfileParser)
-
-		wantedErr error
+		expectedError error
+		mocking       func(t *testing.T,
+			mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
+			mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
+			mockProgress *mocks.Mockprogress)
 	}{
-		"prompt for app type": {
-			inAppType:        "",
-			inAppName:        wantedAppName,
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: wantedDockerfilePath,
+		"with a successful call to add app": {
+			inDomainName: "amazon.com",
 
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your application?"), gomock.Any(), gomock.Eq(manifest.AppTypes)).
-					Return(wantedAppType, nil)
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      nil,
-		},
-		"return an error if fail to get app type": {
-			inAppType:        "",
-			inAppName:        wantedAppName,
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.AppTypes)).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("failed to get type selection: some error"),
-		},
-		"prompt for app name": {
-			inAppType:        wantedAppType,
-			inAppName:        "",
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedAppType)), gomock.Any(), gomock.Any()).
-					Return(wantedAppName, nil)
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      nil,
-		},
-		"returns an error if fail to get application name": {
-			inAppType:        wantedAppType,
-			inAppName:        "",
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: wantedDockerfilePath,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("failed to get application name: some error"),
-		},
-		"choose an existing Dockerfile": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtAppInitDockerfilePrompt, wantedAppName)), appInitDockerfileHelpPrompt, gomock.Eq(
-					[]string{
-						"./Dockerfile",
-						"backend/Dockerfile",
-						"frontend/Dockerfile",
-					})).
-					Return("frontend/Dockerfile", nil)
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      nil,
-		},
-		"returns an error if fail to find Dockerfiles": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inAppPort:        wantedAppPort,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("no Dockerfiles found within . or a sub-directory level below"),
-		},
-		"returns an error if fail to select Dockerfile": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: "",
-
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtAppInitDockerfilePrompt, wantedAppName)), gomock.Any(), gomock.Eq(
-					[]string{
-						"./Dockerfile",
-						"backend/Dockerfile",
-						"frontend/Dockerfile",
-					})).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
-			wantedErr:      fmt.Errorf("failed to select Dockerfile: some error"),
-		},
-		"asks for port if not specified": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: wantedDockerfilePath,
-			inAppPort:        0, //invalid port, default case
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(defaultAppPortString, nil)
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
-			},
-			wantedErr: nil,
-		},
-		"errors if port not specified": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: wantedDockerfilePath,
-			inAppPort:        0, //invalid port, default case
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("", errors.New("some error"))
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("expose error"))
-			},
-			wantedErr: fmt.Errorf("get port: some error"),
-		},
-		"errors if port out of range": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: wantedDockerfilePath,
-			inAppPort:        0, //invalid port, default case
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(appInitAppPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return("100000", errors.New("some error"))
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{}, errors.New("no expose"))
-			},
-			wantedErr: fmt.Errorf("get port: some error"),
-		},
-		"don't ask if dockerfile has port": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: wantedDockerfilePath,
-			inAppPort:        0,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {
-				m.EXPECT().GetExposedPorts().Return([]uint16{80}, nil)
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
+				mockProgress *mocks.Mockprogress) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
+				mockstore.
+					EXPECT().
+					CreateApplication(&config.Application{
+						AccountID: "12345",
+						Name:      "myapp",
+						Domain:    "amazon.com",
+						Tags: map[string]string{
+							"owner": "boss",
+						},
+					})
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
+				mockDeployer.EXPECT().
+					DeployApp(&deploy.CreateAppInput{
+						Name:       "myapp",
+						AccountID:  "12345",
+						DomainName: "amazon.com",
+						AdditionalTags: map[string]string{
+							"owner": "boss",
+						},
+					}).Return(nil)
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},
 		},
-		"don't use dockerfile port if flag specified": {
-			inAppType:        wantedAppType,
-			inAppName:        wantedAppName,
-			inDockerfilePath: wantedDockerfilePath,
-			inAppPort:        wantedAppPort,
-
-			mockFileSystem: func(mockFS afero.Fs) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
+		"should return error from workspace.Create": {
+			expectedError: mockError,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
+				mockProgress *mocks.Mockprogress) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("myapp")).
+					Return(mockError)
 			},
-			mockDockerfile: func(m *climocks.MockdockerfileParser) {},
+		},
+		"with an error while deploying myapp": {
+			expectedError: mockError,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
+				mockProgress *mocks.Mockprogress) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
+				mockDeployer.EXPECT().
+					DeployApp(gomock.Any()).Return(mockError)
+				mockProgress.EXPECT().Stop(log.Serrorf(fmtAppInitFailed, "myapp"))
+			},
+		},
+		"should return error from CreateApplication": {
+			expectedError: mockError,
+			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
+				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
+				mockProgress *mocks.Mockprogress) {
+				mockIdentityService.
+					EXPECT().
+					Get().
+					Return(identity.Caller{
+						Account: "12345",
+					}, nil)
+				mockstore.
+					EXPECT().
+					CreateApplication(gomock.Any()).
+					Return(mockError)
+				mockWorkspace.
+					EXPECT().
+					Create(gomock.Eq("myapp")).Return(nil)
+				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
+				mockDeployer.EXPECT().
+					DeployApp(gomock.Any()).Return(nil)
+				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
+			},
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
+			mockstore := mocks.NewMockstore(ctrl)
+			mockWorkspace := mocks.NewMockwsAppManager(ctrl)
+			mockIdentityService := mocks.NewMockidentityService(ctrl)
+			mockDeployer := mocks.NewMockappDeployer(ctrl)
+			mockProgress := mocks.NewMockprogress(ctrl)
 
-			mockPrompt := climocks.NewMockprompter(ctrl)
-			mockDockerfile := climocks.NewMockdockerfileParser(ctrl)
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
-					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
-					AppPort:        tc.inAppPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompt,
+					AppName:    "myapp",
+					DomainName: tc.inDomainName,
+					ResourceTags: map[string]string{
+						"owner": "boss",
 					},
 				},
-				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
-				setupParser: func(o *initAppOpts) {},
-				df:          mockDockerfile,
+				store:    mockstore,
+				identity: mockIdentityService,
+				cfn:      mockDeployer,
+				ws:       mockWorkspace,
+				prog:     mockProgress,
 			}
-			tc.mockFileSystem(opts.fs)
-			tc.mockPrompt(mockPrompt)
-			tc.mockDockerfile(mockDockerfile)
+			tc.mocking(t, mockstore, mockWorkspace, mockIdentityService, mockDeployer, mockProgress)
 
-			// WHEN
-			err := opts.Ask()
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, wantedAppType, opts.AppType)
-				require.Equal(t, wantedAppName, opts.AppName)
-				require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
-			}
-		})
-	}
-}
-
-func TestAppInitOpts_Execute(t *testing.T) {
-	testCases := map[string]struct {
-		inAppPort        uint16
-		inAppType        string
-		inAppName        string
-		inDockerfilePath string
-		inProjectName    string
-		mockDependencies func(*gomock.Controller, *initAppOpts)
-		wantedErr        error
-	}{
-		"writes load balanced web app manifest, and creates repositories successfully": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inDockerfilePath: "frontend/Dockerfile",
-			inAppPort:        80,
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
-
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
-					Do(func(app *archer.Application) {
-						require.Equal(t, &archer.Application{
-							Name:    "frontend",
-							Project: "project",
-							Type:    manifest.LoadBalancedWebApplication,
-						}, app)
-					}).
-					Return(nil)
-
-				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject("project").Return(&archer.Project{
-					Name:      "project",
-					AccountID: "1234",
-				}, nil)
-
-				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(&archer.Project{
-					Name:      "project",
-					AccountID: "1234",
-				}, "frontend")
-
-				mockProg := climocks.NewMockprogress(ctrl)
-				mockProg.EXPECT().Start(fmt.Sprintf(fmtAddAppToProjectStart, "frontend"))
-				mockProg.EXPECT().Stop(log.Ssuccessf(fmtAddAppToProjectComplete, "frontend"))
-
-				opts.ws = mockWriter
-				opts.appStore = mockAppStore
-				opts.projGetter = mockProjGetter
-				opts.projDeployer = mockProjDeployer
-				opts.prog = mockProg
-			},
-		},
-		"write manifest error": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inDockerfilePath: "frontend/Dockerfile",
-			inAppPort:        80,
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", errors.New("some error"))
-
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-
-				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject("project").Return(&archer.Project{
-					Name:      "project",
-					AccountID: "1234",
-				}, nil)
-
-				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-
-				mockProg := climocks.NewMockprogress(ctrl)
-
-				opts.ws = mockWriter
-				opts.appStore = mockAppStore
-				opts.projGetter = mockProjGetter
-				opts.projDeployer = mockProjDeployer
-				opts.prog = mockProg
-			},
-			wantedErr: errors.New("some error"),
-		},
-		"project error": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-
-				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(nil, errors.New("some error"))
-
-				opts.ws = mockWriter
-				opts.appStore = mockAppStore
-				opts.projGetter = mockProjGetter
-			},
-			wantedErr: errors.New("get project project: some error"),
-		},
-		"add app to project fails": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
-
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-
-				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(&archer.Project{
-					Name:      "project",
-					AccountID: "1234",
-				}, nil)
-
-				mockProg := climocks.NewMockprogress(ctrl)
-				mockProg.EXPECT().Start(fmt.Sprintf(fmtAddAppToProjectStart, "frontend"))
-				mockProg.EXPECT().Stop(log.Serrorf(fmtAddAppToProjectFailed, "frontend"))
-
-				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
-
-				opts.ws = mockWriter
-				opts.appStore = mockAppStore
-				opts.projGetter = mockProjGetter
-				opts.projDeployer = mockProjDeployer
-				opts.prog = mockProg
-			},
-
-			wantedErr: errors.New("add app frontend to project project: some error"),
-		},
-		"error saving app": {
-			inAppType:        manifest.LoadBalancedWebApplication,
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inDockerfilePath: "frontend/Dockerfile",
-
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockWriter := climocks.NewMockwsAppManifestWriter(ctrl)
-				mockWriter.EXPECT().WriteAppManifest(gomock.Any(), opts.AppName).Return("/frontend/manifest.yml", nil)
-
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				mockAppStore.EXPECT().CreateApplication(gomock.Any()).
-					Return(fmt.Errorf("oops"))
-
-				mockProjGetter := mocks.NewMockProjectGetter(ctrl)
-				mockProjGetter.EXPECT().GetProject(gomock.Any()).Return(&archer.Project{}, nil)
-
-				mockProjDeployer := climocks.NewMockprojectDeployer(ctrl)
-				mockProjDeployer.EXPECT().AddAppToProject(gomock.Any(), gomock.Any()).Return(nil)
-
-				mockProg := climocks.NewMockprogress(ctrl)
-				mockProg.EXPECT().Start(gomock.Any())
-				mockProg.EXPECT().Stop(gomock.Any())
-
-				opts.ws = mockWriter
-				opts.appStore = mockAppStore
-				opts.projGetter = mockProjGetter
-				opts.projDeployer = mockProjDeployer
-				opts.prog = mockProg
-			},
-
-			wantedErr: fmt.Errorf("saving application frontend: oops"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			opts := initAppOpts{
-				initAppVars: initAppVars{
-					AppType:        tc.inAppType,
-					AppName:        tc.inAppName,
-					AppPort:        tc.inAppPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
-				},
-			}
-			tc.mockDependencies(ctrl, &opts)
 			// WHEN
 			err := opts.Execute()
 
 			// THEN
-			if tc.wantedErr == nil {
-				require.Nil(t, err)
+			if tc.expectedError == nil {
+				require.NoError(t, err)
 			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
-func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
-	testCases := map[string]struct {
-		inAppPort        uint16
-		inAppName        string
-		inDockerfilePath string
-		inProjectName    string
-		mockDependencies func(*gomock.Controller, *initAppOpts)
-		wantedErr        error
-		wantedPath       string
-	}{
-		"creates manifest with / as the path when there are no other apps": {
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-			wantedPath:       "/",
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{}, nil)
-				opts.appStore = mockAppStore
-			},
-		},
-		"creates manifest with / as the path when it's the only app": {
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-			wantedPath:       "/",
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
-					&archer.Application{
-						Name: "frontend",
-						Type: manifest.LoadBalancedWebApplication,
-					},
-				}, nil)
-				opts.appStore = mockAppStore
-			},
-		},
-		"creates manifest with / as the path when it's the only LBWebApp": {
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-			wantedPath:       "/",
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
-					&archer.Application{
-						Name: "another-app",
-						Type: "backend",
-					},
-				}, nil)
-				opts.appStore = mockAppStore
-			},
-		},
-		"creates manifest with {app name} as the path if there's another LBWebApp": {
-			inProjectName:    "project",
-			inAppName:        "frontend",
-			inAppPort:        80,
-			inDockerfilePath: "frontend/Dockerfile",
-			wantedPath:       "frontend",
-			mockDependencies: func(ctrl *gomock.Controller, opts *initAppOpts) {
-				mockAppStore := mocks.NewMockApplicationStore(ctrl)
-				mockAppStore.EXPECT().ListApplications("project").Return([]*archer.Application{
-					&archer.Application{
-						Name: "another-app",
-						Type: manifest.LoadBalancedWebApplication,
-					},
-				}, nil)
-				opts.appStore = mockAppStore
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			opts := initAppOpts{
-				initAppVars: initAppVars{
-					AppType:        manifest.LoadBalancedWebApplication,
-					AppName:        tc.inAppName,
-					AppPort:        tc.inAppPort,
-					DockerfilePath: tc.inDockerfilePath,
-					GlobalOpts:     &GlobalOpts{projectName: tc.inProjectName},
-				},
-			}
-			tc.mockDependencies(ctrl, &opts)
-			// WHEN
-			manifest, err := opts.newLoadBalancedWebAppManifest()
-
-			// THEN
-			if tc.wantedErr == nil {
-				require.Nil(t, err)
-				require.Equal(t, tc.inAppName, manifest.App.Name)
-				require.Equal(t, tc.inAppPort, manifest.Image.Port)
-				require.Equal(t, tc.inDockerfilePath, manifest.Image.AppImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebAppConfig.Path)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
+				require.True(t, errors.Is(err, tc.expectedError))
 			}
 		})
 	}

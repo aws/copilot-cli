@@ -7,12 +7,12 @@ import (
 	"fmt"
 )
 
-// ErrInvalidAppManifestType occurs when a user requested a manifest template type that doesn't exist.
-type ErrInvalidAppManifestType struct {
+// ErrInvalidSvcManifestType occurs when a user requested a manifest template type that doesn't exist.
+type ErrInvalidSvcManifestType struct {
 	Type string
 }
 
-func (e *ErrInvalidAppManifestType) Error() string {
+func (e *ErrInvalidSvcManifestType) Error() string {
 	return fmt.Sprintf("invalid manifest type: %s", e.Type)
 }
 

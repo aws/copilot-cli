@@ -99,7 +99,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 		"arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName,
 	}
 	testTags := map[string]string{
-		"ecs-project": mockProjectName,
+		"copilot-application": mockProjectName,
 	}
 	badArn := "badArn"
 
@@ -156,7 +156,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 			}
 
 			// WHEN
-			actualOut, actualErr := cp.ListPipelinesForProject(tc.inProjectName)
+			actualOut, actualErr := cp.ListPipelineNamesByTags(testTags)
 
 			// THEN
 			if actualErr != nil {

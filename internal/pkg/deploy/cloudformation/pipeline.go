@@ -28,7 +28,7 @@ func (cf CloudFormation) PipelineExists(in *deploy.CreatePipelineInput) (bool, e
 	return true, nil
 }
 
-// CreatePipeline sets up a new CodePipeline for deploying applications.
+// CreatePipeline sets up a new CodePipeline for deploying services.
 func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	s, err := toStack(stack.NewPipelineStackConfig(in))
 	if err != nil {
@@ -37,7 +37,7 @@ func (cf CloudFormation) CreatePipeline(in *deploy.CreatePipelineInput) error {
 	return cf.cfnClient.CreateAndWait(s)
 }
 
-// UpdatePipeline updates an existing CodePipeline for deploying applications.
+// UpdatePipeline updates an existing CodePipeline for deploying services.
 func (cf CloudFormation) UpdatePipeline(in *deploy.CreatePipelineInput) error {
 	s, err := toStack(stack.NewPipelineStackConfig(in))
 	if err != nil {

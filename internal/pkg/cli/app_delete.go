@@ -1,5 +1,4 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
 // SPDX-License-Identifier: Apache-2.0
 
 package cli
@@ -8,371 +7,328 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+
 	awssession "github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/spf13/cobra"
 )
 
 const (
-	appDeleteNamePrompt    = "Which application would you like to delete?"
-	appDeleteConfirmPrompt = "Are you sure you want to delete %s from project %s?"
-	appDeleteConfirmHelp   = "This will undeploy the app from all environments, delete the local workspace file, and remove ECR repositories."
-)
+	fmtDeleteAppConfirmPrompt = "Are you sure you want to delete application %s?"
+	deleteAppConfirmHelp      = "This will delete all resources in your application: including services, environments, and pipelines."
 
-const (
-	fmtDeleteAppStart             = "Deleting app %s from env %s."
-	fmtDeleteAppFailed            = "Failed to delete app %s from env %s: %v."
-	fmtDeleteAppComplete          = "Deleted app %s from env %s."
-	fmtDeleteAppResourcesStart    = "Deleting app %s resources from project %s."
-	fmtDeleteAppResourcesComplete = "Deleted app %s resources from project %s."
+	deleteAppCleanResourcesStartMsg = "Cleaning up deployment resources."
+	deleteAppCleanResourcesStopMsg  = "Cleaned up deployment resources."
+
+	deleteAppResourcesStartMsg = "Deleting application resources."
+	deleteAppResourcesStopMsg  = "Deleted application resources."
+
+	deleteAppConfigStartMsg = "Deleting application configuration."
+	deleteAppConfigStopMsg  = "Deleted application configuration."
+
+	deleteAppWsStartMsg = "Deleting local workspace folder."
+	deleteAppWsStopMsg  = "Deleted local workspace folder."
 )
 
 var (
-	errAppDeleteCancelled = errors.New("app delete cancelled - no changes made")
+	errOperationCancelled = errors.New("operation cancelled")
 )
 
 type deleteAppVars struct {
+	skipConfirmation bool
+	envProfiles      map[string]string
 	*GlobalOpts
-	SkipConfirmation bool
-	AppName          string
-	EnvName          string
 }
 
 type deleteAppOpts struct {
 	deleteAppVars
+	spinner progress
 
-	// Interfaces to dependencies.
-	projectService   projectService
-	workspaceService wsAppDeleter
-	sessProvider     sessionProvider
-	spinner          progress
-	appRemover       appRemover
-	getAppDeployer   func(session *awssession.Session) appDeployer
-        getImageRemover  func(session *awssession.Session) imageRemover
-
-	// Internal state.
-	projectEnvironments []*archer.Environment
+	store                store
+	ws                   workspaceDeleter
+	sessProvider         sessionProvider
+	cfn                  deployer
+	s3                   func(session *awssession.Session) bucketEmptier
+	executor             func(svcName string) (executor, error)
+	askExecutor          func(envName, envProfile string) (askExecutor, error)
+	deletePipelineRunner func() (deletePipelineRunner, error)
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	workspaceService, err := workspace.New()
+	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("intialize workspace service: %w", err)
+		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	projectService, err := store.New()
+	ws, err := workspace.New()
 	if err != nil {
-		return nil, fmt.Errorf("create project service: %w", err)
+		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
 	provider := session.NewProvider()
 	defaultSession, err := provider.Default()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("default session: %w", err)
 	}
 
 	return &deleteAppOpts{
 		deleteAppVars: vars,
-
-		workspaceService: workspaceService,
-		projectService:   projectService,
-		spinner:          termprogress.NewSpinner(),
-		sessProvider:     provider,
-		appRemover:       cloudformation.New(defaultSession),
-		getAppDeployer:   func(session *awssession.Session) appDeployer {
-			return cloudformation.New(session)
+		spinner:       termprogress.NewSpinner(),
+		store:         store,
+		ws:            ws,
+		sessProvider:  provider,
+		cfn:           cloudformation.New(defaultSession),
+		s3: func(session *awssession.Session) bucketEmptier {
+			return s3.New(session)
 		},
-		getImageRemover: func(session *awssession.Session) imageRemover {
-			return ecr.New(session)
+		executor: func(svcName string) (executor, error) {
+			opts, err := newDeleteSvcOpts(deleteSvcVars{
+				SkipConfirmation: true, // always skip sub-confirmations
+				GlobalOpts:       NewGlobalOpts(),
+				Name:             svcName,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return opts, nil
+		},
+		askExecutor: func(envName, envProfile string) (askExecutor, error) {
+			opts, err := newDeleteEnvOpts(deleteEnvVars{
+				SkipConfirmation: true,
+				GlobalOpts:       NewGlobalOpts(),
+				EnvName:          envName,
+				EnvProfile:       envProfile,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return opts, nil
+		},
+		deletePipelineRunner: func() (deletePipelineRunner, error) {
+			opts, err := newDeletePipelineOpts(deletePipelineVars{
+				GlobalOpts:       NewGlobalOpts(),
+				SkipConfirmation: true,
+				DeleteSecret:     true,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return opts, nil
 		},
 	}, nil
 }
 
-// Validate returns an error if the user inputs are invalid.
+// Validate returns an error if the user's input is invalid.
 func (o *deleteAppOpts) Validate() error {
-	if o.ProjectName() == "" {
-		return errNoProjectInWorkspace
-	}
-	if o.AppName != "" {
-		if _, err := o.projectService.GetApplication(o.ProjectName(), o.AppName); err != nil {
-			return err
-		}
-	}
-	if o.EnvName != "" {
-		if err := o.validateEnvName(); err != nil {
-			return err
-		}
+	if o.AppName() == "" {
+		return errNoAppInWorkspace
 	}
 	return nil
 }
 
-// Ask prompts the user for any required flags.
+// Ask prompts the user for any required flags that they didn't provide.
 func (o *deleteAppOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
-	}
-
-	if o.SkipConfirmation {
+	if o.skipConfirmation {
 		return nil
 	}
 
-	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(appDeleteConfirmPrompt, o.AppName, o.projectName),
-		appDeleteConfirmHelp)
-
+	manualConfirm, err := o.prompt.Confirm(
+		fmt.Sprintf(fmtDeleteAppConfirmPrompt, o.AppName()),
+		deleteAppConfirmHelp,
+		prompt.WithTrueDefault())
 	if err != nil {
-		return fmt.Errorf("app delete confirmation prompt: %w", err)
+		return fmt.Errorf("confirm app deletion: %w", err)
 	}
-
-	if !deleteConfirmed {
-		return errAppDeleteCancelled
+	if !manualConfirm {
+		return errOperationCancelled
 	}
-
 	return nil
 }
 
-// Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
+// Execute deletes the application.
+// It removes all the services from each environment, the environments, the pipeline S3 buckets,
+// the pipeline, the application, removes the variables from the config store, and deletes the local workspace.
 func (o *deleteAppOpts) Execute() error {
-	if err := o.getProjectEnvironments(); err != nil {
+	if err := o.deleteSvcs(); err != nil {
 		return err
 	}
 
-	if err := o.deleteStacks(); err != nil {
-		return err
-	}
-	if err := o.emptyECRRepos(); err != nil {
-		return err
-	}
-	if err := o.removeAppProjectResources(); err != nil {
-		return err
-	}
-	if err := o.deleteSSMParam(); err != nil {
-		return err
-	}
-	if err := o.deleteWorkspaceFile(); err != nil {
+	if err := o.deleteEnvs(); err != nil {
 		return err
 	}
 
-	log.Successf("Deleted app %s from project %s.\n", o.AppName, o.projectName)
+	if err := o.emptyS3Bucket(); err != nil {
+		return err
+	}
+
+	// deletePipeline must happen before deleteAppResources and deleteWs, since the pipeline delete command relies
+	// on the application stackset as well as the workspace directory to still exist.
+	if err := o.deletePipeline(); err != nil {
+		if !errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
+			return err
+		}
+	}
+
+	if err := o.deleteAppResources(); err != nil {
+		return err
+	}
+
+	if err := o.deleteAppConfigs(); err != nil {
+		return err
+	}
+
+	if err := o.deleteWs(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (o *deleteAppOpts) validateEnvName() error {
-	if _, err := o.targetEnv(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *deleteAppOpts) targetEnv() (*archer.Environment, error) {
-	env, err := o.projectService.GetEnvironment(o.ProjectName(), o.EnvName)
+func (o *deleteAppOpts) deleteSvcs() error {
+	svcs, err := o.store.ListServices(o.AppName())
 	if err != nil {
-		return nil, fmt.Errorf("get environment %s from metadata store: %w", o.EnvName, err)
-	}
-	return env, nil
-}
-
-func (o *deleteAppOpts) askAppName() error {
-	if o.AppName != "" {
-		return nil
+		return fmt.Errorf("list services for application %s: %w", o.AppName(), err)
 	}
 
-	names, err := o.retrieveAppNames()
-	if err != nil {
-		return err
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any application in the project %s", o.ProjectName())
-	}
-	if len(names) == 1 {
-		o.AppName = names[0]
-		log.Infof("Only found one application, defaulting to: %s\n", color.HighlightUserInput(o.AppName))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(appDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("select application to delete: %w", err)
-	}
-	o.AppName = name
-	return nil
-}
-
-func (o *deleteAppOpts) retrieveAppNames() ([]string, error) {
-	apps, err := o.projectService.ListApplications(o.ProjectName())
-	if err != nil {
-		return nil, fmt.Errorf("get app names: %w", err)
-	}
-	var names []string
-	for _, app := range apps {
-		names = append(names, app.Name)
-	}
-	return names, nil
-}
-
-func (o *deleteAppOpts) getProjectEnvironments() error {
-	if o.EnvName != "" {
-		env, err := o.targetEnv()
+	for _, svc := range svcs {
+		cmd, err := o.executor(svc.Name)
 		if err != nil {
 			return err
 		}
-		o.projectEnvironments = append(o.projectEnvironments, env)
-	} else {
-		envs, err := o.projectService.ListEnvironments(o.ProjectName())
-
-		if err != nil {
-			return fmt.Errorf("get environments: %w", err)
+		if err := cmd.Execute(); err != nil {
+			return fmt.Errorf("execute svc delete: %w", err)
 		}
-
-		o.projectEnvironments = envs
 	}
-
 	return nil
 }
 
-func (o *deleteAppOpts) deleteStacks() error {
-	for _, env := range o.projectEnvironments {
-		sess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+func (o *deleteAppOpts) deleteEnvs() error {
+	envs, err := o.store.ListEnvironments(o.AppName())
+	if err != nil {
+		return fmt.Errorf("list environments for application %s: %w", o.AppName(), err)
+	}
+
+	for _, env := range envs {
+		// Check to see if a profile was passed in for this environment
+		// for deletion - otherwise it will be passed as an empty
+		// string, which triggers env delete's ask.
+		profile := o.envProfiles[env.Name]
+
+		cmd, err := o.askExecutor(env.Name, profile)
 		if err != nil {
 			return err
 		}
-
-		cfClient := o.getAppDeployer(sess)
-
-		o.spinner.Start(fmt.Sprintf(fmtDeleteAppStart, o.AppName, env.Name))
-		if err := cfClient.DeleteApp(deploy.DeleteAppInput{
-			AppName:     o.AppName,
-			EnvName:     env.Name,
-			ProjectName: o.projectName,
-		}); err != nil {
-			o.spinner.Stop(log.Serrorf(fmtDeleteAppFailed, o.AppName, env.Name, err))
-			return err
+		if err := cmd.Ask(); err != nil {
+			return fmt.Errorf("ask env delete: %w", err)
 		}
-		o.spinner.Stop(log.Ssuccessf(fmtDeleteAppComplete, o.AppName, env.Name))
+		if err := cmd.Execute(); err != nil {
+			return fmt.Errorf("execute env delete: %w", err)
+		}
 	}
-
 	return nil
 }
 
-// This is to make mocking easier in unit tests
-func (o *deleteAppOpts) emptyECRRepos() error {
-	var uniqueRegions []string
-	for _, env := range o.projectEnvironments {
-		if !contains(env.Region, uniqueRegions) {
-			uniqueRegions = append(uniqueRegions, env.Region)
-		}
+func (o *deleteAppOpts) emptyS3Bucket() error {
+	app, err := o.store.GetApplication(o.AppName())
+	if err != nil {
+		return fmt.Errorf("get application %s: %w", o.AppName(), err)
 	}
-
-	// TODO: centralized ECR repo name
-	repoName := fmt.Sprintf("%s/%s", o.projectName, o.AppName)
-
-	for _, region := range uniqueRegions {
-		sess, err := o.sessProvider.DefaultWithRegion(region)
+	appResources, err := o.cfn.GetRegionalAppResources(app)
+	if err != nil {
+		return fmt.Errorf("get regional application resources for %s: %w", app.Name, err)
+	}
+	o.spinner.Start(deleteAppCleanResourcesStartMsg)
+	for _, resource := range appResources {
+		sess, err := o.sessProvider.DefaultWithRegion(resource.Region)
 		if err != nil {
-			return err
+			return fmt.Errorf("default session with region %s: %w", resource.Region, err)
 		}
 
-		ecrService := o.getImageRemover(sess)
-
-		if err := ecrService.ClearRepository(repoName); err != nil {
-			return err
+		// Empty pipeline buckets.
+		s3Client := o.s3(sess)
+		if err := s3Client.EmptyBucket(resource.S3Bucket); err != nil {
+			o.spinner.Stop(log.Serror("Error cleaning up deployment resources."))
+			return fmt.Errorf("empty bucket %s: %w", resource.S3Bucket, err)
 		}
 	}
-
+	o.spinner.Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg))
 	return nil
 }
 
-func (o *deleteAppOpts) removeAppProjectResources() error {
-	proj, err := o.projectService.GetProject(o.projectName)
+func (o *deleteAppOpts) deletePipeline() error {
+	cmd, err := o.deletePipelineRunner()
 	if err != nil {
 		return err
 	}
+	return cmd.Run()
+}
 
-	o.spinner.Start(fmt.Sprintf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
-	if err := o.appRemover.RemoveAppFromProject(proj, o.AppName); err != nil {
-		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtDeleteAppResourcesStart, o.AppName, o.projectName))
-			return err
-		}
+func (o *deleteAppOpts) deleteAppResources() error {
+	o.spinner.Start(deleteAppResourcesStartMsg)
+	if err := o.cfn.DeleteApp(o.AppName()); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting application resources."))
+		return fmt.Errorf("delete app resources: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, o.AppName, o.projectName))
-
+	o.spinner.Stop(log.Ssuccess(deleteAppResourcesStopMsg))
 	return nil
 }
 
-func (o *deleteAppOpts) deleteSSMParam() error {
-	if err := o.projectService.DeleteApplication(o.projectName, o.AppName); err != nil {
-		return fmt.Errorf("delete app %s from project %s: %w", o.AppName, o.projectName, err)
+func (o *deleteAppOpts) deleteAppConfigs() error {
+	o.spinner.Start(deleteAppConfigStartMsg)
+	if err := o.store.DeleteApplication(o.AppName()); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting application configuration."))
+		return fmt.Errorf("delete application %s configuration: %w", o.AppName(), err)
 	}
-
+	o.spinner.Stop(log.Ssuccess(deleteAppConfigStopMsg))
 	return nil
 }
 
-func (o *deleteAppOpts) deleteWorkspaceFile() error {
-	if err := o.workspaceService.DeleteApp(o.AppName); err != nil {
-		return fmt.Errorf("delete application %s directory: %w", o.AppName, err)
+func (o *deleteAppOpts) deleteWs() error {
+	o.spinner.Start(deleteAppWsStartMsg)
+	if err := o.ws.DeleteAll(); err != nil {
+		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
+		return fmt.Errorf("delete workspace: %w", err)
 	}
-
+	o.spinner.Stop(log.Ssuccess(deleteAppWsStopMsg))
 	return nil
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *deleteAppOpts) RecommendedActions() []string {
-	// TODO: Add recommendation to do `pipeline delete` when it is available
-	return []string{
-		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
-			color.HighlightCode(fmt.Sprintf("ecs-preview pipeline update"))),
-	}
-}
-
-// BuildAppDeleteCmd builds the command to delete application(s).
-func BuildAppDeleteCmd() *cobra.Command {
+// BuildAppDeleteCommand builds the `app delete` subcommand.
+func BuildAppDeleteCommand() *cobra.Command {
 	vars := deleteAppVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Deletes an application from your project.",
+		Short: "Delete all resources associated with the application.",
 		Example: `
-  Delete the "test" application.
-  /code $ ecs-preview app delete --name test
-
-  Delete the "test" application without prompting.
-	/code $ ecs-preview app delete --name test --yes`,
+  Force delete the application with environments "test" and "prod".
+  /code $ copilot app delete --yes --env-profiles test=default,prod=prod-profile`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteAppOpts(vars)
 			if err != nil {
 				return err
 			}
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			if err := opts.Execute(); err != nil {
-				return err
-			}
-
-			log.Infoln("Recommended follow-up actions:")
-			for _, followup := range opts.RecommendedActions() {
-				log.Infof("- %s\n", followup)
-			}
-			return nil
+			return opts.Execute()
 		}),
 	}
 
-	cmd.Flags().StringVarP(&vars.AppName, nameFlag, nameFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&vars.EnvName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().BoolVar(&vars.SkipConfirmation, yesFlag, false, yesFlagDescription)
-
+	cmd.Flags().BoolVar(&vars.skipConfirmation, yesFlag, false, yesFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.envProfiles, envProfilesFlag, nil, envProfilesFlagDescription)
 	return cmd
 }

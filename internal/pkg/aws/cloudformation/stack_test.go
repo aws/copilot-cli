@@ -18,7 +18,7 @@ func TestNewStack(t *testing.T) {
 			"Port": "80",
 		}),
 		WithTags(map[string]string{
-			"ecs-project": "phonetool",
+			"copilot-application": "phonetool",
 		}),
 		WithRoleARN("arn"))
 
@@ -33,7 +33,7 @@ func TestNewStack(t *testing.T) {
 	}, s.Parameters)
 	require.Equal(t, []*cloudformation.Tag{
 		{
-			Key:   aws.String("ecs-project"),
+			Key:   aws.String("copilot-application"),
 			Value: aws.String("phonetool"),
 		},
 	}, s.Tags)

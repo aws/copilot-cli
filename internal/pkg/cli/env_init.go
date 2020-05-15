@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	deploycfn "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
@@ -31,17 +30,17 @@ const (
 )
 
 const (
-	fmtDeployEnvStart          = "Proposing infrastructure changes for the %s environment."
-	fmtDeployEnvFailed         = "Failed to accept changes for the %s environment."
-	fmtDNSDelegationStart      = "Sharing DNS permissions for this project to account %s."
-	fmtDNSDelegationFailed     = "Failed to grant DNS permissions to account %s."
-	fmtDNSDelegationComplete   = "Shared DNS permissions for this project to account %s."
-	fmtStreamEnvStart          = "Creating the infrastructure for the %s environment."
-	fmtStreamEnvFailed         = "Failed to create the infrastructure for the %s environment."
-	fmtStreamEnvComplete       = "Created the infrastructure for the %s environment."
-	fmtAddEnvToProjectStart    = "Linking account %s and region %s to project %s."
-	fmtAddEnvToProjectFailed   = "Failed to link account %s and region %s to project %s."
-	fmtAddEnvToProjectComplete = "Linked account %s and region %s project %s."
+	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
+	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment."
+	fmtDNSDelegationStart    = "Sharing DNS permissions for this application to account %s."
+	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s."
+	fmtDNSDelegationComplete = "Shared DNS permissions for this application to account %s."
+	fmtStreamEnvStart        = "Creating the infrastructure for the %s environment."
+	fmtStreamEnvFailed       = "Failed to create the infrastructure for the %s environment."
+	fmtStreamEnvComplete     = "Created the infrastructure for the %s environment."
+	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
+	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s."
+	fmtAddEnvToAppComplete   = "Linked account %s and region %s application %s."
 )
 
 var (
@@ -59,10 +58,9 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	projectGetter archer.ProjectGetter
-	envCreator    archer.EnvironmentCreator
+	store         store
 	envDeployer   deployer
-	projDeployer  deployer
+	appDeployer   deployer
 	identity      identityService
 	envIdentity   identityService
 	profileConfig profileNames
@@ -83,7 +81,7 @@ var initEnvProfileClients = func(o *initEnvOpts) error {
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
-	store, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +97,8 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 	return &initEnvOpts{
 		initEnvVars:        vars,
-		projectGetter:      store,
-		envCreator:         store,
-		projDeployer:       deploycfn.New(defaultSession),
+		store:              store,
+		appDeployer:        deploycfn.New(defaultSession),
 		identity:           identity.New(defaultSession),
 		profileConfig:      cfg,
 		prog:               termprogress.NewSpinner(),
@@ -109,15 +106,15 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the values passed by the user are invalid.
+// Validate returns an error if the values passed by flags are invalid.
 func (o *initEnvOpts) Validate() error {
 	if o.EnvName != "" {
 		if err := validateEnvironmentName(o.EnvName); err != nil {
 			return err
 		}
 	}
-	if o.ProjectName() == "" {
-		return fmt.Errorf("no project found: run %s or %s into your workspace please", color.HighlightCode("project init"), color.HighlightCode("cd"))
+	if o.AppName() == "" {
+		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
 	return nil
 }
@@ -132,9 +129,9 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
-	project, err := o.projectGetter.GetProject(o.ProjectName())
+	app, err := o.store.GetApplication(o.AppName())
 	if err != nil {
-		// Ensure the project actually exists before we do a deployment.
+		// Ensure the app actually exists before we do a deployment.
 		return err
 	}
 
@@ -142,51 +139,51 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	if project.RequiresDNSDelegation() {
-		if err := o.delegateDNSFromProject(project); err != nil {
+	if app.RequiresDNSDelegation() {
+		if err := o.delegateDNSFromApp(app); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
 	}
 
 	// 1. Start creating the CloudFormation stack for the environment.
-	if err := o.deployEnv(project); err != nil {
+	if err := o.deployEnv(app); err != nil {
 		return err
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.ProjectName(), o.EnvName)
+	env, err := o.envDeployer.GetEnvironment(o.AppName(), o.EnvName)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
 	}
 	env.Prod = o.IsProduction
 
-	// 3. Add the stack set instance to the project stackset.
-	if err := o.addToStackset(project, env); err != nil {
+	// 3. Add the stack set instance to the app stackset.
+	if err := o.addToStackset(app, env); err != nil {
 		return err
 	}
 
 	// 4. Store the environment in SSM.
-	if err := o.envCreator.CreateEnvironment(env); err != nil {
+	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
-	log.Successf("Created environment %s in region %s under project %s.\n",
-		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.Project))
+	log.Successf("Created environment %s in region %s under application %s.\n",
+		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.App))
 	return nil
 }
 
-func (o *initEnvOpts) deployEnv(project *archer.Project) error {
+func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name:                     o.EnvName,
-		Project:                  o.ProjectName(),
+		AppName:                  o.AppName(),
 		Prod:                     o.IsProduction,
-		PublicLoadBalancer:       true, // TODO: configure this based on user input or application Type needs?
+		PublicLoadBalancer:       true, // TODO: configure this based on user input or service Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
-		ProjectDNSName:           project.Domain,
-		AdditionalTags:           project.Tags,
+		AppDNSName:               app.Domain,
+		AdditionalTags:           app.Tags,
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.EnvName)))
@@ -195,8 +192,8 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			o.prog.Stop("")
-			log.Successf("CloudFormation stack for env %s already exists under project %s! Do nothing.\n",
-				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.ProjectName()))
+			log.Successf("CloudFormation stack for env %s already exists under application %s! Do nothing.\n",
+				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.AppName()))
 			return nil
 		}
 		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.EnvName)))
@@ -219,30 +216,30 @@ func (o *initEnvOpts) deployEnv(project *archer.Project) error {
 	return nil
 }
 
-func (o *initEnvOpts) addToStackset(project *archer.Project, env *archer.Environment) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToProjectStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
-	if err := o.projDeployer.AddEnvToProject(project, env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToProjectFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
-		return fmt.Errorf("deploy env %s to project %s: %w", env.Name, project.Name, err)
+func (o *initEnvOpts) addToStackset(app *config.Application, env *config.Environment) error {
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
+	if err := o.appDeployer.AddEnvToApp(app, env); err != nil {
+		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
+		return fmt.Errorf("deploy env %s to application %s: %w", env.Name, app.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.ProjectName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
 
 	return nil
 }
 
-func (o *initEnvOpts) delegateDNSFromProject(project *archer.Project) error {
+func (o *initEnvOpts) delegateDNSFromApp(app *config.Application) error {
 	envAccount, err := o.envIdentity.Get()
 	if err != nil {
 		return fmt.Errorf("getting environment account ID for DNS Delegation: %w", err)
 	}
 
 	// By default, our DNS Delegation permits same account delegation.
-	if envAccount.Account == project.AccountID {
+	if envAccount.Account == app.AccountID {
 		return nil
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDNSDelegationStart, color.HighlightUserInput(envAccount.Account)))
-	if err := o.projDeployer.DelegateDNSPermissions(project, envAccount.Account); err != nil {
+	if err := o.appDeployer.DelegateDNSPermissions(app, envAccount.Account); err != nil {
 		o.prog.Stop(log.Serrorf(fmtDNSDelegationFailed, color.HighlightUserInput(envAccount.Account)))
 		return err
 	}
@@ -264,6 +261,7 @@ func (o *initEnvOpts) askEnvName() error {
 }
 
 func (o *initEnvOpts) askEnvProfile() error {
+	// TODO: add this behavior to selector pkg.
 	if o.EnvProfile != "" {
 		return nil
 	}
@@ -278,7 +276,7 @@ func (o *initEnvOpts) askEnvProfile() error {
 		envInitProfileHelpPrompt,
 		names)
 	if err != nil {
-		return fmt.Errorf("prompt to get the profile name: %w", err)
+		return fmt.Errorf("get the profile name: %w", err)
 	}
 	o.EnvProfile = profile
 	return nil
@@ -337,13 +335,13 @@ func BuildEnvInitCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Creates a new environment in your project.",
+		Short: "Creates a new environment in your application.",
 		Example: `
   Creates a test environment in your "default" AWS profile.
-  /code $ ecs-preview env init --name test --profile default
+  /code $ copilot env init --name test --profile default
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ ecs-preview env init --name prod-iad --profile prod-admin --prod`,
+  /code $ copilot env init --name prod-iad --profile prod-admin --prod`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitEnvOpts(vars)
 			if err != nil {

@@ -8,230 +8,102 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDeleteAppOpts_Validate(t *testing.T) {
-	mockError := errors.New("some error")
-
+	const mockAppName = "phonetool"
 	tests := map[string]struct {
-		inProjectName string
-		inAppName     string
-		inEnvName     string
-		setupMocks    func(m *climocks.MockprojectService)
+		name string
 
 		want error
 	}{
-		"should return errNoProjectInWorkspace": {
-			setupMocks: func(m *climocks.MockprojectService) {},
-			inAppName:  "my-app",
-			want:       errNoProjectInWorkspace,
+		"should return error if not in a workspace": {
+			name: "",
+			want: errNoAppInWorkspace,
 		},
-		"with no flag set": {
-			inProjectName: "phonetool",
-			setupMocks:    func(m *climocks.MockprojectService) {},
-			want:          nil,
-		},
-		"with all flag set": {
-			inProjectName: "phonetool",
-			inAppName:     "my-app",
-			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(&archer.Application{
-					Name: "my-app",
-				}, nil)
-			},
+		"should return nil if app name is set": {
+			name: mockAppName,
 			want: nil,
-		},
-		"with env flag set": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").
-					Return(&archer.Environment{Name: "test"}, nil)
-			},
-			want: nil,
-		},
-		"with unknown environment": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetEnvironment("phonetool", "test").Return(nil, errors.New("unknown env"))
-			},
-			want: errors.New("get environment test from metadata store: unknown env"),
-		},
-		"should return error if fail to get app name": {
-			inProjectName: "phonetool",
-			inAppName:     "my-app",
-			setupMocks: func(m *climocks.MockprojectService) {
-				m.EXPECT().GetApplication("phonetool", "my-app").Times(1).Return(nil, mockError)
-			},
-			want: errors.New("some error"),
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockProjectService := climocks.NewMockprojectService(ctrl)
-
-			test.setupMocks(mockProjectService)
-
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: test.inProjectName,
+						appName: test.name,
 					},
-					AppName: test.inAppName,
-					EnvName: test.inEnvName,
 				},
-				projectService: mockProjectService,
 			}
 
-			err := opts.Validate()
+			got := opts.Validate()
 
-			if test.want != nil {
-				require.EqualError(t, err, test.want.Error())
-			} else {
-				require.Nil(t, err)
-			}
+			require.Equal(t, test.want, got)
 		})
 	}
 }
 
 func TestDeleteAppOpts_Ask(t *testing.T) {
-	const (
-		mockProjectName = "phonetool"
-		testAppName     = "my-app"
-		testProjectName = "my-project"
-	)
-	mockError := errors.New("mockError")
-
+	const mockAppName = "phonetool"
+	var mockPrompter *mocks.Mockprompter
+	mockError := errors.New("some error")
 	tests := map[string]struct {
 		skipConfirmation bool
-		inAppName        string
 
-		mockProjectService func(m *climocks.MockprojectService)
-		mockPrompt         func(m *climocks.Mockprompter)
+		setupMocks func(ctrl *gomock.Controller)
 
-		wantedApp   string
-		wantedError error
+		want error
 	}{
-		"should ask for app name": {
-			inAppName:        "",
+		"return nil if skipConfirmation is enabled": {
 			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
-						Name: "my-app",
-					},
-					&archer.Application{
-						Name: "test-app",
-					},
-				}, nil)
-			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(appDeleteNamePrompt, "", []string{"my-app", "test-app"}).Times(1).Return("my-app", nil)
-			},
-
-			wantedApp: testAppName,
+			setupMocks:       func(ctrl *gomock.Controller) {},
+			want:             nil,
 		},
-		"should skip asking for app name if only one app found": {
-			inAppName:        "",
-			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
-						Name: "my-app",
-					},
-				}, nil)
+		"wrap error returned from prompting": {
+			skipConfirmation: false,
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockPrompter = mocks.NewMockprompter(ctrl)
+				mockPrompter.EXPECT().
+					Confirm(fmt.Sprintf(fmtDeleteAppConfirmPrompt, mockAppName),
+						deleteAppConfirmHelp,
+						gomock.Any()).
+					Return(false, mockError)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {},
-
-			wantedApp: testAppName,
+			want: fmt.Errorf("confirm app deletion: %w", mockError),
 		},
-		"returns error if no application found": {
-			inAppName:        "",
-			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{}, nil)
+		"return error if user cancels operation": {skipConfirmation: false,
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockPrompter = mocks.NewMockprompter(ctrl)
+				mockPrompter.EXPECT().
+					Confirm(fmt.Sprintf(fmtDeleteAppConfirmPrompt, mockAppName),
+						deleteAppConfirmHelp,
+						gomock.Any()).
+					Return(false, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("couldn't find any application in the project phonetool"),
+			want: errOperationCancelled,
 		},
-		"returns error if fail to select application": {
-			inAppName:        "",
-			skipConfirmation: true,
-			mockProjectService: func(m *climocks.MockprojectService) {
-				m.EXPECT().ListApplications(mockProjectName).Return([]*archer.Application{
-					&archer.Application{
-						Name: "my-app",
-					},
-					&archer.Application{
-						Name: "test-app",
-					},
-				}, nil)
+		"return nil if user confirms": {
+			skipConfirmation: false,
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockPrompter = mocks.NewMockprompter(ctrl)
+				mockPrompter.EXPECT().
+					Confirm(fmt.Sprintf(fmtDeleteAppConfirmPrompt, mockAppName),
+						deleteAppConfirmHelp,
+						gomock.Any()).
+					Return(true, nil)
 			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(appDeleteNamePrompt, "", []string{"my-app", "test-app"}).Times(1).Return("", mockError)
-			},
-
-			wantedError: fmt.Errorf("select application to delete: %w", mockError),
-		},
-		"should skip confirmation": {
-			inAppName:          testAppName,
-			skipConfirmation:   true,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt:         func(m *climocks.Mockprompter) {},
-
-			wantedApp: testAppName,
-		},
-		"should wrap error returned from prompter confirmation": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
-					appDeleteConfirmHelp,
-				).Times(1).Return(true, mockError)
-			},
-
-			wantedError: fmt.Errorf("app delete confirmation prompt: %w", mockError),
-		},
-		"should return error if user does not confirm app deletion": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
-					appDeleteConfirmHelp,
-				).Times(1).Return(false, nil)
-			},
-
-			wantedError: errAppDeleteCancelled,
-		},
-		"should return error nil if user confirms app delete": {
-			inAppName:          testAppName,
-			skipConfirmation:   false,
-			mockProjectService: func(m *climocks.MockprojectService) {},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					fmt.Sprintf(appDeleteConfirmPrompt, testAppName, mockProjectName),
-					appDeleteConfirmHelp,
-				).Times(1).Return(true, nil)
-			},
-
-			wantedApp: testAppName,
+			want: nil,
 		},
 	}
 
@@ -239,275 +111,218 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockProjectService := climocks.NewMockprojectService(ctrl)
-			test.mockPrompt(mockPrompter)
-			test.mockProjectService(mockProjectService)
-
+			test.setupMocks(ctrl)
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
-					SkipConfirmation: test.skipConfirmation,
 					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
-						prompt:      mockPrompter,
+						appName: mockAppName,
+						prompt:  mockPrompter,
 					},
-					AppName: test.inAppName,
+					skipConfirmation: test.skipConfirmation,
 				},
-				projectService: mockProjectService,
 			}
 
 			got := opts.Ask()
 
-			if got != nil {
-				require.Equal(t, test.wantedError, got)
-			} else {
-				require.Equal(t, test.wantedApp, opts.AppName)
-			}
-		})
-	}
-}
-
-func TestDeleteAppOpts_getProjectEnvironments(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockProjectService := climocks.NewMockprojectService(ctrl)
-	mockProjectName := "mockProjectName"
-	mockEnvName := "mockEnvName"
-	mockError := errors.New("mockError")
-	mockEnvElement := &archer.Environment{Project: mockProjectName, Name: mockEnvName}
-	mockEnvList := []*archer.Environment{
-		mockEnvElement,
-	}
-
-	tests := map[string]struct {
-		setupMocks      func()
-		inEnvName       string
-		want            error
-		wantOptsEnvList []*archer.Environment
-	}{
-		"should wrap error returned from call to ListEnvironments()": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(nil, mockError)
-			},
-			want:            fmt.Errorf("get environments: %w", mockError),
-			wantOptsEnvList: nil,
-		},
-		"should set the opts environment list": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvList, nil)
-			},
-			want:            nil,
-			wantOptsEnvList: mockEnvList,
-		},
-		"should set one element to opts environment list": {
-			setupMocks: func() {
-				mockProjectService.EXPECT().GetEnvironment(gomock.Eq(mockProjectName), gomock.Eq(mockEnvName)).Return(mockEnvElement, nil)
-			},
-			inEnvName:       mockEnvName,
-			want:            nil,
-			wantOptsEnvList: mockEnvList,
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			test.setupMocks()
-			opts := deleteAppOpts{
-				deleteAppVars: deleteAppVars{
-					GlobalOpts: &GlobalOpts{
-						projectName: mockProjectName,
-					},
-					EnvName: test.inEnvName,
-				},
-				projectService: mockProjectService,
-			}
-
-			got := opts.getProjectEnvironments()
-
 			require.Equal(t, test.want, got)
-			require.Equal(t, test.wantOptsEnvList, opts.projectEnvironments)
 		})
 	}
 }
 
 type deleteAppMocks struct {
-	projectService *climocks.MockprojectService
-	secretsmanager *awsmocks.MockSecretsManager
-	sessProvider   *session.Provider
-	deployer       *climocks.MockappDeployer
-	ws             *climocks.MockwsAppDeleter
-	spinner        *climocks.Mockprogress
-	appRemover     *climocks.MockappRemover
-	imageRemover   *climocks.MockimageRemover
+	spinner         *mocks.Mockprogress
+	store           *mocks.Mockstore
+	ws              *mocks.MockworkspaceDeleter
+	sessProvider    *session.Provider
+	deployer        *mocks.Mockdeployer
+	svcDeleter      *mocks.Mockexecutor
+	envDeleter      *mocks.MockaskExecutor
+	bucketEmptier   *mocks.MockbucketEmptier
+	pipelineDeleter *mocks.MockdeletePipelineRunner
 }
 
 func TestDeleteAppOpts_Execute(t *testing.T) {
-	mockEnvName := "test"
-	mockAppName := "backend"
-	mockProjectName := "badgoose"
-	mockEnv := &archer.Environment{
-		Project:        mockProjectName,
-		Name:           mockEnvName,
-		ManagerRoleARN: "some-arn",
-		Region:         "us-west-2",
+	const mockAppName = "phonetool"
+	mockServices := []*config.Service{
+		{
+			Name: "webapp",
+		},
 	}
-	mockEnvs := []*archer.Environment{mockEnv}
-	mockProject := &archer.Project{
-		Name: mockProjectName,
+	mockEnvs := []*config.Environment{
+		{
+			Name: "staging",
+		},
 	}
-
-	mockRepo := fmt.Sprintf("%s/%s", mockProjectName, mockAppName)
-	testError := errors.New("some error")
-
+	mockApp := &config.Application{
+		Name: "badgoose",
+	}
+	mockResources := []*stack.AppRegionalResources{
+		{
+			Region:   "us-west-2",
+			S3Bucket: "goose-bucket",
+		},
+	}
 	tests := map[string]struct {
-		inProjectName string
-		inAppName     string
-		inEnvName     string
-
+		appName    string
 		setupMocks func(mocks deleteAppMocks)
 
 		wantedError error
 	}{
-		"happy path with no environment passed in as flag": {
-			inProjectName: mockProjectName,
-			inAppName:     mockAppName,
+		"happy path": {
+			appName: mockAppName,
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
-					// getProjectEnvironments
-					mocks.projectService.EXPECT().ListEnvironments(gomock.Eq(mockProjectName)).Times(1).Return(mockEnvs, nil),
-					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
-					// emptyECRRepos
-					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
+					// deleteSvcs
+					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
-					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
+					// deleteEnvs
+					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+					mocks.envDeleter.EXPECT().Ask().Return(nil),
+					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+					// emptyS3bucket
+					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
+					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
+					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
+					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
-					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+					// delete pipeline
+					mocks.pipelineDeleter.EXPECT().Run().Return(nil),
+
+					// deleteAppResources
+					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
+					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppResourcesStopMsg)),
+
+					// deleteAppConfigs
+					mocks.spinner.EXPECT().Start(deleteAppConfigStartMsg),
+					mocks.store.EXPECT().DeleteApplication(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
+
+					// deleteWs
+					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
+					mocks.ws.EXPECT().DeleteAll().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
 				)
 			},
 			wantedError: nil,
 		},
-		"happy path with environment passed in as flag": {
-			inProjectName: mockProjectName,
-			inAppName:     mockAppName,
-			inEnvName:     mockEnvName,
+		"when pipeline manifest does not exist": {
+			appName: mockAppName,
 			setupMocks: func(mocks deleteAppMocks) {
 				gomock.InOrder(
-					// getProjectEnvironments
-					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
-					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppComplete, mockAppName, mockEnvName)),
-					// emptyECRRepos
-					mocks.imageRemover.EXPECT().ClearRepository(mockRepo).Return(nil),
+					// deleteSvcs
+					mocks.store.EXPECT().ListServices(mockAppName).Return(mockServices, nil),
+					mocks.svcDeleter.EXPECT().Execute().Return(nil),
 
-					// removeAppProjectResources
-					mocks.projectService.EXPECT().GetProject(mockProjectName).Return(mockProject, nil),
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppResourcesStart, mockAppName, mockProjectName)),
-					mocks.appRemover.EXPECT().RemoveAppFromProject(mockProject, mockAppName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtDeleteAppResourcesComplete, mockAppName, mockProjectName)),
+					// deleteEnvs
+					mocks.store.EXPECT().ListEnvironments(mockAppName).Return(mockEnvs, nil),
+					mocks.envDeleter.EXPECT().Ask().Return(nil),
+					mocks.envDeleter.EXPECT().Execute().Return(nil),
 
-					// deleteSSMParam
-					mocks.projectService.EXPECT().DeleteApplication(mockProjectName, mockAppName).Return(nil),
+					// emptyS3bucket
+					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
+					mocks.deployer.EXPECT().GetRegionalAppResources(mockApp).Return(mockResources, nil),
+					mocks.spinner.EXPECT().Start(deleteAppCleanResourcesStartMsg),
+					mocks.bucketEmptier.EXPECT().EmptyBucket(mockResources[0].S3Bucket).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppCleanResourcesStopMsg)),
 
-					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteApp(mockAppName).Return(nil),
+					// delete pipeline
+					mocks.pipelineDeleter.EXPECT().Run().Return(workspace.ErrNoPipelineInWorkspace),
+
+					// deleteAppResources
+					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
+					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppResourcesStopMsg)),
+
+					// deleteAppConfigs
+					mocks.spinner.EXPECT().Start(deleteAppConfigStartMsg),
+					mocks.store.EXPECT().DeleteApplication(mockAppName).Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
+
+					// deleteWs
+					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
+					mocks.ws.EXPECT().DeleteAll().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
 				)
 			},
 			wantedError: nil,
-		},
-		"errors when deleting stack": {
-			inProjectName: mockProjectName,
-			inAppName:     mockAppName,
-			inEnvName:     mockEnvName,
-			setupMocks: func(mocks deleteAppMocks) {
-				gomock.InOrder(
-					// getProjectEnvironments
-					mocks.projectService.EXPECT().GetEnvironment(mockProjectName, mockEnvName).Times(1).Return(mockEnv, nil),
-					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppStart, mockAppName, mockEnvName)),
-					mocks.deployer.EXPECT().DeleteApp(gomock.Any()).Return(testError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtDeleteAppFailed, mockAppName, mockEnvName, testError)),
-				)
-			},
-			wantedError: testError,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			// GIVEN
-			mockProjectService := climocks.NewMockprojectService(ctrl)
-			mockSecretsManager := awsmocks.NewMockSecretsManager(ctrl)
-			mockWorkspace := climocks.NewMockwsAppDeleter(ctrl)
+			mockSpinner := mocks.NewMockprogress(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			mockWorkspace := mocks.NewMockworkspaceDeleter(ctrl)
 			mockSession := session.NewProvider()
-			mockAppDeployer := climocks.NewMockappDeployer(ctrl)
-			mockAppRemover := climocks.NewMockappRemover(ctrl)
-			mockSpinner := climocks.NewMockprogress(ctrl)
-			mockImageRemover := climocks.NewMockimageRemover(ctrl)
-			mockGetAppDeployer := func(session *awssession.Session) appDeployer {
-				return mockAppDeployer
+			mockDeployer := mocks.NewMockdeployer(ctrl)
+
+			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
+			mockGetBucketEmptier := func(session *awssession.Session) bucketEmptier {
+				return mockBucketEmptier
 			}
 
-			mockGetImageRemover := func(session *awssession.Session) imageRemover {
-				return mockImageRemover
+			// The following three sets of mocks are to avoid having to go through
+			// mocking all the intermediary steps in calling Execute on DeleteAppOpts,
+			// DeleteEnvOpts, and DeletePipelineOpts. It allows us to instead simply
+			// test if the deletion of those resources succeeded or failed.
+			mockExecutor := mocks.NewMockexecutor(ctrl)
+			mockExecutorProvider := func(appName string) (executor, error) {
+				return mockExecutor, nil
+			}
+
+			mockAskExecutor := mocks.NewMockaskExecutor(ctrl)
+			mockAskExecutorProvider := func(envName, envProfile string) (askExecutor, error) {
+				return mockAskExecutor, nil
+			}
+
+			mockRunner := mocks.NewMockdeletePipelineRunner(ctrl)
+			mockRunnerProvider := func() (deletePipelineRunner, error) {
+				return mockRunner, nil
 			}
 
 			mocks := deleteAppMocks{
-				projectService: mockProjectService,
-				secretsmanager: mockSecretsManager,
-				ws:             mockWorkspace,
-				sessProvider:   mockSession,
-				deployer:       mockAppDeployer,
-				spinner:        mockSpinner,
-				appRemover:     mockAppRemover,
-				imageRemover:   mockImageRemover,
+				spinner:         mockSpinner,
+				store:           mockStore,
+				ws:              mockWorkspace,
+				sessProvider:    mockSession,
+				deployer:        mockDeployer,
+				svcDeleter:      mockExecutor,
+				envDeleter:      mockAskExecutor,
+				bucketEmptier:   mockBucketEmptier,
+				pipelineDeleter: mockRunner,
 			}
-
 			test.setupMocks(mocks)
 
 			opts := deleteAppOpts{
 				deleteAppVars: deleteAppVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: test.inProjectName,
+						appName: mockAppName,
 					},
-					AppName: test.inAppName,
-					EnvName: test.inEnvName,
 				},
-				projectService:   mockProjectService,
-				workspaceService: mockWorkspace,
-				sessProvider:     mockSession,
-				spinner:          mockSpinner,
-				appRemover:       mockAppRemover,
-				getAppDeployer:   mockGetAppDeployer,
-				getImageRemover:  mockGetImageRemover,
+				spinner:              mockSpinner,
+				store:                mockStore,
+				ws:                   mockWorkspace,
+				sessProvider:         mockSession,
+				cfn:                  mockDeployer,
+				s3:                   mockGetBucketEmptier,
+				executor:             mockExecutorProvider,
+				askExecutor:          mockAskExecutorProvider,
+				deletePipelineRunner: mockRunnerProvider,
 			}
 
 			// WHEN
 			err := opts.Execute()
 
 			// THEN
-			if test.wantedError != nil {
-				require.EqualError(t, err, test.wantedError.Error())
-			} else {
-				require.Nil(t, err)
-			}
+			require.Equal(t, test.wantedError, err)
 		})
 	}
 }

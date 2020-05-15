@@ -1,5 +1,0 @@
-LogGroup:
-  Type: AWS::Logs::LogGroup
-  Properties:
-    LogGroupName: !Join ['', [/ecs/, !Ref ProjectName, '-', !Ref EnvName, '-', !Ref AppName]]
-    RetentionInDays: !Ref LogRetention

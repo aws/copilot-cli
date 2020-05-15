@@ -4,101 +4,55 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
 const (
-	applicationShowProjectNamePrompt     = "Which project's applications would you like to show?"
-	applicationShowProjectNameHelpPrompt = "A project groups all of your applications together."
-	applicationShowAppNamePrompt         = "Which application of %s would you like to show?"
-	applicationShowAppNameHelpPrompt     = "The detail of an application will be shown (e.g., endpoint URL, CPU, Memory)."
+	appShowNamePrompt     = "Which application would you like to show?"
+	appShowNameHelpPrompt = "An application is a collection of related services."
 )
 
 type showAppVars struct {
 	*GlobalOpts
-	shouldOutputJSON      bool
-	shouldOutputResources bool
-	appName               string
+	shouldOutputJSON bool
 }
 
 type showAppOpts struct {
 	showAppVars
 
-	w             io.Writer
-	storeSvc      storeReader
-	describer     describer
-	ws            wsAppReader
-	initDescriber func(bool) error // Overriden in tests.
+	store store
+	w     io.Writer
+	sel   appSelector
 }
 
 func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
-	ssmStore, err := store.New()
+	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
-	}
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	opts := &showAppOpts{
+	return &showAppOpts{
 		showAppVars: vars,
-		storeSvc:    ssmStore,
-		ws:          ws,
+		store:       store,
 		w:           log.OutputWriter,
-	}
-	opts.initDescriber = func(enableResources bool) error {
-		var d describer
-		app, err := opts.storeSvc.GetApplication(opts.ProjectName(), opts.appName)
-		if err != nil {
-			return err
-		}
-		switch app.Type {
-		case manifest.LoadBalancedWebApplication:
-			if enableResources {
-				d, err = describe.NewWebAppDescriberWithResources(opts.ProjectName(), opts.appName)
-			} else {
-				d, err = describe.NewWebAppDescriber(opts.ProjectName(), opts.appName)
-			}
-		case manifest.BackendApplication:
-			if enableResources {
-				d, err = describe.NewBackendAppDescriberWithResources(opts.ProjectName(), opts.appName)
-			} else {
-				d, err = describe.NewBackendAppDescriber(opts.ProjectName(), opts.appName)
-			}
-		default:
-			return fmt.Errorf("invalid application type %s", app.Type)
-		}
-
-		if err != nil {
-			return fmt.Errorf("creating describer for application %s in project %s: %w", opts.appName, opts.ProjectName(), err)
-		}
-		opts.describer = d
-		return nil
-	}
-	return opts, nil
+		sel:         selector.NewSelect(vars.prompt, store),
+	}, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
 func (o *showAppOpts) Validate() error {
-	if o.ProjectName() != "" {
-		if _, err := o.storeSvc.GetProject(o.ProjectName()); err != nil {
-			return err
-		}
-	}
-	if o.appName != "" {
-		if _, err := o.storeSvc.GetApplication(o.ProjectName(), o.appName); err != nil {
-			return err
+	if o.AppName() != "" {
+		_, err := o.store.GetApplication(o.AppName())
+		if err != nil {
+			return fmt.Errorf("get application %s: %w", o.AppName(), err)
 		}
 	}
 
@@ -107,148 +61,92 @@ func (o *showAppOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *showAppOpts) Ask() error {
-	if err := o.askProject(); err != nil {
+	if err := o.askName(); err != nil {
 		return err
 	}
-	return o.askAppName()
+
+	return nil
 }
 
-// Execute shows the applications through the prompt.
+// Execute writes the application's description.
 func (o *showAppOpts) Execute() error {
-	if o.appName == "" {
-		// If there are no local applications in the workspace, we exit without error.
-		return nil
-	}
-	err := o.initDescriber(o.shouldOutputResources)
+	description, err := o.description()
 	if err != nil {
 		return err
 	}
-	app, err := o.describer.Describe()
+	if !o.shouldOutputJSON {
+		fmt.Fprintf(o.w, description.HumanString())
+		return nil
+	}
+	data, err := description.JSONString()
 	if err != nil {
-		return fmt.Errorf("describe application %s: %w", o.appName, err)
+		return fmt.Errorf("get JSON string: %w", err)
 	}
-
-	if o.shouldOutputJSON {
-		data, err := app.JSONString()
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(o.w, data)
-	} else {
-		fmt.Fprintf(o.w, app.HumanString())
-	}
-
+	fmt.Fprintf(o.w, data)
 	return nil
 }
 
-func (o *showAppOpts) askProject() error {
-	if o.ProjectName() != "" {
+func (o *showAppOpts) description() (*describe.App, error) {
+	app, err := o.store.GetApplication(o.AppName())
+	if err != nil {
+		return nil, fmt.Errorf("get application %s: %w", o.AppName(), err)
+	}
+	envs, err := o.store.ListEnvironments(o.AppName())
+	if err != nil {
+		return nil, fmt.Errorf("list environments in application %s: %w", o.AppName(), err)
+	}
+	svcs, err := o.store.ListServices(o.AppName())
+	if err != nil {
+		return nil, fmt.Errorf("list services in application %s: %w", o.AppName(), err)
+	}
+	var trimmedEnvs []*config.Environment
+	for _, env := range envs {
+		trimmedEnvs = append(trimmedEnvs, &config.Environment{
+			Name:      env.Name,
+			AccountID: env.AccountID,
+			Region:    env.Region,
+			Prod:      env.Prod,
+		})
+	}
+	var trimmedSvcs []*config.Service
+	for _, svc := range svcs {
+		trimmedSvcs = append(trimmedSvcs, &config.Service{
+			Name: svc.Name,
+			Type: svc.Type,
+		})
+	}
+	return &describe.App{
+		Name:     app.Name,
+		URI:      app.Domain,
+		Envs:     trimmedEnvs,
+		Services: trimmedSvcs,
+	}, nil
+}
+
+func (o *showAppOpts) askName() error {
+	if o.AppName() != "" {
 		return nil
 	}
-	projNames, err := o.retrieveProjects()
+	name, err := o.sel.Application(appShowNamePrompt, appShowNameHelpPrompt)
 	if err != nil {
-		return err
+		return fmt.Errorf("select application: %w", err)
 	}
-	if len(projNames) == 0 {
-		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
-	}
-	proj, err := o.prompt.SelectOne(
-		applicationShowProjectNamePrompt,
-		applicationShowProjectNameHelpPrompt,
-		projNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select projects: %w", err)
-	}
-	o.projectName = proj
-
+	o.appName = name
 	return nil
 }
 
-func (o *showAppOpts) askAppName() error {
-	// return if app name is set by flag
-	if o.appName != "" {
-		return nil
-	}
-
-	appNames, err := o.retrieveLocalApplication()
-	if err != nil {
-		appNames, err = o.retrieveAllApplications()
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(appNames) == 0 {
-		log.Infof("No applications found in project %s\n.", color.HighlightUserInput(o.ProjectName()))
-		return nil
-	}
-	if len(appNames) == 1 {
-		o.appName = appNames[0]
-		return nil
-	}
-	appName, err := o.prompt.SelectOne(
-		fmt.Sprintf(applicationShowAppNamePrompt, color.HighlightUserInput(o.ProjectName())),
-		applicationShowAppNameHelpPrompt,
-		appNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select applications for project %s: %w", o.ProjectName(), err)
-	}
-	o.appName = appName
-
-	return nil
-}
-
-func (o *showAppOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.storeSvc.ListProjects()
-	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
-	}
-	projNames := make([]string, len(projs))
-	for ind, proj := range projs {
-		projNames[ind] = proj.Name
-	}
-	return projNames, nil
-}
-
-func (o *showAppOpts) retrieveLocalApplication() ([]string, error) {
-	localAppNames, err := o.ws.AppNames()
-	if err != nil {
-		return nil, err
-	}
-	if len(localAppNames) == 0 {
-		return nil, errors.New("no application found")
-	}
-	return localAppNames, nil
-}
-
-func (o *showAppOpts) retrieveAllApplications() ([]string, error) {
-	apps, err := o.storeSvc.ListApplications(o.ProjectName())
-	if err != nil {
-		return nil, fmt.Errorf("list applications for project %s: %w", o.ProjectName(), err)
-	}
-	appNames := make([]string, len(apps))
-	for ind, app := range apps {
-		appNames[ind] = app.Name
-	}
-
-	return appNames, nil
-}
-
-// BuildAppShowCmd builds the command for showing applications in a project.
+// BuildAppShowCmd builds the command for showing details of an application.
 func BuildAppShowCmd() *cobra.Command {
 	vars := showAppVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "show",
-		Short: "Shows info about a deployed application per environment.",
-		Long:  "Shows info about a deployed application, including endpoints, capacity and related resources per environment.",
-
+		Short: "Shows info about an application.",
+		Long:  "Shows configuration, environments and services for an application.",
 		Example: `
   Shows info about the application "my-app"
-  /code $ ecs-preview app show -n my-app`,
+  /code $ copilot app show -n my-app`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowAppOpts(vars)
 			if err != nil {
@@ -260,13 +158,15 @@ func BuildAppShowCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			return opts.Execute()
+			if err := opts.Execute(); err != nil {
+				return err
+			}
+
+			return nil
 		}),
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
-	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "", appFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
-	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, resourcesFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, projectFlag, projectFlagShort, "", projectFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, nameFlag, nameFlagShort, "" /* default */, appFlagDescription)
 	return cmd
 }

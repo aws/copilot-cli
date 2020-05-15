@@ -54,7 +54,7 @@ var basicNameTestCases = map[string]testCase{
 func TestValidateProjectName(t *testing.T) {
 	// Any project-specific name validations can be added here
 	testCases := map[string]testCase{
-		"contains emoji": testCase{
+		"contains emoji": {
 			input: "😀",
 			want:  errValueBadFormat,
 		},
@@ -62,7 +62,7 @@ func TestValidateProjectName(t *testing.T) {
 
 	for name, tc := range basicNameTestCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateProjectName(tc.input)
+			got := validateAppName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})
@@ -70,19 +70,19 @@ func TestValidateProjectName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateProjectName(tc.input)
+			got := validateAppName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})
 	}
 }
 
-func TestValidateApplicationName(t *testing.T) {
+func TestValidateSvcName(t *testing.T) {
 	testCases := basicNameTestCases
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateApplicationName(tc.input)
+			got := validateSvcName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})
@@ -94,7 +94,7 @@ func TestValidateEnvironmentName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateApplicationName(tc.input)
+			got := validateSvcName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})

@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	awsmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks" // TODO refactor
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
@@ -18,17 +17,17 @@ import (
 )
 
 const (
-	testProjName       = "badgoose"
+	testAppName        = "badgoose"
 	testPipelineName   = "honkpipes"
 	testPipelineSecret = "honkhonkhonk"
 )
 
 type deletePipelineMocks struct {
-	prompt         *climocks.Mockprompter
-	prog           *climocks.Mockprogress
-	secretsmanager *awsmocks.MockSecretsManager
-	deployer       *climocks.MockpipelineDeployer
-	ws             *climocks.MockwsPipelineDeleter
+	prompt         *mocks.Mockprompter
+	prog           *mocks.Mockprogress
+	secretsmanager *mocks.MocksecretsManager
+	deployer       *mocks.MockpipelineDeployer
+	ws             *mocks.MockwsPipelineDeleter
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
@@ -51,13 +50,13 @@ stages:
 `
 
 	testCases := map[string]struct {
-		inProjectName string
-		callMocks     func(m deletePipelineMocks)
+		inAppName string
+		callMocks func(m deletePipelineMocks)
 
 		wantedError error
 	}{
 		"happy path": {
-			inProjectName: testProjName,
+			inAppName: testAppName,
 			callMocks: func(m deletePipelineMocks) {
 				m.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil)
 			},
@@ -65,7 +64,7 @@ stages:
 		},
 
 		"pipeline manifest does not exist": {
-			inProjectName: testProjName,
+			inAppName: testAppName,
 			callMocks: func(m deletePipelineMocks) {
 				m.ws.EXPECT().ReadPipelineManifest().Return(nil, workspace.ErrNoPipelineInWorkspace)
 			},
@@ -73,11 +72,11 @@ stages:
 			wantedError: workspace.ErrNoPipelineInWorkspace,
 		},
 
-		"project does not exist": {
-			inProjectName: "",
-			callMocks:     func(m deletePipelineMocks) {},
+		"application does not exist": {
+			inAppName: "",
+			callMocks: func(m deletePipelineMocks) {},
 
-			wantedError: errNoProjectInWorkspace,
+			wantedError: errNoAppInWorkspace,
 		},
 	}
 
@@ -87,7 +86,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
 			mocks := deletePipelineMocks{
 				ws: mockWorkspace,
 			}
@@ -97,7 +96,7 @@ stages:
 			opts := &deletePipelineOpts{
 				deletePipelineVars: deletePipelineVars{
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
+						appName: tc.inAppName,
 					},
 				},
 				ws: mockWorkspace,
@@ -117,7 +116,7 @@ stages:
 func TestDeletePipelineOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		skipConfirmation bool
-		inProjectName    string
+		inAppName        string
 		inPipelineName   string
 
 		callMocks func(m deletePipelineMocks)
@@ -126,7 +125,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 	}{
 		"skips confirmation works": {
 			skipConfirmation: true,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 
 			callMocks: func(m deletePipelineMocks) {},
@@ -136,11 +135,11 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 
 		"delete confirmation works": {
 			skipConfirmation: false,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			callMocks: func(m deletePipelineMocks) {
 				m.prompt.EXPECT().Confirm(
-					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testProjName),
+					fmt.Sprintf(pipelineDeleteConfirmPrompt, testPipelineName, testAppName),
 					pipelineDeleteConfirmHelp,
 				).Times(1).Return(true, nil)
 			},
@@ -154,7 +153,7 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt: mockPrompt,
@@ -166,8 +165,8 @@ func TestDeletePipelineOpts_Ask(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					SkipConfirmation: tc.skipConfirmation,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
-						prompt:      mockPrompt,
+						appName: tc.inAppName,
+						prompt:  mockPrompt,
 					},
 				},
 				PipelineName: tc.inPipelineName,
@@ -188,7 +187,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 	testError := errors.New("some error")
 	testCases := map[string]struct {
 		deleteSecret     bool
-		inProjectName    string
+		inAppName        string
 		inPipelineName   string
 		inPipelineSecret string
 
@@ -198,7 +197,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 	}{
 		"skips delete secret confirmation when flag is specified": {
 			deleteSecret:     true,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			inPipelineSecret: testPipelineSecret,
 
@@ -206,9 +205,9 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// no confirmation prompt for deleting secret
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
-					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
-					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
@@ -217,7 +216,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 		"asks for confirmation when delete secret flag is not specified": {
 			deleteSecret:     false,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			inPipelineSecret: testPipelineSecret,
 
@@ -228,9 +227,9 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 						pipelineDeleteSecretConfirmHelp,
 					).Times(1).Return(true, nil),
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
-					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
-					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
@@ -239,7 +238,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 		"does not delete secret if user does not confirm": {
 			deleteSecret:     false,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			inPipelineSecret: testPipelineSecret,
 
@@ -252,9 +251,9 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 					// does not delete secret
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Times(0),
-					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(nil),
-					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
@@ -263,16 +262,16 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 
 		"error when deleting stack": {
 			deleteSecret:     true,
-			inProjectName:    testProjName,
+			inAppName:        testAppName,
 			inPipelineName:   testPipelineName,
 			inPipelineSecret: testPipelineSecret,
 
 			setupMocks: func(mocks deletePipelineMocks) {
 				gomock.InOrder(
 					mocks.secretsmanager.EXPECT().DeleteSecret(testPipelineSecret).Return(nil),
-					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testProjName)),
+					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(testError),
-					mocks.prog.EXPECT().Stop(log.Serrorf(fmtDeletePipelineFailed, testPipelineName, testProjName, testError)),
+					mocks.prog.EXPECT().Stop(log.Serrorf(fmtDeletePipelineFailed, testPipelineName, testAppName, testError)),
 					mocks.ws.EXPECT().DeletePipelineManifest().Times(0),
 				)
 			},
@@ -286,11 +285,11 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSecretsManager := awsmocks.NewMockSecretsManager(ctrl)
-			mockProg := climocks.NewMockprogress(ctrl)
-			mockDeployer := climocks.NewMockpipelineDeployer(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			mockWorkspace := climocks.NewMockwsPipelineDeleter(ctrl)
+			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
+			mockProg := mocks.NewMockprogress(ctrl)
+			mockDeployer := mocks.NewMockpipelineDeployer(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,
@@ -306,8 +305,8 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 				deletePipelineVars: deletePipelineVars{
 					DeleteSecret: tc.deleteSecret,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inProjectName,
-						prompt:      mockPrompter,
+						appName: tc.inAppName,
+						prompt:  mockPrompter,
 					},
 				},
 				PipelineName:     tc.inPipelineName,

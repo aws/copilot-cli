@@ -7,37 +7,42 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+
+	"testing"
+
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type showEnvMocks struct {
-	storeSvc  *climocks.MockstoreReader
-	prompt    *climocks.Mockprompter
-	describer *climocks.MockenvDescriber
+	storeSvc  *mocks.Mockstore
+	prompt    *mocks.Mockprompter
+	describer *mocks.MockenvDescriber
+	sel       *mocks.MockconfigSelector
 }
 
 func TestEnvShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputProject     string
+		inputApp         string
 		inputEnvironment string
 		setupMocks       func(mocks showEnvMocks)
 
 		wantedError error
 	}{
-		"valid project name and environment name": {
-			inputProject:     "my-project",
+		"valid app name and environment name": {
+			inputApp:         "my-app",
 			inputEnvironment: "my-env",
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-						Name: "my-project",
+					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+						Name: "my-app",
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(&archer.Environment{
+					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
 				)
@@ -45,26 +50,26 @@ func TestEnvShow_Validate(t *testing.T) {
 
 			wantedError: nil,
 		},
-		"invalid project name": {
-			inputProject:     "my-project",
+		"invalid app name": {
+			inputApp:         "my-app",
 			inputEnvironment: "my-env",
 
 			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().GetProject("my-project").Return(nil, errors.New("some error"))
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
 			},
 
 			wantedError: fmt.Errorf("some error"),
 		},
 		"invalid environment name": {
-			inputProject:     "my-project",
+			inputApp:         "my-app",
 			inputEnvironment: "my-env",
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().GetProject("my-project").Return(&archer.Project{
-						Name: "my-project",
+					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
+						Name: "my-app",
 					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-project", "my-env").Return(nil, errors.New("some error")),
+					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -77,7 +82,7 @@ func TestEnvShow_Validate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
 
 			mocks := showEnvMocks{
 				storeSvc: mockStoreReader,
@@ -89,10 +94,10 @@ func TestEnvShow_Validate(t *testing.T) {
 				showEnvVars: showEnvVars{
 					envName: tc.inputEnvironment,
 					GlobalOpts: &GlobalOpts{
-						projectName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
-				storeSvc: mockStoreReader,
+				store: mockStoreReader,
 			}
 
 			// WHEN
@@ -109,174 +114,59 @@ func TestEnvShow_Validate(t *testing.T) {
 }
 
 func TestEnvShow_Ask(t *testing.T) {
+	mockErr := errors.New("some error")
 	testCases := map[string]struct {
-		inputProject string
-		inputEnv     string
+		inputApp string
+		inputEnv string
 
 		setupMocks func(mocks showEnvMocks)
 
-		wantedProject string
-		wantedEnv     string
-		wantedError   error
+		wantedApp   string
+		wantedEnv   string
+		wantedError error
 	}{
 		"with all flags": {
-			inputProject: "my-project",
-			inputEnv:     "my-env",
+			inputApp: "my-app",
+			inputEnv: "my-env",
 
 			setupMocks: func(mocks showEnvMocks) {},
 
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   nil,
+			wantedApp: "my-app",
+			wantedEnv: "my-env",
 		},
-		"retrieve all env names": {
-			inputProject: "",
-			inputEnv:     "",
+		"returns error when fail to select app": {
+			inputApp: "",
+			inputEnv: "",
 
 			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-
-					// askEnvName
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "my-env"},
-						{Name: "archer-env"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("my-env", nil).Times(1),
-				)
+				m.sel.EXPECT().Application(envShowAppNamePrompt, envShowAppNameHelpPrompt).Return("", mockErr)
 			},
 
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   nil,
-		},
-		"skip selecting if only one project found": {
-			inputProject: "",
-			inputEnv:     "my-env",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{
-							Name: "my-project",
-						},
-					}, nil),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   nil,
-		},
-		"skip selecting if only one env found": {
-			inputProject: "my-project",
-			inputEnv:     "",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{
-							Name: "my-env",
-						},
-					}, nil),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   nil,
-		},
-		"returns error when fail to list project": {
-			inputProject: "",
-			inputEnv:     "",
-
-			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return(nil, errors.New("some error"))
-			},
-
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   fmt.Errorf("list projects: some error"),
-		},
-		"returns error when no project found": {
-			inputProject: "",
-			inputEnv:     "",
-
-			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{}, nil)
-			},
-
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   fmt.Errorf("no project found: run `project init` please"),
-		},
-		"returns error when fail to select project": {
-			inputProject: "",
-			inputEnv:     "",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("", errors.New("some error")).Times(1),
-				)
-			},
-
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   fmt.Errorf("select projects: some error"),
-		},
-		"returns error when fail to list environments": {
-			inputProject: "",
-			inputEnv:     "",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-					//askEnvName
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return(nil, fmt.Errorf("some error")),
-				)
-			},
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   fmt.Errorf("list environments for project my-project: some error"),
+			wantedError: fmt.Errorf("select application: some error"),
 		},
 		"returns error when fail to select environment": {
-			inputProject: "",
-			inputEnv:     "",
+			inputApp: "my-app",
+			inputEnv: "",
+
+			setupMocks: func(m showEnvMocks) {
+				m.sel.EXPECT().Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput("my-app")), envShowHelpPrompt, "my-app").Return("", mockErr)
+			},
+
+			wantedError: fmt.Errorf("select environment for application my-app: some error"),
+		},
+		"success with no flag set": {
+			inputApp: "",
+			inputEnv: "",
 
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
-					// askProject
-					m.storeSvc.EXPECT().ListProjects().Return([]*archer.Project{
-						{Name: "my-project"},
-						{Name: "archer-project"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(environmentShowProjectNamePrompt, environmentShowProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1),
-					//askEnvName
-					m.storeSvc.EXPECT().ListEnvironments("my-project").Return([]*archer.Environment{
-						{Name: "my-env"},
-						{Name: "archer-env"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(fmtEnvironmentShowEnvNamePrompt, "my-project"), environmentShowEnvNameHelpPrompt, []string{"my-env", "archer-env"}).Return("", fmt.Errorf("some error")).Times(1),
+					m.sel.EXPECT().Application(envShowAppNamePrompt, envShowAppNameHelpPrompt).Return("my-app", nil),
+					m.sel.EXPECT().Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput("my-app")), envShowHelpPrompt, "my-app").Return("my-env", nil),
 				)
 			},
-			wantedProject: "my-project",
-			wantedEnv:     "my-env",
-			wantedError:   fmt.Errorf("select environment for project my-project: some error"),
+
+			wantedApp: "my-app",
+			wantedEnv: "my-env",
 		},
 	}
 
@@ -285,12 +175,10 @@ func TestEnvShow_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
+			mockSelector := mocks.NewMockconfigSelector(ctrl)
 
 			mocks := showEnvMocks{
-				storeSvc: mockStoreReader,
-				prompt:   mockPrompter,
+				sel: mockSelector,
 			}
 
 			tc.setupMocks(mocks)
@@ -299,11 +187,10 @@ func TestEnvShow_Ask(t *testing.T) {
 				showEnvVars: showEnvVars{
 					envName: tc.inputEnv,
 					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
-				storeSvc: mockStoreReader,
+				sel: mockSelector,
 			}
 			// WHEN
 			err := showEnvs.Ask()
@@ -312,7 +199,7 @@ func TestEnvShow_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedProject, showEnvs.ProjectName(), "expected project name to match")
+				require.Equal(t, tc.wantedApp, showEnvs.AppName(), "expected app name to match")
 				require.Equal(t, tc.wantedEnv, showEnvs.envName, "expected environment name to match")
 			}
 		})
@@ -325,13 +212,13 @@ func TestEnvShow_Execute(t *testing.T) {
 		inputEnv         string
 		shouldOutputJSON bool
 
-		mockEnvDescriber func(m *climocks.MockenvDescriber)
+		mockEnvDescriber func(m *mocks.MockenvDescriber)
 
 		wantedContent string
 		wantedError   error
 	}{
 		"errors if failed to describe the env": {
-			mockEnvDescriber: func(m *climocks.MockenvDescriber) {
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
 				m.EXPECT().Describe().Return(nil, mockError)
 			},
 			wantedError: fmt.Errorf("describe environment mockEnv: some error"),
@@ -344,8 +231,8 @@ func TestEnvShow_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			b := &bytes.Buffer{}
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
-			mockEnvDescriber := climocks.NewMockenvDescriber(ctrl)
+			mockStoreReader := mocks.NewMockstore(ctrl)
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			tc.mockEnvDescriber(mockEnvDescriber)
 
 			showEnvs := &showEnvOpts{
@@ -354,7 +241,7 @@ func TestEnvShow_Execute(t *testing.T) {
 					shouldOutputJSON: tc.shouldOutputJSON,
 					envName:          "mockEnv",
 				},
-				storeSvc:         mockStoreReader,
+				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
 				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
 				w:                b,

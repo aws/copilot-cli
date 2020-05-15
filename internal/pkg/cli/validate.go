@@ -24,43 +24,43 @@ var (
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
-func validateProjectName(val interface{}) error {
-	if err := basicNameValidation(val); err != nil {
-		return fmt.Errorf("project name %v is invalid: %w", val, err)
-	}
-	return nil
-}
-
-func validateApplicationName(val interface{}) error {
+func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("application name %v is invalid: %w", val, err)
 	}
 	return nil
 }
 
-func validateApplicationPort(val interface{}) error {
-
-	if err := basicPortValidation(val); err != nil {
-		return fmt.Errorf("application port %v is invalid: %w", val, err)
+func validateSvcName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
 	return nil
 }
 
-func validateApplicationType(val interface{}) error {
-	appType, ok := val.(string)
+func validateSvcPort(val interface{}) error {
+
+	if err := basicPortValidation(val); err != nil {
+		return fmt.Errorf("port %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateSvcType(val interface{}) error {
+	svcType, ok := val.(string)
 	if !ok {
 		return errValueNotAString
 	}
-	for _, validType := range manifest.AppTypes {
-		if appType == validType {
+	for _, validType := range manifest.ServiceTypes {
+		if svcType == validType {
 			return nil
 		}
 	}
 	var prettyTypes []string
-	for _, validType := range manifest.AppTypes {
+	for _, validType := range manifest.ServiceTypes {
 		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
 	}
-	return fmt.Errorf("invalid app type %s: must be one of %s", appType, strings.Join(prettyTypes, ", "))
+	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, strings.Join(prettyTypes, ", "))
 }
 
 func validateEnvironmentName(val interface{}) error {

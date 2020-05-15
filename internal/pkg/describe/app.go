@@ -4,168 +4,52 @@
 package describe
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 )
 
-const (
-	// Ignored resources
-	rulePriorityFunction = "Custom::RulePriorityFunction"
-	waitCondition        = "AWS::CloudFormation::WaitCondition"
-	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
-
-	serviceLogicalID = "Service"
-)
-
-type stackAndResourcesDescriber interface {
-	Stack(stackName string) (*cloudformation.Stack, error)
-	StackResources(stackName string) ([]*cloudformation.StackResource, error)
+// App contains serialized parameters for an application.
+type App struct {
+	Name     string                `json:"name"`
+	URI      string                `json:"uri"`
+	Envs     []*config.Environment `json:"environments"`
+	Services []*config.Service     `json:"services"`
 }
 
-type ecsService interface {
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
-}
-
-// AppDescriber retrieves information about an application.
-type AppDescriber struct {
-	project string
-	app     string
-	env     string
-
-	ecsClient      ecsService
-	stackDescriber stackAndResourcesDescriber
-}
-
-// NewAppDescriber instantiates a new application.
-func NewAppDescriber(project, env, app string) (*AppDescriber, error) {
-	svc, err := store.New()
+// JSONString returns the stringified App struct with json format.
+func (a *App) JSONString() (string, error) {
+	b, err := json.Marshal(a)
 	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
+		return "", fmt.Errorf("marshal application description: %w", err)
 	}
-	meta, err := svc.GetApplication(project, app)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", app, err)
-	}
-	environment, err := svc.GetEnvironment(project, env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", env, err)
-	}
-	sess, err := session.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
-	if err != nil {
-		return nil, err
-	}
-	d := newStackDescriber(sess)
-	return &AppDescriber{
-		project: project,
-		app:     meta.Name,
-		env:     environment.Name,
-
-		ecsClient:      ecs.New(sess),
-		stackDescriber: d,
-	}, nil
+	return fmt.Sprintf("%s\n", b), nil
 }
 
-// EnvVars returns the environment variables of the task definition.
-func (d *AppDescriber) EnvVars() (map[string]string, error) {
-	taskDefName := fmt.Sprintf("%s-%s-%s", d.project, d.env, d.app)
-	taskDefinition, err := d.ecsClient.TaskDefinition(taskDefName)
-	if err != nil {
-		return nil, err
+// HumanString returns the stringified App struct with human readable format.
+func (a *App) HumanString() string {
+	var b bytes.Buffer
+	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
+	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", a.Name)
+	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
+	fmt.Fprintf(writer, color.Bold.Sprint("\nEnvironments\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Name", "AccountID", "Region")
+	for _, env := range a.Envs {
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
-	envVars := taskDefinition.EnvironmentVariables()
-
-	return envVars, nil
-}
-
-// GetServiceArn returns the ECS service ARN of the application in an environment.
-func (d *AppDescriber) GetServiceArn() (*ecs.ServiceArn, error) {
-	appResources, err := d.stackDescriber.StackResources(stack.NameForApp(d.project, d.env, d.app))
-	if err != nil {
-		return nil, err
+	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
+	for _, svc := range a.Services {
+		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
-	for _, appResource := range appResources {
-		if aws.StringValue(appResource.LogicalResourceId) == serviceLogicalID {
-			serviceArn := ecs.ServiceArn(aws.StringValue(appResource.PhysicalResourceId))
-			return &serviceArn, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find service arn in app stack resource")
-}
-
-// AppStackResources returns the filtered application stack resources created by CloudFormation.
-func (d *AppDescriber) AppStackResources() ([]*cloudformation.StackResource, error) {
-	appResources, err := d.stackDescriber.StackResources(stack.NameForApp(d.project, d.env, d.app))
-	if err != nil {
-		return nil, err
-	}
-	var resources []*cloudformation.StackResource
-	// See https://github.com/aws/amazon-ecs-cli-v2/issues/621
-	ignoredResources := map[string]bool{
-		rulePriorityFunction: true,
-		waitCondition:        true,
-		waitConditionHandle:  true,
-	}
-	for _, appResource := range appResources {
-		if ignoredResources[aws.StringValue(appResource.ResourceType)] {
-			continue
-		}
-		resources = append(resources, appResource)
-	}
-
-	return resources, nil
-}
-
-// EnvOutputs returns the output of the environment stack.
-func (d *AppDescriber) EnvOutputs() (map[string]string, error) {
-	envStack, err := d.stackDescriber.Stack(stack.NameForEnv(d.project, d.env))
-	if err != nil {
-		return nil, err
-	}
-	outputs := make(map[string]string)
-	for _, out := range envStack.Outputs {
-		outputs[*out.OutputKey] = *out.OutputValue
-	}
-	return outputs, nil
-}
-
-// Params returns the parameters of the application stack.
-func (d *AppDescriber) Params() (map[string]string, error) {
-	appStack, err := d.stackDescriber.Stack(stack.NameForApp(d.project, d.env, d.app))
-	if err != nil {
-		return nil, err
-	}
-	params := make(map[string]string)
-	for _, param := range appStack.Parameters {
-		params[*param.ParameterKey] = *param.ParameterValue
-	}
-	return params, nil
-}
-
-func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
-	var envVarList []*EnvVars
-	for k, v := range m {
-		envVarList = append(envVarList, &EnvVars{
-			Environment: envName,
-			Name:        k,
-			Value:       v,
-		})
-	}
-	return envVarList
-}
-
-func flattenResources(stackResources []*cloudformation.StackResource) []*CfnResource {
-	var webAppResources []*CfnResource
-	for _, stackResource := range stackResources {
-		webAppResources = append(webAppResources, &CfnResource{
-			PhysicalID: aws.StringValue(stackResource.PhysicalResourceId),
-			Type:       aws.StringValue(stackResource.ResourceType),
-		})
-	}
-	return webAppResources
+	writer.Flush()
+	return b.String()
 }
