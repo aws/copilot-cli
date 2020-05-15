@@ -100,7 +100,7 @@ func (o *listEnvOpts) humanOutput(envs []*config.Environment) string {
 	b := &strings.Builder{}
 	for _, env := range envs {
 		if env.Prod {
-			fmt.Fprintf(b, "%s (prod)\n", color.ProdColor(env.Name))
+			fmt.Fprintf(b, "%s (prod)\n", color.Prod(env.Name))
 		} else {
 			fmt.Fprintln(b, env.Name)
 		}
@@ -126,9 +126,9 @@ func BuildEnvListCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the environments in an application",
+		Short: "Lists all the environments in an application.",
 		Example: `
-  Lists all the environments for the frontend application
+  Lists all the environments for the frontend application.
   /code $ copilot env ls -a frontend`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newListEnvOpts(vars)

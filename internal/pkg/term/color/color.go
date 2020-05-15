@@ -73,7 +73,7 @@ func HighlightCode(s string) string {
 	return HiCyan.Sprintf("`%s`", s)
 }
 
-// ProdColor colors the string to mark it is a prod environment.
-func ProdColor(s string) string {
+// Prod colors the string to mark it is a prod environment.
+func Prod(s string) string {
 	return BoldFgYellow.Sprint(s)
 }

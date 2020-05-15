@@ -145,7 +145,7 @@ func BuildEnvShowCmd() *cobra.Command {
 		Long:   "Shows info about a deployed environment, including region, account ID, and services.",
 
 		Example: `
-  Shows info about the environment "test"
+  Shows info about the environment "test".
   /code $ ecs-preview env show -n test`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowEnvOpts(vars)
