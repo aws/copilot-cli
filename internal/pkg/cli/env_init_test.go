@@ -22,26 +22,26 @@ import (
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName     string
-		inProjectName string
+		inEnvName string
+		inAppName string
 
 		wantedErr string
 	}{
 		"valid environment creation": {
-			inEnvName:     "test-pdx",
-			inProjectName: "phonetool",
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
 		},
 		"invalid environment name": {
-			inEnvName:     "123env",
-			inProjectName: "phonetool",
+			inEnvName: "123env",
+			inAppName: "phonetool",
 
 			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
 		"new workspace": {
-			inEnvName:     "test-pdx",
-			inProjectName: "",
+			inEnvName: "test-pdx",
+			inAppName: "",
 
-			wantedErr: "no project found: run `project init` or `cd` into your workspace please",
+			wantedErr: "no application found: run `app init` or `cd` into your workspace please",
 		},
 	}
 
@@ -51,7 +51,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
 					EnvName:    tc.inEnvName,
-					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 			}
 
@@ -76,7 +76,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputEnv     string
 		inputProfile string
-		inputProject string
+		inputApp     string
 
 		setupMocks func(*mocks.Mockprompter, *mocks.MockprofileNames)
 
@@ -127,7 +127,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					EnvProfile: tc.inputProfile,
 					GlobalOpts: &GlobalOpts{
 						prompt:  mockPrompter,
-						appName: tc.inputProject,
+						appName: tc.inputApp,
 					},
 				},
 				profileConfig: mockCfg,
@@ -150,9 +150,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 func TestInitEnvOpts_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
-		inEnvName     string
-		inProd        bool
+		inAppName string
+		inEnvName string
+		inProd    bool
 
 		expectstore    func(m *mocks.Mockstore)
 		expectDeployer func(m *mocks.Mockdeployer)
@@ -161,9 +161,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 		wantedErrorS string
 	}{
-		"returns project exists error": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+		"returns app exists error": {
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
@@ -172,8 +172,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "some error",
 		},
 		"returns identity get error": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -184,8 +184,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "get identity: some identity error",
 		},
 		"errors if environment change set cannot be accepted": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -203,8 +203,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "some deploy error",
 		},
 		"streams failed events": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -251,8 +251,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "some stream error",
 		},
 		"failed to get environment stack": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
@@ -288,8 +288,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "get environment struct for test: some error",
 		},
 		"failed to create stack set instance": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().CreateEnvironment(gomock.Any()).Times(0)
@@ -302,8 +302,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToProjectFailed, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
@@ -330,11 +330,11 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}, nil)
 				m.EXPECT().AddEnvToApp(&config.Application{Name: "phonetool"}, env).Return(errors.New("some cfn error"))
 			},
-			wantedErrorS: "deploy env test to project phonetool: some cfn error",
+			wantedErrorS: "deploy env test to application phonetool: some cfn error",
 		},
 		"returns error from CreateEnvironment": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{
@@ -354,8 +354,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
@@ -384,9 +384,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			wantedErrorS: "store environment: some create error",
 		},
 		"success": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
-			inProd:        true,
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inProd:    true,
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -405,8 +405,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(gomock.Any()).Return(nil)
@@ -436,8 +436,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 		},
 		"skips creating stack if environment stack already exists": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -454,8 +454,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Stop("")
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DeployEnvironment(&deploy.CreateEnvironmentInput{
@@ -473,9 +473,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().AddEnvToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
-		"failed to delegate DNS (project has Domain and env and project are different)": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+		"failed to delegate DNS (app has Domain and env and apps are different)": {
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
@@ -492,9 +492,9 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "granting DNS permissions: some error",
 		},
-		"success with DNS Delegation (project has Domain and env and project are different)": {
-			inProjectName: "phonetool",
-			inEnvName:     "test",
+		"success with DNS Delegation (app has Domain and env and app are different)": {
+			inAppName: "phonetool",
+			inEnvName: "test",
 
 			expectstore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
@@ -514,8 +514,8 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
 				m.EXPECT().Start(fmt.Sprintf(fmtStreamEnvStart, "test"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtStreamEnvComplete, "test"))
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToProjectStart, "1234", "mars-1", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToProjectComplete, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
+				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
@@ -571,15 +571,15 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
 					EnvName:      tc.inEnvName,
-					GlobalOpts:   &GlobalOpts{appName: tc.inProjectName},
+					GlobalOpts:   &GlobalOpts{appName: tc.inAppName},
 					IsProduction: tc.inProd,
 				},
-				store:        mockstore,
-				envDeployer:  mockDeployer,
-				projDeployer: mockDeployer,
-				identity:     mockIdentity,
-				envIdentity:  mockIdentity,
-				prog:         mockProgress,
+				store:       mockstore,
+				envDeployer: mockDeployer,
+				appDeployer: mockDeployer,
+				identity:    mockIdentity,
+				envIdentity: mockIdentity,
+				prog:        mockProgress,
 				initProfileClients: func(o *initEnvOpts) error {
 					return nil
 				},
@@ -598,18 +598,18 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
+func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 	testCases := map[string]struct {
-		project        *config.Application
+		app            *config.Application
 		expectDeployer func(m *mocks.Mockdeployer)
 		expectIdentity func(m *mocks.MockidentityService)
 		expectProgress func(m *mocks.Mockprogress)
 		wantedErr      string
 	}{
-		"should call DelegateDNSPermissions when project and env are in different accounts": {
-			project: &config.Application{
+		"should call DelegateDNSPermissions when app and env are in different accounts": {
+			app: &config.Application{
 				AccountID: "1234",
-				Name:      "crossaccountproject",
+				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -623,10 +623,10 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
 			},
 		},
-		"should skip updating when project and env are in same account": {
-			project: &config.Application{
+		"should skip updating when app and env are in same account": {
+			app: &config.Application{
 				AccountID: "1234",
-				Name:      "crossaccountproject",
+				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -640,9 +640,9 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			},
 		},
 		"should return errors from identity": {
-			project: &config.Application{
+			app: &config.Application{
 				AccountID: "1234",
-				Name:      "crossaccountproject",
+				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -657,9 +657,9 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			wantedErr: "getting environment account ID for DNS Delegation: error",
 		},
 		"should return errors from DelegateDNSPermissions": {
-			project: &config.Application{
+			app: &config.Application{
 				AccountID: "1234",
-				Name:      "crossaccountproject",
+				Name:      "crossaccountapp",
 				Domain:    "amazon.com",
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -697,15 +697,15 @@ func TestInitEnvOpts_delegateDNSFromProject(t *testing.T) {
 			}
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					GlobalOpts: &GlobalOpts{appName: tc.project.Name},
+					GlobalOpts: &GlobalOpts{appName: tc.app.Name},
 				},
-				envIdentity:  mockIdentity,
-				projDeployer: mockDeployer,
-				prog:         mockProgress,
+				envIdentity: mockIdentity,
+				appDeployer: mockDeployer,
+				prog:        mockProgress,
 			}
 
 			// WHEN
-			err := opts.delegateDNSFromProject(tc.project)
+			err := opts.delegateDNSFromApp(tc.app)
 
 			// THEN
 			if tc.wantedErr != "" {

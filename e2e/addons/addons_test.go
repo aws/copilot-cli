@@ -17,35 +17,35 @@ import (
 )
 
 var _ = Describe("addons flow", func() {
-	Context("when creating a new project", func() {
+	Context("when creating a new app", func() {
 		var (
 			initErr error
 		)
 		BeforeAll(func() {
-			_, initErr = cli.ProjectInit(&client.ProjectInitRequest{
-				ProjectName: projectName,
+			_, initErr = cli.AppInit(&client.AppInitRequest{
+				AppName: appName,
 			})
 		})
 
-		It("project init succeeds", func() {
+		It("app init succeeds", func() {
 			Expect(initErr).NotTo(HaveOccurred())
 		})
 
-		It("project init creates an ecs-project directory", func() {
-			Expect("./ecs-project").Should(BeADirectory())
+		It("app init creates an copilot directory", func() {
+			Expect("./copilot").Should(BeADirectory())
 		})
 
-		It("project ls includes new project", func() {
-			projects, err := cli.ProjectList()
+		It("app ls includes new app", func() {
+			apps, err := cli.AppList()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(projects).To(ContainSubstring(projectName))
+			Expect(apps).To(ContainSubstring(appName))
 		})
 
-		It("project show includes project name", func() {
-			projectShowOutput, err := cli.ProjectShow(projectName)
+		It("app show includes app name", func() {
+			appShowOutput, err := cli.AppShow(appName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(projectShowOutput.Name).To(Equal(projectName))
-			Expect(projectShowOutput.URI).To(BeEmpty())
+			Expect(appShowOutput.Name).To(Equal(appName))
+			Expect(appShowOutput.URI).To(BeEmpty())
 		})
 	})
 
@@ -55,10 +55,10 @@ var _ = Describe("addons flow", func() {
 		)
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
-				ProjectName: projectName,
-				EnvName:     "test",
-				Profile:     "default",
-				Prod:        false,
+				AppName: appName,
+				EnvName: "test",
+				Profile: "default",
+				Prod:    false,
 			})
 		})
 
@@ -67,55 +67,55 @@ var _ = Describe("addons flow", func() {
 		})
 	})
 
-	Context("when adding an app", func() {
+	Context("when adding a svc", func() {
 		var (
-			appInitErr error
+			svcInitErr error
 		)
 		BeforeAll(func() {
-			_, appInitErr = cli.AppInit(&client.AppInitRequest{
-				AppName:    appName,
-				AppType:    "Load Balanced Web App",
+			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
+				Name:       svcName,
+				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./hello/Dockerfile",
-				AppPort:    "80",
+				SvcPort:    "80",
 			})
 		})
 
-		It("app init should succeed", func() {
-			Expect(appInitErr).NotTo(HaveOccurred())
+		It("svc init should succeed", func() {
+			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
 
-		It("app init should create app manifests", func() {
-			Expect("./ecs-project/hello/manifest.yml").Should(BeAnExistingFile())
+		It("svc init should create svc manifests", func() {
+			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
 
 		})
 
-		It("app ls should list the apps", func() {
-			appList, appListError := cli.AppList(projectName)
-			Expect(appListError).NotTo(HaveOccurred())
-			Expect(len(appList.Apps)).To(Equal(1))
+		It("svc ls should list the service", func() {
+			svcList, svcListError := cli.SvcList(appName)
+			Expect(svcListError).NotTo(HaveOccurred())
+			Expect(len(svcList.Services)).To(Equal(1))
 
-			appsByName := map[string]client.AppDescription{}
-			for _, app := range appList.Apps {
-				appsByName[app.AppName] = app
+			svcsByName := map[string]client.SvcDescription{}
+			for _, svc := range svcList.Services {
+				svcsByName[svc.Name] = svc
 			}
 
-			for _, app := range []string{appName} {
-				Expect(appsByName[app].AppName).To(Equal(app))
-				Expect(appsByName[app].Project).To(Equal(projectName))
+			for _, svc := range []string{svcName} {
+				Expect(svcsByName[svc].AppName).To(Equal(appName))
+				Expect(svcsByName[svc].Name).To(Equal(svc))
 			}
 		})
 	})
 
-	Context("copy addons file to ecs-project", func() {
+	Context("copy addons file to copilot dir", func() {
 		It("should copy all addons/ files to the app's workspace", func() {
-			err := os.MkdirAll("./ecs-project/hello/addons", 0777)
+			err := os.MkdirAll("./copilot/hello/addons", 0777)
 			Expect(err).NotTo(HaveOccurred(), "create addons dir")
 
 			fds, err := ioutil.ReadDir("./hello/addons")
 			Expect(err).NotTo(HaveOccurred(), "read addons dir")
 
 			for _, fd := range fds {
-				destFile, err := os.Create(fmt.Sprintf("./ecs-project/hello/addons/%s", fd.Name()))
+				destFile, err := os.Create(fmt.Sprintf("./copilot/hello/addons/%s", fd.Name()))
 				Expect(err).NotTo(HaveOccurred(), "create destination file")
 				defer destFile.Close()
 
@@ -130,49 +130,49 @@ var _ = Describe("addons flow", func() {
 		})
 	})
 
-	Context("when deploying app", func() {
+	Context("when deploying svc", func() {
 		var (
 			appDeployErr error
 		)
 		BeforeAll(func() {
-			_, appDeployErr = cli.AppDeploy(&client.AppDeployInput{
-				AppName:  appName,
+			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     svcName,
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
 			})
 		})
 
-		It("app deploy should succeed", func() {
+		It("svc deploy should succeed", func() {
 			Expect(appDeployErr).NotTo(HaveOccurred())
 		})
 
 		It("should be able to make a POST request", func() {
-			app, appShowErr := cli.AppShow(&client.AppShowRequest{
-				ProjectName: projectName,
-				AppName:     appName,
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
 			})
-			Expect(appShowErr).NotTo(HaveOccurred())
-			Expect(len(app.Routes)).To(Equal(1))
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
 
 			// Make a POST request to the API to store the user name in DynamoDB.
-			route := app.Routes[0]
+			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 			Eventually(func() (int, error) {
-				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s/%s", route.URL, appName, projectName), "application/json", nil)
+				resp, fetchErr := http.Post(fmt.Sprintf("%s/%s/%s", route.URL, svcName, appName), "application/json", nil)
 				return resp.StatusCode, fetchErr
 			}, "30s", "1s").Should(Equal(201))
 		})
 
 		It("should be able to retrieve the results", func() {
-			app, appShowErr := cli.AppShow(&client.AppShowRequest{
-				ProjectName: projectName,
-				AppName:     appName,
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
 			})
-			Expect(appShowErr).NotTo(HaveOccurred())
-			Expect(len(app.Routes)).To(Equal(1))
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
 
 			// Make a GET request to the API to retrieve the list of user names from DynamoDB.
-			route := app.Routes[0]
+			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal("test"))
 			var resp *http.Response
 			var fetchErr error
@@ -190,23 +190,23 @@ var _ = Describe("addons flow", func() {
 			result := Result{}
 			err = json.Unmarshal(bodyBytes, &result)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.Names[0]).To(Equal(projectName))
+			Expect(result.Names[0]).To(Equal(appName))
 		})
 
-		It("app logs should display logs", func() {
-			var appLogs []client.AppLogsOutput
-			var appLogsErr error
-			Eventually(func() ([]client.AppLogsOutput, error) {
-				appLogs, appLogsErr = cli.AppLogs(&client.AppLogsRequest{
-					ProjectName: projectName,
-					AppName:     appName,
-					EnvName:     "test",
-					Since:       "1h",
+		It("svc logs should display logs", func() {
+			var svcLogs []client.SvcLogsOutput
+			var svcLogsErr error
+			Eventually(func() ([]client.SvcLogsOutput, error) {
+				svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+					AppName: appName,
+					Name:    svcName,
+					EnvName: "test",
+					Since:   "1h",
 				})
-				return appLogs, appLogsErr
+				return svcLogs, svcLogsErr
 			}, "60s", "10s").ShouldNot(BeEmpty())
 
-			for _, logLine := range appLogs {
+			for _, logLine := range svcLogs {
 				Expect(logLine.Message).NotTo(Equal(""))
 				Expect(logLine.TaskID).NotTo(Equal(""))
 				Expect(logLine.Timestamp).NotTo(Equal(0))

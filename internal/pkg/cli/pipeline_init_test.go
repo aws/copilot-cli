@@ -33,7 +33,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inGitHubOwner       string
 		inGitHubRepo        string
 		inGitHubAccessToken string
-		inProjectEnvs       []*config.Environment
+		inAppEnvs           []*config.Environment
 		inURLs              []string
 
 		mockPrompt func(m *mocks.Mockprompter)
@@ -49,19 +49,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -80,17 +80,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       githubOwner,
@@ -104,17 +104,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("", errors.New("some error")).Times(1)
 			},
 
@@ -128,19 +128,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -157,19 +157,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubReallyBadURL},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -186,19 +186,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*config.Environment{
-				&config.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&config.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -233,8 +233,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					},
 				},
 
-				projectEnvs: tc.inProjectEnvs,
-				repoURLs:    tc.inURLs,
+				envs:     tc.inAppEnvs,
+				repoURLs: tc.inURLs,
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -258,12 +258,12 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
+		inAppName string
 
 		expectedError error
 	}{
-		"invalid project name": {
-			inProjectName: "",
+		"invalid app name": {
+			inAppName:     "",
 			expectedError: errNoAppInWorkspace,
 		},
 	}
@@ -276,7 +276,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 			}
 
@@ -301,7 +301,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inGitHubToken  string
 		inGitHubRepo   string
 		inGitBranch    string
-		inProjectName  string
+		inAppName      string
 
 		mockSecretsManager          func(m *mocks.MocksecretsManager)
 		mockWsWriter                func(m *mocks.MockwsPipelineWriter)
@@ -317,7 +317,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -340,7 +340,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
-					&stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -353,7 +353,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
@@ -377,7 +377,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
-					&stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -391,7 +391,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -402,14 +402,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			mockParser:                  func(m *templatemocks.MockParser) {},
 			mockStoreSvc:                func(m *mocks.Mockstore) {},
 			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			expectedError:               errors.New("write manifest to workspace: some error"),
+			expectedError:               errors.New("write pipeline manifest to workspace: some error"),
 		},
-		"returns an error if project cannot be retrieved": {
+		"returns an error if application cannot be retrieved": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -422,14 +422,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
 			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
-			expectedError:               errors.New("get project metadata badgoose: some error"),
+			expectedError:               errors.New("get application badgoose: some error"),
 		},
-		"returns an error if can't get regional project resources": {
+		"returns an error if can't get regional application resources": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -448,14 +448,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Name: "badgoose",
 				}).Return(nil, errors.New("some error"))
 			},
-			expectedError: fmt.Errorf("get regional project resources: some error"),
+			expectedError: fmt.Errorf("get regional application resources: some error"),
 		},
 		"returns an error if buildspec cannot be parsed": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -476,7 +476,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
-					&stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -489,7 +489,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -512,7 +512,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
-					&stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -525,7 +525,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -548,7 +548,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return([]*stack.AppRegionalResources{
-					&stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -583,7 +583,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					GitHubRepo:        tc.inGitHubRepo,
 					GitHubAccessToken: tc.inGitHubToken,
 					GitBranch:         tc.inGitBranch,
-					GlobalOpts:        &GlobalOpts{appName: tc.inProjectName},
+					GlobalOpts:        &GlobalOpts{appName: tc.inAppName},
 				},
 
 				secretsmanager: mockSecretsManager,
@@ -591,7 +591,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				store:          mockstore,
 				workspace:      mockWriter,
 				parser:         mockParser,
-				fsUtils:        memFs,
+				fs:             memFs,
 			}
 
 			// WHEN
@@ -607,52 +607,18 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestInitPipelineOpts_createSecretName(t *testing.T) {
-	testCases := map[string]struct {
-		inGitHubRepo  string
-		inProjectName string
-
-		expected string
-	}{
-		"matches repo name": {
-			inGitHubRepo:  "goose",
-			inProjectName: "badgoose",
-
-			expected: "github-token-badgoose-goose",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					GitHubRepo: tc.inGitHubRepo,
-					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
-				},
-			}
-
-			// WHEN
-			actual := opts.createSecretName()
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
 func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inGitHubRepo   string
-		inProjectName  string
-		inProjectOwner string
+		inGitHubRepo string
+		inAppName    string
+		inAppOwner   string
 
 		expected string
 	}{
 		"matches repo name": {
-			inGitHubRepo:   "goose",
-			inProjectName:  "badgoose",
-			inProjectOwner: "david",
+			inGitHubRepo: "goose",
+			inAppName:    "badgoose",
+			inAppOwner:   "david",
 
 			expected: "pipeline-badgoose-david-goose",
 		},
@@ -664,8 +630,8 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					GitHubRepo:  tc.inGitHubRepo,
-					GlobalOpts:  &GlobalOpts{appName: tc.inProjectName},
-					GitHubOwner: tc.inProjectOwner,
+					GlobalOpts:  &GlobalOpts{appName: tc.inAppName},
+					GitHubOwner: tc.inAppOwner,
 				},
 			}
 

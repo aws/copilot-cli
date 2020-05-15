@@ -23,7 +23,7 @@ func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 // of the back-end service is unreachable from the LB, so the only way to get it is
 // through service discovery. The response should be `back-end-service-discovery`
 func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	endpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("ECS_APP_DISCOVERY_ENDPOINT"))
+	endpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		log.Printf("🚨 could call service discovery endpoint: err=%s\n", err)

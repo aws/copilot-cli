@@ -5,17 +5,17 @@ import (
 	"strings"
 )
 
-type AppShowOutput struct {
-	AppName            string                      `json:"appName"`
+type SvcShowOutput struct {
+	SvcName            string                      `json:"service"`
 	Type               string                      `json:"type"`
-	Project            string                      `json:"project"`
-	Configs            []AppShowConfigurations     `json:"configurations"`
-	ServiceDiscoveries []AppShowServiceDiscoveries `json:"serviceDiscovery"`
-	Routes             []AppShowRoutes             `json:"routes"`
-	Variables          []AppShowVariables          `json:"variables"`
+	AppName            string                      `json:"application"`
+	Configs            []SvcShowConfigurations     `json:"configurations"`
+	ServiceDiscoveries []SvcShowServiceDiscoveries `json:"serviceDiscovery"`
+	Routes             []SvcShowRoutes             `json:"routes"`
+	Variables          []SvcShowVariables          `json:"variables"`
 }
 
-type AppShowConfigurations struct {
+type SvcShowConfigurations struct {
 	Environment string `json:"environment"`
 	Port        string `json:"port"`
 	Tasks       string `json:"tasks"`
@@ -23,53 +23,53 @@ type AppShowConfigurations struct {
 	Memory      string `json:"memory"`
 }
 
-type AppShowRoutes struct {
+type SvcShowRoutes struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
 }
 
-type AppShowServiceDiscoveries struct {
+type SvcShowServiceDiscoveries struct {
 	Environment []string `json:"environment"`
 	Namespace   string   `json:"namespace"`
 }
 
-type AppShowVariables struct {
+type SvcShowVariables struct {
 	Environment string `json:"environment"`
 	Name        string `json:"name"`
 	Value       string `json:"value"`
 }
 
-func toAppShowOutput(jsonInput string) (*AppShowOutput, error) {
-	var output AppShowOutput
+func toSvcShowOutput(jsonInput string) (*SvcShowOutput, error) {
+	var output SvcShowOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 
-type AppListOutput struct {
-	Apps []AppDescription `json:"applications"`
+type SvcListOutput struct {
+	Services []SvcDescription `json:"services"`
 }
 
-type AppDescription struct {
-	AppName string `json:"name"`
+type SvcDescription struct {
+	Name    string `json:"name"`
 	Type    string `json:"type"`
-	Project string `json:"project"`
+	AppName string `json:"app"`
 }
 
-func toAppListOutput(jsonInput string) (*AppListOutput, error) {
-	var output AppListOutput
+func toSvcListOutput(jsonInput string) (*SvcListOutput, error) {
+	var output SvcListOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 
-type AppLogsOutput struct {
+type SvcLogsOutput struct {
 	TaskID        string `json:"taskID"`
 	IngestionTime int64  `json:"ingestionTime"`
 	Timestamp     int64  `json:"timestamp"`
 	Message       string `json:"message"`
 }
 
-func toAppLogsOutput(jsonInput string) ([]AppLogsOutput, error) {
-	output := []AppLogsOutput{}
+func toSvcLogsOutput(jsonInput string) ([]SvcLogsOutput, error) {
+	output := []SvcLogsOutput{}
 	for _, logLine := range strings.Split(strings.TrimSpace(jsonInput), "\n") {
-		var parsedLogLine AppLogsOutput
+		var parsedLogLine SvcLogsOutput
 		if err := json.Unmarshal([]byte(logLine), &parsedLogLine); err != nil {
 			return nil, err
 		}
@@ -78,13 +78,13 @@ func toAppLogsOutput(jsonInput string) ([]AppLogsOutput, error) {
 	return output, nil
 }
 
-type ProjectShowOutput struct {
+type AppShowOutput struct {
 	Name string `json:"name"`
 	URI  string `json:"uri"`
 }
 
-func toProjectShowOutput(jsonInput string) (*ProjectShowOutput, error) {
-	var output ProjectShowOutput
+func toAppShowOutput(jsonInput string) (*AppShowOutput, error) {
+	var output AppShowOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 
@@ -94,7 +94,7 @@ type EnvListOutput struct {
 
 type EnvDescription struct {
 	Name          string `json:"name"`
-	Project       string `json:"project"`
+	App           string `json:"app"`
 	Region        string `json:"region"`
 	Account       string `json:"accountID"`
 	Prod          bool   `json:"prod"`

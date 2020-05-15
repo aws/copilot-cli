@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -27,13 +28,13 @@ const (
 	fmtEnvDeleteProfilePrompt  = "Which named profile should we use to delete %s?"
 	envDeleteProfileHelpPrompt = "This is usually the same AWS CLI named profile used to create the environment."
 
-	fmtDeleteEnvPrompt = "Are you sure you want to delete environment %s from project %s?"
+	fmtDeleteEnvPrompt = "Are you sure you want to delete environment %s from application %s?"
 )
 
 const (
-	fmtDeleteEnvStart    = "Deleting environment %s from project %s."
-	fmtDeleteEnvFailed   = "Failed to delete environment %s from project %s: %v."
-	fmtDeleteEnvComplete = "Deleted environment %s from project %s."
+	fmtDeleteEnvStart    = "Deleting environment %s from application %s."
+	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s: %v."
+	fmtDeleteEnvComplete = "Deleted environment %s from application %s."
 )
 
 var (
@@ -59,6 +60,7 @@ type deleteEnvOpts struct {
 	deployClient  environmentDeployer
 	profileConfig profileNames
 	prog          progress
+	sel           configSelector
 
 	// initProfileClients is overriden in tests.
 	initProfileClients func(*deleteEnvOpts) error
@@ -67,7 +69,7 @@ type deleteEnvOpts struct {
 func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to ecs-cli metadata store: %w", err)
+		return nil, fmt.Errorf("connect to copilot config store: %w", err)
 	}
 	cfg, err := profile.NewConfig()
 	if err != nil {
@@ -79,6 +81,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 		store:         store,
 		profileConfig: cfg,
 		prog:          termprogress.NewSpinner(),
+		sel:           selector.NewConfigSelect(vars.prompt, store),
 		initProfileClients: func(o *deleteEnvOpts) error {
 			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
 			if err != nil {
@@ -115,7 +118,7 @@ func (o *deleteEnvOpts) Ask() error {
 	}
 	deleteConfirmed, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, o.EnvName, o.AppName()), "")
 	if err != nil {
-		return fmt.Errorf("prompt for environment deletion: %w", err)
+		return fmt.Errorf("confirm to delete environment %s: %w", o.EnvName, err)
 	}
 	if !deleteConfirmed {
 		return errEnvDeleteCancelled
@@ -124,7 +127,7 @@ func (o *deleteEnvOpts) Ask() error {
 	return nil
 }
 
-// Execute deletes the environment from the project by first deleting the stack and then removing the entry from the store.
+// Execute deletes the environment from the application by first deleting the stack and then removing the entry from the store.
 // If an operation fails, it moves on to the next one instead of halting the execution.
 // The environment is removed from the store only if other delete operations succeed.
 // Execute assumes that Validate is invoked first.
@@ -132,7 +135,7 @@ func (o *deleteEnvOpts) Execute() error {
 	if err := o.initProfileClients(o); err != nil {
 		return err
 	}
-	if err := o.validateNoRunningApps(); err != nil {
+	if err := o.validateNoRunningServices(); err != nil {
 		return err
 	}
 
@@ -156,13 +159,13 @@ func (o *deleteEnvOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *deleteEnvOpts) validateNoRunningApps() error {
+func (o *deleteEnvOpts) validateNoRunningServices() error {
 	stacks, err := o.rgClient.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
 				Key:    aws.String(stack.ServiceTagKey),
-				Values: []*string{}, // Matches any application stack.
+				Values: []*string{}, // Matches any service stack.
 			},
 			{
 				Key:    aws.String(stack.EnvTagKey),
@@ -175,19 +178,19 @@ func (o *deleteEnvOpts) validateNoRunningApps() error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("find application cloudformation stacks: %w", err)
+		return fmt.Errorf("find service cloudformation stacks: %w", err)
 	}
 	if len(stacks.ResourceTagMappingList) > 0 {
-		var appNames []string
+		var svcNames []string
 		for _, cfnStack := range stacks.ResourceTagMappingList {
 			for _, t := range cfnStack.Tags {
 				if *t.Key != stack.ServiceTagKey {
 					continue
 				}
-				appNames = append(appNames, *t.Value)
+				svcNames = append(svcNames, *t.Value)
 			}
 		}
-		return fmt.Errorf("applications: '%s' still exist within the environment %s", strings.Join(appNames, ", "), o.EnvName)
+		return fmt.Errorf("service '%s' still exist within the environment %s", strings.Join(svcNames, ", "), o.EnvName)
 	}
 	return nil
 }
@@ -196,28 +199,11 @@ func (o *deleteEnvOpts) askEnvName() error {
 	if o.EnvName != "" {
 		return nil
 	}
-
-	envs, err := o.store.ListEnvironments(o.AppName())
+	env, err := o.sel.Environment(envDeleteNamePrompt, "", o.AppName())
 	if err != nil {
-		return fmt.Errorf("list environments under project %s: %w", o.AppName(), err)
+		return fmt.Errorf("select environment to delete: %w", err)
 	}
-	var names []string
-	for _, env := range envs {
-		names = append(names, env.Name)
-	}
-	if len(names) == 0 {
-		return fmt.Errorf("couldn't find any environment in the project %s", o.AppName())
-	}
-	if len(names) == 1 {
-		o.EnvName = names[0]
-		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(o.EnvName))
-		return nil
-	}
-	name, err := o.prompt.SelectOne(envDeleteNamePrompt, "", names)
-	if err != nil {
-		return fmt.Errorf("prompt for environment name: %w", err)
-	}
-	o.EnvName = name
+	o.EnvName = env
 	return nil
 }
 
@@ -241,22 +227,10 @@ func (o *deleteEnvOpts) askProfile() error {
 		envDeleteProfileHelpPrompt,
 		names)
 	if err != nil {
-		return fmt.Errorf("prompt to get the profile name: %w", err)
+		return fmt.Errorf("get the profile name: %w", err)
 	}
 	o.EnvProfile = profile
 	return nil
-}
-
-func (o *deleteEnvOpts) shouldDelete(projName, envName string) (bool, error) {
-	if o.SkipConfirmation {
-		return true, nil
-	}
-
-	shouldDelete, err := o.prompt.Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, envName, projName), "")
-	if err != nil {
-		return false, fmt.Errorf("prompt for environment deletion: %w", err)
-	}
-	return shouldDelete, nil
 }
 
 // deleteStack returns true if the stack was deleted successfully. Otherwise, returns false.
@@ -272,7 +246,7 @@ func (o *deleteEnvOpts) deleteStack() bool {
 
 func (o *deleteEnvOpts) deleteFromStore() {
 	if err := o.store.DeleteEnvironment(o.AppName(), o.EnvName); err != nil {
-		log.Infof("Failed to remove environment %s from project %s store: %v\n", o.EnvName, o.AppName(), err)
+		log.Infof("Failed to remove environment %s from application %s store: %v\n", o.EnvName, o.AppName(), err)
 	}
 }
 
@@ -283,13 +257,13 @@ func BuildEnvDeleteCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Deletes an environment from your project.",
+		Short: "Deletes an environment from your application.",
 		Example: `
   Delete the "test" environment.
-  /code $ ecs-preview env delete --name test --profile default
+  /code $ copilot env delete --name test --profile default
 
   Delete the "test" environment without prompting.
-	/code $ ecs-preview env delete --name test --profile default --yes`,
+  /code $ copilot env delete --name test --profile default --yes`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newDeleteEnvOpts(vars)
 			if err != nil {

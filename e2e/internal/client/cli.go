@@ -16,56 +16,56 @@ type CLI struct {
 	path string
 }
 
-// ProjectInitRequest contains the parameters for calling ecs project init
-type ProjectInitRequest struct {
-	ProjectName string
-	Domain      string
-}
-
-// InitRequest contains the parameters for calling ecs init
-type InitRequest struct {
-	ProjectName string
-	AppName     string
-	Deploy      bool
-	ImageTag    string
-	Dockerfile  string
-	AppType     string
-	AppPort     string
-}
-
-// EnvInitRequest contains the parameters for calling ecs env init
-type EnvInitRequest struct {
-	ProjectName string
-	EnvName     string
-	Profile     string
-	Prod        bool
-}
-
-// AppInitRequest contains the parameters for calling ecs app init
+// AppInitRequest contains the parameters for calling copilot app init
 type AppInitRequest struct {
+	AppName string
+	Domain  string
+}
+
+// InitRequest contains the parameters for calling copilot init
+type InitRequest struct {
 	AppName    string
-	AppType    string
+	SvcName    string
+	Deploy     bool
+	ImageTag   string
 	Dockerfile string
-	AppPort    string
+	SvcType    string
+	SvcPort    string
 }
 
-// AppShowRequest contains the parameters for calling ecs app show
-type AppShowRequest struct {
-	ProjectName string
-	AppName     string
+// EnvInitRequest contains the parameters for calling copilot env init
+type EnvInitRequest struct {
+	AppName string
+	EnvName string
+	Profile string
+	Prod    bool
 }
 
-// AppLogsRequest contains the parameters for calling ecs app logs
-type AppLogsRequest struct {
-	ProjectName string
-	AppName     string
-	EnvName     string
-	Since       string
+// SvcInitRequest contains the parameters for calling copilot svc init
+type SvcInitRequest struct {
+	Name       string
+	SvcType    string
+	Dockerfile string
+	SvcPort    string
 }
 
-// AppDeployInput contains the parameters for calling ecs app deploy
-type AppDeployInput struct {
-	AppName  string
+// SvcShowRequest contains the parameters for calling copilot svc show
+type SvcShowRequest struct {
+	Name    string
+	AppName string
+}
+
+// SvcLogsRequest contains the parameters for calling copilot svc logs
+type SvcLogsRequest struct {
+	AppName string
+	EnvName string
+	Name    string
+	Since   string
+}
+
+// SvcDeployInput contains the parameters for calling copilot svc deploy
+type SvcDeployInput struct {
+	Name     string
 	EnvName  string
 	ImageTag string
 }
@@ -87,24 +87,24 @@ func NewCLI() (*CLI, error) {
 }
 
 /*Help runs
-ecs-preview --help
+copilot --help
 */
 func (cli *CLI) Help() (string, error) {
 	return cli.exec(exec.Command(cli.path, "--help"))
 }
 
 /*Version runs:
-ecs-preview --version
+copilot --version
 */
 func (cli *CLI) Version() (string, error) {
 	return cli.exec(exec.Command(cli.path, "--version"))
 }
 
 /*Init runs:
-ecs-preview init
-	--project $p
-	--app $a
-	--app-type $type
+copilot init
+	--app $p
+	--svc $s
+	--svc-type $type
 	--tag $t
 	--dockerfile $d
 	--port $port
@@ -119,124 +119,124 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 
 	return cli.exec(
 		exec.Command(cli.path, "init",
-			"--project", opts.ProjectName,
 			"--app", opts.AppName,
-			"--app-type", opts.AppType,
+			"--svc", opts.SvcName,
+			"--svc-type", opts.SvcType,
 			"--tag", opts.ImageTag,
 			"--dockerfile", opts.Dockerfile,
-			"--port", opts.AppPort,
+			"--port", opts.SvcPort,
 			deployOption))
 }
 
-/*AppInit runs:
-ecs-preview app init
+/*SvcInit runs:
+copilot svc init
 	--name $n
-	--app-type $t
+	--svc-type $t
 	--dockerfile $d
 	--port $port
 */
-func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
+func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
 	args := []string{
-		"app",
+		"svc",
 		"init",
-		"--name", opts.AppName,
-		"--app-type", opts.AppType,
+		"--name", opts.Name,
+		"--svc-type", opts.SvcType,
 		"--dockerfile", opts.Dockerfile,
 	}
 	// Apply optional flags only if a value is provided.
-	if opts.AppPort != "" {
-		args = append(args, "--port", opts.AppPort)
+	if opts.SvcPort != "" {
+		args = append(args, "--port", opts.SvcPort)
 	}
 	return cli.exec(
 		exec.Command(cli.path, args...))
 }
 
-/*AppShow runs:
-ecs-preview app show
-	--project $p
+/*SvcShow runs:
+copilot svc show
+	--app $p
 	--name $n
 	--json
 */
-func (cli *CLI) AppShow(opts *AppShowRequest) (*AppShowOutput, error) {
-	appJSON, appShowErr := cli.exec(
-		exec.Command(cli.path, "app", "show",
-			"--project", opts.ProjectName,
-			"--name", opts.AppName,
+func (cli *CLI) SvcShow(opts *SvcShowRequest) (*SvcShowOutput, error) {
+	svcJSON, svcShowErr := cli.exec(
+		exec.Command(cli.path, "svc", "show",
+			"--app", opts.AppName,
+			"--name", opts.Name,
 			"--json"))
 
-	if appShowErr != nil {
-		return nil, appShowErr
+	if svcShowErr != nil {
+		return nil, svcShowErr
 	}
 
-	return toAppShowOutput(appJSON)
+	return toSvcShowOutput(svcJSON)
 }
 
-/*AppDelete runs:
-ecs-preview app delete
+/*SvcDelete runs:
+copilot svc delete
 	--name $n
 	--yes
 */
-func (cli *CLI) AppDelete(appName string) (string, error) {
+func (cli *CLI) SvcDelete(serviceName string) (string, error) {
 	return cli.exec(
-		exec.Command(cli.path, "app", "delete",
-			"--name", appName,
+		exec.Command(cli.path, "svc", "delete",
+			"--name", serviceName,
 			"--yes"))
 }
 
-/*AppDeploy runs:
-ecs-preview app deploy
+/*SvcDeploy runs:
+copilot svc deploy
 	--name $n
 	--env $e
 	--tag $t
 */
-func (cli *CLI) AppDeploy(opts *AppDeployInput) (string, error) {
+func (cli *CLI) SvcDeploy(opts *SvcDeployInput) (string, error) {
 	return cli.exec(
-		exec.Command(cli.path, "app", "deploy",
-			"--name", opts.AppName,
+		exec.Command(cli.path, "svc", "deploy",
+			"--name", opts.Name,
 			"--env", opts.EnvName,
 			"--tag", opts.ImageTag))
 }
 
-/*AppList runs:
-ecs-preview app ls
-	--project $p
+/*SvcList runs:
+copilot svc ls
+	--app $p
 	--json
 */
-func (cli *CLI) AppList(projectName string) (*AppListOutput, error) {
+func (cli *CLI) SvcList(appName string) (*SvcListOutput, error) {
 	output, err := cli.exec(
-		exec.Command(cli.path, "app", "ls",
-			"--project", projectName,
+		exec.Command(cli.path, "svc", "ls",
+			"--app", appName,
 			"--json"))
 	if err != nil {
 		return nil, err
 	}
-	return toAppListOutput(output)
+	return toSvcListOutput(output)
 }
 
-/*AppLogs runs:
-ecs-preview app logs
-	--project $p
+/*SvcLogs runs:
+copilot svc logs
+	--app $p
 	--name $n
 	--since $s
 	--env $e
 	--json
 */
-func (cli *CLI) AppLogs(opts *AppLogsRequest) ([]AppLogsOutput, error) {
+func (cli *CLI) SvcLogs(opts *SvcLogsRequest) ([]SvcLogsOutput, error) {
 	output, err := cli.exec(
-		exec.Command(cli.path, "app", "logs",
-			"--project", opts.ProjectName,
-			"--name", opts.AppName,
+		exec.Command(cli.path, "svc", "logs",
+			"--app", opts.AppName,
+			"--name", opts.Name,
 			"--since", opts.Since,
 			"--env", opts.EnvName,
 			"--json"))
 	if err != nil {
 		return nil, err
 	}
-	return toAppLogsOutput(output)
+	return toSvcLogsOutput(output)
 }
 
 /*EnvDelete runs:
-ecs-preview env delete
+copilot env delete
 	--name $n
 	--profile $p
 	--yes
@@ -250,16 +250,16 @@ func (cli *CLI) EnvDelete(envName, profile string) (string, error) {
 }
 
 /*EnvInit runs:
-ecs-preview env init
+copilot env init
 	--name $n
-	--project $p
+	--app $a
 	--profile $pr
 	--prod (optionally)
 */
 func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	commands := []string{"env", "init",
 		"--name", opts.EnvName,
-		"--project", opts.ProjectName,
+		"--app", opts.AppName,
 		"--profile", opts.Profile,
 	}
 	if opts.Prod {
@@ -269,14 +269,14 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 }
 
 /*EnvList runs:
-ecs-preview env ls
-	--project $p
+copilot env ls
+	--app $a
 	--json
 */
-func (cli *CLI) EnvList(projectName string) (*EnvListOutput, error) {
+func (cli *CLI) EnvList(appName string) (*EnvListOutput, error) {
 	output, err := cli.exec(
 		exec.Command(cli.path, "env", "ls",
-			"--project", projectName,
+			"--app", appName,
 			"--json"))
 	if err != nil {
 		return nil, err
@@ -284,48 +284,48 @@ func (cli *CLI) EnvList(projectName string) (*EnvListOutput, error) {
 	return toEnvListOutput(output)
 }
 
-/*ProjectInit runs:
-ecs-preview project init $p
+/*AppInit runs:
+copilot app init $a
 	--domain $d (optionally)
 */
-func (cli *CLI) ProjectInit(opts *ProjectInitRequest) (string, error) {
-	commands := []string{"project", "init", opts.ProjectName}
+func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
+	commands := []string{"app", "init", opts.AppName}
 	if opts.Domain != "" {
 		commands = append(commands, "--domain", opts.Domain)
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
 
-/*ProjectShow runs:
-ecs-preview project show
+/*AppShow runs:
+copilot app show
 	--name $n
 	--json
 */
-func (cli *CLI) ProjectShow(projectName string) (*ProjectShowOutput, error) {
+func (cli *CLI) AppShow(appName string) (*AppShowOutput, error) {
 	output, err := cli.exec(
-		exec.Command(cli.path, "project", "show",
-			"--name", projectName,
+		exec.Command(cli.path, "app", "show",
+			"--name", appName,
 			"--json"))
 	if err != nil {
 		return nil, err
 	}
-	return toProjectShowOutput(output)
+	return toAppShowOutput(output)
 }
 
-/*ProjectList runs:
-ecs-preview project ls
+/*AppList runs:
+copilot app ls
 */
-func (cli *CLI) ProjectList() (string, error) {
-	return cli.exec(exec.Command(cli.path, "project", "ls"))
+func (cli *CLI) AppList() (string, error) {
+	return cli.exec(exec.Command(cli.path, "app", "ls"))
 }
 
-/*ProjectDelete runs:
-ecs-preview project delete
+/*AppDelete runs:
+copilot app delete
 	--env-profiles $e1=$p1,$e2=$p2
 	--yes
 */
-func (cli *CLI) ProjectDelete(profiles map[string]string) (string, error) {
-	commands := []string{"project", "delete", "--yes"}
+func (cli *CLI) AppDelete(profiles map[string]string) (string, error) {
+	commands := []string{"app", "delete", "--yes"}
 
 	if len(profiles) > 0 {
 		commands = append(commands, "--env-profiles")
