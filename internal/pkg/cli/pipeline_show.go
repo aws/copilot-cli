@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
@@ -19,8 +20,8 @@ import (
 )
 
 const (
-	pipelineShowProjectNamePrompt      = "Which project's pipelines would you like to show?"
-	pipelineShowProjectNameHelpPrompt  = "A project groups all of your pipelines together."
+	pipelineShowAppNamePrompt          = "Which application's pipelines would you like to show?"
+	pipelineShowAppNameHelpPrompt      = "An application is a collection of related services."
 	fmtPipelineShowPipelineNamePrompt  = "Which pipeline of %s would you like to show?"
 	pipelineShowPipelineNameHelpPrompt = "The details of a pipeline will be shown (e.g., region, account ID, stages)."
 )
@@ -39,32 +40,32 @@ type showPipelineOpts struct {
 	ws          wsPipelineReader
 	store       applicationStore
 	pipelineSvc pipelineGetter
+	sel         appSelector
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
-	ssmStore, err := config.NewStore()
+	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 
 	ws, err := workspace.New()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	p := session.NewProvider()
-	defaultSession, err := p.Default()
+	defaultSession, err := session.NewProvider().Default()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("default session: %w", err)
 	}
 
 	opts := &showPipelineOpts{
 		showPipelineVars: vars,
 		ws:               ws,
-		store:            ssmStore,
+		store:            store,
 		pipelineSvc:      codepipeline.New(defaultSession),
+		sel:              selector.NewSelect(vars.prompt, store),
 	}
-
 	return opts, nil
 }
 
@@ -86,53 +87,22 @@ func (o *showPipelineOpts) Validate() error {
 
 // Ask prompts for fields that are required but not passed in.
 func (o *showPipelineOpts) Ask() error {
-	if err := o.askProject(); err != nil {
+	if err := o.askAppName(); err != nil {
 		return err
 	}
-
 	return o.askPipelineName()
 }
 
-func (o *showPipelineOpts) askProject() error {
+func (o *showPipelineOpts) askAppName() error {
 	if o.AppName() != "" {
 		return nil
 	}
-	projNames, err := o.retrieveProjects()
+	name, err := o.sel.Application(pipelineShowAppNamePrompt, pipelineShowAppNameHelpPrompt)
 	if err != nil {
-		return err
+		return fmt.Errorf("select application: %w", err)
 	}
-	if len(projNames) == 0 {
-		return fmt.Errorf("no project found: run %s please", color.HighlightCode("project init"))
-	}
-
-	if len(projNames) == 1 {
-		o.appName = projNames[0]
-		return nil
-	}
-
-	proj, err := o.prompt.SelectOne(
-		pipelineShowProjectNamePrompt,
-		pipelineShowProjectNameHelpPrompt,
-		projNames,
-	)
-	if err != nil {
-		return fmt.Errorf("select projects: %w", err)
-	}
-	o.appName = proj
-
+	o.appName = name
 	return nil
-}
-
-func (o *showPipelineOpts) retrieveProjects() ([]string, error) {
-	projs, err := o.store.ListApplications()
-	if err != nil {
-		return nil, fmt.Errorf("list projects: %w", err)
-	}
-	projNames := make([]string, len(projs))
-	for ind, proj := range projs {
-		projNames[ind] = proj.Name
-	}
-	return projNames, nil
 }
 
 func (o *showPipelineOpts) askPipelineName() error {
@@ -176,10 +146,9 @@ func (o *showPipelineOpts) askPipelineName() error {
 		fmt.Sprintf(fmtPipelineShowPipelineNamePrompt, color.HighlightUserInput(o.AppName())), pipelineShowPipelineNameHelpPrompt, pipelineNames,
 	)
 	if err != nil {
-		return fmt.Errorf("select pipeline for project %s: %w", o.AppName(), err)
+		return fmt.Errorf("select pipeline for application %s: %w", o.AppName(), err)
 	}
 	o.pipelineName = pipelineName
-
 	return nil
 
 }
@@ -208,7 +177,7 @@ func (o *showPipelineOpts) getPipelineNameFromManifest() (string, error) {
 	return pipeline.Name, nil
 }
 
-// Execute writes the pipeline manifest file.
+// Execute shows details about the pipeline.
 func (o *showPipelineOpts) Execute() error {
 	fmt.Printf("Pipeline to show: %+v\n", o.pipelineName) // TODO Placeholder
 	return nil
@@ -222,11 +191,11 @@ func BuildPipelineShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true, // TODO remove when ready for production!
 		Use:    "show",
-		Short:  "Shows info about a deployed pipeline for a project.",
-		Long:   "Shows info about a deployed pipeline for a project, including information about each stage.",
+		Short:  "Shows info about a deployed pipeline for an application.",
+		Long:   "Shows info about a deployed pipeline for an application, including information about each stage.",
 		Example: `
-  Shows info about the pipeline pipeline-myproject-mycompany-myrepo"
-  /code $ ecs-preview pipeline show --project myproject --resources`,
+  Shows info about the pipeline "pipeline-mycompany-myapp-myrepo".
+  /code $ copilot pipeline show --app myapp --resources`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowPipelineOpts(vars)
 			if err != nil {
