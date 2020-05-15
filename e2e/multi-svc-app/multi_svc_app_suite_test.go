@@ -1,4 +1,4 @@
-package multi_app_project_test
+package multi_svc_app_test
 
 import (
 	"fmt"
@@ -11,26 +11,26 @@ import (
 )
 
 var cli *client.CLI
-var projectName string
+var appName string
 
 /**
-The multi app suite runs through several tests focusing on creating multiple
-apps in one project.
+The multi svc suite runs through several tests focusing on creating multiple
+services in one app.
 */
-func TestMultiAppProject(t *testing.T) {
+func TestMultiSvcApp(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Multiple App Suite (one workspace)")
+	RunSpecs(t, "Multiple Svc Suite (one workspace)")
 }
 
 var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
-	projectName = fmt.Sprintf("e2e-multiapp-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-multisvc-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.ProjectDelete(map[string]string{"test": "default"})
+	_, err := cli.AppDelete(map[string]string{"test": "default"})
 	Expect(err).NotTo(HaveOccurred())
 })
 

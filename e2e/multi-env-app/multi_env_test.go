@@ -13,33 +13,33 @@ var (
 	initErr error
 )
 
-var _ = Describe("Multiple Env Project", func() {
-	Context("when creating a new project", func() {
+var _ = Describe("Multiple Env App", func() {
+	Context("when creating a new app", func() {
 		BeforeAll(func() {
-			_, initErr = cli.ProjectInit(&client.ProjectInitRequest{
-				ProjectName: projectName,
+			_, initErr = cli.AppInit(&client.AppInitRequest{
+				AppName: appName,
 			})
 		})
 
-		It("project init succeeds", func() {
+		It("app init succeeds", func() {
 			Expect(initErr).NotTo(HaveOccurred())
 		})
 
-		It("project init creates an ecs-project directory", func() {
-			Expect("./ecs-project").Should(BeADirectory())
+		It("app init creates a copilot directory", func() {
+			Expect("./copilot").Should(BeADirectory())
 		})
 
-		It("project ls includes new project", func() {
-			projects, err := cli.ProjectList()
+		It("app ls includes new app", func() {
+			apps, err := cli.AppList()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(projects).To(ContainSubstring(projectName))
+			Expect(apps).To(ContainSubstring(appName))
 		})
 
-		It("project show includes project name", func() {
-			projectShowOutput, err := cli.ProjectShow(projectName)
+		It("app show includes app name", func() {
+			appShowOutput, err := cli.AppShow(appName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(projectShowOutput.Name).To(Equal(projectName))
-			Expect(projectShowOutput.URI).To(BeEmpty())
+			Expect(appShowOutput.Name).To(Equal(appName))
+			Expect(appShowOutput.URI).To(BeEmpty())
 		})
 	})
 
@@ -50,17 +50,17 @@ var _ = Describe("Multiple Env Project", func() {
 		)
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
-				ProjectName: projectName,
-				EnvName:     "test",
-				Profile:     testEnvironmentProfile,
-				Prod:        false,
+				AppName: appName,
+				EnvName: "test",
+				Profile: testEnvironmentProfile,
+				Prod:    false,
 			})
 
 			_, prodEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
-				ProjectName: projectName,
-				EnvName:     "prod",
-				Profile:     prodEnvironmentProfile,
-				Prod:        true,
+				AppName: appName,
+				EnvName: "prod",
+				Profile: prodEnvironmentProfile,
+				Prod:    true,
 			})
 
 		})
@@ -71,7 +71,7 @@ var _ = Describe("Multiple Env Project", func() {
 		})
 
 		It("env ls should list both envs", func() {
-			envListOutput, err := cli.EnvList(projectName)
+			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(envListOutput.Envs)).To(Equal(2))
 			envs := map[string]client.EnvDescription{}
@@ -94,75 +94,75 @@ var _ = Describe("Multiple Env Project", func() {
 		})
 	})
 
-	Context("when adding an app", func() {
+	Context("when adding a svc", func() {
 		var (
 			frontEndInitErr error
 		)
 		BeforeAll(func() {
-			_, frontEndInitErr = cli.AppInit(&client.AppInitRequest{
-				AppName:    "front-end",
-				AppType:    "Load Balanced Web App",
+			_, frontEndInitErr = cli.SvcInit(&client.SvcInitRequest{
+				Name:       "front-end",
+				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./front-end/Dockerfile",
-				AppPort:    "80",
+				SvcPort:    "80",
 			})
 		})
 
-		It("app init should succeed", func() {
+		It("svc init should succeed", func() {
 			Expect(frontEndInitErr).NotTo(HaveOccurred())
 		})
 
-		It("app init should create an app manifest", func() {
-			Expect("./ecs-project/front-end/manifest.yml").Should(BeAnExistingFile())
+		It("svc init should create a svc manifest", func() {
+			Expect("./copilot/front-end/manifest.yml").Should(BeAnExistingFile())
 		})
 
-		It("app ls should list the app", func() {
-			appList, appListError := cli.AppList(projectName)
-			Expect(appListError).NotTo(HaveOccurred())
-			Expect(len(appList.Apps)).To(Equal(1))
-			Expect(appList.Apps[0].AppName).To(Equal("front-end"))
+		It("svc ls should list the svc", func() {
+			svcList, svcListError := cli.SvcList(appName)
+			Expect(svcListError).NotTo(HaveOccurred())
+			Expect(len(svcList.Services)).To(Equal(1))
+			Expect(svcList.Services[0].Name).To(Equal("front-end"))
 		})
 
-		It("app package should output a cloudformation template and params file", func() {
+		It("svc package should output a cloudformation template and params file", func() {
 			Skip("not implemented yet")
 		})
 	})
 
-	Context("when deploying an app to test and prod envs", func() {
+	Context("when deploying a svc to test and prod envs", func() {
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
-			appName          string
+			svcName          string
 		)
 		BeforeAll(func() {
-			appName = "front-end"
-			_, testDeployErr = cli.AppDeploy(&client.AppDeployInput{
-				AppName:  appName,
+			svcName = "front-end"
+			_, testDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     svcName,
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
 			})
 
-			_, prodEndDeployErr = cli.AppDeploy(&client.AppDeployInput{
-				AppName:  appName,
+			_, prodEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     svcName,
 				EnvName:  "prod",
 				ImageTag: "gallopinggurdey",
 			})
 		})
 
-		It("app deploy should succeed to both environment", func() {
+		It("svc deploy should succeed to both environment", func() {
 			Expect(testDeployErr).NotTo(HaveOccurred())
 			Expect(prodEndDeployErr).NotTo(HaveOccurred())
 		})
 
-		It("app show should include a valid URL and description for test and prod envs", func() {
-			app, appShowErr := cli.AppShow(&client.AppShowRequest{
-				ProjectName: projectName,
-				AppName:     appName,
+		It("svc show should include a valid URL and description for test and prod envs", func() {
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
 			})
-			Expect(appShowErr).NotTo(HaveOccurred())
-			Expect(len(app.Routes)).To(Equal(2))
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(2))
 			// Group routes by environment
-			envRoutes := map[string]client.AppShowRoutes{}
-			for _, route := range app.Routes {
+			envRoutes := map[string]client.SvcShowRoutes{}
+			for _, route := range svc.Routes {
 				envRoutes[route.Environment] = route
 			}
 
@@ -177,21 +177,21 @@ var _ = Describe("Multiple Env Project", func() {
 			}
 		})
 
-		It("app logs should display logs", func() {
+		It("svc logs should display logs", func() {
 			for _, envName := range []string{"test", "prod"} {
-				var appLogs []client.AppLogsOutput
-				var appLogsErr error
-				Eventually(func() ([]client.AppLogsOutput, error) {
-					appLogs, appLogsErr = cli.AppLogs(&client.AppLogsRequest{
-						ProjectName: projectName,
-						AppName:     appName,
-						EnvName:     envName,
-						Since:       "1h",
+				var svcLogs []client.SvcLogsOutput
+				var svcLogsErr error
+				Eventually(func() ([]client.SvcLogsOutput, error) {
+					svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+						AppName: appName,
+						Name:    svcName,
+						EnvName: envName,
+						Since:   "1h",
 					})
-					return appLogs, appLogsErr
+					return svcLogs, svcLogsErr
 				}, "60s", "10s").ShouldNot(BeEmpty())
 
-				for _, logLine := range appLogs {
+				for _, logLine := range svcLogs {
 					Expect(logLine.Message).NotTo(Equal(""))
 					Expect(logLine.TaskID).NotTo(Equal(""))
 					Expect(logLine.Timestamp).NotTo(Equal(0))

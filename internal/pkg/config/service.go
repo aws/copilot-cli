@@ -27,7 +27,7 @@ const (
 
 // Service represents a deployable long running service or task.
 type Service struct {
-	App  string `json:"App"`  // Name of the app this service belongs to.
+	App  string `json:"app"`  // Name of the app this service belongs to.
 	Name string `json:"name"` // Name of the service, which must be unique within a app.
 	Type string `json:"type"` // Type of the service (ex: Load Balanced Web Server, etc)
 }
