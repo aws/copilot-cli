@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-// Package cli contains the ecs-preview subcommands.
+// Package cli contains the copilot commands.
 package cli
 
 import (
@@ -34,15 +34,15 @@ const (
 
 const (
 	initShouldDeployPrompt     = "Would you like to deploy a test environment?"
-	initShouldDeployHelpPrompt = "An environment with your application deployed to it. This will allow you to test your application before placing it in production."
+	initShouldDeployHelpPrompt = "An environment with your service deployed to it. This will allow you to test your service before placing it in production."
 )
 
 type initVars struct {
 	// Flags unique to "init" that's not provided by other sub-commands.
 	shouldDeploy   bool
-	projectName    string
-	appType        string
 	appName        string
+	svcType        string
+	svcName        string
 	dockerfilePath string
 	profile        string
 	imageTag       string
@@ -50,22 +50,22 @@ type initVars struct {
 }
 
 type initOpts struct {
-	ShouldDeploy          bool // true means we should create a test environment and deploy the application in it. Defaults to false.
+	ShouldDeploy          bool // true means we should create a test environment and deploy the service to it. Defaults to false.
 	promptForShouldDeploy bool // true means that the user set the ShouldDeploy flag explicitly.
 
 	// Sub-commands to execute.
-	initProject actionCommand
-	initApp     actionCommand
-	initEnv     actionCommand
-	appDeploy   actionCommand
+	initAppCmd   actionCommand
+	initSvcCmd   actionCommand
+	initEnvCmd   actionCommand
+	deploySvcCmd actionCommand
 
 	// Pointers to flag values part of sub-commands.
 	// Since the sub-commands implement the actionCommand interface, without pointers to their internal fields
 	// we have to resort to type-casting the interface. These pointers simplify data access.
-	projectName    *string
-	appType        *string
 	appName        *string
-	appPort        *uint16
+	svcType        *string
+	svcName        *string
+	svcPort        *uint16
 	dockerfilePath *string
 
 	prompt prompter
@@ -94,9 +94,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 
-	initProject := &initAppOpts{
+	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
-			AppName: vars.projectName,
+			AppName: vars.appName,
 		},
 		store:    ssm,
 		ws:       ws,
@@ -105,10 +105,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		cfn:      deployer,
 		prog:     spin,
 	}
-	initApp := &initSvcOpts{
+	initSvcCmd := &initSvcOpts{
 		initSvcVars: initSvcVars{
-			ServiceType:    vars.appType,
-			Name:           vars.appName,
+			ServiceType:    vars.svcType,
+			Name:           vars.svcName,
 			DockerfilePath: vars.dockerfilePath,
 			Port:           vars.port,
 			GlobalOpts:     NewGlobalOpts(),
@@ -122,7 +122,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			o.df = dockerfile.New(o.fs, o.DockerfilePath)
 		},
 	}
-	initEnv := &initEnvOpts{
+	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
 			EnvName:      defaultEnvironmentName,
@@ -138,7 +138,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initProfileClients: initEnvProfileClients,
 	}
 
-	appDeploy := &deploySvcOpts{
+	deploySvcCmd := &deploySvcOpts{
 		deploySvcVars: deploySvcVars{
 			EnvName:    defaultEnvironmentName,
 			ImageTag:   vars.imageTag,
@@ -157,73 +157,73 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	return &initOpts{
 		ShouldDeploy: vars.shouldDeploy,
 
-		initProject: initProject,
-		initApp:     initApp,
-		initEnv:     initEnv,
-		appDeploy:   appDeploy,
+		initAppCmd:   initAppCmd,
+		initSvcCmd:   initSvcCmd,
+		initEnvCmd:   initEnvCmd,
+		deploySvcCmd: deploySvcCmd,
 
-		projectName:    &initProject.AppName,
-		appType:        &initApp.ServiceType,
-		appName:        &initApp.Name,
-		appPort:        &initApp.Port,
-		dockerfilePath: &initApp.DockerfilePath,
+		appName:        &initAppCmd.AppName,
+		svcType:        &initSvcCmd.ServiceType,
+		svcName:        &initSvcCmd.Name,
+		svcPort:        &initSvcCmd.Port,
+		dockerfilePath: &initSvcCmd.DockerfilePath,
 
 		prompt: prompt,
 	}, nil
 }
 
-// Run executes "project init", "env init", "app init" and "app deploy".
+// Run executes "app init", "env init", "svc init" and "svc deploy".
 func (o *initOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your Git repository.")
 	log.Infoln(`Welcome to the ECS CLI! We're going to walk you through some questions
-to help you get set up with a project on ECS. A project is a collection of
-containerized applications (or micro-services) that operate together.`)
+to help you get set up with an application on ECS. An application is a collection of
+containerized services that operate together.`)
 	log.Infoln()
 
-	if err := o.loadProject(); err != nil {
-		return err
-	}
 	if err := o.loadApp(); err != nil {
 		return err
 	}
-
-	log.Infof("Ok great, we'll set up a %s named %s in project %s listening on port %s.\n",
-		color.HighlightUserInput(*o.appType), color.HighlightUserInput(*o.appName), color.HighlightUserInput(*o.projectName), color.HighlightUserInput(fmt.Sprintf("%d", *o.appPort)))
-
-	if err := o.initProject.Execute(); err != nil {
-		return fmt.Errorf("execute project init: %w", err)
+	if err := o.loadSvc(); err != nil {
+		return err
 	}
-	if err := o.initApp.Execute(); err != nil {
+
+	log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
+		color.HighlightUserInput(*o.svcType), color.HighlightUserInput(*o.svcName), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
+
+	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
+	}
+	if err := o.initSvcCmd.Execute(); err != nil {
+		return fmt.Errorf("execute svc init: %w", err)
 	}
 
 	if err := o.deployEnv(); err != nil {
 		return err
 	}
 
-	return o.deployApp()
-}
-
-func (o *initOpts) loadProject() error {
-	if err := o.initProject.Ask(); err != nil {
-		return fmt.Errorf("prompt for project init: %w", err)
-	}
-	if err := o.initProject.Validate(); err != nil {
-		return err
-	}
-	// Write the project name to viper so that sub-commands can retrieve its value.
-	viper.Set(appFlag, o.projectName)
-	return nil
+	return o.deploySvc()
 }
 
 func (o *initOpts) loadApp() error {
-	if err := o.initApp.Ask(); err != nil {
-		return fmt.Errorf("prompt for app init: %w", err)
+	if err := o.initAppCmd.Ask(); err != nil {
+		return fmt.Errorf("ask app init: %w", err)
 	}
-	return o.initApp.Validate()
+	if err := o.initAppCmd.Validate(); err != nil {
+		return err
+	}
+	// Write the application name to viper so that sub-commands can retrieve its value.
+	viper.Set(appFlag, o.appName)
+	return nil
 }
 
-// deployEnv prompts the user to deploy a test environment if the project doesn't already have one.
+func (o *initOpts) loadSvc() error {
+	if err := o.initSvcCmd.Ask(); err != nil {
+		return fmt.Errorf("ask svc init: %w", err)
+	}
+	return o.initSvcCmd.Validate()
+}
+
+// deployEnv prompts the user to deploy a test environment if the application doesn't already have one.
 func (o *initOpts) deployEnv() error {
 	if o.promptForShouldDeploy {
 		log.Infoln("All right, you're all set for local development.")
@@ -232,26 +232,26 @@ func (o *initOpts) deployEnv() error {
 		}
 	}
 	if !o.ShouldDeploy {
-		// User chose not to deploy the application, exit.
+		// User chose not to deploy the service, exit.
 		return nil
 	}
 
-	return o.initEnv.Execute()
+	return o.initEnvCmd.Execute()
 }
 
-func (o *initOpts) deployApp() error {
+func (o *initOpts) deploySvc() error {
 	if !o.ShouldDeploy {
 		return nil
 	}
-	if deployOpts, ok := o.appDeploy.(*deploySvcOpts); ok {
-		// Set the application's name to the deploy sub-command.
-		deployOpts.Name = *o.appName
+	if deployOpts, ok := o.deploySvcCmd.(*deploySvcOpts); ok {
+		// Set the service's name to the deploy sub-command.
+		deployOpts.Name = *o.svcName
 	}
 
-	if err := o.appDeploy.Ask(); err != nil {
+	if err := o.deploySvcCmd.Ask(); err != nil {
 		return err
 	}
-	return o.appDeploy.Execute()
+	return o.deploySvcCmd.Execute()
 }
 
 func (o *initOpts) askShouldDeploy() error {
@@ -279,10 +279,10 @@ func BuildInitCmd() *cobra.Command {
 				return err
 			}
 			if !opts.ShouldDeploy {
-				log.Info("\nNo problem, you can deploy your application later:\n")
+				log.Info("\nNo problem, you can deploy your service later:\n")
 				log.Infof("- Run %s to create your staging environment.\n",
-					color.HighlightCode(fmt.Sprintf("ecs-preview env init --name %s --profile default --project %s", defaultEnvironmentName, *opts.projectName)))
-				for _, followup := range opts.initApp.RecommendedActions() {
+					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
+				for _, followup := range opts.initSvcCmd.RecommendedActions() {
 					log.Infof("- %s\n", followup)
 				}
 			}
@@ -290,9 +290,9 @@ func BuildInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
-	cmd.Flags().StringVarP(&vars.projectName, appFlag, appFlagShort, "", appFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, svcFlag, svcFlagShort, "", svcFlagDescription)
-	cmd.Flags().StringVarP(&vars.appType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
+	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
+	cmd.Flags().StringVarP(&vars.svcType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldDeploy, deployFlag, false, deployTestFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
