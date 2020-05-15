@@ -21,38 +21,38 @@ import (
 
 func TestDeleteEnvOpts_Validate(t *testing.T) {
 	const (
-		testProjName = "phonetool"
-		testEnvName  = "test"
+		testAppName = "phonetool"
+		testEnvName = "test"
 	)
 	testCases := map[string]struct {
-		inProjectName string
-		inEnv         string
-		mockStore     func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
+		inAppName string
+		inEnv     string
+		mockStore func(ctrl *gomock.Controller) *mocks.MockenvironmentStore
 
 		wantedError error
 	}{
 		"failed to retrieve environment from store": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
+			inAppName: testAppName,
+			inEnv:     testEnvName,
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				envStore := mocks.NewMockenvironmentStore(ctrl)
-				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(nil, &config.ErrNoSuchEnvironment{
-					ApplicationName: testProjName,
+				envStore.EXPECT().GetEnvironment(testAppName, testEnvName).Return(nil, &config.ErrNoSuchEnvironment{
+					ApplicationName: testAppName,
 					EnvironmentName: testEnvName,
 				})
 				return envStore
 			},
 			wantedError: &config.ErrNoSuchEnvironment{
-				ApplicationName: testProjName,
+				ApplicationName: testAppName,
 				EnvironmentName: testEnvName,
 			},
 		},
 		"environment exists": {
-			inProjectName: testProjName,
-			inEnv:         testEnvName,
+			inAppName: testAppName,
+			inEnv:     testEnvName,
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				envStore := mocks.NewMockenvironmentStore(ctrl)
-				envStore.EXPECT().GetEnvironment(testProjName, testEnvName).Return(&config.Environment{}, nil)
+				envStore.EXPECT().GetEnvironment(testAppName, testEnvName).Return(&config.Environment{}, nil)
 				return envStore
 			},
 		},
@@ -66,7 +66,7 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 			opts := &deleteEnvOpts{
 				deleteEnvVars: deleteEnvVars{
 					EnvName:    tc.inEnv,
-					GlobalOpts: &GlobalOpts{appName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 				store: tc.mockStore(ctrl),
 			}
@@ -84,9 +84,8 @@ func TestDeleteEnvOpts_Validate(t *testing.T) {
 
 func TestDeleteEnvOpts_Ask(t *testing.T) {
 	const (
-		testProject  = "phonetool"
-		testEnv1     = "test"
-		testEnv2     = "prod"
+		testApp      = "phonetool"
+		testEnv      = "test"
 		testProfile1 = "default1"
 		testProfile2 = "default2"
 	)
@@ -104,107 +103,59 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 		"prompts for all required flags": {
 			inSkipConfirmation: false,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
-				mockEnvStore.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
-					{
-						Name: testEnv1,
-					},
-					{
-						Name: testEnv2,
-					},
-				}, nil)
+				mockSelector := mocks.NewMockconfigSelector(ctrl)
+				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
 
 				mockCfg := mocks.NewMockprofileNames(ctrl)
 				mockCfg.EXPECT().Names().Return([]string{testProfile1, testProfile2})
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().SelectOne(envDeleteNamePrompt, "", []string{testEnv1, testEnv2}).Return(testEnv1, nil)
-				mockPrompter.EXPECT().SelectOne(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(testEnv1)),
+				mockPrompter.EXPECT().SelectOne(fmt.Sprintf(fmtEnvDeleteProfilePrompt, color.HighlightUserInput(testEnv)),
 					envDeleteProfileHelpPrompt, []string{testProfile1, testProfile2}).Return(testProfile1, nil)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv1, testProject), gomock.Any()).Return(true, nil)
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(true, nil)
 
-				o.store = mockEnvStore
+				o.sel = mockSelector
 				o.profileConfig = mockCfg
 				o.GlobalOpts.prompt = mockPrompter
 			},
-			wantedEnvName:    testEnv1,
+			wantedEnvName:    testEnv,
 			wantedEnvProfile: testProfile1,
 		},
-		"skip prompting if only one environment or profile available": {
+		"skip prompting if only one profile available": {
 			inSkipConfirmation: true,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
-				mockEnvStore.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
-					{
-						Name: testEnv1,
-					},
-				}, nil)
+				mockSelector := mocks.NewMockconfigSelector(ctrl)
+				mockSelector.EXPECT().Environment(envDeleteNamePrompt, "", testApp).Return(testEnv, nil)
 
 				mockCfg := mocks.NewMockprofileNames(ctrl)
 				mockCfg.EXPECT().Names().Return([]string{testProfile1})
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
 
-				o.store = mockEnvStore
+				o.sel = mockSelector
 				o.profileConfig = mockCfg
 				o.GlobalOpts.prompt = mockPrompter
 			},
-			wantedEnvName:    testEnv1,
+			wantedEnvName:    testEnv,
 			wantedEnvProfile: testProfile1,
 		},
 		"wraps error from prompting for confirmation": {
 			inSkipConfirmation: false,
-			inEnvName:          testEnv1,
+			inEnvName:          testEnv,
 			inEnvProfile:       testProfile1,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 
 				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv1, testProject), gomock.Any()).Return(false, errors.New("some error"))
+				mockPrompter.EXPECT().Confirm(fmt.Sprintf(fmtDeleteEnvPrompt, testEnv, testApp), gomock.Any()).Return(false, errors.New("some error"))
 
 				o.GlobalOpts.prompt = mockPrompter
 			},
 
-			wantedError: errors.New("prompt for environment deletion: some error"),
-		},
-		"wraps error from prompting for env name": {
-			inSkipConfirmation: true,
-			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
-				mockEnvStore.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{
-					{
-						Name: testEnv1,
-					},
-					{
-						Name: testEnv2,
-					},
-				}, nil)
-
-				mockPrompter := mocks.NewMockprompter(ctrl)
-				mockPrompter.EXPECT().SelectOne(envDeleteNamePrompt, "", gomock.Any()).Return("", errors.New("some error"))
-
-				o.store = mockEnvStore
-				o.GlobalOpts.prompt = mockPrompter
-			},
-
-			wantedError: errors.New("prompt for environment name: some error"),
-		},
-		"wraps error if no environment found": {
-			inSkipConfirmation: true,
-			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
-				mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
-				mockEnvStore.EXPECT().ListEnvironments(testProject).Return([]*config.Environment{}, nil)
-
-				mockPrompter := mocks.NewMockprompter(ctrl)
-
-				o.store = mockEnvStore
-				o.GlobalOpts.prompt = mockPrompter
-			},
-
-			wantedError: errors.New("couldn't find any environment in the project phonetool"),
+			wantedError: errors.New("confirm to delete environment test: some error"),
 		},
 		"wraps error from prompting from profile": {
 			inSkipConfirmation: true,
-			inEnvName:          testEnv1,
+			inEnvName:          testEnv,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 				mockCfg := mocks.NewMockprofileNames(ctrl)
 				mockCfg.EXPECT().Names().Return([]string{testProfile1, testProfile2})
@@ -216,11 +167,11 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 				o.GlobalOpts.prompt = mockPrompter
 			},
 
-			wantedError: errors.New("prompt to get the profile name: some error"),
+			wantedError: errors.New("get the profile name: some error"),
 		},
 		"errors when no named profile exists": {
 			inSkipConfirmation: true,
-			inEnvName:          testEnv1,
+			inEnvName:          testEnv,
 			mockDependencies: func(ctrl *gomock.Controller, o *deleteEnvOpts) {
 				mockCfg := mocks.NewMockprofileNames(ctrl)
 				mockCfg.EXPECT().Names().Return([]string{})
@@ -242,7 +193,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 					EnvName:    tc.inEnvName,
 					EnvProfile: tc.inEnvProfile,
 					GlobalOpts: &GlobalOpts{
-						appName: testProject,
+						appName: testApp,
 					},
 					SkipConfirmation: tc.inSkipConfirmation,
 				},
@@ -266,8 +217,8 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 
 func TestDeleteEnvOpts_Execute(t *testing.T) {
 	const (
-		testProject = "phonetool"
-		testEnv     = "test"
+		testApp = "phonetool"
+		testEnv = "test"
 	)
 	testError := errors.New("some error")
 
@@ -294,7 +245,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				return nil
 			},
-			wantedError: errors.New("find application cloudformation stacks: some error"),
+			wantedError: errors.New("find service cloudformation stacks: some error"),
 		},
 		"environment has running applications": {
 			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
@@ -326,7 +277,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				return nil
 			},
-			wantedError: errors.New("applications: 'frontend, backend' still exist within the environment test"),
+			wantedError: errors.New("service 'frontend, backend' still exist within the environment test"),
 		},
 		"error from delete stack": {
 			mockRG: func(ctrl *gomock.Controller) *mocks.MockresourceGetter {
@@ -337,13 +288,13 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			},
 			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testProject))
-				prog.EXPECT().Stop(log.Serrorf(fmtDeleteEnvFailed, testEnv, testProject, testError))
+				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testApp))
+				prog.EXPECT().Stop(log.Serrorf(fmtDeleteEnvFailed, testEnv, testApp, testError))
 				return prog
 			},
 			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
 				deploy := mocks.NewMockenvironmentDeployer(ctrl)
-				deploy.EXPECT().DeleteEnvironment(testProject, testEnv).Return(testError)
+				deploy.EXPECT().DeleteEnvironment(testApp, testEnv).Return(testError)
 				return deploy
 			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
@@ -359,18 +310,18 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			},
 			mockProg: func(ctrl *gomock.Controller) *mocks.Mockprogress {
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testProject))
-				prog.EXPECT().Stop(log.Ssuccessf(fmtDeleteEnvComplete, testEnv, testProject))
+				prog.EXPECT().Start(fmt.Sprintf(fmtDeleteEnvStart, testEnv, testApp))
+				prog.EXPECT().Stop(log.Ssuccessf(fmtDeleteEnvComplete, testEnv, testApp))
 				return prog
 			},
 			mockDeploy: func(ctrl *gomock.Controller) *mocks.MockenvironmentDeployer {
 				deploy := mocks.NewMockenvironmentDeployer(ctrl)
-				deploy.EXPECT().DeleteEnvironment(testProject, testEnv).Return(nil)
+				deploy.EXPECT().DeleteEnvironment(testApp, testEnv).Return(nil)
 				return deploy
 			},
 			mockStore: func(ctrl *gomock.Controller) *mocks.MockenvironmentStore {
 				store := mocks.NewMockenvironmentStore(ctrl)
-				store.EXPECT().DeleteEnvironment(testProject, testEnv).Return(nil)
+				store.EXPECT().DeleteEnvironment(testApp, testEnv).Return(nil)
 				return store
 			},
 		},
@@ -385,7 +336,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 				deleteEnvVars: deleteEnvVars{
 					EnvName: testEnv,
 					GlobalOpts: &GlobalOpts{
-						appName: testProject,
+						appName: testApp,
 					},
 				},
 				store:        tc.mockStore(ctrl),

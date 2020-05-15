@@ -130,7 +130,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			IsProduction: false,
 		},
 		store:         ssm,
-		projDeployer:  deployer,
+		appDeployer:   deployer,
 		profileConfig: cfg,
 		prog:          spin,
 		identity:      id,

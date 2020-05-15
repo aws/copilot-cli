@@ -10,15 +10,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/fatih/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/spf13/cobra"
 )
 
 const (
-	environmentListProjectNamePrompt = "Which project's environments would you like to list?"
-	environmentListProjectNameHelper = "A project groups all of your environments together."
+	envListAppNamePrompt = "Which application is the environment in?"
+	envListAppNameHelper = "An application is a collection of related services."
 )
 
 type listEnvVars struct {
@@ -28,44 +28,32 @@ type listEnvVars struct {
 
 type listEnvOpts struct {
 	listEnvVars
-
 	store store
+	sel   configSelector
 
 	w io.Writer
 }
 
 func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
-	ssmStore, err := config.NewStore()
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, err
 	}
 
 	return &listEnvOpts{
 		listEnvVars: vars,
-		store:       ssmStore,
+		store:       store,
+		sel:         selector.NewConfigSelect(vars.prompt, store),
 		w:           os.Stdout,
 	}, nil
 }
 
-func (o *listEnvOpts) selectProject() (string, error) {
-	projs, err := o.store.ListApplications()
-	if err != nil {
-		return "", err
+// Validate returns an error if the values passed by flags are invalid.
+func (o *listEnvOpts) Validate() error {
+	if o.AppName() == "" {
+		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
-	var projStrs []string
-	for _, projStr := range projs {
-		projStrs = append(projStrs, projStr.Name)
-	}
-	if len(projStrs) == 0 {
-		log.Infoln("There are no projects to select.")
-		return "", nil
-	}
-	proj, err := o.prompt.SelectOne(
-		environmentListProjectNamePrompt,
-		environmentListProjectNameHelper,
-		projStrs,
-	)
-	return proj, err
+	return nil
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -73,18 +61,17 @@ func (o *listEnvOpts) Ask() error {
 	if o.AppName() != "" {
 		return nil
 	}
-	projectName, err := o.selectProject()
+	app, err := o.sel.Application(envListAppNamePrompt, envListAppNameHelper)
 	if err != nil {
-		return fmt.Errorf("failed to get project name: %w", err)
+		return fmt.Errorf("select application: %w", err)
 	}
-	o.appName = projectName
-
+	o.appName = app
 	return nil
 }
 
 // Execute lists the environments through the prompt.
 func (o *listEnvOpts) Execute() error {
-	// Ensure the project actually exists before we try to list its environments.
+	// Ensure the application actually exists before we try to list its environments.
 	if _, err := o.store.GetApplication(o.AppName()); err != nil {
 		return err
 	}
@@ -111,10 +98,9 @@ func (o *listEnvOpts) Execute() error {
 
 func (o *listEnvOpts) humanOutput(envs []*config.Environment) string {
 	b := &strings.Builder{}
-	prodColor := color.New(color.FgYellow, color.Bold).SprintFunc()
 	for _, env := range envs {
 		if env.Prod {
-			fmt.Fprintf(b, "%s (prod)\n", prodColor(env.Name))
+			fmt.Fprintf(b, "%s (prod)\n", color.ProdColor(env.Name))
 		} else {
 			fmt.Fprintln(b, env.Name)
 		}
@@ -133,20 +119,23 @@ func (o *listEnvOpts) jsonOutput(envs []*config.Environment) (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
-// BuildEnvListCmd builds the command for listing environments in a project.
+// BuildEnvListCmd builds the command for listing environments in an application.
 func BuildEnvListCmd() *cobra.Command {
 	vars := listEnvVars{
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the environments in a project",
+		Short: "Lists all the environments in an application",
 		Example: `
-  Lists all the environments for the test project
-  /code $ ecs-preview env ls --project test`,
+  Lists all the environments for the frontend application
+  /code $ copilot env ls -a frontend`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newListEnvOpts(vars)
 			if err != nil {
+				return err
+			}
+			if err := opts.Validate(); err != nil {
 				return err
 			}
 			if err := opts.Ask(); err != nil {
