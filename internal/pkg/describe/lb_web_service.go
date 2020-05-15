@@ -22,15 +22,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-const (
-	// Display settings.
-	minCellWidth           = 20  // minimum number of characters in a table's cell.
-	tabWidth               = 4   // number of characters in between columns.
-	cellPaddingWidth       = 2   // number of padding characters added by default to a cell.
-	paddingChar            = ' ' // character in between columns.
-	noAdditionalFormatting = 0
-)
-
 // WebServiceURI represents the unique identifier to access a web service.
 type WebServiceURI struct {
 	DNSName string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public load balancer's DNS.
@@ -76,12 +67,6 @@ type svcDescriber interface {
 	EnvVars() (map[string]string, error)
 	GetServiceArn() (*ecs.ServiceArn, error)
 	ServiceStackResources() ([]*cloudformation.StackResource, error)
-}
-
-// HumanJSONStringer contains methods to stringify a description into human or machine-readable formats.
-type HumanJSONStringer interface {
-	HumanString() string
-	JSONString() (string, error)
 }
 
 // WebServiceDescriber retrieves information about a load balanced web service.
@@ -271,45 +256,6 @@ func (e envVars) humanString(w io.Writer) {
 	}
 }
 
-// CfnResource contains service resources created by cloudformation.
-type CfnResource struct {
-	Type       string `json:"type"`
-	PhysicalID string `json:"physicalID"`
-}
-
-type cfnResources map[string][]*CfnResource
-
-func (c cfnResources) humanString(w io.Writer, configs []*ServiceConfig) {
-	// Go maps don't have a guaranteed order.
-	// Show the resources by the order of environments displayed under Configuration for a consistent view.
-	for _, config := range configs {
-		env := config.Environment
-		resources := c[env]
-		fmt.Fprintf(w, "\n  %s\n", env)
-		for _, resource := range resources {
-			fmt.Fprintf(w, "    %s\t%s\n", resource.Type, resource.PhysicalID)
-		}
-	}
-}
-
-// ServiceConfig contains serialized configuration parameters for a service.
-type ServiceConfig struct {
-	Environment string `json:"environment"`
-	Port        string `json:"port"`
-	Tasks       string `json:"tasks"`
-	CPU         string `json:"cpu"`
-	Memory      string `json:"memory"`
-}
-
-type configurations []*ServiceConfig
-
-func (c configurations) humanString(w io.Writer) {
-	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
-	for _, config := range c {
-		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
-	}
-}
-
 // WebServiceRoute contains serialized route parameters for a web service.
 type WebServiceRoute struct {
 	Environment string `json:"environment"`
@@ -382,7 +328,7 @@ func (w *webSvcDesc) HumanString() string {
 
 		// Go maps don't have a guaranteed order.
 		// Show the resources by the order of environments displayed under Configuration for a consistent view.
-		w.Resources.humanString(writer, w.Configurations)
+		w.Resources.humanStringByEnv(writer, w.Configurations)
 	}
 	writer.Flush()
 	return b.String()
