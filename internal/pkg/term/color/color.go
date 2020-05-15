@@ -16,14 +16,15 @@ import (
 // Refer to https://en.wikipedia.org/wiki/ANSI_escape_code to validate if colors would
 // be visible on white or black screen backgrounds.
 var (
-	Grey       = color.New(color.FgWhite)
-	Red        = color.New(color.FgHiRed)
-	Green      = color.New(color.FgHiGreen)
-	Yellow     = color.New(color.FgHiYellow)
-	Cyan       = color.New(color.FgCyan)
-	HiCyan     = color.New(color.FgHiCyan)
-	Bold       = color.New(color.Bold)
-	BoldItalic = color.New(color.Bold).Add(color.Italic)
+	Grey         = color.New(color.FgWhite)
+	Red          = color.New(color.FgHiRed)
+	Green        = color.New(color.FgHiGreen)
+	Yellow       = color.New(color.FgHiYellow)
+	Cyan         = color.New(color.FgCyan)
+	HiCyan       = color.New(color.FgHiCyan)
+	Bold         = color.New(color.Bold)
+	BoldItalic   = color.New(color.Bold).Add(color.Italic)
+	BoldFgYellow = color.New(color.FgYellow).Add(color.Bold)
 )
 
 const colorEnvVar = "COLOR"
@@ -70,4 +71,9 @@ func HighlightResource(s string) string {
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
 func HighlightCode(s string) string {
 	return HiCyan.Sprintf("`%s`", s)
+}
+
+// Prod colors the string to mark it is a prod environment.
+func Prod(s string) string {
+	return BoldFgYellow.Sprint(s)
 }
