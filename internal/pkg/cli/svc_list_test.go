@@ -49,7 +49,7 @@ func TestListSvcOpts_Execute(t *testing.T) {
 						{Name: "lb-svc"},
 					}, nil)
 			},
-			expectedContent: "{\"services\":[{\"App\":\"\",\"name\":\"my-svc\",\"type\":\"\"},{\"App\":\"\",\"name\":\"lb-svc\",\"type\":\"\"}]}\n",
+			expectedContent: "{\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"\"},{\"app\":\"\",\"name\":\"lb-svc\",\"type\":\"\"}]}\n",
 		},
 		"with human outputs": {
 			opts: listSvcOpts{

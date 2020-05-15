@@ -250,7 +250,7 @@ func TestEnvShow_Execute(t *testing.T) {
 					m.EXPECT().Describe().Return(mockEnv, nil))
 			},
 
-			wantedContent: "{\"environment\":{\"app\":\"my-app\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"App\":\"my-app\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"},{\"App\":\"my-app\",\"name\":\"copilot-svc\",\"type\":\"lb-web-svc\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
+			wantedContent: "{\"environment\":{\"app\":\"my-app\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"my-app\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"},{\"app\":\"my-app\",\"name\":\"copilot-svc\",\"type\":\"lb-web-svc\"}],\"tags\":{\"tag1\":\"value1\",\"tag2\":\"value2\"}}\n",
 		},
 		"correctly shows human output": {
 			inputEnv:         "test",
