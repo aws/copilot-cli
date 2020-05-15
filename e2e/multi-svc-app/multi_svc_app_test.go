@@ -106,7 +106,7 @@ var _ = Describe("Multiple Service App", func() {
 		It("svc ls should list the svc", func() {
 			svcList, svcListError := cli.SvcList(appName)
 			Expect(svcListError).NotTo(HaveOccurred())
-			Expect(len(svcList.Services)).To(Equal(2))
+			Expect(len(svcList.Services)).To(Equal(3))
 
 			svcsByName := map[string]client.SvcDescription{}
 			for _, svc := range svcList.Services {
