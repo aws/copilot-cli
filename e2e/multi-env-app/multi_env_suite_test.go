@@ -11,7 +11,7 @@ import (
 )
 
 var cli *client.CLI
-var projectName string
+var appName string
 var testEnvironmentProfile string
 var prodEnvironmentProfile string
 
@@ -26,11 +26,11 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
-	projectName = fmt.Sprintf("e2e-multienv-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-multienv-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.ProjectDelete(map[string]string{"test": testEnvironmentProfile, "prod": prodEnvironmentProfile})
+	_, err := cli.AppDelete(map[string]string{"test": testEnvironmentProfile, "prod": prodEnvironmentProfile})
 	Expect(err).NotTo(HaveOccurred())
 })
 

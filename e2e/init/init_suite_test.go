@@ -11,7 +11,7 @@ import (
 )
 
 var cli *client.CLI
-var projectName string
+var appName string
 
 /**
 The Init Suite runs through the ecs-preview init workflow for a brand new
@@ -27,17 +27,17 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
-	projectName = fmt.Sprintf("e2e-init-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-init-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.AppDelete("front-end")
+	_, err := cli.SvcDelete("front-end")
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = cli.EnvDelete("test", "default")
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = cli.ProjectDelete(map[string]string{})
+	_, err = cli.AppDelete(map[string]string{})
 	Expect(err).NotTo(HaveOccurred())
 })
 

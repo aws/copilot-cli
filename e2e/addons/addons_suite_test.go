@@ -14,8 +14,8 @@ import (
 )
 
 var cli *client.CLI
-var projectName string
 var appName string
+var svcName string
 
 // The Addons suite runs creates a new application with additional resources.
 func TestAddons(t *testing.T) {
@@ -27,12 +27,12 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
-	projectName = fmt.Sprintf("e2e-addons-%d", time.Now().Unix())
-	appName = "hello"
+	appName = fmt.Sprintf("e2e-addons-%d", time.Now().Unix())
+	svcName = "hello"
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.ProjectDelete(map[string]string{"test": "default"})
+	_, err := cli.AppDelete(map[string]string{"test": "default"})
 	Expect(err).NotTo(HaveOccurred())
 })
 
