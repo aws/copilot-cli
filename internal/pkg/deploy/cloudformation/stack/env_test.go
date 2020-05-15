@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
@@ -82,7 +82,7 @@ func TestEnvTemplate(t *testing.T) {
 func TestEnvParameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
-	deploymentInputWithDNS.ProjectDNSName = "ecs.aws"
+	deploymentInputWithDNS.AppDNSName = "ecs.aws"
 	testCases := map[string]struct {
 		input *deploy.CreateEnvironmentInput
 		want  []*cloudformation.Parameter
@@ -95,8 +95,8 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(strconv.FormatBool(deploymentInput.PublicLoadBalancer)),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectNameKey),
-					ParameterValue: aws.String(deploymentInput.Project),
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String(deploymentInput.AppName),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
@@ -107,11 +107,11 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(deploymentInput.ToolsAccountPrincipalARN),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSKey),
+					ParameterKey:   aws.String(envParamAppDNSKey),
 					ParameterValue: aws.String(""),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String(""),
 				},
 			},
@@ -124,8 +124,8 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(strconv.FormatBool(deploymentInputWithDNS.PublicLoadBalancer)),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectNameKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.Project),
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.AppName),
 				},
 				{
 					ParameterKey:   aws.String(envParamEnvNameKey),
@@ -136,11 +136,11 @@ func TestEnvParameters(t *testing.T) {
 					ParameterValue: aws.String(deploymentInputWithDNS.ToolsAccountPrincipalARN),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.ProjectDNSName),
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(deploymentInputWithDNS.AppDNSName),
 				},
 				{
-					ParameterKey:   aws.String(envParamProjectDNSDelegationRoleKey),
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 					ParameterValue: aws.String("arn:aws:iam::000000000:role/project-DNSDelegationRole"),
 				},
 			},
@@ -167,7 +167,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -176,7 +176,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
-					ProjectDNSName:           "",
+					AppDNSName:               "",
 				},
 			},
 		},
@@ -185,7 +185,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "0000000",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -194,7 +194,7 @@ func TestEnvDNSDelegationRole(t *testing.T) {
 			input: &EnvStackConfig{
 				CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 					ToolsAccountPrincipalARN: "arn:aws:iam::0000000:root",
-					ProjectDNSName:           "ecs.aws",
+					AppDNSName:               "ecs.aws",
 				},
 			},
 		},
@@ -211,16 +211,16 @@ func TestEnvTags(t *testing.T) {
 	env := &EnvStackConfig{
 		CreateEnvironmentInput: &deploy.CreateEnvironmentInput{
 			Name:    "env",
-			Project: "project",
+			AppName: "project",
 			AdditionalTags: map[string]string{
-				"owner":       "boss",
-				ProjectTagKey: "overrideproject",
+				"owner":   "boss",
+				AppTagKey: "overrideproject",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(ProjectTagKey),
+			Key:   aws.String(AppTagKey),
 			Value: aws.String("project"), // Ignore user's overrides.
 		},
 		{
@@ -240,13 +240,13 @@ func TestStackName(t *testing.T) {
 	env := &EnvStackConfig{
 		CreateEnvironmentInput: deploymentInput,
 	}
-	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.Project, deploymentInput.Name), env.StackName())
+	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.AppName, deploymentInput.Name), env.StackName())
 }
 
 func TestToEnv(t *testing.T) {
 	mockDeployInput := mockDeployEnvironmentInput()
 	testCases := map[string]struct {
-		expectedEnv archer.Environment
+		expectedEnv config.Environment
 		mockStack   *cloudformation.Stack
 		want        error
 	}{
@@ -259,9 +259,9 @@ func TestToEnv(t *testing.T) {
 				"arn:aws:cloudformation:eu-west-3:902697171733:stack/project-env",
 				"arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
 				"arn:aws:iam::902697171733:role/phonetool-test-CFNExecutionRole"),
-			expectedEnv: archer.Environment{
+			expectedEnv: config.Environment{
 				Name:             mockDeployInput.Name,
-				Project:          mockDeployInput.Project,
+				App:              mockDeployInput.AppName,
 				Prod:             mockDeployInput.Prod,
 				AccountID:        "902697171733",
 				Region:           "eu-west-3",
@@ -307,7 +307,7 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 	return &deploy.CreateEnvironmentInput{
 		Name:                     "env",
-		Project:                  "project",
+		AppName:                  "project",
 		Prod:                     true,
 		PublicLoadBalancer:       true,
 		ToolsAccountPrincipalARN: "arn:aws:iam::000000000:root",

@@ -14,11 +14,11 @@ import (
 // Long flag names.
 const (
 	// Common flags.
-	projectFlag = "project"
 	nameFlag    = "name"
 	appFlag     = "app"
 	envFlag     = "env"
-	appTypeFlag = "app-type"
+	svcFlag     = "svc"
+	svcTypeFlag = "svc-type"
 	profileFlag = "profile"
 	yesFlag     = "yes"
 	jsonFlag    = "json"
@@ -42,19 +42,19 @@ const (
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
 	domainNameFlag        = "domain"
-	localAppFlag          = "local"
+	localFlag             = "local"
 	deleteSecretFlag      = "delete-secret"
-	appPortFlag           = "port"
+	svcPortFlag           = "port"
 )
 
 // Short flag names.
 // A short flag only exists if the flag is mandatory by the command.
 const (
-	projectFlagShort = "p"
 	nameFlagShort    = "n"
 	appFlagShort     = "a"
 	envFlagShort     = "e"
-	appTypeFlagShort = "t"
+	svcFlagShort     = "s"
+	svcTypeFlagShort = "t"
 
 	dockerFileFlagShort        = "d"
 	githubURLFlagShort         = "u"
@@ -65,21 +65,21 @@ const (
 
 // Descriptions for flags.
 var (
-	appTypeFlagDescription = fmt.Sprintf(`Type of application to create. Must be one of:
-%s`, strings.Join(quoteAll(manifest.AppTypes), ", "))
+	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
+%s`, strings.Join(quoteAll(manifest.ServiceTypes), ", "))
 )
 
 const (
-	projectFlagDescription  = "Name of the project."
 	appFlagDescription      = "Name of the application."
 	envFlagDescription      = "Name of the environment."
+	svcFlagDescription      = "Name of the service."
 	pipelineFlagDescription = "Name of the pipeline."
 	profileFlagDescription  = "Name of the profile."
 	yesFlagDescription      = "Skips confirmation prompt."
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	dockerFileFlagDescription   = "Path to the Dockerfile."
-	imageTagFlagDescription     = `Optional. The application's image tag.`
+	imageTagFlagDescription     = `Optional. The service's image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
@@ -92,17 +92,18 @@ Defaults to all logs. Only one of start-time / since may be used.`
 Defaults to all logs. Only one of start-time / since may be used.`
 	endTimeFlagDescription = `Optional. Only return logs before a specific date (RFC3339).
 Defaults to all logs. Only one of end-time / follow may be used.`
-	deployTestFlagDescription        = `Deploy your application to a "test" environment.`
-	githubURLFlagDescription         = "GitHub repository URL for your application."
+	deployTestFlagDescription        = `Deploy your service to a "test" environment.`
+	githubURLFlagDescription         = "GitHub repository URL for your service."
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
-	resourcesFlagDescription         = "Optional. Show the resources of your application."
-	localAppFlagDescription          = "Only show applications in the current directory."
+	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
+	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
+	localSvcFlagDescription          = "Only show services in the workspace."
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
-	appPortFlagDescription           = "Optional. The port on which your Dockerfile listens."
+	svcPortFlagDescription           = "Optional. The port on which your service listens."
 )
 
 func quoteAll(elems []string) []string {

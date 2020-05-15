@@ -7,17 +7,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"sort"
 	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/store"
 )
 
 const (
@@ -30,33 +30,36 @@ type resourceGroupsClient interface {
 
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
-	Environment  *archer.Environment   `json:"environment"`
-	Applications []*archer.Application `json:"applications"`
-	Tags         map[string]string     `json:"tags,omitempty"`
+	Environment *config.Environment `json:"environment"`
+	Services    []*config.Service   `json:"services"`
+	Tags        map[string]string   `json:"tags,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	env  *archer.Environment
-	proj *archer.Project
-	apps []*archer.Application
+	app  *config.Application
+	env  *config.Environment
+	svcs []*config.Service
 
 	store    storeSvc
 	rgClient resourceGroupsClient
 }
 
 // NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) {
-	svc, err := store.New()
+func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
+	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	env, err := svc.GetEnvironment(projectName, envName)
+	env, err := store.GetEnvironment(appName, envName)
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	proj, err := svc.GetProject(projectName)
-	apps, err := svc.ListApplications(projectName)
+	app, err := store.GetApplication(appName)
+	if err != nil {
+		return nil, fmt.Errorf("get application %s: %w", appName, err)
+	}
+	svcs, err := store.ListServices(appName)
 	if err != nil {
 		return nil, err
 	}
@@ -65,29 +68,28 @@ func NewEnvDescriber(projectName string, envName string) (*EnvDescriber, error) 
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	return &EnvDescriber{
+		app:      app,
 		env:      env,
-		store:    svc,
-		proj:     proj,
-		apps:     apps,
+		store:    store,
+		svcs:     svcs,
 		rgClient: resourcegroups.New(sess),
 	}, nil
 }
 
-// Describe returns info about a project's environment.
+// Describe returns info about an application's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	appsForEnv, err := e.filterAppsForEnv()
+	svcs, err := e.filterSvcsForEnv()
 	if err != nil {
 		return nil, err
 	}
-
 	return &EnvDescription{
-		Environment:  e.env,
-		Applications: appsForEnv,
-		Tags:         e.proj.Tags,
+		Environment: e.env,
+		Services:    svcs,
+		Tags:        e.app.Tags,
 	}, nil
 }
 
-func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
+func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
 	tags := map[string]string{
 		stack.EnvTagKey: e.env.Name,
 	}
@@ -104,14 +106,14 @@ func (e *EnvDescriber) filterAppsForEnv() ([]*archer.Application, error) {
 		}
 		stacksOfEnvironment[stack] = true
 	}
-	var apps []*archer.Application
-	for _, app := range e.apps {
-		stackName := stack.NameForApp(e.proj.Name, e.env.Name, app.Name)
+	var svcs []*config.Service
+	for _, svc := range e.svcs {
+		stackName := stack.NameForService(e.app.Name, e.env.Name, svc.Name)
 		if stacksOfEnvironment[stackName] {
-			apps = append(apps, app)
+			svcs = append(svcs, svc)
 		}
 	}
-	return apps, nil
+	return svcs, nil
 }
 
 func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
@@ -130,7 +132,7 @@ func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
 	if err != nil {
-		return "", fmt.Errorf("marshal applications: %w", err)
+		return "", fmt.Errorf("marshal environment description: %w", err)
 	}
 	return fmt.Sprintf("%s\n", b), nil
 }
@@ -145,11 +147,11 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nApplications\n\n"))
+	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
-	for _, app := range e.Applications {
-		fmt.Fprintf(writer, "  %s\t%s\n", app.Name, app.Type)
+	for _, svc := range e.Services {
+		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
 	writer.Flush()
 	if len(e.Tags) != 0 {

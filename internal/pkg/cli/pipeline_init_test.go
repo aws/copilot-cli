@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	archermocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -33,10 +33,10 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 		inGitHubOwner       string
 		inGitHubRepo        string
 		inGitHubAccessToken string
-		inProjectEnvs       []*archer.Environment
+		inAppEnvs           []*config.Environment
 		inURLs              []string
 
-		mockPrompt func(m *climocks.Mockprompter)
+		mockPrompt func(m *mocks.Mockprompter)
 
 		expectedGitHubOwner       string
 		expectedGitHubRepo        string
@@ -49,19 +49,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -80,17 +80,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(false, errors.New("some error")).Times(1)
 			},
 
 			expectedGitHubOwner:       githubOwner,
@@ -104,17 +104,17 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inGitHubOwner:       "",
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("", errors.New("some error")).Times(1)
 			},
 
@@ -128,19 +128,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -157,19 +157,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubReallyBadURL},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -186,19 +186,19 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			inEnvironments:      []string{},
 			inGitHubRepo:        "",
 			inGitHubAccessToken: "",
-			inProjectEnvs: []*archer.Environment{
-				&archer.Environment{
+			inAppEnvs: []*config.Environment{
+				{
 					Name: "test",
 				},
-				&archer.Environment{
+				{
 					Name: "prod",
 				},
 			},
 			inURLs: []string{githubURL, githubBadURL},
 
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().Confirm(pipelineAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
-				m.EXPECT().Confirm(pipelineAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(pipelineInitAddEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
+				m.EXPECT().Confirm(pipelineInitAddMoreEnvPrompt, gomock.Any()).Return(true, nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"test", "prod"}).Return("test", nil).Times(1)
 				m.EXPECT().SelectOne(pipelineSelectEnvPrompt, gomock.Any(), []string{"prod"}).Return("prod", nil).Times(1)
 
@@ -220,7 +220,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := climocks.NewMockprompter(ctrl)
+			mockPrompt := mocks.NewMockprompter(ctrl)
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
@@ -233,8 +233,8 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 					},
 				},
 
-				projectEnvs: tc.inProjectEnvs,
-				repoURLs:    tc.inURLs,
+				envs:     tc.inAppEnvs,
+				repoURLs: tc.inURLs,
 			}
 
 			tc.mockPrompt(mockPrompt)
@@ -258,13 +258,13 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 func TestInitPipelineOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inProjectName string
+		inAppName string
 
 		expectedError error
 	}{
-		"invalid project name": {
-			inProjectName: "",
-			expectedError: errNoProjectInWorkspace,
+		"invalid app name": {
+			inAppName:     "",
+			expectedError: errNoAppInWorkspace,
 		},
 	}
 
@@ -276,7 +276,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 			}
 
@@ -301,14 +301,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inGitHubToken  string
 		inGitHubRepo   string
 		inGitBranch    string
-		inProjectName  string
+		inAppName      string
 
-		mockSecretsManager          func(m *archermocks.MockSecretsManager)
-		mockWsWriter                func(m *climocks.MockwsPipelineWriter)
+		mockSecretsManager          func(m *mocks.MocksecretsManager)
+		mockWsWriter                func(m *mocks.MockwsPipelineWriter)
 		mockParser                  func(m *templatemocks.MockParser)
 		mockFileSystem              func(mockFS afero.Fs)
-		mockRegionalResourcesGetter func(m *archermocks.MockProjectResourceStore)
-		mockStoreSvc                func(m *climocks.MockstoreReader)
+		mockRegionalResourcesGetter func(m *mocks.MockappResourcesGetter)
+		mockStoreSvc                func(m *mocks.Mockstore)
 
 		expectedError error
 	}{
@@ -317,12 +317,12 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
 			},
@@ -331,16 +331,16 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
-				}).Return([]*archer.ProjectRegionalResources{
-					&archer.ProjectRegionalResources{
+				}).Return([]*stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -353,13 +353,13 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("/buildspec.yml", nil)
 			},
@@ -368,16 +368,16 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
-				}).Return([]*archer.ProjectRegionalResources{
-					&archer.ProjectRegionalResources{
+				}).Return([]*stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -391,92 +391,92 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", errors.New("some error"))
 			},
 			mockParser:                  func(m *templatemocks.MockParser) {},
-			mockStoreSvc:                func(m *climocks.MockstoreReader) {},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
-			expectedError:               errors.New("write manifest to workspace: some error"),
+			mockStoreSvc:                func(m *mocks.Mockstore) {},
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			expectedError:               errors.New("write pipeline manifest to workspace: some error"),
 		},
-		"returns an error if project cannot be retrieved": {
+		"returns an error if application cannot be retrieved": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(nil, errors.New("some error"))
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {},
-			expectedError:               errors.New("get project metadata badgoose: some error"),
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {},
+			expectedError:               errors.New("get application badgoose: some error"),
 		},
-		"returns an error if can't get regional project resources": {
+		"returns an error if can't get regional application resources": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 			},
 			mockParser: func(m *templatemocks.MockParser) {},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
 				}).Return(nil, errors.New("some error"))
 			},
-			expectedError: fmt.Errorf("get regional project resources: some error"),
+			expectedError: fmt.Errorf("get regional application resources: some error"),
 		},
 		"returns an error if buildspec cannot be parsed": {
 			inEnvironments: []string{"test"},
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Times(0)
 			},
 			mockParser: func(m *templatemocks.MockParser) {
 				m.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
-				}).Return([]*archer.ProjectRegionalResources{
-					&archer.ProjectRegionalResources{
+				}).Return([]*stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -489,12 +489,12 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("", manifestExistsErr)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", buildspecExistsErr)
 			},
@@ -503,16 +503,16 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
-				}).Return([]*archer.ProjectRegionalResources{
-					&archer.ProjectRegionalResources{
+				}).Return([]*stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -525,12 +525,12 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubToken:  "hunter2",
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
-			inProjectName:  "badgoose",
+			inAppName:      "badgoose",
 
-			mockSecretsManager: func(m *archermocks.MockSecretsManager) {
+			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 			},
-			mockWsWriter: func(m *climocks.MockwsPipelineWriter) {
+			mockWsWriter: func(m *mocks.MockwsPipelineWriter) {
 				m.EXPECT().WritePipelineManifest(gomock.Any()).Return("/pipeline.yml", nil)
 				m.EXPECT().WritePipelineBuildspec(gomock.Any()).Return("", errors.New("some error"))
 			},
@@ -539,16 +539,16 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
 			},
-			mockStoreSvc: func(m *climocks.MockstoreReader) {
-				m.EXPECT().GetProject("badgoose").Return(&archer.Project{
+			mockStoreSvc: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
 			},
-			mockRegionalResourcesGetter: func(m *archermocks.MockProjectResourceStore) {
-				m.EXPECT().GetRegionalProjectResources(&archer.Project{
+			mockRegionalResourcesGetter: func(m *mocks.MockappResourcesGetter) {
+				m.EXPECT().GetRegionalAppResources(&config.Application{
 					Name: "badgoose",
-				}).Return([]*archer.ProjectRegionalResources{
-					&archer.ProjectRegionalResources{
+				}).Return([]*stack.AppRegionalResources{
+					{
 						Region:   "us-west-2",
 						S3Bucket: "gooseBucket",
 					},
@@ -564,17 +564,17 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSecretsManager := archermocks.NewMockSecretsManager(ctrl)
-			mockWriter := climocks.NewMockwsPipelineWriter(ctrl)
+			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
+			mockWriter := mocks.NewMockwsPipelineWriter(ctrl)
 			mockParser := templatemocks.NewMockParser(ctrl)
-			mockRegionalResourcesGetter := archermocks.NewMockProjectResourceStore(ctrl)
-			mockStoreReader := climocks.NewMockstoreReader(ctrl)
+			mockRegionalResourcesGetter := mocks.NewMockappResourcesGetter(ctrl)
+			mockstore := mocks.NewMockstore(ctrl)
 
 			tc.mockSecretsManager(mockSecretsManager)
 			tc.mockWsWriter(mockWriter)
 			tc.mockParser(mockParser)
 			tc.mockRegionalResourcesGetter(mockRegionalResourcesGetter)
-			tc.mockStoreSvc(mockStoreReader)
+			tc.mockStoreSvc(mockstore)
 			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
 
 			opts := &initPipelineOpts{
@@ -583,15 +583,15 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					GitHubRepo:        tc.inGitHubRepo,
 					GitHubAccessToken: tc.inGitHubToken,
 					GitBranch:         tc.inGitBranch,
-					GlobalOpts:        &GlobalOpts{projectName: tc.inProjectName},
+					GlobalOpts:        &GlobalOpts{appName: tc.inAppName},
 				},
 
 				secretsmanager: mockSecretsManager,
 				cfnClient:      mockRegionalResourcesGetter,
-				storeSvc:       mockStoreReader,
+				store:          mockstore,
 				workspace:      mockWriter,
 				parser:         mockParser,
-				fsUtils:        memFs,
+				fs:             memFs,
 			}
 
 			// WHEN
@@ -607,52 +607,18 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	}
 }
 
-func TestInitPipelineOpts_createSecretName(t *testing.T) {
-	testCases := map[string]struct {
-		inGitHubRepo  string
-		inProjectName string
-
-		expected string
-	}{
-		"matches repo name": {
-			inGitHubRepo:  "goose",
-			inProjectName: "badgoose",
-
-			expected: "github-token-badgoose-goose",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initPipelineOpts{
-				initPipelineVars: initPipelineVars{
-					GitHubRepo: tc.inGitHubRepo,
-					GlobalOpts: &GlobalOpts{projectName: tc.inProjectName},
-				},
-			}
-
-			// WHEN
-			actual := opts.createSecretName()
-
-			// THEN
-			require.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
 func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 	testCases := map[string]struct {
-		inGitHubRepo   string
-		inProjectName  string
-		inProjectOwner string
+		inGitHubRepo string
+		inAppName    string
+		inAppOwner   string
 
 		expected string
 	}{
 		"matches repo name": {
-			inGitHubRepo:   "goose",
-			inProjectName:  "badgoose",
-			inProjectOwner: "david",
+			inGitHubRepo: "goose",
+			inAppName:    "badgoose",
+			inAppOwner:   "david",
 
 			expected: "pipeline-badgoose-david-goose",
 		},
@@ -664,8 +630,8 @@ func TestInitPipelineOpts_createPipelineName(t *testing.T) {
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					GitHubRepo:  tc.inGitHubRepo,
-					GlobalOpts:  &GlobalOpts{projectName: tc.inProjectName},
-					GitHubOwner: tc.inProjectOwner,
+					GlobalOpts:  &GlobalOpts{appName: tc.inAppName},
+					GitHubOwner: tc.inAppOwner,
 				},
 			}
 

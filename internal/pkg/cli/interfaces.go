@@ -7,12 +7,13 @@ import (
 	"encoding"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -34,10 +35,96 @@ type actionCommand interface {
 	RecommendedActions() []string
 }
 
-type projectService interface {
-	archer.ProjectStore
-	archer.EnvironmentStore
-	archer.ApplicationStore
+// SSM store interface.
+
+type serviceStore interface {
+	serviceCreator
+	serviceGetter
+	serviceLister
+	serviceDeleter
+}
+
+type serviceCreator interface {
+	CreateService(svc *config.Service) error
+}
+
+type serviceGetter interface {
+	GetService(appName, svcName string) (*config.Service, error)
+}
+
+type serviceLister interface {
+	ListServices(appName string) ([]*config.Service, error)
+}
+
+type serviceDeleter interface {
+	DeleteService(appName, svcName string) error
+}
+
+type applicationStore interface {
+	applicationCreator
+	applicationGetter
+	applicationLister
+	applicationDeleter
+}
+
+type applicationCreator interface {
+	CreateApplication(app *config.Application) error
+}
+
+type applicationGetter interface {
+	GetApplication(appName string) (*config.Application, error)
+}
+
+type applicationLister interface {
+	ListApplications() ([]*config.Application, error)
+}
+
+type applicationDeleter interface {
+	DeleteApplication(name string) error
+}
+
+type environmentStore interface {
+	environmentCreator
+	environmentGetter
+	environmentLister
+	environmentDeleter
+}
+
+type environmentCreator interface {
+	CreateEnvironment(env *config.Environment) error
+}
+
+type environmentGetter interface {
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+}
+
+type environmentLister interface {
+	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
+type environmentDeleter interface {
+	DeleteEnvironment(appName, environmentName string) error
+}
+
+type store interface {
+	applicationStore
+	environmentStore
+	serviceStore
+}
+
+// Secretsmanager interface.
+
+type secretsManager interface {
+	secretCreator
+	secretDeleter
+}
+
+type secretCreator interface {
+	CreateSecret(secretName, secretString string) (string, error)
+}
+
+type secretDeleter interface {
+	DeleteSecret(secretName string) error
 }
 
 type ecrService interface {
@@ -95,25 +182,16 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
-type storeReader interface {
-	archer.ProjectLister
-	archer.ProjectGetter
-	archer.EnvironmentLister
-	archer.EnvironmentGetter
-	archer.ApplicationLister
-	archer.ApplicationGetter
-}
-
 type workspaceDeleter interface {
 	DeleteAll() error
 }
 
-type wsAppManifestReader interface {
-	ReadAppManifest(appName string) ([]byte, error)
+type svcManifestReader interface {
+	ReadServiceManifest(svcName string) ([]byte, error)
 }
 
-type wsAppManifestWriter interface {
-	WriteAppManifest(marshaler encoding.BinaryMarshaler, appName string) (string, error)
+type svcManifestWriter interface {
+	WriteServiceManifest(marshaler encoding.BinaryMarshaler, svcName string) (string, error)
 }
 
 type wsPipelineManifestReader interface {
@@ -125,13 +203,17 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsAppDeleter interface {
-	DeleteApp(name string) error
+type wsSvcDeleter interface {
+	DeleteService(name string) error
 }
 
-type wsAppReader interface {
-	AppNames() ([]string, error)
-	wsAppManifestReader
+type wsServiceLister interface {
+	ServiceNames() ([]string, error)
+}
+
+type wsSvcReader interface {
+	wsServiceLister
+	svcManifestReader
 }
 
 type wsPipelineDeleter interface {
@@ -140,21 +222,17 @@ type wsPipelineDeleter interface {
 }
 
 type wsPipelineReader interface {
-	AppNames() ([]string, error)
+	wsServiceLister
 	wsPipelineManifestReader
 }
 
-type wsProjectManager interface {
-	Create(projectName string) error
+type wsAppManager interface {
+	Create(appName string) error
 	Summary() (*workspace.Summary, error)
 }
 
 type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
-}
-
-type port interface {
-	Set(number int) error
 }
 
 type bucketEmptier interface {
@@ -165,17 +243,16 @@ type bucketEmptier interface {
 type environmentDeployer interface {
 	DeployEnvironment(env *deploy.CreateEnvironmentInput) error
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
-	DeleteEnvironment(projName, envName string) error
-	GetEnvironment(projectName, envName string) (*archer.Environment, error)
+	DeleteEnvironment(appName, envName string) error
+	GetEnvironment(appName, envName string) (*config.Environment, error)
 }
 
-type appDeployer interface {
-	// DeployApp // TODO ADD
-	DeleteApp(in deploy.DeleteAppInput) error
+type svcDeleter interface {
+	DeleteService(in deploy.DeleteServiceInput) error
 }
 
-type appRemover interface {
-	RemoveAppFromProject(project *archer.Project, appName string) error
+type svcRemoverFromApp interface {
+	RemoveServiceFromApp(app *config.Application, svcName string) error
 }
 
 type imageRemover interface {
@@ -187,27 +264,27 @@ type pipelineDeployer interface {
 	UpdatePipeline(env *deploy.CreatePipelineInput) error
 	PipelineExists(env *deploy.CreatePipelineInput) (bool, error)
 	DeletePipeline(pipelineName string) error
-	AddPipelineResourcesToProject(project *archer.Project, region string) error
-	projectResourcesGetter
+	AddPipelineResourcesToApp(app *config.Application, region string) error
+	appResourcesGetter
 	// TODO: Add StreamPipelineCreation method
 }
 
-type projectDeployer interface {
-	DeployProject(in *deploy.CreateProjectInput) error
-	AddAppToProject(project *archer.Project, appName string) error
-	AddEnvToProject(project *archer.Project, env *archer.Environment) error
-	DelegateDNSPermissions(project *archer.Project, accountID string) error
-	DeleteProject(name string) error
+type appDeployer interface {
+	DeployApp(in *deploy.CreateAppInput) error
+	AddServiceToApp(app *config.Application, svcName string) error
+	AddEnvToApp(app *config.Application, env *config.Environment) error
+	DelegateDNSPermissions(app *config.Application, accountID string) error
+	DeleteApp(name string) error
 }
 
-type projectResourcesGetter interface {
-	GetProjectResourcesByRegion(project *archer.Project, region string) (*archer.ProjectRegionalResources, error)
-	GetRegionalProjectResources(project *archer.Project) ([]*archer.ProjectRegionalResources, error)
+type appResourcesGetter interface {
+	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
+	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
 type deployer interface {
 	environmentDeployer
-	projectDeployer
+	appDeployer
 	pipelineDeployer
 }
 
@@ -224,7 +301,7 @@ type serviceArnGetter interface {
 }
 
 type statusDescriber interface {
-	Describe() (*describe.AppStatusDesc, error)
+	Describe() (*describe.ServiceStatusDesc, error)
 }
 
 type envDescriber interface {
@@ -237,7 +314,7 @@ type resourceGroupsClient interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	ListPipelinesForProject(projectName string) ([]string, error)
+	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
 }
 
 type executor interface {
@@ -251,4 +328,23 @@ type deletePipelineRunner interface {
 type askExecutor interface {
 	Ask() error
 	executor
+}
+
+type appSelector interface {
+	Application(prompt, help string) (string, error)
+}
+
+type appEnvSelector interface {
+	appSelector
+	Environment(prompt, help, app string) (string, error)
+}
+
+type configSelector interface {
+	appEnvSelector
+	Service(prompt, help, app string) (string, error)
+}
+
+type wsSelector interface {
+	appEnvSelector
+	Service(prompt, help string) (string, error)
 }

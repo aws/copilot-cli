@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -22,17 +22,17 @@ type envDescriberMocks struct {
 
 func TestEnvDescriber_Describe(t *testing.T) {
 	const (
-		testARN1      = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
-		testARN2      = "arn:aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
-		unparsableARN = "aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
-		noSlashARN    = "arn:aws:cloudformation:us-west-2:123456789012:stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		testARN1      = "arn:aws:cloudformation:us-west-2:123456789012:stack/testApp-testEnv-testSvc1/6d75d1g0-8b1a-11ea-b358-06c1882c17fd"
+		testARN2      = "arn:aws:cloudformation:us-west-2:123456789012:stack/testApp-testEnv-testSvc2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
+		unparsableARN = "aws:cloudformation:us-west-2:123456789012:stack/testApp-testEnv-testSvc2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc"
+		noSlashARN    = "arn:aws:cloudformation:us-west-2:123456789012:stacktestApp-testEnv-testSvc16d75d1g0-8b1a-11ea-b358-06c1882c17fd"
 	)
-	testProject := &archer.Project{
-		Name: "testProject",
+	testApp := &config.Application{
+		Name: "testApp",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
-	testEnv := &archer.Environment{
-		Project:          "testProject",
+	testEnv := &config.Environment{
+		App:              "testApp",
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
@@ -41,31 +41,31 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testApp1 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp1",
-		Type:    "load-balanced",
+	testSvc1 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc1",
+		Type: "load-balanced",
 	}
-	testApp2 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp2",
-		Type:    "load-balanced",
+	testSvc2 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc2",
+		Type: "load-balanced",
 	}
-	testApp3 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp3",
-		Type:    "load-balanced",
+	testSvc3 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc3",
+		Type: "load-balanced",
 	}
 
-	allApps := []*archer.Application{testApp1, testApp2, testApp3}
-	envApps := []*archer.Application{testApp1, testApp2}
+	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
+	envSvcs := []*config.Service{testSvc1, testSvc2}
 	rgTags := map[string]string{stack.EnvTagKey: "testEnv"}
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		setupMocks func(mocks envDescriberMocks)
 
 		wantedEnv   *EnvDescription
-		wantedApps  []*archer.Application
+		wantedSvcs  []*config.Service
 		wantedError error
 	}{
 		"error if GetResourcesByTags fails": {
@@ -86,7 +86,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("parse ARN aws:cloudformation:us-west-2:123456789012:stack/testProject-testEnv-testApp2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: arn: invalid prefix"),
+			wantedError: fmt.Errorf("parse ARN aws:cloudformation:us-west-2:123456789012:stack/testApp-testEnv-testSvc2/7d75d1f0-8c1a-11ea-b358-06c1882c17fc: arn: invalid prefix"),
 		},
 		"error if getStackName fails because resource ARN can't be split": {
 			setupMocks: func(m envDescriberMocks) {
@@ -96,7 +96,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("invalid ARN resource format stacktestProject-testEnv-testApp16d75d1g0-8b1a-11ea-b358-06c1882c17fd. Ex: arn:partition:service:region:account-id:resource-type/resource-id"),
+			wantedError: fmt.Errorf("invalid ARN resource format stacktestApp-testEnv-testSvc16d75d1g0-8b1a-11ea-b358-06c1882c17fd. Ex: arn:partition:service:region:account-id:resource-type/resource-id"),
 		},
 		"success": {
 			setupMocks: func(m envDescriberMocks) {
@@ -108,9 +108,9 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedEnv: &EnvDescription{
-				Environment:  testEnv,
-				Applications: envApps,
-				Tags:         map[string]string{"key1": "value1", "key2": "value2"},
+				Environment: testEnv,
+				Services:    envSvcs,
+				Tags:        map[string]string{"key1": "value1", "key2": "value2"},
 			},
 		},
 	}
@@ -132,8 +132,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 
 			d := &EnvDescriber{
 				env:  testEnv,
-				proj: testProject,
-				apps: allApps,
+				app:  testApp,
+				svcs: allSvcs,
 
 				store:    mockStore,
 				rgClient: mockResourceGroupsClient,
@@ -154,12 +154,12 @@ func TestEnvDescriber_Describe(t *testing.T) {
 }
 
 func TestEnvDescription_JSONString(t *testing.T) {
-	testProject := &archer.Project{
-		Name: "testProject",
+	testApp := &config.Application{
+		Name: "testApp",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
-	testEnv := &archer.Environment{
-		Project:          "testProject",
+	testEnv := &config.Environment{
+		App:              "testApp",
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
@@ -168,32 +168,32 @@ func TestEnvDescription_JSONString(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testApp1 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp1",
-		Type:    "load-balanced",
+	testSvc1 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc1",
+		Type: "load-balanced",
 	}
-	testApp2 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp2",
-		Type:    "load-balanced",
+	testSvc2 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc2",
+		Type: "load-balanced",
 	}
-	testApp3 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp3",
-		Type:    "load-balanced",
+	testSvc3 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc3",
+		Type: "load-balanced",
 	}
-	allApps := []*archer.Application{testApp1, testApp2, testApp3}
-	wantedContent := "{\"environment\":{\"project\":\"testProject\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"applications\":[{\"project\":\"testProject\",\"name\":\"testApp1\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp2\",\"type\":\"load-balanced\"},{\"project\":\"testProject\",\"name\":\"testApp3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n"
+	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
+	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"}}\n"
 
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	d := &EnvDescription{
-		Environment:  testEnv,
-		Applications: allApps,
-		Tags:         testProject.Tags,
+		Environment: testEnv,
+		Services:    allSvcs,
+		Tags:        testApp.Tags,
 	}
 
 	// WHEN
@@ -204,12 +204,12 @@ func TestEnvDescription_JSONString(t *testing.T) {
 }
 
 func TestEnvDescription_HumanString(t *testing.T) {
-	testProject := &archer.Project{
-		Name: "testProject",
+	testApp := &config.Application{
+		Name: "testApp",
 		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
-	testEnv := &archer.Environment{
-		Project:          "testProject",
+	testEnv := &config.Environment{
+		App:              "testApp",
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
@@ -218,22 +218,22 @@ func TestEnvDescription_HumanString(t *testing.T) {
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
 	}
-	testApp1 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp1",
-		Type:    "load-balanced",
+	testSvc1 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc1",
+		Type: "load-balanced",
 	}
-	testApp2 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp2",
-		Type:    "load-balanced",
+	testSvc2 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc2",
+		Type: "load-balanced",
 	}
-	testApp3 := &archer.Application{
-		Project: "testProject",
-		Name:    "testApp3",
-		Type:    "load-balanced",
+	testSvc3 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc3",
+		Type: "load-balanced",
 	}
-	allApps := []*archer.Application{testApp1, testApp2, testApp3}
+	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
 
 	wantedContent := `About
 
@@ -242,12 +242,12 @@ func TestEnvDescription_HumanString(t *testing.T) {
   Region            us-west-2
   Account ID        123456789012
 
-Applications
+Services
 
   Name              Type
-  testApp1          load-balanced
-  testApp2          load-balanced
-  testApp3          load-balanced
+  testSvc1          load-balanced
+  testSvc2          load-balanced
+  testSvc3          load-balanced
 
 Tags
 
@@ -260,9 +260,9 @@ Tags
 	defer ctrl.Finish()
 
 	d := &EnvDescription{
-		Environment:  testEnv,
-		Applications: allApps,
-		Tags:         testProject.Tags,
+		Environment: testEnv,
+		Services:    allSvcs,
+		Tags:        testApp.Tags,
 	}
 
 	// WHEN

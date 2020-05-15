@@ -16,35 +16,33 @@ import (
 )
 
 func TestAddons_Template(t *testing.T) {
+	svcName := "my-svc"
 	testCases := map[string]struct {
-		appName          string
 		mockDependencies func(ctrl *gomock.Controller, a *Addons)
 
 		wantedTemplate string
 		wantedErr      error
 	}{
 		"return ErrDirNotExist if ReadAddonsDir fails": {
-			appName: "my-app",
 			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
-				ws := mocks.NewMockworkspaceService(ctrl)
-				ws.EXPECT().ReadAddonsDir("my-app").
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(svcName).
 					Return(nil, errors.New("some error"))
 				a.ws = ws
 			},
 			wantedErr: &ErrDirNotExist{
-				AppName:   "my-app",
+				SvcName:   svcName,
 				ParentErr: errors.New("some error"),
 			},
 		},
 		"return error if missing required files": {
-			appName: "my-app",
 			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
-				ws := mocks.NewMockworkspaceService(ctrl)
-				ws.EXPECT().ReadAddonsDir("my-app").
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(svcName).
 					Return([]string{
 						"README.md",
 					}, nil)
-				ws.EXPECT().ReadAddonsFile("my-app", "params.yaml").Times(0)
+				ws.EXPECT().ReadAddonsFile(svcName, "params.yaml").Times(0)
 
 				a.ws = ws
 			},
@@ -52,32 +50,30 @@ func TestAddons_Template(t *testing.T) {
 			wantedErr: errors.New(`addons directory has missing file(s): params.yaml, outputs.yaml, at least one resource YAML file such as "s3-bucket.yaml"`),
 		},
 		"return addon template": {
-			appName: "my-app",
-
 			mockDependencies: func(ctrl *gomock.Controller, a *Addons) {
-				ws := mocks.NewMockworkspaceService(ctrl)
-				ws.EXPECT().ReadAddonsDir("my-app").
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(svcName).
 					Return([]string{
 						"params.yaml",
 						"outputs.yml",
 						"policy.yaml",
 						"README.md",
 					}, nil)
-				ws.EXPECT().ReadAddonsFile("my-app", "params.yaml").
+				ws.EXPECT().ReadAddonsFile(svcName, "params.yaml").
 					Return([]byte("hello"), nil)
-				ws.EXPECT().ReadAddonsFile("my-app", "outputs.yml").
+				ws.EXPECT().ReadAddonsFile(svcName, "outputs.yml").
 					Return([]byte("hello"), nil)
-				ws.EXPECT().ReadAddonsFile("my-app", "policy.yaml").
+				ws.EXPECT().ReadAddonsFile(svcName, "policy.yaml").
 					Return([]byte("hello"), nil)
 
 				parser := templatemocks.NewMockParser(ctrl)
 				parser.EXPECT().Parse(addonsTemplatePath, struct {
-					AppName    string
+					SvcName    string
 					Parameters []string
 					Resources  []string
 					Outputs    []string
 				}{
-					AppName:    a.appName,
+					SvcName:    a.svcName,
 					Parameters: []string{"hello"},
 					Resources:  []string{"hello"},
 					Outputs:    []string{"hello"},
@@ -97,7 +93,7 @@ func TestAddons_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			addons := &Addons{
-				appName: tc.appName,
+				svcName: svcName,
 			}
 			tc.mockDependencies(ctrl, addons)
 

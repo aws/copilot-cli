@@ -4,224 +4,67 @@
 package cli
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/archer/mocks"
-	climocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAppList_Execute(t *testing.T) {
+func TestListAppOpts_Execute(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockError := fmt.Errorf("error")
-	mockAppStore := mocks.NewMockApplicationStore(ctrl)
-	mockProjectStore := mocks.NewMockProjectStore(ctrl)
-	mockWorkspace := climocks.NewMockwsAppReader(ctrl)
+	mockstore := mocks.NewMockstore(ctrl)
 	defer ctrl.Finish()
+	testError := errors.New("error fetching apps")
 
 	testCases := map[string]struct {
-		listOpts        listAppOpts
-		mocking         func()
-		expectedErr     error
-		expectedContent string
+		listOpts listAppOpts
+		mocking  func()
+		want     error
 	}{
-		"with json outputs": {
+		"with applications": {
 			listOpts: listAppOpts{
-				listAppVars: listAppVars{
-					ShouldOutputJSON: true,
-					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
-					},
-				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				store: mockstore,
+				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
+				mockstore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
-						{Name: "my-app"},
-						{Name: "lb-app"},
-					}, nil)
-			},
-			expectedContent: `{"applications":[{"project":"","name":"my-app","type":""},{"project":"","name":"lb-app","type":""}]}` + "\n",
-		},
-		"with human outputs": {
-			listOpts: listAppOpts{
-				listAppVars: listAppVars{
-					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
-					},
-				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
-			},
-			mocking: func() {
-				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
-					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
-						{Name: "my-app", Type: "Load Balanced Web App"},
-						{Name: "lb-app", Type: "Load Balanced Web App"},
-					}, nil)
-			},
-			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\nlb-app              Load Balanced Web App\n",
-		},
-		"with invalid project name": {
-			expectedErr: mockError,
-			listOpts: listAppOpts{
-				listAppVars: listAppVars{
-					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
-					},
-				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
-			},
-			mocking: func() {
-				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
-					Return(nil, mockError)
-
-				mockAppStore.
-					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
-					Times(0)
+					ListApplications().
+					Return([]*config.Application{
+						{Name: "app1"},
+						{Name: "app2"},
+					}, nil).
+					Times(1)
 			},
 		},
-		"with failed call to list": {
-			expectedErr: mockError,
+		"with an error": {
 			listOpts: listAppOpts{
-				listAppVars: listAppVars{
-					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
-					},
-				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
+				store: mockstore,
+				w:     ioutil.Discard,
 			},
 			mocking: func() {
-				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-
-				mockAppStore.
+				mockstore.
 					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
-					Return(nil, mockError)
+					ListApplications().
+					Return(nil, testError).
+					Times(1)
 			},
-		},
-		"with local flag enabled": {
-			expectedErr: nil,
-			listOpts: listAppOpts{
-				listAppVars: listAppVars{
-					ShouldShowLocalApps: true,
-					GlobalOpts: &GlobalOpts{
-						projectName: "coolproject",
-					},
-				},
-				appLister:     mockAppStore,
-				projectGetter: mockProjectStore,
-				ws:            mockWorkspace,
-			},
-			mocking: func() {
-				mockProjectStore.EXPECT().
-					GetProject(gomock.Eq("coolproject")).
-					Return(&archer.Project{}, nil)
-				mockAppStore.
-					EXPECT().
-					ListApplications(gomock.Eq("coolproject")).
-					Return([]*archer.Application{
-						{Name: "my-app", Type: "Load Balanced Web App"},
-						{Name: "lb-app", Type: "Load Balanced Web App"},
-					}, nil)
-				mockWorkspace.EXPECT().AppNames().
-					Return([]string{"my-app"}, nil).Times(1)
-			},
-			expectedContent: "Name                Type\n------              ---------------------\nmy-app              Load Balanced Web App\n",
+			want: fmt.Errorf("list applications: %w", testError),
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			b := &bytes.Buffer{}
 			tc.mocking()
-			tc.listOpts.w = b
-			err := tc.listOpts.Execute()
 
-			if tc.expectedErr != nil {
-				require.EqualError(t, tc.expectedErr, err.Error())
-			} else {
-				require.Equal(t, tc.expectedContent, b.String())
-			}
-		})
-	}
-}
+			got := tc.listOpts.Execute()
 
-func TestAppList_Ask(t *testing.T) {
-	testCases := map[string]struct {
-		inputProject string
-
-		mockProjectLister func(m *mocks.MockProjectLister)
-		mockPrompt        func(m *climocks.Mockprompter)
-
-		wantedProject string
-	}{
-		"with no flags set": {
-			mockProjectLister: func(m *mocks.MockProjectLister) {
-				m.EXPECT().ListProjects().Return([]*archer.Project{
-					&archer.Project{Name: "my-project"},
-					&archer.Project{Name: "archer-project"},
-				}, nil)
-			},
-			mockPrompt: func(m *climocks.Mockprompter) {
-				m.EXPECT().SelectOne(applicationListProjectNamePrompt, applicationListProjectNameHelpPrompt, []string{"my-project", "archer-project"}).Return("my-project", nil).Times(1)
-			},
-			wantedProject: "my-project",
-		},
-		"with project flags set": {
-			mockProjectLister: func(m *mocks.MockProjectLister) {},
-			mockPrompt:        func(m *climocks.Mockprompter) {},
-			inputProject:      "my-project",
-			wantedProject:     "my-project",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockProjectLister := mocks.NewMockProjectLister(ctrl)
-			mockPrompter := climocks.NewMockprompter(ctrl)
-			tc.mockProjectLister(mockProjectLister)
-			tc.mockPrompt(mockPrompter)
-
-			listApps := &listAppOpts{
-				listAppVars: listAppVars{
-					GlobalOpts: &GlobalOpts{
-						prompt:      mockPrompter,
-						projectName: tc.inputProject,
-					},
-				},
-				projectLister: mockProjectLister,
-			}
-
-			err := listApps.Ask()
-
-			require.NoError(t, err)
-			require.Equal(t, tc.wantedProject, listApps.ProjectName(), "expected project names to match")
+			require.Equal(t, tc.want, got)
 		})
 	}
 }

@@ -172,7 +172,7 @@ func (c *CloudWatchLogs) LogGroupExists(logGroupName string) (bool, error) {
 }
 
 func parseTaskID(logStreamName string) (string, error) {
-	// logStreamName example: ecs/appName/1cc0685ad01d4d0f8e4e2c00d1775c56
+	// logStreamName example: ecs/{name}/1cc0685ad01d4d0f8e4e2c00d1775c56
 	logStreamNameSplit := strings.Split(logStreamName, "/")
 	if len(logStreamNameSplit) != 3 {
 		return "", fmt.Errorf("cannot parse task ID from log stream name: %s", logStreamName)

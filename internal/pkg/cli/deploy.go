@@ -12,13 +12,13 @@ import (
 // BuildDeployCmd is the deploy command - which is
 // an alias for app deploy.
 func BuildDeployCmd() *cobra.Command {
-	deployCmd := BuildAppDeployCmd()
+	deployCmd := BuildSvcDeployCmd()
 	deployCmd.Use = "deploy"
-	deployCmd.Short = "Deploy your app."
-	deployCmd.Long = `Command for deploying apps to your environments.`
+	deployCmd.Short = "Deploy your service."
+	deployCmd.Long = `Command for deploying services to your environments.`
 	deployCmd.Example = `
-	Deploys an application named "frontend" to a "test" environment.
-	/code $ ecs-preview deploy --name frontend --env test`
+	Deploys a service named "frontend" to a "test" environment.
+	/code $ copilot deploy --name frontend --env test`
 
 	deployCmd.SetUsageTemplate(template.Usage)
 

@@ -247,7 +247,7 @@ func (t *TaskDefinition) EnvironmentVariables() map[string]string {
 type ServiceArn string
 
 // ClusterName returns the cluster name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
 // will return my-project-test-Cluster-9F7Y0RLP60R7
 func (s *ServiceArn) ClusterName() (string, error) {
 	serviceArn := string(*s)
@@ -263,8 +263,8 @@ func (s *ServiceArn) ClusterName() (string, error) {
 }
 
 // ServiceName returns the service name.
-// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-my-app-Service-JSOH5GYBFAIB
-// will return my-project-test-my-app-Service-JSOH5GYBFAIB
+// For example: arn:aws:ecs:us-west-2:1234567890:service/my-project-test-Cluster-9F7Y0RLP60R7/my-project-test-myService-JSOH5GYBFAIB
+// will return my-project-test-myService-JSOH5GYBFAIB
 func (s *ServiceArn) ServiceName() (string, error) {
 	serviceArn := string(*s)
 	parsedArn, err := arn.Parse(serviceArn)

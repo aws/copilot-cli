@@ -1,0 +1,8 @@
+Family: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref ServiceName]]
+NetworkMode: awsvpc
+RequiresCompatibilities:
+  - FARGATE
+Cpu: !Ref TaskCPU
+Memory: !Ref TaskMemory
+ExecutionRoleArn: !Ref ExecutionRole
+TaskRoleArn: !Ref TaskRole
