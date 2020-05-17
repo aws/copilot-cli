@@ -22,6 +22,7 @@ Continuous delivery pipelines to release the services in your applications.`,
 	cmd.AddCommand(BuildPipelineUpdateCmd())
 	cmd.AddCommand(BuildPipelineDeleteCmd())
 	cmd.AddCommand(BuildPipelineShowCmd())
+	cmd.AddCommand(BuildPipelineStatusCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
