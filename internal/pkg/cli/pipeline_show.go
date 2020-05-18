@@ -123,7 +123,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if errors.Is(err, workspace.ErrNoPipelineInWorkspace) {
-		log.Infof("No pipeline manifest in workspace for project %s, looking for deployed pipelines\n", color.HighlightUserInput(o.AppName()))
+		log.Infof("No pipeline manifest in workspace for application %s, looking for deployed pipelines\n", color.HighlightUserInput(o.AppName()))
 	}
 
 	// find deployed pipelines
@@ -133,7 +133,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 	}
 
 	if len(pipelineNames) == 0 {
-		log.Infof("No pipelines found for project %s.\n", color.HighlightUserInput(o.AppName()))
+		log.Infof("No pipelines found for application %s.\n", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 
