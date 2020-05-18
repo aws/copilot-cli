@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 )
@@ -20,7 +21,13 @@ var (
 	errValueNotAString   = errors.New("value must be a string")
 	errInvalidGitHubRepo = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid       = errors.New("value must be in range 1-65535")
+	errS3ValueBadSize    = errors.New("value must be between 3 and 63 characters in length")
+	errS3ValueBadFormat  = errors.New("value must contain only alphanumeric characters and .-")
+	errDDBValueBadSize   = errors.New("value must be between 3 and 255 characters in length")
+	errDDBValueBadFormat = errors.New("value must contain only alphanumeric characters and ._-")
 )
+
+var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
 
 var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
@@ -45,6 +52,13 @@ func validateSvcPort(val interface{}) error {
 	}
 	return nil
 }
+func prettify(inputStrings []string) string {
+	var prettyTypes []string
+	for _, validType := range inputStrings {
+		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
+	}
+	return strings.Join(prettyTypes, ", ")
+}
 
 func validateSvcType(val interface{}) error {
 	svcType, ok := val.(string)
@@ -56,11 +70,21 @@ func validateSvcType(val interface{}) error {
 			return nil
 		}
 	}
-	var prettyTypes []string
-	for _, validType := range manifest.ServiceTypes {
-		prettyTypes = append(prettyTypes, fmt.Sprintf(`"%s"`, validType))
+
+	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+}
+
+func validateStorageType(val interface{}) error {
+	storageType, ok := val.(string)
+	if !ok {
+		return errValueNotAString
 	}
-	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, strings.Join(prettyTypes, ", "))
+	for _, validType := range storageTypes {
+		if storageType == validType {
+			return nil
+		}
+	}
+	return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
 }
 
 func validateEnvironmentName(val interface{}) error {
@@ -131,6 +155,40 @@ func stringPortValidation(val string) error {
 	}
 	if port64 < 1 || port64 > 65535 {
 		return errPortInvalid
+	}
+	return nil
+}
+
+// s3 bucket names: 'a-zA-Z0-9.-'
+func s3BucketNameValidation(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if len(s) < 3 || len(s) > 63 {
+		return errS3ValueBadSize
+	}
+	for _, r := range s {
+		if !(unicode.IsDigit(r) || unicode.IsLetter(r) || r == '.' || r == '-') {
+			return errS3ValueBadFormat
+		}
+	}
+	return nil
+}
+
+// Dynameo table names: 'a-zA-Z0-9.-_'
+func dynamoTableNameValidation(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if len(s) < 3 || len(s) > 255 {
+		return errDDBValueBadSize
+	}
+	for _, r := range s {
+		if !(unicode.IsDigit(r) || unicode.IsLetter(r) || r == '.' || r == '-' || r == '_') {
+			return errDDBValueBadFormat
+		}
 	}
 	return nil
 }
