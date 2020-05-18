@@ -163,7 +163,7 @@ func BuildSvcListCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "ls",
-		Short: "Lists all the services in an application",
+		Short: "Lists all the services in an application.",
 		Example: `
   Lists all the services for the "myapp" application.
   /code $ copilot svc ls --app myapp`,

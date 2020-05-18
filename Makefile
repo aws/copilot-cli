@@ -1,7 +1,7 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-BINARY_NAME=ecs-preview
+BINARY_NAME=copilot
 PACKAGES=./internal...
 SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
 BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
@@ -31,23 +31,23 @@ release: packr-build compile-darwin compile-linux compile-windows packr-clean
 
 .PHONY: release-docker
 release-docker:
-	docker build -t aws/amazon-ecs-cli-v2 . &&\
-	docker create -ti --name amazon-ecs-cli-v2-builder aws/amazon-ecs-cli-v2 &&\
-	docker cp amazon-ecs-cli-v2-builder:/aws-amazon-ecs-cli-v2/bin/local/ . &&\
-	docker rm -f amazon-ecs-cli-v2-builder
+	docker build -t aws/copilot . &&\
+	docker create -ti --name amazon-ecs-copilot-builder aws/copilot &&\
+	docker cp amazon-ecs-copilot-builder:/copilot/bin/local/ . &&\
+	docker rm -f amazon-ecs-copilot-builder
 	@echo "Built binaries under ./local/"
 
 compile-local:
-	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/ecs-preview
+	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 compile-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/ecs-preview
+	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/copilot
 
 compile-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-amd64 ./cmd/ecs-preview
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-amd64 ./cmd/copilot
 
 compile-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/ecs-preview
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
@@ -105,9 +105,9 @@ run-integ-test:
 .PHONY: e2e
 e2e: build-e2e
 	@echo "Building E2E Docker Image" &&\
-	docker build -t ecs-cli-v2/e2e . -f e2e/Dockerfile
+	docker build -t copilot/e2e . -f e2e/Dockerfile
 	@echo "Running E2E Tests" &&\
-	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
+	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:latest
 
 .PHONY: tools
 tools:

@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 )
 
