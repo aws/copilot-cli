@@ -205,7 +205,7 @@ func BuildStorageInitCmd() *cobra.Command {
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
   Create a "my-table" DynamoDB table in the "test" environment.
-  /code $ ecs-preview storage init --name my-table --storage-type dynamo-db --app frontend`,
+  /code $ copilot storage init --name my-table --storage-type dynamo-db --app frontend`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
