@@ -12,8 +12,9 @@ import (
 // BuildStorageCmd is the top level command for storage
 func BuildStorageCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "storage",
-		Short: "Persistent storage commands.",
+		Hidden: true,
+		Use:    "storage",
+		Short:  "Persistent storage commands.",
 		Long: `Command for working with storage and databases.
 Can be used to initialize S3 buckets, key-value databases, and others.`,
 	}
