@@ -16,7 +16,7 @@ require (
 	github.com/golang/mock v1.4.3
 	github.com/google/uuid v1.1.1
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c // indirect
-	github.com/onsi/ginkgo v1.12.0
+	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.0
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/spf13/afero v1.2.2
