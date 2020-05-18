@@ -221,7 +221,7 @@ func BuildPipelineShowCmd() *cobra.Command {
 		Short:  "Shows info about a deployed pipeline for an application.",
 		Long:   "Shows info about a deployed pipeline for an application, including information about each stage.",
 		Example: `
-  Shows info about the pipeline "pipeline-mycompany-myapp-myrepo".
+  Shows info about the pipeline "pipeline-myapp-mycompany-myrepo".
   /code $ copilot pipeline show --app myapp --resources`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowPipelineOpts(vars)
