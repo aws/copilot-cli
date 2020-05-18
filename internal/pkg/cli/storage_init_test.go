@@ -18,6 +18,10 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
+		inAttributes  []string
+		inPartition   string
+		inSort        string
+		inLSISort     string
 
 		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
@@ -124,9 +128,13 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inAppName,
 					},
-					StorageType: tc.inStorageType,
-					StorageName: tc.inStorageName,
-					StorageSvc:  tc.inSvcName,
+					StorageType:  tc.inStorageType,
+					StorageName:  tc.inStorageName,
+					StorageSvc:   tc.inSvcName,
+					Attributes:   tc.inAttributes,
+					PartitionKey: tc.inPartition,
+					SortKey:      tc.inSort,
+					LSISort:      tc.inLSISort,
 				},
 				ws:    mockWs,
 				store: mockStore,
