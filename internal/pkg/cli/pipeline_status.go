@@ -7,13 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	pipelineStatusAppNamePrompt     = "Which application is the pipeline in?"
-	pipelineStatusAppNameHelpPrompt = "An application is a collection of related services."
-	pipelineStatusNamePrompt        = "Which pipeline's status would you like to show?"
-	pipelineStatusNameHelpPrompt    = "Displays the status of each of a pipeline's stages."
-)
-
 type pipelineStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
