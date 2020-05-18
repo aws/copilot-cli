@@ -25,7 +25,7 @@ phases:
       - VERSION=`./bin/local/copilot-amd64 --version`
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
-      - echo "Creating latest and version-tagged artifacts..."
+      - echo "Creating version-tagged artifacts..."
       - ARTIFACT_DIRECTORY=aws/copilot
       - mkdir -p $ARTIFACT_DIRECTORY
       - mv ./bin/local/copilot.exe $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe
