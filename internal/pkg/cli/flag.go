@@ -46,7 +46,11 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	storageTypeFlag = "storage-type"
+	storageTypeFlag         = "storage-type"
+	storagePartitionKeyFlag = "partition-key"
+	storageSortKeyFlag      = "sort-key"
+	storageLSIConfig        = "lsi-sort"
+	storageAttributeFlag    = "attribute"
 )
 
 // Short flag names.
@@ -63,6 +67,7 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
+	storageAttributeFlagShort  = "r"
 )
 
 // Descriptions for flags.
@@ -110,8 +115,11 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 
-	storageFlagDescription        = "Name of the storage resource to create."
-	storageServiceFlagDescription = "Name of the service to associate with storage."
+	storageFlagDescription             = "Name of the storage resource to create."
+	storageServiceFlagDescription      = "Name of the service to associate with storage."
+	storagePartitionKeyFlagDescription = "Partition key for the DDB table. Must be of the format '<keyName>:<dataType>'."
+	storageSortKeyFlagDescription      = "Sort key for the DDB table. Must be of the format '<keyName>:<dataType>'."
+	storageAttributeFlagDescription    = "Attributes for a DDB table. Must be of the format '<name>:<dataType>'. Can be specified multiple times."
 )
 
 func quoteAll(elems []string) []string {
