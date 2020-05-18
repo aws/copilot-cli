@@ -12,18 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-/* Needed test cases:
-validate:
-  - ValidateKey (string:Type)
-  - ValidateAttribute
-  - ValidateLSI
-Ask:
-  - sort key specified
-  - partition key specified
-  - attributes specified
-  - LSI sort key specified
-*/
-
 func TestStorageInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName     string
@@ -98,6 +86,28 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inSvcName:     "frontend",
 			inStorageName: "my-cool_table.3",
 			wantedErr:     nil,
+		},
+		"s3 bad character": {
+			mockWs: func(m *mocks.MockwsSvcReader) {
+				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
+			},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: s3StorageType,
+			inSvcName:     "frontend",
+			inStorageName: "mybadbucket???",
+			wantedErr:     errS3ValueBadFormat,
+		},
+		"ddb bad character": {
+			mockWs: func(m *mocks.MockwsSvcReader) {
+				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
+			},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     "frontend",
+			inStorageName: "badTable!!!",
+			wantedErr:     errDDBValueBadFormat,
 		},
 	}
 	for name, tc := range testCases {
