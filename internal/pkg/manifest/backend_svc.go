@@ -30,9 +30,16 @@ type BackendService struct {
 	Service      `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig   `yaml:",inline"`
-	Environments map[string]TaskConfig `yaml:",flow"`
+	Sidecar      `yaml:",inline"`
+	Environments map[string]backendServiceOverrideConfig `yaml:",flow"`
 
 	parser template.Parser
+}
+
+type backendServiceOverrideConfig struct {
+	Image      imageWithPortAndHealthcheck `yaml:",flow"`
+	TaskConfig `yaml:",inline"`
+	Sidecar    `yaml:",inline"`
 }
 
 type imageWithPortAndHealthcheck struct {
@@ -105,10 +112,11 @@ func (s *BackendService) ApplyEnv(envName string) *BackendService {
 	return &BackendService{
 		Service: s.Service,
 		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: s.Image.ServiceImageWithPort,
-			HealthCheck:          s.Image.HealthCheck,
+			ServiceImageWithPort: target.Image.ServiceImageWithPort,
+			HealthCheck:          target.Image.HealthCheck,
 		},
-		TaskConfig: s.TaskConfig.copyAndApply(target),
+		TaskConfig: s.TaskConfig.copyAndApply(target.TaskConfig),
+		Sidecar:    s.Sidecar.copyAndApply(target.Sidecar),
 	}
 }
 

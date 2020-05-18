@@ -79,16 +79,14 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: 80,
 				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					RoutingRule: RoutingRule{
-						Path:            "/awards/*",
-						HealthCheckPath: "/",
-					},
-					TaskConfig: TaskConfig{
-						CPU:    1024,
-						Memory: 1024,
-						Count:  intp(1),
-					},
+				RoutingRule: RoutingRule{
+					Path:            "/awards/*",
+					HealthCheckPath: "/",
+				},
+				TaskConfig: TaskConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  intp(1),
 				},
 			},
 			envToApply: "prod-iad",
@@ -104,16 +102,14 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: 80,
 				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					RoutingRule: RoutingRule{
-						Path:            "/awards/*",
-						HealthCheckPath: "/",
-					},
-					TaskConfig: TaskConfig{
-						CPU:    1024,
-						Memory: 1024,
-						Count:  intp(1),
-					},
+				RoutingRule: RoutingRule{
+					Path:            "/awards/*",
+					HealthCheckPath: "/",
+				},
+				TaskConfig: TaskConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  intp(1),
 				},
 			},
 		},
@@ -129,32 +125,52 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					},
 					Port: 80,
 				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					RoutingRule: RoutingRule{
-						Path:            "/awards/*",
-						HealthCheckPath: "/",
+				RoutingRule: RoutingRule{
+					Path:            "/awards/*",
+					HealthCheckPath: "/",
+				},
+				TaskConfig: TaskConfig{
+					CPU:    1024,
+					Memory: 1024,
+					Count:  intp(1),
+					Variables: map[string]string{
+						"LOG_LEVEL":      "DEBUG",
+						"DDB_TABLE_NAME": "awards",
 					},
-					TaskConfig: TaskConfig{
-						CPU:    1024,
-						Memory: 1024,
-						Count:  intp(1),
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards",
-						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+					Secrets: map[string]string{
+						"GITHUB_TOKEN": "1111",
+						"TWILIO_TOKEN": "1111",
+					},
+				},
+				Sidecar: Sidecar{
+					Sidecars: map[string]SidecarConfig{
+						"xray": {
+							Port:      "2000",
+							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+							CredParam: "some arn",
 						},
 					},
 				},
-				Environments: map[string]LoadBalancedWebServiceConfig{
+				Environments: map[string]loadBalancedWebServiceOverrideConfig{
 					"prod-iad": {
+						Image: ServiceImageWithPort{
+							ServiceImage: ServiceImage{
+								Build: "./RealDockerfile",
+							},
+							Port: 5000,
+						},
 						TaskConfig: TaskConfig{
 							CPU:   2046,
 							Count: intp(0),
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
+							},
+						},
+						Sidecar: Sidecar{
+							Sidecars: map[string]SidecarConfig{
+								"xray": {
+									Port: "2000/udp",
+								},
 							},
 						},
 					},
@@ -169,26 +185,33 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				},
 				Image: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: "./Dockerfile",
+						Build: "./RealDockerfile",
 					},
-					Port: 80,
+					Port: 5000,
 				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					RoutingRule: RoutingRule{
-						Path:            "/awards/*",
-						HealthCheckPath: "/",
+				RoutingRule: RoutingRule{
+					Path:            "/awards/*",
+					HealthCheckPath: "/",
+				},
+				TaskConfig: TaskConfig{
+					CPU:    2046,
+					Memory: 1024,
+					Count:  intp(0),
+					Variables: map[string]string{
+						"LOG_LEVEL":      "DEBUG",
+						"DDB_TABLE_NAME": "awards-prod",
 					},
-					TaskConfig: TaskConfig{
-						CPU:    2046,
-						Memory: 1024,
-						Count:  intp(0),
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards-prod",
-						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+					Secrets: map[string]string{
+						"GITHUB_TOKEN": "1111",
+						"TWILIO_TOKEN": "1111",
+					},
+				},
+				Sidecar: Sidecar{
+					Sidecars: map[string]SidecarConfig{
+						"xray": {
+							Port:      "2000/udp",
+							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+							CredParam: "some arn",
 						},
 					},
 				},

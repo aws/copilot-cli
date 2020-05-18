@@ -34,6 +34,11 @@ variables:
   LOG_LEVEL: "WARN"
 secrets:
   DB_PASSWORD: MYSQL_DB_PASSWORD
+sidecars:
+  xray:
+    port: 2000/udp
+    image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
+    credentialParameter: some arn
 environments:
   test:
     count: 3
@@ -44,27 +49,34 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Service: Service{Name: "frontend", Type: LoadBalancedWebServiceType},
 					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: "frontend/Dockerfile"}, Port: 80},
-					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						RoutingRule: RoutingRule{
-							Path:            "svc",
-							HealthCheckPath: "/",
+					RoutingRule: RoutingRule{
+						Path:            "svc",
+						HealthCheckPath: "/",
+					},
+					LogsConfig: LogsConfig{
+						LogRetention: 30,
+					},
+					TaskConfig: TaskConfig{
+						CPU:    512,
+						Memory: 1024,
+						Count:  intp(1),
+						Variables: map[string]string{
+							"LOG_LEVEL": "WARN",
 						},
-						LogsConfig: LogsConfig{
-							LogRetention: 30,
+						Secrets: map[string]string{
+							"DB_PASSWORD": "MYSQL_DB_PASSWORD",
 						},
-						TaskConfig: TaskConfig{
-							CPU:    512,
-							Memory: 1024,
-							Count:  intp(1),
-							Variables: map[string]string{
-								"LOG_LEVEL": "WARN",
-							},
-							Secrets: map[string]string{
-								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+					},
+					Sidecar: Sidecar{
+						Sidecars: map[string]SidecarConfig{
+							"xray": {
+								Port:      "2000/udp",
+								Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+								CredParam: "some arn",
 							},
 						},
 					},
-					Environments: map[string]LoadBalancedWebServiceConfig{
+					Environments: map[string]loadBalancedWebServiceOverrideConfig{
 						"test": {
 							TaskConfig: TaskConfig{
 								Count: intp(3),
