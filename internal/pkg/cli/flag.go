@@ -45,6 +45,8 @@ const (
 	localFlag             = "local"
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
+
+	storageTypeFlag = "storage-type"
 )
 
 // Short flag names.
@@ -104,7 +106,13 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	envProfilesFlagDescription       = "Optional. Environments and the profile to use to delete the environment."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
+
+	storageFlagDescription        = "Name of the storage resource to create."
+	storageServiceFlagDescription = "Name of the service to associate with storage."
 )
+
+var storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
+%s`, strings.Join(quoteAll(storageTypes), ", "))
 
 func quoteAll(elems []string) []string {
 	quotedElems := make([]string, len(elems))
