@@ -19,28 +19,28 @@ phases:
     finally:
       - echo "Built artifacts:"
       - ls -lah ./bin/local
-      - ./bin/local/ecs-preview-amd64 --version
+      - ./bin/local/copilot-amd64 --version
   post_build:
     commands:
-      - VERSION=`./bin/local/ecs-preview-amd64 --version`
+      - VERSION=`./bin/local/copilot-amd64 --version`
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
-      - echo "Creating latest and version-tagged artifacts..."
-      - ARTIFACT_DIRECTORY=aws/amazon-ecs-cli-v2
+      - echo "Creating version-tagged artifacts..."
+      - ARTIFACT_DIRECTORY=aws/copilot
       - mkdir -p $ARTIFACT_DIRECTORY
-      - mv ./bin/local/ecs-preview.exe $ARTIFACT_DIRECTORY/ecs-preview-windows-$VERSION.exe
-      - mv ./bin/local/ecs-preview $ARTIFACT_DIRECTORY/ecs-preview-darwin-$VERSION
-      - mv ./bin/local/ecs-preview-amd64 $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION
+      - mv ./bin/local/copilot.exe $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe
+      - mv ./bin/local/copilot $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION
+      - mv ./bin/local/copilot-amd64 $ARTIFACT_DIRECTORY/copilot-linux-$VERSION
       - echo "Creating manifest file..."
       - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
-      - echo $ARTIFACT_DIRECTORY/ecs-preview-windows-$VERSION.exe >> $MANIFESTFILE
-      - echo $ARTIFACT_DIRECTORY/ecs-preview-darwin-$VERSION >> $MANIFESTFILE
-      - echo $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/copilot-linux-$VERSION >> $MANIFESTFILE
     finally:
       - echo "Built artifacts:"
       - ls -lah $ARTIFACT_DIRECTORY
-      - $ARTIFACT_DIRECTORY/ecs-preview-linux-$VERSION --version
+      - $ARTIFACT_DIRECTORY/copilot-linux-$VERSION --version
 artifacts:
   files:
     - '**/*'

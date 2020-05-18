@@ -14,7 +14,7 @@ var cli *client.CLI
 var appName string
 
 /**
-The Init Suite runs through the ecs-preview init workflow for a brand new
+The Init Suite runs through the copilot init workflow for a brand new
 project. It creates a single environment, deploys an app to it, and then
 tears it down.
 */

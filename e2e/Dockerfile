@@ -11,7 +11,7 @@ RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git
 RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 
 # Copy the binary
-ADD bin/local/ecs-preview-amd64 /bin/ecs-preview
+ADD bin/local/copilot-amd64 /bin/copilot
 
 # Add the e2e directory and the project go.mod
 ADD e2e/ github.com/aws/amazon-ecs-cli-v2/e2e/

@@ -8,10 +8,10 @@ phases:
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
-      # Download the ecs-cli-v2 linux binary.
-      - wget {{.BinaryS3BucketPath}}/ecs-preview-linux-{{.Version}}
-      - mv ./ecs-preview-linux-{{.Version}} ./ecs-preview
-      - chmod +x ./ecs-preview
+      # Download the copilot linux binary.
+      - wget {{.BinaryS3BucketPath}}/copilot-linux-{{.Version}}
+      - mv ./copilot-linux-{{.Version}} ./copilot
+      - chmod +x ./copilot
   build:
     commands:
       - echo "Run your tests"
@@ -21,16 +21,16 @@ phases:
       - ls -l
       - export COLOR="false"
       # Find all the local services in the workspace.
-      - svcs=$(./ecs-preview svc ls --local --json | jq '.services[].name' | sed 's/"//g')
+      - svcs=$(./copilot svc ls --local --json | jq '.services[].name' | sed 's/"//g')
       # Find all the environments.
-      - envs=$(./ecs-preview env ls --json | jq '.environments[].name' | sed 's/"//g')
+      - envs=$(./copilot env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
       - >
         for env in $envs; do
           for svc in svcs; do
-          ./ecs-preview svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
+          ./copilot svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
           done;
         done;
       - ls -lah ./infrastructure
@@ -54,7 +54,7 @@ phases:
       #     - Login and push the image.
       - >
         for svc in $svcs; do
-          for df_rel_path in $(cat $CODEBUILD_SRC_DIR/ecs-project/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
+          for df_rel_path in $(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
           df_path=$CODEBUILD_SRC_DIR/$df_rel_path
           df_dir_path=$(dirname "$df_path")
           docker build -t $svc:$tag -f $df_path $df_dir_path;
