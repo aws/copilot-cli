@@ -22,9 +22,9 @@ var _ = Describe("Root", func() {
 		It("should output a valid semantic version", func() {
 			output, err := cli.Version()
 			Expect(err).NotTo(HaveOccurred())
-			// Versions look like ecs-preview version: v0.0.4-34-g133b977
+			// Versions look like copilot version: v0.0.4-34-g133b977
 			// the extra bit at the end is if the build isn't a tagged release.
-			Expect(output).To(MatchRegexp(`ecs-preview version: v\d*\.\d*\.\d*.*`))
+			Expect(output).To(MatchRegexp(`copilot version: v\d*\.\d*\.\d*.*`))
 		})
 	})
 })

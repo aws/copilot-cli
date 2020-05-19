@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
@@ -29,11 +29,11 @@ func main() {
 
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "ecs-preview",
+		Use:   "copilot",
 		Short: "Launch and manage applications on Amazon ECS and AWS Fargate.",
 		Example: `
-  Display the help menu for the init command
-  /code $ ecs-preview init --help`,
+  Displays the help menu for the "init" command.
+  /code $ copilot init --help`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// If we don't set a Run() function the help menu doesn't show up.
 			// See https://github.com/spf13/cobra/issues/790
@@ -44,7 +44,7 @@ func buildRootCmd() *cobra.Command {
 	// Sets version for --version flag. Version command gives more detailed
 	// version information.
 	cmd.Version = version.Version
-	cmd.SetVersionTemplate("ecs-preview version: {{.Version}}\n")
+	cmd.SetVersionTemplate("copilot version: {{.Version}}\n")
 
 	// NOTE: Order for each grouping below is significant in that it affects help menu output ordering.
 	// "Getting Started" command group.
