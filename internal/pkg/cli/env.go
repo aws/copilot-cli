@@ -16,9 +16,9 @@ func BuildEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "env",
 		Short: `Commands for environments.
-Environments are deployment stages with shared between services.`,
+Environments are deployment stages shared between services.`,
 		Long: `Commands for environments.
-Environments are deployment stages with shared between services.`,
+Environments are deployment stages shared between services.`,
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.PersistentFlags().StringP(appFlag, appFlagShort, "" /* default */, appFlagDescription)
