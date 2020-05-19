@@ -12,14 +12,14 @@ import (
 type pipelineStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
-	appName       string
-	pipelineName  string
+	appName          string
+	pipelineName     string
 }
 
 type pipelineStatusOpts struct {
 	pipelineStatusVars
 
-	statusDescriber  pipelineStatusDescriber
+	statusDescriber     pipelineStatusDescriber
 	initStatusDescriber func(opts *pipelineStatusOpts) error
 }
 
@@ -43,11 +43,11 @@ func (o *pipelineStatusOpts) Ask() error {
 func (o *pipelineStatusOpts) Execute() error {
 	err := o.initStatusDescriber(o)
 	if err != nil {
-		return fmt.Errorf("describe status of pipeline %s: %w, o.pipelineName, err")
+		return fmt.Errorf("describe status of pipeline : ")
 	}
 	pipelineStatus, err := o.statusDescriber.Describe()
 	if err != nil {
-		return fmt.Errorf("describe status of pipeline %s: %w", o.pipelineName, err)
+		return fmt.Errorf("describe status of pipeline : ")
 	}
 	fmt.Print(pipelineStatus)
 	return nil

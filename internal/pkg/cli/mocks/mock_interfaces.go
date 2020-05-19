@@ -3152,6 +3152,44 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// MockpipelineStatusDescriber is a mock of pipelineStatusDescriber interface
+type MockpipelineStatusDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockpipelineStatusDescriberMockRecorder
+}
+
+// MockpipelineStatusDescriberMockRecorder is the mock recorder for MockpipelineStatusDescriber
+type MockpipelineStatusDescriberMockRecorder struct {
+	mock *MockpipelineStatusDescriber
+}
+
+// NewMockpipelineStatusDescriber creates a new mock instance
+func NewMockpipelineStatusDescriber(ctrl *gomock.Controller) *MockpipelineStatusDescriber {
+	mock := &MockpipelineStatusDescriber{ctrl: ctrl}
+	mock.recorder = &MockpipelineStatusDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockpipelineStatusDescriber) EXPECT() *MockpipelineStatusDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method
+func (m *MockpipelineStatusDescriber) Describe() (*describe.PipelineStatusDesc, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(*describe.PipelineStatusDesc)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe
+func (mr *MockpipelineStatusDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockpipelineStatusDescriber)(nil).Describe))
+}
+
 // MockresourceGroupsClient is a mock of resourceGroupsClient interface
 type MockresourceGroupsClient struct {
 	ctrl     *gomock.Controller

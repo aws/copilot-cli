@@ -3,29 +3,22 @@
 
 package describe
 
-import (
-)
+import ()
 
 // PipelineStatus retrieves status of a pipeline.
 type PipelineStatus struct {
-
 }
 
 // PipelineStatusDesc contains the status for a pipeline.
 type PipelineStatusDesc struct {
-
 }
 
 // NewPipelineStatus instantiates a new PipelineStatus struct.
-func NewPipelineStatus( ) (*PipelineStatus, error) {
-	return &PipelineStatus{
-
-	}, nil
+func NewPipelineStatus() (*PipelineStatus, error) {
+	return &PipelineStatus{}, nil
 }
 
 // Describe returns status of a pipeline.
 func (w *PipelineStatus) Describe() (*PipelineStatusDesc, error) {
-	return &PipelineStatusDesc{
-
-	}, nil
+	return &PipelineStatusDesc{}, nil
 }
