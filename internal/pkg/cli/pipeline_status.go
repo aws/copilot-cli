@@ -4,6 +4,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +18,9 @@ type pipelineStatusVars struct {
 
 type pipelineStatusOpts struct {
 	pipelineStatusVars
+
+	statusDescriber  pipelineStatusDescriber
+	initStatusDescriber func(opts *pipelineStatusOpts) error
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
@@ -36,6 +41,15 @@ func (o *pipelineStatusOpts) Ask() error {
 
 // Execute displays the status of the pipeline.
 func (o *pipelineStatusOpts) Execute() error {
+	err := o.initStatusDescriber(o)
+	if err != nil {
+		return fmt.Errorf("describe status of pipeline %s: %w, o.pipelineName, err")
+	}
+	pipelineStatus, err := o.statusDescriber.Describe()
+	if err != nil {
+		return fmt.Errorf("describe status of pipeline %s: %w", o.pipelineName, err)
+	}
+	fmt.Print(pipelineStatus)
 	return nil
 }
 
