@@ -30,7 +30,7 @@ func main() {
 func buildRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "copilot",
-		Short: "Launch and manage applications on Amazon ECS and AWS Fargate.",
+		Short: shortDescription,
 		Example: `
   Displays the help menu for the "init" command.
   /code $ copilot init --help`,
