@@ -16,6 +16,16 @@ func isInGroup(cmd *cobra.Command, group string) bool {
 	return cmd.Annotations["group"] == group
 }
 
+func filterCmdsByGroup(cmds []*cobra.Command, group string) []*cobra.Command {
+	var filtered []*cobra.Command
+	for _, cmd := range cmds {
+		if isInGroup(cmd, group) {
+			filtered = append(filtered, cmd)
+		}
+	}
+	return filtered
+}
+
 func h1(text string) string {
 	var s strings.Builder
 	color.New(color.Bold, color.Underline).Fprintf(&s, text)

@@ -19,6 +19,7 @@ func BuildWikiCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wiki",
 		Short: "Open the project wiki.",
+		Long:  "Open the project wiki.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			var err error
 
