@@ -50,7 +50,7 @@ type Sidecar struct {
 type SidecarConfig struct {
 	Port      string `yaml:"port"`
 	Image     string `yaml:"image"`
-	CredParam string `yaml:"credentialParameter"`
+	CredParam string `yaml:"credentialsParameter"`
 }
 
 func (s Sidecar) copyAndApply(other Sidecar) Sidecar {

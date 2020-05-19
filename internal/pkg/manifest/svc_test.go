@@ -38,7 +38,7 @@ sidecars:
   xray:
     port: 2000/udp
     image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
-    credentialParameter: some arn
+    credentialsParameter: some arn
 environments:
   test:
     count: 3
