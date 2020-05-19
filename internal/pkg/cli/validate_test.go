@@ -177,11 +177,11 @@ func TestValidateStorageType(t *testing.T) {
 		want  error
 	}{
 		"S3 okay": {
-			input: "S3 Bucket",
+			input: "S3",
 			want:  nil,
 		},
 		"DDB okay": {
-			input: "Dynamo DB",
+			input: "DynamoDB",
 			want:  nil,
 		},
 		"Bad name": {
