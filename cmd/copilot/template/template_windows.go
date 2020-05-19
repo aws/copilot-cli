@@ -12,8 +12,8 @@ import (
 )
 
 // RootUsage is the text template for the root command.
-var RootUsage = fmt.Sprintf("{{\"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
-	group.GettingStarted, group.Develop, group.Release, group.Settings) +
+var RootUsage = fmt.Sprintf("{{\"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
+	group.GettingStarted, group.Develop, group.Release, group.Settings, group.Addons) +
 	`  {{$group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
     {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}

@@ -24,7 +24,7 @@ Can be used to initialize S3 buckets, key-value databases, and others.`,
 	cmd.SetUsageTemplate(template.Usage)
 
 	cmd.Annotations = map[string]string{
-		"group": group.Develop,
+		"group": group.Addons,
 	}
 	return cmd
 }
