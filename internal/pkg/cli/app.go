@@ -13,10 +13,11 @@ import (
 // BuildAppCmd builds the top level app command and related subcommands.
 func BuildAppCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "app",
-		Short: "Manage your applications.",
-		Long: `Manage your applications.
-Applications are a collection of services, and deployment environments.`,
+		Use: "app",
+		Short: `Commands for applications.
+Applications are a collection of services and environments.`,
+		Long: `Commands for applications.
+Applications are a collection of services and environments.`,
 	}
 
 	cmd.AddCommand(BuildAppInitCommand())

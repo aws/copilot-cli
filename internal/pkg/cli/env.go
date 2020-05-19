@@ -11,13 +11,14 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 )
 
-// BuildEnvCmd is the top level command for environments
+// BuildEnvCmd is the top level command for environments.
 func BuildEnvCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "env",
-		Short: "Environment commands.",
-		Long: `Command for working with environments.
-An environment represents a deployment stage.`,
+		Use: "env",
+		Short: `Commands for environments.
+Environments are deployment stages shared between services.`,
+		Long: `Commands for environments.
+Environments are deployment stages shared between services.`,
 	}
 	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
 	cmd.PersistentFlags().StringP(appFlag, appFlagShort, "" /* default */, appFlagDescription)

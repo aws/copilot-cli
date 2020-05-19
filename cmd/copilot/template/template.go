@@ -1,5 +1,3 @@
-// +build !windows
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -16,8 +14,13 @@ import (
 // RootUsage is the text template for the root command.
 var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$groups := mkSlice \"%s\" \"%s\" \"%s\" \"%s\" \"%s\" }}{{range $group := $groups }} \n",
 	group.GettingStarted, group.Develop, group.Release, group.Settings, group.Addons) +
-	`  {{h2 $group}}{{range $cmd := $cmds}}{{if isInGroup $cmd $group}}
-    {{rpad $cmd.Name $cmd.NamePadding}} {{$cmd.Short}}{{end}}{{end}}
+	`  {{h2 $group}}{{$groupCmds := (filterCmdsByGroup $cmds $group)}}
+{{- range $j, $cmd := $groupCmds}}{{$lines := split $cmd.Short "\n"}}
+{{- range $i, $line := $lines}}
+    {{if eq $i 0}}{{rpad $cmd.Name $cmd.NamePadding}} {{$line}}
+    {{- else}}{{rpad "" $cmd.NamePadding}} {{$line}}
+{{- end}}{{end}}{{if and (gt (len $lines) 1) (ne (inc $j) (len $groupCmds))}}
+{{end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
 {{h1 "Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
@@ -46,7 +49,7 @@ const Usage = `{{h1 "Usage"}}{{if .Runnable}}
 `
 
 func init() {
-	cobra.AddTemplateFunc("isInGroup", isInGroup)
+	cobra.AddTemplateFunc("filterCmdsByGroup", filterCmdsByGroup)
 	cobra.AddTemplateFunc("h1", h1)
 	cobra.AddTemplateFunc("h2", h2)
 	cobra.AddTemplateFunc("code", code)

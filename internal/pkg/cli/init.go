@@ -269,6 +269,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application.",
+		Long:  "Create a new ECS application.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitOpts(vars)
 			if err != nil {
