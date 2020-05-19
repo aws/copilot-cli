@@ -10,8 +10,8 @@ phases:
       - cd $CODEBUILD_SRC_DIR
       # Download the copilot linux binary.
       - wget {{.BinaryS3BucketPath}}/copilot-linux-{{.Version}}
-      - mv ./copilot-linux-{{.Version}} ./copilot
-      - chmod +x ./copilot
+      - mv ./copilot-linux-{{.Version}} ./copilot-linux
+      - chmod +x ./copilot-linux
   build:
     commands:
       - echo "Run your tests"
@@ -21,16 +21,16 @@ phases:
       - ls -l
       - export COLOR="false"
       # Find all the local services in the workspace.
-      - svcs=$(./copilot svc ls --local --json | jq '.services[].name' | sed 's/"//g')
+      - svcs=$(./copilot-linux svc ls --local --json | jq '.services[].name' | sed 's/"//g')
       # Find all the environments.
-      - envs=$(./copilot env ls --json | jq '.environments[].name' | sed 's/"//g')
+      - envs=$(./copilot-linux env ls --json | jq '.environments[].name' | sed 's/"//g')
       # Generate the cloudformation templates.
       # The tag is the build ID but we replaced the colon ':' with a dash '-'.
       - tag=$(sed 's/:/-/g' <<<"$CODEBUILD_BUILD_ID")
       - >
         for env in $envs; do
-          for svc in svcs; do
-          ./copilot svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
+          for svc in $svcs; do
+          ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag;
           done;
         done;
       - ls -lah ./infrastructure
