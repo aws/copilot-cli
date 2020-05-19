@@ -66,7 +66,7 @@ func BuildPipelineStatusCmd() *cobra.Command {
 
 		Example: `
 Shows status of the pipeline "pipeline-myapp-myrepo".
-/code $ copilot pipeline status -n pipeline-myapp-mycompany-myrepo`,
+/code $ copilot pipeline status -n pipeline-myapp-myrepo`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPipelineStatusOpts(vars)
 			if err != nil {
