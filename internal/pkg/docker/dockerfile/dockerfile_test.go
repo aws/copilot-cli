@@ -3,15 +3,13 @@
 package dockerfile
 
 import (
-	"bufio"
-	"strings"
 	"testing"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseDockerfile(t *testing.T) {
+func TestParseExposeDockerfile(t *testing.T) {
 	testCases := map[string]struct {
 		dockerfile   string
 		err          error
@@ -70,13 +68,10 @@ func TestParseDockerfile(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			r := strings.NewReader(tc.dockerfile)
-			scanner := bufio.NewScanner(r)
-			got := parseFromScanner(scanner)
+			got, _ := parseFromReader(tc.dockerfile)
 			require.Equal(t, tc.wantedConfig, got)
 		})
 	}
-
 }
 
 func getUintPorts(inPorts []portConfig) []uint16 {
@@ -193,6 +188,65 @@ EXPOSE 8080/tcp 5000`),
 
 			require.Equal(t, wantedUintPorts, ports)
 
+		})
+	}
+}
+
+func TestParseHealthCheckDockerfile(t *testing.T) {
+	testCases := map[string]struct {
+		dockerfile   string
+		err          error
+		wantedConfig Dockerfile
+	}{
+		"correctly parses healthcheck with default values": {
+			dockerfile: `HEALTHCHECK CMD curl -f http://localhost/ || exit 1`,
+			err:        nil,
+			wantedConfig: Dockerfile{
+				HealthCheck: healthCheck{
+					interval:    30,
+					timeout:     30,
+					startPeriod: 0,
+					retries:     3,
+					command:     "CMD curl -f http://localhost/ || exit 1",
+				},
+				ExposedPorts: []portConfig{},
+			},
+		},
+		"correctly parses healthcheck with user's values": {
+			dockerfile: `HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
+			CMD curl -f http://localhost/ || exit 1`,
+			err: nil,
+			wantedConfig: Dockerfile{
+				HealthCheck: healthCheck{
+					interval:    300,
+					timeout:     3,
+					startPeriod: 2,
+					retries:     3,
+					command:     "CMD curl -f http://localhost/ || exit 1",
+				},
+				ExposedPorts: []portConfig{},
+			},
+		},
+		"correctly parses healthcheck with NONE": {
+			dockerfile: `HEALTHCHECK NONE`,
+			err:        nil,
+			wantedConfig: Dockerfile{
+				HealthCheck: healthCheck{
+					interval:    0,
+					timeout:     0,
+					startPeriod: 0,
+					retries:     0,
+					command:     "",
+				},
+				ExposedPorts: []portConfig{},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, _ := parseFromReader(tc.dockerfile)
+			require.Equal(t, tc.wantedConfig, got)
 		})
 	}
 }

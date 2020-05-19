@@ -4,13 +4,17 @@
 package dockerfile
 
 import (
-	"bufio"
 	"errors"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/spf13/afero"
 )
 
@@ -23,6 +27,10 @@ const (
 )
 const reFindAllMatches = -1 // regexp package uses this as shorthand for "find all matches in string"
 
+const (
+	nanoseconds = 1000000000
+)
+
 var (
 	errCouldntParseDockerfilePort = errors.New("parse port from EXPOSE")
 )
@@ -34,9 +42,18 @@ type portConfig struct {
 	err       error
 }
 
+type healthCheck struct {
+	interval    uint16
+	timeout     uint16
+	startPeriod uint16
+	retries     uint16
+	command     string
+}
+
 // Dockerfile represents a parsed dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
+	HealthCheck  healthCheck
 	parsed       bool
 	path         string
 
@@ -47,6 +64,7 @@ type Dockerfile struct {
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
+		HealthCheck:  healthCheck{},
 		fs:           fs,
 		path:         path,
 		parsed:       false,
@@ -80,7 +98,7 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	return ports, err
 }
 
-// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and (TODO) parseHealthcheck
+// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck
 func (df *Dockerfile) parse() error {
 	if df.parsed {
 		return nil
@@ -93,27 +111,56 @@ func (df *Dockerfile) parse() error {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	parsedDockerfile := parseFromScanner(scanner)
+	f, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		return fmt.Errorf("dockerfile readfile error: %w %s", err, f)
+	}
+	fileString := string(f)
+
+	parsedDockerfile, err := parseFromReader(fileString)
+	if err != nil {
+		return fmt.Errorf("dockerfile parse error: %w", err)
+	}
 
 	df.ExposedPorts = parsedDockerfile.ExposedPorts
+	df.HealthCheck = parsedDockerfile.HealthCheck
 	df.parsed = true
 	return nil
 }
 
-func parseFromScanner(scanner *bufio.Scanner) Dockerfile {
-	var line = ""
+func parseFromReader(line string) (Dockerfile, error) {
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
-	for scanner.Scan() {
-		line = scanner.Text()
-		switch {
-		case strings.HasPrefix(line, "EXPOSE"):
-			currentPorts := parseExpose(line)
+	df.HealthCheck = healthCheck{}
+
+	// Parse(rwc io.Reader) reads lines from a Reader, and parses the lines into an AST.
+	ast, err := parser.Parse(strings.NewReader(line))
+	if err != nil {
+		return df, err
+	}
+	for i := 0; i < len(ast.AST.Children); i++ {
+		// ParseInstruction converts an AST to a typed instruction.
+		// Example of an instruction is HEALTHCHECK CMD curl -f http://localhost/ || exit 1.
+		instruction, err := instructions.ParseInstruction(ast.AST.Children[i])
+		if err != nil {
+			return df, err
+		}
+		inst := fmt.Sprint(instruction)
+
+		// Getting the value at a children will return the dockerfile directive
+		switch d := ast.AST.Children[i].Value; d {
+		case "expose":
+			currentPorts := parseExpose(inst)
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
+		case "healthcheck":
+			healthCheckOptions, err := parseHealthCheck(inst)
+			if err != nil {
+				return df, err
+			}
+			df.HealthCheck = healthCheckOptions
 		}
 	}
-	return df
+	return df, nil
 }
 
 func parseExpose(line string) []portConfig {
@@ -168,4 +215,35 @@ func parseExpose(line string) []portConfig {
 		})
 	}
 	return ports
+}
+
+func parseHealthCheck(line string) (healthCheck, error) {
+	var hc healthCheck
+
+	if line[12:] == "NONE" {
+		return hc, nil
+	}
+
+	var retries int
+	var interval, timeout, startPeriod time.Duration
+	fs := flag.NewFlagSet("flags", flag.ContinueOnError)
+
+	// Default value DurationVar gives is in nanoseconds
+	fs.DurationVar(&interval, "interval", 30*nanoseconds, "")
+	fs.DurationVar(&timeout, "timeout", 30*nanoseconds, "")
+	fs.DurationVar(&startPeriod, "start-period", 0, "")
+	fs.IntVar(&retries, "retries", 3, "")
+
+	if err := fs.Parse(strings.Split(line[12:], " ")); err != nil {
+		return hc, err
+	}
+
+	hc = healthCheck{
+		interval:    uint16(interval / nanoseconds),
+		timeout:     uint16(timeout / nanoseconds),
+		startPeriod: uint16(startPeriod / nanoseconds),
+		retries:     uint16(retries),
+		command:     regexp.MustCompile("CMD.*").FindString(line),
+	}
+	return hc, nil
 }
