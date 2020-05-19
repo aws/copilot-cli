@@ -69,6 +69,8 @@ const (
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
 %s`, strings.Join(quoteAll(manifest.ServiceTypes), ", "))
+	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
+%s`, strings.Join(quoteAll(storageTypes), ", "))
 )
 
 const (
@@ -110,9 +112,6 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	storageFlagDescription        = "Name of the storage resource to create."
 	storageServiceFlagDescription = "Name of the service to associate with storage."
 )
-
-var storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s`, strings.Join(quoteAll(storageTypes), ", "))
 
 func quoteAll(elems []string) []string {
 	quotedElems := make([]string, len(elems))

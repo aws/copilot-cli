@@ -14,9 +14,9 @@ func BuildStorageCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "storage",
-		Short:  "Persistent storage commands.",
-		Long: `Command for working with storage and databases.
-Can be used to initialize S3 buckets, key-value databases, and others.`,
+		Short:  "Commands for working with storage and databases.",
+		Long: `Commands for working with storage and databases.
+Augment your services with S3 buckets, NoSQL and SQL databases.`,
 	}
 
 	cmd.AddCommand(BuildStorageInitCmd())

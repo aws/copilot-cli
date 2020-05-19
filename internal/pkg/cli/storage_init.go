@@ -1,4 +1,5 @@
 // Copyright Amazon.com, Inc or its affiliates. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 package cli
 
@@ -14,8 +15,8 @@ import (
 )
 
 const (
-	dynamoDBStorageType = "Dynamo DB"
-	s3StorageType       = "S3 Bucket"
+	dynamoDBStorageType = "DynamoDB"
+	s3StorageType       = "S3"
 )
 
 var storageTypes = []string{
@@ -25,11 +26,14 @@ var storageTypes = []string{
 
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
-	storageInitTypeHelp      = "The type of storage you'd like to add to your project. You can choose between key-value (DynamoDB) content (S3) storage types."
+	storageInitTypeHelp      = `The type of storage you'd like to add to your service. 
+	DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
+	S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 	storageInitSvcPrompt     = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
-	storageInitSvcHelp       = "The service you'd like to have access to this storage resource. We'll deploy the Cloudformation for the storage when you run `app deploy`."
+	storageInitSvcHelp       = `The service you'd like to have access to this storage resource. 
+We'll deploy the Cloudformation for the storage when you run 'svc deploy'.`
 )
 
 var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
@@ -48,32 +52,30 @@ type initStorageVars struct {
 type initStorageOpts struct {
 	initStorageVars
 
-	fs        afero.Fs
-	ws        wsSvcReader
-	store     store
-	appGetter store
+	fs    afero.Fs
+	ws    wsSvcReader
+	store store
 
-	proj *config.Application
+	app *config.Application
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to application datastore: %w", err)
+		return nil, fmt.Errorf("new config store client: %w", err)
 	}
 
 	ws, err := workspace.New()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
 	return &initStorageOpts{
 		initStorageVars: vars,
 
-		fs:        &afero.Afero{Fs: afero.NewOsFs()},
-		store:     store,
-		appGetter: store,
-		ws:        ws,
+		fs:    &afero.Afero{Fs: afero.NewOsFs()},
+		store: store,
+		ws:    ws,
 	}, nil
 }
 
@@ -172,7 +174,7 @@ func (o *initStorageOpts) askStorageSvc() error {
 	}
 	localSvcNames, err := o.ws.ServiceNames()
 	if err != nil {
-		return fmt.Errorf("retrieve local app names: %w", err)
+		return fmt.Errorf("retrieve local service names: %w", err)
 	}
 	svc, err := o.prompt.SelectOne(storageInitSvcPrompt,
 		storageInitSvcHelp,
@@ -185,7 +187,7 @@ func (o *initStorageOpts) askStorageSvc() error {
 func (o *initStorageOpts) validateServiceName() error {
 	names, err := o.ws.ServiceNames()
 	if err != nil {
-		return fmt.Errorf("list services in the workspace: %w", err)
+		return fmt.Errorf("retrieve local service names: %w", err)
 	}
 	for _, name := range names {
 		if o.StorageSvc == name {
@@ -205,7 +207,7 @@ func BuildStorageInitCmd() *cobra.Command {
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
   Create a "my-table" DynamoDB table in the "test" environment.
-  /code $ copilot storage init --name my-table --storage-type dynamo-db --app frontend`,
+  /code $ copilot storage init --name my-table --storage-type dynamo-db --svc frontend`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -229,7 +231,7 @@ func BuildStorageInitCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&vars.StorageName, nameFlag, nameFlagShort, "", storageFlagDescription)
 	cmd.Flags().StringVar(&vars.StorageType, storageTypeFlag, "", storageTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.StorageSvc, appFlag, appFlagShort, "", storageServiceFlagDescription)
+	cmd.Flags().StringVarP(&vars.StorageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
 
 	return cmd
 }
