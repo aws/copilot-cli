@@ -53,9 +53,9 @@ type SidecarConfig struct {
 	CredParam string `yaml:"credentialParameter"`
 }
 
-func (tc Sidecar) copyAndApply(other Sidecar) Sidecar {
+func (s Sidecar) copyAndApply(other Sidecar) Sidecar {
 	// TODO: abstract away copyandApply and deepCopy.
-	override := tc.deepcopy()
+	override := s.deepcopy()
 	for k, v := range other.Sidecars {
 		config := override.Sidecars[k]
 		if v.CredParam != "" {
@@ -72,9 +72,9 @@ func (tc Sidecar) copyAndApply(other Sidecar) Sidecar {
 	return override
 }
 
-func (tc Sidecar) deepcopy() Sidecar {
-	config := make(map[string]SidecarConfig, len(tc.Sidecars))
-	for k, v := range tc.Sidecars {
+func (s Sidecar) deepcopy() Sidecar {
+	config := make(map[string]SidecarConfig, len(s.Sidecars))
+	for k, v := range s.Sidecars {
 		config[k] = v
 	}
 	return Sidecar{
