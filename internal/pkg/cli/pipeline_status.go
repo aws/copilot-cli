@@ -61,11 +61,11 @@ func BuildPipelineStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true, // TODO: remove when ready for production!
 		Use:    "status",
-		Short:  "Show the status of your application's pipeline.",
+		Short:  "Show the status of a pipeline.",
 		Long:   "Show the status of each deployed pipeline's stages.",
 
 		Example: `
-Shows status of the deployed pipeline "pipeline-myapp-mycompany-myrepo".
+Shows status of the pipeline "pipeline-myapp-myrepo".
 /code $ copilot pipeline status -n pipeline-myapp-mycompany-myrepo`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPipelineStatusOpts(vars)
