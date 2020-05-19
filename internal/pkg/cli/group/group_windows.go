@@ -9,6 +9,6 @@ const (
 	GettingStarted = "Getting Started"
 	Develop        = "Develop"
 	Settings       = "Settings"
-	Operational    = "Operational"
+	Operational    = "Operations"
 	Release        = "Release"
 )
