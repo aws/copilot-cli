@@ -52,7 +52,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "my-bucket",
-			wantedErr:     errors.New("list services in the workspace: wanted err"),
+			wantedErr:     errors.New("retrieve local service names: wanted err"),
 		},
 		"happy path s3": {
 			mockWs: func(m *mocks.MockwsSvcReader) {
