@@ -5,35 +5,36 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 )
 
 const (
-	wikiURL = "https://github.com/aws/amazon-ecs-cli-v2/wiki"
+	docsURL = "https://github.com/aws/amazon-ecs-cli-v2/wiki"
 )
 
-// BuildWikiCmd builds the command for opening the wiki.
-func BuildWikiCmd() *cobra.Command {
+// BuildDocsCmd builds the command for opening the documentation.
+func BuildDocsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "wiki",
-		Short: "Open the project wiki.",
+		Use:   "docs",
+		Short: "Open the copilot docs.",
+		Long:  "Open the copilot docs.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			var err error
 
 			switch runtime.GOOS {
 			case "linux":
-				err = exec.Command("xdg-open", wikiURL).Start()
+				err = exec.Command("xdg-open", docsURL).Start()
 			case "windows":
-				err = exec.Command("rundll32", "url.dll,FileProtocolHandler", wikiURL).Start()
+				err = exec.Command("rundll32", "url.dll,FileProtocolHandler", docsURL).Start()
 			case "darwin":
-				err = exec.Command("open", wikiURL).Start()
+				err = exec.Command("open", docsURL).Start()
 			default:
 				err = fmt.Errorf("unsupported platform")
 			}
 			if err != nil {
-				return fmt.Errorf("open wiki: %w", err)
+				return fmt.Errorf("open docs: %w", err)
 			}
 
 			return nil

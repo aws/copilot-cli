@@ -76,7 +76,7 @@ func NewCLI() (*CLI, error) {
 	// your file system and docker image repo isn't polluted
 	// with test data and files. Since this is going to run
 	// from Docker, the binary will localted in the root bin.
-	cliPath := filepath.Join("/", "bin", "ecs-preview")
+	cliPath := filepath.Join("/", "bin", "copilot")
 	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
 	}

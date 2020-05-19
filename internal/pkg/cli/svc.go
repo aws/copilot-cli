@@ -6,7 +6,7 @@ package cli
 import (
 	"errors"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 )
@@ -16,10 +16,11 @@ var errNoAppInWorkspace = errors.New("could not find an application attached to 
 // BuildSvcCmd is the top level command for service.
 func BuildSvcCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "svc",
-		Short: "Service commands.",
-		Long: `Command for working with long-running services.
-A service represents an Amazon ECS service.`,
+		Use: "svc",
+		Short: `Commands for services.
+Services are long-running Amazon ECS services.`,
+		Long: `Commands for services.
+Services are long-running Amazon ECS services.`,
 	}
 
 	cmd.AddCommand(BuildSvcInitCmd())

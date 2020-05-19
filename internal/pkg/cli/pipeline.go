@@ -4,7 +4,7 @@
 package cli
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 )
@@ -12,10 +12,11 @@ import (
 // BuildPipelineCmd is the top level command for pipelines
 func BuildPipelineCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Manage your pipelines.",
-		Long: `Manage your pipelines.
-Continuous delivery pipelines to release the services in your applications.`,
+		Use: "pipeline",
+		Short: `Commands for pipelines.
+Continuous delivery pipelines to release services.`,
+		Long: `Commands for pipelines.
+Continuous delivery pipelines to release services.`,
 	}
 
 	cmd.AddCommand(BuildPipelineInitCmd())

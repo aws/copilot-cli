@@ -6,17 +6,18 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
 )
 
 // BuildAppCmd builds the top level app command and related subcommands.
 func BuildAppCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "app",
-		Short: "Manage your applications.",
-		Long: `Manage your applications.
-Applications are a collection of services, and deployment environments.`,
+		Use: "app",
+		Short: `Commands for applications.
+Applications are a collection of services and environments.`,
+		Long: `Commands for applications.
+Applications are a collection of services and environments.`,
 	}
 
 	cmd.AddCommand(BuildAppInitCommand())

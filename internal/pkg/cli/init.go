@@ -6,7 +6,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/ecs-preview/template"
+	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -269,6 +269,7 @@ func BuildInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Create a new ECS application.",
+		Long:  "Create a new ECS application.",
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitOpts(vars)
 			if err != nil {
