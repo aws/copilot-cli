@@ -47,7 +47,7 @@ func (o *pipelineStatusOpts) Execute() error {
 	}
 	pipelineStatus, err := o.statusDescriber.Describe()
 	if err != nil {
-		return fmt.Errorf("describe status of pipeline : %w", err)
+		return fmt.Errorf("describe status of pipeline: %w", err)
 	}
 	fmt.Print(pipelineStatus)
 	return nil
@@ -61,8 +61,8 @@ func BuildPipelineStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true, // TODO: remove when ready for production!
 		Use:    "status",
-		Short:  "Show the status of a pipeline.",
-		Long:   "Show the status of each stage of your pipeline.",
+		Short:  "Shows the status of a pipeline.",
+		Long:   "Shows the status of each stage of your pipeline.",
 
 		Example: `
 Shows status of the pipeline "pipeline-myapp-myrepo".
