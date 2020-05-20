@@ -27,8 +27,8 @@ var storageTypes = []string{
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
 	storageInitTypeHelp      = `The type of storage you'd like to add to your service. 
-	DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
-	S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
+DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
+S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
 	storageInitSvcPrompt     = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"

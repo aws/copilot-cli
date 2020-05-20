@@ -38,16 +38,16 @@ var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 
 // matches alphanumeric, .- from 3 to 63 characters long.
 // https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html
-var s3RegExp = regexp.MustCompile(
+var s3RegExp = regexp.MustCompile("" +
 	`^` + // start of line
-		`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63
-		`$`, // end of line
+	`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
+	`$`, // end of line
 )
 var s3DashesRegExp = regexp.MustCompile(
-	`[\.\-]{2,}`, // no consecutive periods or dashes
+	`[\.\-]{2,}`, // check for consecutive periods or dashes
 )
 var s3TrailingDashRegExp = regexp.MustCompile(
-	`[^\-]$`, // no trailing dash
+	`[^\-]$`, // check for trailing dash
 )
 
 // S3 buckets can't be formatted as IP addresses.
@@ -181,11 +181,13 @@ func stringPortValidation(val string) error {
 
 // s3 bucket names: 'a-zA-Z0-9.-'
 func s3BucketNameValidation(val interface{}) error {
+	const minS3Length = 3
+	const maxS3Length = 63
 	s, ok := val.(string)
 	if !ok {
 		return errValueNotAString
 	}
-	if len(s) < 3 || len(s) > 63 {
+	if len(s) < minS3Length || len(s) > maxS3Length {
 		return errS3ValueBadSize
 	}
 
