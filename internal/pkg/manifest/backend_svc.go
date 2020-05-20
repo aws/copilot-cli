@@ -30,6 +30,7 @@ type BackendService struct {
 	Service      `yaml:",inline"`
 	Image        imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig   `yaml:",inline"`
+	LogConfig    `yaml:"logging,flow"`
 	Sidecar      `yaml:",inline"`
 	Environments map[string]backendServiceOverrideConfig `yaml:",flow"`
 
@@ -39,6 +40,7 @@ type BackendService struct {
 type backendServiceOverrideConfig struct {
 	Image      imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig `yaml:",inline"`
+	LogConfig  `yaml:"logging,flow"`
 	Sidecar    `yaml:",inline"`
 }
 
@@ -117,6 +119,7 @@ func (s *BackendService) ApplyEnv(envName string) *BackendService {
 		},
 		TaskConfig: s.TaskConfig.copyAndApply(target.TaskConfig),
 		Sidecar:    s.Sidecar.copyAndApply(target.Sidecar),
+		LogConfig:  s.LogConfig.copyAndApply(target.LogConfig),
 	}
 }
 
@@ -129,7 +132,7 @@ func newDefaultBackendService() *BackendService {
 		TaskConfig: TaskConfig{
 			CPU:    256,
 			Memory: 512,
-			Count:  intp(1),
+			Count:  aws.Int(1),
 		},
 	}
 }
@@ -140,7 +143,7 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    durationp(10 * time.Second),
-		Retries:     intp(2),
+		Retries:     aws.Int(2),
 		Timeout:     durationp(5 * time.Second),
 		StartPeriod: durationp(0 * time.Second),
 	}

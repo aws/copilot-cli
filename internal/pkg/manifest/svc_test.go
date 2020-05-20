@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,6 +40,16 @@ sidecars:
     port: 2000/udp
     image: 123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon
     credentialsParameter: some arn
+logging:
+  destination:
+    name: cloudwatch
+    includePattern: ^[a-z][aeiou].*$
+    excludePattern: ^.*[aeiou]$
+  enableMetadata: false
+  secretOptions:
+    LOG_TOKEN: LOG_TOKEN
+  configFile: ./extra.conf
+  permissionFile: ./permissions.json
 environments:
   test:
     count: 3
@@ -53,13 +64,10 @@ environments:
 						Path:            "svc",
 						HealthCheckPath: "/",
 					},
-					LogsConfig: LogsConfig{
-						LogRetention: 30,
-					},
 					TaskConfig: TaskConfig{
 						CPU:    512,
 						Memory: 1024,
-						Count:  intp(1),
+						Count:  aws.Int(1),
 						Variables: map[string]string{
 							"LOG_LEVEL": "WARN",
 						},
@@ -76,10 +84,23 @@ environments:
 							},
 						},
 					},
+					LogConfig: LogConfig{
+						Destination: destinationConfig{
+							ExcludePattern: aws.String("^.*[aeiou]$"),
+							IncludePattern: aws.String("^[a-z][aeiou].*$"),
+							Name:           "cloudwatch",
+						},
+						EnableMetadata: aws.Bool(false),
+						ConfigFile:     "./extra.conf",
+						PermissionFile: "./permissions.json",
+						SecretOptions: map[string]string{
+							"LOG_TOKEN": "LOG_TOKEN",
+						},
+					},
 					Environments: map[string]loadBalancedWebServiceOverrideConfig{
 						"test": {
 							TaskConfig: TaskConfig{
-								Count: intp(3),
+								Count: aws.Int(3),
 							},
 						},
 					},
@@ -118,7 +139,7 @@ secrets:
 						HealthCheck: &ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
 							Interval:    durationp(10 * time.Second),
-							Retries:     intp(2),
+							Retries:     aws.Int(2),
 							Timeout:     durationp(5 * time.Second),
 							StartPeriod: durationp(0 * time.Second),
 						},
@@ -126,7 +147,7 @@ secrets:
 					TaskConfig: TaskConfig{
 						CPU:    1024,
 						Memory: 1024,
-						Count:  intp(1),
+						Count:  aws.Int(1),
 						Secrets: map[string]string{
 							"API_TOKEN": "SUBS_API_TOKEN",
 						},
