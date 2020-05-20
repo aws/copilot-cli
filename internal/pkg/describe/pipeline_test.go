@@ -202,6 +202,7 @@ func TestPipelineDescriber_String(t *testing.T) {
   AccountID         1234567890
   Created At        3 months ago
   Updated At        3 months ago
+
 Stages
 
   Name              Category            Provider            Details
@@ -229,6 +230,7 @@ Resources
   AccountID         1234567890
   Created At        3 months ago
   Updated At        3 months ago
+
 Stages
 
   Name              Category            Provider            Details
