@@ -6,6 +6,8 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
@@ -18,6 +20,18 @@ import (
 type envDescriberMocks struct {
 	storeSvc                 *mocks.MockstoreSvc
 	mockResourceGroupsClient *mocks.MockresourceGroupsClient
+	mockStackDescriber       *mocks.MockstackAndResourcesDescriber
+}
+
+var wantedResources = []*CfnResource{
+	{
+		Type:       "AWS::IAM::Role",
+		PhysicalID: "testApp-testEnv-CFNExecutionRole",
+	},
+	{
+		Type:       "testApp-testEnv-Cluster",
+		PhysicalID: "AWS::ECS::Cluster-jI63pYBWU6BZ",
+	},
 }
 
 func TestEnvDescriber_Describe(t *testing.T) {
@@ -56,12 +70,31 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		Name: "testSvc3",
 		Type: "load-balanced",
 	}
-
+	mockResource1 := &cloudformation.StackResource{
+		PhysicalResourceId: aws.String("testApp-testEnv-CFNExecutionRole"),
+		ResourceType:       aws.String("AWS::IAM::Role"),
+	}
+	mockResource2 := &cloudformation.StackResource{
+		PhysicalResourceId: aws.String("AWS::ECS::Cluster-jI63pYBWU6BZ"),
+		ResourceType:       aws.String("testApp-testEnv-Cluster"),
+	}
 	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
 	envSvcs := []*config.Service{testSvc1, testSvc2}
 	rgTags := map[string]string{stack.EnvTagKey: "testEnv"}
+	stackTags := []*cloudformation.Tag{
+		{
+			Key:   aws.String("copilot-application"),
+			Value: aws.String("testApp"),
+		},
+		{
+			Key:   aws.String("copilot-environment"),
+			Value: aws.String("testEnv"),
+		},
+	}
 	mockError := errors.New("some error")
 	testCases := map[string]struct {
+		shouldOutputResources bool
+
 		setupMocks func(mocks envDescriberMocks)
 
 		wantedEnv   *EnvDescription
@@ -75,7 +108,6 @@ func TestEnvDescriber_Describe(t *testing.T) {
 						Return(nil, mockError),
 				)
 			},
-
 			wantedError: fmt.Errorf("get AWS::CloudFormation::Stack resources for env testEnv: some error"),
 		},
 		"error if getStackName fails because can't parse resource ARN": {
@@ -98,19 +130,47 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("invalid ARN resource format stacktestApp-testEnv-testSvc16d75d1g0-8b1a-11ea-b358-06c1882c17fd. Ex: arn:partition:service:region:account-id:resource-type/resource-id"),
 		},
-		"success": {
+		"success without resources": {
+			shouldOutputResources: false,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
 						testARN1,
 						testARN2,
 					}, nil),
+					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
+						Tags: stackTags,
+					}, nil),
 				)
 			},
 			wantedEnv: &EnvDescription{
 				Environment: testEnv,
 				Services:    envSvcs,
-				Tags:        map[string]string{"key1": "value1", "key2": "value2"},
+				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"},
+			},
+		},
+		"success with resources": {
+			shouldOutputResources: true,
+			setupMocks: func(m envDescriberMocks) {
+				gomock.InOrder(
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
+						testARN1,
+						testARN2,
+					}, nil),
+					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
+						Tags: stackTags,
+					}, nil),
+					m.mockStackDescriber.EXPECT().StackResources(stack.NameForEnv(testApp.Name, testEnv.Name)).Return([]*cloudformation.StackResource{
+						mockResource1,
+						mockResource2,
+					}, nil),
+				)
+			},
+			wantedEnv: &EnvDescription{
+				Environment: testEnv,
+				Services:    envSvcs,
+				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"},
+				Resources:   wantedResources,
 			},
 		},
 	}
@@ -123,20 +183,24 @@ func TestEnvDescriber_Describe(t *testing.T) {
 
 			mockStore := mocks.NewMockstoreSvc(ctrl)
 			mockResourceGroupsClient := mocks.NewMockresourceGroupsClient(ctrl)
+			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := envDescriberMocks{
 				storeSvc:                 mockStore,
 				mockResourceGroupsClient: mockResourceGroupsClient,
+				mockStackDescriber:       mockStackDescriber,
 			}
 
 			tc.setupMocks(mocks)
 
 			d := &EnvDescriber{
-				env:  testEnv,
-				app:  testApp,
-				svcs: allSvcs,
+				env:             testEnv,
+				app:             testApp,
+				svcs:            allSvcs,
+				enableResources: tc.shouldOutputResources,
 
-				store:    mockStore,
-				rgClient: mockResourceGroupsClient,
+				store:          mockStore,
+				rgClient:       mockResourceGroupsClient,
+				stackDescriber: mockStackDescriber,
 			}
 
 			// WHEN

@@ -51,7 +51,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		w:           log.OutputWriter,
 		sel:         selector.NewConfigSelect(vars.prompt, store),
 		initEnvDescriber: func(o *showEnvOpts) error {
-			d, err := describe.NewEnvDescriber(o.AppName(), o.envName)
+			d, err := describe.NewEnvDescriber(o.AppName(), o.envName, o.shouldOutputResources)
 			if err != nil {
 				return fmt.Errorf("creating describer for environment %s in application %s: %w", o.envName, o.AppName(), err)
 			}
