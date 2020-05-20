@@ -86,14 +86,14 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		config := action.Configuration
 
 		var details string
-		if category == "Source" {
+		switch category {
+		case "Source":
 			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
-		}
-		if category == "Build" {
+		case "Build":
 			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
-		}
-		if category == "Deploy" {
+		case "Deploy":
 			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
+		default:
 		}
 
 		stage := Stage{
