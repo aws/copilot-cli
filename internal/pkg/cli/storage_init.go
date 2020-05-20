@@ -202,7 +202,7 @@ func BuildStorageInitCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: false, //TODO remove when ready for production
+		Hidden: true, //TODO remove when ready for production
 		Use:    "init",
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
