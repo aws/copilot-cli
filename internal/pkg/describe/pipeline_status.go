@@ -3,7 +3,6 @@
 
 package describe
 
-import ()
 
 // PipelineStatus retrieves status of a pipeline.
 type PipelineStatus struct {
