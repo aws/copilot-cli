@@ -70,13 +70,10 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	pipeline := resp.Pipeline
 	metadata := resp.Metadata
 	arn := aws.StringValue(metadata.PipelineArn)
-	region, err := c.getPipelineRegion(arn)
+
+	parsedArn, err := arn.Parse(resourceArn)
 	if err != nil {
-		return nil, err
-	}
-	accountId, err := c.getPipelineAccountId(arn)
-	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
 	}
 
 	var stages []Stage
@@ -110,8 +107,8 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 
 	return &Pipeline{
 		Name:      aws.StringValue(pipeline.Name),
-		Region:    region,
-		AccountID: accountId,
+		Region:    parsedArn.Region,
+		AccountID: parsedArn.AccountID,
 		Stages:    stages,
 		CreatedAt: metadata.Created,
 		UpdatedAt: metadata.Updated,
@@ -151,22 +148,4 @@ func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
 	}
 
 	return parsedArn.Resource, nil
-}
-
-func (c *CodePipeline) getPipelineRegion(resourceArn string) (string, error) {
-	parsedArn, err := arn.Parse(resourceArn)
-	if err != nil {
-		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
-	}
-
-	return parsedArn.Region, nil
-}
-
-func (c *CodePipeline) getPipelineAccountId(resourceArn string) (string, error) {
-	parsedArn, err := arn.Parse(resourceArn)
-	if err != nil {
-		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
-	}
-
-	return parsedArn.AccountID, nil
 }
