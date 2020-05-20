@@ -44,7 +44,7 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
-func (c *CfnResource) HumanString() string {
+func (c CfnResource) HumanString() string {
 	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)
 }
 

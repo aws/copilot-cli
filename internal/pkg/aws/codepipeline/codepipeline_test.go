@@ -112,6 +112,11 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 		},
 	}
 	mockStages := []*codepipeline.StageDeclaration{mockSourceStage, mockBuildStage, mockTestStage}
+
+	mockStageWithNoAction := &codepipeline.StageDeclaration{
+		Name:    aws.String("DummyStage"),
+		Actions: []*codepipeline.ActionDeclaration{},
+	}
 	mockOutput := &codepipeline.GetPipelineOutput{
 		Pipeline: &codepipeline.PipelineDeclaration{
 			Name:   aws.String(mockPipelineName),
@@ -168,7 +173,49 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"should wrap error": {
+		"should only populate stage name if stage has no actions": {
+			inPipelineName: mockPipelineName,
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{
+					Name: aws.String(mockPipelineName),
+				}).Return(
+					&codepipeline.GetPipelineOutput{
+						Pipeline: &codepipeline.PipelineDeclaration{
+							Name:   aws.String(mockPipelineName),
+							Stages: []*codepipeline.StageDeclaration{mockSourceStage, mockStageWithNoAction},
+						},
+						Metadata: &codepipeline.PipelineMetadata{
+							Created:     &mockTime,
+							Updated:     &mockTime,
+							PipelineArn: aws.String(mockArn),
+						},
+					}, nil)
+
+			},
+			expectedOut: &Pipeline{
+				Name:      mockPipelineName,
+				Region:    "us-west-2",
+				AccountID: "1234567890",
+				Stages: []Stage{
+					{
+						Name:     "Source",
+						Category: "Source",
+						Provider: "GitHub",
+						Details:  "Repository: badgoose/repo",
+					},
+					{
+						Name:     "DummyStage",
+						Category: "",
+						Provider: "",
+						Details:  "",
+					},
+				},
+				CreatedAt: &mockTime,
+				UpdatedAt: &mockTime,
+			},
+			expectedError: nil,
+		},
+		"should wrap error from codepipeline client": {
 			inPipelineName: mockPipelineName,
 			callMocks: func(m codepipelineMocks) {
 				m.cp.EXPECT().GetPipeline(&codepipeline.GetPipelineInput{

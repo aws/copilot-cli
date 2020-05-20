@@ -32,12 +32,12 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name      string  `json:"name"`
-	Region    string  `json:"region"`
-	AccountID string  `json:"accountId"`
-	Stages    []Stage `json:"stages"`
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
+	Name      string     `json:"name"`
+	Region    string     `json:"region"`
+	AccountID string     `json:"accountId"`
+	Stages    []Stage    `json:"stages"`
+	CreatedAt *time.Time `json:"createdAt"`
+	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
 // Stage wraps the codepipeline pipeline stage
@@ -69,31 +69,34 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 
 	pipeline := resp.Pipeline
 	metadata := resp.Metadata
-	arn := aws.StringValue(metadata.PipelineArn)
+	pipelineArn := aws.StringValue(metadata.PipelineArn)
 
-	parsedArn, err := arn.Parse(resourceArn)
+	parsedArn, err := arn.Parse(pipelineArn)
 	if err != nil {
-		return "", fmt.Errorf("parse pipeline ARN: %s", resourceArn)
+		return nil, fmt.Errorf("parse pipeline ARN: %s", pipelineArn)
 	}
 
 	var stages []Stage
 	for _, s := range pipeline.Stages {
 		name := aws.StringValue(s.Name)
-		action := s.Actions[0]
+		var category, provider, details string
 
-		category := aws.StringValue(action.ActionTypeId.Category)
-		provider := aws.StringValue(action.ActionTypeId.Provider)
-		config := action.Configuration
+		if len(s.Actions) > 0 {
+			action := s.Actions[0]
+			category = aws.StringValue(action.ActionTypeId.Category)
+			provider = aws.StringValue(action.ActionTypeId.Provider)
+			config := action.Configuration
 
-		var details string
-		switch category {
-		case "Source":
-			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
-		case "Build":
-			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
-		case "Deploy":
-			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
-		default:
+			switch category {
+			case "Source":
+				details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+			case "Build":
+				details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
+			case "Deploy":
+				details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
+			default:
+				// not a currently recognized stage - empty string
+			}
 		}
 
 		stage := Stage{
