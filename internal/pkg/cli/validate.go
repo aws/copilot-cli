@@ -47,7 +47,7 @@ var s3DashesRegExp = regexp.MustCompile(
 	`[\.\-]{2,}`, // check for consecutive periods or dashes
 )
 var s3TrailingDashRegExp = regexp.MustCompile(
-	`[^\-]$`, // check for trailing dash
+	`-$`, // check for trailing dash
 )
 
 // S3 buckets can't be formatted as IP addresses.
@@ -204,7 +204,7 @@ func s3BucketNameValidation(val interface{}) error {
 	}
 
 	dashMatch := s3TrailingDashRegExp.FindStringSubmatch(s)
-	if len(dashMatch) == 0 {
+	if len(dashMatch) != 0 {
 		return errS3ValueTrailingDash
 	}
 
