@@ -36,26 +36,27 @@ var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
 var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 
-// matches alphanumeric, .- from 3 to 63 characters long.
+// s3 validation expressions.
+// s3RegExp matches alphanumeric, .- from 3 to 63 characters long.
+// s3DashesRegExp matches consecutive dashes or periods
+// s3TrailingDashRegExp matches a trailing dash
+// ipAddressRegExp checks for a bucket in the format of an IP address.
 // https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-s3-bucket-naming-requirements.html
-var s3RegExp = regexp.MustCompile("" +
-	`^` + // start of line
-	`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
-	`$`, // end of line
-)
-var s3DashesRegExp = regexp.MustCompile(
-	`[\.\-]{2,}`, // check for consecutive periods or dashes
-)
-var s3TrailingDashRegExp = regexp.MustCompile(
-	`-$`, // check for trailing dash
-)
-
-// S3 buckets can't be formatted as IP addresses.
-// $ aws s3 mb s3://999.999.999.999
-// > make_bucket failed: s3://999.999.999.999 An error occurred (InvalidBucketName) \
-//   when calling the CreateBucket operation: The specified bucket is not valid.
-var ipAddressRegexp = regexp.MustCompile(
-	`^(?:\d{1,3}\.){3}\d{1,3}$`, // match any 1-3 digits in xxx.xxx.xxx.xxx format.
+var (
+	s3RegExp = regexp.MustCompile("" +
+		`^` + // start of line
+		`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
+		`$`, // end of line
+	)
+	s3DashesRegExp = regexp.MustCompile(
+		`[\.\-]{2,}`, // check for consecutive periods or dashes
+	)
+	s3TrailingDashRegExp = regexp.MustCompile(
+		`-$`, // check for trailing dash
+	)
+	ipAddressRegexp = regexp.MustCompile(
+		`^(?:\d{1,3}\.){3}\d{1,3}$`, // match any 1-3 digits in xxx.xxx.xxx.xxx format.
+	)
 )
 
 func validateAppName(val interface{}) error {
