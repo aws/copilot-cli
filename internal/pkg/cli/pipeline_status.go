@@ -47,7 +47,7 @@ func (o *pipelineStatusOpts) Execute() error {
 	}
 	pipelineStatus, err := o.statusDescriber.Describe()
 	if err != nil {
-		return fmt.Errorf("describe status of pipeline : %w", err)
+		return fmt.Errorf("describe status of pipeline: %w", err)
 	}
 	fmt.Print(pipelineStatus)
 	return nil
