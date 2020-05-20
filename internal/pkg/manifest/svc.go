@@ -41,6 +41,47 @@ type ServiceImageWithPort struct {
 	Port         uint16 `yaml:"port"`
 }
 
+// Sidecar holds configuration for all sidecar containers in a service.
+type Sidecar struct {
+	Sidecars map[string]SidecarConfig `yaml:"sidecars"`
+}
+
+// SidecarConfig represents the configurable options for setting up a sidecar container.
+type SidecarConfig struct {
+	Port      string `yaml:"port"`
+	Image     string `yaml:"image"`
+	CredParam string `yaml:"credentialsParameter"`
+}
+
+func (s Sidecar) copyAndApply(other Sidecar) Sidecar {
+	// TODO: abstract away copyandApply and deepCopy.
+	override := s.deepcopy()
+	for k, v := range other.Sidecars {
+		config := override.Sidecars[k]
+		if v.CredParam != "" {
+			config.CredParam = v.CredParam
+		}
+		if v.Image != "" {
+			config.Image = v.Image
+		}
+		if v.Port != "" {
+			config.Port = v.Port
+		}
+		override.Sidecars[k] = config
+	}
+	return override
+}
+
+func (s Sidecar) deepcopy() Sidecar {
+	config := make(map[string]SidecarConfig, len(s.Sidecars))
+	for k, v := range s.Sidecars {
+		config[k] = v
+	}
+	return Sidecar{
+		Sidecars: config,
+	}
+}
+
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
 	CPU       int               `yaml:"cpu"`
