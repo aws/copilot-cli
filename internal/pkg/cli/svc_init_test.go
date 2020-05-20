@@ -641,7 +641,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.Equal(t, tc.inSvcName, manifest.Service.Name)
 				require.Equal(t, tc.inSvcPort, manifest.Image.Port)
 				require.Equal(t, tc.inDockerfilePath, manifest.Image.ServiceImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebServiceConfig.Path)
+				require.Equal(t, tc.wantedPath, manifest.Path)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
