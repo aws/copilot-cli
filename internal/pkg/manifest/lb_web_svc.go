@@ -17,19 +17,23 @@ const (
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LoadBalancedWebService struct {
-	Service                      `yaml:",inline"`
-	Image                        ServiceImageWithPort `yaml:",flow"`
-	LoadBalancedWebServiceConfig `yaml:",inline"`
-	Environments                 map[string]LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
+	Service      `yaml:",inline"`
+	Image        ServiceImageWithPort `yaml:",flow"`
+	RoutingRule  `yaml:"http,flow"`
+	TaskConfig   `yaml:",inline"`
+	LogsConfig   `yaml:",flow"`
+	Sidecar      `yaml:",inline"`
+	Environments map[string]loadBalancedWebServiceOverrideConfig `yaml:",flow"` // Fields to override per environment.
 
 	parser template.Parser
 }
 
-// LoadBalancedWebServiceConfig represents a load balanced web service with AWS Fargate as compute.
-type LoadBalancedWebServiceConfig struct {
+type loadBalancedWebServiceOverrideConfig struct {
+	Image       ServiceImageWithPort `yaml:",flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
 	LogsConfig  `yaml:",flow"`
+	Sidecar     `yaml:"sidecar,flow"`
 }
 
 // LogsConfig is the configuration to the ECS logs.
@@ -74,7 +78,7 @@ func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalanced
 		},
 		Port: input.Port,
 	}
-	defaultLbManifest.LoadBalancedWebServiceConfig.RoutingRule.Path = input.Path
+	defaultLbManifest.RoutingRule.Path = input.Path
 	defaultLbManifest.parser = template.New()
 	return defaultLbManifest
 }
@@ -84,18 +88,16 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Service: Service{},
 		Image:   ServiceImageWithPort{},
-		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			RoutingRule: RoutingRule{
-				HealthCheckPath: "/",
-			},
-			TaskConfig: TaskConfig{
-				CPU:    256,
-				Memory: 512,
-				Count:  intp(1),
-			},
-			LogsConfig: LogsConfig{
-				LogRetention: LogRetentionInDays,
-			},
+		RoutingRule: RoutingRule{
+			HealthCheckPath: "/",
+		},
+		TaskConfig: TaskConfig{
+			CPU:    256,
+			Memory: 512,
+			Count:  intp(1),
+		},
+		LogsConfig: LogsConfig{
+			LogRetention: LogRetentionInDays,
 		},
 	}
 }
@@ -124,14 +126,13 @@ func (s *LoadBalancedWebService) ApplyEnv(envName string) *LoadBalancedWebServic
 	}
 
 	return &LoadBalancedWebService{
-		Service: s.Service,
-		Image:   s.Image,
-		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-			RoutingRule: s.RoutingRule.copyAndApply(target.RoutingRule),
-			TaskConfig:  s.TaskConfig.copyAndApply(target.TaskConfig),
-			LogsConfig: LogsConfig{
-				LogRetention: s.LogRetention,
-			},
+		Service:     s.Service,
+		Image:       target.Image,
+		RoutingRule: s.RoutingRule.copyAndApply(target.RoutingRule),
+		TaskConfig:  s.TaskConfig.copyAndApply(target.TaskConfig),
+		Sidecar:     s.Sidecar.copyAndApply(target.Sidecar),
+		LogsConfig: LogsConfig{
+			LogRetention: target.LogRetention,
 		},
 	}
 }

@@ -233,16 +233,43 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 		"uses env overrides": {
 			svc: &BackendService{
+				Image: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Port: 80,
+					},
+				},
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
 					Count:  intp(1),
 				},
-				Environments: map[string]TaskConfig{
+				Sidecar: Sidecar{
+					Sidecars: map[string]SidecarConfig{
+						"xray": {
+							Port:  "2000/udp",
+							Image: "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+						},
+					},
+				},
+				Environments: map[string]backendServiceOverrideConfig{
 					"test": {
-						Count: intp(0),
-						Variables: map[string]string{
-							"LOG_LEVEL": "DEBUG",
+						Image: imageWithPortAndHealthcheck{
+							ServiceImageWithPort: ServiceImageWithPort{
+								Port: 5000,
+							},
+						},
+						TaskConfig: TaskConfig{
+							Count: intp(0),
+							Variables: map[string]string{
+								"LOG_LEVEL": "DEBUG",
+							},
+						},
+						Sidecar: Sidecar{
+							Sidecars: map[string]SidecarConfig{
+								"xray": {
+									CredParam: "some arn",
+								},
+							},
 						},
 					},
 				},
@@ -250,6 +277,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			inEnvName: "test",
 
 			wanted: &BackendService{
+				Image: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Port: 5000,
+					},
+				},
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
@@ -258,6 +290,15 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						"LOG_LEVEL": "DEBUG",
 					},
 					Secrets: map[string]string{},
+				},
+				Sidecar: Sidecar{
+					Sidecars: map[string]SidecarConfig{
+						"xray": {
+							Port:      "2000/udp",
+							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+							CredParam: "some arn",
+						},
+					},
 				},
 			},
 		},
