@@ -43,7 +43,7 @@ func (o *pipelineStatusOpts) Ask() error {
 func (o *pipelineStatusOpts) Execute() error {
 	err := o.initStatusDescriber(o)
 	if err != nil {
-		return fmt.Errorf("describe status of pipeline : ")
+		return fmt.Errorf("describe status of pipeline: %w", err)
 	}
 	pipelineStatus, err := o.statusDescriber.Describe()
 	if err != nil {
