@@ -62,7 +62,7 @@ func BuildPipelineStatusCmd() *cobra.Command {
 		Hidden: true, // TODO: remove when ready for production!
 		Use:    "status",
 		Short:  "Show the status of a pipeline.",
-		Long:   "Show the status of each deployed pipeline's stages.",
+		Long:   "Show the status of each stage of your pipeline.",
 
 		Example: `
 Shows status of the pipeline "pipeline-myapp-myrepo".
