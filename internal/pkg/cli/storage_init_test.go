@@ -96,7 +96,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "mybadbucket???",
-			wantedErr:     errS3ValueBadFormat,
+			wantedErr:     errS3ValueBadCharacter,
 		},
 		"ddb bad character": {
 			mockWs: func(m *mocks.MockwsSvcReader) {

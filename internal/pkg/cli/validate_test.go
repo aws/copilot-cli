@@ -109,15 +109,15 @@ var s3TestCases = map[string]testCase{
 	},
 	"contains punctuation": {
 		input: "sadbucket!",
-		want:  errS3ValueBadFormat,
+		want:  errS3ValueBadCharacter,
 	},
 	"contains spaces": {
 		input: "bowie is a good dog",
-		want:  errS3ValueBadFormat,
+		want:  errS3ValueBadCharacter,
 	},
 	"leading whitespace": {
 		input: " a-Very-GOOD-dog-indeed",
-		want:  errS3ValueBadFormat,
+		want:  errS3ValueBadCharacter,
 	},
 	"too long": {
 		input: "sitting-in-the-morning-sun-ill-be-sitting-when-the-evening-comes-watching-the-ships-roll-in",
@@ -126,6 +126,26 @@ var s3TestCases = map[string]testCase{
 	"too short": {
 		input: "oh",
 		want:  errS3ValueBadSize,
+	},
+	"consecutive dots": {
+		input: "b.u..cket",
+		want:  errS3ValueBadFormat,
+	},
+	"trailing dash": {
+		input: "bucket-",
+		want:  errS3ValueTrailingDash,
+	},
+	"consecutive -.": {
+		input: "bu.-cket",
+		want:  errS3ValueBadFormat,
+	},
+	"ip address format": {
+		input: "123.455.999.000",
+		want:  errS3ValueBadFormat,
+	},
+	"non-ip-address numbers and dots": {
+		input: "124.333.333.333.333",
+		want:  nil,
 	},
 }
 
@@ -165,7 +185,7 @@ func TestValidateDDBName(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := dynamoTableNameValidation(tc.input)
-
+			t.Logf("error: %v", got)
 			require.True(t, errors.Is(got, tc.want))
 		})
 	}
