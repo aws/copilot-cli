@@ -96,7 +96,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: s3StorageType,
 			inSvcName:     "frontend",
 			inStorageName: "mybadbucket???",
-			wantedErr:     errS3ValueBadCharacter,
+			wantedErr:     errValueBadFormatWithPeriod,
 		},
 		"ddb bad character": {
 			mockWs: func(m *mocks.MockwsSvcReader) {
@@ -107,7 +107,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     "frontend",
 			inStorageName: "badTable!!!",
-			wantedErr:     errDDBValueBadFormat,
+			wantedErr:     errValueBadFormatWithPeriodUnderscore,
 		},
 	}
 	for name, tc := range testCases {

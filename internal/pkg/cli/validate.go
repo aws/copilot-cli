@@ -14,18 +14,18 @@ import (
 )
 
 var (
-	errValueEmpty          = errors.New("value must not be empty")
-	errValueTooLong        = errors.New("value must not exceed 255 characters")
-	errValueBadFormat      = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
-	errValueNotAString     = errors.New("value must be a string")
-	errInvalidGitHubRepo   = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
-	errPortInvalid         = errors.New("value must be in range 1-65535")
-	errS3ValueBadSize      = errors.New("value must be between 3 and 63 characters in length")
-	errS3ValueBadFormat    = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
-	errS3ValueTrailingDash = errors.New("value must not have trailing -")
-	errS3ValueBadCharacter = errors.New("value must contain only alphanumeric characters and .-")
-	errDDBValueBadSize     = errors.New("value must be between 3 and 255 characters in length")
-	errDDBValueBadFormat   = errors.New("value must contain only alphanumeric characters and ._-")
+	errValueEmpty                         = errors.New("value must not be empty")
+	errValueTooLong                       = errors.New("value must not exceed 255 characters")
+	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
+	errValueNotAString                    = errors.New("value must be a string")
+	errInvalidGitHubRepo                  = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
+	errPortInvalid                        = errors.New("value must be in range 1-65535")
+	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
+	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
+	errS3ValueTrailingDash                = errors.New("value must not have trailing -")
+	errValueBadFormatWithPeriod           = errors.New("value must contain only alphanumeric characters and .-")
+	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
+	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
@@ -201,7 +201,7 @@ func s3BucketNameValidation(val interface{}) error {
 	// check for correct character set
 	nameMatch := s3RegExp.FindStringSubmatch(s)
 	if len(nameMatch) == 0 {
-		return errS3ValueBadCharacter
+		return errValueBadFormatWithPeriod
 	}
 
 	dashMatch := s3TrailingDashRegExp.FindStringSubmatch(s)
@@ -232,7 +232,7 @@ func dynamoTableNameValidation(val interface{}) error {
 	}
 	m := ddbRegExp.FindStringSubmatch(s)
 	if len(m) == 0 {
-		return errDDBValueBadFormat
+		return errValueBadFormatWithPeriodUnderscore
 	}
 	return nil
 }
