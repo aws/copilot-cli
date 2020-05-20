@@ -25,7 +25,7 @@ func TestPipelineStatus_Execute(t *testing.T) {
 			mockStatusDescriber: func(m *mocks.MockpipelineStatusDescriber) {
 				m.EXPECT().Describe().Return(nil, mockError)
 			},
-			wantedError: fmt.Errorf("describe status of pipeline : "),
+			wantedError: fmt.Errorf("describe status of pipeline : some error"),
 		},
 	}
 
