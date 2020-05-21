@@ -5,6 +5,7 @@ package describe
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -30,6 +31,24 @@ type stackAndResourcesDescriber interface {
 
 type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+}
+
+// ServiceConfig contains serialized configuration parameters for a service.
+type ServiceConfig struct {
+	Environment string `json:"environment"`
+	Port        string `json:"port"`
+	Tasks       string `json:"tasks"`
+	CPU         string `json:"cpu"`
+	Memory      string `json:"memory"`
+}
+
+type configurations []*ServiceConfig
+
+func (c configurations) humanString(w io.Writer) {
+	fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", "Environment", "Tasks", "CPU (vCPU)", "Memory (MiB)", "Port")
+	for _, config := range c {
+		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\t%s\n", config.Environment, config.Tasks, cpuToString(config.CPU), config.Memory, config.Port)
+	}
 }
 
 // ServiceDescriber retrieves information about a service.
@@ -158,15 +177,4 @@ func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
 		})
 	}
 	return envVarList
-}
-
-func flattenResources(stackResources []*cloudformation.StackResource) []*CfnResource {
-	var webSvcResources []*CfnResource
-	for _, stackResource := range stackResources {
-		webSvcResources = append(webSvcResources, &CfnResource{
-			PhysicalID: aws.StringValue(stackResource.PhysicalResourceId),
-			Type:       aws.StringValue(stackResource.ResourceType),
-		})
-	}
-	return webSvcResources
 }

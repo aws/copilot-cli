@@ -191,7 +191,7 @@ func (w *backendSvcDesc) HumanString() string {
 
 		// Go maps don't have a guaranteed order.
 		// Show the resources by the order of environments displayed under Configurations for a consistent view.
-		w.Resources.humanString(writer, w.Configurations)
+		w.Resources.humanStringByEnv(writer, w.Configurations)
 	}
 	writer.Flush()
 	return b.String()
