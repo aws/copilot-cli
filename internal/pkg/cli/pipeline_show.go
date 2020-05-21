@@ -39,11 +39,13 @@ type showPipelineOpts struct {
 	showPipelineVars
 
 	// Interfaces to dependencies
-	w           io.Writer
-	ws          wsPipelineReader
-	store       applicationStore
-	pipelineSvc pipelineGetter
-	sel         appSelector
+	w             io.Writer
+	ws            wsPipelineReader
+	store         applicationStore
+	pipelineSvc   pipelineGetter
+	describer     describer
+	initDescriber func(bool) error
+	sel           appSelector
 }
 
 func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
@@ -70,6 +72,16 @@ func newShowPipelineOpts(vars showPipelineVars) (*showPipelineOpts, error) {
 		sel:              selector.NewSelect(vars.prompt, store),
 		w:                log.OutputWriter,
 	}
+	opts.initDescriber = func(enableResources bool) error {
+		describer, err := describe.NewPipelineDescriber(opts.pipelineName, enableResources)
+		if err != nil {
+			return fmt.Errorf("new pipeline describer: %w", err)
+		}
+
+		opts.describer = describer
+		return nil
+	}
+
 	return opts, nil
 }
 
@@ -186,15 +198,14 @@ func (o *showPipelineOpts) Execute() error {
 	if o.pipelineName == "" {
 		return nil
 	}
-
-	describer, err := describe.NewPipelineDescriber(o.pipelineName, o.shouldOutputResources)
+	err := o.initDescriber(o.shouldOutputResources)
 	if err != nil {
 		return err
 	}
 
-	pipeline, err := describer.Describe()
+	pipeline, err := o.describer.Describe()
 	if err != nil {
-		return err
+		return fmt.Errorf("describe pipeline %s: %w", o.pipelineName, err)
 	}
 
 	if o.shouldOutputJSON {
