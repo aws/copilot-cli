@@ -148,7 +148,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 				Name:      mockPipelineName,
 				Region:    "us-west-2",
 				AccountID: "1234567890",
-				Stages: []Stage{
+				Stages: []*Stage{
 					{
 						Name:     "Source",
 						Category: "Source",
@@ -196,7 +196,7 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 				Name:      mockPipelineName,
 				Region:    "us-west-2",
 				AccountID: "1234567890",
-				Stages: []Stage{
+				Stages: []*Stage{
 					{
 						Name:     "Source",
 						Category: "Source",

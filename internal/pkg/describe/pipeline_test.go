@@ -31,7 +31,7 @@ var mockPipeline = &codepipeline.Pipeline{
 	Name:      pipelineName,
 	Region:    "us-west-2",
 	AccountID: "1234567890",
-	Stages: []codepipeline.Stage{
+	Stages: []*codepipeline.Stage{
 		{
 			Name:     "Source",
 			Category: "Source",

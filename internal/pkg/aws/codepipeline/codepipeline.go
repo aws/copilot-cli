@@ -35,7 +35,7 @@ type Pipeline struct {
 	Name      string     `json:"name"`
 	Region    string     `json:"region"`
 	AccountID string     `json:"accountId"`
-	Stages    []Stage    `json:"stages"`
+	Stages    []*Stage   `json:"stages"`
 	CreatedAt *time.Time `json:"createdAt"`
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
@@ -76,34 +76,11 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		return nil, fmt.Errorf("parse pipeline ARN: %s", pipelineArn)
 	}
 
-	var stages []Stage
+	var stages []*Stage
 	for _, s := range pipeline.Stages {
-		name := aws.StringValue(s.Name)
-		var category, provider, details string
-
-		if len(s.Actions) > 0 {
-			action := s.Actions[0]
-			category = aws.StringValue(action.ActionTypeId.Category)
-			provider = aws.StringValue(action.ActionTypeId.Provider)
-			config := action.Configuration
-
-			switch category {
-			case "Source":
-				details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
-			case "Build":
-				details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
-			case "Deploy":
-				details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
-			default:
-				// not a currently recognized stage - empty string
-			}
-		}
-
-		stage := Stage{
-			Name:     name,
-			Category: category,
-			Provider: provider,
-			Details:  details,
+		stage, err := c.getStage(s)
+		if err != nil {
+			return nil, fmt.Errorf("get stage for pipeline: %s", pipelineArn)
 		}
 		stages = append(stages, stage)
 	}
@@ -116,6 +93,43 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		CreatedAt: metadata.Created,
 		UpdatedAt: metadata.Updated,
 	}, nil
+}
+
+func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
+	name := aws.StringValue(s.Name)
+	var category, provider, details string
+
+	if len(s.Actions) > 0 {
+		// Currently, we only support Source, Build and Deploy stages, all of which must contain at least one action.
+		action := s.Actions[0]
+		category = aws.StringValue(action.ActionTypeId.Category)
+		provider = aws.StringValue(action.ActionTypeId.Provider)
+
+		config := action.Configuration
+
+		switch category {
+
+		case "Source":
+			// Currently, our only source provider is GitHub: https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+		case "Build":
+			// Currently, we use CodeBuild only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html#action-reference-CodeBuild-config
+			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
+		case "Deploy":
+			// Currently, we use Cloudformation only for he build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
+			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
+		default:
+			// not a currently recognized stage - empty string
+		}
+	}
+
+	stage := &Stage{
+		Name:     name,
+		Category: category,
+		Provider: provider,
+		Details:  details,
+	}
+	return stage, nil
 }
 
 // HumanString returns the stringified Stage struct with human readable format.
