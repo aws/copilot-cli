@@ -21,6 +21,7 @@ const (
 
 type api interface {
 	GetPipeline(*cp.GetPipelineInput) (*cp.GetPipelineOutput, error)
+	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
 }
 
 // CodePipeline wraps the AWS CodePipeline client.
@@ -32,6 +33,12 @@ type CodePipeline struct {
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
 	Name string `json:"name"`
+}
+
+// PipelineStatus represents a Pipeline's status.
+type PipelineState struct {
+	PipelineName string `json:"Pipeline"`
+	StageStates []*cp.StageState `json:"StageStates"`
 }
 
 // New returns a CodePipeline client configured against the input session.
@@ -57,6 +64,24 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	}
 
 	return pipeline, nil
+}
+
+// GetPipelineStatus retrieves status information from a given pipeline.
+func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
+	input := &cp.GetPipelineStateInput{
+		Name: aws.String(name),
+	}
+	resp, err := c.client.GetPipelineState(input)
+
+	if err != nil {
+		return nil, fmt.Errorf("get pipeline state %s: %w", name, err)
+	}
+	pipelineState := &PipelineState{
+		PipelineName: aws.StringValue(resp.PipelineName),
+		StageStates: resp.StageStates,
+	}
+
+	return pipelineState, nil
 }
 
 // ListPipelineNamesByTags retrieves the names of all pipelines for a project.
