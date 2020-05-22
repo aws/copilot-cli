@@ -47,3 +47,18 @@ func (mr *MockapiMockRecorder) GetPipeline(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*Mockapi)(nil).GetPipeline), arg0)
 }
+
+// GetPipelineState mocks base method
+func (m *Mockapi) GetPipelineState(arg0 *codepipeline.GetPipelineStateInput) (*codepipeline.GetPipelineStateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPipelineState", arg0)
+	ret0, _ := ret[0].(*codepipeline.GetPipelineStateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPipelineState indicates an expected call of GetPipelineState
+func (mr *MockapiMockRecorder) GetPipelineState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineState", reflect.TypeOf((*Mockapi)(nil).GetPipelineState), arg0)
+}

@@ -51,8 +51,8 @@ type Stage struct {
 
 // PipelineStatus represents a Pipeline's status.
 type PipelineState struct {
-	PipelineName string `json:"Pipeline"`
-	StageStates []*cp.StageState `json:"StageStates"`
+	PipelineName string           `json:"pipelineName"`
+	StageStates  []*cp.StageState `json:"stageStates"`
 }
 
 // New returns a CodePipeline client configured against the input session.
@@ -158,7 +158,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	}
 	pipelineState := &PipelineState{
 		PipelineName: aws.StringValue(resp.PipelineName),
-		StageStates: resp.StageStates,
+		StageStates:  resp.StageStates,
 	}
 
 	return pipelineState, nil

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,7 @@ type pipelineStatusVars struct {
 type pipelineStatusOpts struct {
 	pipelineStatusVars
 
-	pipelineSvc         pipelineGetter
+	pipelineSvc         pipelineStateGetter
 	statusDescriber     pipelineStatusDescriber
 	initStatusDescriber func(opts *pipelineStatusOpts) error
 }
@@ -34,7 +35,15 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 
 	opts := &pipelineStatusOpts{
 		pipelineStatusVars: vars,
-		pipelineSvc: codepipeline.New(session),
+		pipelineSvc:        codepipeline.New(session),
+		initStatusDescriber: func(o *pipelineStatusOpts) error {
+			d, err := describe.NewPipelineStatus(o.pipelineName)
+			if err != nil {
+				return fmt.Errorf("creating status describer for pipeline %s in application %s: %w", o.pipelineName, o.appName, err)
+			}
+			o.statusDescriber = d
+			return nil
+		},
 	}
 	return opts, nil
 }

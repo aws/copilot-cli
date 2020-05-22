@@ -318,8 +318,11 @@ type resourceGroupsClient interface {
 
 type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
+}
+
+type pipelineStateGetter interface {
+	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
 }
 
 type executor interface {
