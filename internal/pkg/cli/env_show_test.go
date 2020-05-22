@@ -282,7 +282,7 @@ func TestEnvShow_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf("describe environment testEnv: some error"),
 		},
-		"success": {
+		"success in human format": {
 			inputEnv: "testEnv",
 			setupMocks: func(m showEnvMocks) {
 				gomock.InOrder(
@@ -291,6 +291,17 @@ func TestEnvShow_Execute(t *testing.T) {
 			},
 
 			wantedContent: "About\n\n  Name              testEnv\n  Production        false\n  Region            us-west-2\n  Account ID        123456789012\n\nServices\n\n  Name              Type\n  testSvc1          load-balanced\n  testSvc2          load-balanced\n  testSvc3          load-balanced\n\nTags\n\n  Key                  Value\n  copilot-application  testApp\n  copilot-environment  testEnv\n  key1                 value1\n  key2                 value2\n\nResources\n\n  AWS::IAM::Role           testApp-testEnv-CFNExecutionRole\n  testApp-testEnv-Cluster  AWS::ECS::Cluster-jI63pYBWU6BZ\n",
+		},
+		"success in JSON format": {
+			inputEnv:         "testEnv",
+			shouldOutputJSON: true,
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil),
+				)
+			},
+
+			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}]}\n",
 		},
 	}
 

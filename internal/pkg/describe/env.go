@@ -33,15 +33,15 @@ type EnvDescription struct {
 	Environment *config.Environment `json:"environment"`
 	Services    []*config.Service   `json:"services"`
 	Tags        map[string]string   `json:"tags,omitempty"`
-	Resources    []*CfnResource        `json:"resources,omitempty"`
+	Resources   []*CfnResource      `json:"resources,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	app  *config.Application
-	env  *config.Environment
-	svcs []*config.Service
-	enableResources  bool
+	app             *config.Application
+	env             *config.Environment
+	svcs            []*config.Service
+	enableResources bool
 
 	store          storeSvc
 	rgClient       resourceGroupsClient
@@ -73,14 +73,14 @@ func NewEnvDescriber(appName string, envName string, enableResources bool) (*Env
 	}
 	d := newStackDescriber(sess)
 	return &EnvDescriber{
-		app:      app,
-		env:      env,
-		svcs:     svcs,
+		app:             app,
+		env:             env,
+		svcs:            svcs,
 		enableResources: enableResources,
 
-		store:    store,
-		rgClient:        resourcegroups.New(sess),
-		stackDescriber:  stackAndResourcesDescriber(d),
+		store:          store,
+		rgClient:       resourcegroups.New(sess),
+		stackDescriber: stackAndResourcesDescriber(d),
 	}, nil
 }
 
@@ -114,10 +114,10 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	}
 
 	return &EnvDescription{
-		Environment:  e.env,
+		Environment: e.env,
 		Services:    svcs,
-		Tags:         tags,
-		Resources:    stackResources,
+		Tags:        tags,
+		Resources:   stackResources,
 	}, nil
 }
 
