@@ -6,6 +6,7 @@ package codepipeline
 
 import (
 	"fmt"
+	"time"
 
 	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
@@ -32,7 +33,20 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name string `json:"name"`
+	Name      string     `json:"name"`
+	Region    string     `json:"region"`
+	AccountID string     `json:"accountId"`
+	Stages    []*Stage   `json:"stages"`
+	CreatedAt *time.Time `json:"createdAt"`
+	UpdatedAt *time.Time `json:"updatedAt"`
+}
+
+// Stage wraps the codepipeline pipeline stage
+type Stage struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Provider string `json:"provider"`
+	Details  string `json:"details"`
 }
 
 // PipelineStatus represents a Pipeline's status.
@@ -59,11 +73,77 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline %s: %w", name, err)
 	}
-	pipeline := &Pipeline{
-		Name: aws.StringValue(resp.Pipeline.Name),
+
+	pipeline := resp.Pipeline
+	metadata := resp.Metadata
+	pipelineArn := aws.StringValue(metadata.PipelineArn)
+
+	parsedArn, err := arn.Parse(pipelineArn)
+	if err != nil {
+		return nil, fmt.Errorf("parse pipeline ARN: %s", pipelineArn)
 	}
 
-	return pipeline, nil
+	var stages []*Stage
+	for _, s := range pipeline.Stages {
+		stage, err := c.getStage(s)
+		if err != nil {
+			return nil, fmt.Errorf("get stage for pipeline: %s", pipelineArn)
+		}
+		stages = append(stages, stage)
+	}
+
+	return &Pipeline{
+		Name:      aws.StringValue(pipeline.Name),
+		Region:    parsedArn.Region,
+		AccountID: parsedArn.AccountID,
+		Stages:    stages,
+		CreatedAt: metadata.Created,
+		UpdatedAt: metadata.Updated,
+	}, nil
+}
+
+func (c *CodePipeline) getStage(s *cp.StageDeclaration) (*Stage, error) {
+	name := aws.StringValue(s.Name)
+	var category, provider, details string
+
+	if len(s.Actions) > 0 {
+		// Currently, we only support Source, Build and Deploy stages, all of which must contain at least one action.
+		action := s.Actions[0]
+		category = aws.StringValue(action.ActionTypeId.Category)
+		provider = aws.StringValue(action.ActionTypeId.Provider)
+
+		config := action.Configuration
+
+		switch category {
+
+		case "Source":
+			// Currently, our only source provider is GitHub: https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+			details = fmt.Sprintf("Repository: %s/%s", aws.StringValue(config["Owner"]), aws.StringValue(config["Repo"]))
+		case "Build":
+			// Currently, we use CodeBuild only for the build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CodeBuild.html#action-reference-CodeBuild-config
+			details = fmt.Sprintf("BuildProject: %s", aws.StringValue(config["ProjectName"]))
+		case "Deploy":
+			// Currently, we use Cloudformation only for he build stage: https://docs.aws.amazon.com/codepipeline/latest/userguide/action-reference-CloudFormation.html#action-reference-CloudFormation-config
+			details = fmt.Sprintf("StackName: %s", aws.StringValue(config["StackName"]))
+		default:
+			// not a currently recognized stage - empty string
+		}
+	}
+
+	stage := &Stage{
+		Name:     name,
+		Category: category,
+		Provider: provider,
+		Details:  details,
+	}
+	return stage, nil
+}
+
+// HumanString returns the stringified Stage struct with human readable format.
+// Example output:
+//   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
+func (s *Stage) HumanString() string {
+	return fmt.Sprintf("  %s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
 // GetPipelineStatus retrieves status information from a given pipeline.
