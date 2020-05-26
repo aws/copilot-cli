@@ -18,13 +18,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type updatePipelineMocks struct {
+	envStore *mocks.MockenvironmentStore
+	prompt   *mocks.Mockprompter
+	prog     *mocks.Mockprogress
+	deployer *mocks.MockpipelineDeployer
+	ws       *mocks.MockwsPipelineReader
+}
+
 func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 	testCases := map[string]struct {
 		stages    []manifest.PipelineStage
 		inAppName string
-
-		mockWorkspace func(m *mocks.MockwsPipelineReader)
-		mockEnvStore  func(m *mocks.MockenvironmentStore)
+		callMocks func(m updatePipelineMocks)
 
 		expectedStages []deploy.PipelineStage
 		expectedError  error
@@ -36,10 +42,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 				},
 			},
 			inAppName: "badgoose",
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
-			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
+			callMocks: func(m updatePipelineMocks) {
 				mockEnv := &config.Environment{
 					Name:      "test",
 					App:       "badgoose",
@@ -47,8 +50,10 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					AccountID: "123456789012",
 					Prod:      false,
 				}
-
-				m.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1)
+				gomock.InOrder(
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
 			},
 
 			expectedStages: []deploy.PipelineStage{
@@ -74,9 +79,12 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 
 			mockEnvStore := mocks.NewMockenvironmentStore(ctrl)
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
+			mocks := updatePipelineMocks{
+				envStore: mockEnvStore,
+				ws:       mockWorkspace,
+			}
 
-			tc.mockEnvStore(mockEnvStore)
-			tc.mockWorkspace(mockWorkspace)
+			tc.callMocks(mocks)
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
@@ -206,76 +214,65 @@ stages:
 		inPipelineName string
 		inRegion       string
 		inPipelineFile string
-		mockDeployer   func(m *mocks.MockpipelineDeployer)
-		mockWorkspace  func(m *mocks.MockwsPipelineReader)
-		mockEnvStore   func(m *mocks.MockenvironmentStore)
-		mockProgress   func(m *mocks.Mockprogress)
-		mockPrompt     func(m *mocks.Mockprompter)
+		callMocks      func(m updatePipelineMocks)
 		expectedError  error
 	}{
 		"create and deploy pipeline": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any()).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(1),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(0)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
-				m.EXPECT().CreatePipeline(gomock.Any()).Return(nil)
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: nil,
 		},
 		"update and deploy pipeline": {
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
-			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(0)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any()).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(1),
+				)
 			},
 			expectedError: nil,
 		},
@@ -283,33 +280,26 @@ stages:
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
-			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(0)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(0)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().UpdatePipeline(gomock.Any()).Return(nil).Times(0)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, nil)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, nil),
+				)
 			},
 			expectedError: nil,
 		},
@@ -317,218 +307,196 @@ stages:
 			inApp:     &app,
 			inAppName: appName,
 			inRegion:  region,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
-			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, errors.New("some error"))
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(false, errors.New("some error")),
+				)
 			},
 			expectedError: fmt.Errorf("prompt for pipeline update: some error"),
 		},
 		"returns an error if fail to add pipeline resources to app": {
-			inApp:         &app,
-			inRegion:      region,
-			inAppName:     appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {},
-			mockEnvStore:  func(m *mocks.MockenvironmentStore) {},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(1)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(0)
+			inApp:     &app,
+			inRegion:  region,
+			inAppName: appName,
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(errors.New("some error")),
+					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(1),
+				)
 			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(errors.New("some error"))
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("add pipeline resources to application %s in %s: some error", appName, region),
 		},
 		"returns an error if fail to read pipeline file": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), errors.New("some error"))
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), errors.New("some error")),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("read pipeline manifest: some error"),
 		},
 		"returns an error if unable to unmarshal pipeline file": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
+			callMocks: func(m updatePipelineMocks) {
 				content := ""
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("unmarshal pipeline manifest: pipeline.yml contains invalid schema version: 0"),
 		},
 		"returns an error if unable to convert environments to deployment stage": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return(nil, errors.New("some error")).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")).Times(1),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("convert environments to deployment stage: service names from workspace: some error"),
 		},
 		"returns an error if fails to get cross-regional resources": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error")),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, errors.New("some error"))
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("get cross-regional resources: some error"),
 		},
 		"returns an error if fails to check if pipeline exists": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error")),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(false, errors.New("some error"))
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("check if pipeline exists: some error"),
 		},
 		"returns an error if fails to create pipeline": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(false, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error")),
+					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(1),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(0)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(0)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(false, nil)
-				m.EXPECT().CreatePipeline(gomock.Any()).Return(errors.New("some error"))
-			},
-			mockPrompt:    func(m *mocks.Mockprompter) {},
 			expectedError: fmt.Errorf("create pipeline: some error"),
 		},
 		"returns an error if fails to update pipeline": {
 			inApp:     &app,
 			inRegion:  region,
 			inAppName: appName,
-			mockWorkspace: func(m *mocks.MockwsPipelineReader) {
-				m.EXPECT().ReadPipelineManifest().Return([]byte(content), nil)
-				m.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1)
+			callMocks: func(m updatePipelineMocks) {
+				gomock.InOrder(
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1),
+					m.deployer.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil),
+					m.prog.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1),
+
+					m.ws.EXPECT().ReadPipelineManifest().Return([]byte(content), nil),
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+
+					// convertStages
+					m.envStore.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1),
+
+					// getArtifactBuckets
+					m.deployer.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil),
+
+					// deployPipeline
+					m.deployer.EXPECT().PipelineExists(gomock.Any()).Return(true, nil),
+					m.prompt.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil),
+					m.prog.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1),
+					m.deployer.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error")),
+					m.prog.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(1),
+				)
 			},
-			mockEnvStore: func(m *mocks.MockenvironmentStore) {
-				m.EXPECT().GetEnvironment(appName, "chicken").Return(mockEnv, nil).Times(1)
-				m.EXPECT().GetEnvironment(appName, "wings").Return(mockEnv, nil).Times(1)
-			},
-			mockProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateResourcesStart, appName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateResourcesFailed, appName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateResourcesComplete, appName)).Times(1)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateStart, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateFailed, pipelineName)).Times(0)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateComplete, pipelineName)).Times(0)
-				m.EXPECT().Start(fmt.Sprintf(fmtPipelineUpdateProposalStart, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Serrorf(fmtPipelineUpdateProposalFailed, pipelineName)).Times(1)
-				m.EXPECT().Stop(log.Ssuccessf(fmtPipelineUpdateProposalComplete, pipelineName)).Times(0)
-			},
-			mockDeployer: func(m *mocks.MockpipelineDeployer) {
-				m.EXPECT().AddPipelineResourcesToApp(&app, region).Return(nil)
-				m.EXPECT().GetRegionalAppResources(gomock.Any()).Return(mockResources, nil)
-				m.EXPECT().PipelineExists(gomock.Any()).Return(true, nil)
-				m.EXPECT().UpdatePipeline(gomock.Any()).Return(errors.New("some error"))
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(fmt.Sprintf(fmtPipelineUpdateExistPrompt, pipelineName), "").Return(true, nil)
-			},
+
 			expectedError: fmt.Errorf("update pipeline: some error"),
 		},
 	}
@@ -543,11 +511,16 @@ stages:
 			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			tc.mockDeployer(mockPipelineDeployer)
-			tc.mockEnvStore(mockEnvStore)
-			tc.mockWorkspace(mockWorkspace)
-			tc.mockProgress(mockProgress)
-			tc.mockPrompt(mockPrompt)
+
+			mocks := updatePipelineMocks{
+				envStore: mockEnvStore,
+				prompt:   mockPrompt,
+				prog:     mockProgress,
+				deployer: mockPipelineDeployer,
+				ws:       mockWorkspace,
+			}
+
+			tc.callMocks(mocks)
 
 			opts := &updatePipelineOpts{
 				updatePipelineVars: updatePipelineVars{
