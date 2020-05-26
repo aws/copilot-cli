@@ -327,7 +327,7 @@ func TestEnvShow_Execute(t *testing.T) {
 				},
 				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
-				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
+				initEnvDescriber: func(bool) error { return nil },
 				w:                b,
 			}
 

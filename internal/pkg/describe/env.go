@@ -49,7 +49,7 @@ type EnvDescriber struct {
 }
 
 // NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(appName string, envName string, enableResources bool) (*EnvDescriber, error) {
+func NewEnvDescriber(appName, envName string) (*EnvDescriber, error) {
 	store, err := config.NewStore()
 
 	if err != nil {
@@ -76,12 +76,22 @@ func NewEnvDescriber(appName string, envName string, enableResources bool) (*Env
 		app:             app,
 		env:             env,
 		svcs:            svcs,
-		enableResources: enableResources,
+		enableResources: false,
 
 		store:          store,
 		rgClient:       resourcegroups.New(sess),
 		stackDescriber: stackAndResourcesDescriber(d),
 	}, nil
+}
+
+// NewEnvDescriberWithResources instantiates an environment describer with stack resources.
+func NewEnvDescriberWithResources(appName, envName string) (*EnvDescriber, error) {
+	d, err := NewEnvDescriber(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	d.enableResources = true
+	return d, nil
 }
 
 // Describe returns info about an application's environment.

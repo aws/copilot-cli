@@ -36,7 +36,7 @@ type showEnvOpts struct {
 	store            store
 	describer        envDescriber
 	sel              configSelector
-	initEnvDescriber func(*showEnvOpts) error
+	initEnvDescriber func(bool) error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -45,20 +45,26 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		return nil, fmt.Errorf("connect to copilot config store: %w", err)
 	}
 
-	return &showEnvOpts{
+	opts := &showEnvOpts{
 		showEnvVars: vars,
 		store:       store,
 		w:           log.OutputWriter,
 		sel:         selector.NewConfigSelect(vars.prompt, store),
-		initEnvDescriber: func(o *showEnvOpts) error {
-			d, err := describe.NewEnvDescriber(o.AppName(), o.envName, o.shouldOutputResources)
-			if err != nil {
-				return fmt.Errorf("creating describer for environment %s in application %s: %w", o.envName, o.AppName(), err)
-			}
-			o.describer = d
-			return nil
-		},
-	}, nil
+	}
+	opts.initEnvDescriber = func(enableResources bool) error {
+		var d envDescriber
+		if enableResources {
+			d, err = describe.NewEnvDescriber(opts.AppName(), opts.envName)
+		} else {
+			d, err = describe.NewEnvDescriberWithResources(opts.AppName(), opts.envName)
+		}
+		if err != nil {
+			return fmt.Errorf("creating describer for environment %s in application %s: %w", opts.envName, opts.AppName(), err)
+		}
+		opts.describer = d
+		return nil
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
@@ -87,7 +93,7 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
-	if err := o.initEnvDescriber(o); err != nil {
+	if err := o.initEnvDescriber(o.shouldOutputResources); err != nil {
 		return err
 	}
 	env, err := o.describer.Describe()
