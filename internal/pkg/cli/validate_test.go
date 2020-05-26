@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -99,6 +100,122 @@ func TestValidateEnvironmentName(t *testing.T) {
 			require.True(t, errors.Is(got, tc.want))
 		})
 	}
+}
+
+func TestValidateS3Name(t *testing.T) {
+	testCases := map[string]testCase{
+		"good case": {
+			input: "happy-s3-bucket",
+			want:  nil,
+		},
+		"contains punctuation": {
+			input: "sadbucket!",
+			want:  errValueBadFormatWithPeriod,
+		},
+		"contains spaces": {
+			input: "bowie is a good dog",
+			want:  errValueBadFormatWithPeriod,
+		},
+		"leading whitespace": {
+			input: " a-Very-GOOD-dog-indeed",
+			want:  errValueBadFormatWithPeriod,
+		},
+		"too long": {
+			input: "sitting-in-the-morning-sun-ill-be-sitting-when-the-evening-comes-watching-the-ships-roll-in",
+			want:  errS3ValueBadSize,
+		},
+		"too short": {
+			input: "oh",
+			want:  errS3ValueBadSize,
+		},
+		"consecutive dots": {
+			input: "b.u..cket",
+			want:  errS3ValueBadFormat,
+		},
+		"trailing dash": {
+			input: "bucket-",
+			want:  errS3ValueTrailingDash,
+		},
+		"consecutive -.": {
+			input: "bu.-cket",
+			want:  errS3ValueBadFormat,
+		},
+		"ip address format": {
+			input: "123.455.999.000",
+			want:  errS3ValueBadFormat,
+		},
+		"non-ip-address numbers and dots": {
+			input: "124.333.333.333.333",
+			want:  nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := s3BucketNameValidation(tc.input)
+
+			require.True(t, errors.Is(got, tc.want))
+		})
+	}
+}
+
+func TestValidateDDBName(t *testing.T) {
+	testCases := map[string]testCase{
+		"good case": {
+			input: "dynamo_table-1",
+			want:  nil,
+		},
+		"too short": {
+			input: "p",
+			want:  errDDBValueBadSize,
+		},
+		"too long": {
+			input: "i-met-a-traveller-from-an-antique-land-who-said_two-vast-and-trunkless-legs-of-stone_stand-in-the-desert-near-them-on-the-sand_half-sunk-a-shattered-visage-lies-whose-frown_and-wrinkled-lip-and-sneer-of-cold-command_tell-that-its-sculptor-well-those-passions-read_which-yet-survive-stamped-on-these-lifeless-things",
+			want:  errDDBValueBadSize,
+		},
+		"bad character": {
+			input: "badgoose!?",
+			want:  errValueBadFormatWithPeriodUnderscore,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := dynamoTableNameValidation(tc.input)
+			t.Logf("error: %v", got)
+			require.True(t, errors.Is(got, tc.want))
+		})
+	}
+}
+
+func TestValidateStorageType(t *testing.T) {
+	testCases := map[string]struct {
+		input string
+		want  error
+	}{
+		"S3 okay": {
+			input: "S3",
+			want:  nil,
+		},
+		"DDB okay": {
+			input: "DynamoDB",
+			want:  nil,
+		},
+		"Bad name": {
+			input: "Dropbox",
+			want:  fmt.Errorf(fmtErrInvalidStorageType, "Dropbox", prettify(storageTypes)),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateStorageType(tc.input)
+			if tc.want == nil {
+				require.Nil(t, got)
+			} else {
+				require.EqualError(t, tc.want, got.Error())
+			}
+		})
+	}
+
 }
 
 func TestIsCorrectFormat(t *testing.T) {

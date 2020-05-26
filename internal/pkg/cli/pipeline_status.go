@@ -4,18 +4,23 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
 type pipelineStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
-	appName       string
-	pipelineName  string
+	appName          string
+	pipelineName     string
 }
 
 type pipelineStatusOpts struct {
 	pipelineStatusVars
+
+	statusDescriber     pipelineStatusDescriber
+	initStatusDescriber func(opts *pipelineStatusOpts) error
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
@@ -36,6 +41,15 @@ func (o *pipelineStatusOpts) Ask() error {
 
 // Execute displays the status of the pipeline.
 func (o *pipelineStatusOpts) Execute() error {
+	err := o.initStatusDescriber(o)
+	if err != nil {
+		return fmt.Errorf("describe status of pipeline: %w", err)
+	}
+	pipelineStatus, err := o.statusDescriber.Describe()
+	if err != nil {
+		return fmt.Errorf("describe status of pipeline: %w", err)
+	}
+	fmt.Print(pipelineStatus)
 	return nil
 }
 
@@ -47,12 +61,12 @@ func BuildPipelineStatusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true, // TODO: remove when ready for production!
 		Use:    "status",
-		Short:  "Show the status of your application's pipeline.",
-		Long:   "Show the status of each deployed pipeline's stages.",
+		Short:  "Shows the status of a pipeline.",
+		Long:   "Shows the status of each stage of your pipeline.",
 
 		Example: `
-Shows status of the deployed pipeline "pipeline-myapp-mycompany-myrepo".
-/code $ copilot pipeline status -n pipeline-myapp-mycompany-myrepo`,
+Shows status of the pipeline "pipeline-myapp-myrepo".
+/code $ copilot pipeline status -n pipeline-myapp-myrepo`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPipelineStatusOpts(vars)
 			if err != nil {
