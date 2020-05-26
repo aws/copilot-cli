@@ -300,7 +300,7 @@ func TestEnvDescription_HumanString(t *testing.T) {
 	}
 	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
 
-	wantedContent := "About\n\n  Name              testEnv\n  Production        false\n  Region            us-west-2\n  Account ID        123456789012\n\nServices\n\n  Name              Type\n  testSvc1          load-balanced\n  testSvc2          load-balanced\n  testSvc3          load-balanced\n\nTags\n\n  Key               Value\n  key1              value1\n  key2              value2\n\nResources\n\n  AWS::IAM::Role           testApp-testEnv-CFNExecutionRole\n  testApp-testEnv-Cluster  AWS::ECS::Cluster-jI63pYBWU6BZ\n"
+	wantedContent := "About\n\n  Name              testEnv\n  Production        false\n  Region            us-west-2\n  Account ID        123456789012\n\nServices\n\n  Name              Type\n  ----              ----\n  testSvc1          load-balanced\n  testSvc2          load-balanced\n  testSvc3          load-balanced\n\nTags\n\n  Key               Value\n  ---               -----\n  key1              value1\n  key2              value2\n\nResources\n\n  AWS::IAM::Role           testApp-testEnv-CFNExecutionRole\n  testApp-testEnv-Cluster  AWS::ECS::Cluster-jI63pYBWU6BZ\n"
 	// GIVEN
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
