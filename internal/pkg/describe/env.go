@@ -191,6 +191,9 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "----", "----")
+	writer.Flush()
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
@@ -199,6 +202,7 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
 		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
+		fmt.Fprintf(writer, "  %s\t%s\n", "---", "-----")
 		// sort Tags in alpha order by keys
 		keys := make([]string, 0, len(e.Tags))
 		for k := range e.Tags {
@@ -207,6 +211,7 @@ func (e *EnvDescription) HumanString() string {
 		sort.Strings(keys)
 		for _, key := range keys {
 			fmt.Fprintf(writer, "  %s\t%s\n", key, e.Tags[key])
+			writer.Flush()
 		}
 	}
 	writer.Flush()
