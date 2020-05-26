@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -21,7 +22,7 @@ type LoadBalancedWebService struct {
 	Image        ServiceImageWithPort `yaml:",flow"`
 	RoutingRule  `yaml:"http,flow"`
 	TaskConfig   `yaml:",inline"`
-	LogsConfig   `yaml:",flow"`
+	LogConfig    `yaml:"logging,flow"`
 	Sidecar      `yaml:",inline"`
 	Environments map[string]loadBalancedWebServiceOverrideConfig `yaml:",flow"` // Fields to override per environment.
 
@@ -32,19 +33,16 @@ type loadBalancedWebServiceOverrideConfig struct {
 	Image       ServiceImageWithPort `yaml:",flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
-	LogsConfig  `yaml:",flow"`
+	LogConfig   `yaml:"logging,flow"`
 	Sidecar     `yaml:"sidecar,flow"`
-}
-
-// LogsConfig is the configuration to the ECS logs.
-type LogsConfig struct {
-	LogRetention int `yaml:"logRetention"`
 }
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
 	Path            string `yaml:"path"`
 	HealthCheckPath string `yaml:"healthcheck"`
+	// TargetContainer is the container load balancer routes traffic to.
+	TargetContainer string `yaml:"targetContainer"`
 }
 
 func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
@@ -53,6 +51,9 @@ func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
 	}
 	if other.HealthCheckPath != "" {
 		r.HealthCheckPath = other.HealthCheckPath
+	}
+	if other.TargetContainer != "" {
+		r.TargetContainer = other.TargetContainer
 	}
 	return r
 }
@@ -94,10 +95,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 		TaskConfig: TaskConfig{
 			CPU:    256,
 			Memory: 512,
-			Count:  intp(1),
-		},
-		LogsConfig: LogsConfig{
-			LogRetention: LogRetentionInDays,
+			Count:  aws.Int(1),
 		},
 	}
 }
@@ -131,8 +129,6 @@ func (s *LoadBalancedWebService) ApplyEnv(envName string) *LoadBalancedWebServic
 		RoutingRule: s.RoutingRule.copyAndApply(target.RoutingRule),
 		TaskConfig:  s.TaskConfig.copyAndApply(target.TaskConfig),
 		Sidecar:     s.Sidecar.copyAndApply(target.Sidecar),
-		LogsConfig: LogsConfig{
-			LogRetention: target.LogRetention,
-		},
+		LogConfig:   s.LogConfig.copyAndApply(target.LogConfig),
 	}
 }
