@@ -101,8 +101,14 @@ func TestHasSecrets(t *testing.T) {
 		in     ServiceOpts
 		wanted bool
 	}{
-		"no secrets": {
+		"nil secrets": {
 			in:     ServiceOpts{},
+			wanted: false,
+		},
+		"no secrets": {
+			in: ServiceOpts{
+				Secrets: map[string]string{},
+			},
 			wanted: false,
 		},
 		"service has secrets": {
