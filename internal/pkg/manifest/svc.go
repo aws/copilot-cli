@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,6 +42,72 @@ type ServiceImageWithPort struct {
 	Port         uint16 `yaml:"port"`
 }
 
+// LogConfig holds configuration for Firelens to route your logs.
+type LogConfig struct {
+	Destination    destinationConfig `yaml:"destination,flow"`
+	EnableMetadata *bool             `yaml:"enableMetadata"`
+	SecretOptions  map[string]string `yaml:"secretOptions"`
+	ConfigFile     string            `yaml:"configFile"`
+	PermissionFile string            `yaml:"permissionFile"`
+}
+
+type destinationConfig struct {
+	Name           string  `yaml:"name"`
+	IncludePattern *string `yaml:"includePattern"` // can be empty string as a valid value
+	ExcludePattern *string `yaml:"excludePattern"`
+}
+
+func (lc LogConfig) copyAndApply(other LogConfig) LogConfig {
+	override := lc.deepcopy()
+	if other.Destination.Name != "" {
+		override.Destination.Name = other.Destination.Name
+	}
+	if other.Destination.ExcludePattern != nil {
+		override.Destination.ExcludePattern = other.Destination.ExcludePattern
+	}
+	if other.Destination.IncludePattern != nil {
+		override.Destination.IncludePattern = other.Destination.IncludePattern
+	}
+	if other.EnableMetadata != nil {
+		override.EnableMetadata = other.EnableMetadata
+	}
+	if other.ConfigFile != "" {
+		override.ConfigFile = other.ConfigFile
+	}
+	if other.PermissionFile != "" {
+		override.PermissionFile = other.PermissionFile
+	}
+	if other.SecretOptions != nil && override.SecretOptions == nil {
+		override.SecretOptions = make(map[string]string)
+	}
+	for k, v := range other.SecretOptions {
+		override.SecretOptions[k] = v
+	}
+	return override
+}
+
+func (lc LogConfig) deepcopy() LogConfig {
+	destination := destinationConfig{
+		ExcludePattern: stringpcopy(lc.Destination.ExcludePattern),
+		IncludePattern: stringpcopy(lc.Destination.IncludePattern),
+		Name:           lc.Destination.Name,
+	}
+	secretOptions := make(map[string]string, len(lc.SecretOptions))
+	for k, v := range lc.SecretOptions {
+		secretOptions[k] = v
+	}
+	if lc.SecretOptions == nil {
+		secretOptions = nil
+	}
+	return LogConfig{
+		Destination:    destination,
+		ConfigFile:     lc.ConfigFile,
+		EnableMetadata: boolpcopy(lc.EnableMetadata),
+		PermissionFile: lc.PermissionFile,
+		SecretOptions:  secretOptions,
+	}
+}
+
 // Sidecar holds configuration for all sidecar containers in a service.
 type Sidecar struct {
 	Sidecars map[string]SidecarConfig `yaml:"sidecars"`
@@ -56,6 +123,9 @@ type SidecarConfig struct {
 func (s Sidecar) copyAndApply(other Sidecar) Sidecar {
 	// TODO: abstract away copyandApply and deepCopy.
 	override := s.deepcopy()
+	if other.Sidecars != nil && override.Sidecars == nil {
+		override.Sidecars = make(map[string]SidecarConfig)
+	}
 	for k, v := range other.Sidecars {
 		config := override.Sidecars[k]
 		if v.CredParam != "" {
@@ -75,7 +145,14 @@ func (s Sidecar) copyAndApply(other Sidecar) Sidecar {
 func (s Sidecar) deepcopy() Sidecar {
 	config := make(map[string]SidecarConfig, len(s.Sidecars))
 	for k, v := range s.Sidecars {
-		config[k] = v
+		config[k] = SidecarConfig{
+			CredParam: v.CredParam,
+			Image:     v.Image,
+			Port:      v.Port,
+		}
+	}
+	if s.Sidecars == nil {
+		config = nil
 	}
 	return Sidecar{
 		Sidecars: config,
@@ -100,10 +177,16 @@ func (tc TaskConfig) copyAndApply(other TaskConfig) TaskConfig {
 		override.Memory = other.Memory
 	}
 	if other.Count != nil {
-		override.Count = intp(*other.Count)
+		override.Count = other.Count
+	}
+	if other.Variables != nil && override.Variables == nil {
+		override.Variables = make(map[string]string)
 	}
 	for k, v := range other.Variables {
 		override.Variables[k] = v
+	}
+	if other.Secrets != nil && override.Secrets == nil {
+		override.Secrets = make(map[string]string)
 	}
 	for k, v := range other.Secrets {
 		override.Secrets[k] = v
@@ -116,14 +199,20 @@ func (tc TaskConfig) deepcopy() TaskConfig {
 	for k, v := range tc.Variables {
 		vars[k] = v
 	}
+	if tc.Variables == nil {
+		vars = nil
+	}
 	secrets := make(map[string]string, len(tc.Secrets))
 	for k, v := range tc.Secrets {
 		secrets[k] = v
 	}
+	if tc.Secrets == nil {
+		secrets = nil
+	}
 	return TaskConfig{
 		CPU:       tc.CPU,
 		Memory:    tc.Memory,
-		Count:     intp(*tc.Count),
+		Count:     intpcopy(tc.Count),
 		Variables: vars,
 		Secrets:   secrets,
 	}
@@ -166,10 +255,27 @@ func UnmarshalService(in []byte) (interface{}, error) {
 	}
 }
 
-func intp(v int) *int {
+func durationp(v time.Duration) *time.Duration {
 	return &v
 }
 
-func durationp(v time.Duration) *time.Duration {
-	return &v
+func boolpcopy(v *bool) *bool {
+	if v == nil {
+		return nil
+	}
+	return aws.Bool(*v)
+}
+
+func stringpcopy(v *string) *string {
+	if v == nil {
+		return nil
+	}
+	return aws.String(*v)
+}
+
+func intpcopy(v *int) *int {
+	if v == nil {
+		return nil
+	}
+	return aws.Int(*v)
 }

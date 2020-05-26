@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -43,7 +44,7 @@ func TestNewBackendSvc(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 		},
@@ -73,7 +74,7 @@ func TestNewBackendSvc(t *testing.T) {
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 						Interval:    durationp(10 * time.Second),
-						Retries:     intp(2),
+						Retries:     aws.Int(2),
 						Timeout:     durationp(5 * time.Second),
 						StartPeriod: durationp(0 * time.Second),
 					},
@@ -81,7 +82,7 @@ func TestNewBackendSvc(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 512,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 		},
@@ -127,7 +128,7 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 				HealthCheck: &ContainerHealthCheck{
 					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
 					Interval:    durationp(6 * time.Second),
-					Retries:     intp(0),
+					Retries:     aws.Int(0),
 					Timeout:     durationp(20 * time.Second),
 					StartPeriod: durationp(15 * time.Second),
 				},
@@ -191,7 +192,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"hello", "world"},
 						Interval:    durationp(1 * time.Second),
-						Retries:     intp(100),
+						Retries:     aws.Int(100),
 						Timeout:     durationp(100 * time.Minute),
 						StartPeriod: durationp(5 * time.Second),
 					},
@@ -199,7 +200,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 			inEnvName: "test",
@@ -219,7 +220,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"hello", "world"},
 						Interval:    durationp(1 * time.Second),
-						Retries:     intp(100),
+						Retries:     aws.Int(100),
 						Timeout:     durationp(100 * time.Minute),
 						StartPeriod: durationp(5 * time.Second),
 					},
@@ -227,11 +228,38 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 		},
-		"uses env overrides": {
+		"uses env minimal overrides": {
+			svc: &BackendService{
+				Image: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Port: 80,
+					},
+				},
+				Environments: map[string]backendServiceOverrideConfig{
+					"test": {
+						Image: imageWithPortAndHealthcheck{
+							ServiceImageWithPort: ServiceImageWithPort{
+								Port: 5000,
+							},
+						},
+					},
+				},
+			},
+			inEnvName: "test",
+
+			wanted: &BackendService{
+				Image: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Port: 5000,
+					},
+				},
+			},
+		},
+		"uses env all overrides": {
 			svc: &BackendService{
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
@@ -241,7 +269,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 				Sidecar: Sidecar{
 					Sidecars: map[string]SidecarConfig{
@@ -249,6 +277,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							Port:  "2000/udp",
 							Image: "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
 						},
+					},
+				},
+				LogConfig: LogConfig{
+					Destination: destinationConfig{
+						Name:           "datadog",
+						ExcludePattern: aws.String("*"),
 					},
 				},
 				Environments: map[string]backendServiceOverrideConfig{
@@ -259,7 +293,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 						TaskConfig: TaskConfig{
-							Count: intp(0),
+							Count: aws.Int(0),
 							Variables: map[string]string{
 								"LOG_LEVEL": "DEBUG",
 							},
@@ -269,6 +303,12 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 								"xray": {
 									CredParam: "some arn",
 								},
+							},
+						},
+						LogConfig: LogConfig{
+							Destination: destinationConfig{
+								IncludePattern: aws.String("*"),
+								ExcludePattern: aws.String("fe/"),
 							},
 						},
 					},
@@ -285,11 +325,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    256,
 					Memory: 256,
-					Count:  intp(0),
+					Count:  aws.Int(0),
 					Variables: map[string]string{
 						"LOG_LEVEL": "DEBUG",
 					},
-					Secrets: map[string]string{},
 				},
 				Sidecar: Sidecar{
 					Sidecars: map[string]SidecarConfig{
@@ -298,6 +337,13 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
 							CredParam: "some arn",
 						},
+					},
+				},
+				LogConfig: LogConfig{
+					Destination: destinationConfig{
+						Name:           "datadog",
+						IncludePattern: aws.String("*"),
+						ExcludePattern: aws.String("fe/"),
 					},
 				},
 			},
