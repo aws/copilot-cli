@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -86,7 +87,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 			envToApply: "prod-iad",
@@ -109,7 +110,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 				},
 			},
 		},
@@ -132,7 +133,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					CPU:    1024,
 					Memory: 1024,
-					Count:  intp(1),
+					Count:  aws.Int(1),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
 						"DDB_TABLE_NAME": "awards",
@@ -151,6 +152,9 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
+				LogConfig: LogConfig{
+					ConfigFile: "mockConfigFile",
+				},
 				Environments: map[string]loadBalancedWebServiceOverrideConfig{
 					"prod-iad": {
 						Image: ServiceImageWithPort{
@@ -159,9 +163,12 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							},
 							Port: 5000,
 						},
+						RoutingRule: RoutingRule{
+							TargetContainer: "xray",
+						},
 						TaskConfig: TaskConfig{
 							CPU:   2046,
-							Count: intp(0),
+							Count: aws.Int(0),
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
@@ -171,6 +178,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 								"xray": {
 									Port: "2000/udp",
 								},
+							},
+						},
+						LogConfig: LogConfig{
+							SecretOptions: map[string]string{
+								"FOO": "BAR",
 							},
 						},
 					},
@@ -192,11 +204,12 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				RoutingRule: RoutingRule{
 					Path:            "/awards/*",
 					HealthCheckPath: "/",
+					TargetContainer: "xray",
 				},
 				TaskConfig: TaskConfig{
 					CPU:    2046,
 					Memory: 1024,
-					Count:  intp(0),
+					Count:  aws.Int(0),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
 						"DDB_TABLE_NAME": "awards-prod",
@@ -213,6 +226,12 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
 							CredParam: "some arn",
 						},
+					},
+				},
+				LogConfig: LogConfig{
+					ConfigFile: "mockConfigFile",
+					SecretOptions: map[string]string{
+						"FOO": "BAR",
 					},
 				},
 			},
