@@ -43,7 +43,6 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	)
 	testApp := &config.Application{
 		Name: "testApp",
-		Tags: map[string]string{"key1": "value1", "key2": "value2"},
 	}
 	testEnv := &config.Environment{
 		App:              "testApp",
@@ -146,7 +145,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			wantedEnv: &EnvDescription{
 				Environment: testEnv,
 				Services:    envSvcs,
-				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"},
+				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
 			},
 		},
 		"success with resources": {
@@ -169,7 +168,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			wantedEnv: &EnvDescription{
 				Environment: testEnv,
 				Services:    envSvcs,
-				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"},
+				Tags:        map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv"},
 				Resources:   wantedResources,
 			},
 		},
