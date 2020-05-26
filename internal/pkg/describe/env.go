@@ -109,7 +109,7 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	if e.enableResources {
 		stackResources, err = e.envOutputs()
 		if err != nil {
-			return nil, fmt.Errorf("retrieve environment resources: %w", err)
+			return nil, err
 		}
 	}
 
