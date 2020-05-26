@@ -99,11 +99,6 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	for _, tag := range envStack.Tags {
 		tags[*tag.Key] = *tag.Value
 	}
-	// TODO: The combined tags are sorted alphabetically for HumanString, below. Eventually separate these two groups so
-	// they don't intermix in the sorting process.
-	for k, v := range e.app.Tags {
-		tags[k] = v
-	}
 
 	var stackResources []*CfnResource
 	if e.enableResources {
