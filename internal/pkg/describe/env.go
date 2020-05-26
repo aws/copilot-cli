@@ -162,7 +162,7 @@ func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 
 func (e *EnvDescriber) envOutputs() ([]*CfnResource, error) {
 	envStack, err := e.stackDescriber.StackResources(stack.NameForEnv(e.app.Name, e.env.Name))
-	if err != nil && !IsStackNotExistsErr(err) {
+	if err != nil {
 		return nil, fmt.Errorf("retrieve environment resources: %w", err)
 	}
 	outputs := flattenResources(envStack)
