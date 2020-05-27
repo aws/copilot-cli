@@ -169,7 +169,7 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 
 	if len(pipelineNames) == 1 {
 		pipelineName = pipelineNames[0]
-		log.Infof("Found pipeline: %s\n.", color.HighlightUserInput(pipelineName))
+		log.Infof("Found pipeline: %s\n", color.HighlightUserInput(pipelineName))
 		o.pipelineName = pipelineName
 
 		return nil
