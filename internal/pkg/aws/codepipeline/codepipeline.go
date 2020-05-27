@@ -194,11 +194,11 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	}
 	var stageStates []*StageState
 	for _, stage := range resp.StageStates {
-		var bool string
+		var transition string
 		if *stage.InboundTransitionState.Enabled == true {
-			bool = "ENABLED"
+			transition = "ENABLED"
 		} else {
-			bool = "DISABLED"
+			transition = "DISABLED"
 		}
 		var status string
 		for _, actionState := range stage.ActionStates {
@@ -212,7 +212,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 		stageToAdd := &StageState{
 			StageName:  aws.StringValue(stage.StageName),
 			Status:     status,
-			Transition: bool,
+			Transition: transition,
 		}
 		stageStates = append(stageStates, stageToAdd)
 	}
