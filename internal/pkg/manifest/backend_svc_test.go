@@ -170,85 +170,114 @@ func TestBackendSvc_DockerfilePath(t *testing.T) {
 }
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
+	mockBackendServiceWithNoOverride := BackendService{
+		Service: Service{
+			Name: aws.String("phonetool"),
+			Type: aws.String(BackendServiceType),
+		},
+		Image: imageWithPortAndHealthcheck{
+			ServiceImageWithPort: ServiceImageWithPort{
+				ServiceImage: ServiceImage{
+					Build: aws.String("./Dockerfile"),
+				},
+				Port: aws.Uint16(8080),
+			},
+			HealthCheck: &ContainerHealthCheck{
+				Command:     []string{"hello", "world"},
+				Interval:    durationp(1 * time.Second),
+				Retries:     aws.Int(100),
+				Timeout:     durationp(100 * time.Minute),
+				StartPeriod: durationp(5 * time.Second),
+			},
+		},
+		TaskConfig: TaskConfig{
+			CPU:    aws.Int(256),
+			Memory: aws.Int(256),
+			Count:  aws.Int(1),
+		},
+	}
+	mockBackendServiceWithMinimalOverride := BackendService{
+		Image: imageWithPortAndHealthcheck{
+			ServiceImageWithPort: ServiceImageWithPort{
+				Port: aws.Uint16(80),
+			},
+		},
+		Environments: map[string]*backendServiceOverrideConfig{
+			"test": {
+				Image: imageWithPortAndHealthcheck{
+					ServiceImageWithPort: ServiceImageWithPort{
+						Port: aws.Uint16(5000),
+					},
+				},
+			},
+		},
+	}
+	mockBackendServiceWithAllOverride := BackendService{
+		Image: imageWithPortAndHealthcheck{
+			ServiceImageWithPort: ServiceImageWithPort{
+				Port: aws.Uint16(80),
+			},
+		},
+		TaskConfig: TaskConfig{
+			CPU:    aws.Int(256),
+			Memory: aws.Int(256),
+			Count:  aws.Int(1),
+		},
+		Sidecar: Sidecar{
+			Sidecars: map[string]*SidecarConfig{
+				"xray": {
+					Port:  aws.String("2000/udp"),
+					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+				},
+			},
+		},
+		LogConfig: LogConfig{
+			Destination: destinationConfig{
+				Name:           aws.String("datadog"),
+				ExcludePattern: aws.String("*"),
+			},
+		},
+		Environments: map[string]*backendServiceOverrideConfig{
+			"test": {
+				TaskConfig: TaskConfig{
+					Count: aws.Int(0),
+					CPU:   aws.Int(512),
+					Variables: map[string]string{
+						"LOG_LEVEL": "DEBUG",
+					},
+				},
+				Sidecar: Sidecar{
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							CredParam: aws.String("some arn"),
+						},
+					},
+				},
+				LogConfig: LogConfig{
+					Destination: destinationConfig{
+						IncludePattern: aws.String("*"),
+						ExcludePattern: aws.String("fe/"),
+					},
+				},
+			},
+		},
+	}
 	testCases := map[string]struct {
 		svc       *BackendService
 		inEnvName string
 
-		wanted *BackendService
+		wanted   *BackendService
+		original *BackendService
 	}{
-		"environment doesn't exist": {
-			svc: &BackendService{
-				Service: Service{
-					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
-				},
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
-							Build: aws.String("./Dockerfile"),
-						},
-						Port: aws.Uint16(8080),
-					},
-					HealthCheck: &ContainerHealthCheck{
-						Command:     []string{"hello", "world"},
-						Interval:    durationp(1 * time.Second),
-						Retries:     aws.Int(100),
-						Timeout:     durationp(100 * time.Minute),
-						StartPeriod: durationp(5 * time.Second),
-					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(256),
-					Memory: aws.Int(256),
-					Count:  aws.Int(1),
-				},
-			},
+		"no env override": {
+			svc:       &mockBackendServiceWithNoOverride,
 			inEnvName: "test",
 
-			wanted: &BackendService{
-				Service: Service{
-					Name: aws.String("phonetool"),
-					Type: aws.String(BackendServiceType),
-				},
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
-							Build: aws.String("./Dockerfile"),
-						},
-						Port: aws.Uint16(8080),
-					},
-					HealthCheck: &ContainerHealthCheck{
-						Command:     []string{"hello", "world"},
-						Interval:    durationp(1 * time.Second),
-						Retries:     aws.Int(100),
-						Timeout:     durationp(100 * time.Minute),
-						StartPeriod: durationp(5 * time.Second),
-					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(256),
-					Memory: aws.Int(256),
-					Count:  aws.Int(1),
-				},
-			},
+			wanted:   &mockBackendServiceWithNoOverride,
+			original: &mockBackendServiceWithNoOverride,
 		},
 		"uses env minimal overrides": {
-			svc: &BackendService{
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						Port: aws.Uint16(80),
-					},
-				},
-				Environments: map[string]*backendServiceOverrideConfig{
-					"test": {
-						Image: imageWithPortAndHealthcheck{
-							ServiceImageWithPort: ServiceImageWithPort{
-								Port: aws.Uint16(5000),
-							},
-						},
-					},
-				},
-			},
+			svc:       &mockBackendServiceWithMinimalOverride,
 			inEnvName: "test",
 
 			wanted: &BackendService{
@@ -258,58 +287,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 			},
+			original: &mockBackendServiceWithMinimalOverride,
 		},
 		"uses env all overrides": {
-			svc: &BackendService{
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						Port: aws.Uint16(80),
-					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(256),
-					Memory: aws.Int(256),
-					Count:  aws.Int(1),
-				},
-				Sidecar: Sidecar{
-					Sidecars: map[string]*SidecarConfig{
-						"xray": {
-							Port:  aws.String("2000/udp"),
-							Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-						},
-					},
-				},
-				LogConfig: LogConfig{
-					Destination: destinationConfig{
-						Name:           aws.String("datadog"),
-						ExcludePattern: aws.String("*"),
-					},
-				},
-				Environments: map[string]*backendServiceOverrideConfig{
-					"test": {
-						TaskConfig: TaskConfig{
-							Count: aws.Int(0),
-							CPU:   aws.Int(512),
-							Variables: map[string]string{
-								"LOG_LEVEL": "DEBUG",
-							},
-						},
-						Sidecar: Sidecar{
-							Sidecars: map[string]*SidecarConfig{
-								"xray": {
-									CredParam: aws.String("some arn"),
-								},
-							},
-						},
-						LogConfig: LogConfig{
-							Destination: destinationConfig{
-								IncludePattern: aws.String("*"),
-								ExcludePattern: aws.String("fe/"),
-							},
-						},
-					},
-				},
-			},
+			svc:       &mockBackendServiceWithAllOverride,
 			inEnvName: "test",
 
 			wanted: &BackendService{
@@ -343,6 +324,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 			},
+			original: &mockBackendServiceWithAllOverride,
 		},
 	}
 
@@ -350,7 +332,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, _ := tc.svc.ApplyEnv(tc.inEnvName)
 
+			// Should override properly.
 			require.Equal(t, tc.wanted, got)
+			// Should not impact the original manifest struct.
+			require.Equal(t, tc.svc, tc.original)
 		})
 	}
 }
