@@ -453,7 +453,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectProgress: func(m *mocks.Mockprogress) {
 				m.EXPECT().Start(fmt.Sprintf(fmtDeployEnvStart, "test"))
-				m.EXPECT().Stop("")
+				m.EXPECT().Stop(log.Ssuccessf(fmtDeployEnvComplete, "test", "phonetool"))
 				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "mars-1", "phonetool"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "mars-1", "phonetool"))
 			},
