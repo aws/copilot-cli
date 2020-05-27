@@ -201,9 +201,10 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 			transition = "DISABLED"
 		}
 		var status string
+		const emptyStatus = "  -"
 		for _, actionState := range stage.ActionStates {
 			if actionState.LatestExecution == nil {
-				status = "  -"
+				status = emptyStatus
 			} else {
 				status = aws.StringValue(actionState.LatestExecution.Status)
 			}
