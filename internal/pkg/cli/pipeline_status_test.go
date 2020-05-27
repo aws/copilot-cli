@@ -304,7 +304,7 @@ func TestPipelineStatus_Execute(t *testing.T) {
 		expectedContent string
 		expectedError   error
 	}{
-		"errors if failed to describe the status of the pipeline": {
+		"errors if fail to describe the status of the pipeline": {
 			setupMocks: func(m *mocks.Mockdescriber) {
 				m.EXPECT().Describe().Return(nil, mockErr)
 			},
