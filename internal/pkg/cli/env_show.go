@@ -36,7 +36,7 @@ type showEnvOpts struct {
 	store            store
 	describer        envDescriber
 	sel              configSelector
-	initEnvDescriber func(bool) error
+	initEnvDescriber func() error
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
@@ -51,9 +51,9 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		w:           log.OutputWriter,
 		sel:         selector.NewConfigSelect(vars.prompt, store),
 	}
-	opts.initEnvDescriber = func(enableResources bool) error {
+	opts.initEnvDescriber = func() error {
 		var d envDescriber
-		if enableResources {
+		if !vars.shouldOutputResources {
 			d, err = describe.NewEnvDescriber(opts.AppName(), opts.envName)
 		} else {
 			d, err = describe.NewEnvDescriberWithResources(opts.AppName(), opts.envName)
@@ -93,7 +93,7 @@ func (o *showEnvOpts) Ask() error {
 
 // Execute shows the environments through the prompt.
 func (o *showEnvOpts) Execute() error {
-	if err := o.initEnvDescriber(o.shouldOutputResources); err != nil {
+	if err := o.initEnvDescriber(); err != nil {
 		return err
 	}
 	env, err := o.describer.Describe()
