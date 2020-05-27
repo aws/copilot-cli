@@ -58,15 +58,15 @@ environments:
 				actualManifest, ok := i.(*LoadBalancedWebService)
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
-					Service: Service{Name: "frontend", Type: LoadBalancedWebServiceType},
-					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: "frontend/Dockerfile"}, Port: 80},
+					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: aws.String("frontend/Dockerfile")}, Port: aws.Uint16(80)},
 					RoutingRule: RoutingRule{
-						Path:            "svc",
-						HealthCheckPath: "/",
+						Path:            aws.String("svc"),
+						HealthCheckPath: aws.String("/"),
 					},
 					TaskConfig: TaskConfig{
-						CPU:    512,
-						Memory: 1024,
+						CPU:    aws.Int(512),
+						Memory: aws.Int(1024),
 						Count:  aws.Int(1),
 						Variables: map[string]string{
 							"LOG_LEVEL": "WARN",
@@ -76,11 +76,11 @@ environments:
 						},
 					},
 					Sidecar: Sidecar{
-						Sidecars: map[string]SidecarConfig{
+						Sidecars: map[string]*SidecarConfig{
 							"xray": {
-								Port:      "2000/udp",
-								Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
-								CredParam: "some arn",
+								Port:      aws.String("2000/udp"),
+								Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								CredParam: aws.String("some arn"),
 							},
 						},
 					},
@@ -88,11 +88,11 @@ environments:
 						Destination: destinationConfig{
 							ExcludePattern: aws.String("^.*[aeiou]$"),
 							IncludePattern: aws.String("^[a-z][aeiou].*$"),
-							Name:           "cloudwatch",
+							Name:           aws.String("cloudwatch"),
 						},
 						EnableMetadata: aws.Bool(false),
-						ConfigFile:     "./extra.conf",
-						PermissionFile: "./permissions.json",
+						ConfigFile:     aws.String("./extra.conf"),
+						PermissionFile: aws.String("./permissions.json"),
 						SecretOptions: map[string]string{
 							"LOG_TOKEN": "LOG_TOKEN",
 						},
@@ -126,15 +126,15 @@ secrets:
 				require.True(t, ok)
 				wantedManifest := &BackendService{
 					Service: Service{
-						Name: "subscribers",
-						Type: BackendServiceType,
+						Name: aws.String("subscribers"),
+						Type: aws.String(BackendServiceType),
 					},
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							ServiceImage: ServiceImage{
-								Build: "./subscribers/Dockerfile",
+								Build: aws.String("./subscribers/Dockerfile"),
 							},
-							Port: 8080,
+							Port: aws.Uint16(8080),
 						},
 						HealthCheck: &ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
@@ -145,8 +145,8 @@ secrets:
 						},
 					},
 					TaskConfig: TaskConfig{
-						CPU:    1024,
-						Memory: 1024,
+						CPU:    aws.Int(1024),
+						Memory: aws.Int(1024),
 						Count:  aws.Int(1),
 						Secrets: map[string]string{
 							"API_TOKEN": "SUBS_API_TOKEN",

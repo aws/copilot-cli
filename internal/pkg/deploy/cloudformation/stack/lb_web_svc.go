@@ -44,14 +44,17 @@ type LoadBalancedWebService struct {
 // NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
 func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addons.New(mft.Name)
+	addons, err := addons.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
+	}
 	return &LoadBalancedWebService{
 		svc: &svc{
-			name:   mft.Name,
+			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
 			tc:     envManifest.TaskConfig,
@@ -105,15 +108,15 @@ func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: aws.String(s.manifest.Path),
+			ParameterValue: s.manifest.Path,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: aws.String(s.manifest.HealthCheckPath),
+			ParameterValue: s.manifest.HealthCheckPath,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),

@@ -6,6 +6,7 @@ package manifest
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/imdario/mergo"
 )
 
 const (
@@ -39,23 +40,10 @@ type loadBalancedWebServiceOverrideConfig struct {
 
 // RoutingRule holds the path to route requests to the service.
 type RoutingRule struct {
-	Path            string `yaml:"path"`
-	HealthCheckPath string `yaml:"healthcheck"`
+	Path            *string `yaml:"path"`
+	HealthCheckPath *string `yaml:"healthcheck"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer string `yaml:"targetContainer"`
-}
-
-func (r RoutingRule) copyAndApply(other RoutingRule) RoutingRule {
-	if other.Path != "" {
-		r.Path = other.Path
-	}
-	if other.HealthCheckPath != "" {
-		r.HealthCheckPath = other.HealthCheckPath
-	}
-	if other.TargetContainer != "" {
-		r.TargetContainer = other.TargetContainer
-	}
-	return r
+	TargetContainer *string `yaml:"targetContainer"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -70,16 +58,16 @@ type LoadBalancedWebServiceProps struct {
 func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalancedWebService {
 	defaultLbManifest := newDefaultLoadBalancedWebService()
 	defaultLbManifest.Service = Service{
-		Name: input.Name,
-		Type: LoadBalancedWebServiceType,
+		Name: aws.String(input.Name),
+		Type: aws.String(LoadBalancedWebServiceType),
 	}
 	defaultLbManifest.Image = ServiceImageWithPort{
 		ServiceImage: ServiceImage{
-			Build: input.Dockerfile,
+			Build: aws.String(input.Dockerfile),
 		},
-		Port: input.Port,
+		Port: aws.Uint16(input.Port),
 	}
-	defaultLbManifest.RoutingRule.Path = input.Path
+	defaultLbManifest.RoutingRule.Path = aws.String(input.Path)
 	defaultLbManifest.parser = template.New()
 	return defaultLbManifest
 }
@@ -90,11 +78,11 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 		Service: Service{},
 		Image:   ServiceImageWithPort{},
 		RoutingRule: RoutingRule{
-			HealthCheckPath: "/",
+			HealthCheckPath: aws.String("/"),
 		},
 		TaskConfig: TaskConfig{
-			CPU:    256,
-			Memory: 512,
+			CPU:    aws.Int(256),
+			Memory: aws.Int(512),
 			Count:  aws.Int(1),
 		},
 	}
@@ -112,23 +100,26 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 
 // DockerfilePath returns the image build path.
 func (s *LoadBalancedWebService) DockerfilePath() string {
-	return s.Image.Build
+	return aws.StringValue(s.Image.Build)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s *LoadBalancedWebService) ApplyEnv(envName string) *LoadBalancedWebService {
-	target, ok := s.Environments[envName]
+func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebService, error) {
+	overrideConfig, ok := s.Environments[envName]
 	if !ok {
-		return s
+		return &s, nil
 	}
-
-	return &LoadBalancedWebService{
-		Service:     s.Service,
-		Image:       target.Image,
-		RoutingRule: s.RoutingRule.copyAndApply(target.RoutingRule),
-		TaskConfig:  s.TaskConfig.copyAndApply(target.TaskConfig),
-		Sidecar:     s.Sidecar.copyAndApply(target.Sidecar),
-		LogConfig:   s.LogConfig.copyAndApply(target.LogConfig),
+	target := LoadBalancedWebService{
+		Image:       overrideConfig.Image,
+		RoutingRule: overrideConfig.RoutingRule,
+		TaskConfig:  overrideConfig.TaskConfig,
+		LogConfig:   overrideConfig.LogConfig,
+		Sidecar:     overrideConfig.Sidecar,
 	}
+	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
+		return nil, err
+	}
+	s.Environments = nil
+	return &s, nil
 }

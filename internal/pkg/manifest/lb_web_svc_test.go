@@ -71,22 +71,22 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 		"with no existing environments": {
 			in: &LoadBalancedWebService{
 				Service: Service{
-					Name: "phonetool",
-					Type: LoadBalancedWebServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				Image: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: "./Dockerfile",
+						Build: aws.String("./Dockerfile"),
 					},
-					Port: 80,
+					Port: aws.Uint16(80),
 				},
 				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+					Path:            aws.String("/awards/*"),
+					HealthCheckPath: aws.String("/"),
 				},
 				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
+					CPU:    aws.Int(1024),
+					Memory: aws.Int(1024),
 					Count:  aws.Int(1),
 				},
 			},
@@ -94,22 +94,22 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &LoadBalancedWebService{
 				Service: Service{
-					Name: "phonetool",
-					Type: LoadBalancedWebServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				Image: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: "./Dockerfile",
+						Build: aws.String("./Dockerfile"),
 					},
-					Port: 80,
+					Port: aws.Uint16(80),
 				},
 				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+					Path:            aws.String("/awards/*"),
+					HealthCheckPath: aws.String("/"),
 				},
 				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
+					CPU:    aws.Int(1024),
+					Memory: aws.Int(1024),
 					Count:  aws.Int(1),
 				},
 			},
@@ -117,22 +117,22 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 		"with overrides": {
 			in: &LoadBalancedWebService{
 				Service: Service{
-					Name: "phonetool",
-					Type: LoadBalancedWebServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				Image: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: "./Dockerfile",
+						Build: aws.String("./Dockerfile"),
 					},
-					Port: 80,
+					Port: aws.Uint16(80),
 				},
 				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
+					Path:            aws.String("/awards/*"),
+					HealthCheckPath: aws.String("/"),
 				},
 				TaskConfig: TaskConfig{
-					CPU:    1024,
-					Memory: 1024,
+					CPU:    aws.Int(1024),
+					Memory: aws.Int(1024),
 					Count:  aws.Int(1),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
@@ -144,39 +144,39 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				Sidecar: Sidecar{
-					Sidecars: map[string]SidecarConfig{
+					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:      "2000",
-							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
-							CredParam: "some arn",
+							Port:      aws.String("2000"),
+							Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredParam: aws.String("some arn"),
 						},
 					},
 				},
 				LogConfig: LogConfig{
-					ConfigFile: "mockConfigFile",
+					ConfigFile: aws.String("mockConfigFile"),
 				},
 				Environments: map[string]loadBalancedWebServiceOverrideConfig{
 					"prod-iad": {
 						Image: ServiceImageWithPort{
 							ServiceImage: ServiceImage{
-								Build: "./RealDockerfile",
+								Build: aws.String("./RealDockerfile"),
 							},
-							Port: 5000,
+							Port: aws.Uint16(5000),
 						},
 						RoutingRule: RoutingRule{
-							TargetContainer: "xray",
+							TargetContainer: aws.String("xray"),
 						},
 						TaskConfig: TaskConfig{
-							CPU:   2046,
+							CPU:   aws.Int(2046),
 							Count: aws.Int(0),
 							Variables: map[string]string{
 								"DDB_TABLE_NAME": "awards-prod",
 							},
 						},
 						Sidecar: Sidecar{
-							Sidecars: map[string]SidecarConfig{
+							Sidecars: map[string]*SidecarConfig{
 								"xray": {
-									Port: "2000/udp",
+									Port: aws.String("2000/udp"),
 								},
 							},
 						},
@@ -192,23 +192,23 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &LoadBalancedWebService{
 				Service: Service{
-					Name: "phonetool",
-					Type: LoadBalancedWebServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(LoadBalancedWebServiceType),
 				},
 				Image: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: "./RealDockerfile",
+						Build: aws.String("./RealDockerfile"),
 					},
-					Port: 5000,
+					Port: aws.Uint16(5000),
 				},
 				RoutingRule: RoutingRule{
-					Path:            "/awards/*",
-					HealthCheckPath: "/",
-					TargetContainer: "xray",
+					Path:            aws.String("/awards/*"),
+					HealthCheckPath: aws.String("/"),
+					TargetContainer: aws.String("xray"),
 				},
 				TaskConfig: TaskConfig{
-					CPU:    2046,
-					Memory: 1024,
+					CPU:    aws.Int(2046),
+					Memory: aws.Int(1024),
 					Count:  aws.Int(0),
 					Variables: map[string]string{
 						"LOG_LEVEL":      "DEBUG",
@@ -220,16 +220,16 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				Sidecar: Sidecar{
-					Sidecars: map[string]SidecarConfig{
+					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:      "2000/udp",
-							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
-							CredParam: "some arn",
+							Port:      aws.String("2000/udp"),
+							Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredParam: aws.String("some arn"),
 						},
 					},
 				},
 				LogConfig: LogConfig{
-					ConfigFile: "mockConfigFile",
+					ConfigFile: aws.String("mockConfigFile"),
 					SecretOptions: map[string]string{
 						"FOO": "BAR",
 					},
@@ -243,7 +243,7 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 			// GIVEN
 
 			// WHEN
-			conf := tc.in.ApplyEnv(tc.envToApply)
+			conf, _ := tc.in.ApplyEnv(tc.envToApply)
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")

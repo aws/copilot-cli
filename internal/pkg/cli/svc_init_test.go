@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -638,10 +639,10 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.inSvcName, manifest.Service.Name)
-				require.Equal(t, tc.inSvcPort, manifest.Image.Port)
-				require.Equal(t, tc.inDockerfilePath, manifest.Image.ServiceImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.Path)
+				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Service.Name))
+				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
+				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.ServiceImage.Build))
+				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
