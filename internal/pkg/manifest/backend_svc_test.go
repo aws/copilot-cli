@@ -33,18 +33,20 @@ func TestNewBackendSvc(t *testing.T) {
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
-							Build: aws.String("./subscribers/Dockerfile"),
+				BackendServiceConfig: BackendServiceConfig{
+					Image: imageWithPortAndHealthcheck{
+						ServiceImageWithPort: ServiceImageWithPort{
+							ServiceImage: ServiceImage{
+								Build: aws.String("./subscribers/Dockerfile"),
+							},
+							Port: aws.Uint16(8080),
 						},
-						Port: aws.Uint16(8080),
 					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(256),
-					Memory: aws.Int(512),
-					Count:  aws.Int(1),
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count:  aws.Int(1),
+					},
 				},
 			},
 		},
@@ -64,25 +66,27 @@ func TestNewBackendSvc(t *testing.T) {
 					Name: aws.String("subscribers"),
 					Type: aws.String(BackendServiceType),
 				},
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						ServiceImage: ServiceImage{
-							Build: aws.String("./subscribers/Dockerfile"),
+				BackendServiceConfig: BackendServiceConfig{
+					Image: imageWithPortAndHealthcheck{
+						ServiceImageWithPort: ServiceImageWithPort{
+							ServiceImage: ServiceImage{
+								Build: aws.String("./subscribers/Dockerfile"),
+							},
+							Port: aws.Uint16(8080),
 						},
-						Port: aws.Uint16(8080),
+						HealthCheck: &ContainerHealthCheck{
+							Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
+							Interval:    durationp(10 * time.Second),
+							Retries:     aws.Int(2),
+							Timeout:     durationp(5 * time.Second),
+							StartPeriod: durationp(0 * time.Second),
+						},
 					},
-					HealthCheck: &ContainerHealthCheck{
-						Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
-						Interval:    durationp(10 * time.Second),
-						Retries:     aws.Int(2),
-						Timeout:     durationp(5 * time.Second),
-						StartPeriod: durationp(0 * time.Second),
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count:  aws.Int(1),
 					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(256),
-					Memory: aws.Int(512),
-					Count:  aws.Int(1),
 				},
 			},
 		},
@@ -175,34 +179,38 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Name: aws.String("phonetool"),
 			Type: aws.String(BackendServiceType),
 		},
-		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: ServiceImageWithPort{
-				ServiceImage: ServiceImage{
-					Build: aws.String("./Dockerfile"),
+		BackendServiceConfig: BackendServiceConfig{
+			Image: imageWithPortAndHealthcheck{
+				ServiceImageWithPort: ServiceImageWithPort{
+					ServiceImage: ServiceImage{
+						Build: aws.String("./Dockerfile"),
+					},
+					Port: aws.Uint16(8080),
 				},
-				Port: aws.Uint16(8080),
+				HealthCheck: &ContainerHealthCheck{
+					Command:     []string{"hello", "world"},
+					Interval:    durationp(1 * time.Second),
+					Retries:     aws.Int(100),
+					Timeout:     durationp(100 * time.Minute),
+					StartPeriod: durationp(5 * time.Second),
+				},
 			},
-			HealthCheck: &ContainerHealthCheck{
-				Command:     []string{"hello", "world"},
-				Interval:    durationp(1 * time.Second),
-				Retries:     aws.Int(100),
-				Timeout:     durationp(100 * time.Minute),
-				StartPeriod: durationp(5 * time.Second),
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(256),
+				Count:  aws.Int(1),
 			},
-		},
-		TaskConfig: TaskConfig{
-			CPU:    aws.Int(256),
-			Memory: aws.Int(256),
-			Count:  aws.Int(1),
 		},
 	}
 	mockBackendServiceWithMinimalOverride := BackendService{
-		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: ServiceImageWithPort{
-				Port: aws.Uint16(80),
+		BackendServiceConfig: BackendServiceConfig{
+			Image: imageWithPortAndHealthcheck{
+				ServiceImageWithPort: ServiceImageWithPort{
+					Port: aws.Uint16(80),
+				},
 			},
 		},
-		Environments: map[string]*backendServiceOverrideConfig{
+		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
@@ -213,37 +221,39 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		},
 	}
 	mockBackendServiceWithAllOverride := BackendService{
-		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: ServiceImageWithPort{
-				Port: aws.Uint16(80),
+		BackendServiceConfig: BackendServiceConfig{
+			Image: imageWithPortAndHealthcheck{
+				ServiceImageWithPort: ServiceImageWithPort{
+					Port: aws.Uint16(80),
+				},
 			},
-		},
-		TaskConfig: TaskConfig{
-			CPU:    aws.Int(256),
-			Memory: aws.Int(256),
-			Count:  aws.Int(1),
-		},
-		Sidecar: Sidecar{
-			Sidecars: map[string]*SidecarConfig{
-				"xray": {
-					Port:  aws.String("2000/udp"),
-					Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(256),
+				Count:  aws.Int(1),
+			},
+			Sidecar: Sidecar{
+				Sidecars: map[string]*SidecarConfig{
+					"xray": {
+						Port:  aws.String("2000/udp"),
+						Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+					},
+				},
+			},
+			LogConfig: LogConfig{
+				Destination: destinationConfig{
+					Name:           aws.String("datadog"),
+					ExcludePattern: aws.String("*"),
 				},
 			},
 		},
-		LogConfig: LogConfig{
-			Destination: destinationConfig{
-				Name:           aws.String("datadog"),
-				ExcludePattern: aws.String("*"),
-			},
-		},
-		Environments: map[string]*backendServiceOverrideConfig{
+		Environments: map[string]*BackendServiceConfig{
 			"test": {
 				TaskConfig: TaskConfig{
 					Count: aws.Int(0),
 					CPU:   aws.Int(512),
 					Variables: map[string]string{
-						"LOG_LEVEL": "DEBUG",
+						"LOG_LEVEL": "",
 					},
 				},
 				Sidecar: Sidecar{
@@ -281,9 +291,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			inEnvName: "test",
 
 			wanted: &BackendService{
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						Port: aws.Uint16(5000),
+				BackendServiceConfig: BackendServiceConfig{
+					Image: imageWithPortAndHealthcheck{
+						ServiceImageWithPort: ServiceImageWithPort{
+							Port: aws.Uint16(5000),
+						},
 					},
 				},
 			},
@@ -294,33 +306,35 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			inEnvName: "test",
 
 			wanted: &BackendService{
-				Image: imageWithPortAndHealthcheck{
-					ServiceImageWithPort: ServiceImageWithPort{
-						Port: aws.Uint16(80),
-					},
-				},
-				TaskConfig: TaskConfig{
-					CPU:    aws.Int(512),
-					Memory: aws.Int(256),
-					Count:  aws.Int(0),
-					Variables: map[string]string{
-						"LOG_LEVEL": "DEBUG",
-					},
-				},
-				Sidecar: Sidecar{
-					Sidecars: map[string]*SidecarConfig{
-						"xray": {
-							Port:      aws.String("2000/udp"),
-							Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-							CredParam: aws.String("some arn"),
+				BackendServiceConfig: BackendServiceConfig{
+					Image: imageWithPortAndHealthcheck{
+						ServiceImageWithPort: ServiceImageWithPort{
+							Port: aws.Uint16(80),
 						},
 					},
-				},
-				LogConfig: LogConfig{
-					Destination: destinationConfig{
-						Name:           aws.String("datadog"),
-						IncludePattern: aws.String("*"),
-						ExcludePattern: aws.String("fe/"),
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(512),
+						Memory: aws.Int(256),
+						Count:  aws.Int(0),
+						Variables: map[string]string{
+							"LOG_LEVEL": "",
+						},
+					},
+					Sidecar: Sidecar{
+						Sidecars: map[string]*SidecarConfig{
+							"xray": {
+								Port:      aws.String("2000/udp"),
+								Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+								CredParam: aws.String("some arn"),
+							},
+						},
+					},
+					LogConfig: LogConfig{
+						Destination: destinationConfig{
+							Name:           aws.String("datadog"),
+							IncludePattern: aws.String("*"),
+							ExcludePattern: aws.String("fe/"),
+						},
 					},
 				},
 			},

@@ -28,17 +28,15 @@ type BackendServiceProps struct {
 
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
-	Service      `yaml:",inline"`
-	Image        imageWithPortAndHealthcheck `yaml:",flow"`
-	TaskConfig   `yaml:",inline"`
-	LogConfig    `yaml:"logging,flow"`
-	Sidecar      `yaml:",inline"`
-	Environments map[string]*backendServiceOverrideConfig `yaml:",flow"`
+	Service              `yaml:",inline"`
+	BackendServiceConfig `yaml:",inline"`
+	Environments         map[string]*BackendServiceConfig `yaml:",flow"`
 
 	parser template.Parser
 }
 
-type backendServiceOverrideConfig struct {
+// BackendServiceConfig holds the configuration for a backend service.
+type BackendServiceConfig struct {
 	Image      imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig `yaml:",inline"`
 	LogConfig  `yaml:"logging,flow"`
@@ -72,9 +70,9 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	}
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
-	svc.Image.Build = aws.String(props.Dockerfile)
-	svc.Image.Port = aws.Uint16(props.Port)
-	svc.Image.HealthCheck = healthCheck
+	svc.BackendServiceConfig.Image.Build = aws.String(props.Dockerfile)
+	svc.BackendServiceConfig.Image.Port = aws.Uint16(props.Port)
+	svc.BackendServiceConfig.Image.HealthCheck = healthCheck
 	svc.parser = template.New()
 	return svc
 }
@@ -102,7 +100,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 
 // DockerfilePath returns the image build path.
 func (s *BackendService) DockerfilePath() string {
-	return aws.StringValue(s.Image.Build)
+	return aws.StringValue(s.BackendServiceConfig.Image.Build)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -113,10 +111,7 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 		return &s, nil
 	}
 	target := BackendService{
-		Image:      overrideConfig.Image,
-		TaskConfig: overrideConfig.TaskConfig,
-		LogConfig:  overrideConfig.LogConfig,
-		Sidecar:    overrideConfig.Sidecar,
+		BackendServiceConfig: *overrideConfig,
 	}
 	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
 		return nil, err
@@ -131,10 +126,12 @@ func newDefaultBackendService() *BackendService {
 		Service: Service{
 			Type: aws.String(BackendServiceType),
 		},
-		TaskConfig: TaskConfig{
-			CPU:    aws.Int(256),
-			Memory: aws.Int(512),
-			Count:  aws.Int(1),
+		BackendServiceConfig: BackendServiceConfig{
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count:  aws.Int(1),
+			},
 		},
 	}
 }
