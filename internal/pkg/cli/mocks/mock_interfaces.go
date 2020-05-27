@@ -3176,10 +3176,10 @@ func (m *MockpipelineStatusDescriber) EXPECT() *MockpipelineStatusDescriberMockR
 }
 
 // Describe mocks base method
-func (m *MockpipelineStatusDescriber) Describe() (*describe.PipelineStatusDesc, error) {
+func (m *MockpipelineStatusDescriber) Describe() (*describe.PipelineStatus, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.PipelineStatusDesc)
+	ret0, _ := ret[0].(*describe.PipelineStatus)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -3304,6 +3304,21 @@ func (m *MockpipelineStateGetter) EXPECT() *MockpipelineStateGetterMockRecorder 
 	return m.recorder
 }
 
+// GetPipeline mocks base method
+func (m *MockpipelineStateGetter) GetPipeline(pipelineName string) (*codepipeline.Pipeline, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPipeline", pipelineName)
+	ret0, _ := ret[0].(*codepipeline.Pipeline)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPipeline indicates an expected call of GetPipeline
+func (mr *MockpipelineStateGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineStateGetter)(nil).GetPipeline), pipelineName)
+}
+
 // GetPipelineState mocks base method
 func (m *MockpipelineStateGetter) GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error) {
 	m.ctrl.T.Helper()
@@ -3317,6 +3332,21 @@ func (m *MockpipelineStateGetter) GetPipelineState(pipelineName string) (*codepi
 func (mr *MockpipelineStateGetterMockRecorder) GetPipelineState(pipelineName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineState", reflect.TypeOf((*MockpipelineStateGetter)(nil).GetPipelineState), pipelineName)
+}
+
+// ListPipelineNamesByTags mocks base method
+func (m *MockpipelineStateGetter) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPipelineNamesByTags", tags)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPipelineNamesByTags indicates an expected call of ListPipelineNamesByTags
+func (mr *MockpipelineStateGetterMockRecorder) ListPipelineNamesByTags(tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockpipelineStateGetter)(nil).ListPipelineNamesByTags), tags)
 }
 
 // Mockexecutor is a mock of executor interface

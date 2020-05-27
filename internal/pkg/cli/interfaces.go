@@ -309,7 +309,7 @@ type envDescriber interface {
 }
 
 type pipelineStatusDescriber interface {
-	Describe() (*describe.PipelineStatusDesc, error)
+	Describe() (*describe.PipelineStatus, error)
 }
 
 type resourceGroupsClient interface {
@@ -322,7 +322,9 @@ type pipelineGetter interface {
 }
 
 type pipelineStateGetter interface {
+	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
+	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
 }
 
 type executor interface {

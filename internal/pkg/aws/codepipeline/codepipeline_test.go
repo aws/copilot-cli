@@ -333,3 +333,132 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 		})
 	}
 }
+
+func TestCodePipeline_GetPipelineState(t *testing.T) {
+	mockPipelineName := "pipeline-dinder-badgoose-repo"
+	mockTime := time.Now()
+	mockOutput := &codepipeline.GetPipelineStateOutput{
+		PipelineName: aws.String(mockPipelineName),
+		StageStates: []*codepipeline.StageState{
+			{
+				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
+				ActionStates: []*codepipeline.ActionState{
+					{
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Succeeded")},
+					},
+				},
+				StageName: aws.String("Source"),
+			},
+			{
+				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
+				ActionStates: []*codepipeline.ActionState{
+					{
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Succeeded")},
+					},
+				},
+				StageName: aws.String("Build"),
+			},
+			{
+				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
+				ActionStates: []*codepipeline.ActionState{
+					{
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("In Progress")},
+					},
+				},
+				StageName: aws.String("DeployTo-test"),
+			},
+			{
+				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(false)},
+				ActionStates: []*codepipeline.ActionState{
+					{
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Failed")},
+					},
+				},
+				StageName: aws.String("DeployTo-prod"),
+			},
+		},
+		Updated: &mockTime,
+	}
+	mockError := errors.New("mockError")
+
+	tests := map[string]struct {
+		inPipelineName string
+		callMocks      func(m codepipelineMocks)
+
+		expectedOut   *PipelineState
+		expectedError error
+	}{
+		"happy path": {
+			inPipelineName: mockPipelineName,
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipelineState(&codepipeline.GetPipelineStateInput{
+					Name: aws.String(mockPipelineName),
+				}).Return(mockOutput, nil)
+
+			},
+			expectedOut: &PipelineState{
+				PipelineName: mockPipelineName,
+				StageStates: []*StageState{
+					{
+						StageName:  "Source",
+						Status:     "Succeeded",
+						Transition: "ENABLED",
+					},
+					{
+						StageName:  "Build",
+						Status:     "Succeeded",
+						Transition: "ENABLED",
+					},
+					{
+						StageName:  "DeployTo-test",
+						Status:     "In Progress",
+						Transition: "ENABLED",
+					},
+					{
+						StageName:  "DeployTo-prod",
+						Status:     "Failed",
+						Transition: "DISABLED",
+					},
+				},
+				UpdatedAt: &mockTime,
+			},
+			expectedError: nil,
+		},
+		"should wrap error from CodePipeline client": {
+			inPipelineName: mockPipelineName,
+			callMocks: func(m codepipelineMocks) {
+				m.cp.EXPECT().GetPipelineState(&codepipeline.GetPipelineStateInput{
+					Name: aws.String(mockPipelineName),
+				}).Return(nil, mockError)
+
+			},
+			expectedOut:   nil,
+			expectedError: fmt.Errorf("get pipeline state %s: %w", mockPipelineName, mockError),
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := cpmocks.NewMockapi(ctrl)
+
+			mocks := codepipelineMocks{
+				cp: mockClient,
+			}
+			tc.callMocks(mocks)
+
+			cp := CodePipeline{
+				client: mockClient,
+			}
+
+			// WHEN
+			actualOut, err := cp.GetPipelineState(tc.inPipelineName)
+
+			// THEN
+			require.Equal(t, tc.expectedError, err)
+			require.Equal(t, tc.expectedOut, actualOut)
+		})
+	}
+}
