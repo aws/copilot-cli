@@ -59,7 +59,7 @@ type PipelineState struct {
 // StageState wraps the CodePipeline pipeline state
 type StageState struct {
 	StageName  string `json:"stageName"`
-	Status     string `json:"status,omitempty"`
+	Status     string `json:"status"`
 	Transition string `json:"transition"`
 }
 
