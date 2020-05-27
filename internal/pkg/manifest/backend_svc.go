@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/imdario/mergo"
 )
 
 const (
@@ -32,7 +33,7 @@ type BackendService struct {
 	TaskConfig   `yaml:",inline"`
 	LogConfig    `yaml:"logging,flow"`
 	Sidecar      `yaml:",inline"`
-	Environments map[string]backendServiceOverrideConfig `yaml:",flow"`
+	Environments map[string]*backendServiceOverrideConfig `yaml:",flow"`
 
 	parser template.Parser
 }
@@ -70,9 +71,9 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		healthCheck.apply(props.HealthCheck)
 	}
 	// Apply overrides.
-	svc.Name = props.Name
-	svc.Image.Build = props.Dockerfile
-	svc.Image.Port = props.Port
+	svc.Name = aws.String(props.Name)
+	svc.Image.Build = aws.String(props.Dockerfile)
+	svc.Image.Port = aws.Uint16(props.Port)
 	svc.Image.HealthCheck = healthCheck
 	svc.parser = template.New()
 	return svc
@@ -101,37 +102,38 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 
 // DockerfilePath returns the image build path.
 func (s *BackendService) DockerfilePath() string {
-	return s.Image.Build
+	return aws.StringValue(s.Image.Build)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s *BackendService) ApplyEnv(envName string) *BackendService {
-	target, ok := s.Environments[envName]
+func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
+	overrideConfig, ok := s.Environments[envName]
 	if !ok {
-		return s
+		return &s, nil
 	}
-	return &BackendService{
-		Service: s.Service,
-		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: target.Image.ServiceImageWithPort,
-			HealthCheck:          target.Image.HealthCheck,
-		},
-		TaskConfig: s.TaskConfig.copyAndApply(target.TaskConfig),
-		Sidecar:    s.Sidecar.copyAndApply(target.Sidecar),
-		LogConfig:  s.LogConfig.copyAndApply(target.LogConfig),
+	target := BackendService{
+		Image:      overrideConfig.Image,
+		TaskConfig: overrideConfig.TaskConfig,
+		LogConfig:  overrideConfig.LogConfig,
+		Sidecar:    overrideConfig.Sidecar,
 	}
+	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
+		return nil, err
+	}
+	s.Environments = nil
+	return &s, nil
 }
 
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
 		Service: Service{
-			Type: BackendServiceType,
+			Type: aws.String(BackendServiceType),
 		},
 		TaskConfig: TaskConfig{
-			CPU:    256,
-			Memory: 512,
+			CPU:    aws.Int(256),
+			Memory: aws.Int(512),
 			Count:  aws.Int(1),
 		},
 	}

@@ -30,20 +30,20 @@ func TestNewBackendSvc(t *testing.T) {
 			},
 			wantedManifest: &BackendService{
 				Service: Service{
-					Name: "subscribers",
-					Type: BackendServiceType,
+					Name: aws.String("subscribers"),
+					Type: aws.String(BackendServiceType),
 				},
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: "./subscribers/Dockerfile",
+							Build: aws.String("./subscribers/Dockerfile"),
 						},
-						Port: 8080,
+						Port: aws.Uint16(8080),
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 512,
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
 					Count:  aws.Int(1),
 				},
 			},
@@ -61,15 +61,15 @@ func TestNewBackendSvc(t *testing.T) {
 			},
 			wantedManifest: &BackendService{
 				Service: Service{
-					Name: "subscribers",
-					Type: BackendServiceType,
+					Name: aws.String("subscribers"),
+					Type: aws.String(BackendServiceType),
 				},
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: "./subscribers/Dockerfile",
+							Build: aws.String("./subscribers/Dockerfile"),
 						},
-						Port: 8080,
+						Port: aws.Uint16(8080),
 					},
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
@@ -80,8 +80,8 @@ func TestNewBackendSvc(t *testing.T) {
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 512,
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
 					Count:  aws.Int(1),
 				},
 			},
@@ -179,15 +179,15 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 		"environment doesn't exist": {
 			svc: &BackendService{
 				Service: Service{
-					Name: "phonetool",
-					Type: BackendServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
 				},
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: "./Dockerfile",
+							Build: aws.String("./Dockerfile"),
 						},
-						Port: 8080,
+						Port: aws.Uint16(8080),
 					},
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"hello", "world"},
@@ -198,8 +198,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 256,
+					CPU:    aws.Int(256),
+					Memory: aws.Int(256),
 					Count:  aws.Int(1),
 				},
 			},
@@ -207,15 +207,15 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 			wanted: &BackendService{
 				Service: Service{
-					Name: "phonetool",
-					Type: BackendServiceType,
+					Name: aws.String("phonetool"),
+					Type: aws.String(BackendServiceType),
 				},
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: "./Dockerfile",
+							Build: aws.String("./Dockerfile"),
 						},
-						Port: 8080,
+						Port: aws.Uint16(8080),
 					},
 					HealthCheck: &ContainerHealthCheck{
 						Command:     []string{"hello", "world"},
@@ -226,8 +226,8 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 256,
+					CPU:    aws.Int(256),
+					Memory: aws.Int(256),
 					Count:  aws.Int(1),
 				},
 			},
@@ -236,14 +236,14 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			svc: &BackendService{
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
-						Port: 80,
+						Port: aws.Uint16(80),
 					},
 				},
-				Environments: map[string]backendServiceOverrideConfig{
+				Environments: map[string]*backendServiceOverrideConfig{
 					"test": {
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
-								Port: 5000,
+								Port: aws.Uint16(5000),
 							},
 						},
 					},
@@ -254,7 +254,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
-						Port: 5000,
+						Port: aws.Uint16(5000),
 					},
 				},
 			},
@@ -263,45 +263,41 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			svc: &BackendService{
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
-						Port: 80,
+						Port: aws.Uint16(80),
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 256,
+					CPU:    aws.Int(256),
+					Memory: aws.Int(256),
 					Count:  aws.Int(1),
 				},
 				Sidecar: Sidecar{
-					Sidecars: map[string]SidecarConfig{
+					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:  "2000/udp",
-							Image: "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
+							Port:  aws.String("2000/udp"),
+							Image: aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
 						},
 					},
 				},
 				LogConfig: LogConfig{
 					Destination: destinationConfig{
-						Name:           "datadog",
+						Name:           aws.String("datadog"),
 						ExcludePattern: aws.String("*"),
 					},
 				},
-				Environments: map[string]backendServiceOverrideConfig{
+				Environments: map[string]*backendServiceOverrideConfig{
 					"test": {
-						Image: imageWithPortAndHealthcheck{
-							ServiceImageWithPort: ServiceImageWithPort{
-								Port: 5000,
-							},
-						},
 						TaskConfig: TaskConfig{
 							Count: aws.Int(0),
+							CPU:   aws.Int(512),
 							Variables: map[string]string{
 								"LOG_LEVEL": "DEBUG",
 							},
 						},
 						Sidecar: Sidecar{
-							Sidecars: map[string]SidecarConfig{
+							Sidecars: map[string]*SidecarConfig{
 								"xray": {
-									CredParam: "some arn",
+									CredParam: aws.String("some arn"),
 								},
 							},
 						},
@@ -319,29 +315,29 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			wanted: &BackendService{
 				Image: imageWithPortAndHealthcheck{
 					ServiceImageWithPort: ServiceImageWithPort{
-						Port: 5000,
+						Port: aws.Uint16(80),
 					},
 				},
 				TaskConfig: TaskConfig{
-					CPU:    256,
-					Memory: 256,
+					CPU:    aws.Int(512),
+					Memory: aws.Int(256),
 					Count:  aws.Int(0),
 					Variables: map[string]string{
 						"LOG_LEVEL": "DEBUG",
 					},
 				},
 				Sidecar: Sidecar{
-					Sidecars: map[string]SidecarConfig{
+					Sidecars: map[string]*SidecarConfig{
 						"xray": {
-							Port:      "2000/udp",
-							Image:     "123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon",
-							CredParam: "some arn",
+							Port:      aws.String("2000/udp"),
+							Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredParam: aws.String("some arn"),
 						},
 					},
 				},
 				LogConfig: LogConfig{
 					Destination: destinationConfig{
-						Name:           "datadog",
+						Name:           aws.String("datadog"),
 						IncludePattern: aws.String("*"),
 						ExcludePattern: aws.String("fe/"),
 					},
@@ -352,7 +348,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.svc.ApplyEnv(tc.inEnvName)
+			got, _ := tc.svc.ApplyEnv(tc.inEnvName)
 
 			require.Equal(t, tc.wanted, got)
 		})

@@ -54,7 +54,7 @@ func TestBackendService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for service %s: %w", testBackendSvcManifest.Name, errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
@@ -104,7 +104,7 @@ func TestBackendService_Template(t *testing.T) {
 			defer ctrl.Finish()
 			conf := &BackendService{
 				svc: &svc{
-					name: testBackendSvcManifest.Name,
+					name: aws.StringValue(testBackendSvcManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
@@ -130,7 +130,7 @@ func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
 		svc: &svc{
-			name: testBackendSvcManifest.Name,
+			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
 			tc:   testBackendSvcManifest.TaskConfig,
