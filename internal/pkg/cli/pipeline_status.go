@@ -5,6 +5,9 @@ package cli
 
 import (
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 
 	"github.com/spf13/cobra"
 )
@@ -19,14 +22,30 @@ type pipelineStatusVars struct {
 type pipelineStatusOpts struct {
 	pipelineStatusVars
 
+	pipelineSvc         pipelineStateGetter
 	statusDescriber     pipelineStatusDescriber
 	initStatusDescriber func(opts *pipelineStatusOpts) error
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
-	return &pipelineStatusOpts{
+	session, err := session.NewProvider().Default()
+	if err != nil {
+		return nil, fmt.Errorf("session: %w", err)
+	}
+
+	opts := &pipelineStatusOpts{
 		pipelineStatusVars: vars,
-	}, nil
+		pipelineSvc:        codepipeline.New(session),
+		initStatusDescriber: func(o *pipelineStatusOpts) error {
+			d, err := describe.NewPipelineStatus(o.pipelineName)
+			if err != nil {
+				return fmt.Errorf("creating status describer for pipeline %s in application %s: %w", o.pipelineName, o.appName, err)
+			}
+			o.statusDescriber = d
+			return nil
+		},
+	}
+	return opts, nil
 }
 
 // Validate returns an error if the values provided by the user are invalid.
