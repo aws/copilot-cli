@@ -24,36 +24,29 @@ import (
 )
 
 var (
-	svcInitSvcTypePrompt        = "Which type of " + color.Emphasize("infrastructure pattern") + " best represents your service?"
+	fmtSvcInitSvcTypePrompt     = "Which %s best represents your service's architecture?"
 	fmtSvcInitSvcTypeHelpPrompt = `A %s is a public, internet-facing, HTTP server that's behind a load balancer. 
 To learn more see: https://git.io/JfIpv
 
 A %s is a private, non internet-facing service.
 To learn more see: https://git.io/JfIpT`
 
-	fmtSvcInitSvcNamePrompt     = "What do you want to " + color.Emphasize("name") + " this %s?"
+	fmtSvcInitSvcNamePrompt     = "What do you want to %s this %s?"
 	fmtSvcInitSvcNameHelpPrompt = `The name will uniquely identify this service within your app %s.
 Deployed resources (such as your service, logs) will contain this service's name and be tagged with it.`
 
-	fmtSvcInitDockerfilePrompt  = "Which Dockerfile would you like to use for %s?"
+	fmtSvcInitDockerfilePrompt  = "Which %s would you like to use for %s?"
 	svcInitDockerfileHelpPrompt = "Dockerfile to use for building your service's container image."
 
-	svcInitSvcPortPrompt     = "Which port do you want customer traffic sent to?"
+	svcInitSvcPortPrompt     = "Which %s do you want customer traffic sent to?"
 	svcInitSvcPortHelpPrompt = `The port will be used by the load balancer to route incoming traffic to this service.
 You should set this to the port which your Dockerfile uses to communicate with the internet.`
 )
 
 const (
 	fmtAddSvcToAppStart    = "Creating ECR repositories for service %s."
-	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s."
-	fmtAddSvcToAppComplete = "Created ECR repositories for service %s."
-)
-
-const (
-	fmtParsePortFromDockerfileStart    = "Parsing dockerfile at path %s for service %s...\n"
-	parseFromDockerfileTooManyPorts    = "It looks like your Dockerfile exposes more than one port.\n"
-	fmtParseFromDockerfileNoPort       = "Couldn't find an exposed port in dockerfile for service %s.\n"
-	fmtParsePortFromDockerfileComplete = "It looks like your Dockerfile exposes port %s. We'll use that to route traffic to your container from your load balancer.\n"
+	fmtAddSvcToAppFailed   = "Failed to create ECR repositories for service %s.\n"
+	fmtAddSvcToAppComplete = "Created ECR repositories for service %s.\n"
 )
 
 const (
@@ -214,13 +207,12 @@ func (o *initSvcOpts) createManifest() (string, error) {
 		return "", err
 	}
 
-	log.Infoln()
 	manifestMsgFmt := "Wrote the manifest for service %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for service %s already exists at %s, skipping writing it.\n"
 	}
 	log.Successf(manifestMsgFmt, color.HighlightUserInput(o.Name), color.HighlightResource(manifestPath))
-	log.Infoln("Your manifest contains configurations like your container size and ports.")
+	log.Infoln(color.Help(fmt.Sprintf("Your manifest contains configurations like your container size and port (:%d).", o.Port)))
 	log.Infoln()
 
 	return manifestPath, nil
@@ -280,7 +272,8 @@ func (o *initSvcOpts) askSvcType() error {
 		manifest.LoadBalancedWebServiceType,
 		manifest.BackendServiceType,
 	)
-	t, err := o.prompt.SelectOne(svcInitSvcTypePrompt, help, manifest.ServiceTypes)
+	msg := fmt.Sprintf(fmtSvcInitSvcTypePrompt, color.Emphasize("service type"))
+	t, err := o.prompt.SelectOne(msg, help, manifest.ServiceTypes, prompt.WithFinalMessage("Service type:"))
 	if err != nil {
 		return fmt.Errorf("select service type: %w", err)
 	}
@@ -294,9 +287,10 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 
 	name, err := o.prompt.Get(
-		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.HighlightUserInput(o.ServiceType)),
+		fmt.Sprintf(fmtSvcInitSvcNamePrompt, color.Emphasize("name"), color.HighlightUserInput(o.ServiceType)),
 		fmt.Sprintf(fmtSvcInitSvcNameHelpPrompt, o.AppName()),
-		validateSvcName)
+		validateSvcName,
+		prompt.WithFinalMessage("Service name:"))
 	if err != nil {
 		return fmt.Errorf("get service name: %w", err)
 	}
@@ -318,9 +312,10 @@ func (o *initSvcOpts) askDockerfile() error {
 	}
 
 	sel, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.HighlightUserInput(o.Name)),
+		fmt.Sprintf(fmtSvcInitDockerfilePrompt, color.Emphasize("Dockerfile"), color.HighlightUserInput(o.Name)),
 		svcInitDockerfileHelpPrompt,
 		dockerfiles,
+		prompt.WithFinalMessage("Dockerfile:"),
 	)
 	if err != nil {
 		return fmt.Errorf("select Dockerfile: %w", err)
@@ -337,11 +332,6 @@ func (o *initSvcOpts) askSvcPort() error {
 		return nil
 	}
 
-	log.Infof(fmtParsePortFromDockerfileStart,
-		color.HighlightUserInput(o.DockerfilePath),
-		color.HighlightUserInput(o.Name),
-	)
-
 	o.setupParser(o)
 	ports, err := o.df.GetExposedPorts()
 	// Ignore any errors in dockerfile parsing--we'll use the default instead.
@@ -351,25 +341,21 @@ func (o *initSvcOpts) askSvcPort() error {
 	var defaultPort = defaultSvcPortString
 	switch len(ports) {
 	case 0:
-		log.Infof(fmtParseFromDockerfileNoPort,
-			color.HighlightUserInput(o.Name),
-		)
+		// There were no ports detected, keep the default port prompt.
+		defaultPort = defaultSvcPortString
 	case 1:
 		o.Port = ports[0]
-		log.Successf(fmtParsePortFromDockerfileComplete,
-			color.HighlightUserInput(strconv.Itoa(int(o.Port))),
-		)
 		return nil
 	default:
 		defaultPort = strconv.Itoa(int(ports[0]))
-		log.Infoln(parseFromDockerfileTooManyPorts)
 	}
 
 	port, err := o.prompt.Get(
-		fmt.Sprintf(svcInitSvcPortPrompt),
+		fmt.Sprintf(svcInitSvcPortPrompt, color.Emphasize("port")),
 		fmt.Sprintf(svcInitSvcPortHelpPrompt),
 		validateSvcPort,
 		prompt.WithDefaultInput(defaultPort),
+		prompt.WithFinalMessage("Port:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get port: %w", err)
