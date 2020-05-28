@@ -208,12 +208,11 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 			}
 		}
 
-		stageToAdd := &StageState{
+		stageStates = append(stageStates, &StageState{
 			StageName:  aws.StringValue(stage.StageName),
 			Status:     status,
 			Transition: transition,
-		}
-		stageStates = append(stageStates, stageToAdd)
+		})
 	}
 	pipelineState := &PipelineState{
 		PipelineName: aws.StringValue(resp.PipelineName),
