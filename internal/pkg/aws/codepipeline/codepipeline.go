@@ -196,10 +196,9 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	for _, stage := range resp.StageStates {
 		var transition string
 		if stage.InboundTransitionState != nil {
+			transition = "DISABLED"
 			if *stage.InboundTransitionState.Enabled == true {
 				transition = "ENABLED"
-			} else {
-				transition = "DISABLED"
 			}
 		}
 		var status string
