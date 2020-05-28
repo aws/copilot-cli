@@ -48,7 +48,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
-			tc:     envManifest.TaskConfig,
+			tc:     envManifest.BackendServiceConfig.TaskConfig,
 			rc:     rc,
 			parser: parser,
 			addons: addons,
@@ -66,10 +66,10 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseBackendService(template.ServiceOpts{
-		Variables:   s.manifest.Variables,
-		Secrets:     s.manifest.Secrets,
+		Variables:   s.manifest.BackendServiceConfig.Variables,
+		Secrets:     s.manifest.BackendServiceConfig.Secrets,
 		NestedStack: outputs,
-		HealthCheck: s.manifest.Image.HealthCheckOpts(),
+		HealthCheck: s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -82,7 +82,7 @@ func (s *BackendService) Parameters() []*cloudformation.Parameter {
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
 		},
 	}...)
 }
