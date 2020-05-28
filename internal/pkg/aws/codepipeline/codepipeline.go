@@ -207,19 +207,17 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 				status = aws.StringValue(actionState.LatestExecution.Status)
 			}
 		}
-
 		stageStates = append(stageStates, &StageState{
 			StageName:  aws.StringValue(stage.StageName),
 			Status:     status,
 			Transition: transition,
 		})
 	}
-	pipelineState := &PipelineState{
+	return &PipelineState{
 		PipelineName: aws.StringValue(resp.PipelineName),
 		StageStates:  stageStates,
 		UpdatedAt:    resp.Updated,
-	}
-	return pipelineState, nil
+	}, nil
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
