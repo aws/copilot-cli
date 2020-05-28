@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	fmtAppInitStart    = "Creating the infrastructure to manage container repositories under application %s."
-	fmtAppInitComplete = "Created the infrastructure to manage container repositories under application %s."
-	fmtAppInitFailed   = "Failed to create the infrastructure to manage container repositories under application %s."
+	fmtAppInitStart    = "Creating the infrastructure to manage services under application %s."
+	fmtAppInitComplete = "Created the infrastructure to manage services under application %s.\n"
+	fmtAppInitFailed   = "Failed to create the infrastructure to manage services under application %s.\n"
 
 	appInitNameHelpPrompt = "Services in the same application share the same VPC and ECS Cluster and are discoverable via service discovery."
 )
@@ -95,8 +95,8 @@ func (o *initAppOpts) Ask() error {
 	if err == nil {
 		if o.AppName == "" {
 			log.Infoln(fmt.Sprintf(
-				"Looks like you are using a workspace that's registered to application %s.\nWe'll use that as your application.",
-				color.HighlightResource(summary.Application)))
+				"Your workspace is registered to application %s.",
+				color.HighlightUserInput(summary.Application)))
 			o.AppName = summary.Application
 			return nil
 		}
@@ -120,18 +120,15 @@ If you'd like to delete the application and all of its resources, run %s.
 
 	existingApps, _ := o.store.ListApplications()
 	if len(existingApps) == 0 {
-		log.Infoln("Looks like you don't have any existing applications. Let's create one!")
 		return o.askNewAppName()
 	}
 
-	log.Infoln("Looks like you have some applications already.")
 	useExistingApp, err := o.prompt.Confirm(
-		"Would you like to use one of your existing applications?", "", prompt.WithTrueDefault())
+		"Would you like to use one of your existing applications?", "", prompt.WithTrueDefault(), prompt.WithFinalMessage("Use existing application:"))
 	if err != nil {
 		return fmt.Errorf("prompt to confirm using existing application: %w", err)
 	}
 	if useExistingApp {
-		log.Infoln("Ok, here are your existing applications.")
 		return o.askSelectExistingAppName(existingApps)
 	}
 	log.Infoln("Ok, let's create a new application then.")
@@ -210,7 +207,8 @@ func (o *initAppOpts) askNewAppName() error {
 	appName, err := o.prompt.Get(
 		fmt.Sprintf("What would you like to %s your application?", color.Emphasize("name")),
 		appInitNameHelpPrompt,
-		validateAppName)
+		validateAppName,
+		prompt.WithFinalMessage("Application name:"))
 	if err != nil {
 		return fmt.Errorf("prompt get application name: %w", err)
 	}
@@ -226,7 +224,8 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 	name, err := o.prompt.SelectOne(
 		fmt.Sprintf("Which %s do you want to add a new service to?", color.Emphasize("existing application")),
 		appInitNameHelpPrompt,
-		names)
+		names,
+		prompt.WithFinalMessage("Application name:"))
 	if err != nil {
 		return fmt.Errorf("prompt select application name: %w", err)
 	}

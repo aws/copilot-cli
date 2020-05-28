@@ -429,10 +429,10 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	if err := o.svcCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		o.spinner.Stop("Error!")
+		o.spinner.Stop(log.Serrorf("Failed to deploy service.\n"))
 		return fmt.Errorf("deploy service: %w", err)
 	}
-	o.spinner.Stop("")
+	o.spinner.Stop("\n")
 	return nil
 }
 
