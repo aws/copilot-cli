@@ -31,16 +31,17 @@ const (
 
 const (
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
-	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment."
+	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n"
+	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n"
 	fmtDNSDelegationStart    = "Sharing DNS permissions for this application to account %s."
-	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s."
-	fmtDNSDelegationComplete = "Shared DNS permissions for this application to account %s."
+	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s.\n"
+	fmtDNSDelegationComplete = "Shared DNS permissions for this application to account %s.\n"
 	fmtStreamEnvStart        = "Creating the infrastructure for the %s environment."
-	fmtStreamEnvFailed       = "Failed to create the infrastructure for the %s environment."
-	fmtStreamEnvComplete     = "Created the infrastructure for the %s environment."
+	fmtStreamEnvFailed       = "Failed to create the infrastructure for the %s environment.\n"
+	fmtStreamEnvComplete     = "Created the infrastructure for the %s environment.\n"
 	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
-	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s."
-	fmtAddEnvToAppComplete   = "Linked account %s and region %s application %s."
+	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n"
+	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n"
 )
 
 var (
@@ -167,7 +168,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("store environment: %w", err)
 	}
 	log.Successf("Created environment %s in region %s under application %s.\n",
-		color.HighlightUserInput(env.Name), color.HighlightResource(env.Region), color.HighlightResource(env.App))
+		color.HighlightUserInput(env.Name), color.Emphasize(env.Region), color.HighlightUserInput(env.App))
 	return nil
 }
 
@@ -191,9 +192,8 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
-			o.prog.Stop("")
-			log.Successf("CloudFormation stack for env %s already exists under application %s! Do nothing.\n",
-				color.HighlightUserInput(o.EnvName), color.HighlightResource(o.AppName()))
+			o.prog.Stop(log.Ssuccessf(fmtDeployEnvComplete,
+				color.HighlightUserInput(o.EnvName), color.HighlightUserInput(o.AppName())))
 			return nil
 		}
 		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.EnvName)))
@@ -217,12 +217,12 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 }
 
 func (o *initEnvOpts) addToStackset(app *config.Application, env *config.Environment) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
+	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
 	if err := o.appDeployer.AddEnvToApp(app, env); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
+		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
 		return fmt.Errorf("deploy env %s to application %s: %w", env.Name, app.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.HighlightResource(env.AccountID), color.HighlightResource(env.Region), color.HighlightUserInput(o.AppName())))
+	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(env.AccountID), color.Emphasize(env.Region), color.HighlightUserInput(o.AppName())))
 
 	return nil
 }

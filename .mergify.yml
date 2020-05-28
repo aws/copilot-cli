@@ -16,3 +16,4 @@ pull_request_rules:
         method: squash
         strict: smart
         strict_method: merge
+        commit_message: title+body

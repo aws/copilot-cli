@@ -35,17 +35,20 @@ type BackendService struct {
 // NewBackendService creates a new BackendService stack from a manifest file.
 func NewBackendService(mft *manifest.BackendService, env, app string, rc RuntimeConfig) (*BackendService, error) {
 	parser := template.New()
-	addons, err := addons.New(mft.Name)
+	addons, err := addons.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
+	}
 	return &BackendService{
 		svc: &svc{
-			name:   mft.Name,
+			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
-			tc:     envManifest.TaskConfig,
+			tc:     envManifest.BackendServiceConfig.TaskConfig,
 			rc:     rc,
 			parser: parser,
 			addons: addons,
@@ -63,10 +66,10 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseBackendService(template.ServiceOpts{
-		Variables:   s.manifest.Variables,
-		Secrets:     s.manifest.Secrets,
+		Variables:   s.manifest.BackendServiceConfig.Variables,
+		Secrets:     s.manifest.BackendServiceConfig.Secrets,
 		NestedStack: outputs,
-		HealthCheck: s.manifest.Image.HealthCheckOpts(),
+		HealthCheck: s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -79,7 +82,7 @@ func (s *BackendService) Parameters() []*cloudformation.Parameter {
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
 		},
 	}...)
 }
