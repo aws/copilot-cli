@@ -39,7 +39,7 @@ func TestPipelineStatus_Validate(t *testing.T) {
 					mocks.store.EXPECT().GetApplication("bad-app-le").Return(nil, mockError),
 				)
 			},
-			expectedErr: fmt.Errorf("mock error"),
+			expectedErr: mockError,
 		},
 		"errors if pipeline name is invalid": {
 			testAppName:      mockAppName,
@@ -52,7 +52,7 @@ func TestPipelineStatus_Validate(t *testing.T) {
 					mocks.pipelineSvc.EXPECT().GetPipeline("no-good-pipeline").Return(nil, mockError),
 				)
 			},
-			expectedErr: fmt.Errorf("mock error"),
+			expectedErr: mockError,
 		},
 		"success": {
 			testAppName:      mockAppName,
@@ -302,7 +302,7 @@ func TestPipelineStatus_Execute(t *testing.T) {
 			setupMocks: func(m pipelineStatusMocks) {
 				m.describer.EXPECT().Describe().Return(nil, mockError)
 			},
-			expectedError: fmt.Errorf("describe status of pipeline: mock error"),
+			expectedError: fmt.Errorf("describe status of pipeline: %w", mockError),
 		},
 		"errors if fail to return JSON output": {
 			pipelineName:     mockPipelineName,
