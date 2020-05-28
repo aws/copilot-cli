@@ -41,7 +41,7 @@ type pipelineStatusOpts struct {
 	w             io.Writer
 	ws            wsPipelineReader
 	store         store
-	pipelineSvc   pipelineStateGetter
+	pipelineSvc   pipelineGetter
 	describer     describer
 	sel           appSelector
 	initDescriber func(opts *pipelineStatusOpts) error

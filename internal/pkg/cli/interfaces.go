@@ -317,12 +317,6 @@ type pipelineGetter interface {
 	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
 }
 
-type pipelineStateGetter interface {
-	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
-	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
-	ListPipelineNamesByTags(tags map[string]string) ([]string, error)
-}
-
 type executor interface {
 	Execute() error
 }
