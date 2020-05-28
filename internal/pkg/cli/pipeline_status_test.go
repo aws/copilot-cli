@@ -342,7 +342,7 @@ func TestPipelineStatus_Execute(t *testing.T) {
 					shouldOutputJSON: tc.shouldOutputJSON,
 					pipelineName:     tc.pipelineName,
 				},
-				describer: mockDescriber,
+				describer:     mockDescriber,
 				initDescriber: func(o *pipelineStatusOpts) error { return nil },
 				w:             b,
 			}

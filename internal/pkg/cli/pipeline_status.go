@@ -31,7 +31,6 @@ const (
 type pipelineStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
-	appName          string
 	pipelineName     string
 }
 

@@ -368,7 +368,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 			},
 			{
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(false)},
-				StageName: aws.String("DeployTo-prod"),
+				StageName:              aws.String("DeployTo-prod"),
 			},
 		},
 		Updated: &mockTime,

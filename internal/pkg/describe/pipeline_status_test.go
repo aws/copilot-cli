@@ -27,8 +27,8 @@ var mockPipelineState = &codepipeline.PipelineState{
 	PipelineName: mockPipelineName,
 	StageStates: []*codepipeline.StageState{
 		{
-			StageName:  "Source",
-			Status:     "Succeeded",
+			StageName: "Source",
+			Status:    "Succeeded",
 		},
 		{
 			StageName:  "Build",
