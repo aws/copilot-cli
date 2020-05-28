@@ -31,6 +31,7 @@ const (
 type pipelineStatusVars struct {
 	*GlobalOpts
 	shouldOutputJSON bool
+	appName          string
 	pipelineName     string
 }
 
@@ -184,7 +185,6 @@ func (o *pipelineStatusOpts) askPipelineName() error {
 	}
 	o.pipelineName = pipelineName
 	return nil
-
 }
 
 func (o *pipelineStatusOpts) retrieveAllPipelines() ([]string, error) {

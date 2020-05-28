@@ -308,10 +308,6 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
-type pipelineStatusDescriber interface {
-	Describe() (*describe.PipelineStatus, error)
-}
-
 type resourceGroupsClient interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
