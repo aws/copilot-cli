@@ -31,6 +31,7 @@ memory: 1024
 count: 1
 http:
   path: "svc"
+  targetContainer: "frontend"
 variables:
   LOG_LEVEL: "WARN"
 secrets:
@@ -59,45 +60,48 @@ environments:
 				require.True(t, ok)
 				wantedManifest := &LoadBalancedWebService{
 					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
-					Image:   ServiceImageWithPort{ServiceImage: ServiceImage{Build: aws.String("frontend/Dockerfile")}, Port: aws.Uint16(80)},
-					RoutingRule: RoutingRule{
-						Path:            aws.String("svc"),
-						HealthCheckPath: aws.String("/"),
-					},
-					TaskConfig: TaskConfig{
-						CPU:    aws.Int(512),
-						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
-						Variables: map[string]string{
-							"LOG_LEVEL": "WARN",
+					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: aws.String("frontend/Dockerfile")}, Port: aws.Uint16(80)},
+						RoutingRule: RoutingRule{
+							Path:            aws.String("svc"),
+							HealthCheckPath: aws.String("/"),
+							TargetContainer: aws.String("frontend"),
 						},
-						Secrets: map[string]string{
-							"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+						TaskConfig: TaskConfig{
+							CPU:    aws.Int(512),
+							Memory: aws.Int(1024),
+							Count:  aws.Int(1),
+							Variables: map[string]string{
+								"LOG_LEVEL": "WARN",
+							},
+							Secrets: map[string]string{
+								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+							},
 						},
-					},
-					Sidecar: Sidecar{
-						Sidecars: map[string]*SidecarConfig{
-							"xray": {
-								Port:      aws.String("2000/udp"),
-								Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
-								CredParam: aws.String("some arn"),
+						Sidecar: Sidecar{
+							Sidecars: map[string]*SidecarConfig{
+								"xray": {
+									Port:      aws.String("2000/udp"),
+									Image:     aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+									CredParam: aws.String("some arn"),
+								},
+							},
+						},
+						LogConfig: LogConfig{
+							Destination: destinationConfig{
+								ExcludePattern: aws.String("^.*[aeiou]$"),
+								IncludePattern: aws.String("^[a-z][aeiou].*$"),
+								Name:           aws.String("cloudwatch"),
+							},
+							EnableMetadata: aws.Bool(false),
+							ConfigFile:     aws.String("./extra.conf"),
+							PermissionFile: aws.String("./permissions.json"),
+							SecretOptions: map[string]string{
+								"LOG_TOKEN": "LOG_TOKEN",
 							},
 						},
 					},
-					LogConfig: LogConfig{
-						Destination: destinationConfig{
-							ExcludePattern: aws.String("^.*[aeiou]$"),
-							IncludePattern: aws.String("^[a-z][aeiou].*$"),
-							Name:           aws.String("cloudwatch"),
-						},
-						EnableMetadata: aws.Bool(false),
-						ConfigFile:     aws.String("./extra.conf"),
-						PermissionFile: aws.String("./permissions.json"),
-						SecretOptions: map[string]string{
-							"LOG_TOKEN": "LOG_TOKEN",
-						},
-					},
-					Environments: map[string]loadBalancedWebServiceOverrideConfig{
+					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
 							TaskConfig: TaskConfig{
 								Count: aws.Int(3),
@@ -129,27 +133,29 @@ secrets:
 						Name: aws.String("subscribers"),
 						Type: aws.String(BackendServiceType),
 					},
-					Image: imageWithPortAndHealthcheck{
-						ServiceImageWithPort: ServiceImageWithPort{
-							ServiceImage: ServiceImage{
-								Build: aws.String("./subscribers/Dockerfile"),
+					BackendServiceConfig: BackendServiceConfig{
+						Image: imageWithPortAndHealthcheck{
+							ServiceImageWithPort: ServiceImageWithPort{
+								ServiceImage: ServiceImage{
+									Build: aws.String("./subscribers/Dockerfile"),
+								},
+								Port: aws.Uint16(8080),
 							},
-							Port: aws.Uint16(8080),
+							HealthCheck: &ContainerHealthCheck{
+								Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
+								Interval:    durationp(10 * time.Second),
+								Retries:     aws.Int(2),
+								Timeout:     durationp(5 * time.Second),
+								StartPeriod: durationp(0 * time.Second),
+							},
 						},
-						HealthCheck: &ContainerHealthCheck{
-							Command:     []string{"CMD-SHELL", "curl http://localhost:5000/ || exit 1"},
-							Interval:    durationp(10 * time.Second),
-							Retries:     aws.Int(2),
-							Timeout:     durationp(5 * time.Second),
-							StartPeriod: durationp(0 * time.Second),
-						},
-					},
-					TaskConfig: TaskConfig{
-						CPU:    aws.Int(1024),
-						Memory: aws.Int(1024),
-						Count:  aws.Int(1),
-						Secrets: map[string]string{
-							"API_TOKEN": "SUBS_API_TOKEN",
+						TaskConfig: TaskConfig{
+							CPU:    aws.Int(1024),
+							Memory: aws.Int(1024),
+							Count:  aws.Int(1),
+							Secrets: map[string]string{
+								"API_TOKEN": "SUBS_API_TOKEN",
+							},
 						},
 					},
 				}

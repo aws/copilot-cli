@@ -106,9 +106,9 @@ func UnmarshalService(in []byte) (interface{}, error) {
 		if err := yaml.Unmarshal(in, m); err != nil {
 			return nil, fmt.Errorf("unmarshal to backend service: %w", err)
 		}
-		if m.Image.HealthCheck != nil {
+		if m.BackendServiceConfig.Image.HealthCheck != nil {
 			// Make sure that unset fields in the healthcheck gets a default value.
-			m.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
+			m.BackendServiceConfig.Image.HealthCheck.applyIfNotSet(newDefaultContainerHealthCheck())
 		}
 		return m, nil
 	default:

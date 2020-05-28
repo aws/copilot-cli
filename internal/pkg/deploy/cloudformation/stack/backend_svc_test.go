@@ -133,7 +133,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
-			tc:   testBackendSvcManifest.TaskConfig,
+			tc:   testBackendSvcManifest.BackendServiceConfig.TaskConfig,
 			rc: RuntimeConfig{
 				ImageRepoURL: testImageRepoURL,
 				ImageTag:     testImageTag,
