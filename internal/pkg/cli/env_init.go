@@ -31,7 +31,7 @@ const (
 
 const (
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
-	fmtDeployEnvComplete     = "CloudFormation stack for env %s already exists under application %s! Do nothing.\n"
+	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n"
 	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n"
 	fmtDNSDelegationStart    = "Sharing DNS permissions for this application to account %s."
 	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s.\n"
