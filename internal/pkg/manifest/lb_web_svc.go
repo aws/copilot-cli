@@ -21,7 +21,8 @@ const (
 type LoadBalancedWebService struct {
 	Service                      `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
-	Environments                 map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
+	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
+	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
 
 	parser template.Parser
 }
@@ -109,10 +110,11 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	if !ok {
 		return &s, nil
 	}
-	target := LoadBalancedWebService{
+	// Apply overrides to the original service s.
+	err := mergo.Merge(&s, LoadBalancedWebService{
 		LoadBalancedWebServiceConfig: *overrideConfig,
-	}
-	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	if err != nil {
 		return nil, err
 	}
 	s.Environments = nil

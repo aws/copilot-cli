@@ -30,12 +30,13 @@ type BackendServiceProps struct {
 type BackendService struct {
 	Service              `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
-	Environments         map[string]*BackendServiceConfig `yaml:",flow"`
+	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
+	Environments map[string]*BackendServiceConfig `yaml:",flow"`
 
 	parser template.Parser
 }
 
-// BackendServiceConfig holds the configuration for a backend service.
+// BackendServiceConfig holds the configuration that can be overriden per environments.
 type BackendServiceConfig struct {
 	Image      imageWithPortAndHealthcheck `yaml:",flow"`
 	TaskConfig `yaml:",inline"`
@@ -110,10 +111,11 @@ func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
 	if !ok {
 		return &s, nil
 	}
-	target := BackendService{
+	// Apply overrides to the original service s.
+	err := mergo.Merge(&s, BackendService{
 		BackendServiceConfig: *overrideConfig,
-	}
-	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	if err != nil {
 		return nil, err
 	}
 	s.Environments = nil
