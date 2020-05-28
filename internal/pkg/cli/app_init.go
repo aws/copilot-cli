@@ -26,6 +26,9 @@ const (
 	fmtAppInitComplete = "Created the infrastructure to manage services under application %s.\n"
 	fmtAppInitFailed   = "Failed to create the infrastructure to manage services under application %s.\n"
 
+	fmtAppInitNamePrompt    = "What would you like to %s your application?"
+	fmtAppInitNewNamePrompt = `Ok, let's create a new application then.
+  What would you like to %s your application?`
 	appInitNameHelpPrompt = "Services in the same application share the same VPC and ECS Cluster and are discoverable via service discovery."
 )
 
@@ -120,7 +123,7 @@ If you'd like to delete the application and all of its resources, run %s.
 
 	existingApps, _ := o.store.ListApplications()
 	if len(existingApps) == 0 {
-		return o.askNewAppName()
+		return o.askAppName(fmtAppInitNamePrompt)
 	}
 
 	useExistingApp, err := o.prompt.Confirm(
@@ -131,8 +134,7 @@ If you'd like to delete the application and all of its resources, run %s.
 	if useExistingApp {
 		return o.askSelectExistingAppName(existingApps)
 	}
-	log.Infoln("Ok, let's create a new application then.")
-	return o.askNewAppName()
+	return o.askAppName(fmtAppInitNewNamePrompt)
 }
 
 // Execute creates a new managed empty application.
@@ -203,9 +205,9 @@ func (o *initAppOpts) RecommendedActions() []string {
 	}
 }
 
-func (o *initAppOpts) askNewAppName() error {
+func (o *initAppOpts) askAppName(formatMsg string) error {
 	appName, err := o.prompt.Get(
-		fmt.Sprintf("What would you like to %s your application?", color.Emphasize("name")),
+		fmt.Sprintf(formatMsg, color.Emphasize("name")),
 		appInitNameHelpPrompt,
 		validateAppName,
 		prompt.WithFinalMessage("Application name:"))
