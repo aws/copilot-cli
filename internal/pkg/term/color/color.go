@@ -20,10 +20,11 @@ var (
 	Red          = color.New(color.FgHiRed)
 	Green        = color.New(color.FgHiGreen)
 	Yellow       = color.New(color.FgHiYellow)
+	HiBlue       = color.New(color.FgHiBlue)
 	Cyan         = color.New(color.FgCyan)
 	HiCyan       = color.New(color.FgHiCyan)
 	Bold         = color.New(color.Bold)
-	BoldItalic   = color.New(color.Bold).Add(color.Italic)
+	Faint        = color.New(color.Faint)
 	BoldFgYellow = color.New(color.FgYellow).Add(color.Bold)
 )
 
@@ -53,19 +54,24 @@ func DisableColorBasedOnEnvVar() {
 	}
 }
 
+// Help colors the string to denote that it's auxiliary helpful information, and returns it.
+func Help(s string) string {
+	return Faint.Sprint(s)
+}
+
 // Emphasize colors the string to denote that it as important, and returns it.
 func Emphasize(s string) string {
-	return BoldItalic.Sprint(s)
+	return Bold.Sprint(s)
 }
 
 // HighlightUserInput colors the string to denote it as an input from standard input, and returns it.
 func HighlightUserInput(s string) string {
-	return Cyan.Sprint(s)
+	return Emphasize(s)
 }
 
 // HighlightResource colors the string to denote it as a resource created by the CLI, and returns it.
 func HighlightResource(s string) string {
-	return HiCyan.Sprint(s)
+	return HiBlue.Sprint(s)
 }
 
 // HighlightCode wraps the string with the ` character, colors it to denote it's a code block, and returns it.
