@@ -29,7 +29,6 @@ var mockPipelineState = &codepipeline.PipelineState{
 		{
 			StageName:  "Source",
 			Status:     "Succeeded",
-			Transition: "ENABLED",
 		},
 		{
 			StageName:  "Build",
@@ -116,7 +115,7 @@ func TestPipelineStatusDescriber_String(t *testing.T) {
 
   Stage             Status              Transition          
   -----             ------              ----------
-  Source            Succeeded           ENABLED
+  Source            Succeeded             -
   Build             In Progress         ENABLED
   DeployTo-test     Failed              ENABLED
   DeployTo-prod       -                 DISABLED
@@ -125,7 +124,7 @@ Last Deployment
 
   Updated At        3 months ago
 `,
-			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"status\":\"Succeeded\",\"transition\":\"ENABLED\"},{\"stageName\":\"Build\",\"status\":\"In Progress\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"status\":\"Failed\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-prod\",\"status\":\"\",\"transition\":\"DISABLED\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
+			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"status\":\"Succeeded\",\"transition\":\"\"},{\"stageName\":\"Build\",\"status\":\"In Progress\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"status\":\"Failed\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-prod\",\"status\":\"\",\"transition\":\"DISABLED\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
 		},
 	}
 	for _, tc := range testCases {

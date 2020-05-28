@@ -195,10 +195,12 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	var stageStates []*StageState
 	for _, stage := range resp.StageStates {
 		var transition string
-		if *stage.InboundTransitionState.Enabled == true {
-			transition = "ENABLED"
-		} else {
-			transition = "DISABLED"
+		if stage.InboundTransitionState != nil {
+			if *stage.InboundTransitionState.Enabled == true {
+				transition = "ENABLED"
+			} else {
+				transition = "DISABLED"
+			}
 		}
 		var status string
 		for _, actionState := range stage.ActionStates {
@@ -227,9 +229,14 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (s *StageState) HumanString() string {
 	const empty = "  -"
-	if s.Status == "" {
+	switch {
+	case s.Status == "" && s.Transition == "":
+		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, empty, empty)
+	case s.Status == "":
 		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, empty, s.Transition)
-	} else {
+	case s.Transition == "":
+		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, empty)
+	default:
 		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, s.Transition)
 	}
 }

@@ -341,7 +341,6 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 		PipelineName: aws.String(mockPipelineName),
 		StageStates: []*codepipeline.StageState{
 			{
-				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
 				ActionStates: []*codepipeline.ActionState{
 					{
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Succeeded")},
@@ -397,7 +396,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 					{
 						StageName:  "Source",
 						Status:     "Succeeded",
-						Transition: "ENABLED",
+						Transition: "",
 					},
 					{
 						StageName:  "Build",
