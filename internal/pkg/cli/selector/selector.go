@@ -11,12 +11,13 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 )
 
 // Prompter wraps the method for users to select an option from a list of options.
 type Prompter interface {
-	SelectOne(message, help string, options []string) (string, error)
+	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
 }
 
 type appEnvLister interface {

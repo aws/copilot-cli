@@ -33,21 +33,25 @@ type EnvDescription struct {
 	Environment *config.Environment `json:"environment"`
 	Services    []*config.Service   `json:"services"`
 	Tags        map[string]string   `json:"tags,omitempty"`
+	Resources   []*CfnResource      `json:"resources,omitempty"`
 }
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	app  *config.Application
-	env  *config.Environment
-	svcs []*config.Service
+	app             *config.Application
+	env             *config.Environment
+	svcs            []*config.Service
+	enableResources bool
 
-	store    storeSvc
-	rgClient resourceGroupsClient
+	store          storeSvc
+	rgClient       resourceGroupsClient
+	stackDescriber stackAndResourcesDescriber
 }
 
 // NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
+func NewEnvDescriber(appName, envName string) (*EnvDescriber, error) {
 	store, err := config.NewStore()
+
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
@@ -67,13 +71,27 @@ func NewEnvDescriber(appName string, envName string) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
 	}
+	d := newStackDescriber(sess)
 	return &EnvDescriber{
-		app:      app,
-		env:      env,
-		store:    store,
-		svcs:     svcs,
-		rgClient: resourcegroups.New(sess),
+		app:             app,
+		env:             env,
+		svcs:            svcs,
+		enableResources: false,
+
+		store:          store,
+		rgClient:       resourcegroups.New(sess),
+		stackDescriber: stackAndResourcesDescriber(d),
 	}, nil
+}
+
+// NewEnvDescriberWithResources instantiates an environment describer with stack resources.
+func NewEnvDescriberWithResources(appName, envName string) (*EnvDescriber, error) {
+	d, err := NewEnvDescriber(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	d.enableResources = true
+	return d, nil
 }
 
 // Describe returns info about an application's environment.
@@ -82,10 +100,29 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	tags := make(map[string]string)
+	envStack, err := e.stackDescriber.Stack(stack.NameForEnv(e.app.Name, e.env.Name))
+	if err != nil {
+		return nil, err
+	}
+	for _, tag := range envStack.Tags {
+		tags[*tag.Key] = *tag.Value
+	}
+
+	var stackResources []*CfnResource
+	if e.enableResources {
+		stackResources, err = e.envOutputs()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &EnvDescription{
 		Environment: e.env,
 		Services:    svcs,
-		Tags:        e.app.Tags,
+		Tags:        tags,
+		Resources:   stackResources,
 	}, nil
 }
 
@@ -128,6 +165,15 @@ func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
 	return stack[1], nil
 }
 
+func (e *EnvDescriber) envOutputs() ([]*CfnResource, error) {
+	envStack, err := e.stackDescriber.StackResources(stack.NameForEnv(e.app.Name, e.env.Name))
+	if err != nil {
+		return nil, fmt.Errorf("retrieve environment resources: %w", err)
+	}
+	outputs := flattenResources(envStack)
+	return outputs, nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
@@ -150,6 +196,9 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
+	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\n", "----", "----")
+	writer.Flush()
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
 	}
@@ -158,6 +207,7 @@ func (e *EnvDescription) HumanString() string {
 		fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
 		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
+		fmt.Fprintf(writer, "  %s\t%s\n", "---", "-----")
 		// sort Tags in alpha order by keys
 		keys := make([]string, 0, len(e.Tags))
 		for k := range e.Tags {
@@ -166,6 +216,15 @@ func (e *EnvDescription) HumanString() string {
 		sort.Strings(keys)
 		for _, key := range keys {
 			fmt.Fprintf(writer, "  %s\t%s\n", key, e.Tags[key])
+			writer.Flush()
+		}
+	}
+	writer.Flush()
+	if len(e.Resources) != 0 {
+		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n\n"))
+		writer.Flush()
+		for _, resource := range e.Resources {
+			fmt.Fprintf(writer, "  %s\t%s\n", resource.Type, resource.PhysicalID)
 		}
 	}
 	writer.Flush()

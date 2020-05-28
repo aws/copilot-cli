@@ -83,11 +83,11 @@ func (s *svc) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(s.tc.CPU)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(s.tc.CPU))),
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(s.tc.Memory)),
+			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(s.tc.Memory))),
 		},
 		{
 			ParameterKey:   aws.String(ServiceTaskCountParamKey),

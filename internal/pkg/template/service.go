@@ -100,7 +100,7 @@ func toSnakeCase(s string) string {
 }
 
 func hasSecrets(opts ServiceOpts) bool {
-	if opts.Secrets != nil {
+	if len(opts.Secrets) > 0 {
 		return true
 	}
 	if opts.NestedStack != nil && (len(opts.NestedStack.SecretOutputs) > 0) {

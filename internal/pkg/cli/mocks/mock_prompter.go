@@ -34,10 +34,10 @@ func (m *Mockprompter) EXPECT() *MockprompterMockRecorder {
 }
 
 // Get mocks base method
-func (m *Mockprompter) Get(message, help string, validator prompt.ValidatorFunc, opts ...prompt.GetOption) (string, error) {
+func (m *Mockprompter) Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help, validator}
-	for _, a := range opts {
+	for _, a := range promptOpts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Get", varargs...)
@@ -47,47 +47,57 @@ func (m *Mockprompter) Get(message, help string, validator prompt.ValidatorFunc,
 }
 
 // Get indicates an expected call of Get
-func (mr *MockprompterMockRecorder) Get(message, help, validator interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockprompterMockRecorder) Get(message, help, validator interface{}, promptOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{message, help, validator}, opts...)
+	varargs := append([]interface{}{message, help, validator}, promptOpts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*Mockprompter)(nil).Get), varargs...)
 }
 
 // GetSecret mocks base method
-func (m *Mockprompter) GetSecret(message, help string) (string, error) {
+func (m *Mockprompter) GetSecret(message, help string, promptOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecret", message, help)
+	varargs := []interface{}{message, help}
+	for _, a := range promptOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSecret", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSecret indicates an expected call of GetSecret
-func (mr *MockprompterMockRecorder) GetSecret(message, help interface{}) *gomock.Call {
+func (mr *MockprompterMockRecorder) GetSecret(message, help interface{}, promptOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*Mockprompter)(nil).GetSecret), message, help)
+	varargs := append([]interface{}{message, help}, promptOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*Mockprompter)(nil).GetSecret), varargs...)
 }
 
 // SelectOne mocks base method
-func (m *Mockprompter) SelectOne(message, help string, options []string) (string, error) {
+func (m *Mockprompter) SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SelectOne", message, help, options)
+	varargs := []interface{}{message, help, options}
+	for _, a := range promptOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SelectOne", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SelectOne indicates an expected call of SelectOne
-func (mr *MockprompterMockRecorder) SelectOne(message, help, options interface{}) *gomock.Call {
+func (mr *MockprompterMockRecorder) SelectOne(message, help, options interface{}, promptOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOne", reflect.TypeOf((*Mockprompter)(nil).SelectOne), message, help, options)
+	varargs := append([]interface{}{message, help, options}, promptOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectOne", reflect.TypeOf((*Mockprompter)(nil).SelectOne), varargs...)
 }
 
 // Confirm mocks base method
-func (m *Mockprompter) Confirm(message, help string, options ...prompt.ConfirmOption) (bool, error) {
+func (m *Mockprompter) Confirm(message, help string, promptOpts ...prompt.Option) (bool, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{message, help}
-	for _, a := range options {
+	for _, a := range promptOpts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Confirm", varargs...)
@@ -97,8 +107,8 @@ func (m *Mockprompter) Confirm(message, help string, options ...prompt.ConfirmOp
 }
 
 // Confirm indicates an expected call of Confirm
-func (mr *MockprompterMockRecorder) Confirm(message, help interface{}, options ...interface{}) *gomock.Call {
+func (mr *MockprompterMockRecorder) Confirm(message, help interface{}, promptOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{message, help}, options...)
+	varargs := append([]interface{}{message, help}, promptOpts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Confirm", reflect.TypeOf((*Mockprompter)(nil).Confirm), varargs...)
 }

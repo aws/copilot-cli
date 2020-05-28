@@ -175,9 +175,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 // Run executes "app init", "env init", "svc init" and "svc deploy".
 func (o *initOpts) Run() error {
 	log.Warningln("It's best to run this command in the root of your Git repository.")
-	log.Infoln(`Welcome to the Copilot CLI! We're going to walk you through some questions
+	log.Infoln(color.Help(`Welcome to the Copilot CLI! We're going to walk you through some questions
 to help you get set up with an application on ECS. An application is a collection of
-containerized services that operate together.`)
+containerized services that operate together.`))
 	log.Infoln()
 
 	if err := o.loadApp(); err != nil {
@@ -189,7 +189,7 @@ containerized services that operate together.`)
 
 	log.Infof("Ok great, we'll set up a %s named %s in application %s listening on port %s.\n",
 		color.HighlightUserInput(*o.svcType), color.HighlightUserInput(*o.svcName), color.HighlightUserInput(*o.appName), color.HighlightUserInput(fmt.Sprintf("%d", *o.svcPort)))
-
+	log.Infoln()
 	if err := o.initAppCmd.Execute(); err != nil {
 		return fmt.Errorf("execute app init: %w", err)
 	}
@@ -236,6 +236,7 @@ func (o *initOpts) deployEnv() error {
 		return nil
 	}
 
+	log.Infoln()
 	return o.initEnvCmd.Execute()
 }
 
@@ -255,7 +256,7 @@ func (o *initOpts) deploySvc() error {
 }
 
 func (o *initOpts) askShouldDeploy() error {
-	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt)
+	v, err := o.prompt.Confirm(initShouldDeployPrompt, initShouldDeployHelpPrompt, prompt.WithFinalMessage("Deploy:"))
 	if err != nil {
 		return fmt.Errorf("failed to confirm deployment: %w", err)
 	}

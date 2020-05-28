@@ -116,7 +116,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				c.svc.addons = addons
 			},
 			wantedTemplate: "",
-			wantedError:    fmt.Errorf("generate addons template for service %s: %w", testLBWebServiceManifest.Name, errors.New("some error")),
+			wantedError:    fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -204,7 +204,7 @@ Outputs:
 			defer ctrl.Finish()
 			conf := &LoadBalancedWebService{
 				svc: &svc{
-					name: testLBWebServiceManifest.Name,
+					name: aws.StringValue(testLBWebServiceManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
@@ -246,7 +246,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			// GIVEN
 			conf := &LoadBalancedWebService{
 				svc: &svc{
-					name: testLBWebServiceManifest.Name,
+					name: aws.StringValue(testLBWebServiceManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
 					tc:   testLBWebServiceManifest.TaskConfig,
@@ -355,7 +355,7 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 			defer ctrl.Finish()
 			c := &LoadBalancedWebService{
 				svc: &svc{
-					name: testLBWebServiceManifest.Name,
+					name: aws.StringValue(testLBWebServiceManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
 					tc:   testLBWebServiceManifest.TaskConfig,
@@ -385,7 +385,7 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// GIVEN
 	conf := &LoadBalancedWebService{
 		svc: &svc{
-			name: testLBWebServiceManifest.Name,
+			name: aws.StringValue(testLBWebServiceManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
 			rc: RuntimeConfig{
