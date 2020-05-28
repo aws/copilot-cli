@@ -41,7 +41,7 @@ const (
 	fmtStreamEnvComplete     = "Created the infrastructure for the %s environment.\n"
 	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
 	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n"
-	fmtAddEnvToAppComplete   = "Linked account %s and region %s application %s.\n"
+	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n"
 )
 
 var (
