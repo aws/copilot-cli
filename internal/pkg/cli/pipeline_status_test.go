@@ -27,6 +27,7 @@ type pipelineStatusMocks struct {
 	ws          *mocks.MockwsPipelineReader
 	prompt      *mocks.Mockprompter
 	pipelineSvc *mocks.MockpipelineStateGetter
+	describer   *mocks.Mockdescriber
 	sel         *mocks.MockappSelector
 }
 
@@ -299,29 +300,29 @@ func TestPipelineStatus_Execute(t *testing.T) {
 	testCases := map[string]struct {
 		shouldOutputJSON bool
 		pipelineName     string
-		setupMocks       func(m *mocks.Mockdescriber)
+		setupMocks       func(m pipelineStatusMocks)
 
 		expectedContent string
 		expectedError   error
 	}{
 		"errors if fail to describe the status of the pipeline": {
-			setupMocks: func(m *mocks.Mockdescriber) {
-				m.EXPECT().Describe().Return(nil, mockErr)
+			setupMocks: func(m pipelineStatusMocks) {
+				m.describer.EXPECT().Describe().Return(nil, mockErr)
 			},
 			expectedError: fmt.Errorf("describe status of pipeline: some error"),
 		},
 		"errors if fail to return JSON output": {
 			pipelineName:     mockPLName,
 			shouldOutputJSON: true,
-			setupMocks: func(m *mocks.Mockdescriber) {
-				m.EXPECT().Describe().Return(&mockPipelineStatus, nil)
+			setupMocks: func(m pipelineStatusMocks) {
+				m.describer.EXPECT().Describe().Return(&mockPipelineStatus, nil)
 			},
 			expectedError: mockErr,
 		},
 		"success with HumanString": {
 			pipelineName: mockPLName,
-			setupMocks: func(m *mocks.Mockdescriber) {
-				m.EXPECT().Describe().Return(&mockPipelineStatus, nil)
+			setupMocks: func(m pipelineStatusMocks) {
+				m.describer.EXPECT().Describe().Return(&mockPipelineStatus, nil)
 			},
 			expectedContent: "mockData",
 			expectedError:   nil,
@@ -337,14 +338,18 @@ func TestPipelineStatus_Execute(t *testing.T) {
 			b := &bytes.Buffer{}
 			mockDescriber := mocks.NewMockdescriber(ctrl)
 
-			tc.setupMocks(mockDescriber)
+			mocks := pipelineStatusMocks{
+				describer: mockDescriber,
+			}
+
+			tc.setupMocks(mocks)
 
 			opts := &pipelineStatusOpts{
 				pipelineStatusVars: pipelineStatusVars{
 					shouldOutputJSON: tc.shouldOutputJSON,
 					pipelineName:     tc.pipelineName,
 				},
-				describer:     mockDescriber,
+				describer: mockDescriber,
 				initDescriber: func(o *pipelineStatusOpts) error { return nil },
 				w:             b,
 			}
