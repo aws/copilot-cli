@@ -19,23 +19,21 @@ const (
 // LoadBalancedWebService holds the configuration to build a container image with an exposed port that receives
 // requests through a load balancer with AWS Fargate as the compute engine.
 type LoadBalancedWebService struct {
-	Service      `yaml:",inline"`
-	Image        ServiceImageWithPort `yaml:",flow"`
-	RoutingRule  `yaml:"http,flow"`
-	TaskConfig   `yaml:",inline"`
-	LogConfig    `yaml:"logging,flow"`
-	Sidecar      `yaml:",inline"`
-	Environments map[string]loadBalancedWebServiceOverrideConfig `yaml:",flow"` // Fields to override per environment.
+	Service                      `yaml:",inline"`
+	LoadBalancedWebServiceConfig `yaml:",inline"`
+	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
+	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
 
 	parser template.Parser
 }
 
-type loadBalancedWebServiceOverrideConfig struct {
+// LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
+type LoadBalancedWebServiceConfig struct {
 	Image       ServiceImageWithPort `yaml:",flow"`
 	RoutingRule `yaml:"http,flow"`
 	TaskConfig  `yaml:",inline"`
 	LogConfig   `yaml:"logging,flow"`
-	Sidecar     `yaml:"sidecar,flow"`
+	Sidecar     `yaml:",inline"`
 }
 
 // RoutingRule holds the path to route requests to the service.
@@ -76,14 +74,16 @@ func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalanced
 func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 	return &LoadBalancedWebService{
 		Service: Service{},
-		Image:   ServiceImageWithPort{},
-		RoutingRule: RoutingRule{
-			HealthCheckPath: aws.String("/"),
-		},
-		TaskConfig: TaskConfig{
-			CPU:    aws.Int(256),
-			Memory: aws.Int(512),
-			Count:  aws.Int(1),
+		LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+			Image: ServiceImageWithPort{},
+			RoutingRule: RoutingRule{
+				HealthCheckPath: aws.String("/"),
+			},
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count:  aws.Int(1),
+			},
 		},
 	}
 }
@@ -110,14 +110,11 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebServic
 	if !ok {
 		return &s, nil
 	}
-	target := LoadBalancedWebService{
-		Image:       overrideConfig.Image,
-		RoutingRule: overrideConfig.RoutingRule,
-		TaskConfig:  overrideConfig.TaskConfig,
-		LogConfig:   overrideConfig.LogConfig,
-		Sidecar:     overrideConfig.Sidecar,
-	}
-	if err := mergo.Merge(&s, target, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue); err != nil {
+	// Apply overrides to the original service s.
+	err := mergo.Merge(&s, LoadBalancedWebService{
+		LoadBalancedWebServiceConfig: *overrideConfig,
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	if err != nil {
 		return nil, err
 	}
 	s.Environments = nil
