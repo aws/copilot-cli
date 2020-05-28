@@ -44,8 +44,8 @@ func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, 
 }
 
 // Describe returns status of a pipeline.
-func (w *PipelineStatusDescriber) Describe() (HumanJSONStringer, error) {
-	ps, err := w.pipelineSvc.GetPipelineState(w.pipelineName)
+func (d *PipelineStatusDescriber) Describe() (HumanJSONStringer, error) {
+	ps, err := d.pipelineSvc.GetPipelineState(d.pipelineName)
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline status: %w", err)
 	}
