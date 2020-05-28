@@ -353,7 +353,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
 				ActionStates: []*codepipeline.ActionState{
 					{
-						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Succeeded")},
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("In Progress")},
 					},
 				},
 				StageName: aws.String("Build"),
@@ -362,18 +362,13 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
 				ActionStates: []*codepipeline.ActionState{
 					{
-						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("In Progress")},
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Failed")},
 					},
 				},
 				StageName: aws.String("DeployTo-test"),
 			},
 			{
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(false)},
-				ActionStates: []*codepipeline.ActionState{
-					{
-						LatestExecution: &codepipeline.ActionExecution{Status: aws.String("Failed")},
-					},
-				},
 				StageName: aws.String("DeployTo-prod"),
 			},
 		},
@@ -406,17 +401,17 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 					},
 					{
 						StageName:  "Build",
-						Status:     "Succeeded",
-						Transition: "ENABLED",
-					},
-					{
-						StageName:  "DeployTo-test",
 						Status:     "In Progress",
 						Transition: "ENABLED",
 					},
 					{
-						StageName:  "DeployTo-prod",
+						StageName:  "DeployTo-test",
 						Status:     "Failed",
+						Transition: "ENABLED",
+					},
+					{
+						StageName:  "DeployTo-prod",
+						Status:     "",
 						Transition: "DISABLED",
 					},
 				},

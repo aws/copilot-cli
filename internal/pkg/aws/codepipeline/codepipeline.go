@@ -201,11 +201,8 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 			transition = "DISABLED"
 		}
 		var status string
-		const emptyStatus = "  -"
 		for _, actionState := range stage.ActionStates {
-			if actionState.LatestExecution == nil {
-				status = emptyStatus
-			} else {
+			if actionState.LatestExecution != nil {
 				status = aws.StringValue(actionState.LatestExecution.Status)
 			}
 		}
@@ -229,5 +226,10 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (s *StageState) HumanString() string {
-	return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, s.Transition)
+	const empty = "  -"
+	if s.Status == "" {
+		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, empty, s.Transition)
+	} else {
+		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, s.Transition)
+	}
 }
