@@ -229,7 +229,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 		var transition string
 		if stage.InboundTransitionState != nil {
 			transition = "DISABLED"
-			if *stage.InboundTransitionState.Enabled == true {
+			if *stage.InboundTransitionState.Enabled {
 				transition = "ENABLED"
 			}
 		}
