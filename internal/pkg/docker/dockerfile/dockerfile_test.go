@@ -3,6 +3,7 @@
 package dockerfile
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -246,6 +247,41 @@ func TestParseHealthCheckDockerfile(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, _ := parseFromReader(tc.dockerfile)
+			require.Equal(t, tc.wantedConfig, got)
+		})
+	}
+}
+
+func TestParseHealthCheckErrorDockerfile(t *testing.T) {
+	testCases := map[string]struct {
+		dockerfile   string
+		wantedConfig Dockerfile
+		wantedErr    error
+	}{
+		"healthcheck contains an invalid flag": {
+			dockerfile: `HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`,
+			wantedErr:  fmt.Errorf("parse instructions: Unknown flag: randomFlag"),
+			wantedConfig: Dockerfile{
+				HealthCheck: healthCheck{
+					interval:    0,
+					timeout:     0,
+					startPeriod: 0,
+					retries:     0,
+					command:     "",
+				},
+				ExposedPorts: []portConfig{},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := parseFromReader(tc.dockerfile)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, tc.wantedConfig, got)
 		})
 	}

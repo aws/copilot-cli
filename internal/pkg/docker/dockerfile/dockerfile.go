@@ -28,7 +28,15 @@ const (
 const reFindAllMatches = -1 // regexp package uses this as shorthand for "find all matches in string"
 
 const (
-	nanoseconds = 1000000000
+	intervalFlag       = "interval"
+	timeoutFlag        = "timeout"
+	startPeriodFlag    = "start-period"
+	retriesFlag        = "retries"
+	intervalDefault    = 30000000000 //30s in nanoseconds
+	timeoutDefault     = 30000000000 //30s in nanoseconds
+	startPeriodDefault = 0
+	retriesDefault     = 3
+	healthcheck        = 12
 )
 
 var (
@@ -50,7 +58,7 @@ type healthCheck struct {
 	command     string
 }
 
-// Dockerfile represents a parsed dockerfile.
+// Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
 	HealthCheck  healthCheck
@@ -107,19 +115,19 @@ func (df *Dockerfile) parse() error {
 	file, err := df.fs.Open(df.path)
 
 	if err != nil {
-		return fmt.Errorf("read dockerfile: %w", err)
+		return fmt.Errorf("read Dockerfile: %w", err)
 	}
 	defer file.Close()
 
 	f, err := ioutil.ReadFile(file.Name())
 	if err != nil {
-		return fmt.Errorf("dockerfile readfile error: %w %s", err, f)
+		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
 	}
 	fileString := string(f)
 
 	parsedDockerfile, err := parseFromReader(fileString)
 	if err != nil {
-		return fmt.Errorf("dockerfile parse error: %w", err)
+		return fmt.Errorf("parse Dockerfile: %w", err)
 	}
 
 	df.ExposedPorts = parsedDockerfile.ExposedPorts
@@ -136,19 +144,21 @@ func parseFromReader(line string) (Dockerfile, error) {
 	// Parse(rwc io.Reader) reads lines from a Reader, and parses the lines into an AST.
 	ast, err := parser.Parse(strings.NewReader(line))
 	if err != nil {
-		return df, err
+		return df, fmt.Errorf("parse reader: %w", err)
 	}
-	for i := 0; i < len(ast.AST.Children); i++ {
+
+	for _, child := range ast.AST.Children {
 		// ParseInstruction converts an AST to a typed instruction.
+		// Does prevalidation checks before parsing
 		// Example of an instruction is HEALTHCHECK CMD curl -f http://localhost/ || exit 1.
-		instruction, err := instructions.ParseInstruction(ast.AST.Children[i])
+		instruction, err := instructions.ParseInstruction(child)
 		if err != nil {
-			return df, err
+			return df, fmt.Errorf("parse instructions: %w", err)
 		}
 		inst := fmt.Sprint(instruction)
 
-		// Getting the value at a children will return the dockerfile directive
-		switch d := ast.AST.Children[i].Value; d {
+		// Getting the value at a children will return the Dockerfile directive
+		switch d := child.Value; d {
 		case "expose":
 			currentPorts := parseExpose(inst)
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
@@ -220,28 +230,27 @@ func parseExpose(line string) []portConfig {
 func parseHealthCheck(line string) (healthCheck, error) {
 	var hc healthCheck
 
-	if line[12:] == "NONE" {
-		return hc, nil
+	if line[healthcheck:] == "NONE" {
+		return healthCheck{}, nil
 	}
 
 	var retries int
 	var interval, timeout, startPeriod time.Duration
 	fs := flag.NewFlagSet("flags", flag.ContinueOnError)
 
-	// Default value DurationVar gives is in nanoseconds
-	fs.DurationVar(&interval, "interval", 30*nanoseconds, "")
-	fs.DurationVar(&timeout, "timeout", 30*nanoseconds, "")
-	fs.DurationVar(&startPeriod, "start-period", 0, "")
-	fs.IntVar(&retries, "retries", 3, "")
+	fs.DurationVar(&interval, intervalFlag, intervalDefault, "")
+	fs.DurationVar(&timeout, timeoutFlag, timeoutDefault, "")
+	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
+	fs.IntVar(&retries, retriesFlag, retriesDefault, "")
 
-	if err := fs.Parse(strings.Split(line[12:], " ")); err != nil {
-		return hc, err
+	if err := fs.Parse(strings.Split(line[healthcheck:], " ")); err != nil {
+		return healthCheck{}, err
 	}
 
 	hc = healthCheck{
-		interval:    uint16(interval / nanoseconds),
-		timeout:     uint16(timeout / nanoseconds),
-		startPeriod: uint16(startPeriod / nanoseconds),
+		interval:    uint16(interval.Seconds()),
+		timeout:     uint16(timeout.Seconds()),
+		startPeriod: uint16(startPeriod.Seconds()),
 		retries:     uint16(retries),
 		command:     regexp.MustCompile("CMD.*").FindString(line),
 	}
