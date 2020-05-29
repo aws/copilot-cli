@@ -58,9 +58,37 @@ type PipelineState struct {
 
 // StageState wraps a CodePipeline stage state
 type StageState struct {
-	StageName  string `json:"stageName"`
-	Status     string `json:"status"`
-	Transition string `json:"transition"`
+	StageName  string        `json:"stageName"`
+	Actions    []StageAction `json:"actions"`
+	Transition string        `json:"transition"`
+}
+
+// StageAction wraps a CodePipeline stage action
+type StageAction struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// Loops through ss.Actions and determines the collective status
+func (ss StageState) AggregateStatus() string {
+	status := map[string]int{
+		"":           0,
+		"InProgress": 0,
+		"Failed":     0,
+		"Abandoned":  0,
+		"Succeeded":  0,
+	}
+	for _, action := range ss.Actions {
+		status[action.Status] += 1
+	}
+	if status["InProgress"] > 0 {
+		return "InProgress"
+	} else if status["Failed"]+status["Abandoned"] > 0 {
+		return "Failed"
+	} else if status["Succeeded"] > 0 && status["Succeeded"] == len(ss.Actions) {
+		return "Succeeded"
+	}
+	return ""
 }
 
 // New returns a CodePipeline client configured against the input session.
@@ -205,15 +233,18 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 				transition = "ENABLED"
 			}
 		}
-		var status string
+		var status []StageAction
 		for _, actionState := range stage.ActionStates {
 			if actionState.LatestExecution != nil {
-				status = aws.StringValue(actionState.LatestExecution.Status)
+				status = append(status, StageAction{
+					Name:   aws.StringValue(actionState.ActionName),
+					Status: aws.StringValue(actionState.LatestExecution.Status),
+				})
 			}
 		}
 		stageStates = append(stageStates, &StageState{
 			StageName:  stageName,
-			Status:     status,
+			Actions:    status,
 			Transition: transition,
 		})
 	}
@@ -227,15 +258,15 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 // HumanString returns the stringified PipelineState struct with human readable format.
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
-func (s *StageState) HumanString() string {
+func (ss *StageState) HumanString() string {
 	const empty = "  -"
-status := s.Status
-transition := s.Transition
-if status == "" {
-  status = empty
-}
-if transition == "" {
-  transition = empty
-}
-return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, status, transition) 
+	status := ss.AggregateStatus()
+	transition := ss.Transition
+	if status == "" {
+		status = empty
+	}
+	if transition == "" {
+		transition = empty
+	}
+	return fmt.Sprintf("  %s\t%s\t%s\n", ss.StageName, status, transition)
 }

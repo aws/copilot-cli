@@ -343,6 +343,11 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 			{
 				ActionStates: []*codepipeline.ActionState{
 					{
+						ActionName:      aws.String("action1"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
+					},
+					{
+						ActionName:      aws.String("action2"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
 					},
 				},
@@ -352,7 +357,16 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
 				ActionStates: []*codepipeline.ActionState{
 					{
+						ActionName:      aws.String("action1"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusFailed)},
+					},
+					{
+						ActionName:      aws.String("action2"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusInProgress)},
+					},
+					{
+						ActionName:      aws.String("action3"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
 					},
 				},
 				StageName: aws.String("Build"),
@@ -361,6 +375,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				InboundTransitionState: &codepipeline.TransitionState{Enabled: aws.Bool(true)},
 				ActionStates: []*codepipeline.ActionState{
 					{
+						ActionName:      aws.String("action1"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusFailed)},
 					},
 				},
@@ -394,23 +409,49 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				PipelineName: mockPipelineName,
 				StageStates: []*StageState{
 					{
-						StageName:  "Source",
-						Status:     "Succeeded",
+						StageName: "Source",
+						Actions: []StageAction{
+							{
+								Name:   "action1",
+								Status: "Succeeded",
+							},
+							{
+								Name:   "action2",
+								Status: "Succeeded",
+							},
+						},
 						Transition: "",
 					},
 					{
-						StageName:  "Build",
-						Status:     "InProgress",
+						StageName: "Build",
+						Actions: []StageAction{
+							{
+								Name:   "action1",
+								Status: "Failed",
+							},
+							{
+								Name:   "action2",
+								Status: "InProgress",
+							},
+							{
+								Name:   "action3",
+								Status: "Succeeded",
+							},
+						},
 						Transition: "ENABLED",
 					},
 					{
-						StageName:  "DeployTo-test",
-						Status:     "Failed",
+						StageName: "DeployTo-test",
+						Actions: []StageAction{
+							{
+								Name:   "action1",
+								Status: "Failed",
+							},
+						},
 						Transition: "ENABLED",
 					},
 					{
 						StageName:  "DeployTo-prod",
-						Status:     "",
 						Transition: "DISABLED",
 					},
 				},

@@ -6,12 +6,13 @@ package describe
 import (
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type pipelineStatusDescriberMocks struct {
@@ -28,16 +29,43 @@ var mockPipelineState = &codepipeline.PipelineState{
 	StageStates: []*codepipeline.StageState{
 		{
 			StageName: "Source",
-			Status:    "Succeeded",
+			Actions: []codepipeline.StageAction{
+				{
+					Name:   "action1",
+					Status: "Succeeded",
+				},
+				{
+					Name:   "action2",
+					Status: "Succeeded",
+				},
+			},
 		},
 		{
-			StageName:  "Build",
-			Status:     "InProgress",
+			StageName: "Build",
+			Actions: []codepipeline.StageAction{
+				{
+					Name:   "action1",
+					Status: "Failed",
+				},
+				{
+					Name:   "action2",
+					Status: "InProgress",
+				},
+				{
+					Name:   "action3",
+					Status: "Succeeded",
+				},
+			},
 			Transition: "ENABLED",
 		},
 		{
-			StageName:  "DeployTo-test",
-			Status:     "Failed",
+			StageName: "DeployTo-test",
+			Actions: []codepipeline.StageAction{
+				{
+					Name:   "action1",
+					Status: "Failed",
+				},
+			},
 			Transition: "ENABLED",
 		},
 		{
@@ -124,7 +152,7 @@ Last Deployment
 
   Updated At        3 months ago
 `,
-			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"status\":\"Succeeded\",\"transition\":\"\"},{\"stageName\":\"Build\",\"status\":\"InProgress\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"status\":\"Failed\",\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-prod\",\"status\":\"\",\"transition\":\"DISABLED\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
+			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"action2\",\"status\":\"Succeeded\"}],\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":null,\"transition\":\"DISABLED\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
 		},
 	}
 	for _, tc := range testCases {
