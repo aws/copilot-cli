@@ -56,7 +56,7 @@ type PipelineState struct {
 	UpdatedAt    *time.Time    `json:"updatedAt"`
 }
 
-// StageState wraps the CodePipeline pipeline state
+// StageState wraps a CodePipeline stage state
 type StageState struct {
 	StageName  string `json:"stageName"`
 	Status     string `json:"status"`

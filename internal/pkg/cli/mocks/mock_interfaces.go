@@ -3152,44 +3152,6 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
-// MockpipelineStatusDescriber is a mock of pipelineStatusDescriber interface
-type MockpipelineStatusDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockpipelineStatusDescriberMockRecorder
-}
-
-// MockpipelineStatusDescriberMockRecorder is the mock recorder for MockpipelineStatusDescriber
-type MockpipelineStatusDescriberMockRecorder struct {
-	mock *MockpipelineStatusDescriber
-}
-
-// NewMockpipelineStatusDescriber creates a new mock instance
-func NewMockpipelineStatusDescriber(ctrl *gomock.Controller) *MockpipelineStatusDescriber {
-	mock := &MockpipelineStatusDescriber{ctrl: ctrl}
-	mock.recorder = &MockpipelineStatusDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockpipelineStatusDescriber) EXPECT() *MockpipelineStatusDescriberMockRecorder {
-	return m.recorder
-}
-
-// Describe mocks base method
-func (m *MockpipelineStatusDescriber) Describe() (*describe.PipelineStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Describe")
-	ret0, _ := ret[0].(*describe.PipelineStatus)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Describe indicates an expected call of Describe
-func (mr *MockpipelineStatusDescriberMockRecorder) Describe() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockpipelineStatusDescriber)(nil).Describe))
-}
-
 // MockresourceGroupsClient is a mock of resourceGroupsClient interface
 type MockresourceGroupsClient struct {
 	ctrl     *gomock.Controller
@@ -3279,74 +3241,6 @@ func (m *MockpipelineGetter) ListPipelineNamesByTags(tags map[string]string) ([]
 func (mr *MockpipelineGetterMockRecorder) ListPipelineNamesByTags(tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockpipelineGetter)(nil).ListPipelineNamesByTags), tags)
-}
-
-// MockpipelineStateGetter is a mock of pipelineStateGetter interface
-type MockpipelineStateGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockpipelineStateGetterMockRecorder
-}
-
-// MockpipelineStateGetterMockRecorder is the mock recorder for MockpipelineStateGetter
-type MockpipelineStateGetterMockRecorder struct {
-	mock *MockpipelineStateGetter
-}
-
-// NewMockpipelineStateGetter creates a new mock instance
-func NewMockpipelineStateGetter(ctrl *gomock.Controller) *MockpipelineStateGetter {
-	mock := &MockpipelineStateGetter{ctrl: ctrl}
-	mock.recorder = &MockpipelineStateGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockpipelineStateGetter) EXPECT() *MockpipelineStateGetterMockRecorder {
-	return m.recorder
-}
-
-// GetPipeline mocks base method
-func (m *MockpipelineStateGetter) GetPipeline(pipelineName string) (*codepipeline.Pipeline, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPipeline", pipelineName)
-	ret0, _ := ret[0].(*codepipeline.Pipeline)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPipeline indicates an expected call of GetPipeline
-func (mr *MockpipelineStateGetterMockRecorder) GetPipeline(pipelineName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipeline", reflect.TypeOf((*MockpipelineStateGetter)(nil).GetPipeline), pipelineName)
-}
-
-// GetPipelineState mocks base method
-func (m *MockpipelineStateGetter) GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPipelineState", pipelineName)
-	ret0, _ := ret[0].(*codepipeline.PipelineState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPipelineState indicates an expected call of GetPipelineState
-func (mr *MockpipelineStateGetterMockRecorder) GetPipelineState(pipelineName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineState", reflect.TypeOf((*MockpipelineStateGetter)(nil).GetPipelineState), pipelineName)
-}
-
-// ListPipelineNamesByTags mocks base method
-func (m *MockpipelineStateGetter) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPipelineNamesByTags", tags)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListPipelineNamesByTags indicates an expected call of ListPipelineNamesByTags
-func (mr *MockpipelineStateGetterMockRecorder) ListPipelineNamesByTags(tags interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelineNamesByTags", reflect.TypeOf((*MockpipelineStateGetter)(nil).ListPipelineNamesByTags), tags)
 }
 
 // Mockexecutor is a mock of executor interface
