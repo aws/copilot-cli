@@ -19,7 +19,7 @@ type pipelineStatusMocks struct {
 	store       *mocks.Mockstore
 	ws          *mocks.MockwsPipelineReader
 	prompt      *mocks.Mockprompter
-	pipelineSvc *mocks.MockpipelineStateGetter
+	pipelineSvc *mocks.MockpipelineGetter
 	describer   *mocks.Mockdescriber
 	sel         *mocks.MockappSelector
 }
@@ -76,7 +76,7 @@ func TestPipelineStatus_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStoreReader := mocks.NewMockstore(ctrl)
-			mockPipelineStateGetter := mocks.NewMockpipelineStateGetter(ctrl)
+			mockPipelineStateGetter := mocks.NewMockpipelineGetter(ctrl)
 
 			mocks := pipelineStatusMocks{
 				store:       mockStoreReader,
@@ -243,7 +243,7 @@ stages:
 			mockStore := mocks.NewMockstore(ctrl)
 			mockWS := mocks.NewMockwsPipelineReader(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockPLSvc := mocks.NewMockpipelineStateGetter(ctrl)
+			mockPLSvc := mocks.NewMockpipelineGetter(ctrl)
 			mockSel := mocks.NewMockappSelector(ctrl)
 
 			mocks := pipelineStatusMocks{
