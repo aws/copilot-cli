@@ -17,3 +17,18 @@ pull_request_rules:
         strict: smart
         strict_method: merge
         commit_message: title+body
+  - name: Automatically approve Dependabot PRs
+    conditions:
+      - base=master
+      - status-success=AWS CodeBuild us-west-2 (ecs-cli-v2-ci)
+      - status-success=Semantic Pull Request
+      - author~=^dependabot(|-preview)\[bot\]$
+      - -title~=(WIP|wip)
+      - -label~=(WIP|do-not-merge)
+      - -merged
+      - -closed
+    actions:
+      merge:
+        method: squash
+        strict: smart
+        strict_method: merge
