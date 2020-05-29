@@ -65,10 +65,15 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	if err != nil {
+		return "", err
+	}
 	content, err := s.parser.ParseBackendService(template.ServiceOpts{
 		Variables:   s.manifest.BackendServiceConfig.Variables,
 		Secrets:     s.manifest.BackendServiceConfig.Secrets,
 		NestedStack: outputs,
+		Sidecars:    sidecars,
 		HealthCheck: s.manifest.BackendServiceConfig.Image.HealthCheckOpts(),
 	})
 	if err != nil {

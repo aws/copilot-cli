@@ -1,0 +1,15 @@
+{{range $sidecar := .Sidecars}}- Name: {{$sidecar.Name}}
+  Image: {{$sidecar.Image}}
+  PortMappings:
+    - ContainerPort: {{$sidecar.Port}}{{if $sidecar.Protocol}}
+      Protocol: {{$sidecar.Protocol}}{{end}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+{{- if $sidecar.CredParam}}
+  RepositoryCredentials:
+    CredentialsParameter: {{$sidecar.CredParam}}{{- end}}
+{{end}}

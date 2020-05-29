@@ -37,6 +37,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				mockBox.AddString("services/common/cf/service-base-properties.yml", "service-base-properties")
 				mockBox.AddString("services/common/cf/servicediscovery.yml", "servicediscovery")
 				mockBox.AddString("services/common/cf/addons.yml", "addons")
+				mockBox.AddString("services/common/cf/sidecars.yml", "sidecars")
 
 				t.box = mockBox
 			},
@@ -48,6 +49,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   service-base-properties
   servicediscovery
   addons
+  sidecars
 `,
 		},
 	}

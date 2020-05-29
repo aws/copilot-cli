@@ -29,12 +29,22 @@ type ServiceNestedStackOpts struct {
 	PolicyOutputs   []string
 }
 
+// SidecarOpts holds configuration that's needed if the service has sidecar containers.
+type SidecarOpts struct {
+	Name      *string
+	Image     *string
+	Port      *string
+	Protocol  *string
+	CredParam *string
+}
+
 // ServiceOpts holds optional data that can be provided to enable features in a service stack template.
 type ServiceOpts struct {
 	// Additional options that're common between **all** service templates.
 	Variables   map[string]string
 	Secrets     map[string]string
 	NestedStack *ServiceNestedStackOpts // Outputs from nested stacks such as the addons stack.
+	Sidecars    []*SidecarOpts
 
 	// Additional options that're not shared across all service templates.
 	HealthCheck        *ecs.HealthCheck

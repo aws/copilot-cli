@@ -32,6 +32,10 @@ Parameters:
     Default: ""
   HealthCheckPath:
     Type: String
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
 Conditions:
   HTTPLoadBalancer:
     !Not
@@ -62,7 +66,7 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-
+{{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}
 
 {{include "taskrole" . | indent 2}}
@@ -80,8 +84,8 @@ Resources:
       # This may need to be adjusted if the container takes a while to start up
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
-        - ContainerName: !Ref ServiceName
-          ContainerPort: !Ref ContainerPort
+        - ContainerName: !Ref TargetContainer
+          ContainerPort: !Ref TargetPort
           TargetGroupArn: !Ref TargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn

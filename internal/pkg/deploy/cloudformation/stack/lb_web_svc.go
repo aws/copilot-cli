@@ -10,6 +10,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -25,6 +26,8 @@ const (
 	LBWebServiceContainerPortParamKey   = "ContainerPort"
 	LBWebServiceRulePathParamKey        = "RulePath"
 	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
+	LBWebServiceTargetContainerParamKey = "TargetContainer"
+	LBWebServiceTargetPortParamKey      = "TargetPort"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -91,10 +94,15 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	if err != nil {
+		return "", err
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
 		Secrets:            s.manifest.Secrets,
 		NestedStack:        outputs,
+		Sidecars:           sidecars,
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
 	if err != nil {
@@ -105,10 +113,25 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+	containerName := s.name
+	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)
+	// Route load balancer traffic to main container by default.
+	targetContainer := aws.String(containerName)
+	targetPort := aws.String(containerPort)
+	mftTargetContainer := s.manifest.TargetContainer
+	if mftTargetContainer != nil {
+		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
+		if ok {
+			targetContainer = mftTargetContainer
+			targetPort = sidecar.Port
+		} else {
+			log.Infof("Target container %s doesn't exist. Use main container to route traffics instead.\n", *s.manifest.TargetContainer)
+		}
+	}
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
+			ParameterValue: aws.String(containerPort),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
@@ -121,6 +144,14 @@ func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+			ParameterValue: targetContainer,
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+			ParameterValue: targetPort,
 		},
 	}...)
 }

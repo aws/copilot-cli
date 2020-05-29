@@ -227,6 +227,20 @@ Outputs:
 }
 
 func TestLoadBalancedWebService_Parameters(t *testing.T) {
+	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		ServiceProps: &manifest.ServiceProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
+	testLBWebServiceManifest.TargetContainer = aws.String("xray")
+	testLBWebServiceManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+		"xray": {
+			Port: aws.String("5000"),
+		},
+	}}
 	testCases := map[string]struct {
 		httpsEnabled bool
 		expectedHTTP string
@@ -316,6 +330,14 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
 					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("xray"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("5000"),
 				},
 			}, params)
 		})

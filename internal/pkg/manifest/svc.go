@@ -6,8 +6,10 @@ package manifest
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +19,8 @@ const (
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
+
+	defaultSidecarPort = "80"
 )
 
 // ServiceTypes are the supported service manifest types.
@@ -60,6 +64,28 @@ type destinationConfig struct {
 // Sidecar holds configuration for all sidecar containers in a service.
 type Sidecar struct {
 	Sidecars map[string]*SidecarConfig `yaml:"sidecars"`
+}
+
+// SidecarsOpts converts the service's sidecar configuration into a format parsable by the templates pkg.
+func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
+	if s.Sidecars == nil {
+		return nil, nil
+	}
+	var sidecars []*template.SidecarOpts
+	for name, config := range s.Sidecars {
+		port, protocol, err := parsePortMapping(config.Port)
+		if err != nil {
+			return nil, fmt.Errorf("parse port mapping %s: %w", *config.Port, err)
+		}
+		sidecars = append(sidecars, &template.SidecarOpts{
+			Name:      aws.String(name),
+			Image:     config.Image,
+			Port:      port,
+			Protocol:  protocol,
+			CredParam: config.CredParam,
+		})
+	}
+	return sidecars, nil
 }
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
@@ -139,4 +165,21 @@ func intpcopy(v *int) *int {
 		return nil
 	}
 	return aws.Int(*v)
+}
+
+// Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
+func parsePortMapping(s *string) (port *string, protocol *string, err error) {
+	if s == nil {
+		// default port for sidecar container to be 80.
+		return aws.String(defaultSidecarPort), nil, nil
+	}
+	portProtocol := strings.Split(*s, "/")
+	switch len(portProtocol) {
+	case 1:
+		return aws.String(portProtocol[0]), nil, nil
+	case 2:
+		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
+	default:
+		return nil, nil, fmt.Errorf("cannot parse %s", *s)
+	}
 }

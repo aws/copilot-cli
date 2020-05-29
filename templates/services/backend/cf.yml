@@ -55,7 +55,7 @@ Resources:
             Retries: {{.HealthCheck.Retries}}
             StartPeriod: {{.HealthCheck.StartPeriod}}
             Timeout: {{.HealthCheck.Timeout}}{{end}}
-
+{{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}
 
 {{include "taskrole" . | indent 2}}
