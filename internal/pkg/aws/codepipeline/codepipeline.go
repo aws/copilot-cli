@@ -229,14 +229,13 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (s *StageState) HumanString() string {
 	const empty = "  -"
-	switch {
-	case s.Status == "" && s.Transition == "":
-		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, empty, empty)
-	case s.Status == "":
-		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, empty, s.Transition)
-	case s.Transition == "":
-		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, empty)
-	default:
-		return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, s.Status, s.Transition)
-	}
+status := s.Status
+transition := s.Transition
+if status == "" {
+  status = empty
+}
+if transition == "" {
+  transition = empty
+}
+return fmt.Sprintf("  %s\t%s\t%s\n", s.StageName, status, transition) 
 }
