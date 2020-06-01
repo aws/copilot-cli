@@ -1,6 +1,9 @@
 {{.BucketName}}AccessPolicy:
   Type: AWS::IAM::ManagedPolicy
   Properties:
+    Description: !Sub
+      - Grants CRUD access to the S3 bucket ${Bucket}
+      - { Bucket: !Ref {{.BucketName}} }
     PolicyDocument:
       Version: 2012-10-17
       Statement:
