@@ -69,7 +69,11 @@ type StageAction struct {
 	Status string `json:"status"`
 }
 
-// Loops through ss.Actions and determines the collective status
+// AggregateStatus returns the collective status of a stage by looking at each individual action's status.
+// It returns "InProgress" if there are any actions that are in progress.
+// It returns "Failed" if there are actions that failed or were abandoned.
+// It returns "Succeeded" if all actions succeeded.
+// It returns "" if the status is unknown.
 func (ss StageState) AggregateStatus() string {
 	status := map[string]int{
 		"":           0,
