@@ -1,9 +1,9 @@
 App:
   Type: String
-  Description: Your project name.
+  Description: Your application's name.
 Env:
   Type: String
-  Description: The environment name your application is being deployed to.
+  Description: The environment name your service is being deployed to.
 Service:
   Type: String
-  Description: The name of the application being deployed.
+  Description: The name of the service being deployed.

@@ -7,7 +7,7 @@
     PolicyDocument:
       Version: 2012-10-17
       Statement:
-        - Sid: {{.BucketResourceName}}S3ObjectActions
+        - Sid: S3ObjectActions
           Effect: Allow
           Action:
           - s3:GetObject
@@ -17,7 +17,7 @@
           - s3:DeleteObject
           - s3:RestoreObject
           Resource: !Sub ${{{.BucketResourceName}}.Arn}/*
-        - Sid: {{.BucketResourceName}}S3ListAction
+        - Sid: S3ListAction
           Effect: Allow
           Action: s3:ListBucket
           Resource: !Sub ${{{.BucketResourceName}}.Arn}
