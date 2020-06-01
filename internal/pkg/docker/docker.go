@@ -6,33 +6,35 @@ package docker
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 )
 
-// Service wraps a runner.
-type Service struct {
-	runner runner
+// Runner represents a command that can be run.
+type Runner struct {
+	runner
 }
 
 type runner interface {
 	Run(name string, args []string, options ...command.Option) error
 }
 
-// New returns a Service.
-func New() Service {
-	return Service{
+// New returns a Runner.
+func New() Runner {
+	return Runner{
 		runner: command.New(),
 	}
 }
 
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile image path.
-func (s Service) Build(uri, imageTag, path string) error {
+func (r Runner) Build(uri, imageTag, path string) error {
 	imageName := imageName(uri, imageTag)
+	dfPath, dfName := filepath.Split(path)
 
-	err := s.runner.Run("docker", []string{"build", "-t", imageName, path})
+	err := r.Run("docker", []string{"build", "-t", imageName, dfPath, "-f", dfName})
 
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
@@ -42,8 +44,8 @@ func (s Service) Build(uri, imageTag, path string) error {
 }
 
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
-func (s Service) Login(uri, username, password string) error {
-	err := s.runner.Run("docker",
+func (r Runner) Login(uri, username, password string) error {
+	err := r.Run("docker",
 		[]string{"login", "-u", username, "--password-stdin", uri},
 		command.Stdin(strings.NewReader(password)))
 
@@ -55,10 +57,10 @@ func (s Service) Login(uri, username, password string) error {
 }
 
 // Push will run `docker push` command against the Service repository URI with the input uri and image tag.
-func (s Service) Push(uri, imageTag string) error {
+func (r Runner) Push(uri, imageTag string) error {
 	path := imageName(uri, imageTag)
 
-	err := s.runner.Run("docker", []string{"push", path})
+	err := r.Run("docker", []string{"push", path})
 
 	if err != nil {
 		// TODO: improve the error handling here.
