@@ -41,7 +41,7 @@ type Pipeline struct {
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
-// Stage wraps the codepipeline pipeline stage
+// Stage wraps the codepipeline pipeline stage.
 type Stage struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
@@ -56,14 +56,14 @@ type PipelineState struct {
 	UpdatedAt    *time.Time    `json:"updatedAt"`
 }
 
-// StageState wraps a CodePipeline stage state
+// StageState wraps a CodePipeline stage state.
 type StageState struct {
 	StageName  string        `json:"stageName"`
 	Actions    []StageAction `json:"actions"`
 	Transition string        `json:"transition"`
 }
 
-// StageAction wraps a CodePipeline stage action
+// StageAction wraps a CodePipeline stage action.
 type StageAction struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
