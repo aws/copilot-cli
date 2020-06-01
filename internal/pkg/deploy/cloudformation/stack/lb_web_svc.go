@@ -111,8 +111,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return content.String(), nil
 }
 
-// Parameters returns the list of CloudFormation parameters used by the template.
-func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+func (s *LoadBalancedWebService) loadBalancerTarget() (*string, *string) {
 	containerName := s.name
 	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)
 	// Route load balancer traffic to main container by default.
@@ -128,10 +127,16 @@ func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
 			log.Infof("Target container %s doesn't exist. Use main container to route traffics instead.\n", *s.manifest.TargetContainer)
 		}
 	}
+	return targetContainer, targetPort
+}
+
+// Parameters returns the list of CloudFormation parameters used by the template.
+func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+	targetContainer, targetPort := s.loadBalancerTarget()
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(containerPort),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),

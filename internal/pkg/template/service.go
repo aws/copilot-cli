@@ -31,11 +31,11 @@ type ServiceNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name      *string
-	Image     *string
-	Port      *string
-	Protocol  *string
-	CredParam *string
+	Name       *string
+	Image      *string
+	Port       *string
+	Protocol   *string
+	CredsParam *string
 }
 
 // ServiceOpts holds optional data that can be provided to enable features in a service stack template.

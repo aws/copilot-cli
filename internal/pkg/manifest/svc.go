@@ -19,8 +19,6 @@ const (
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
-
-	defaultSidecarPort = "80"
 )
 
 // ServiceTypes are the supported service manifest types.
@@ -82,7 +80,7 @@ func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
 			Image:     config.Image,
 			Port:      port,
 			Protocol:  protocol,
-			CredParam: config.CredParam,
+			CredsParam: config.CredsParam,
 		})
 	}
 	return sidecars, nil
@@ -92,7 +90,7 @@ func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
 type SidecarConfig struct {
 	Port      *string `yaml:"port"`
 	Image     *string `yaml:"image"`
-	CredParam *string `yaml:"credentialsParameter"`
+	CredsParam *string `yaml:"credentialsParameter"`
 }
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
@@ -170,8 +168,7 @@ func intpcopy(v *int) *int {
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
 func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
-		// default port for sidecar container to be 80.
-		return aws.String(defaultSidecarPort), nil, nil
+		return nil, nil, nil
 	}
 	portProtocol := strings.Split(*s, "/")
 	switch len(portProtocol) {
@@ -180,6 +177,6 @@ func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	case 2:
 		return aws.String(portProtocol[0]), aws.String(portProtocol[1]), nil
 	default:
-		return nil, nil, fmt.Errorf("cannot parse %s", *s)
+		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
 	}
 }

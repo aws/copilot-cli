@@ -79,7 +79,7 @@ func TestBackendService_Template(t *testing.T) {
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("parse port mapping 80/80/80: %w", errors.New("cannot parse 80/80/80")),
+			wantedErr: fmt.Errorf("parse port mapping 80/80/80: %w", errors.New("cannot parse port mapping from 80/80/80")),
 		},
 		"failed parsing svc template": {
 			manifest: testBackendSvcManifest,
