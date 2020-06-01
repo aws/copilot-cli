@@ -73,7 +73,7 @@ type StageAction struct {
 // It returns "InProgress" if there are any actions that are in progress.
 // It returns "Failed" if there are actions that failed or were abandoned.
 // It returns "Succeeded" if all actions succeeded.
-// It returns "" if the status is unknown.
+// It returns "" if there is no prior execution.
 func (ss StageState) AggregateStatus() string {
 	status := map[string]int{
 		"":           0,
