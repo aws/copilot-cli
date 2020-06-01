@@ -1,6 +1,6 @@
 {{.BucketResourceName}}BucketName:
   Description: "The name of a user-defined bucket."
-  Value: !Sub ${App}-${Env}-${Service}-{{.BucketName}}
+  Value: !Ref {{.BucketResourceName}}
 {{.BucketResourceName}}AccessPolicy:
   Description: "The IAM::ManagedPolicy to attach to the task role"
   Value: !Ref {{.BucketResourceName}}AccessPolicy
