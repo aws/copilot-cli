@@ -19,6 +19,8 @@ const (
 	LoadBalancedWebServiceType = "Load Balanced Web Service"
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
+
+	defaultSidecarPort = "80"
 )
 
 // ServiceTypes are the supported service manifest types.
@@ -168,7 +170,8 @@ func intpcopy(v *int) *int {
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).
 func parsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
-		return nil, nil, nil
+		// default port for sidecar container to be 80.
+		return aws.String(defaultSidecarPort), nil, nil
 	}
 	portProtocol := strings.Split(*s, "/")
 	switch len(portProtocol) {
