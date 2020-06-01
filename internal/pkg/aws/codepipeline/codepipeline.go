@@ -41,7 +41,7 @@ type Pipeline struct {
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
-// Stage wraps the codepipeline pipeline stage
+// Stage wraps the codepipeline pipeline stage.
 type Stage struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
@@ -51,8 +51,48 @@ type Stage struct {
 
 // PipelineStatus represents a Pipeline's status.
 type PipelineState struct {
-	PipelineName string           `json:"pipelineName"`
-	StageStates  []*cp.StageState `json:"stageStates"`
+	PipelineName string        `json:"pipelineName"`
+	StageStates  []*StageState `json:"stageStates"`
+	UpdatedAt    *time.Time    `json:"updatedAt"`
+}
+
+// StageState wraps a CodePipeline stage state.
+type StageState struct {
+	StageName  string        `json:"stageName"`
+	Actions    []StageAction `json:"actions"`
+	Transition string        `json:"transition"`
+}
+
+// StageAction wraps a CodePipeline stage action.
+type StageAction struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// AggregateStatus returns the collective status of a stage by looking at each individual action's status.
+// It returns "InProgress" if there are any actions that are in progress.
+// It returns "Failed" if there are actions that failed or were abandoned.
+// It returns "Succeeded" if all actions succeeded.
+// It returns "" if there is no prior execution.
+func (ss StageState) AggregateStatus() string {
+	status := map[string]int{
+		"":           0,
+		"InProgress": 0,
+		"Failed":     0,
+		"Abandoned":  0,
+		"Succeeded":  0,
+	}
+	for _, action := range ss.Actions {
+		status[action.Status] += 1
+	}
+	if status["InProgress"] > 0 {
+		return "InProgress"
+	} else if status["Failed"]+status["Abandoned"] > 0 {
+		return "Failed"
+	} else if status["Succeeded"] > 0 && status["Succeeded"] == len(ss.Actions) {
+		return "Succeeded"
+	}
+	return ""
 }
 
 // New returns a CodePipeline client configured against the input session.
@@ -146,24 +186,6 @@ func (s *Stage) HumanString() string {
 	return fmt.Sprintf("  %s\t%s\t%s\t%s\n", s.Name, s.Category, s.Provider, s.Details)
 }
 
-// GetPipelineStatus retrieves status information from a given pipeline.
-func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
-	input := &cp.GetPipelineStateInput{
-		Name: aws.String(name),
-	}
-	resp, err := c.client.GetPipelineState(input)
-
-	if err != nil {
-		return nil, fmt.Errorf("get pipeline state %s: %w", name, err)
-	}
-	pipelineState := &PipelineState{
-		PipelineName: aws.StringValue(resp.PipelineName),
-		StageStates:  resp.StageStates,
-	}
-
-	return pipelineState, nil
-}
-
 // ListPipelineNamesByTags retrieves the names of all pipelines for a project.
 func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
 	var pipelineNames []string
@@ -190,4 +212,65 @@ func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
 	}
 
 	return parsedArn.Resource, nil
+}
+
+// GetPipelineStatus retrieves status information from a given pipeline.
+func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
+	input := &cp.GetPipelineStateInput{
+		Name: aws.String(name),
+	}
+	resp, err := c.client.GetPipelineState(input)
+
+	if err != nil {
+		return nil, fmt.Errorf("get pipeline state %s: %w", name, err)
+	}
+	var stageStates []*StageState
+	for _, stage := range resp.StageStates {
+		var stageName string
+		if stage.StageName != nil {
+			stageName = aws.StringValue(stage.StageName)
+		}
+		var transition string
+		if stage.InboundTransitionState != nil {
+			transition = "DISABLED"
+			if *stage.InboundTransitionState.Enabled {
+				transition = "ENABLED"
+			}
+		}
+		var status []StageAction
+		for _, actionState := range stage.ActionStates {
+			if actionState.LatestExecution != nil {
+				status = append(status, StageAction{
+					Name:   aws.StringValue(actionState.ActionName),
+					Status: aws.StringValue(actionState.LatestExecution.Status),
+				})
+			}
+		}
+		stageStates = append(stageStates, &StageState{
+			StageName:  stageName,
+			Actions:    status,
+			Transition: transition,
+		})
+	}
+	return &PipelineState{
+		PipelineName: aws.StringValue(resp.PipelineName),
+		StageStates:  stageStates,
+		UpdatedAt:    resp.Updated,
+	}, nil
+}
+
+// HumanString returns the stringified PipelineState struct with human readable format.
+// Example output:
+//   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
+func (ss *StageState) HumanString() string {
+	const empty = "  -"
+	status := ss.AggregateStatus()
+	transition := ss.Transition
+	if status == "" {
+		status = empty
+	}
+	if transition == "" {
+		transition = empty
+	}
+	return fmt.Sprintf("  %s\t%s\t%s\n", ss.StageName, status, transition)
 }
