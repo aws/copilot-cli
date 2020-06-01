@@ -328,7 +328,7 @@ func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
 	}
-	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
+	return mf.DockerfilePath(), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

@@ -220,7 +220,7 @@ image:
 			wantPath: "",
 			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
 		},
-		"should trim the manifest DockerfilePath if it contains /Dockerfile": {
+		"success": {
 			inputSvc: "serviceA",
 			setupMocks: func(controller *gomock.Controller) {
 				mockWorkspace = mocks.NewMockwsSvcReader(controller)
@@ -229,7 +229,7 @@ image:
 					mockWorkspace.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil),
 				)
 			},
-			wantPath: "serviceA",
+			wantPath: "serviceA/Dockerfile",
 			wantErr:  nil,
 		},
 	}
