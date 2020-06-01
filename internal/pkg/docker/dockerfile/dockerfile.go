@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -119,7 +118,7 @@ func (df *Dockerfile) parse() error {
 	}
 	defer file.Close()
 
-	f, err := ioutil.ReadFile(file.Name())
+	f, err := afero.ReadFile(df.fs, file.Name())
 	if err != nil {
 		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
 	}
