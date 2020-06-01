@@ -1,0 +1,20 @@
+{{.BucketName}}AccessPolicy:
+  Type: AWS::IAM::ManagedPolicy
+  Properties:
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Sid: {{.BucketName}}-s3-object-actions
+          Effect: Allow
+          Action:
+          - 's3:GetObject'
+          - 's3:PutObject'
+          - 's3:PutObjectACL'
+          - 's3:PutObjectTagging'
+          - 's3:DeleteObject'
+          - 's3:RestoreObject'
+          Resource: 'arn:aws:s3:::{{.BucketName}}/*'
+        - Sid: {{.BucketName}}-s3-list-action
+          Effect: Allow
+          Action: 's3:ListBucket'
+          Resource: 'arn:aws:s3:::{{.BucketName}}'

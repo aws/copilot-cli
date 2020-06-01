@@ -1,0 +1,3 @@
+BucketName:
+  Description: "The name of a user-defined bucket."
+  Value: !Ref {{.BucketName}}

@@ -1,0 +1,13 @@
+{{.BucketName}}:
+  Type: AWS::S3::Bucket
+  Properties:
+    AccessControl: private
+    BucketEncryption: 
+      ServerSideEncryptionConfiguration:
+      - ServerSideEncryptionByDefault:
+          SSEAlgorithm: AES256
+    BucketName: !Sub '${App}-${Env}-${Svc}-{{.BucketName}}'
+    DeletionPolicy: retain
+    PublicAccessBlockConfiguration: 
+      BlockPublicAcls: true
+      BlockPublicPolicy: true
