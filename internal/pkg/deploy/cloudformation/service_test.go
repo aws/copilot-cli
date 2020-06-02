@@ -30,7 +30,7 @@ func (m *mockStackConfig) Template() (string, error) {
 	return m.template, nil
 }
 
-func (m *mockStackConfig) Parameters() []*sdkcloudformation.Parameter {
+func (m *mockStackConfig) Parameters() ([]*sdkcloudformation.Parameter, error) {
 	var params []*sdkcloudformation.Parameter
 	for k, v := range m.parameters {
 		params = append(params, &sdkcloudformation.Parameter{
@@ -38,7 +38,7 @@ func (m *mockStackConfig) Parameters() []*sdkcloudformation.Parameter {
 			ParameterValue: aws.String(v),
 		})
 	}
-	return params
+	return params, nil
 }
 
 func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {

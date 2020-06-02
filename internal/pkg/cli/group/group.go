@@ -13,4 +13,5 @@ const (
 	Settings       = "Settings ⚙️"
 	Operational    = "Operations 🧐"
 	Release        = "Release 🚀"
+	Addons         = "Addons 🧸"
 )

@@ -328,7 +328,7 @@ func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
 	}
-	return strings.TrimSuffix(mf.DockerfilePath(), "/Dockerfile"), nil
+	return mf.DockerfilePath(), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
@@ -429,10 +429,10 @@ func (o *deploySvcOpts) deploySvc(addonsURL string) error {
 			color.HighlightUserInput(o.targetEnvironment.Name)))
 
 	if err := o.svcCFN.DeployService(conf, awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)); err != nil {
-		o.spinner.Stop("Error!")
+		o.spinner.Stop(log.Serrorf("Failed to deploy service.\n"))
 		return fmt.Errorf("deploy service: %w", err)
 	}
-	o.spinner.Stop("")
+	o.spinner.Stop("\n")
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -115,7 +116,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq("Which type of infrastructure pattern best represents your service?"), gomock.Any(), gomock.Eq(manifest.ServiceTypes)).
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitSvcTypePrompt, "service type")), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
 					Return(wantedSvcType, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -129,7 +130,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.ServiceTypes)).
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(manifest.ServiceTypes), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -143,7 +144,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf("What do you want to name this %s?", wantedSvcType)), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(wantedSvcName, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -157,7 +158,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -178,12 +179,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, wantedSvcName)), svcInitDockerfileHelpPrompt, gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, "Dockerfile", wantedSvcName)), svcInitDockerfileHelpPrompt, gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",
 						"frontend/Dockerfile",
-					})).
+					}), gomock.Any()).
 					Return("frontend/Dockerfile", nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -216,12 +217,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, wantedSvcName)), gomock.Any(), gomock.Eq(
+				m.EXPECT().SelectOne(gomock.Eq(fmt.Sprintf(fmtSvcInitDockerfilePrompt, "Dockerfile", wantedSvcName)), gomock.Any(), gomock.Eq(
 					[]string{
 						"./Dockerfile",
 						"backend/Dockerfile",
 						"frontend/Dockerfile",
-					})).
+					}), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {},
@@ -235,7 +236,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(svcInitSvcPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(defaultSvcPortString, nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
@@ -251,7 +252,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(svcInitSvcPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
@@ -267,7 +268,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 
 			mockFileSystem: func(mockFS afero.Fs) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Eq(svcInitSvcPortPrompt), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Get(gomock.Eq(fmt.Sprintf(svcInitSvcPortPrompt, "port")), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("100000", errors.New("some error"))
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {
@@ -638,10 +639,10 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 			// THEN
 			if tc.wantedErr == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.inSvcName, manifest.Service.Name)
-				require.Equal(t, tc.inSvcPort, manifest.Image.Port)
-				require.Equal(t, tc.inDockerfilePath, manifest.Image.ServiceImage.Build)
-				require.Equal(t, tc.wantedPath, manifest.LoadBalancedWebServiceConfig.Path)
+				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Service.Name))
+				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
+				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.ServiceImage.Build))
+				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

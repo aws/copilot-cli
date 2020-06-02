@@ -107,7 +107,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 }
 
 // Parameters returns a list of parameters which accompany the app CloudFormation template.
-func (c *AppStackConfig) Parameters() []*cloudformation.Parameter {
+func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(appAdminRoleParamName),
@@ -133,7 +133,7 @@ func (c *AppStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(appDNSDelegationRoleParamName),
 			ParameterValue: aws.String(dnsDelegationRoleName(c.Name)),
 		},
-	}
+	}, nil
 }
 
 // Tags returns the tags that should be applied to the Application CloudFormation stack.

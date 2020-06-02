@@ -17,28 +17,31 @@ func TestBuild(t *testing.T) {
 
 	mockURI := "mockURI"
 	mockImageTag := "mockImageTag"
-	mockPath := "mockPath"
+	mockPath := "mockPath/mockDockerfile"
 
 	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
+		path       string
 		setupMocks func(controller *gomock.Controller)
 
 		want error
 	}{
 		"wrap error returned from Run()": {
+			path: mockPath,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/", "-f", "mockDockerfile"}).Return(mockError)
 			},
 			want: fmt.Errorf("building image: %w", mockError),
 		},
 		"happy path": {
+			path: mockPath,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), mockPath}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/", "-f", "mockDockerfile"}).Return(nil)
 			},
 		},
 	}
@@ -47,11 +50,11 @@ func TestBuild(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := Service{
+			s := Runner{
 				runner: mockRunner,
 			}
 
-			got := s.Build(mockURI, mockImageTag, mockPath)
+			got := s.Build(mockURI, mockImageTag, test.path)
 
 			require.Equal(t, test.want, got)
 		})
@@ -94,7 +97,7 @@ func TestLogin(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := Service{
+			s := Runner{
 				runner: mockRunner,
 			}
 
@@ -140,7 +143,7 @@ func TestPush(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			test.setupMocks(controller)
-			s := Service{
+			s := Runner{
 				runner: mockRunner,
 			}
 

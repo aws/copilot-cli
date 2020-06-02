@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 
 	"testing"
@@ -208,20 +209,99 @@ func TestEnvShow_Ask(t *testing.T) {
 
 func TestEnvShow_Execute(t *testing.T) {
 	mockError := errors.New("some error")
+	testEnv := &config.Environment{
+		App:              "testApp",
+		Name:             "testEnv",
+		Region:           "us-west-2",
+		AccountID:        "123456789012",
+		Prod:             false,
+		RegistryURL:      "",
+		ExecutionRoleARN: "",
+		ManagerRoleARN:   "",
+	}
+	testSvc1 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc1",
+		Type: "load-balanced",
+	}
+	testSvc2 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc2",
+		Type: "load-balanced",
+	}
+	testSvc3 := &config.Service{
+		App:  "testApp",
+		Name: "testSvc3",
+		Type: "load-balanced",
+	}
+	var wantedResources = []*describe.CfnResource{
+		{
+			Type:       "AWS::IAM::Role",
+			PhysicalID: "testApp-testEnv-CFNExecutionRole",
+		},
+		{
+			Type:       "testApp-testEnv-Cluster",
+			PhysicalID: "AWS::ECS::Cluster-jI63pYBWU6BZ",
+		},
+	}
+	mockTags := map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"}
+	mockEnvDescription := describe.EnvDescription{
+		Environment: testEnv,
+		Services:    []*config.Service{testSvc1, testSvc2, testSvc3},
+		Tags:        mockTags,
+		Resources:   wantedResources,
+	}
+
 	testCases := map[string]struct {
 		inputEnv         string
 		shouldOutputJSON bool
 
-		mockEnvDescriber func(m *mocks.MockenvDescriber)
+		setupMocks func(mocks showEnvMocks)
 
 		wantedContent string
 		wantedError   error
 	}{
-		"errors if failed to describe the env": {
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Describe().Return(nil, mockError)
+		"return error if fail to describe the env": {
+			inputEnv: "testEnv",
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.describer.EXPECT().Describe().Return(nil, mockError),
+				)
 			},
-			wantedError: fmt.Errorf("describe environment mockEnv: some error"),
+
+			wantedError: fmt.Errorf("describe environment testEnv: some error"),
+		},
+		"return error if fail to generate JSON output": {
+			inputEnv:         "testEnv",
+			shouldOutputJSON: true,
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.describer.EXPECT().Describe().Return(&mockEnvDescription, mockError),
+				)
+			},
+
+			wantedError: fmt.Errorf("describe environment testEnv: some error"),
+		},
+		"success in human format": {
+			inputEnv: "testEnv",
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil),
+				)
+			},
+
+			wantedContent: "About\n\n  Name              testEnv\n  Production        false\n  Region            us-west-2\n  Account ID        123456789012\n\nServices\n\n  Name              Type\n  ----              ----\n  testSvc1          load-balanced\n  testSvc2          load-balanced\n  testSvc3          load-balanced\n\nTags\n\n  Key                  Value\n  ---                  -----\n  copilot-application  testApp\n  copilot-environment  testEnv\n  key1              value1\n  key2              value2\n\nResources\n\n  AWS::IAM::Role           testApp-testEnv-CFNExecutionRole\n  testApp-testEnv-Cluster  AWS::ECS::Cluster-jI63pYBWU6BZ\n",
+		},
+		"success in JSON format": {
+			inputEnv:         "testEnv",
+			shouldOutputJSON: true,
+			setupMocks: func(m showEnvMocks) {
+				gomock.InOrder(
+					m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil),
+				)
+			},
+
+			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}]}\n",
 		},
 	}
 
@@ -233,17 +313,21 @@ func TestEnvShow_Execute(t *testing.T) {
 			b := &bytes.Buffer{}
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
-			tc.mockEnvDescriber(mockEnvDescriber)
+
+			mocks := showEnvMocks{
+				describer: mockEnvDescriber,
+			}
+
+			tc.setupMocks(mocks)
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					GlobalOpts:       &GlobalOpts{},
+					envName:          tc.inputEnv,
 					shouldOutputJSON: tc.shouldOutputJSON,
-					envName:          "mockEnv",
 				},
 				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
-				initEnvDescriber: func(opts *showEnvOpts) error { return nil },
+				initEnvDescriber: func() error { return nil },
 				w:                b,
 			}
 

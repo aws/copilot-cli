@@ -11,26 +11,34 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGet(t *testing.T) {
+func TestPrompt_Get(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockInput := "yes"
+	mockDefaultInput := "yes"
 	mockMessage := "mockMessage"
 	mockHelpMessage := "mockHelpMessage"
+	mockFinalMessage := "mockFinalMessage"
 
 	testCases := map[string]struct {
-		mockPrompter      Prompt
-		mockValidatorFunc ValidatorFunc
+		inValidator ValidatorFunc
+		inPrompt    Prompt
 
 		wantValue string
 		wantError error
 	}{
 		"should return users input": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
-				internalPrompt, ok := p.(*survey.Input)
-
-				require.True(t, ok, "input prompt should be type *survey.Input")
-				require.Equal(t, mockMessage, internalPrompt.Message)
-				require.Equal(t, mockHelpMessage, internalPrompt.Help)
+			inValidator: func(ans interface{}) error {
+				return nil
+			},
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+				internalPrompt, ok := p.(*prompt)
+				require.True(t, ok, "input prompt should be type *prompt")
+				require.Equal(t, mockFinalMessage, internalPrompt.FinalMessage)
+				input, ok := internalPrompt.prompter.(*survey.Input)
+				require.True(t, ok, "internal prompt should be type *survey.Input")
+				require.Equal(t, mockMessage, input.Message)
+				require.Equal(t, mockHelpMessage, input.Help)
+				require.Equal(t, mockDefaultInput, input.Default)
 
 				result, ok := out.(*string)
 
@@ -42,14 +50,11 @@ func TestGet(t *testing.T) {
 
 				return nil
 			},
-			mockValidatorFunc: func(ans interface{}) error {
-				return nil
-			},
 			wantValue: mockInput,
 			wantError: nil,
 		},
 		"should echo error": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
 				return mockError
 			},
 			wantError: mockError,
@@ -58,7 +63,8 @@ func TestGet(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotValue, gotError := tc.mockPrompter.Get(mockMessage, mockHelpMessage, nil)
+			gotValue, gotError := tc.inPrompt.Get(mockMessage, mockHelpMessage, tc.inValidator,
+				WithDefaultInput(mockDefaultInput), WithFinalMessage(mockFinalMessage))
 
 			require.Equal(t, tc.wantValue, gotValue)
 			require.Equal(t, tc.wantError, gotError)
@@ -66,57 +72,52 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestSelectOne(t *testing.T) {
+func TestPrompt_GetSecret(t *testing.T) {
 	mockError := fmt.Errorf("error")
-	mockMessage := "Which droid is best droid?"
-	mockHelpMessage := "All the droids."
+	mockMessage := "What's your super secret password?"
+	mockSecret := "password"
 
 	testCases := map[string]struct {
-		mockPrompter Prompt
-		mockOptions  []string
+		inPrompt Prompt
 
 		wantValue string
 		wantError error
 	}{
-		"should return users input": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
-				internalPrompt, ok := p.(*survey.Select)
+		"should return true": {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+				internalPrompt, ok := p.(*prompt)
+				require.True(t, ok, "input prompt should be type *prompt")
+				require.Empty(t, internalPrompt.FinalMessage)
 
-				require.True(t, ok, "input prompt should be type *survey.Select")
-				require.Equal(t, mockMessage, internalPrompt.Message)
-				require.Equal(t, mockHelpMessage, internalPrompt.Help)
-				require.NotEmpty(t, internalPrompt.Options)
+				passwd, ok := internalPrompt.prompter.(*survey.Password)
+				require.True(t, ok, "internal prompt should be type *survey.Password")
+				require.Equal(t, mockMessage, passwd.Message)
+				require.Empty(t, passwd.Help)
 
 				result, ok := out.(*string)
 
 				require.True(t, ok, "type to write user input to should be a string")
 
-				*result = internalPrompt.Options[0]
+				*result = mockSecret
 
 				require.Equal(t, 2, len(opts))
 
 				return nil
 			},
-			mockOptions: []string{"r2d2", "c3po", "bb8"},
-			wantValue:   "r2d2",
-			wantError:   nil,
+			wantValue: mockSecret,
+			wantError: nil,
 		},
 		"should echo error": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
 				return mockError
 			},
-			mockOptions: []string{"apple", "orange", "banana"},
-			wantError:   mockError,
-		},
-		"should return error if input options list is empty": {
-			mockOptions: []string{},
-			wantError:   ErrEmptyOptions,
+			wantError: mockError,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotValue, gotError := tc.mockPrompter.SelectOne(mockMessage, mockHelpMessage, tc.mockOptions)
+			gotValue, gotError := tc.inPrompt.GetSecret(mockMessage, "")
 
 			require.Equal(t, tc.wantValue, gotValue)
 			require.Equal(t, tc.wantError, gotError)
@@ -124,24 +125,89 @@ func TestSelectOne(t *testing.T) {
 	}
 }
 
-func TestConfirm(t *testing.T) {
+func TestPrompt_SelectOne(t *testing.T) {
+	mockError := fmt.Errorf("error")
+	mockMessage := "Which droid is best droid?"
+
+	testCases := map[string]struct {
+		inPrompt Prompt
+		inOpts   []string
+
+		wantValue string
+		wantError error
+	}{
+		"should return users input": {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+				internalPrompt, ok := p.(*prompt)
+				require.True(t, ok, "input prompt should be type *prompt")
+				require.Empty(t, internalPrompt.FinalMessage)
+
+				sel, ok := internalPrompt.prompter.(*survey.Select)
+				require.True(t, ok, "internal prompt should be type *survey.Select")
+				require.Equal(t, mockMessage, sel.Message)
+				require.Empty(t, sel.Help)
+				require.NotEmpty(t, sel.Options)
+
+				result, ok := out.(*string)
+
+				require.True(t, ok, "type to write user input to should be a string")
+
+				*result = sel.Options[0]
+
+				require.Equal(t, 2, len(opts))
+
+				return nil
+			},
+			inOpts:    []string{"r2d2", "c3po", "bb8"},
+			wantValue: "r2d2",
+			wantError: nil,
+		},
+		"should echo error": {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+				return mockError
+			},
+			inOpts:    []string{"apple", "orange", "banana"},
+			wantError: mockError,
+		},
+		"should return error if input options list is empty": {
+			inOpts:    []string{},
+			wantError: ErrEmptyOptions,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotValue, gotError := tc.inPrompt.SelectOne(mockMessage, "", tc.inOpts)
+
+			require.Equal(t, tc.wantValue, gotValue)
+			require.Equal(t, tc.wantError, gotError)
+		})
+	}
+}
+
+func TestPrompt_Confirm(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockMessage := "Is devx awesome?"
 	mockHelpMessage := "Yes."
+	mockFinalMessage := "Awesome"
 
 	testCases := map[string]struct {
-		mockPrompter Prompt
+		inPrompt Prompt
 
 		wantValue bool
 		wantError error
 	}{
 		"should return true": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
-				internalPrompt, ok := p.(*survey.Confirm)
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+				internalPrompt, ok := p.(*prompt)
+				require.True(t, ok, "input prompt should be type *prompt")
+				require.Equal(t, mockFinalMessage, internalPrompt.FinalMessage)
 
-				require.True(t, ok, "input prompt should be type *survey.Confirm")
-				require.Equal(t, mockMessage, internalPrompt.Message)
-				require.Equal(t, mockHelpMessage, internalPrompt.Help)
+				confirm, ok := internalPrompt.prompter.(*survey.Confirm)
+				require.True(t, ok, "internal prompt should be type *survey.Confirm")
+				require.Equal(t, mockMessage, confirm.Message)
+				require.Equal(t, mockHelpMessage, confirm.Help)
+				require.True(t, confirm.Default)
 
 				result, ok := out.(*bool)
 
@@ -157,7 +223,7 @@ func TestConfirm(t *testing.T) {
 			wantError: nil,
 		},
 		"should echo error": {
-			mockPrompter: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
+			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
 				return mockError
 			},
 			wantError: mockError,
@@ -166,7 +232,8 @@ func TestConfirm(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotValue, gotError := tc.mockPrompter.Confirm(mockMessage, mockHelpMessage)
+			gotValue, gotError := tc.inPrompt.Confirm(mockMessage, mockHelpMessage,
+				WithTrueDefault(), WithFinalMessage(mockFinalMessage))
 
 			require.Equal(t, tc.wantValue, gotValue)
 			require.Equal(t, tc.wantError, gotError)

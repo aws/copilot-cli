@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/imdario/mergo"
 )
 
 const (
@@ -27,12 +28,20 @@ type BackendServiceProps struct {
 
 // BackendService holds the configuration to create a backend service manifest.
 type BackendService struct {
-	Service      `yaml:",inline"`
-	Image        imageWithPortAndHealthcheck `yaml:",flow"`
-	TaskConfig   `yaml:",inline"`
-	Environments map[string]TaskConfig `yaml:",flow"`
+	Service              `yaml:",inline"`
+	BackendServiceConfig `yaml:",inline"`
+	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
+	Environments map[string]*BackendServiceConfig `yaml:",flow"`
 
 	parser template.Parser
+}
+
+// BackendServiceConfig holds the configuration that can be overriden per environments.
+type BackendServiceConfig struct {
+	Image      imageWithPortAndHealthcheck `yaml:",flow"`
+	TaskConfig `yaml:",inline"`
+	LogConfig  `yaml:"logging,flow"`
+	Sidecar    `yaml:",inline"`
 }
 
 type imageWithPortAndHealthcheck struct {
@@ -61,10 +70,10 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		healthCheck.apply(props.HealthCheck)
 	}
 	// Apply overrides.
-	svc.Name = props.Name
-	svc.Image.Build = props.Dockerfile
-	svc.Image.Port = props.Port
-	svc.Image.HealthCheck = healthCheck
+	svc.Name = aws.String(props.Name)
+	svc.BackendServiceConfig.Image.Build = aws.String(props.Dockerfile)
+	svc.BackendServiceConfig.Image.Port = aws.Uint16(props.Port)
+	svc.BackendServiceConfig.Image.HealthCheck = healthCheck
 	svc.parser = template.New()
 	return svc
 }
@@ -92,36 +101,39 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 
 // DockerfilePath returns the image build path.
 func (s *BackendService) DockerfilePath() string {
-	return s.Image.Build
+	return aws.StringValue(s.BackendServiceConfig.Image.Build)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s *BackendService) ApplyEnv(envName string) *BackendService {
-	target, ok := s.Environments[envName]
+func (s BackendService) ApplyEnv(envName string) (*BackendService, error) {
+	overrideConfig, ok := s.Environments[envName]
 	if !ok {
-		return s
+		return &s, nil
 	}
-	return &BackendService{
-		Service: s.Service,
-		Image: imageWithPortAndHealthcheck{
-			ServiceImageWithPort: s.Image.ServiceImageWithPort,
-			HealthCheck:          s.Image.HealthCheck,
-		},
-		TaskConfig: s.TaskConfig.copyAndApply(target),
+	// Apply overrides to the original service s.
+	err := mergo.Merge(&s, BackendService{
+		BackendServiceConfig: *overrideConfig,
+	}, mergo.WithOverride, mergo.WithOverwriteWithEmptyValue)
+	if err != nil {
+		return nil, err
 	}
+	s.Environments = nil
+	return &s, nil
 }
 
 // newDefaultBackendService returns a backend service with minimal task sizes and a single replica.
 func newDefaultBackendService() *BackendService {
 	return &BackendService{
 		Service: Service{
-			Type: BackendServiceType,
+			Type: aws.String(BackendServiceType),
 		},
-		TaskConfig: TaskConfig{
-			CPU:    256,
-			Memory: 512,
-			Count:  intp(1),
+		BackendServiceConfig: BackendServiceConfig{
+			TaskConfig: TaskConfig{
+				CPU:    aws.Int(256),
+				Memory: aws.Int(512),
+				Count:  aws.Int(1),
+			},
 		},
 	}
 }
@@ -132,7 +144,7 @@ func newDefaultContainerHealthCheck() *ContainerHealthCheck {
 	return &ContainerHealthCheck{
 		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
 		Interval:    durationp(10 * time.Second),
-		Retries:     intp(2),
+		Retries:     aws.Int(2),
 		Timeout:     durationp(5 * time.Second),
 		StartPeriod: durationp(0 * time.Second),
 	}

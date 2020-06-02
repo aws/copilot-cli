@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"testing"
@@ -295,6 +296,88 @@ stages:
 				require.Nil(t, err)
 				require.Equal(t, tc.expectedApp, opts.AppName(), "expected application names to match")
 				require.Equal(t, tc.expectedPipeline, opts.pipelineName, "expected pipeline name to match")
+			}
+		})
+	}
+}
+func TestPipelineShow_Execute(t *testing.T) {
+	mockPipeline := mockDescribeData{
+		data: "mockData",
+		err:  mockError,
+	}
+	testCases := map[string]struct {
+		inPipelineName   string
+		setupMocks       func(m *mocks.Mockdescriber)
+		shouldOutputJSON bool
+
+		expectedContent string
+		expectedErr     error
+	}{
+		"noop if pipeline name is empty": {
+			inPipelineName: "",
+			setupMocks: func(m *mocks.Mockdescriber) {
+				m.EXPECT().Describe().Times(0)
+			},
+		},
+		"happy  path": {
+			inPipelineName: mockPipelineName,
+			setupMocks: func(m *mocks.Mockdescriber) {
+				m.EXPECT().Describe().Return(&mockPipeline, nil)
+			},
+			shouldOutputJSON: false,
+			expectedContent:  "mockData",
+			expectedErr:      nil,
+		},
+		"return error if fail to generate JSON output": {
+			inPipelineName: mockPipelineName,
+			setupMocks: func(m *mocks.Mockdescriber) {
+				m.EXPECT().Describe().Return(&mockPipeline, nil)
+			},
+			shouldOutputJSON: true,
+
+			expectedErr: mockError,
+		},
+		"return error if fail to describe pipeline": {
+			inPipelineName: mockPipelineName,
+			setupMocks: func(m *mocks.Mockdescriber) {
+				m.EXPECT().Describe().Return(nil, mockError)
+			},
+			shouldOutputJSON: false,
+
+			expectedErr: fmt.Errorf("describe pipeline %s: %w", mockPipelineName, mockError),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			b := &bytes.Buffer{}
+			mockDescriber := mocks.NewMockdescriber(ctrl)
+
+			tc.setupMocks(mockDescriber)
+
+			opts := &showPipelineOpts{
+				showPipelineVars: showPipelineVars{
+					shouldOutputJSON: tc.shouldOutputJSON,
+					pipelineName:     tc.inPipelineName,
+				},
+				describer:     mockDescriber,
+				initDescriber: func(bool) error { return nil },
+				w:             b,
+			}
+
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.expectedErr != nil {
+				require.EqualError(t, err, tc.expectedErr.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.expectedContent, b.String(), "expected output content match")
 			}
 		})
 	}

@@ -45,18 +45,44 @@ var testBackendSvcManifest = manifest.NewBackendService(manifest.BackendServiceP
 })
 
 func TestBackendService_Template(t *testing.T) {
+	badTestBackendSvcManifest := manifest.NewBackendService(manifest.BackendServiceProps{
+		ServiceProps: manifest.ServiceProps{
+			Name:       "frontend",
+			Dockerfile: "./frontend/Dockerfile",
+		},
+		Port: 8080,
+	})
+	badTestBackendSvcManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+		"xray": {
+			Port: aws.String("80/80/80"),
+		},
+	}}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
+		manifest         *manifest.BackendService
 		wantedTemplate   string
 		wantedErr        error
 	}{
 		"unexpected addons parsing error": {
+			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				svc.addons = mockTemplater{err: errors.New("some error")}
 			},
-			wantedErr: fmt.Errorf("generate addons template for service %s: %w", testBackendSvcManifest.Name, errors.New("some error")),
+			wantedErr: fmt.Errorf("generate addons template for service %s: %w", aws.StringValue(testBackendSvcManifest.Name), errors.New("some error")),
+		},
+		"failed parsing sidecars template": {
+			manifest: badTestBackendSvcManifest,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				svc.addons = mockTemplater{
+					tpl: `Outputs:
+  AdditionalResourcesPolicyArn:
+    Value: hello`,
+				}
+			},
+			wantedErr: fmt.Errorf("converts the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
 		},
 		"failed parsing svc template": {
+			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -71,6 +97,7 @@ func TestBackendService_Template(t *testing.T) {
 			wantedErr: fmt.Errorf("parse backend service template: %w", errors.New("some error")),
 		},
 		"render template": {
+			manifest: testBackendSvcManifest,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
 				m.EXPECT().ParseBackendService(template.ServiceOpts{
@@ -104,7 +131,7 @@ func TestBackendService_Template(t *testing.T) {
 			defer ctrl.Finish()
 			conf := &BackendService{
 				svc: &svc{
-					name: testBackendSvcManifest.Name,
+					name: aws.StringValue(testBackendSvcManifest.Name),
 					env:  testEnvName,
 					app:  testAppName,
 					rc: RuntimeConfig{
@@ -112,7 +139,7 @@ func TestBackendService_Template(t *testing.T) {
 						ImageTag:     testImageTag,
 					},
 				},
-				manifest: testBackendSvcManifest,
+				manifest: tc.manifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
@@ -130,10 +157,10 @@ func TestBackendService_Parameters(t *testing.T) {
 	// GIVEN
 	conf := &BackendService{
 		svc: &svc{
-			name: testBackendSvcManifest.Name,
+			name: aws.StringValue(testBackendSvcManifest.Name),
 			env:  testEnvName,
 			app:  testAppName,
-			tc:   testBackendSvcManifest.TaskConfig,
+			tc:   testBackendSvcManifest.BackendServiceConfig.TaskConfig,
 			rc: RuntimeConfig{
 				ImageRepoURL: testImageRepoURL,
 				ImageTag:     testImageTag,
@@ -143,7 +170,7 @@ func TestBackendService_Parameters(t *testing.T) {
 	}
 
 	// WHEN
-	params := conf.Parameters()
+	params, _ := conf.Parameters()
 
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Parameter{

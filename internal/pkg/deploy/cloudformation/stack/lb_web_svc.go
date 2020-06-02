@@ -25,6 +25,8 @@ const (
 	LBWebServiceContainerPortParamKey   = "ContainerPort"
 	LBWebServiceRulePathParamKey        = "RulePath"
 	LBWebServiceHealthCheckPathParamKey = "HealthCheckPath"
+	LBWebServiceTargetContainerParamKey = "TargetContainer"
+	LBWebServiceTargetPortParamKey      = "TargetPort"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -44,14 +46,17 @@ type LoadBalancedWebService struct {
 // NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
 func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addons.New(mft.Name)
+	addons, err := addons.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	envManifest := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	envManifest, err := mft.ApplyEnv(env) // Apply environment overrides to the manifest values.
+	if err != nil {
+		return nil, fmt.Errorf("apply environment %s override: %s", env, err)
+	}
 	return &LoadBalancedWebService{
 		svc: &svc{
-			name:   mft.Name,
+			name:   aws.StringValue(mft.Name),
 			env:    env,
 			app:    app,
 			tc:     envManifest.TaskConfig,
@@ -88,10 +93,15 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
+	if err != nil {
+		return "", fmt.Errorf("converts the sidecar configuration for service %s: %w", s.name, err)
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
 		Secrets:            s.manifest.Secrets,
 		NestedStack:        outputs,
+		Sidecars:           sidecars,
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
 	if err != nil {
@@ -100,26 +110,57 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return content.String(), nil
 }
 
+func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
+	containerName := s.name
+	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)
+	// Route load balancer traffic to main container by default.
+	targetContainer = aws.String(containerName)
+	targetPort = aws.String(containerPort)
+	mftTargetContainer := s.manifest.TargetContainer
+	if mftTargetContainer != nil {
+		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
+		if ok {
+			targetContainer = mftTargetContainer
+			targetPort = sidecar.Port
+		} else {
+			return nil, nil, fmt.Errorf("target container %s doesn't exist", *s.manifest.TargetContainer)
+		}
+	}
+	return
+}
+
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
+func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
+	targetContainer, targetPort, err := s.loadBalancerTarget()
+	if err != nil {
+		return nil, err
+	}
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-			ParameterValue: aws.String(strconv.FormatUint(uint64(s.manifest.Image.Port), 10)),
+			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-			ParameterValue: aws.String(s.manifest.Path),
+			ParameterValue: s.manifest.Path,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-			ParameterValue: aws.String(s.manifest.HealthCheckPath),
+			ParameterValue: s.manifest.HealthCheckPath,
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
 			ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 		},
-	}...)
+		{
+			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+			ParameterValue: targetContainer,
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+			ParameterValue: targetPort,
+		},
+	}...), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
