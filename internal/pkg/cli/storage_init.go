@@ -4,9 +4,11 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -52,9 +54,10 @@ type initStorageVars struct {
 type initStorageOpts struct {
 	initStorageVars
 
-	fs    afero.Fs
-	ws    wsSvcReader
-	store store
+	fs          afero.Fs
+	ws          wsSvcReader
+	addonWriter wsAddonWriter
+	store       store
 
 	app *config.Application
 }
@@ -73,9 +76,10 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	return &initStorageOpts{
 		initStorageVars: vars,
 
-		fs:    &afero.Afero{Fs: afero.NewOsFs()},
-		store: store,
-		ws:    ws,
+		fs:            &afero.Afero{Fs: afero.NewOsFs()},
+		store:         store,
+		ws:            ws,
+		wsAddonWriter: ws,
 	}, nil
 }
 
@@ -197,6 +201,104 @@ func (o *initStorageOpts) validateServiceName() error {
 	return fmt.Errorf("service %s not found in the workspace", o.StorageSvc)
 }
 
+func (o *initStorageOpts) Execute() error {
+	params := `
+App:
+  Type: String
+  Description: Your application's name.
+Env:
+  Type: String
+  Description: The environment name your service, job, or workflow is being deployed to.
+Name:
+  Type: String
+  Description: The name of the service, job, or workflow being deployed.`
+	output := `
+%[1]sBucketName:
+  Description: "The name of a user-defined bucket."
+  Value: !Ref %[1]s
+%[1]sAccessPolicy:
+  Description: "The IAM::ManagedPolicy to attach to the task role"
+  Value: !Ref %[1]sAccessPolicy`
+	policy := `
+%[1]sAccessPolicy:
+  Type: AWS::IAM::ManagedPolicy
+  Properties:
+    Description: !Sub
+      - Grants CRUD access to the S3 bucket ${Bucket}
+      - { Bucket: !Ref %[1]s }
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Sid: S3ObjectActions
+          Effect: Allow
+          Action:
+          - s3:GetObject
+          - s3:PutObject
+          - s3:PutObjectACL
+          - s3:PutObjectTagging
+          - s3:DeleteObject
+          - s3:RestoreObject
+          Resource: !Sub ${%[1]s.Arn}/*
+        - Sid: S3ListAction
+          Effect: Allow
+          Action: s3:ListBucket
+          Resource: !Sub ${%[1]s.Arn}`
+	cf := `
+%[2]s:
+  Type: AWS::S3::Bucket
+  DeletionPolicy: Retain
+  Properties:
+    AccessControl: Private
+    BucketEncryption: 
+      ServerSideEncryptionConfiguration:
+      - ServerSideEncryptionByDefault:
+          SSEAlgorithm: AES256
+    BucketName: !Sub '${App}-${Env}-${Name}-%[1]s'
+    PublicAccessBlockConfiguration: 
+      BlockPublicAcls: true
+	  BlockPublicPolicy: true`
+	logicalIdName := logicalIdSafe(o.StorageName)
+	output = fmt.Sprintf(output, logicalIdName)
+	policy = fmt.Sprintf(policy, logicalIdName)
+	cf = fmt.Sprintf(cf, o.StorageName, logicalIdName)
+
+	paramsOut := &template.Content{
+		Buffer: bytes.NewBufferString(params),
+	}
+	outputOut := &template.Content{
+		Buffer: bytes.NewBufferString(output),
+	}
+	policyOut := &template.Content{
+		Buffer: bytes.NewBufferString(policy),
+	}
+	cfOut := &template.Content{
+		Buffer: bytes.NewBufferString(cf),
+	}
+
+	wsAddonWriter.WriteAddons(paramsOut, o.StorageSvc, "params.yaml")
+	wsAddonWriter.WriteAddons(outputOut, o.StorageSvc, "outputs.yaml")
+	wsAddonWriter.WriteAddons(policyOut, o.StorageSvc, "policy.yaml")
+	wsAddonWriter.WriteAddons(cfOut, o.StorageSvc, "s3.yaml")
+
+}
+
+// Strip non-alphanumeric characters from an input string
+func logicalIdSafe(input string) string {
+	var output string
+	for _, c := range input {
+		if c >= 'a' && c <= 'z' {
+			output += string(c)
+		} else if c >= '0' && c <= '9' {
+			output += string(c)
+		} else if c >= 'A' && c <= 'Z' {
+			output += string(c)
+		} else {
+			continue
+		}
+	}
+	return output
+}
+
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
@@ -219,9 +321,9 @@ func BuildStorageInitCmd() *cobra.Command {
 			if err := opts.Ask(); err != nil {
 				return err
 			}
-			// if err := opts.Execute(); err != nil {
-			// 	return err
-			// }
+			if err := opts.Execute(); err != nil {
+				return err
+			}
 			log.Infoln("Recommended follow-up actions:")
 			// for _, followup := range opts.RecommendedActions() {
 			// 	log.Infof("- %s\n", followup)
