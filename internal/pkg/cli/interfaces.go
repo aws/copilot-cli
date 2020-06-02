@@ -232,7 +232,7 @@ type wsAppManager interface {
 }
 
 type wsAddonWriter interface {
-	WriteAddon(f encoding.BinaryMarshaler, svc, path string)
+	WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error)
 }
 
 type artifactUploader interface {
