@@ -235,101 +235,132 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testLBWebServiceManifest.TargetContainer = aws.String("xray")
-	testLBWebServiceManifest.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
+	testLBWebServiceManifestWithSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		ServiceProps: &manifest.ServiceProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
+	testLBWebServiceManifestWithSidecar.TargetContainer = aws.String("xray")
+	testLBWebServiceManifestWithSidecar.Sidecar = manifest.Sidecar{Sidecars: map[string]*manifest.SidecarConfig{
 		"xray": {
 			Port: aws.String("5000"),
 		},
 	}}
+	testLBWebServiceManifestWithBadSidecar := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+		ServiceProps: &manifest.ServiceProps{
+			Name:       "frontend",
+			Dockerfile: "frontend/Dockerfile",
+		},
+		Path: "frontend",
+		Port: 80,
+	})
+	testLBWebServiceManifestWithBadSidecar.TargetContainer = aws.String("xray")
+	expectedParams := []*cloudformation.Parameter{
+		{
+			ParameterKey:   aws.String(ServiceAppNameParamKey),
+			ParameterValue: aws.String("phonetool"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceEnvNameParamKey),
+			ParameterValue: aws.String("test"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceNameParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceContainerImageParamKey),
+			ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
+			ParameterValue: aws.String("80"),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
+			ParameterValue: aws.String("/"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceTaskCPUParamKey),
+			ParameterValue: aws.String("256"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
+			ParameterValue: aws.String("512"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceTaskCountParamKey),
+			ParameterValue: aws.String("1"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
+			ParameterValue: aws.String("30"),
+		},
+		{
+			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
+			ParameterValue: aws.String(""),
+		},
+	}
 	testCases := map[string]struct {
 		httpsEnabled bool
-		expectedHTTP string
+		manifest     *manifest.LoadBalancedWebService
+
+		expectedParams []*cloudformation.Parameter
+		expectedErr    error
 	}{
 		"HTTPS Enabled": {
 			httpsEnabled: true,
-			expectedHTTP: "true",
+			manifest:     testLBWebServiceManifest,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("true"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+			}...),
 		},
 		"HTTPS Not Enabled": {
 			httpsEnabled: false,
-			expectedHTTP: "false",
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
+			manifest:     testLBWebServiceManifest,
 
-			// GIVEN
-			conf := &LoadBalancedWebService{
-				svc: &svc{
-					name: aws.StringValue(testLBWebServiceManifest.Name),
-					env:  testEnvName,
-					app:  testAppName,
-					tc:   testLBWebServiceManifest.TaskConfig,
-					rc: RuntimeConfig{
-						ImageRepoURL: testImageRepoURL,
-						ImageTag:     testImageTag,
-					},
-				},
-				manifest: testLBWebServiceManifest,
-
-				httpsEnabled: tc.httpsEnabled,
-			}
-
-			// WHEN
-			params := conf.Parameters()
-
-			// THEN
-			require.ElementsMatch(t, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(ServiceAppNameParamKey),
-					ParameterValue: aws.String("phonetool"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceEnvNameParamKey),
-					ParameterValue: aws.String("test"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceNameParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceContainerImageParamKey),
-					ParameterValue: aws.String("12345.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
-					ParameterValue: aws.String("80"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceHealthCheckPathParamKey),
-					ParameterValue: aws.String("/"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceTaskCPUParamKey),
-					ParameterValue: aws.String("256"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceTaskMemoryParamKey),
-					ParameterValue: aws.String("512"),
-				},
-				{
-					ParameterKey:   aws.String(ServiceTaskCountParamKey),
-					ParameterValue: aws.String("1"),
-				},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
-					ParameterValue: aws.String(tc.expectedHTTP),
+					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(ServiceLogRetentionParamKey),
-					ParameterValue: aws.String("30"),
+					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),
-					ParameterValue: aws.String(""),
+					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+			}...),
+		},
+		"with sidecar container": {
+			httpsEnabled: true,
+			manifest:     testLBWebServiceManifestWithSidecar,
+
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterValue: aws.String("true"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
@@ -339,7 +370,44 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 					ParameterValue: aws.String("5000"),
 				},
-			}, params)
+			}...),
+		},
+		"with bad sidecar container": {
+			httpsEnabled: true,
+			manifest:     testLBWebServiceManifestWithBadSidecar,
+
+			expectedErr: fmt.Errorf("target container xray doesn't exist"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+
+			// GIVEN
+			conf := &LoadBalancedWebService{
+				svc: &svc{
+					name: aws.StringValue(tc.manifest.Name),
+					env:  testEnvName,
+					app:  testAppName,
+					tc:   tc.manifest.TaskConfig,
+					rc: RuntimeConfig{
+						ImageRepoURL: testImageRepoURL,
+						ImageTag:     testImageTag,
+					},
+				},
+				manifest: tc.manifest,
+
+				httpsEnabled: tc.httpsEnabled,
+			}
+
+			// WHEN
+			params, err := conf.Parameters()
+
+			// THEN
+			if err == nil {
+				require.ElementsMatch(t, tc.expectedParams, params)
+			} else {
+				require.EqualError(t, tc.expectedErr, err.Error())
+			}
 		})
 	}
 }

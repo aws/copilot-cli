@@ -10,7 +10,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
@@ -111,12 +110,12 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return content.String(), nil
 }
 
-func (s *LoadBalancedWebService) loadBalancerTarget() (*string, *string) {
+func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, targetPort *string, err error) {
 	containerName := s.name
 	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.Image.Port)), 10)
 	// Route load balancer traffic to main container by default.
-	targetContainer := aws.String(containerName)
-	targetPort := aws.String(containerPort)
+	targetContainer = aws.String(containerName)
+	targetPort = aws.String(containerPort)
 	mftTargetContainer := s.manifest.TargetContainer
 	if mftTargetContainer != nil {
 		sidecar, ok := s.manifest.Sidecars[*mftTargetContainer]
@@ -124,15 +123,18 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (*string, *string) {
 			targetContainer = mftTargetContainer
 			targetPort = sidecar.Port
 		} else {
-			log.Infof("Target container %s doesn't exist. Use main container to route traffics instead.\n", *s.manifest.TargetContainer)
+			return nil, nil, fmt.Errorf("target container %s doesn't exist", *s.manifest.TargetContainer)
 		}
 	}
-	return targetContainer, targetPort
+	return targetContainer, targetPort, nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
-	targetContainer, targetPort := s.loadBalancerTarget()
+func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
+	targetContainer, targetPort, err := s.loadBalancerTarget()
+	if err != nil {
+		return nil, err
+	}
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
@@ -158,7 +160,7 @@ func (s *LoadBalancedWebService) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
 			ParameterValue: targetPort,
 		},
-	}...)
+	}...), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

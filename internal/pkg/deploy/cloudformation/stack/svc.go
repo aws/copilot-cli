@@ -114,16 +114,20 @@ func (s *svc) Tags() []*cloudformation.Tag {
 }
 
 type templateConfigurer interface {
-	Parameters() []*cloudformation.Parameter
+	Parameters() ([]*cloudformation.Parameter, error)
 	Tags() []*cloudformation.Tag
 }
 
 func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
+	params, err := tc.Parameters()
+	if err != nil {
+		return "", err
+	}
 	doc, err := s.parser.Parse(svcParamsTemplatePath, struct {
 		Parameters []*cloudformation.Parameter
 		Tags       []*cloudformation.Tag
 	}{
-		Parameters: tc.Parameters(),
+		Parameters: params,
 		Tags:       tc.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": func(i int) int { return i + 1 },

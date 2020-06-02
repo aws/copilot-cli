@@ -22,7 +22,7 @@ import (
 type StackConfiguration interface {
 	StackName() string
 	Template() (string, error)
-	Parameters() []*sdkcloudformation.Parameter
+	Parameters() ([]*sdkcloudformation.Parameter, error)
 	Tags() []*sdkcloudformation.Tag
 }
 
@@ -112,7 +112,10 @@ func toStack(config StackConfiguration) (*cloudformation.Stack, error) {
 		return nil, err
 	}
 	stack := cloudformation.NewStack(config.StackName(), template)
-	stack.Parameters = config.Parameters()
+	stack.Parameters, err = config.Parameters()
+	if err != nil {
+		return nil, err
+	}
 	stack.Tags = config.Tags()
 	return stack, nil
 }

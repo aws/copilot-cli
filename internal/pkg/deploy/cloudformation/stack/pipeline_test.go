@@ -31,8 +31,9 @@ func TestPipelineParameters(t *testing.T) {
 	pipeline := NewPipelineStackConfig(
 		mockCreatePipelineInput(),
 	)
+	params, _ := pipeline.Parameters()
 
-	require.Nil(t, pipeline.Parameters(), "pipeline cloudformation template should not expose any parameters")
+	require.Nil(t, params, "pipeline cloudformation template should not expose any parameters")
 }
 
 func TestPipelineTags(t *testing.T) {

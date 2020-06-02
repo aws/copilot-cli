@@ -202,7 +202,8 @@ func TestAppParameters(t *testing.T) {
 	app := &AppStackConfig{
 		CreateAppInput: &deploy.CreateAppInput{Name: "testapp", AccountID: "1234", DomainName: "amazon.com"},
 	}
-	require.ElementsMatch(t, expectedParams, app.Parameters())
+	params, _ := app.Parameters()
+	require.ElementsMatch(t, expectedParams, params)
 }
 
 func TestAppTags(t *testing.T) {

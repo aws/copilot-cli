@@ -83,13 +83,13 @@ func (s *BackendService) Template() (string, error) {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *BackendService) Parameters() []*cloudformation.Parameter {
+func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	return append(s.svc.Parameters(), []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
 			ParameterValue: aws.String(strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.Image.Port)), 10)),
 		},
-	}...)
+	}...), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

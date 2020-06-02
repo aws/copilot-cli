@@ -152,7 +152,8 @@ func TestEnvParameters(t *testing.T) {
 			env := &EnvStackConfig{
 				CreateEnvironmentInput: tc.input,
 			}
-			require.ElementsMatch(t, tc.want, env.Parameters())
+			params, _ := env.Parameters()
+			require.ElementsMatch(t, tc.want, params)
 		})
 	}
 }

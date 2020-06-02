@@ -75,13 +75,13 @@ func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
 	for name, config := range s.Sidecars {
 		port, protocol, err := parsePortMapping(config.Port)
 		if err != nil {
-			return nil, fmt.Errorf("parse port mapping %s: %w", *config.Port, err)
+			return nil, err
 		}
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:      aws.String(name),
-			Image:     config.Image,
-			Port:      port,
-			Protocol:  protocol,
+			Name:       aws.String(name),
+			Image:      config.Image,
+			Port:       port,
+			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 		})
 	}
@@ -90,8 +90,8 @@ func (s *Sidecar) SidecarsOpts() ([]*template.SidecarOpts, error) {
 
 // SidecarConfig represents the configurable options for setting up a sidecar container.
 type SidecarConfig struct {
-	Port      *string `yaml:"port"`
-	Image     *string `yaml:"image"`
+	Port       *string `yaml:"port"`
+	Image      *string `yaml:"image"`
 	CredsParam *string `yaml:"credentialsParameter"`
 }
 
