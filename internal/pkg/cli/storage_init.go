@@ -154,14 +154,17 @@ func (o *initStorageOpts) askStorageName() error {
 		return nil
 	}
 	var validator func(interface{}) error
+	var friendlyText string
 	switch o.StorageType {
 	case dynamoDBStorageType:
 		validator = dynamoTableNameValidation
+		friendlyText = "DynamoDB table"
 	case s3StorageType:
 		validator = s3BucketNameValidation
+		friendlyText = "S3 Bucket"
 	}
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
-		color.HighlightUserInput(o.StorageType)),
+		color.HighlightUserInput(friendlyText)),
 		storageInitNameHelp,
 		validator)
 
