@@ -14,6 +14,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockBinaryMarshaler implements the encoding.BinaryMarshaler interface.
+type mockBinaryMarshaler struct {
+	content []byte
+	err     error
+}
+
+func (m mockBinaryMarshaler) MarshalBinary() (data []byte, err error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.content, nil
+}
+
 func TestWorkspace_copilotDirPath(t *testing.T) {
 	// turn "test/copilot" into a platform-dependent path
 	var manifestDir = filepath.FromSlash("test/copilot")
@@ -575,6 +588,65 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedErr, actualErr)
 			require.Equal(t, tc.wantedFileNames, actualFileNames)
+		})
+	}
+}
+
+func TestWorkspace_WriteAddon(t *testing.T) {
+	testCases := map[string]struct {
+		marshaler mockBinaryMarshaler
+		svc       string
+		fname     string
+
+		wantedPath string
+		wantedErr  error
+	}{
+		"writes addons file with content": {
+			marshaler: mockBinaryMarshaler{
+				content: []byte("hello"),
+			},
+			svc:   "webhook",
+			fname: "s3.yml",
+
+			wantedPath: "/copilot/webhook/addons/s3.yml",
+		},
+		"wraps error if cannot marshal to binary": {
+			marshaler: mockBinaryMarshaler{
+				err: errors.New("some error"),
+			},
+			svc:   "webhook",
+			fname: "s3.yml",
+
+			wantedErr: errors.New("marshal binary addon content: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			fs := afero.NewMemMapFs()
+			utils := &afero.Afero{
+				Fs: fs,
+			}
+			utils.MkdirAll(filepath.Join("/", "copilot", tc.svc), 0755)
+			ws := &Workspace{
+				workingDir: "/",
+				copilotDir: "/copilot",
+				fsUtils:    utils,
+			}
+
+			// WHEN
+			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.fname)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error(), "expected the same error")
+			} else {
+				require.Equal(t, tc.wantedPath, actualPath, "expected the same path")
+				out, err := utils.ReadFile(tc.wantedPath)
+				require.NoError(t, err)
+				require.Equal(t, tc.marshaler.content, out, "expected the contents of the file to match")
+			}
 		})
 	}
 }
