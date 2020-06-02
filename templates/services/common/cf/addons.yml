@@ -5,6 +5,6 @@ AddonsStack:
     Parameters:
       App: !Ref AppName
       Env: !Ref EnvName
-      Service: !Ref ServiceName
+      Name: !Ref ServiceName
     TemplateURL:
       !Ref AddonsTemplateURL
