@@ -31,6 +31,7 @@ var (
 		"service-base-properties",
 		"servicediscovery",
 		"addons",
+		"sidecars",
 	}
 )
 

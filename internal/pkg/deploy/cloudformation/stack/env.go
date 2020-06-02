@@ -86,7 +86,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
-func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
+func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamIncludeLBKey),
@@ -112,7 +112,7 @@ func (e *EnvStackConfig) Parameters() []*cloudformation.Parameter {
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
 			ParameterValue: aws.String(e.dnsDelegationRole()),
 		},
-	}
+	}, nil
 }
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.

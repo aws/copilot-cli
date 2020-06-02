@@ -36,8 +36,8 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	return content.String(), nil
 }
 
-func (p *pipelineStackConfig) Parameters() []*cloudformation.Parameter {
-	return nil
+func (p *pipelineStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
+	return nil, nil
 }
 
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
