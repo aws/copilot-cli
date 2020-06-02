@@ -76,10 +76,10 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	return &initStorageOpts{
 		initStorageVars: vars,
 
-		fs:            &afero.Afero{Fs: afero.NewOsFs()},
-		store:         store,
-		ws:            ws,
-		wsAddonWriter: ws,
+		fs:          &afero.Afero{Fs: afero.NewOsFs()},
+		store:       store,
+		ws:          ws,
+		addonWriter: ws,
 	}, nil
 }
 
@@ -275,11 +275,11 @@ Name:
 		Buffer: bytes.NewBufferString(cf),
 	}
 
-	wsAddonWriter.WriteAddons(paramsOut, o.StorageSvc, "params.yaml")
-	wsAddonWriter.WriteAddons(outputOut, o.StorageSvc, "outputs.yaml")
-	wsAddonWriter.WriteAddons(policyOut, o.StorageSvc, "policy.yaml")
-	wsAddonWriter.WriteAddons(cfOut, o.StorageSvc, "s3.yaml")
-
+	o.addonWriter.WriteAddon(paramsOut, o.StorageSvc, "params.yaml")
+	o.addonWriter.WriteAddon(outputOut, o.StorageSvc, "outputs.yaml")
+	o.addonWriter.WriteAddon(policyOut, o.StorageSvc, "policy.yaml")
+	o.addonWriter.WriteAddon(cfOut, o.StorageSvc, "s3.yaml")
+	return nil
 }
 
 // Strip non-alphanumeric characters from an input string
