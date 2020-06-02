@@ -27,15 +27,19 @@ const (
 const reFindAllMatches = -1 // regexp package uses this as shorthand for "find all matches in string"
 
 const (
-	intervalFlag       = "interval"
-	timeoutFlag        = "timeout"
+	intervalFlag    = "interval"
+	intervalDefault = 30 * time.Second
+
+	timeoutFlag    = "timeout"
+	timeoutDefault = 30 * time.Second
+
 	startPeriodFlag    = "start-period"
-	retriesFlag        = "retries"
-	intervalDefault    = 30000000000 //30s in nanoseconds
-	timeoutDefault     = 30000000000 //30s in nanoseconds
 	startPeriodDefault = 0
-	retriesDefault     = 3
-	healthcheck        = 12
+
+	retriesFlag    = "retries"
+	retriesDefault = 3
+
+	hcInstrStartIndex = len("HEALTHCHECK ")
 )
 
 var (
@@ -54,13 +58,13 @@ type healthCheck struct {
 	timeout     uint16
 	startPeriod uint16
 	retries     uint16
-	command     string
+	cmd         string
 }
 
 // Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
-	HealthCheck  healthCheck
+	HealthCheck  *healthCheck
 	parsed       bool
 	path         string
 
@@ -71,7 +75,7 @@ type Dockerfile struct {
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
-		HealthCheck:  healthCheck{},
+		HealthCheck:  &healthCheck{},
 		fs:           fs,
 		path:         path,
 		parsed:       false,
@@ -105,7 +109,7 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	return ports, err
 }
 
-// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck
+// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck.
 func (df *Dockerfile) parse() error {
 	if df.parsed {
 		return nil
@@ -114,7 +118,7 @@ func (df *Dockerfile) parse() error {
 	file, err := df.fs.Open(df.path)
 
 	if err != nil {
-		return fmt.Errorf("read Dockerfile: %w", err)
+		return fmt.Errorf("open Dockerfile: %w", err)
 	}
 	defer file.Close()
 
@@ -122,11 +126,10 @@ func (df *Dockerfile) parse() error {
 	if err != nil {
 		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
 	}
-	fileString := string(f)
 
-	parsedDockerfile, err := parseFromReader(fileString)
+	parsedDockerfile, err := parseFromReader(string(f))
 	if err != nil {
-		return fmt.Errorf("parse Dockerfile: %w", err)
+		return err
 	}
 
 	df.ExposedPorts = parsedDockerfile.ExposedPorts
@@ -135,15 +138,14 @@ func (df *Dockerfile) parse() error {
 	return nil
 }
 
-func parseFromReader(line string) (Dockerfile, error) {
+// parseFromReader reads a Dockerfile and returns a Dockerfile struct.
+func parseFromReader(line string) (*Dockerfile, error) {
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
-	df.HealthCheck = healthCheck{}
 
-	// Parse(rwc io.Reader) reads lines from a Reader, and parses the lines into an AST.
 	ast, err := parser.Parse(strings.NewReader(line))
 	if err != nil {
-		return df, fmt.Errorf("parse reader: %w", err)
+		return nil, fmt.Errorf("parse reader: %w", err)
 	}
 
 	for _, child := range ast.AST.Children {
@@ -152,7 +154,7 @@ func parseFromReader(line string) (Dockerfile, error) {
 		// Example of an instruction is HEALTHCHECK CMD curl -f http://localhost/ || exit 1.
 		instruction, err := instructions.ParseInstruction(child)
 		if err != nil {
-			return df, fmt.Errorf("parse instructions: %w", err)
+			return nil, fmt.Errorf("parse instructions: %w", err)
 		}
 		inst := fmt.Sprint(instruction)
 
@@ -164,12 +166,12 @@ func parseFromReader(line string) (Dockerfile, error) {
 		case "healthcheck":
 			healthCheckOptions, err := parseHealthCheck(inst)
 			if err != nil {
-				return df, err
+				return nil, err
 			}
 			df.HealthCheck = healthCheckOptions
 		}
 	}
-	return df, nil
+	return &df, nil
 }
 
 func parseExpose(line string) []portConfig {
@@ -226,11 +228,12 @@ func parseExpose(line string) []portConfig {
 	return ports
 }
 
-func parseHealthCheck(line string) (healthCheck, error) {
+// parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
+func parseHealthCheck(content string) (*healthCheck, error) {
 	var hc healthCheck
 
-	if line[healthcheck:] == "NONE" {
-		return healthCheck{}, nil
+	if content[hcInstrStartIndex:] == "NONE" {
+		return nil, nil
 	}
 
 	var retries int
@@ -242,8 +245,8 @@ func parseHealthCheck(line string) (healthCheck, error) {
 	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
 	fs.IntVar(&retries, retriesFlag, retriesDefault, "")
 
-	if err := fs.Parse(strings.Split(line[healthcheck:], " ")); err != nil {
-		return healthCheck{}, err
+	if err := fs.Parse(strings.Split(content[hcInstrStartIndex:], " ")); err != nil {
+		return nil, err
 	}
 
 	hc = healthCheck{
@@ -251,7 +254,17 @@ func parseHealthCheck(line string) (healthCheck, error) {
 		timeout:     uint16(timeout.Seconds()),
 		startPeriod: uint16(startPeriod.Seconds()),
 		retries:     uint16(retries),
-		command:     regexp.MustCompile("CMD.*").FindString(line),
+		cmd:         regexp.MustCompile("CMD.*").FindString(content),
 	}
-	return hc, nil
+	return &hc, nil
+}
+
+// GetHealthCheck returns a healthCheck struct.
+func (df *Dockerfile) GetHealthCheck() (*healthCheck, error) {
+	if !df.parsed {
+		if err := df.parse(); err != nil {
+			return nil, err
+		}
+	}
+	return df.HealthCheck, nil
 }

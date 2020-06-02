@@ -27,6 +27,7 @@ func TestParseExposeDockerfile(t *testing.T) {
 						RawString: "5000",
 					},
 				},
+				HealthCheck: nil,
 			},
 		},
 		"correctly parses exposed port and protocol": {
@@ -40,6 +41,7 @@ func TestParseExposeDockerfile(t *testing.T) {
 						RawString: "5000/tcp",
 					},
 				},
+				HealthCheck: nil,
 			},
 		},
 		"multiple ports with one expose line": {
@@ -63,6 +65,7 @@ func TestParseExposeDockerfile(t *testing.T) {
 						RawString: "6000",
 					},
 				},
+				HealthCheck: nil,
 			},
 		},
 	}
@@ -70,7 +73,7 @@ func TestParseExposeDockerfile(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got, _ := parseFromReader(tc.dockerfile)
-			require.Equal(t, tc.wantedConfig, got)
+			require.Equal(t, tc.wantedConfig, *got)
 		})
 	}
 }
@@ -195,94 +198,63 @@ EXPOSE 8080/tcp 5000`),
 
 func TestParseHealthCheckDockerfile(t *testing.T) {
 	testCases := map[string]struct {
-		dockerfile   string
-		err          error
-		wantedConfig Dockerfile
+		dockerfilePath string
+		dockerfile     []byte
+		wantedConfig   *healthCheck
+		wantedErr      error
 	}{
 		"correctly parses healthcheck with default values": {
-			dockerfile: `HEALTHCHECK CMD curl -f http://localhost/ || exit 1`,
-			err:        nil,
-			wantedConfig: Dockerfile{
-				HealthCheck: healthCheck{
-					interval:    30,
-					timeout:     30,
-					startPeriod: 0,
-					retries:     3,
-					command:     "CMD curl -f http://localhost/ || exit 1",
-				},
-				ExposedPorts: []portConfig{},
+			dockerfile: []byte(`HEALTHCHECK CMD curl -f http://localhost/ || exit 1`),
+			wantedErr:  nil,
+			wantedConfig: &healthCheck{
+				interval:    30,
+				timeout:     30,
+				startPeriod: 0,
+				retries:     3,
+				cmd:         "CMD curl -f http://localhost/ || exit 1",
 			},
 		},
 		"correctly parses healthcheck with user's values": {
-			dockerfile: `HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
-			CMD curl -f http://localhost/ || exit 1`,
-			err: nil,
-			wantedConfig: Dockerfile{
-				HealthCheck: healthCheck{
-					interval:    300,
-					timeout:     3,
-					startPeriod: 2,
-					retries:     3,
-					command:     "CMD curl -f http://localhost/ || exit 1",
-				},
-				ExposedPorts: []portConfig{},
+			dockerfile: []byte(`HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
+			CMD curl -f http://localhost/ || exit 1`),
+			wantedErr: nil,
+			wantedConfig: &healthCheck{
+				interval:    300,
+				timeout:     3,
+				startPeriod: 2,
+				retries:     3,
+				cmd:         "CMD curl -f http://localhost/ || exit 1",
 			},
 		},
 		"correctly parses healthcheck with NONE": {
-			dockerfile: `HEALTHCHECK NONE`,
-			err:        nil,
-			wantedConfig: Dockerfile{
-				HealthCheck: healthCheck{
-					interval:    0,
-					timeout:     0,
-					startPeriod: 0,
-					retries:     0,
-					command:     "",
-				},
-				ExposedPorts: []portConfig{},
-			},
+			dockerfile:   []byte(`HEALTHCHECK NONE`),
+			wantedErr:    nil,
+			wantedConfig: nil,
 		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got, _ := parseFromReader(tc.dockerfile)
-			require.Equal(t, tc.wantedConfig, got)
-		})
-	}
-}
-
-func TestParseHealthCheckErrorDockerfile(t *testing.T) {
-	testCases := map[string]struct {
-		dockerfile   string
-		wantedConfig Dockerfile
-		wantedErr    error
-	}{
 		"healthcheck contains an invalid flag": {
-			dockerfile: `HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`,
+			dockerfile: []byte(`HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`),
 			wantedErr:  fmt.Errorf("parse instructions: Unknown flag: randomFlag"),
-			wantedConfig: Dockerfile{
-				HealthCheck: healthCheck{
-					interval:    0,
-					timeout:     0,
-					startPeriod: 0,
-					retries:     0,
-					command:     "",
-				},
-				ExposedPorts: []portConfig{},
-			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := parseFromReader(tc.dockerfile)
+			fs := afero.Afero{Fs: afero.NewMemMapFs()}
+			err := fs.WriteFile("./Dockerfile", tc.dockerfile, 0644)
+			if err != nil {
+				t.FailNow()
+			}
+
+			df := New(fs, "./Dockerfile")
+			hc, err := df.GetHealthCheck()
+
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, tc.wantedConfig, got)
+
+			require.Equal(t, tc.wantedConfig, hc)
 		})
 	}
 }
