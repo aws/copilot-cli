@@ -7,7 +7,7 @@
       ServerSideEncryptionConfiguration:
       - ServerSideEncryptionByDefault:
           SSEAlgorithm: AES256
-    BucketName: !Sub '${App}-${Env}-${Svc}-{{.BucketName}}'
+    BucketName: !Sub '${App}-${Env}-${Name}-{{.BucketName}}'
     PublicAccessBlockConfiguration: 
       BlockPublicAcls: true
       BlockPublicPolicy: true
