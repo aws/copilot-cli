@@ -95,7 +95,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("converts the sidecar configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
@@ -126,7 +126,7 @@ func (s *LoadBalancedWebService) loadBalancerTarget() (targetContainer *string, 
 			return nil, nil, fmt.Errorf("target container %s doesn't exist", *s.manifest.TargetContainer)
 		}
 	}
-	return targetContainer, targetPort, nil
+	return
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
