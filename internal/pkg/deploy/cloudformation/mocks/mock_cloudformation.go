@@ -65,11 +65,12 @@ func (mr *MockStackConfigurationMockRecorder) Template() *gomock.Call {
 }
 
 // Parameters mocks base method
-func (m *MockStackConfiguration) Parameters() []*cloudformation0.Parameter {
+func (m *MockStackConfiguration) Parameters() ([]*cloudformation0.Parameter, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parameters")
 	ret0, _ := ret[0].([]*cloudformation0.Parameter)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Parameters indicates an expected call of Parameters
