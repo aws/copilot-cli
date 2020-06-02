@@ -246,8 +246,7 @@ Name:
           Effect: Allow
           Action: s3:ListBucket
           Resource: !Sub ${%[1]s.Arn}`
-	cf := `
-%[2]s:
+	cf := `%[2]s:
   Type: AWS::S3::Bucket
   DeletionPolicy: Retain
   Properties:
@@ -259,7 +258,7 @@ Name:
     BucketName: !Sub '${App}-${Env}-${Name}-%[1]s'
     PublicAccessBlockConfiguration: 
       BlockPublicAcls: true
-	  BlockPublicPolicy: true`
+      BlockPublicPolicy: true`
 	logicalIdName := logicalIdSafe(o.StorageName)
 	output = fmt.Sprintf(output, logicalIdName)
 	policy = fmt.Sprintf(policy, logicalIdName)
