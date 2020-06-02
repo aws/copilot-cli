@@ -26,7 +26,7 @@ const (
 
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
-	ReadAddonsFile(svcName, fileName string) ([]byte, error)
+	ReadAddon(svcName, fileName string) ([]byte, error)
 }
 
 // Addons represents additional resources for a service.
@@ -63,7 +63,7 @@ func (a *Addons) Template() (string, error) {
 
 	addonFiles := make(map[string]string)
 	for _, fileName := range filterYAMLfiles(fileNames) {
-		content, err := a.ws.ReadAddonsFile(a.svcName, fileName)
+		content, err := a.ws.ReadAddon(a.svcName, fileName)
 		if err != nil {
 			return "", fmt.Errorf("read addons file %s under service %s: %w", fileName, a.svcName, err)
 		}

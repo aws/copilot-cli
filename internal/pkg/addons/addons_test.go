@@ -42,7 +42,7 @@ func TestAddons_Template(t *testing.T) {
 					Return([]string{
 						"README.md",
 					}, nil)
-				ws.EXPECT().ReadAddonsFile(svcName, "params.yaml").Times(0)
+				ws.EXPECT().ReadAddon(svcName, "params.yaml").Times(0)
 
 				a.ws = ws
 			},
@@ -59,11 +59,11 @@ func TestAddons_Template(t *testing.T) {
 						"policy.yaml",
 						"README.md",
 					}, nil)
-				ws.EXPECT().ReadAddonsFile(svcName, "params.yaml").
+				ws.EXPECT().ReadAddon(svcName, "params.yaml").
 					Return([]byte("hello"), nil)
-				ws.EXPECT().ReadAddonsFile(svcName, "outputs.yml").
+				ws.EXPECT().ReadAddon(svcName, "outputs.yml").
 					Return([]byte("hello"), nil)
-				ws.EXPECT().ReadAddonsFile(svcName, "policy.yaml").
+				ws.EXPECT().ReadAddon(svcName, "policy.yaml").
 					Return([]byte("hello"), nil)
 
 				parser := templatemocks.NewMockParser(ctrl)
