@@ -22,6 +22,11 @@ const (
 	s3StorageType       = "S3"
 )
 
+const (
+	dynamoDBTableFriendlyText = "DynamoDB Table"
+	s3BucketFriendlyText      = "S3 Bucket"
+)
+
 var storageTypes = []string{
 	dynamoDBStorageType,
 	s3StorageType,
@@ -157,7 +162,7 @@ func (o *initStorageOpts) askStorageName() error {
 	switch o.StorageType {
 	case s3StorageType:
 		validator = s3BucketNameValidation
-		friendlyText = "S3 Bucket"
+		friendlyText = s3BucketFriendlyText
 	}
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
 		color.HighlightUserInput(friendlyText)),
@@ -247,18 +252,18 @@ Name:
   DeletionPolicy: Retain
   Properties:
     AccessControl: Private
-    BucketEncryption: 
+    BucketEncryption:
       ServerSideEncryptionConfiguration:
       - ServerSideEncryptionByDefault:
           SSEAlgorithm: AES256
     BucketName: !Sub '${App}-${Env}-${Name}-%[1]s'
-    PublicAccessBlockConfiguration: 
+    PublicAccessBlockConfiguration:
       BlockPublicAcls: true
       BlockPublicPolicy: true`
-	logicalIdName := logicalIdSafe(o.StorageName)
-	output = fmt.Sprintf(output, logicalIdName)
-	policy = fmt.Sprintf(policy, logicalIdName)
-	cf = fmt.Sprintf(cf, o.StorageName, logicalIdName)
+	logicalIDName := logicalIDSafe(o.StorageName)
+	output = fmt.Sprintf(output, logicalIDName)
+	policy = fmt.Sprintf(policy, logicalIDName)
+	cf = fmt.Sprintf(cf, o.StorageName, logicalIDName)
 
 	paramsOut := &template.Content{
 		Buffer: bytes.NewBufferString(params),
@@ -283,7 +288,7 @@ Name:
 var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 // Strip non-alphanumeric characters from an input string
-func logicalIdSafe(input string) string {
+func logicalIDSafe(input string) string {
 	return nonAlphaNum.ReplaceAllString(input, "")
 }
 
