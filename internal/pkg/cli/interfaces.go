@@ -231,6 +231,11 @@ type wsAppManager interface {
 	Summary() (*workspace.Summary, error)
 }
 
+type wsAddonManager interface {
+	WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error)
+	wsSvcReader
+}
+
 type artifactUploader interface {
 	PutArtifact(bucket, fileName string, data io.Reader) (string, error)
 }
