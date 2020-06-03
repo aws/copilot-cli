@@ -19,19 +19,19 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inSvcName     string
 		inStorageName string
 
-		mockWs    func(m *mocks.MockwsSvcReader)
+		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedErr error
 	}{
 		"no app in workspace": {
-			mockWs:    func(m *mocks.MockwsSvcReader) {},
+			mockWs:    func(m *mocks.MockwsAddonManager) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedErr: errNoAppInWorkspace,
 		},
 		"svc not in workspace": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"bad", "workspace"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -43,7 +43,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     errors.New("service frontend not found in the workspace"),
 		},
 		"workspace error": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("wanted err"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -55,7 +55,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     errors.New("retrieve local service names: wanted err"),
 		},
 		"happy path s3": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:     func(m *mocks.Mockstore) {},
@@ -66,7 +66,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     nil,
 		},
 		"happy path ddb": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:     func(m *mocks.Mockstore) {},
@@ -77,7 +77,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     nil,
 		},
 		"default to ddb name validation when storage type unspecified": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:     func(m *mocks.Mockstore) {},
@@ -88,7 +88,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     nil,
 		},
 		"s3 bad character": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:     func(m *mocks.Mockstore) {},
@@ -99,7 +99,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			wantedErr:     errValueBadFormatWithPeriod,
 		},
 		"ddb bad character": {
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore:     func(m *mocks.Mockstore) {},
@@ -115,7 +115,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockwsSvcReader(ctrl)
+			mockWs := mocks.NewMockwsAddonManager(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
