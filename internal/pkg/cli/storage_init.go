@@ -234,7 +234,7 @@ func (o *initStorageOpts) askStorageType() error {
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.StorageSvc)),
 		storageInitTypeHelp,
-		[]string{s3StorageType})
+		storageTypes)
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
@@ -253,7 +253,11 @@ func (o *initStorageOpts) askStorageName() error {
 	case s3StorageType:
 		validator = s3BucketNameValidation
 		friendlyText = s3BucketFriendlyText
+	case dynamoDBStorageType:
+		validator = dynamoTableNameValidation
+		friendlyText = dynamoDBTableFriendlyText
 	}
+
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
 		color.HighlightUserInput(friendlyText)),
 		storageInitNameHelp,
