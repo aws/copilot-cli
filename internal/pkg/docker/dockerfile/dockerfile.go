@@ -4,13 +4,16 @@
 package dockerfile
 
 import (
-	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	"github.com/spf13/afero"
 )
 
@@ -23,6 +26,22 @@ const (
 )
 const reFindAllMatches = -1 // regexp package uses this as shorthand for "find all matches in string"
 
+const (
+	intervalFlag    = "interval"
+	intervalDefault = 30 * time.Second
+
+	timeoutFlag    = "timeout"
+	timeoutDefault = 30 * time.Second
+
+	startPeriodFlag    = "start-period"
+	startPeriodDefault = 0
+
+	retriesFlag    = "retries"
+	retriesDefault = 3
+
+	hcInstrStartIndex = len("HEALTHCHECK ")
+)
+
 var (
 	errCouldntParseDockerfilePort = errors.New("parse port from EXPOSE")
 )
@@ -34,9 +53,18 @@ type portConfig struct {
 	err       error
 }
 
-// Dockerfile represents a parsed dockerfile.
+type healthCheck struct {
+	interval    uint16
+	timeout     uint16
+	startPeriod uint16
+	retries     uint16
+	cmd         string
+}
+
+// Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
+	HealthCheck  *healthCheck
 	parsed       bool
 	path         string
 
@@ -47,6 +75,7 @@ type Dockerfile struct {
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
+		HealthCheck:  nil,
 		fs:           fs,
 		path:         path,
 		parsed:       false,
@@ -80,7 +109,7 @@ func (df *Dockerfile) GetExposedPorts() ([]uint16, error) {
 	return ports, err
 }
 
-// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and (TODO) parseHealthcheck
+// parse takes a Dockerfile and fills in struct members based on methods like parseExpose and parseHealthcheck.
 func (df *Dockerfile) parse() error {
 	if df.parsed {
 		return nil
@@ -89,31 +118,60 @@ func (df *Dockerfile) parse() error {
 	file, err := df.fs.Open(df.path)
 
 	if err != nil {
-		return fmt.Errorf("read dockerfile: %w", err)
+		return fmt.Errorf("open Dockerfile: %w", err)
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	parsedDockerfile := parseFromScanner(scanner)
+	f, err := afero.ReadFile(df.fs, file.Name())
+	if err != nil {
+		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
+	}
+
+	parsedDockerfile, err := parse(string(f))
+	if err != nil {
+		return err
+	}
 
 	df.ExposedPorts = parsedDockerfile.ExposedPorts
+	df.HealthCheck = parsedDockerfile.HealthCheck
 	df.parsed = true
 	return nil
 }
 
-func parseFromScanner(scanner *bufio.Scanner) Dockerfile {
-	var line = ""
+// parse parses the contents of a Dockerfile into a Dockerfile struct.
+func parse(content string) (*Dockerfile, error) {
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
-	for scanner.Scan() {
-		line = scanner.Text()
-		switch {
-		case strings.HasPrefix(line, "EXPOSE"):
-			currentPorts := parseExpose(line)
+
+	ast, err := parser.Parse(strings.NewReader(content))
+	if err != nil {
+		return nil, fmt.Errorf("parse reader: %w", err)
+	}
+
+	for _, child := range ast.AST.Children {
+		// ParseInstruction converts an AST to a typed instruction.
+		// Does prevalidation checks before parsing
+		// Example of an instruction is HEALTHCHECK CMD curl -f http://localhost/ || exit 1.
+		instruction, err := instructions.ParseInstruction(child)
+		if err != nil {
+			return nil, fmt.Errorf("parse instructions: %w", err)
+		}
+		inst := fmt.Sprint(instruction)
+
+		// Getting the value at a children will return the Dockerfile directive
+		switch d := child.Value; d {
+		case "expose":
+			currentPorts := parseExpose(inst)
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
+		case "healthcheck":
+			healthCheckOptions, err := parseHealthCheck(inst)
+			if err != nil {
+				return nil, err
+			}
+			df.HealthCheck = healthCheckOptions
 		}
 	}
-	return df
+	return &df, nil
 }
 
 func parseExpose(line string) []portConfig {
@@ -168,4 +226,45 @@ func parseExpose(line string) []portConfig {
 		})
 	}
 	return ports
+}
+
+// parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
+func parseHealthCheck(content string) (*healthCheck, error) {
+	var hc healthCheck
+
+	if content[hcInstrStartIndex:] == "NONE" {
+		return nil, nil
+	}
+
+	var retries int
+	var interval, timeout, startPeriod time.Duration
+	fs := flag.NewFlagSet("flags", flag.ContinueOnError)
+
+	fs.DurationVar(&interval, intervalFlag, intervalDefault, "")
+	fs.DurationVar(&timeout, timeoutFlag, timeoutDefault, "")
+	fs.DurationVar(&startPeriod, startPeriodFlag, startPeriodDefault, "")
+	fs.IntVar(&retries, retriesFlag, retriesDefault, "")
+
+	if err := fs.Parse(strings.Split(content[hcInstrStartIndex:], " ")); err != nil {
+		return nil, err
+	}
+
+	hc = healthCheck{
+		interval:    uint16(interval.Seconds()),
+		timeout:     uint16(timeout.Seconds()),
+		startPeriod: uint16(startPeriod.Seconds()),
+		retries:     uint16(retries),
+		cmd:         regexp.MustCompile("CMD.*").FindString(content),
+	}
+	return &hc, nil
+}
+
+// GetHealthCheck returns a healthCheck struct.
+func (df *Dockerfile) GetHealthCheck() (*healthCheck, error) {
+	if !df.parsed {
+		if err := df.parse(); err != nil {
+			return nil, err
+		}
+	}
+	return df.HealthCheck, nil
 }
