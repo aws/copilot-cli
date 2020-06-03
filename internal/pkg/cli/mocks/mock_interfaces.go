@@ -2173,31 +2173,31 @@ func (mr *MockwsAppManagerMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsAppManager)(nil).Summary))
 }
 
-// MockwsAddonWriter is a mock of wsAddonWriter interface
-type MockwsAddonWriter struct {
+// MockwsAddonManager is a mock of wsAddonManager interface
+type MockwsAddonManager struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsAddonWriterMockRecorder
+	recorder *MockwsAddonManagerMockRecorder
 }
 
-// MockwsAddonWriterMockRecorder is the mock recorder for MockwsAddonWriter
-type MockwsAddonWriterMockRecorder struct {
-	mock *MockwsAddonWriter
+// MockwsAddonManagerMockRecorder is the mock recorder for MockwsAddonManager
+type MockwsAddonManagerMockRecorder struct {
+	mock *MockwsAddonManager
 }
 
-// NewMockwsAddonWriter creates a new mock instance
-func NewMockwsAddonWriter(ctrl *gomock.Controller) *MockwsAddonWriter {
-	mock := &MockwsAddonWriter{ctrl: ctrl}
-	mock.recorder = &MockwsAddonWriterMockRecorder{mock}
+// NewMockwsAddonManager creates a new mock instance
+func NewMockwsAddonManager(ctrl *gomock.Controller) *MockwsAddonManager {
+	mock := &MockwsAddonManager{ctrl: ctrl}
+	mock.recorder = &MockwsAddonManagerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsAddonWriter) EXPECT() *MockwsAddonWriterMockRecorder {
+func (m *MockwsAddonManager) EXPECT() *MockwsAddonManagerMockRecorder {
 	return m.recorder
 }
 
 // WriteAddon mocks base method
-func (m *MockwsAddonWriter) WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error) {
+func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteAddon", f, svc, path)
 	ret0, _ := ret[0].(string)
@@ -2206,9 +2206,39 @@ func (m *MockwsAddonWriter) WriteAddon(f encoding.BinaryMarshaler, svc, path str
 }
 
 // WriteAddon indicates an expected call of WriteAddon
-func (mr *MockwsAddonWriterMockRecorder) WriteAddon(f, svc, path interface{}) *gomock.Call {
+func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonWriter)(nil).WriteAddon), f, svc, path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, path)
+}
+
+// ServiceNames mocks base method
+func (m *MockwsAddonManager) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsAddonManagerMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsAddonManager)(nil).ServiceNames))
+}
+
+// ReadServiceManifest mocks base method
+func (m *MockwsAddonManager) ReadServiceManifest(svcName string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsAddonManagerMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadServiceManifest), svcName)
 }
 
 // MockartifactUploader is a mock of artifactUploader interface

@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -54,10 +55,9 @@ type initStorageVars struct {
 type initStorageOpts struct {
 	initStorageVars
 
-	fs          afero.Fs
-	ws          wsSvcReader
-	addonWriter wsAddonWriter
-	store       store
+	fs    afero.Fs
+	ws    wsAddonManager
+	store store
 
 	app *config.Application
 }
@@ -76,10 +76,9 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 	return &initStorageOpts{
 		initStorageVars: vars,
 
-		fs:          &afero.Afero{Fs: afero.NewOsFs()},
-		store:       store,
-		ws:          ws,
-		addonWriter: ws,
+		fs:    &afero.Afero{Fs: afero.NewOsFs()},
+		store: store,
+		ws:    ws,
 	}, nil
 }
 
@@ -156,9 +155,6 @@ func (o *initStorageOpts) askStorageName() error {
 	var validator func(interface{}) error
 	var friendlyText string
 	switch o.StorageType {
-	case dynamoDBStorageType:
-		validator = dynamoTableNameValidation
-		friendlyText = "DynamoDB table"
 	case s3StorageType:
 		validator = s3BucketNameValidation
 		friendlyText = "S3 Bucket"
@@ -277,28 +273,18 @@ Name:
 		Buffer: bytes.NewBufferString(cf),
 	}
 
-	o.addonWriter.WriteAddon(paramsOut, o.StorageSvc, "params.yaml")
-	o.addonWriter.WriteAddon(outputOut, o.StorageSvc, "outputs.yaml")
-	o.addonWriter.WriteAddon(policyOut, o.StorageSvc, "policy.yaml")
-	o.addonWriter.WriteAddon(cfOut, o.StorageSvc, "s3.yaml")
+	o.ws.WriteAddon(paramsOut, o.StorageSvc, "params.yaml")
+	o.ws.WriteAddon(outputOut, o.StorageSvc, "outputs.yaml")
+	o.ws.WriteAddon(policyOut, o.StorageSvc, "policy.yaml")
+	o.ws.WriteAddon(cfOut, o.StorageSvc, "s3.yaml")
 	return nil
 }
 
+var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
 // Strip non-alphanumeric characters from an input string
 func logicalIdSafe(input string) string {
-	var output string
-	for _, c := range input {
-		if c >= 'a' && c <= 'z' {
-			output += string(c)
-		} else if c >= '0' && c <= '9' {
-			output += string(c)
-		} else if c >= 'A' && c <= 'Z' {
-			output += string(c)
-		} else {
-			continue
-		}
-	}
-	return output
+	return nonAlphaNum.ReplaceAllString(input, "")
 }
 
 func BuildStorageInitCmd() *cobra.Command {
