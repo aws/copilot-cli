@@ -139,7 +139,7 @@ func (o *initStorageOpts) askStorageType() error {
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.StorageSvc)),
 		storageInitTypeHelp,
-		storageTypes)
+		[]string{s3StorageType})
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
