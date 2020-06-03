@@ -328,6 +328,50 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	return nil
 }
 
+func (o *initStorageOpts) askDynamoLSIConfig() error {
+	if o.LSIName != "" || o.LSISort != "" {
+		return nil
+	}
+	addLsi, err := o.prompt.Confirm(
+		storageInitDDBLSIPrompt,
+		storageInitDDBLSIHelp,
+	)
+	if err != nil {
+		return fmt.Errorf("confirm add lsi to table: %w", err)
+	}
+	if addLsi != true {
+		return nil
+	}
+
+	name, err := o.prompt.Get(storageInitDDBLSINamePrompt,
+		storageInitDDBLSIHelp,
+		dynamoTableNameValidation,
+	)
+	if err != nil {
+		return fmt.Errorf("get lsi name: %w", err)
+	}
+	o.LSIName = name
+
+	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
+		color.HighlightUserInput("sort key"),
+		color.HighlightUserInput(lsiFriendlyText),
+	)
+	key, err := o.prompt.Get(keyPrompt,
+		storageInitDDBLSISortKeyPromptHelp,
+		dynamoTableNameValidation,
+	)
+	if err != nil {
+		return fmt.Errorf("get lsi sort key: %w", err)
+	}
+
+	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
+		storageInitDDBLSISortKeyPromptHelp,
+		attributeTypesLong,
+	)
+	o.LSISort = key + ":" + keyType
+	return nil
+}
+
 func (o *initStorageOpts) validateServiceName() error {
 	names, err := o.ws.ServiceNames()
 	if err != nil {
