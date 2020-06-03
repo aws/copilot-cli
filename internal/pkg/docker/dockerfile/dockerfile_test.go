@@ -72,7 +72,7 @@ func TestParseExposeDockerfile(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, _ := parseFromReader(tc.dockerfile)
+			got, _ := parse(tc.dockerfile)
 			require.Equal(t, tc.wantedConfig, *got)
 		})
 	}
@@ -91,7 +91,7 @@ func getUintPorts(inPorts []portConfig) []uint16 {
 	return ports
 }
 
-func TestDockerfileInterface(t *testing.T) {
+func TestDockerfile_GetExposedPort(t *testing.T) {
 	wantedPath := "./Dockerfile"
 	testCases := map[string]struct {
 		dockerfilePath string
@@ -196,7 +196,7 @@ EXPOSE 8080/tcp 5000`),
 	}
 }
 
-func TestParseHealthCheckDockerfile(t *testing.T) {
+func TestDockerfile_GetHealthCheck(t *testing.T) {
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte

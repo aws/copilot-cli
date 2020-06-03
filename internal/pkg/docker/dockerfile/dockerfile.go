@@ -75,7 +75,7 @@ type Dockerfile struct {
 func New(fs afero.Fs, path string) *Dockerfile {
 	return &Dockerfile{
 		ExposedPorts: []portConfig{},
-		HealthCheck:  &healthCheck{},
+		HealthCheck:  nil,
 		fs:           fs,
 		path:         path,
 		parsed:       false,
@@ -127,7 +127,7 @@ func (df *Dockerfile) parse() error {
 		return fmt.Errorf("read Dockerfile %s error: %w", f, err)
 	}
 
-	parsedDockerfile, err := parseFromReader(string(f))
+	parsedDockerfile, err := parse(string(f))
 	if err != nil {
 		return err
 	}
@@ -138,12 +138,12 @@ func (df *Dockerfile) parse() error {
 	return nil
 }
 
-// parseFromReader reads a Dockerfile and returns a Dockerfile struct.
-func parseFromReader(line string) (*Dockerfile, error) {
+// parse parses the contents of a Dockerfile into a Dockerfile struct.
+func parse(content string) (*Dockerfile, error) {
 	var df Dockerfile
 	df.ExposedPorts = []portConfig{}
 
-	ast, err := parser.Parse(strings.NewReader(line))
+	ast, err := parser.Parse(strings.NewReader(content))
 	if err != nil {
 		return nil, fmt.Errorf("parse reader: %w", err)
 	}
