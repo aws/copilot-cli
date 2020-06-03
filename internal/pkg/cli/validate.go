@@ -45,7 +45,7 @@ var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 var (
 	s3RegExp = regexp.MustCompile("" +
 		`^` + // start of line
-		`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
+		`[a-z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
 		`$`, // end of line
 	)
 	s3DashesRegExp = regexp.MustCompile(
@@ -180,7 +180,7 @@ func stringPortValidation(val string) error {
 	return nil
 }
 
-// s3 bucket names: 'a-zA-Z0-9.-'
+// s3 bucket names: 'a-z0-9.-'
 func s3BucketNameValidation(val interface{}) error {
 	const minS3Length = 3
 	const maxS3Length = 63
