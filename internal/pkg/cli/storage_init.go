@@ -25,6 +25,7 @@ const (
 const (
 	dynamoDBTableFriendlyText = "DynamoDB Table"
 	s3BucketFriendlyText      = "S3 Bucket"
+	lsiFriendlyText           = "Local Secondary Index"
 )
 
 var storageTypes = []string{
@@ -60,8 +61,9 @@ var (
 var (
 	storageInitDDBPartitionKeyPromptHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
 	storageInitDDBSortKeyPromptHelp      = "The sort key of this table. Without a sort key, the partition key " + color.Emphasize("must") + " be unique on the table."
+	storageInitDDBLSISortKeyPromptHelp   = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 	storageInitDDBKeyTypeHelp            = "The datatype to store in the key. N is number, S is string, B is binary."
-	storageInitDDbLSIHelp                = "A Local Secondary Index has the same partition key as the table, but a different sort key."
+	storageInitDDBLSIHelp                = "A Local Secondary Index has the same partition key as the table, but a different sort key."
 )
 
 const (
@@ -124,6 +126,7 @@ type initStorageVars struct {
 	SortKey      string
 	Attributes   []string
 	LSISort      string
+	LSIName      string
 	GSIPartition string
 	GSISort      string
 }
@@ -167,13 +170,11 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
-
 	if o.StorageType != "" {
 		if err := validateStorageType(o.StorageType); err != nil {
 			return err
 		}
 	}
-
 	if o.StorageName != "" {
 		var err error
 		switch o.StorageType {
@@ -215,12 +216,12 @@ func (o *initStorageOpts) Ask() error {
 		if err := o.askDynamoPartitionKey(); err != nil {
 			return err
 		}
-		// if err := o.askDynamoSortKey(); err != nil {
-		// 	return err
-		// }
-		// if err := o.askDynamoLSIConfig(); err != nil {
-		// 	return err
-		// }
+		if err := o.askDynamoSortKey(); err != nil {
+			return err
+		}
+		if err := o.askDynamoLSIConfig(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -327,9 +328,6 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	return nil
 }
 
-// func (o *initStorageOpts) askDynamoSortKeyType() error {
-// 	// TODO
-// }
 func (o *initStorageOpts) validateServiceName() error {
 	names, err := o.ws.ServiceNames()
 	if err != nil {
