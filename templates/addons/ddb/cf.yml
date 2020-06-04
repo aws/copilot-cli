@@ -2,7 +2,7 @@
   Type: AWS::DynamoDB::Table
   Properties:
     TableName: !Sub ${App}-${Env}-${Name}-{{.TableName}}
-    AttributeDefinitions:{{range .Attributes}}
+    AttributeDefinitions:
       - AttributeName: {{.Name}}
         AttributeType: {{.DataType}}{{end}}
     ProvisionedThroughput: 
@@ -14,11 +14,11 @@
       - AttributeName: {{.SortKey}}
         KeyType: RANGE{{if .HasLSI}}
     LocalSecondaryIndexes{{range .LSIs}}
-      - IndexName: .Name
+      - IndexName: {{.Name}}
         KeySchema:
-          - AttributeName: .PartitionKey
+          - AttributeName: {{.PartitionKey}}
             KeyType: HASH
-          - AttributeName: .SortKey
+          - AttributeName: {{.SortKey}}
             KeyType: RANGE
         Projection:
           ProjectionType: ALL{{end}}{{end}}
