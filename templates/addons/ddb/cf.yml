@@ -1,7 +1,7 @@
 {{.TableResourceName}}:
   Type: AWS::DynamoDB::Table
   Properties:
-    TableName: !Sub ${Project}-${Env}-${App}-{{.TableName}}
+    TableName: !Sub ${App}-${Env}-${Name}-{{.TableName}}
     AttributeDefinitions:{{range .Attributes}}
       - AttributeName: {{.Name}}
         AttributeType: {{.DataType}}{{end}}
