@@ -5,14 +5,12 @@
     AttributeDefinitions:
       - AttributeName: {{.Name}}
         AttributeType: {{.DataType}}{{end}}
-    ProvisionedThroughput: 
-      ReadCapacityUnits: 2
-      WriteCapacityUnits: 2
+    BillingMode: PAY_PER_REQUEST
     KeySchema: 
       - AttributeName: {{.PartitionKey}}
-        KeyType: HASH
+        KeyType: HASH{{if .SortKey}}
       - AttributeName: {{.SortKey}}
-        KeyType: RANGE{{if .HasLSI}}
+        KeyType: RANGE{{end}}{{if .HasLSI}}
     LocalSecondaryIndexes:{{range .LSIs}}
       - IndexName: {{.Name}}
         KeySchema:
