@@ -95,13 +95,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	sidecars, err := s.manifest.Sidecar.SidecarsOpts()
 	if err != nil {
-		return "", fmt.Errorf("converts the sidecar configuration for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.ServiceOpts{
 		Variables:          s.manifest.Variables,
 		Secrets:            s.manifest.Secrets,
 		NestedStack:        outputs,
 		Sidecars:           sidecars,
+		LogConfig:          s.manifest.LogConfigOpts(),
 		RulePriorityLambda: rulePriorityLambda.String(),
 	})
 	if err != nil {
