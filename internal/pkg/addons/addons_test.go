@@ -6,6 +6,8 @@ package addons
 import (
 	"bytes"
 	"errors"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons/mocks"
@@ -103,6 +105,89 @@ func TestAddons_Template(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedErr, gotErr)
 			require.Equal(t, tc.wantedTemplate, gotTemplate)
+		})
+	}
+}
+
+func TestAddons_template(t *testing.T) {
+	const testSvcName = "mysvc"
+	testErr := errors.New("some error")
+	testCases := map[string]struct {
+		mockAddons func(ctrl *gomock.Controller) *Addons
+
+		wantedTemplate string
+		wantedErr      error
+	}{
+		"return ErrDirNotExist if addons doesn't exist in a service": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).
+					Return(nil, testErr)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: &ErrDirNotExist{
+				SvcName:   testSvcName,
+				ParentErr: testErr,
+			},
+		},
+		"merge invalid Metadata fields": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-second.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "invalid-second.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-second.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: errors.New("merge addon invalid-second.yaml under service mysvc: metadata key Services already exists with a different definition"),
+		},
+		"merge Metadata fields successfully": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "valid-second.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "valid-second.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "valid-second.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedTemplate: func() string {
+				wanted, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "wanted.yaml"))
+				return string(wanted)
+			}(),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			addons := tc.mockAddons(ctrl)
+
+			// WHEN
+			actualTemplate, actualErr := addons.template()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, tc.wantedErr, actualErr.Error())
+			} else {
+				require.Equal(t, tc.wantedTemplate, actualTemplate)
+			}
 		})
 	}
 }

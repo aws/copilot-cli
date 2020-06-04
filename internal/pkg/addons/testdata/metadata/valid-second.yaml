@@ -1,0 +1,5 @@
+Metadata:
+    Version: 1
+    Databases:
+        users: Database for users.
+        payments: Database for payments.

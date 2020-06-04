@@ -1,0 +1,5 @@
+Metadata:
+    Version: 1
+    Services:
+      - api
+      - fe

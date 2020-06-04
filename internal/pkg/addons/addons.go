@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -96,6 +97,41 @@ func (a *Addons) Template() (string, error) {
 		return "", err
 	}
 	return content.String(), nil
+}
+
+// template will replace Template.
+// template merges CloudFormation templates under the "addons/" directory of a service
+// into a single CloudFormation template and returns it.
+//
+// If the addons directory doesn't exist, it returns the empty string and ErrDirNotExist.
+func (a *Addons) template() (string, error) {
+	fnames, err := a.ws.ReadAddonsDir(a.svcName)
+	if err != nil {
+		return "", &ErrDirNotExist{
+			SvcName:   a.svcName,
+			ParentErr: err,
+		}
+	}
+
+	var mergedTemplate cloudformation
+	for _, fname := range filterYAMLfiles(fnames) {
+		out, err := a.ws.ReadAddon(a.svcName, fname)
+		if err != nil {
+			return "", fmt.Errorf("read addon %s under service %s: %w", fname, a.svcName, err)
+		}
+		var tpl cloudformation
+		if err := yaml.Unmarshal(out, &tpl); err != nil {
+			return "", fmt.Errorf("unmarshal addon %s under service %s: %w", fname, a.svcName, err)
+		}
+		if err := mergedTemplate.merge(tpl); err != nil {
+			return "", fmt.Errorf("merge addon %s under service %s: %w", fname, a.svcName, err)
+		}
+	}
+	out, err := yaml.Marshal(&mergedTemplate)
+	if err != nil {
+		return "", fmt.Errorf("marshal merged addons template: %w", err)
+	}
+	return string(out), nil
 }
 
 func filterYAMLfiles(files []string) []string {
