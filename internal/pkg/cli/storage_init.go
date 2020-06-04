@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -90,15 +91,12 @@ const (
 )
 
 type dynamoDBConfig struct {
-	PartitionKey dynamoKey
-	SortKey      dynamoKey
+	TableName    string
+	PartitionKey string
+	SortKey      string
+	HasLSI       bool
 	LSIs         []localSecondaryIndex
 	Attributes   []attribute
-}
-
-type dynamoKey struct {
-	Name string
-	Type string
 }
 
 type attribute struct {
@@ -108,8 +106,8 @@ type attribute struct {
 
 type localSecondaryIndex struct {
 	Name         string
-	PartitionKey dynamoKey
-	SortKey      dynamoKey
+	PartitionKey string
+	SortKey      string
 	Attributes   []attribute
 }
 
@@ -477,10 +475,51 @@ func logicalIDSafe(input string) string {
 }
 
 func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
-	// TODO fill in as needed
+	cfg := &dynamoDBConfig{}
+	cfg.TableName = o.StorageName
+	hashAttr, err := getAttrFromKey(o.PartitionKey)
+	if err != nil {
+		return nil, err
+	}
+	rangeAttr, err := getAttrFromKey(o.SortKey)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Attributes = []attribute{
+		hashAttr,
+		rangeAttr,
+	}
+	if o.LSIName != "" {
+		lsiAttr, err := getAttrFromKey(o.LSISort)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Attributes = append(cfg.Attributes, lsiAttr)
+	}
+	cfg.PartitionKey = dynamoKey{
+		Name: hashAttr.Name,
+		Type: PartitionKeyType,
+	}
+	cfg.SortKey = dynamoKey{
+		Name: rangeAttr.Name,
+		Type: SortKeyType,
+	}
+
 	return nil, nil
 }
 
+var regexpMatchAttribute = regexp.MustCompile("(.*):([sbnSBN])")
+
+func getAttrFromKey(input string) (attribute, error) {
+	attrs := regexpMatchAttribute.FindStringSubmatch(input)
+	if len(attrs) == 0 {
+		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
+	}
+	return attribute{
+		Name:     attrs[1],
+		DataType: strings.Upper(attrs[2]),
+	}, nil
+}
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
