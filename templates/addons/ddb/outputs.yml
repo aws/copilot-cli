@@ -1,0 +1,6 @@
+{{.TableResourceName}}TableName:
+  Description: "The name of the DynamoDB table for this application."
+  Value: !Ref {{.TableResourceName}}
+{{.TableResourceName}}AccessPolicy:
+  Description: "The IAM::ManagedPolicy to attach to the task role."
+  Value: !Ref {{.TableResourceName}}AccessPolicy

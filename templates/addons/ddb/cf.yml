@@ -1,0 +1,24 @@
+{{.TableResourceName}}:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: !Sub ${Project}-${Env}-${App}-{{.TableName}}
+    AttributeDefinitions:{{range .Attributes}}
+      - AttributeName: {{.Name}}
+        AttributeType: {{.DataType}}{{end}}
+    ProvisionedThroughput: 
+      ReadCapacityUnits: 2
+      WriteCapacityUnits: 2
+    KeySchema: 
+      - AttributeName: {{.PartitionKey}}
+        KeyType: HASH
+      - AttributeName: {{.SortKey}}
+        KeyType: RANGE{{if .HasLSI}}
+    LocalSecondaryIndexes{{range .LSIs}}
+      - IndexName: .Name
+        KeySchema:
+          - AttributeName: .PartitionKey
+            KeyType: HASH
+          - AttributeName: .SortKey
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL{{end}}{{end}}
