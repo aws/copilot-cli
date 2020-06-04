@@ -1,0 +1,23 @@
+{{.TableResourceName}}:
+  Type: AWS::DynamoDB::Table
+  DeletionPolicy: Retain
+  Properties:
+    TableName: !Sub ${App}-${Env}-${Name}-{{.TableName}}
+    AttributeDefinitions:
+      - AttributeName: {{.Name}}
+        AttributeType: "{{.DataType}}"{{end}}
+    BillingMode: PAY_PER_REQUEST
+    KeySchema: 
+      - AttributeName: {{.PartitionKey}}
+        KeyType: HASH{{ if .SortKey }}
+      - AttributeName: {{.SortKey}}
+        KeyType: RANGE{{end}}{{if .HasLSI}}
+    LocalSecondaryIndexes:{{range .LSIs}}
+      - IndexName: {{.Name}}
+        KeySchema:
+          - AttributeName: {{.PartitionKey}}
+            KeyType: HASH
+          - AttributeName: {{.SortKey}}
+            KeyType: RANGE
+        Projection:
+          ProjectionType: ALL{{end}}{{end}}
