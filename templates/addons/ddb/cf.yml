@@ -13,7 +13,7 @@
         KeyType: HASH
       - AttributeName: {{.SortKey}}
         KeyType: RANGE{{if .HasLSI}}
-    LocalSecondaryIndexes{{range .LSIs}}
+    LocalSecondaryIndexes:{{range .LSIs}}
       - IndexName: {{.Name}}
         KeySchema:
           - AttributeName: {{.PartitionKey}}

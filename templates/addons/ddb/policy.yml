@@ -1,7 +1,7 @@
 {{.TableResourceName}}AccessPolicy:
   Type: AWS::IAM::ManagedPolicy
   Properties:
-  Description: !Sub
+    Description: !Sub
       - Grants CRUD access to the Dynamo DB table ${Table}
       - { Table: !Ref {{.TableResourceName}} }
     PolicyDocument:
