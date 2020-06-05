@@ -4,8 +4,6 @@
 package addons
 
 import (
-	"reflect"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,31 +52,30 @@ func mergeMapNodes(dst, src *yaml.Node) error {
 	}
 
 	dstMap := mappingNode(dst)
-	newSrcContent := make([]*yaml.Node, len(src.Content))
-	copy(newSrcContent, src.Content)
+	var newContent []*yaml.Node
 	for i := 0; i < len(src.Content); i += 2 {
 		// The content of a map always come in pairs.
 		// The first element represents a key, ex: {Value: "ELBIngressGroup", Kind: ScalarNode, Tag: "!!str", Content: nil}
-		// The second element is another map that holds the value, ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
+		// The second element holds the value, ex: {Value: "", Kind: MappingNode, Tag:"!!map", Content:[...]}
 		key := src.Content[i].Value
 		srcValue := src.Content[i+1]
 
 		dstValue, ok := dstMap[key]
 		if !ok {
 			// The key doesn't exist in dst, we want to retain the two src nodes.
+			newContent = append(newContent, src.Content[i], src.Content[i+1])
 			continue
 		}
-		if !reflect.DeepEqual(dstValue, srcValue) {
+
+		if !isEqual(dstValue, srcValue) {
 			return &errKeyAlreadyExists{
 				Key:    key,
 				First:  dstValue,
 				Second: srcValue,
 			}
 		}
-		// Remove the two src nodes since they already exists in dst.
-		newSrcContent = append(newSrcContent[:i], newSrcContent[i+2:]...)
 	}
-	dst.Content = append(dst.Content, newSrcContent...)
+	dst.Content = append(dst.Content, newContent...)
 	return nil
 }
 
@@ -89,4 +86,30 @@ func mappingNode(n *yaml.Node) map[string]*yaml.Node {
 		m[n.Content[i].Value] = n.Content[i+1]
 	}
 	return m
+}
+
+// isEqual returns true if the first and second nodes are deeply equal in all of their values except stylistic ones.
+//
+// We ignore the style (ex: single quote vs. double) in which the nodes are defined, the comments associated with
+// the nodes, and the indentation and position of the nodes as they're only visual properties and don't matter.
+func isEqual(first *yaml.Node, second *yaml.Node) bool {
+	if first == nil {
+		return second == nil
+	}
+	if second == nil {
+		return false
+	}
+	if len(first.Content) != len(second.Content) {
+		return false
+	}
+	hasSameContent := true
+	for i := 0; i < len(first.Content); i += 1 {
+		hasSameContent = hasSameContent && isEqual(first.Content[i], second.Content[i])
+	}
+	return first.Kind == second.Kind &&
+		first.Tag == second.Tag &&
+		first.Value == second.Value &&
+		first.Anchor == second.Anchor &&
+		isEqual(first.Alias, second.Alias) &&
+		hasSameContent
 }

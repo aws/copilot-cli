@@ -186,6 +186,7 @@ func TestAddons_template(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, tc.wantedErr, actualErr.Error())
 			} else {
+				require.NoError(t, actualErr)
 				require.Equal(t, tc.wantedTemplate, actualTemplate)
 			}
 		})
