@@ -33,9 +33,8 @@ func New() Runner {
 func (r Runner) Build(uri, imageTag, path string) error {
 	imageName := imageName(uri, imageTag)
 	dfDir := filepath.Dir(path)
-	dfPath := filepath.Base(path)
 
-	err := r.Run("docker", []string{"build", "-t", imageName, dfDir, "-f", dfPath})
+	err := r.Run("docker", []string{"build", "-t", imageName, dfDir, "-f", path})
 
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
