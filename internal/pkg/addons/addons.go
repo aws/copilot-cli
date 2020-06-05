@@ -113,13 +113,13 @@ func (a *Addons) template() (string, error) {
 		}
 	}
 
-	var mergedTemplate cloudformation
+	var mergedTemplate cfnTemplate
 	for _, fname := range filterYAMLfiles(fnames) {
 		out, err := a.ws.ReadAddon(a.svcName, fname)
 		if err != nil {
 			return "", fmt.Errorf("read addon %s under service %s: %w", fname, a.svcName, err)
 		}
-		var tpl cloudformation
+		var tpl cfnTemplate
 		if err := yaml.Unmarshal(out, &tpl); err != nil {
 			return "", fmt.Errorf("unmarshal addon %s under service %s: %w", fname, a.svcName, err)
 		}

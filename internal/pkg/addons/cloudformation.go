@@ -13,14 +13,14 @@ const (
 	metadataSection cfnSection = iota + 1
 )
 
-// cloudformation represents a parsed YAML AWS CloudFormation template.
-type cloudformation struct {
+// cfnTemplate represents a parsed YAML AWS CloudFormation template.
+type cfnTemplate struct {
 	Metadata yaml.Node `yaml:"Metadata,omitempty"`
 }
 
 // merge combines non-empty fields of other with cf's fields.
-func (cf *cloudformation) merge(other cloudformation) error {
-	if err := cf.mergeMetadata(other.Metadata); err != nil {
+func (t *cfnTemplate) merge(other cfnTemplate) error {
+	if err := t.mergeMetadata(other.Metadata); err != nil {
 		return err
 	}
 	return nil
@@ -28,8 +28,8 @@ func (cf *cloudformation) merge(other cloudformation) error {
 
 // mergeMetadata updates cf's Metadata with additional metadata.
 // If the key already exists in Metadata but with a different definition, returns errMetadataKeyAlreadyExists.
-func (cf *cloudformation) mergeMetadata(metadata yaml.Node) error {
-	if err := mergeMapNodes(&cf.Metadata, &metadata); err != nil {
+func (t *cfnTemplate) mergeMetadata(metadata yaml.Node) error {
+	if err := mergeMapNodes(&t.Metadata, &metadata); err != nil {
 		return wrapKeyAlreadyExistsErr(metadataSection, err)
 	}
 	return nil
