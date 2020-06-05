@@ -39,7 +39,8 @@ type Service struct {
 
 // ServiceImage represents the service's container image.
 type ServiceImage struct {
-	Build *string `yaml:"build"` // Path to the Dockerfile.
+	Build   *string `yaml:"build"`   // Path to the Dockerfile.
+	Context *string `yaml:"context"` // Optional path to the build context
 }
 
 // ServiceImageWithPort represents a container image with an exposed port.

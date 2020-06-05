@@ -89,6 +89,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
+		"dirName":    tplDirName,
 	}))
 	if err != nil {
 		return nil, err
@@ -99,6 +100,10 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 // DockerfilePath returns the image build path.
 func (s *BackendService) DockerfilePath() string {
 	return aws.StringValue(s.BackendServiceConfig.Image.Build)
+}
+
+func (s *BackendService) DockerfileContext() string {
+	return aws.StringValue(s.Image.Context)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -126,6 +131,7 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
+			Image: imageWithPortAndHealthcheck{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

@@ -11,6 +11,9 @@ type: {{.Type}}
 image:
   # Path to your service's Dockerfile.
   build: {{.Image.Build}}
+  # Path to the build context directory. If unspecified, defaults to the directory of the Dockerfile.
+  # If a context is specifed, `build` should be a path relative to `context`
+  context: {{ dirName .Image.Build}}
   # Port exposed through your container to route traffic to it.
   port: {{.Image.Port}}{{if .Image.HealthCheck}}
   healthcheck:

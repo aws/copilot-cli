@@ -293,6 +293,10 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 	if err != nil {
 		return err
 	}
+	ctx, err := o.getDockerfileContext()
+	if err != nil {
+		return err
+	}
 
 	if err := o.docker.Build(uri, path, o.ImageTag); err != nil {
 		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", path, o.ImageTag, err)
@@ -329,6 +333,27 @@ func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
 	}
 	return mf.DockerfilePath(), nil
+}
+
+func (o *deploySvcOpts) getDockerfileContext() (string, error) {
+	type dfContext interface {
+		DockerfileContext() string
+	}
+
+	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
+	if err != nil {
+		return "", fmt.Errorf("read manifest file %s: %w", o.Name, err)
+	}
+
+	svc, err := manifest.UnmarshalService(manifestBytes)
+	if err != nil {
+		return "", fmt.Errorf("unmarshal svc manifest: %w", err)
+	}
+	mf, ok := svc.(dfContext)
+	if !ok {
+		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
+	}
+	return mf.DockerfileContext(), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

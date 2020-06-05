@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -99,16 +101,27 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
+	content, err := s.parser.Parse(lbWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
+		"dirName": tplDirName,
+	}))
 	if err != nil {
 		return nil, err
 	}
 	return content.Bytes(), nil
 }
 
+func tplDirName(s string) string {
+	return filepath.Dir(s)
+}
+
 // DockerfilePath returns the image build path.
 func (s *LoadBalancedWebService) DockerfilePath() string {
 	return aws.StringValue(s.Image.Build)
+}
+
+// DockerfileContext returns the image build context directory
+func (s *LoadBalancedWebService) DockerfileContext() string {
+	return aws.StringValue(s.Image.Context)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

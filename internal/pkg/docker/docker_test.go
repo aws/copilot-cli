@@ -17,6 +17,7 @@ func TestBuild(t *testing.T) {
 
 	mockURI := "mockURI"
 	mockPath := "mockPath/to/mockDockerfile"
+	mockContext := "mockPath"
 
 	mockTag1 := "tag1"
 	mockTag2 := "tag2"
@@ -26,12 +27,14 @@ func TestBuild(t *testing.T) {
 
 	tests := map[string]struct {
 		path       string
+		context    string
 		setupMocks func(controller *gomock.Controller)
 
 		wantedError error
 	}{
-		"failed to run": {
-			path: mockPath,
+		"wrap error returned from Run()": {
+			path:    mockPath,
+			context: "",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
@@ -42,6 +45,34 @@ func TestBuild(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
+		"happy path": {
+			path:    mockPath,
+			context: "",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+		"context differs from path": {
+			path:    mockPath,
+			context: mockContext,
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+		"behaves the same if context is DF dir": {
+			path:    mockPath,
+			context: "mockPath/to",
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+
 		"success with additional tags": {
 			path: mockPath,
 			setupMocks: func(controller *gomock.Controller) {
@@ -63,7 +94,7 @@ func TestBuild(t *testing.T) {
 				runner: mockRunner,
 			}
 
-			got := s.Build(mockURI, tc.path, mockTag1, mockTag2, mockTag3)
+			got := s.Build(mockURI, tc.path, tc.context, mockTag1, mockTag2, mockTag3)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, got.Error())

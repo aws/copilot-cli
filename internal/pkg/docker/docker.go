@@ -28,9 +28,15 @@ func New() Runner {
 	}
 }
 
-// Build will run a `docker build` command with the input uri, Dockerfile path, and tags.
-func (r Runner) Build(uri, path, imageTag string, additionalTags ...string) error {
-	dfDir := filepath.Dir(path)
+// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
+func (r Runner) Build(uri, imageTag, path, context string, additionalTags ...string) error {
+	imageName := imageName(uri, imageTag)
+	var dfDir string
+	if context == "" {
+		dfDir = filepath.Dir(path)
+	} else {
+		dfDir = context
+	}
 
 	args := []string{"build"}
 	for _, tag := range append(additionalTags, imageTag) {

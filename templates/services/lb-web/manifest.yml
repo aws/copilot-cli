@@ -10,6 +10,8 @@ type: {{.Type}}
 image:
   # Path to your service's Dockerfile.
   build: {{.Image.Build}}
+  # Path to the build context directory
+  context: {{ dirName .Image.Build}}
   # Port exposed through your container to route traffic to it.
   port: {{.Image.Port}}
 
