@@ -4,6 +4,6 @@ App:
 Env:
   Type: String
   Description: The environment name your service is being deployed to.
-Service:
+Name:
   Type: String
   Description: The name of the service being deployed.
