@@ -24,8 +24,8 @@ const (
 )
 
 const (
-	dynamoDBTableFriendlyText = "DynamoDB Table"
 	s3BucketFriendlyText      = "S3 Bucket"
+	dynamoDBTableFriendlyText = "DynamoDB Table"
 	lsiFriendlyText           = "Local Secondary Index"
 )
 
@@ -34,49 +34,53 @@ var storageTypes = []string{
 	s3StorageType,
 }
 
+// General-purpose prompts, collected for all storage resources.
 var (
 	fmtStorageInitTypePrompt = "What " + color.Emphasize("type") + " of storage would you like to associate with %s?"
 	storageInitTypeHelp      = `The type of storage you'd like to add to your service. 
 DynamoDB is a key-value and document database that delivers single-digit millisecond performance at any scale.
 S3 is a web object store built to store and retrieve any amount of data from anywhere on the Internet.`
+
 	fmtStorageInitNamePrompt = "What would you like to " + color.Emphasize("name") + " this %s?"
 	storageInitNameHelp      = "The name of this storage resource. You can use the following characters: a-zA-Z0-9-_"
-	storageInitSvcPrompt     = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
-	storageInitSvcHelp       = `The service you'd like to have access to this storage resource. 
+
+	storageInitSvcPrompt = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
+	storageInitSvcHelp   = `The service you'd like to have access to this storage resource. 
 We'll deploy the Cloudformation for the storage when you run 'svc deploy'.`
 )
 
 var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
 
+// DDB-specific questions and help prompts.
 var fmtStorageInitDynamoInfoText = `We're going to ask you some questions about your database schema and datatypes.
 You can change any of this information at the end by editing the CloudFormation
-generated at ./ecs-project/%s/addons/%s-%s.yml.`
+generated at %s`
 
 var (
-	fmtStorageInitDDBKeyPrompt  = "What would you like to name the %s of this %s?"
+	fmtStorageInitDDBKeyPrompt           = "What would you like to name the %s of this %s?"
+	storageInitDDBPartitionKeyPromptHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
+	storageInitDDBSortKeyHelp            = "The sort key of this table. Without a sort key, the partition key " + color.Emphasize("must") + " be unique on the table."
+	storageInitDDBLSISortKeyPromptHelp   = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
+
 	storageInitDDBKeyTypePrompt = "What datatype is this key?"
-	storageInitDDBLSIPrompt     = "Would you like to add a local secondary index to this table?"
+	storageInitDDBKeyTypeHelp   = "The datatype to store in the key. N is number, S is string, B is binary."
+
+	storageInitDDBLSIPrompt = "Would you like to add a local secondary index to this table?"
+	storageInitDDBLSIHelp   = "A Local Secondary Index has the same partition key as the table, but a different sort key."
+
 	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("LSI") + "?"
 )
 
-var (
-	storageInitDDBPartitionKeyPromptHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
-	storageInitDDBSortKeyPromptHelp      = "The sort key of this table. Without a sort key, the partition key " + color.Emphasize("must") + " be unique on the table."
-	storageInitDDBLSISortKeyPromptHelp   = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
-	storageInitDDBKeyTypeHelp            = "The datatype to store in the key. N is number, S is string, B is binary."
-	storageInitDDBLSIHelp                = "A Local Secondary Index has the same partition key as the table, but a different sort key."
-)
-
 const (
-	StringType = "S"
-	IntType    = "N"
-	BinaryType = "B"
+	ddbStringType = "S"
+	ddbIntType    = "N"
+	ddbBinaryType = "B"
 )
 
 var attributeTypes = []string{
-	StringType,
-	IntType,
-	BinaryType,
+	ddbStringType,
+	ddbIntType,
+	ddbBinaryType,
 }
 
 var attributeTypesLong = []string{
@@ -86,29 +90,29 @@ var attributeTypesLong = []string{
 }
 
 const (
-	PartitionKeyType = "HASH"
-	SortKeyType      = "RANGE"
+	ddbPartitionKeyType = "HASH"
+	ddbSortKeyType      = "RANGE"
 )
 
 type dynamoDBConfig struct {
-	TableName    string
-	PartitionKey string
-	SortKey      string
-	HasLSI       bool
-	LSIs         []localSecondaryIndex
-	Attributes   []attribute
+	tableName    string
+	partitionKey string
+	sortKey      string
+	hasLsi       bool
+	lsis         []localSecondaryIndex
+	attributes   []attribute
 }
 
 type attribute struct {
-	Name     string
-	DataType string
+	name        string
+	ddbDataType string
 }
 
 type localSecondaryIndex struct {
-	Name         string
-	PartitionKey string
-	SortKey      string
-	Attributes   []attribute
+	name         string
+	partitionKey string
+	sortKey      string
+	attributes   []attribute
 }
 
 type s3Config struct {
@@ -117,16 +121,16 @@ type s3Config struct {
 
 type initStorageVars struct {
 	*GlobalOpts
-	StorageType  string
-	StorageName  string
-	StorageSvc   string
-	PartitionKey string
-	SortKey      string
-	Attributes   []string
-	LSISort      string
-	LSIName      string
-	GSIPartition string
-	GSISort      string
+	storageType string
+	storageName string
+	storageSvc  string
+
+	// Dynamo DB specific values collected via flags or prompts
+	partitionKey string
+	sortKey      string
+	attributes   []string // Attributes collected as "attName:T" where T is one of [SNB]
+	lsiSort      string
+	lsiName      string
 }
 
 type initStorageOpts struct {
@@ -163,26 +167,26 @@ func (o *initStorageOpts) Validate() error {
 	if o.AppName() == "" {
 		return errNoAppInWorkspace
 	}
-	if o.StorageSvc != "" {
+	if o.storageSvc != "" {
 		if err := o.validateServiceName(); err != nil {
 			return err
 		}
 	}
-	if o.StorageType != "" {
-		if err := validateStorageType(o.StorageType); err != nil {
+	if o.storageType != "" {
+		if err := validateStorageType(o.storageType); err != nil {
 			return err
 		}
 	}
-	if o.StorageName != "" {
+	if o.storageName != "" {
 		var err error
-		switch o.StorageType {
+		switch o.storageType {
 		case dynamoDBStorageType:
-			err = dynamoTableNameValidation(o.StorageName)
+			err = dynamoTableNameValidation(o.storageName)
 		case s3StorageType:
-			err = s3BucketNameValidation(o.StorageName)
+			err = s3BucketNameValidation(o.storageName)
 		default:
 			// use dynamo since it's a superset of s3
-			err = dynamoTableNameValidation(o.StorageName)
+			err = dynamoTableNameValidation(o.storageName)
 		}
 		if err != nil {
 			return err
@@ -209,7 +213,7 @@ func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageName(); err != nil {
 		return err
 	}
-	switch o.StorageType {
+	switch o.storageType {
 	case dynamoDBStorageType:
 		if err := o.askDynamoPartitionKey(); err != nil {
 			return err
@@ -225,29 +229,29 @@ func (o *initStorageOpts) Ask() error {
 }
 
 func (o *initStorageOpts) askStorageType() error {
-	if o.StorageType != "" {
+	if o.storageType != "" {
 		return nil
 	}
 
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
-		fmtStorageInitTypePrompt, color.HighlightUserInput(o.StorageSvc)),
+		fmtStorageInitTypePrompt, color.HighlightUserInput(o.storageSvc)),
 		storageInitTypeHelp,
 		storageTypes)
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
 
-	o.StorageType = storageType
+	o.storageType = storageType
 	return nil
 }
 
 func (o *initStorageOpts) askStorageName() error {
-	if o.StorageName != "" {
+	if o.storageName != "" {
 		return nil
 	}
 	var validator func(interface{}) error
 	var friendlyText string
-	switch o.StorageType {
+	switch o.storageType {
 	case s3StorageType:
 		validator = s3BucketNameValidation
 		friendlyText = s3BucketFriendlyText
@@ -264,12 +268,12 @@ func (o *initStorageOpts) askStorageName() error {
 	if err != nil {
 		return fmt.Errorf("input storage name: %w", err)
 	}
-	o.StorageName = name
+	o.storageName = name
 	return nil
 }
 
 func (o *initStorageOpts) askStorageSvc() error {
-	if o.StorageSvc != "" {
+	if o.storageSvc != "" {
 		return nil
 	}
 	localSvcNames, err := o.ws.ServiceNames()
@@ -280,12 +284,12 @@ func (o *initStorageOpts) askStorageSvc() error {
 		storageInitSvcHelp,
 		localSvcNames,
 	)
-	o.StorageSvc = svc
+	o.storageSvc = svc
 	return nil
 }
 
 func (o *initStorageOpts) askDynamoPartitionKey() error {
-	if o.PartitionKey != "" {
+	if o.partitionKey != "" {
 		return nil
 	}
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
@@ -297,18 +301,22 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 		basicNameValidation,
 	)
 	if err != nil {
-		return fmt.Errorf("get ddb partition key: %w", err)
+		return fmt.Errorf("get DDB partition key: %w", err)
 	}
 	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
 		storageInitDDBKeyTypeHelp,
 		attributeTypesLong,
 	)
-	o.PartitionKey = key + ":" + keyType
+	if err != nil {
+		return fmt.Errorf("get DDB partition key datatype: %w", err)
+	}
+
+	o.partitionKey = key + ":" + keyType
 	return nil
 }
 
 func (o *initStorageOpts) askDynamoSortKey() error {
-	if o.SortKey != "" {
+	if o.sortKey != "" {
 		return nil
 	}
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
@@ -316,22 +324,25 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 		color.HighlightUserInput(dynamoDBStorageType),
 	)
 	key, err := o.prompt.Get(keyPrompt,
-		storageInitDDBSortKeyPromptHelp,
+		storageInitDDBSortKeyHelp,
 		basicNameValidation,
 	)
 	if err != nil {
-		return fmt.Errorf("get ddb sort key: %w", err)
+		return fmt.Errorf("get DDB sort key: %w", err)
 	}
 	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
 		storageInitDDBKeyTypeHelp,
 		attributeTypesLong,
 	)
-	o.SortKey = key + ":" + keyType
+	if err != nil {
+		return fmt.Errorf("get DDB sort key datatype: %w", err)
+	}
+	o.sortKey = key + ":" + keyType
 	return nil
 }
 
 func (o *initStorageOpts) askDynamoLSIConfig() error {
-	if o.LSIName != "" || o.LSISort != "" {
+	if o.lsiName != "" || o.lsiSort != "" {
 		return nil
 	}
 	addLsi, err := o.prompt.Confirm(
@@ -339,7 +350,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		storageInitDDBLSIHelp,
 	)
 	if err != nil {
-		return fmt.Errorf("confirm add lsi to table: %w", err)
+		return fmt.Errorf("confirm add LSI to table: %w", err)
 	}
 	if addLsi != true {
 		return nil
@@ -350,9 +361,9 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		dynamoTableNameValidation,
 	)
 	if err != nil {
-		return fmt.Errorf("get lsi name: %w", err)
+		return fmt.Errorf("get LSI name: %w", err)
 	}
-	o.LSIName = name
+	o.lsiName = name
 
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 		color.HighlightUserInput("sort key"),
@@ -363,14 +374,17 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		dynamoTableNameValidation,
 	)
 	if err != nil {
-		return fmt.Errorf("get lsi sort key: %w", err)
+		return fmt.Errorf("get LSI sort key: %w", err)
 	}
 
 	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
 		storageInitDDBLSISortKeyPromptHelp,
 		attributeTypesLong,
 	)
-	o.LSISort = key + ":" + keyType
+	if err != nil {
+		return fmt.Errorf("get LSI sort key datatype: %w", err)
+	}
+	o.lsiSort = key + ":" + keyType
 	return nil
 }
 
@@ -380,11 +394,11 @@ func (o *initStorageOpts) validateServiceName() error {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}
 	for _, name := range names {
-		if o.StorageSvc == name {
+		if o.storageSvc == name {
 			return nil
 		}
 	}
-	return fmt.Errorf("service %s not found in the workspace", o.StorageSvc)
+	return fmt.Errorf("service %s not found in the workspace", o.storageSvc)
 }
 
 func (o *initStorageOpts) Execute() error {
@@ -442,10 +456,10 @@ Name:
     PublicAccessBlockConfiguration:
       BlockPublicAcls: true
       BlockPublicPolicy: true`
-	logicalIDName := logicalIDSafe(o.StorageName)
+	logicalIDName := logicalIDSafe(o.storageName)
 	output = fmt.Sprintf(output, logicalIDName)
 	policy = fmt.Sprintf(policy, logicalIDName)
-	cf = fmt.Sprintf(cf, o.StorageName, logicalIDName)
+	cf = fmt.Sprintf(cf, o.storageName, logicalIDName)
 
 	paramsOut := &template.Content{
 		Buffer: bytes.NewBufferString(params),
@@ -460,10 +474,10 @@ Name:
 		Buffer: bytes.NewBufferString(cf),
 	}
 
-	o.ws.WriteAddon(paramsOut, o.StorageSvc, "params.yaml")
-	o.ws.WriteAddon(outputOut, o.StorageSvc, "outputs.yaml")
-	o.ws.WriteAddon(policyOut, o.StorageSvc, "policy.yaml")
-	o.ws.WriteAddon(cfOut, o.StorageSvc, "s3.yaml")
+	o.ws.WriteAddon(paramsOut, o.storageSvc, "params.yaml")
+	o.ws.WriteAddon(outputOut, o.storageSvc, "outputs.yaml")
+	o.ws.WriteAddon(policyOut, o.storageSvc, "policy.yaml")
+	o.ws.WriteAddon(cfOut, o.storageSvc, "s3.yaml")
 	return nil
 }
 
@@ -476,34 +490,28 @@ func logicalIDSafe(input string) string {
 
 func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
 	cfg := &dynamoDBConfig{}
-	cfg.TableName = o.StorageName
-	hashAttr, err := getAttrFromKey(o.PartitionKey)
+	cfg.tableName = o.storageName
+	hashAttr, err := getAttrFromKey(o.partitionKey)
 	if err != nil {
 		return nil, err
 	}
-	rangeAttr, err := getAttrFromKey(o.SortKey)
+	rangeAttr, err := getAttrFromKey(o.sortKey)
 	if err != nil {
 		return nil, err
 	}
-	cfg.Attributes = []attribute{
+	cfg.attributes = []attribute{
 		hashAttr,
 		rangeAttr,
 	}
-	if o.LSIName != "" {
-		lsiAttr, err := getAttrFromKey(o.LSISort)
+	if o.lsiName != "" {
+		lsiAttr, err := getAttrFromKey(o.lsiSort)
 		if err != nil {
 			return nil, err
 		}
-		cfg.Attributes = append(cfg.Attributes, lsiAttr)
+		cfg.attributes = append(cfg.attributes, lsiAttr)
 	}
-	cfg.PartitionKey = dynamoKey{
-		Name: hashAttr.Name,
-		Type: PartitionKeyType,
-	}
-	cfg.SortKey = dynamoKey{
-		Name: rangeAttr.Name,
-		Type: SortKeyType,
-	}
+	cfg.partitionKey = hashAttr.name
+	cfg.sortKey = rangeAttr.name
 
 	return nil, nil
 }
@@ -516,8 +524,8 @@ func getAttrFromKey(input string) (attribute, error) {
 		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
 	}
 	return attribute{
-		Name:     attrs[1],
-		DataType: strings.Upper(attrs[2]),
+		name:        attrs[1],
+		ddbDataType: strings.ToUpper(attrs[2]),
 	}, nil
 }
 func BuildStorageInitCmd() *cobra.Command {
@@ -552,9 +560,9 @@ func BuildStorageInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.StorageName, nameFlag, nameFlagShort, "", storageFlagDescription)
-	cmd.Flags().StringVar(&vars.StorageType, storageTypeFlag, "", storageTypeFlagDescription)
-	cmd.Flags().StringVarP(&vars.StorageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
+	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
+	cmd.Flags().StringVar(&vars.storageType, storageTypeFlag, "", storageTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.storageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
 
 	return cmd
 }

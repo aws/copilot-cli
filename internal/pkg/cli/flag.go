@@ -117,9 +117,12 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 
 	storageFlagDescription             = "Name of the storage resource to create."
 	storageServiceFlagDescription      = "Name of the service to associate with storage."
-	storagePartitionKeyFlagDescription = "Partition key for the DDB table. Must be of the format '<keyName>:<dataType>'."
-	storageSortKeyFlagDescription      = "Sort key for the DDB table. Must be of the format '<keyName>:<dataType>'."
-	storageAttributeFlagDescription    = "Attributes for a DDB table. Must be of the format '<name>:<dataType>'. Can be specified multiple times."
+	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageSortKeyFlagDescription = `Sort key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageAttributeFlagDescription = `Attributes for a DDB table.
+Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 )
 
 func quoteAll(elems []string) []string {
