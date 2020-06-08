@@ -19,6 +19,8 @@ import (
 const (
 	// SleepDuration is the sleep time for making the next request for log events.
 	SleepDuration = 1 * time.Second
+
+	logStreamNamePrefix = "copilot/"
 )
 
 var (
@@ -124,12 +126,8 @@ func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime 
 		}
 
 		for _, event := range resp.Events {
-			taskID, err := parseTaskID(*logStreamName)
-			if err != nil {
-				return nil, err
-			}
 			log := &Event{
-				TaskID:        taskID,
+				LogStreamName: trimLogStreamName(*logStreamName),
 				IngestionTime: aws.Int64Value(event.IngestionTime),
 				Message:       aws.StringValue(event.Message),
 				Timestamp:     aws.Int64Value(event.Timestamp),
@@ -171,11 +169,7 @@ func (c *CloudWatchLogs) LogGroupExists(logGroupName string) (bool, error) {
 	return false, nil
 }
 
-func parseTaskID(logStreamName string) (string, error) {
-	// logStreamName example: ecs/{name}/1cc0685ad01d4d0f8e4e2c00d1775c56
-	logStreamNameSplit := strings.Split(logStreamName, "/")
-	if len(logStreamNameSplit) != 3 {
-		return "", fmt.Errorf("cannot parse task ID from log stream name: %s", logStreamName)
-	}
-	return logStreamNameSplit[2], nil
+func trimLogStreamName(logStreamName string) string {
+	// logStreamName example: copilot/{name}/1cc0685ad01d4d0f8e4e2c00d1775c56
+	return strings.TrimPrefix(logStreamName, logStreamNamePrefix)
 }
