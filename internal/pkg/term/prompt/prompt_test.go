@@ -89,8 +89,8 @@ func TestPrompt_GetSecret(t *testing.T) {
 				require.True(t, ok, "input prompt should be type *prompt")
 				require.Empty(t, internalPrompt.FinalMessage)
 
-				passwd, ok := internalPrompt.prompter.(*survey.Password)
-				require.True(t, ok, "internal prompt should be type *survey.Password")
+				passwd, ok := internalPrompt.prompter.(*passwordPrompt)
+				require.True(t, ok, "internal prompt should be type *passwordPrompt")
 				require.Equal(t, mockMessage, passwd.Message)
 				require.Empty(t, passwd.Help)
 

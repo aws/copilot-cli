@@ -66,13 +66,12 @@ func init() {
   {{- if .Default}}{{color "default"}}({{.Default}}) {{color "reset"}}{{end}}
 {{- end}}`
 
-	survey.PasswordQuestionTemplate = `{{if not .Answer}}
-{{end}}
+	survey.PasswordQuestionTemplate = `
 {{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }}{{$lines := split .Help "\n"}}{{range $i, $line := $lines}}
 {{- if eq $i 0}}  {{ $line }}
 {{ else }}  {{ $line }}
 {{ end }}{{- end }}{{color "reset"}}{{end}}
-{{- color .Config.Icons.Question.Format }}{{if not .ShowAnswer}}  {{ .Config.Icons.Question.Text }}{{else}}{{ .Config.Icons.Question.Text }}{{end}}{{color "reset"}}
+{{- color .Config.Icons.Question.Format }}  {{ .Config.Icons.Question.Text }}{{color "reset"}}
 {{- color "default"}}{{ .Message }} {{color "reset"}}
 {{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}`
 
@@ -120,7 +119,7 @@ func (p *prompt) Cleanup(config *survey.PromptConfig, val interface{}) error {
 		typedPrompt.Message = p.FinalMessage
 	case *survey.Input:
 		typedPrompt.Message = p.FinalMessage
-	case *survey.Password:
+	case *passwordPrompt:
 		typedPrompt.Message = p.FinalMessage
 	case *survey.Confirm:
 		typedPrompt.Message = p.FinalMessage
@@ -149,10 +148,35 @@ func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ..
 	return result, err
 }
 
+type passwordPrompt struct {
+	*survey.Password
+}
+
+// Cleanup renders a new template that's left-shifted when the user answers the prompt.
+func (pp *passwordPrompt) Cleanup(config *survey.PromptConfig, val interface{}) error {
+	// The user already entered their password, move the cursor one level up to override the prompt.
+	pp.Password.NewCursor().PreviousLine(1)
+
+	// survey.Password unlike other survey structs doesn't have an "Answer" field. Therefore, we can't use a single
+	// template like other prompts. Instead, when Cleanup is called, we render a new template
+	// that behaves as if the question is answered.
+	return pp.Password.Render(`
+{{- color .Config.Icons.Question.Format }}{{ .Config.Icons.Question.Text }}{{color "reset"}}
+{{- color "default"}}{{ .Message }} {{color "reset"}}
+`,
+		survey.PasswordTemplateData{
+			Password: *pp.Password,
+			Config:   config,
+			ShowHelp: false,
+		})
+}
+
 // GetSecret prompts the user for sensitive input. Wraps survey.Password
 func (p Prompt) GetSecret(message, help string, promptOpts ...Option) (string, error) {
-	passwd := &survey.Password{
-		Message: message,
+	passwd := &passwordPrompt{
+		Password: &survey.Password{
+			Message: message,
+		},
 	}
 	if help != "" {
 		passwd.Help = color.Help(help)
