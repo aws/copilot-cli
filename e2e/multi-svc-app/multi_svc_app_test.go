@@ -31,7 +31,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect("./copilot").Should(BeADirectory())
 		})
 
-		It("app ls includes new project", func() {
+		It("app ls includes new application", func() {
 			apps, err := cli.AppList()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(apps).To(ContainSubstring(appName))
@@ -235,7 +235,7 @@ var _ = Describe("Multiple Service App", func() {
 
 				for _, logLine := range svcLogs {
 					Expect(logLine.Message).NotTo(Equal(""))
-					Expect(logLine.TaskID).NotTo(Equal(""))
+					Expect(logLine.LogStreamName).NotTo(Equal(""))
 					Expect(logLine.Timestamp).NotTo(Equal(0))
 					Expect(logLine.IngestionTime).NotTo(Equal(0))
 				}

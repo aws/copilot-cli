@@ -60,7 +60,7 @@ func toSvcListOutput(jsonInput string) (*SvcListOutput, error) {
 }
 
 type SvcLogsOutput struct {
-	TaskID        string `json:"taskID"`
+	LogStreamName string `json:"logStreamName"`
 	IngestionTime int64  `json:"ingestionTime"`
 	Timestamp     int64  `json:"timestamp"`
 	Message       string `json:"message"`
