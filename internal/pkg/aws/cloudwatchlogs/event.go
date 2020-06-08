@@ -13,12 +13,12 @@ import (
 )
 
 const (
-	shortTaskIDLength = 7
+	shortLogStreamNameLength = 25
 )
 
 // Event represents a log event.
 type Event struct {
-	TaskID        string `json:"taskID"`
+	LogStreamName string `json:"logStreamName"`
 	IngestionTime int64  `json:"ingestionTime"`
 	Message       string `json:"message"`
 	Timestamp     int64  `json:"timestamp"`
@@ -41,12 +41,12 @@ func (l *Event) HumanString() string {
 	for _, code := range warningCodes {
 		l.Message = strings.ReplaceAll(l.Message, code, color.Yellow.Sprint(code))
 	}
-	return fmt.Sprintf("%s %s\n", color.Grey.Sprint(l.shortTaskID()), l.Message)
+	return fmt.Sprintf("%s %s\n", color.Grey.Sprint(l.shortLogStreamName()), l.Message)
 }
 
-func (l *Event) shortTaskID() string {
-	if len(l.TaskID) < shortTaskIDLength {
-		return l.TaskID
+func (l *Event) shortLogStreamName() string {
+	if len(l.LogStreamName) < shortLogStreamNameLength {
+		return l.LogStreamName
 	}
-	return l.TaskID[0:shortTaskIDLength]
+	return l.LogStreamName[0:shortLogStreamNameLength]
 }

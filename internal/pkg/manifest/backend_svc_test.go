@@ -240,10 +240,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 					},
 				},
 			},
-			LogConfig: LogConfig{
-				Destination: destinationConfig{
-					Name:           aws.String("datadog"),
-					ExcludePattern: aws.String("*"),
+			LogConfig: &LogConfig{
+				Destination: map[string]string{
+					"Name":            "datadog",
+					"exclude-pattern": "*",
 				},
 			},
 		},
@@ -263,10 +263,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						},
 					},
 				},
-				LogConfig: LogConfig{
-					Destination: destinationConfig{
-						IncludePattern: aws.String("*"),
-						ExcludePattern: aws.String("fe/"),
+				LogConfig: &LogConfig{
+					Destination: map[string]string{
+						"include-pattern": "*",
+						"exclude-pattern": "fe/",
 					},
 				},
 			},
@@ -329,11 +329,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 							},
 						},
 					},
-					LogConfig: LogConfig{
-						Destination: destinationConfig{
-							Name:           aws.String("datadog"),
-							IncludePattern: aws.String("*"),
-							ExcludePattern: aws.String("fe/"),
+					LogConfig: &LogConfig{
+						Destination: map[string]string{
+							"Name":            "datadog",
+							"include-pattern": "*",
+							"exclude-pattern": "fe/",
 						},
 					},
 				},

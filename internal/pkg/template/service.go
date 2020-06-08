@@ -38,6 +38,16 @@ type SidecarOpts struct {
 	CredsParam *string
 }
 
+// LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
+// its logs.
+type LogConfigOpts struct {
+	Image          *string
+	Destination    map[string]string
+	EnableMetadata *string
+	SecretOptions  map[string]string
+	ConfigFile     *string
+}
+
 // ServiceOpts holds optional data that can be provided to enable features in a service stack template.
 type ServiceOpts struct {
 	// Additional options that're common between **all** service templates.
@@ -45,6 +55,7 @@ type ServiceOpts struct {
 	Secrets     map[string]string
 	NestedStack *ServiceNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	Sidecars    []*SidecarOpts
+	LogConfig   *LogConfigOpts
 
 	// Additional options that're not shared across all service templates.
 	HealthCheck        *ecs.HealthCheck

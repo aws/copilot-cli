@@ -43,14 +43,13 @@ sidecars:
     credentialsParameter: some arn
 logging:
   destination:
-    name: cloudwatch
-    includePattern: ^[a-z][aeiou].*$
-    excludePattern: ^.*[aeiou]$
+    Name: cloudwatch
+    include-pattern: ^[a-z][aeiou].*$
+    exclude-pattern: ^.*[aeiou]$
   enableMetadata: false
   secretOptions:
     LOG_TOKEN: LOG_TOKEN
-  configFile: ./extra.conf
-  permissionFile: ./permissions.json
+  configFilePath: /extra.conf
 environments:
   test:
     count: 3
@@ -87,15 +86,14 @@ environments:
 								},
 							},
 						},
-						LogConfig: LogConfig{
-							Destination: destinationConfig{
-								ExcludePattern: aws.String("^.*[aeiou]$"),
-								IncludePattern: aws.String("^[a-z][aeiou].*$"),
-								Name:           aws.String("cloudwatch"),
+						LogConfig: &LogConfig{
+							Destination: map[string]string{
+								"exclude-pattern": "^.*[aeiou]$",
+								"include-pattern": "^[a-z][aeiou].*$",
+								"Name":            "cloudwatch",
 							},
 							EnableMetadata: aws.Bool(false),
-							ConfigFile:     aws.String("./extra.conf"),
-							PermissionFile: aws.String("./permissions.json"),
+							ConfigFile:     aws.String("/extra.conf"),
 							SecretOptions: map[string]string{
 								"LOG_TOKEN": "LOG_TOKEN",
 							},
