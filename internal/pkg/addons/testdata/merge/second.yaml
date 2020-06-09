@@ -28,3 +28,22 @@ Parameters:
       Default: "false"
     InstanceType:
       Type: 'AWS::SSM::Parameter::Value<String>'
+
+Mappings:
+  MyTableDynamoDBSettings:
+    prod: # Another ignored comment.
+    # Comments and position should not matter.
+
+      RCU: 50
+      WCU: 25
+    test:
+          RCU: 5
+          WCU: 5
+    gamma:
+      RCU: 10
+      WCU: 10
+  MyLambdaSettings:
+    test:
+      MemorySize: 512
+    prod:
+      MemorySize: 1024

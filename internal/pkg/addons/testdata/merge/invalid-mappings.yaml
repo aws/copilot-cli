@@ -1,0 +1,8 @@
+Mappings:
+  MyTableDynamoDBSettings:
+    test: # The order is different inside "test" so it should error out.
+      WCU: 5
+      RCU: 5
+    prod:
+      RCU: 50
+      WCU: 25

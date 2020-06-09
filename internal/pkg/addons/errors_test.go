@@ -91,3 +91,42 @@ and
     Default: api # "Default" doesn't exist in first.yaml, therefore it should error.`)),
 		herr.HumanError())
 }
+
+func TestErrMappingAlreadyExists_HumanError(t *testing.T) {
+	// GIVEN
+	var first yaml.Node
+	require.NoError(t, yaml.Unmarshal([]byte(`
+test:
+  WCU: 5`), &first), "unmarshal first")
+
+	var second yaml.Node
+	require.NoError(t, yaml.Unmarshal([]byte(`
+test:
+  RCU: 5`), &second), "unmarshal second")
+
+	var err error
+	err = &errMappingAlreadyExists{
+		&errKeyAlreadyExists{
+			Key:    "MyMapping.test",
+			First:  &first,
+			Second: &second,
+		},
+	}
+	type humanError interface {
+		HumanError() string
+	}
+
+	// THEN
+	herr, ok := err.(humanError)
+	require.True(t, ok, "expected errMappingAlreadyExists to implement humanError")
+	require.Equal(t, fmt.Sprintf(`The Mapping %s exists with two different values under addons:
+%s
+and
+%s`,
+		color.HighlightCode("MyMapping.test"),
+		color.HighlightCode(`test:
+    WCU: 5`),
+		color.HighlightCode(`test:
+    RCU: 5`)),
+		herr.HumanError())
+}
