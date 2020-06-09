@@ -148,7 +148,24 @@ func TestAddons_template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New("merge addon invalid-metadata.yaml under service mysvc: metadata key Services already exists with a different definition"),
+			wantedErr: errors.New(`merge addon invalid-metadata.yaml under service mysvc: metadata key "Services" already exists with a different definition`),
+		},
+		"returns err on invalid Parameters fields": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-parameters.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: errors.New(`merge addon invalid-parameters.yaml under service mysvc: parameter logical ID "Name" already exists with a different definition`),
 		},
 		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {

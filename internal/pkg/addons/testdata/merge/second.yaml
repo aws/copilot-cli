@@ -11,3 +11,20 @@ Metadata:
 
   # Different Styles of definition a node should be ignored (single quote, double quote, flow, ...)
   Services: ['api', "fe"]
+
+Parameters:
+    # Different indentation and order should not matter.
+    Name:
+      Type: String
+      Description: The name of the service, job, or workflow being deployed.
+    App: # Line comment is ignored.
+        Type: String
+        Description: Your application's name.
+    Env:
+          Type: String
+          Description: The environment name your service, job, or workflow is being deployed to.
+    IsProd:
+      Type: String
+      Default: "false"
+    InstanceType:
+      Type: 'AWS::SSM::Parameter::Value<String>'

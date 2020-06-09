@@ -6,3 +6,18 @@ Metadata:
     Databases:
         users: Database for users.
         payments: Database for payments.
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+        Type: String
+        Description: The name of the service, job, or workflow being deployed.
+    IsProd:
+        Type: String
+        Default: "false"
+    InstanceType:
+        Type: 'AWS::SSM::Parameter::Value<String>'
