@@ -1,8 +1,0 @@
-Metadata:
-    Version: 1
-    Services:
-        - api
-        - fe
-    Databases:
-        users: Database for users.
-        payments: Database for payments.

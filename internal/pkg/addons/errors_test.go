@@ -15,8 +15,8 @@ import (
 func TestErrMetadataKeyAlreadyExists_HumanError(t *testing.T) {
 	// GIVEN
 	var err error
-	err = &errMetadataKeyAlreadyExists{
-		errKeyAlreadyExists: &errKeyAlreadyExists{
+	err = &errMetadataAlreadyExists{
+		&errKeyAlreadyExists{
 			Key: "Version",
 			First: &yaml.Node{
 				Tag:   "!!str",
@@ -36,13 +36,58 @@ func TestErrMetadataKeyAlreadyExists_HumanError(t *testing.T) {
 
 	// THEN
 	herr, ok := err.(humanError)
-	require.True(t, ok, "expected errMetadataKeyAlreadyExists to implement humanError")
-	require.Equal(t, fmt.Sprintf(`The "Metadata" key %s exists with two different values under addons:
+	require.True(t, ok, "expected errMetadataAlreadyExists to implement humanError")
+	require.Equal(t, fmt.Sprintf(`The Metadata key %s exists with two different values under addons:
 %s
 and
 %s`,
 		color.HighlightCode("Version"),
 		color.HighlightCode(`"1"`),
 		color.HighlightCode(`"2"`)),
+		herr.HumanError())
+}
+
+func TestErrParameterAlreadyExists_HumanError(t *testing.T) {
+	// GIVEN
+	var first yaml.Node
+	require.NoError(t, yaml.Unmarshal([]byte(`
+Name:
+  Type: String
+  Description: The name of the service, job, or workflow being deployed.`), &first), "unmarshal first")
+
+	var second yaml.Node
+	require.NoError(t, yaml.Unmarshal([]byte(`
+Name:
+  Type: String
+  Description: The name of the service, job, or workflow being deployed.
+  Default: api # "Default" doesn't exist in first.yaml, therefore it should error.`), &second), "unmarshal second")
+
+	var err error
+	err = &errParameterAlreadyExists{
+		&errKeyAlreadyExists{
+			Key:    "Name",
+			First:  &first,
+			Second: &second,
+		},
+	}
+	type humanError interface {
+		HumanError() string
+	}
+
+	// THEN
+	herr, ok := err.(humanError)
+	require.True(t, ok, "expected errParameterAlreadyExists to implement humanError")
+	require.Equal(t, fmt.Sprintf(`The Parameter logical ID %s exists with two different values under addons:
+%s
+and
+%s`,
+		color.HighlightCode("Name"),
+		color.HighlightCode(`Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.`),
+		color.HighlightCode(`Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+    Default: api # "Default" doesn't exist in first.yaml, therefore it should error.`)),
 		herr.HumanError())
 }

@@ -1,0 +1,16 @@
+Metadata:
+    Version: 1
+    Services:
+      - api
+      - fe
+
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+        Type: String
+        Description: The name of the service, job, or workflow being deployed.

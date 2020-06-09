@@ -11,11 +11,13 @@ type cfnSection int
 
 const (
 	metadataSection cfnSection = iota + 1
+	parametersSection
 )
 
 // cfnTemplate represents a parsed YAML AWS CloudFormation template.
 type cfnTemplate struct {
-	Metadata yaml.Node `yaml:"Metadata,omitempty"`
+	Metadata   yaml.Node `yaml:"Metadata,omitempty"`
+	Parameters yaml.Node `yaml:"Parameters,omitempty"`
 }
 
 // merge combines non-empty fields of other with cf's fields.
@@ -23,14 +25,26 @@ func (t *cfnTemplate) merge(other cfnTemplate) error {
 	if err := t.mergeMetadata(other.Metadata); err != nil {
 		return err
 	}
+	if err := t.mergeParameters(other.Parameters); err != nil {
+		return err
+	}
 	return nil
 }
 
 // mergeMetadata updates cf's Metadata with additional metadata.
-// If the key already exists in Metadata but with a different definition, returns errMetadataKeyAlreadyExists.
+// If the key already exists in Metadata but with a different definition, returns errMetadataAlreadyExists.
 func (t *cfnTemplate) mergeMetadata(metadata yaml.Node) error {
 	if err := mergeMapNodes(&t.Metadata, &metadata); err != nil {
 		return wrapKeyAlreadyExistsErr(metadataSection, err)
+	}
+	return nil
+}
+
+// mergeParameters updates cf's Parameters with additional parameters.
+// If the parameterLogicalID already exists but with a different value, returns errParameterAlreadyExists.
+func (t *cfnTemplate) mergeParameters(params yaml.Node) error {
+	if err := mergeMapNodes(&t.Parameters, &params); err != nil {
+		return wrapKeyAlreadyExistsErr(parametersSection, err)
 	}
 	return nil
 }
