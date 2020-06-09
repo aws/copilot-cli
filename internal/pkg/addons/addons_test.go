@@ -133,40 +133,40 @@ func TestAddons_template(t *testing.T) {
 				ParentErr: testErr,
 			},
 		},
-		"merge invalid Metadata fields": {
+		"return err on invalid Metadata fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
-				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-second.yaml"}, nil)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "first.yaml"))
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "invalid-second.yaml"))
-				ws.EXPECT().ReadAddon(testSvcName, "invalid-second.yaml").Return(second, nil)
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-metadata.yaml").Return(second, nil)
 				return &Addons{
 					svcName: testSvcName,
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New("merge addon invalid-second.yaml under service mysvc: metadata key Services already exists with a different definition"),
+			wantedErr: errors.New("merge addon invalid-metadata.yaml under service mysvc: metadata key Services already exists with a different definition"),
 		},
-		"merge Metadata fields successfully": {
+		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
-				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "valid-second.yaml"}, nil)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "second.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "first.yaml"))
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "valid-second.yaml"))
-				ws.EXPECT().ReadAddon(testSvcName, "valid-second.yaml").Return(second, nil)
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "second.yaml").Return(second, nil)
 				return &Addons{
 					svcName: testSvcName,
 					ws:      ws,
 				}
 			},
 			wantedTemplate: func() string {
-				wanted, _ := ioutil.ReadFile(filepath.Join("testdata", "metadata", "wanted.yaml"))
+				wanted, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "wanted.yaml"))
 				return string(wanted)
 			}(),
 		},
