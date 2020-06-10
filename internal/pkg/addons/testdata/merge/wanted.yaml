@@ -37,3 +37,9 @@ Mappings:
             MemorySize: 512
         prod:
             MemorySize: 1024
+Conditions:
+    IsProd: !Equals [!Ref Env, prod]
+    IsTest: !Not [!Equals [!Ref Env, "prod"]]
+    ExportOutputs: !Or
+        - !Condition IsProd
+        - !Condition IsTest
