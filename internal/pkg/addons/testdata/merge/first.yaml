@@ -14,3 +14,12 @@ Parameters:
     Name:
         Type: String
         Description: The name of the service, job, or workflow being deployed.
+
+Mappings:
+    MyTableDynamoDBSettings:
+        test:
+            RCU: 5
+            WCU: 5
+        prod:
+            RCU: 50
+            WCU: 25

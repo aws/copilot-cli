@@ -167,6 +167,23 @@ func TestAddons_template(t *testing.T) {
 			},
 			wantedErr: errors.New(`merge addon invalid-parameters.yaml under service mysvc: parameter logical ID "Name" already exists with a different definition`),
 		},
+		"returns err on invalid Mappings fields": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-mappings.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: errors.New(`merge addon invalid-mappings.yaml under service mysvc: mapping "MyTableDynamoDBSettings.test" already exists with a different definition`),
+		},
 		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
@@ -201,7 +218,7 @@ func TestAddons_template(t *testing.T) {
 
 			// THEN
 			if tc.wantedErr != nil {
-				require.EqualError(t, tc.wantedErr, actualErr.Error())
+				require.EqualError(t, actualErr, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, actualErr)
 				require.Equal(t, tc.wantedTemplate, actualTemplate)

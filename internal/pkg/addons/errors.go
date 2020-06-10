@@ -73,6 +73,20 @@ func (e *errParameterAlreadyExists) HumanError() string {
 	return fmt.Sprintf(`The Parameter logical ID %s`, e.errKeyAlreadyExists.HumanError())
 }
 
+// errMappingAlreadyExists occurs if the named values for the same Mappings key have different values.
+type errMappingAlreadyExists struct {
+	*errKeyAlreadyExists
+}
+
+func (e *errMappingAlreadyExists) Error() string {
+	return fmt.Sprintf(`mapping "%s" already exists with a different definition`, e.Key)
+}
+
+// HumanError returns a string that explains the error with human-friendly details.
+func (e *errMappingAlreadyExists) HumanError() string {
+	return fmt.Sprintf(`The Mapping %s`, e.errKeyAlreadyExists.HumanError())
+}
+
 // wrapKeyAlreadyExistsErr wraps the err if its an errKeyAlreadyExists error with additional cfn section metadata.
 // If the error is not an errKeyAlreadyExists, then return it as is.
 func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
@@ -87,6 +101,10 @@ func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
 		}
 	case parametersSection:
 		return &errParameterAlreadyExists{
+			keyExistsErr,
+		}
+	case mappingsSection:
+		return &errMappingAlreadyExists{
 			keyExistsErr,
 		}
 	default:
