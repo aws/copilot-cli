@@ -242,7 +242,7 @@ func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...
 	return result, err
 }
 
-// Multiselect prompts the user with a list of options to choose from with the arrow keys and enter key.
+// MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
 func (p Prompt) MultiSelect(message, help string, options []string, promptOpts ...Option) ([]string, error) {
 	var result []string
 	if len(options) <= 0 {
