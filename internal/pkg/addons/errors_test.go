@@ -130,3 +130,38 @@ and
     RCU: 5`)),
 		herr.HumanError())
 }
+
+func TestErrConditionAlreadyExists_HumanError(t *testing.T) {
+	// GIVEN
+	var err error
+	err = &errConditionAlreadyExists{
+		&errKeyAlreadyExists{
+			Key: "IsProd",
+			First: &yaml.Node{
+				Tag:   "!!str",
+				Kind:  yaml.ScalarNode,
+				Value: "1",
+			},
+			Second: &yaml.Node{
+				Tag:   "!!str",
+				Kind:  yaml.ScalarNode,
+				Value: "2",
+			},
+		},
+	}
+	type humanError interface {
+		HumanError() string
+	}
+
+	// THEN
+	herr, ok := err.(humanError)
+	require.True(t, ok, "expected errConditionAlreadyExists to implement humanError")
+	require.Equal(t, fmt.Sprintf(`The Condition %s exists with two different values under addons:
+%s
+and
+%s`,
+		color.HighlightCode("IsProd"),
+		color.HighlightCode(`"1"`),
+		color.HighlightCode(`"2"`)),
+		herr.HumanError())
+}

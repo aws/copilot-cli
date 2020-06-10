@@ -1,0 +1,2 @@
+Conditions:
+    IsProd: !Not [!Equals [!Ref Env, prod]]

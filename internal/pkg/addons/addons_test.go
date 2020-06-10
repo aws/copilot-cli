@@ -184,6 +184,23 @@ func TestAddons_template(t *testing.T) {
 			},
 			wantedErr: errors.New(`merge addon invalid-mappings.yaml under service mysvc: mapping "MyTableDynamoDBSettings.test" already exists with a different definition`),
 		},
+		"returns err on invalid Conditions fields": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-conditions.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: errors.New(`merge addon invalid-conditions.yaml under service mysvc: condition "IsProd" already exists with a different definition`),
+		},
 		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)

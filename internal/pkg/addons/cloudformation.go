@@ -16,6 +16,7 @@ const (
 	metadataSection cfnSection = iota + 1
 	parametersSection
 	mappingsSection
+	conditionsSection
 )
 
 // cfnTemplate represents a parsed YAML AWS CloudFormation template.
@@ -71,9 +72,10 @@ func (t *cfnTemplate) mergeMappings(mappings yaml.Node) error {
 }
 
 // mergeConditions updates t's Conditions with additional conditions.
+// If a condition already exists with a different value, returns errConditionAlreadyExists.
 func (t *cfnTemplate) mergeConditions(conditions yaml.Node) error {
 	if err := mergeSingleLevelMaps(&t.Conditions, &conditions); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(conditionsSection, err)
 	}
 	return nil
 }
