@@ -222,6 +222,33 @@ func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...
 	return result, err
 }
 
+// Multiselect prompts the user with a list of options to choose from with the arrow keys and enter key.
+func (p Prompt) MultiSelect(message, help string, options []string, promptOpts ...Option) ([]string, error) {
+	var result []string
+	if len(options) <= 0 {
+		// returns nil slice if error
+		return result, ErrEmptyOptions
+	}
+	multiselect := &survey.MultiSelect{
+		Message: message,
+		Options: options,
+		Default: options[0],
+	}
+	if help != "" {
+		multiselect.Help = color.Help(help)
+	}
+
+	prompt := &prompt{
+		prompter: multiselect,
+	}
+	for _, option := range promptOpts {
+		option(prompt)
+	}
+
+	err := p(prompt, &result, stdio(), icons())
+	return result, err
+}
+
 // Confirm prompts the user with a yes/no option.
 func (p Prompt) Confirm(message, help string, promptOpts ...Option) (bool, error) {
 	confirm := &survey.Confirm{
