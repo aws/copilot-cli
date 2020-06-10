@@ -88,6 +88,22 @@ func toAppShowOutput(jsonInput string) (*AppShowOutput, error) {
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 
+type EnvShowOutput struct {
+	Environment EnvDescription    `json:"environment"`
+	Services    []EnvShowServices `json:"services"`
+	Tags        map[string]string `json:"tags"`
+}
+
+type EnvShowServices struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+func toEnvShowOutput(jsonInput string) (*EnvShowOutput, error) {
+	var output EnvShowOutput
+	return &output, json.Unmarshal([]byte(jsonInput), &output)
+}
+
 type EnvListOutput struct {
 	Envs []EnvDescription `json:"environments"`
 }
