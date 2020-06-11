@@ -30,24 +30,23 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
 
-		inImage            	string
-		inDockerfilePath   	string
+		inImage				string
+		inDockerfilePath	string
 
-		inTaskRole         	string
+		inTaskRole			string
 
-		inApp  				string
+		inApp				string
+		inEnv				string
+		inSubnetID			string
+		inSecurityGroupIDs	[]string
 
-		inEnv              	string
-		inSubnetID         	string
-		inSecurityGroupIDs 	[]string
-
-		inEnvVars          	map[string]string
-		inCommands         	string
+		inEnvVars			map[string]string
+		inCommands			string
 
 		appName				string
 
 		mockStore			func(m *mocks.Mockstore)
-		mockFileSystem func(mockFS afero.Fs)
+		mockFileSystem		func(mockFS afero.Fs)
 
 		wantedError			error
 	}{

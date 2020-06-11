@@ -46,15 +46,15 @@ type runTaskVars struct {
 	CPU					uint16
 	Memory				uint16
 
-	Image 				string
-	DockerfilePath 		string
+	Image				string
+	DockerfilePath		string
 
 	TaskRole			string
 
 	SubnetID			string
 	SecurityGroupIDs	[]string
-	App 				string
-	Env 				string
+	App					string
+	Env					string
 
 	EnvVars				map[string]string
 	Commands			string
@@ -64,9 +64,9 @@ type runTaskOpts struct {
 	runTaskVars
 
 	// Interfaces to interact with dependencies.
-	fs          afero.Fs
-	store       store
-	df          dockerfileParser
+	fs			afero.Fs
+	store		store
+	df			dockerfileParser
 
 	// sets up Dockerfile parser using fs and input path
 	setupParser func(opts *runTaskOpts)
