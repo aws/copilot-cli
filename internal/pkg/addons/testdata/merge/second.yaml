@@ -56,3 +56,10 @@ Conditions:
   ExportOutputs: !Or
     - !Condition IsProd
     - !Condition IsTest
+
+Transform:
+  - Name: 'AWS::Include'
+    Parameters:
+      Location: 's3://MyAmazonS3BucketName/MyFileName.yaml'
+  - 'AWS::Serverless-2016-10-31'
+  - MyMacro

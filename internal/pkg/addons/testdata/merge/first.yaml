@@ -26,3 +26,5 @@ Mappings:
 
 Conditions:
     IsProd: !Equals [!Ref Env, prod]
+
+Transform: AWS::Serverless-2016-10-31
