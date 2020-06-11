@@ -23,7 +23,7 @@ var (
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
 	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
 	errS3ValueTrailingDash                = errors.New("value must not have trailing -")
-	errValueBadFormatWithPeriod           = errors.New("value must contain only alphanumeric characters and .-")
+	errValueBadFormatWithPeriod           = errors.New("value must contain only lowercase alphanumeric characters and .-")
 	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
 	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 )
@@ -45,7 +45,7 @@ var ddbRegExp = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_]+$`)
 var (
 	s3RegExp = regexp.MustCompile("" +
 		`^` + // start of line
-		`[a-zA-Z0-9\.\-]{3,63}` + // main match: alphanumerics, ., - from 3-63 characters
+		`[a-z0-9\.\-]{3,63}` + // main match: lowercase alphanumerics, ., - from 3-63 characters
 		`$`, // end of line
 	)
 	s3DashesRegExp = regexp.MustCompile(
@@ -180,7 +180,7 @@ func stringPortValidation(val string) error {
 	return nil
 }
 
-// s3 bucket names: 'a-zA-Z0-9.-'
+// s3 bucket names: 'a-z0-9.-'
 func s3BucketNameValidation(val interface{}) error {
 	const minS3Length = 3
 	const maxS3Length = 63

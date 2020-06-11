@@ -41,6 +41,12 @@ type EnvInitRequest struct {
 	Prod    bool
 }
 
+// EnvShowRequest contains the parameters for calling copilot env show
+type EnvShowRequest struct {
+	AppName string
+	EnvName string
+}
+
 // SvcInitRequest contains the parameters for calling copilot svc init
 type SvcInitRequest struct {
 	Name       string
@@ -266,6 +272,25 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 		commands = append(commands, "--prod")
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*EnvShow runs:
+copilot env show
+	--app $a
+	--name $n
+	--json
+*/
+func (cli *CLI) EnvShow(opts *EnvShowRequest) (*EnvShowOutput, error) {
+	envJSON, envShowErr := cli.exec(
+		exec.Command(cli.path, "env", "show",
+			"--app", opts.AppName,
+			"--name", opts.EnvName,
+			"--json"))
+
+	if envShowErr != nil {
+		return nil, envShowErr
+	}
+	return toEnvShowOutput(envJSON)
 }
 
 /*EnvList runs:

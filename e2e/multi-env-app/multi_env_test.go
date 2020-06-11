@@ -198,11 +198,42 @@ var _ = Describe("Multiple Env App", func() {
 
 				for _, logLine := range svcLogs {
 					Expect(logLine.Message).NotTo(Equal(""))
-					Expect(logLine.TaskID).NotTo(Equal(""))
+					Expect(logLine.LogStreamName).NotTo(Equal(""))
 					Expect(logLine.Timestamp).NotTo(Equal(0))
 					Expect(logLine.IngestionTime).NotTo(Equal(0))
 				}
 			}
+		})
+
+		It("env show should display info for test and prod envs", func() {
+			envs := map[string]client.EnvDescription{}
+			for _, envName := range []string{"test", "prod"} {
+				envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
+					AppName: appName,
+					EnvName: envName,
+				})
+				Expect(envShowErr).NotTo(HaveOccurred())
+				Expect(envShowOutput.Environment.Name).To(Equal(envName))
+				Expect(envShowOutput.Environment.App).To(Equal(appName))
+
+				Expect(len(envShowOutput.Services)).To(Equal(1))
+				Expect(envShowOutput.Services[0].Name).To(Equal(svcName))
+				Expect(envShowOutput.Services[0].Type).To(Equal("Load Balanced Web Service"))
+
+				Expect(len(envShowOutput.Tags)).To(Equal(2))
+				Expect(envShowOutput.Tags["copilot-application"]).To(Equal(appName))
+				Expect(envShowOutput.Tags["copilot-environment"]).To(Equal(envName))
+
+				envs[envShowOutput.Environment.Name] = envShowOutput.Environment
+			}
+			Expect(envs["test"]).NotTo(BeNil())
+			Expect(envs["test"].Prod).To(BeFalse())
+			Expect(envs["prod"]).NotTo(BeNil())
+			Expect(envs["prod"].Prod).To(BeTrue())
+			Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
+			Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
+			Expect(envs["test"].ExecutionRole).NotTo(Equal(envs["prod"].ExecutionRole))
+			Expect(envs["test"].ManagerRole).NotTo(Equal(envs["prod"].ExecutionRole))
 		})
 	})
 

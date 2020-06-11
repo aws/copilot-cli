@@ -1,0 +1,45 @@
+Metadata:
+    Version: 1
+    Services:
+        - api
+        - fe
+    Databases:
+        users: Database for users.
+        payments: Database for payments.
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+        Type: String
+        Description: The name of the service, job, or workflow being deployed.
+    IsProd:
+        Type: String
+        Default: "false"
+    InstanceType:
+        Type: 'AWS::SSM::Parameter::Value<String>'
+Mappings:
+    MyTableDynamoDBSettings:
+        test:
+            RCU: 5
+            WCU: 5
+        prod:
+            RCU: 50
+            WCU: 25
+        gamma:
+            RCU: 10
+            WCU: 10
+    MyLambdaSettings:
+        test:
+            MemorySize: 512
+        prod:
+            MemorySize: 1024
+Conditions:
+    IsProd: !Equals [!Ref Env, prod]
+    IsTest: !Not [!Equals [!Ref Env, "prod"]]
+    ExportOutputs: !Or
+        - !Condition IsProd
+        - !Condition IsTest

@@ -46,7 +46,7 @@ func TestOutputs(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			template, err := ioutil.ReadFile(filepath.Join("testdata", tc.testdataFileName))
+			template, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.testdataFileName))
 			require.NoError(t, err)
 
 			// WHEN

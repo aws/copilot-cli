@@ -60,12 +60,7 @@ Resources:
           PortMappings:
             - ContainerPort: !Ref ContainerPort
 {{include "envvars" . | indent 10}}
-          LogConfiguration:
-            LogDriver: awslogs
-            Options:
-              awslogs-region: !Ref AWS::Region
-              awslogs-group: !Ref LogGroup
-              awslogs-stream-prefix: copilot
+{{include "logconfig" . | indent 10}}
 {{include "sidecars" . | indent 8}}
 {{include "executionrole" . | indent 2}}
 
