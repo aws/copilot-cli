@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package cli
 
 import (
@@ -11,10 +14,31 @@ import (
 	"strings"
 )
 
-// // Descriptions for flags. (later copied to flag.go)
-const (
-
-)
+var regions = []string{
+	"us-east-1",
+	"us-east-2",
+	"us-west-1",
+	"us-west-2",
+	"af-south-1",
+	"ap-east-1",
+	"ap-south-1",
+	"ap-northeast-1",
+	"ap-northeast-2",
+	"ap-northeast-3",
+	"ap-southeast-1",
+	"ap-southeast-2",
+	"ca-central-1",
+	"cn-north-1",
+	"cn-northwest-1",
+	"eu-central-1",
+	"eu-west-1",
+	"eu-west-2",
+	"eu-south-1",
+	"eu-west-3",
+	"eu-north-1",
+	"me-south-1",
+	"sa-east-1",
+}
 
 type runTaskVars struct {
 	*GlobalOpts
@@ -119,70 +143,18 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.Env != "" {
-		if o.App == "" {
-			if err:= o.validateEnvName(); err != nil {
-				return err
-			}
-		} else {
-			if _, err := o.store.GetEnvironment(o.App, o.Env); err != nil {
-				return fmt.Errorf("get environment: %w", err)
-			}
+		if err := o.validateEnvName(); err != nil {
+			return err
 		}
 	}
 
 	return nil
-}
-
-func (o *runTaskOpts) validateAppName() error {
-	if o.AppName() == "" {
-		if _, err := o.store.GetApplication(o.App); err != nil {
-			return fmt.Errorf("get application: %w", err)
-		}
-	}
-	return nil
-}
-
-func (o *runTaskOpts) validateEnvName() error {
-	if o.AppName() == "" {
-		return errNoAppInWorkspace
-	}
-
-	if _, err := o.store.GetEnvironment(o.AppName(), o.Env); err != nil {
-		return fmt.Errorf("get environment %s: %w", o.Env, err)
-	}
-	return nil
-}
-
-var regions = []string{
-	"us-east-1",
-	"us-east-2",
-	"us-west-1",
-	"us-west-2",
-	"af-south-1",
-	"ap-east-1",
-	"ap-south-1",
-	"ap-northeast-1",
-	"ap-northeast-2",
-	"ap-northeast-3",
-	"ap-southeast-1",
-	"ap-southeast-2",
-	"ca-central-1",
-	"cn-north-1",
-	"cn-northwest-1",
-	"eu-central-1",
-	"eu-west-1",
-	"eu-west-2",
-	"eu-south-1",
-	"eu-west-3",
-	"eu-north-1",
-	"me-south-1",
-	"sa-east-1",
 }
 
 func (o *runTaskOpts) validateImageName() error {
-	regRegions := "(" + strings.Join(regions, "|") + ")"
+	regionsRegex := fmt.Sprintf("(%s)", strings.Join(regions, "|"))
 
-	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.` + regRegions + `.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
+	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.` +regionsRegex+ `.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
 	if err != nil {
 		return fmt.Errorf("validate image name: %w", err)
 	}
@@ -221,6 +193,32 @@ func (o *runTaskOpts) validateSecurityGroupIDs() error {
 	return nil
 }
 
+func (o *runTaskOpts) validateAppName() error {
+	if o.AppName() == "" {
+		if _, err := o.store.GetApplication(o.App); err != nil {
+			return fmt.Errorf("get application: %w", err)
+		}
+	}
+	return nil
+}
+
+func (o *runTaskOpts) validateEnvName() error {
+	if o.App != "" {
+		if _, err := o.store.GetEnvironment(o.App, o.Env); err != nil {
+			return fmt.Errorf("get environment: %w", err)
+		}
+	} else {
+		if o.AppName() == "" {
+			return errNoAppInWorkspace
+		}
+
+		if _, err := o.store.GetEnvironment(o.AppName(), o.Env); err != nil {
+			return fmt.Errorf("get environment %s: %w", o.Env, err)
+		}
+	}
+
+	return nil
+}
 // BuildTaskRunCmd build the command for running a new task
 func BuildTaskRunCmd() *cobra.Command {
 	vars := runTaskVars{

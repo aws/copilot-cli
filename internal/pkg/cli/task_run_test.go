@@ -144,6 +144,18 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inImage: "image name",
 			wantedError: errors.New("image name is malformed"),
 		},
+		"malformed subnet id": {
+			basicOpts: defaultOpts,
+
+			inSubnetID: "malformed-subnet-7192f73d",
+			wantedError: errors.New("subnet id is malformed"),
+		},
+		"malformed security group ids": {
+			basicOpts: defaultOpts,
+
+			inSecurityGroupIDs: []string{"malformed-sg-12d9dj", "sg-123dfda9"},
+			wantedError: errors.New("one or more malformed security group id(s)"),
+		},
 		"specified app exists": {
 			basicOpts: defaultOpts,
 
@@ -254,18 +266,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inSecurityGroupIDs: []string{"security group id1", "securty group id2"},
 
 			wantedError: errors.New("can only specify one of a)env and b)subnet id and (or) security groups"),
-		},
-		"malformed subnet id": {
-			basicOpts: defaultOpts,
-
-			inSubnetID: "malformed-subnet-7192f73d",
-			wantedError: errors.New("subnet id is malformed"),
-		},
-		"malformed security group ids": {
-			basicOpts: defaultOpts,
-
-			inSecurityGroupIDs: []string{"malformed-sg-12d9dj", "sg-123dfda9"},
-			wantedError: errors.New("one or more malformed security group id(s)"),
 		},
 	}
 
