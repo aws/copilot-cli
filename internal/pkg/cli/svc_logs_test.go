@@ -573,29 +573,29 @@ func TestSvcLogs_Execute(t *testing.T) {
 	}
 	logEvents := []*cloudwatchlogs.Event{
 		{
-			TaskID:  "123456789",
-			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -`,
+			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
+			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -`,
 		},
 		{
-			TaskID:  "123456789",
-			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -`,
+			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
+			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -`,
 		},
 		{
-			TaskID:  "123456789",
-			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -`,
+			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
+			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -`,
 		},
 	}
 	moreLogEvents := []*cloudwatchlogs.Event{
 		{
-			TaskID:  "123456789",
-			Message: `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -`,
+			LogStreamName: "firelens_log_router/fcfe4ab8043841c08162318e5ad805f1",
+			Message:       `10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -`,
 		},
 	}
-	logEventsHumanString := `1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
-1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
-1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+	logEventsHumanString := `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
 `
-	logEventsJSONString := "{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"GET / HTTP/1.1\\\" 200 -\",\"timestamp\":0}\n{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"FATA some error\\\" - -\",\"timestamp\":0}\n{\"taskID\":\"123456789\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"WARN some warning\\\" - -\",\"timestamp\":0}\n"
+	logEventsJSONString := "{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"GET / HTTP/1.1\\\" 200 -\",\"timestamp\":0}\n{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"FATA some error\\\" - -\",\"timestamp\":0}\n{\"logStreamName\":\"firelens_log_router/fcfe4ab8043841c08162318e5ad805f1\",\"ingestionTime\":0,\"message\":\"10.0.0.00 - - [01/Jan/1970 01:01:01] \\\"WARN some warning\\\" - -\",\"timestamp\":0}\n"
 	testCases := map[string]struct {
 		inputApp     string
 		inputSvc     string
@@ -671,10 +671,10 @@ func TestSvcLogs_Execute(t *testing.T) {
 			},
 
 			wantedError: nil,
-			wantedContent: `1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
-1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
-1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
-1234567 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -
 `,
 		},
 		"returns error if fail to get event logs": {

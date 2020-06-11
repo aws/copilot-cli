@@ -1,0 +1,146 @@
+Metadata:
+    Version: 1
+    Services:
+        - api
+        - fe
+    Databases:
+        users: Database for users.
+        payments: Database for payments.
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+        Type: String
+        Description: The name of the service, job, or workflow being deployed.
+    IsProd:
+        Type: String
+        Default: "false"
+    InstanceType:
+        Type: 'AWS::SSM::Parameter::Value<String>'
+Mappings:
+    MyTableDynamoDBSettings:
+        test:
+            RCU: 5
+            WCU: 5
+        prod:
+            RCU: 50
+            WCU: 25
+        gamma:
+            RCU: 10
+            WCU: 10
+    MyLambdaSettings:
+        test:
+            MemorySize: 512
+        prod:
+            MemorySize: 1024
+Conditions:
+    IsProd: !Equals [!Ref Env, prod]
+    IsTest: !Not [!Equals [!Ref Env, "prod"]]
+    ExportOutputs: !Or
+        - !Condition IsProd
+        - !Condition IsTest
+Transform:
+    - AWS::Serverless-2016-10-31
+    - Name: 'AWS::Include'
+      Parameters:
+        Location: 's3://MyAmazonS3BucketName/MyFileName.yaml'
+    - MyMacro
+Resources:
+    MyTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+            TableName: !Sub '${App}-${Env}-${Name}-mytable'
+            AttributeDefinitions:
+                - AttributeName: id
+                  AttributeType: S
+            KeySchema:
+                - AttributeName: id
+                  KeyType: HASH
+            ProvisionedThroughput:
+                ReadCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, {Ref: Env}, RCU]
+                WriteCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, {Ref: Env}, WCU]
+    MyTableAccessPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            Description: !Sub
+                - Grants CRUD access to MyTable
+                - {Table: !Ref MyTable}
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                    - Sid: DDBActions
+                      Effect: Allow
+                      Action:
+                        - dynamodb:BatchGet*
+                        - dynamodb:DescribeStream
+                        - dynamodb:DescribeTable
+                        - dynamodb:Get*
+                        - dynamodb:Query
+                        - dynamodb:Scan
+                        - dynamodb:BatchWrite*
+                        - dynamodb:Create*
+                        - dynamodb:Delete*
+                        - dynamodb:Update*
+                        - dynamodb:PutItem
+                      Resource: !Sub ${ MyTable.Arn}
+                    - Sid: DDBLSIActions
+                      Action:
+                        - dynamodb:Query
+                        - dynamodb:Scan
+                      Effect: Allow
+                      Resource: !Sub ${ MyTable.Arn}/Index/*
+    MyBucket:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        Properties:
+            AccessControl: Private
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                        SSEAlgorithm: AES256
+            BucketName: !Sub '${App}-${Env}-${Name}-mybucket'
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+    MyBucketAccessPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            Description: !Sub
+                - Grants CRUD access to MyBucket
+                - {Bucket: !Ref MyBucket}
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                    - Sid: S3ObjectActions
+                      Effect: Allow
+                      Action:
+                        - s3:GetObject
+                        - s3:PutObject
+                        - s3:PutObjectACL
+                        - s3:PutObjectTagging
+                        - s3:DeleteObject
+                        - s3:RestoreObject
+                      Resource: !Sub ${MyBucket.Arn}/*
+                    - Sid: S3ListAction
+                      Effect: Allow
+                      Action: s3:ListBucket
+                      Resource: !Sub ${MyBucket.Arn}
+Outputs:
+    MyTableName:
+        Description: "The name of this DynamoDB."
+        Value: !Ref MyTable
+    MyTableAccessPolicy:
+        Description: "The IAM::ManagedPolicy to attach to the task role."
+        Value: !Ref MyTableAccessPolicy
+    MyBucketName:
+        Description: "The name of a user-defined bucket."
+        Value: !Ref MyBucketName
+    MyBucketAccessPolicy:
+        Description: "The IAM::ManagedPolicy to attach to the task role"
+        Value: !Ref MyBucketAccessPolicy

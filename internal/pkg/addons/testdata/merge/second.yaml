@@ -1,0 +1,115 @@
+# The indentation and the exact line where a field appears should be ignored.
+Metadata:
+  Databases:
+    users: Database for users.
+    payments: Database for payments.
+
+  # The HeadComment -- comments preceding the node -- should be ignored.
+  Version: 1 #  The LineComment -- comment at the end of the node -- should be ignored.
+  # The FootComments -- comments after the node -- should be ignored.
+  # Continuation of foot comment.
+
+  # Different Styles of definition a node should be ignored (single quote, double quote, flow, ...)
+  Services: ['api', "fe"]
+
+Parameters:
+    # Different indentation and order should not matter.
+    Name:
+      Type: String
+      Description: The name of the service, job, or workflow being deployed.
+    App: # Line comment is ignored.
+        Type: String
+        Description: Your application's name.
+    Env:
+          Type: String
+          Description: The environment name your service, job, or workflow is being deployed to.
+    IsProd:
+      Type: String
+      Default: "false"
+    InstanceType:
+      Type: 'AWS::SSM::Parameter::Value<String>'
+
+Mappings:
+  MyTableDynamoDBSettings:
+    prod: # Another ignored comment.
+    # Comments and position should not matter.
+
+      RCU: 50
+      WCU: 25
+    test:
+          RCU: 5
+          WCU: 5
+    gamma:
+      RCU: 10
+      WCU: 10
+  MyLambdaSettings:
+    test:
+      MemorySize: 512
+    prod:
+      MemorySize: 1024
+
+Conditions:
+  IsTest:
+    !Not [!Equals [ !Ref Env, "prod" ]]
+  IsProd:
+      !Equals [!Ref Env, prod]
+  ExportOutputs: !Or
+    - !Condition IsProd
+    - !Condition IsTest
+
+Transform:
+  - Name: 'AWS::Include'
+    Parameters:
+      Location: 's3://MyAmazonS3BucketName/MyFileName.yaml'
+  - 'AWS::Serverless-2016-10-31'
+  - MyMacro
+
+Resources:
+    MyBucket:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        AccessControl: Private
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        BucketName: !Sub '${App}-${Env}-${Name}-mybucket'
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+
+    MyBucketAccessPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        Description: !Sub
+          - Grants CRUD access to MyBucket
+          - { Bucket: !Ref MyBucket }
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Sid: S3ObjectActions
+              Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:PutObject
+                - s3:PutObjectACL
+                - s3:PutObjectTagging
+                - s3:DeleteObject
+                - s3:RestoreObject
+              Resource: !Sub ${MyBucket.Arn}/*
+            - Sid: S3ListAction
+              Effect: Allow
+              Action: s3:ListBucket
+              Resource: !Sub ${MyBucket.Arn}
+
+Outputs:
+    MyBucketName:
+      Description: "The name of a user-defined bucket."
+      Value: !Ref MyBucketName
+    MyBucketAccessPolicy:
+      Description: "The IAM::ManagedPolicy to attach to the task role"
+      Value: !Ref MyBucketAccessPolicy
+    MyTableName:
+          Description: "The name of this DynamoDB."
+          Value: !Ref MyTable

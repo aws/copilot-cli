@@ -1,0 +1,86 @@
+Metadata:
+    Version: 1
+    Services:
+      - api
+      - fe
+
+Parameters:
+    App:
+        Type: String
+        Description: Your application's name.
+    Env:
+        Type: String
+        Description: The environment name your service, job, or workflow is being deployed to.
+    Name:
+        Type: String
+        Description: The name of the service, job, or workflow being deployed.
+
+Mappings:
+    MyTableDynamoDBSettings:
+        test:
+            RCU: 5
+            WCU: 5
+        prod:
+            RCU: 50
+            WCU: 25
+
+Conditions:
+    IsProd: !Equals [!Ref Env, prod]
+
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+    MyTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+            TableName: !Sub '${App}-${Env}-${Name}-mytable'
+            AttributeDefinitions:
+                - AttributeName: id
+                  AttributeType: S
+            KeySchema:
+                - AttributeName: id
+                  KeyType: HASH
+            ProvisionedThroughput:
+                ReadCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, Ref: Env, RCU]
+                WriteCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, Ref: Env, WCU]
+
+    MyTableAccessPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            Description: !Sub
+                - Grants CRUD access to MyTable
+                - { Table: !Ref MyTable }
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                    - Sid: DDBActions
+                      Effect: Allow
+                      Action:
+                          - dynamodb:BatchGet*
+                          - dynamodb:DescribeStream
+                          - dynamodb:DescribeTable
+                          - dynamodb:Get*
+                          - dynamodb:Query
+                          - dynamodb:Scan
+                          - dynamodb:BatchWrite*
+                          - dynamodb:Create*
+                          - dynamodb:Delete*
+                          - dynamodb:Update*
+                          - dynamodb:PutItem
+                      Resource: !Sub ${ MyTable.Arn}
+                    - Sid: DDBLSIActions
+                      Action:
+                          - dynamodb:Query
+                          - dynamodb:Scan
+                      Effect: Allow
+                      Resource: !Sub ${ MyTable.Arn}/Index/*
+
+Outputs:
+    MyTableName:
+        Description: "The name of this DynamoDB."
+        Value: !Ref MyTable
+    MyTableAccessPolicy:
+        Description: "The IAM::ManagedPolicy to attach to the task role."
+        Value: !Ref MyTableAccessPolicy

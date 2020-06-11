@@ -29,12 +29,12 @@ func New() Runner {
 	}
 }
 
-// Build will run a `docker build` command with the input uri, tag, and Dockerfile image path.
+// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
 func (r Runner) Build(uri, imageTag, path string) error {
 	imageName := imageName(uri, imageTag)
-	dfPath, dfName := filepath.Split(path)
+	dfDir := filepath.Dir(path)
 
-	err := r.Run("docker", []string{"build", "-t", imageName, dfPath, "-f", dfName})
+	err := r.Run("docker", []string{"build", "-t", imageName, dfDir, "-f", path})
 
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
