@@ -13,9 +13,9 @@ import (
 func BuildTaskCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "task",
-		Short: `Commands for tasks.
+		Short: `inCommands for tasks.
 Tasks are one-off Amazon ECS tasks.`,
-		Long: `Commands for tasks
+		Long: `inCommands for tasks
 Tasks are one-off Amazon ECS tasks.`,
 	}
 
