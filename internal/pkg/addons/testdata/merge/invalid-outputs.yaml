@@ -1,0 +1,4 @@
+Outputs:
+  MyTableAccessPolicy:
+    Description: "The IAM::ManagedPolicy to attach to the task role."
+    Value: !Ref MyBucketAccessPolicy # Refers to the wrong policy!

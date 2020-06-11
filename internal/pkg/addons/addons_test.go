@@ -218,6 +218,23 @@ func TestAddons_template(t *testing.T) {
 			},
 			wantedErr: errors.New(`merge addon invalid-resources.yaml under service mysvc: resource "MyTable" already exists with a different definition`),
 		},
+		"returns err on invalid Outputs fields": {
+			mockAddons: func(ctrl *gomock.Controller) *Addons {
+				ws := mocks.NewMockworkspaceReader(ctrl)
+				ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
+
+				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
+
+				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
+				ws.EXPECT().ReadAddon(testSvcName, "invalid-outputs.yaml").Return(second, nil)
+				return &Addons{
+					svcName: testSvcName,
+					ws:      ws,
+				}
+			},
+			wantedErr: errors.New(`merge addon invalid-outputs.yaml under service mysvc: output "MyTableAccessPolicy" already exists with a different definition`),
+		},
 		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)

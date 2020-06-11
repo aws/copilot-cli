@@ -109,3 +109,16 @@ func TestErrResourceAlreadyExists_HumanError(t *testing.T) {
 	_, ok := err.(humanError)
 	require.True(t, ok, "expected errResourceAlreadyExists to implement humanError")
 }
+
+func TestErrOutputAlreadyExists_HumanError(t *testing.T) {
+	// GIVEN
+	var err error
+	err = &errOutputAlreadyExists{}
+	type humanError interface {
+		HumanError() string
+	}
+
+	// THEN
+	_, ok := err.(humanError)
+	require.True(t, ok, "expected errOutputAlreadyExists to implement humanError")
+}
