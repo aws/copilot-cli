@@ -48,15 +48,15 @@ const (
 
 	storageTypeFlag = "storage-type"
 
-	numFlag              = "num"
-	cpuFlag              = "cpu"
-	memoryFlag           = "memory"
-	imageFlag            = "image"
-	taskRoleFlag         = "task-role"
-	subnetIDFlag         = "subnet-id"
-	securityGroupIDsFlag = "security-group-id"
-	envVarsFlag          = "env-vars"
-	commandFlag          = "command"
+	numFlag            = "num"
+	cpuFlag            = "cpu"
+	memoryFlag         = "memory"
+	imageFlag          = "image"
+	taskRoleFlag       = "task-role"
+	subnetFlag         = "subnet"
+	securityGroupsFlag = "security-groups"
+	envVarsFlag        = "env-vars"
+	commandFlag        = "command"
 )
 
 // Short flag names.
@@ -123,15 +123,15 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	storageFlagDescription        = "Name of the storage resource to create."
 	storageServiceFlagDescription = "Name of the service to associate with storage."
 
-	numFlagDescription              = "Optional. The number of tasks to set up. Default to 1."
-	cpuFlagDescription              = "Optional. The number of cpu-units to reserve. Default to 256."
-	memoryFlagDescription           = "Optional. The amount of memory to reserve. Default to 512."
-	imageFlagDescription            = "Optional. The image to run instead of building a dockerfile."
-	taskRoleFlagDescription         = "Optional. The role for the task to use."
-	subnetIDFlagDescription         = "Optional. The subnet id for the task to use."
-	securityGroupIDsFlagDescription = "Optional. The security group id(s) for the task to use."
-	envVarsFlagDescription          = "Optional. A key=value list of environment variables"
-	commandFlagDescription          = "Optional. List of commands that are passed to docker run"
+	numFlagDescription            = "Optional. The number of tasks to set up. Default to 1."
+	cpuFlagDescription            = "Optional. The number of cpu-units to reserve. Default to 256."
+	memoryFlagDescription         = "Optional. The amount of memory to reserve. Default to 512."
+	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription       = "Optional. The role for the task to use."
+	subnetFlagDescription         = "Optional. The subnet id for the task to use."
+	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use."
+	envVarsFlagDescription        = "Optional. A key=value list of environment variables."
+	commandFlagDescription        = "Optional. List of commands that are passed to `docker run`."
 )
 
 func quoteAll(elems []string) []string {
