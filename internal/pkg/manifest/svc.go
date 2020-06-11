@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +21,8 @@ const (
 	// BackendServiceType is a service that cannot be accessed from the internet but can be reached from other services.
 	BackendServiceType = "Backend Service"
 
-	defaultSidecarPort = "80"
+	defaultSidecarPort    = "80"
+	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 )
 
 // ServiceTypes are the supported service manifest types.
@@ -48,17 +50,36 @@ type ServiceImageWithPort struct {
 
 // LogConfig holds configuration for Firelens to route your logs.
 type LogConfig struct {
-	Destination    destinationConfig `yaml:"destination,flow"`
+	Image          *string           `yaml:"image"`
+	Destination    map[string]string `yaml:"destination,flow"`
 	EnableMetadata *bool             `yaml:"enableMetadata"`
 	SecretOptions  map[string]string `yaml:"secretOptions"`
-	ConfigFile     *string           `yaml:"configFile"`
-	PermissionFile *string           `yaml:"permissionFile"`
+	ConfigFile     *string           `yaml:"configFilePath"`
 }
 
-type destinationConfig struct {
-	Name           *string `yaml:"name"`
-	IncludePattern *string `yaml:"includePattern"` // can be empty string as a valid value
-	ExcludePattern *string `yaml:"excludePattern"`
+func (lc *LogConfig) logConfigOpts() *template.LogConfigOpts {
+	return &template.LogConfigOpts{
+		Image:          lc.image(),
+		ConfigFile:     lc.ConfigFile,
+		EnableMetadata: lc.enableMetadata(),
+		Destination:    lc.Destination,
+		SecretOptions:  lc.SecretOptions,
+	}
+}
+
+func (lc *LogConfig) image() *string {
+	if lc.Image == nil {
+		return aws.String(defaultFluentbitImage)
+	}
+	return lc.Image
+}
+
+func (lc *LogConfig) enableMetadata() *string {
+	if lc.EnableMetadata == nil {
+		// Enable ecs log metadata by default.
+		return aws.String("true")
+	}
+	return aws.String(strconv.FormatBool(*lc.EnableMetadata))
 }
 
 // Sidecar holds configuration for all sidecar containers in a service.

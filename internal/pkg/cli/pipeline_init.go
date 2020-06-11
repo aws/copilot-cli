@@ -473,9 +473,9 @@ func (o *initPipelineOpts) parseGitRemoteResult(s string) ([]string, error) {
 
 func (o *initPipelineOpts) getGitHubAccessToken() error {
 	token, err := o.prompt.GetSecret(
-		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository: %s", o.GitHubRepo),
+		fmt.Sprintf("Please enter your GitHub Personal Access Token for your repository %s:", color.HighlightUserInput(o.GitHubRepo)),
 		`The personal access token for the GitHub repository linked to your workspace. 
-For more information on how to create a personal access token, please refer to: https://help.github.com/en/enterprise/2.17/user/authenticating-to-github/creating-a-personal-access-token-for-the-command-line.`,
+For more information, please refer to: https://git.io/JfDFD.`,
 	)
 
 	if err != nil {

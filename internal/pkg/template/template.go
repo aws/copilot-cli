@@ -32,6 +32,7 @@ var (
 		"servicediscovery",
 		"addons",
 		"sidecars",
+		"logconfig",
 	}
 )
 

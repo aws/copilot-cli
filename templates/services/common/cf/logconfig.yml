@@ -1,0 +1,18 @@
+{{- if .LogConfig}}LogConfiguration:
+  LogDriver: awsfirelens
+{{- if .LogConfig.Destination}}
+  Options:{{range $name, $value := .LogConfig.Destination}}
+    {{$name}}: {{$value}}{{end}}
+{{- end}}
+{{- if .LogConfig.SecretOptions}}
+  SecretOptions:{{range $name, $valueFrom := .LogConfig.SecretOptions}}
+    - Name: {{$name}}
+      ValueFrom: {{$valueFrom}}{{end}}
+{{- end}}
+{{- else}}LogConfiguration:
+  LogDriver: awslogs
+  Options:
+    awslogs-region: !Ref AWS::Region
+    awslogs-group: !Ref LogGroup
+    awslogs-stream-prefix: copilot
+{{- end}}

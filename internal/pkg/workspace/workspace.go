@@ -229,9 +229,19 @@ func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
 	return names, nil
 }
 
-// ReadAddonsFile returns the contents of a file under the service's "addons/" directory.
-func (ws *Workspace) ReadAddonsFile(svcName, fileName string) ([]byte, error) {
-	return ws.read(svcName, addonsDirName, fileName)
+// ReadAddon returns the contents of a file under the service's "addons/" directory.
+func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
+	return ws.read(svc, addonsDirName, fname)
+}
+
+// WriteAddon writes the content of an addon file under "{svc}/addons/{fname}".
+// If successful returns the full path of the file, otherwise an empty string and an error.
+func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, fname string) (string, error) {
+	data, err := content.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal binary addon content: %w", err)
+	}
+	return ws.write(data, svc, addonsDirName, fname)
 }
 
 func (ws *Workspace) writeSummary(appName string) error {

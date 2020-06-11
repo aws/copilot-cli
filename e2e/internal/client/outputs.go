@@ -60,7 +60,7 @@ func toSvcListOutput(jsonInput string) (*SvcListOutput, error) {
 }
 
 type SvcLogsOutput struct {
-	TaskID        string `json:"taskID"`
+	LogStreamName string `json:"logStreamName"`
 	IngestionTime int64  `json:"ingestionTime"`
 	Timestamp     int64  `json:"timestamp"`
 	Message       string `json:"message"`
@@ -85,6 +85,22 @@ type AppShowOutput struct {
 
 func toAppShowOutput(jsonInput string) (*AppShowOutput, error) {
 	var output AppShowOutput
+	return &output, json.Unmarshal([]byte(jsonInput), &output)
+}
+
+type EnvShowOutput struct {
+	Environment EnvDescription    `json:"environment"`
+	Services    []EnvShowServices `json:"services"`
+	Tags        map[string]string `json:"tags"`
+}
+
+type EnvShowServices struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+func toEnvShowOutput(jsonInput string) (*EnvShowOutput, error) {
+	var output EnvShowOutput
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 

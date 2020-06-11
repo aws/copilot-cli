@@ -148,6 +148,10 @@ func TestValidateS3Name(t *testing.T) {
 			input: "124.333.333.333.333",
 			want:  nil,
 		},
+		"capital letters in bucket name": {
+			input: "BADbucketname",
+			want:  errValueBadFormatWithPeriod,
+		},
 	}
 
 	for name, tc := range testCases {

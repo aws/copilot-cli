@@ -1,3 +1,17 @@
+{{if .LogConfig}}- Name: firelens_log_router
+  Image: {{ .LogConfig.Image }}
+  FirelensConfiguration:
+    Type: fluentbit
+    Options:
+      enable-ecs-log-metadata: {{.LogConfig.EnableMetadata}}{{if .LogConfig.ConfigFile}}
+      config-file-type: file
+      config-file-value: {{.LogConfig.ConfigFile}}{{end}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot{{end}}
 {{range $sidecar := .Sidecars}}- Name: {{$sidecar.Name}}
   Image: {{$sidecar.Image}}{{if $sidecar.Port}}
   PortMappings:

@@ -31,7 +31,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect("./copilot").Should(BeADirectory())
 		})
 
-		It("app ls includes new project", func() {
+		It("app ls includes new application", func() {
 			apps, err := cli.AppList()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(apps).To(ContainSubstring(appName))
@@ -154,7 +154,7 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(backEndDeployErr).NotTo(HaveOccurred())
 		})
 
-		It("svc show should include a valid URL and description for test and prod envs", func() {
+		It("svc show should include a valid URL and description for test env", func() {
 			for _, svcName := range []string{"front-end", "www"} {
 				svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 					AppName: appName,
@@ -185,6 +185,25 @@ var _ = Describe("Multiple Service App", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(bodyBytes)).To(Equal(svcName))
 			}
+		})
+
+		It("env show should include the name and type for front-end, www, and back-end svcs", func() {
+			envShowOutput, envShowErr := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			Expect(envShowErr).NotTo(HaveOccurred())
+			Expect(len(envShowOutput.Services)).To(Equal(3))
+			svcs := map[string]client.EnvShowServices{}
+			for _, svc := range envShowOutput.Services {
+				svcs[svc.Name] = svc
+			}
+			Expect(svcs["front-end"]).NotTo(BeNil())
+			Expect(svcs["front-end"].Type).To(Equal("Load Balanced Web Service"))
+			Expect(svcs["www"]).NotTo(BeNil())
+			Expect(svcs["www"].Type).To(Equal("Load Balanced Web Service"))
+			Expect(svcs["back-end"]).NotTo(BeNil())
+			Expect(svcs["back-end"].Type).To(Equal("Backend Service"))
 		})
 
 		It("service discovery should be enabled and working", func() {
@@ -235,7 +254,7 @@ var _ = Describe("Multiple Service App", func() {
 
 				for _, logLine := range svcLogs {
 					Expect(logLine.Message).NotTo(Equal(""))
-					Expect(logLine.TaskID).NotTo(Equal(""))
+					Expect(logLine.LogStreamName).NotTo(Equal(""))
 					Expect(logLine.Timestamp).NotTo(Equal(0))
 					Expect(logLine.IngestionTime).NotTo(Equal(0))
 				}

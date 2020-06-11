@@ -127,7 +127,7 @@ var _ = Describe("init flow", func() {
 
 			for _, logLine := range svcLogs {
 				Expect(logLine.Message).NotTo(Equal(""))
-				Expect(logLine.TaskID).NotTo(Equal(""))
+				Expect(logLine.LogStreamName).NotTo(Equal(""))
 				Expect(logLine.Timestamp).NotTo(Equal(0))
 				Expect(logLine.IngestionTime).NotTo(Equal(0))
 			}
