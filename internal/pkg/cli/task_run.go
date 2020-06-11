@@ -42,31 +42,31 @@ var regions = []string{
 
 type runTaskVars struct {
 	*GlobalOpts
-	Num					uint8
-	CPU					uint16
-	Memory				uint16
+	Num    uint8
+	CPU    uint16
+	Memory uint16
 
-	Image 				string
-	DockerfilePath 		string
+	Image          string
+	DockerfilePath string
 
-	TaskRole			string
+	TaskRole string
 
-	SubnetID			string
-	SecurityGroupIDs	[]string
-	App 				string
-	Env 				string
+	SubnetID         string
+	SecurityGroupIDs []string
+	App              string
+	Env              string
 
-	EnvVars				map[string]string
-	Commands			string
+	EnvVars  map[string]string
+	Commands string
 }
 
 type runTaskOpts struct {
 	runTaskVars
 
 	// Interfaces to interact with dependencies.
-	fs          afero.Fs
-	store       store
-	df          dockerfileParser
+	fs    afero.Fs
+	store store
+	df    dockerfileParser
 
 	// sets up Dockerfile parser using fs and input path
 	setupParser func(opts *runTaskOpts)
@@ -81,8 +81,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	return &runTaskOpts{
 		runTaskVars: vars,
 
-		fs:	&afero.Afero{Fs: afero.NewOsFs()},
-		store:	store,
+		fs:    &afero.Afero{Fs: afero.NewOsFs()},
+		store: store,
 
 		setupParser: func(o *runTaskOpts) {
 			o.df = dockerfile.New(o.fs, o.DockerfilePath)
@@ -154,7 +154,7 @@ func (o *runTaskOpts) Validate() error {
 func (o *runTaskOpts) validateImageName() error {
 	regionsRegex := fmt.Sprintf("(%s)", strings.Join(regions, "|"))
 
-	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.` +regionsRegex+ `.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
+	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.`+regionsRegex+`.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
 	if err != nil {
 		return fmt.Errorf("validate image name: %w", err)
 	}
@@ -219,6 +219,7 @@ func (o *runTaskOpts) validateEnvName() error {
 
 	return nil
 }
+
 // BuildTaskRunCmd build the command for running a new task
 func BuildTaskRunCmd() *cobra.Command {
 	vars := runTaskVars{
@@ -227,7 +228,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a task",
-		Long: `Run a task.`,
+		Long:  `Run a task.`,
 		Example: `
 Run a task with default setting
 /code $ copilot task run
@@ -267,4 +268,3 @@ Starts 4 tasks with 2GB memory, Runs a particular image.
 
 	return cmd
 }
-

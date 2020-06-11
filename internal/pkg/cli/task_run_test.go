@@ -15,41 +15,40 @@ import (
 )
 
 type basicOpts struct {
-	inNum              	uint8
-	inCPU              	uint16
-	inMemory           	uint16
+	inNum    uint8
+	inCPU    uint16
+	inMemory uint16
 }
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	defaultOpts := basicOpts{
-		inNum: 1,
-		inCPU: 256,
+		inNum:    1,
+		inCPU:    256,
 		inMemory: 512,
 	}
 
 	testCases := map[string]struct {
 		basicOpts
 
-		inImage            	string
-		inDockerfilePath   	string
+		inImage          string
+		inDockerfilePath string
 
-		inTaskRole         	string
+		inTaskRole string
 
-		inApp  				string
+		inApp              string
+		inEnv              string
+		inSubnetID         string
+		inSecurityGroupIDs []string
 
-		inEnv              	string
-		inSubnetID         	string
-		inSecurityGroupIDs 	[]string
+		inEnvVars  map[string]string
+		inCommands string
 
-		inEnvVars          	map[string]string
-		inCommands         	string
+		appName string
 
-		appName				string
-
-		mockStore			func(m *mocks.Mockstore)
+		mockStore      func(m *mocks.Mockstore)
 		mockFileSystem func(mockFS afero.Fs)
 
-		wantedError			error
+		wantedError error
 	}{
 		"valid with no flag": {
 			basicOpts:   defaultOpts,
@@ -58,21 +57,21 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"valid image and env": {
 			basicOpts: defaultOpts,
 
-			inImage: "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			inImage:    "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inTaskRole: "exec-role",
 
 			inEnv: "dev",
 
 			inEnvVars: map[string]string{
 				"NAME": "my-app",
-				"ENV":	"dev",
+				"ENV":  "dev",
 			},
 			inCommands: "echo \"docker commands\"",
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(&config.Environment{
-					App: "my-app",
+					App:  "my-app",
 					Name: "dev",
 				}, nil)
 			},
@@ -83,14 +82,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			inDockerfilePath: "hello/world/Dockerfile",
-			inTaskRole: "exec-role",
+			inTaskRole:       "exec-role",
 
-			inSubnetID: "subnet-10d938jds",
+			inSubnetID:         "subnet-10d938jds",
 			inSecurityGroupIDs: []string{"sg-0d9sjdk", "sg-d33kds99"},
 
 			inEnvVars: map[string]string{
 				"NAME": "pj",
-				"ENV":	"dev",
+				"ENV":  "dev",
 			},
 			inCommands: "echo \"docker commands\"",
 
@@ -102,24 +101,24 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{
-				inNum: 0,
-				inCPU: 256,
+				inNum:    0,
+				inCPU:    256,
 				inMemory: 512,
 			},
 			wantedError: errors.New("number of tasks must be positive"),
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{
-				inNum: 1,
-				inCPU: 0,
+				inNum:    1,
+				inCPU:    0,
 				inMemory: 512,
 			},
 			wantedError: errors.New("CPU units must be positive"),
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
-				inNum: 1,
-				inCPU: 256,
+				inNum:    1,
+				inCPU:    256,
 				inMemory: 0,
 			},
 			wantedError: errors.New("memory must be positive"),
@@ -127,7 +126,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
 
-			inImage: "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inDockerfilePath: "hello/world/Dockerfile",
 
 			wantedError: errors.New("cannot specify both image and dockerfile path"),
@@ -141,20 +140,20 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"malformed image name": {
 			basicOpts: defaultOpts,
 
-			inImage: "image name",
+			inImage:     "image name",
 			wantedError: errors.New("image name is malformed"),
 		},
 		"malformed subnet id": {
 			basicOpts: defaultOpts,
 
-			inSubnetID: "malformed-subnet-7192f73d",
+			inSubnetID:  "malformed-subnet-7192f73d",
 			wantedError: errors.New("subnet id is malformed"),
 		},
 		"malformed security group ids": {
 			basicOpts: defaultOpts,
 
 			inSecurityGroupIDs: []string{"malformed-sg-12d9dj", "sg-123dfda9"},
-			wantedError: errors.New("one or more malformed security group id(s)"),
+			wantedError:        errors.New("one or more malformed security group id(s)"),
 		},
 		"specified app exists": {
 			basicOpts: defaultOpts,
@@ -175,8 +174,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("my-app").Return(nil, &config.ErrNoSuchApplication{
 					ApplicationName: "my-app",
-					AccountID: "115",
-					Region: "us-east-1",
+					AccountID:       "115",
+					Region:          "us-east-1",
 				})
 			},
 			wantedError: fmt.Errorf("get application: couldn't find an application named my-app in account 115 and region us-east-1"),
@@ -189,7 +188,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(&config.Environment{
-					App: "my-app",
+					App:  "my-app",
 					Name: "dev",
 				}, nil)
 
@@ -220,12 +219,12 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"env exists in workspace": {
 			basicOpts: defaultOpts,
 
-			inEnv: "test",
+			inEnv:   "test",
 			appName: "their-app",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("their-app", "test").Return(&config.Environment{
-					App: "their-app",
+					App:  "their-app",
 					Name: "test",
 				}, nil)
 			},
@@ -234,7 +233,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"unknown env in workspace": {
 			basicOpts: defaultOpts,
 
-			inEnv: "test",
+			inEnv:   "test",
 			appName: "their-app",
 
 			mockStore: func(m *mocks.Mockstore) {
@@ -248,13 +247,13 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"no workspace": {
 			basicOpts: defaultOpts,
 
-			inEnv: "test",
+			inEnv:       "test",
 			wantedError: errNoAppInWorkspace,
 		},
 		"both environment and subnet id specified": {
 			basicOpts: defaultOpts,
 
-			inEnv: "test",
+			inEnv:      "test",
 			inSubnetID: "subnet id",
 
 			wantedError: errors.New("can only specify one of a)env and b)subnet id and (or) security groups"),
@@ -262,7 +261,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
 
-			inEnv: "test",
+			inEnv:              "test",
 			inSecurityGroupIDs: []string{"security group id1", "securty group id2"},
 
 			wantedError: errors.New("can only specify one of a)env and b)subnet id and (or) security groups"),
@@ -281,20 +280,20 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
 					},
-					Num: tc.inNum,
-					CPU: tc.inCPU,
-					Memory: tc.inMemory,
-					Image: tc.inImage,
-					App: tc.inApp,
-					Env: tc.inEnv,
-					TaskRole: tc.inTaskRole,
-					SubnetID: tc.inSubnetID,
+					Num:              tc.inNum,
+					CPU:              tc.inCPU,
+					Memory:           tc.inMemory,
+					Image:            tc.inImage,
+					App:              tc.inApp,
+					Env:              tc.inEnv,
+					TaskRole:         tc.inTaskRole,
+					SubnetID:         tc.inSubnetID,
 					SecurityGroupIDs: tc.inSecurityGroupIDs,
-					DockerfilePath: tc.inDockerfilePath,
-					EnvVars: tc.inEnvVars,
-					Commands: tc.inCommands,
+					DockerfilePath:   tc.inDockerfilePath,
+					EnvVars:          tc.inEnvVars,
+					Commands:         tc.inCommands,
 				},
-				fs: &afero.Afero{Fs: afero.NewMemMapFs()},
+				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
 			}
 
