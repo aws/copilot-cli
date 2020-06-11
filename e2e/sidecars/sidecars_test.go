@@ -18,7 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const manifest = `# The manifest for the "app" service.
+const manifest = `# The manifest for the "hello" service.
 # Read the full specification for the "Load Balanced Web Service" type at:
 #  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-svc
 
@@ -51,8 +51,7 @@ count: 1
 sidecars:
   nginx:
     port: 80
-    image: %s    # Image URL for sidecar container. Local images and images in the Docker Hub registry and ECR repository are supported.
-
+    image: %s    # Image URL for sidecar container.
 logging:
   destination:
     Name: cloudwatch
@@ -73,7 +72,6 @@ var _ = Describe("sidecars flow", func() {
 		})
 
 		It("app init succeeds", func() {
-			fmt.Println(initErr)
 			Expect(initErr).NotTo(HaveOccurred())
 		})
 
@@ -113,7 +111,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("when init a svc", func() {
+	Context("when creating a service", func() {
 		var (
 			svcInitErr error
 		)
@@ -175,11 +173,11 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("modify manifest file", func() {
+	Context("write local manifest and addon files", func() {
 		var newManifest string
 		It("overwrite existing manifest", func() {
-			stackName := fmt.Sprintf("%s-test-%s", appName, svcName)
-			newManifest = fmt.Sprintf(manifest, sidecarImageURI, stackName)
+			logGroupName := fmt.Sprintf("%s-test-%s", appName, svcName)
+			newManifest = fmt.Sprintf(manifest, sidecarImageURI, logGroupName)
 			err := ioutil.WriteFile("./copilot/hello/manifest.yml", []byte(newManifest), 0644)
 			Expect(err).NotTo(HaveOccurred(), "overwrite manifest")
 		})
