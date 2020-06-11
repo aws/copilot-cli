@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -27,6 +28,11 @@ const (
 	s3BucketFriendlyText      = "S3 Bucket"
 	dynamoDBTableFriendlyText = "DynamoDB Table"
 	lsiFriendlyText           = "Local Secondary Index"
+)
+
+const (
+	ddbKeyString       = "key"
+	ddbAttributeString = "attribute"
 )
 
 var storageTypes = []string{
@@ -57,18 +63,27 @@ You can change any of this information at the end by editing the CloudFormation
 generated at %s`
 
 var (
-	fmtStorageInitDDBKeyPrompt           = "What would you like to name the %s of this %s?"
-	storageInitDDBPartitionKeyPromptHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
-	storageInitDDBSortKeyHelp            = "The sort key of this table. Without a sort key, the partition key " + color.Emphasize("must") + " be unique on the table."
-	storageInitDDBLSISortKeyPromptHelp   = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
+	fmtStorageInitDDBKeyPrompt     = "What would you like to name the %s of this %s?"
+	storageInitDDBPartitionKeyHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
 
-	storageInitDDBKeyTypePrompt = "What datatype is this key?"
-	storageInitDDBKeyTypeHelp   = "The datatype to store in the key. N is number, S is string, B is binary."
+	storageInitDDBSortKeyConfirm = "Would you like to add a sort key to this table?"
+	storageInitDDBSortKeyHelp    = "The sort key of this table. Without a sort key, the partition key " + color.Emphasize("must") + ` be unique on the table.
+You must specify a sort key if you wish to add alternate sort keys later.`
 
-	storageInitDDBLSIPrompt = "Would you like to add a local secondary index to this table?"
-	storageInitDDBLSIHelp   = "A Local Secondary Index has the same partition key as the table, but a different sort key."
+	fmtStorageInitDDBKeyTypePrompt = "What datatype is this %s?"
+	fmtStorageInitDDBKeyTypeHelp   = "The datatype to store in the %s. N is number, S is string, B is binary."
 
-	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("LSI") + "?"
+	storageInitDDBMoreAttributesPrompt = "Would you like to add more attributes to this table?"
+	storageInitDDBMoreAttributesHelp   = "You can use these extra attributes to specify additional sort keys or alternate partition keys."
+	storageInitDDBAttributePrompt      = "What would you like to name this " + color.Emphasize(ddbAttributeString) + "?"
+	storageInitDDBAttributeHelp        = "You can use the the characters [a-zA-Z0-9.-_]"
+
+	storageInitDDBLSIPrompt = "Would you like to add any alternate sort keys to this table?"
+	storageInitDDBLSIHelp   = `Alternate sort keys create Local Secondary Indexes, which allow you to sort the table using the same 
+partition key but a different sort key.`
+
+	storageInitDDBLSINamePrompt  = "What would you like to name this " + color.Emphasize("LSI") + "?"
+	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
 const (
@@ -129,8 +144,9 @@ type initStorageVars struct {
 	partitionKey string
 	sortKey      string
 	attributes   []string // Attributes collected as "attName:T" where T is one of [SNB]
-	lsiSort      string
-	lsiName      string
+	lsiSorts     []string // lsi sort keys collected as names of existing attributes
+	noLsi        bool
+	noSort       bool
 }
 
 type initStorageOpts struct {
@@ -141,6 +157,7 @@ type initStorageOpts struct {
 	store store
 
 	app *config.Application
+	sel configSelector
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -160,6 +177,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:    &afero.Afero{Fs: afero.NewOsFs()},
 		store: store,
 		ws:    ws,
+		sel:   selector.NewConfigSelect(vars.prompt, store),
 	}, nil
 }
 
@@ -192,13 +210,35 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
+	if o.partitionKey != "" {
+		if err := validateKey(o.partitionKey); err != nil {
+			return err
+		}
+	}
+	if o.sortKey != "" {
+		if err := validateKey(o.sortKey); err != nil {
+			return err
+		}
+	}
+	if len(o.attributes) != 0 {
+		if err := validateAttributes(o.attributes); err != nil {
+			return err
+		}
+	}
+	// --no-lsi and --lsi are mutually exclusive.
+	if o.noLsi && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
+	}
 
-	// if o.PartitionKey != "" {
-	// 	// TODO
-	// 	if err := validateKey(o.partitionKey); err != nil {
-
-	// 	}
-	// }
+	// --no-sort and --lsi are mutually exclusive.
+	if o.noSort && len(o.lsiSorts) != 0 {
+		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
+	}
+	if len(o.lsiSorts) != 0 {
+		if err := validateLsi(o.lsiSorts, o.attributes); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -219,6 +259,9 @@ func (o *initStorageOpts) Ask() error {
 			return err
 		}
 		if err := o.askDynamoSortKey(); err != nil {
+			return err
+		}
+		if err := o.askDynamoAttributes(); err != nil {
 			return err
 		}
 		if err := o.askDynamoLSIConfig(); err != nil {
@@ -276,14 +319,13 @@ func (o *initStorageOpts) askStorageSvc() error {
 	if o.storageSvc != "" {
 		return nil
 	}
-	localSvcNames, err := o.ws.ServiceNames()
+	svc, err := o.sel.Service(storageInitSvcPrompt,
+		storageInitSvcHelp,
+		o.AppName(),
+	)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
 	}
-	svc, err := o.prompt.SelectOne(storageInitSvcPrompt,
-		storageInitSvcHelp,
-		localSvcNames,
-	)
 	o.storageSvc = svc
 	return nil
 }
@@ -297,14 +339,18 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 		color.HighlightUserInput(dynamoDBStorageType),
 	)
 	key, err := o.prompt.Get(keyPrompt,
-		storageInitDDBPartitionKeyPromptHelp,
-		basicNameValidation,
+		storageInitDDBPartitionKeyHelp,
+		dynamoTableNameValidation,
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB partition key: %w", err)
 	}
-	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
-		storageInitDDBKeyTypeHelp,
+
+	keyTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, ddbKeyString)
+	keyTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbKeyString)
+
+	keyType, err := o.prompt.SelectOne(keyTypePrompt,
+		keyTypeHelp,
 		attributeTypesLong,
 	)
 	if err != nil {
@@ -319,19 +365,36 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	if o.sortKey != "" {
 		return nil
 	}
+	// If the user has not specified a sort key and has specified the --no-sort flag we don't have to demand it of them.
+	if o.noSort {
+		return nil
+	}
+
+	response, err := o.prompt.Confirm(storageInitDDBSortKeyConfirm, storageInitDDBSortKeyHelp)
+	if err != nil {
+		return fmt.Errorf("confirm DDB sort key: %w", err)
+	}
+	if response == false {
+		o.noSort = true
+		return nil
+	}
+
 	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 		color.HighlightUserInput("sort key"),
 		color.HighlightUserInput(dynamoDBStorageType),
 	)
 	key, err := o.prompt.Get(keyPrompt,
 		storageInitDDBSortKeyHelp,
-		basicNameValidation,
+		dynamoTableNameValidation,
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB sort key: %w", err)
 	}
-	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
-		storageInitDDBKeyTypeHelp,
+	keyTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, ddbKeyString)
+	keyTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbKeyString)
+
+	keyType, err := o.prompt.SelectOne(keyTypePrompt,
+		keyTypeHelp,
 		attributeTypesLong,
 	)
 	if err != nil {
@@ -340,9 +403,54 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	o.sortKey = key + ":" + keyType
 	return nil
 }
+func (o *initStorageOpts) askDynamoAttributes() error {
+	// Extra attributes have been specified by flags.
+	if len(o.attributes) != 0 {
+		return nil
+	}
+	// If --no-lsi has been specified, there is no need to ask for more attributes
+	if o.noLsi {
+		return nil
+	}
+
+	// If --no-sort has been specified, there is no need to ask for more attributes
+	if o.noSort {
+		return nil
+	}
+	attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
+	attributeTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbAttributeString)
+	for {
+		moreAtt, err := o.prompt.Confirm(storageInitDDBMoreAttributesPrompt, storageInitDDBMoreAttributesHelp)
+		if err != nil {
+			return fmt.Errorf("confirm add more attributes: %w", err)
+		}
+		if !moreAtt {
+			break
+		}
+		att, err := o.prompt.Get(storageInitDDBAttributePrompt,
+			storageInitDDBAttributeHelp,
+			dynamoTableNameValidation)
+		if err != nil {
+			return fmt.Errorf("get DDB attribute name: %w", err)
+		}
+		attType, err := o.prompt.SelectOne(attributeTypePrompt,
+			attributeTypeHelp,
+			attributeTypesLong,
+		)
+		if err != nil {
+			return fmt.Errorf("get DDB attribute type: %w", err)
+		}
+
+		o.attributes = append(o.attributes, att+":"+attType)
+	}
+	return nil
+}
 
 func (o *initStorageOpts) askDynamoLSIConfig() error {
-	if o.lsiName != "" || o.lsiSort != "" {
+	if o.noLsi {
+		return nil
+	}
+	if o.noSort {
 		return nil
 	}
 	addLsi, err := o.prompt.Confirm(
@@ -352,39 +460,31 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	if err != nil {
 		return fmt.Errorf("confirm add LSI to table: %w", err)
 	}
+	o.noLsi = !addLsi
 	if addLsi != true {
 		return nil
 	}
 
-	name, err := o.prompt.Get(storageInitDDBLSINamePrompt,
+	var attributeNames []string
+	for _, att := range o.attributes {
+		attributeParts, err := getAttrFromKey(att)
+		if err != nil {
+			return fmt.Errorf("get name from attribute: %w", err)
+		}
+		attributeNames = append(attributeNames, attributeParts.name)
+	}
+
+	names, err := o.prompt.MultiSelect(storageInitDDBLSINamePrompt,
 		storageInitDDBLSIHelp,
-		dynamoTableNameValidation,
+		attributeNames,
 	)
 	if err != nil {
-		return fmt.Errorf("get LSI name: %w", err)
+		return fmt.Errorf("get LSI sort keys: %w", err)
 	}
-	o.lsiName = name
-
-	keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
-		color.HighlightUserInput("sort key"),
-		color.HighlightUserInput(lsiFriendlyText),
-	)
-	key, err := o.prompt.Get(keyPrompt,
-		storageInitDDBLSISortKeyPromptHelp,
-		dynamoTableNameValidation,
-	)
-	if err != nil {
-		return fmt.Errorf("get LSI sort key: %w", err)
+	if len(names) > 5 {
+		return fmt.Errorf("cannot specify more than 5 alternate sort keys")
 	}
-
-	keyType, err := o.prompt.SelectOne(storageInitDDBKeyTypePrompt,
-		storageInitDDBLSISortKeyPromptHelp,
-		attributeTypesLong,
-	)
-	if err != nil {
-		return fmt.Errorf("get LSI sort key datatype: %w", err)
-	}
-	o.lsiSort = key + ":" + keyType
+	o.lsiSorts = names
 	return nil
 }
 
@@ -503,12 +603,14 @@ func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
 		hashAttr,
 		rangeAttr,
 	}
-	if o.lsiName != "" {
-		lsiAttr, err := getAttrFromKey(o.lsiSort)
-		if err != nil {
-			return nil, err
+	if len(o.lsiSorts) != 0 {
+		for _, k := range o.lsiSorts {
+			lsiAttr, err := getAttrFromKey(k)
+			if err != nil {
+				return nil, err
+			}
+			cfg.attributes = append(cfg.attributes, lsiAttr)
 		}
-		cfg.attributes = append(cfg.attributes, lsiAttr)
 	}
 	cfg.partitionKey = hashAttr.name
 	cfg.sortKey = rangeAttr.name
@@ -516,7 +618,7 @@ func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
 	return nil, nil
 }
 
-var regexpMatchAttribute = regexp.MustCompile("(.*):([sbnSBN])")
+var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
 
 func getAttrFromKey(input string) (attribute, error) {
 	attrs := regexpMatchAttribute.FindStringSubmatch(input)
@@ -528,6 +630,7 @@ func getAttrFromKey(input string) (attribute, error) {
 		ddbDataType: strings.ToUpper(attrs[2]),
 	}, nil
 }
+
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
@@ -561,8 +664,14 @@ func BuildStorageInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.storageName, nameFlag, nameFlagShort, "", storageFlagDescription)
-	cmd.Flags().StringVar(&vars.storageType, storageTypeFlag, "", storageTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.storageType, storageTypeFlag, svcTypeFlagShort, "", storageTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.storageSvc, svcFlag, svcFlagShort, "", storageServiceFlagDescription)
 
+	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
+	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.attributes, storageAttributeFlag, []string{}, storageAttributeFlagDescription)
+	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
+	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
+	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 	return cmd
 }

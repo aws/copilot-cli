@@ -49,8 +49,10 @@ const (
 	storageTypeFlag         = "storage-type"
 	storagePartitionKeyFlag = "partition-key"
 	storageSortKeyFlag      = "sort-key"
-	storageLSIConfig        = "lsi-sort"
-	storageAttributeFlag    = "attribute"
+	storageNoSortFlag       = "no-sort"
+	storageLSIConfigFlag    = "lsi"
+	storageNoLSIFlag        = "no-lsi"
+	storageAttributeFlag    = "att"
 )
 
 // Short flag names.
@@ -67,7 +69,6 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
-	storageAttributeFlagShort  = "r"
 )
 
 // Descriptions for flags.
@@ -119,10 +120,13 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	storageServiceFlagDescription      = "Name of the service to associate with storage."
 	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
-	storageSortKeyFlagDescription = `Sort key for the DDB table.
+	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
-	storageAttributeFlagDescription = `Attributes for a DDB table.
+	storageNoSortFlagDescription    = "Optional. Don't ask about configuring sort keys."
+	storageAttributeFlagDescription = `Optional. Attributes for a DDB table.
 Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
+	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
+	storageLSIConfigFlagDescription = "Optional. Attribute to use as an alternate sort key. May be specified up to 5 times."
 )
 
 func quoteAll(elems []string) []string {
