@@ -75,6 +75,26 @@ func init() {
 {{- color "default"}}{{ .Message }} {{color "reset"}}
 {{- if and .Help (not .ShowHelp)}}{{color "white"}}[{{ .Config.HelpInput }} for help]{{color "reset"}} {{end}}`
 
+	survey.MultiSelectQuestionTemplate = `{{if not .Answer}}
+{{end}}
+{{- if .ShowHelp }}{{- color .Config.Icons.Help.Format }}{{ .Config.Icons.Help.Text }}{{$lines := split .Help "\n"}}{{range $i, $line := $lines}}
+{{- if eq $i 0}}  {{ $line }}
+{{ else }}  {{ $line }}
+{{ end }}{{- end }}{{color "reset"}}{{end}}
+{{- color .Config.Icons.Question.Format }}{{if not .ShowAnswer}}  {{ .Config.Icons.Question.Text }}{{else}}{{ .Config.Icons.Question.Text }}{{end}}{{color "reset"}}
+{{- color "default"}}{{ .Message }}{{ .FilterMessage }}{{color "reset"}}
+{{- if .ShowAnswer}}{{color "default"}} {{.Answer}}{{color "reset"}}{{"\n"}}
+{{- else }}
+	{{- "  "}}{{- color "white"}}[Use arrows to move, space to select, type to filter{{- if and .Help (not .ShowHelp)}}, {{ .Config.HelpInput }} for more help{{end}}]{{color "reset"}}
+  {{- "\n"}}
+  {{- range $ix, $option := .PageEntries}}
+    {{- if eq $ix $.SelectedIndex }}{{color "default+b" }}  {{ $.Config.Icons.SelectFocus.Text }}{{color "reset"}}{{else}} {{end}}
+    {{- if index $.Checked $option.Index }}{{color "default+b" }} {{ $.Config.Icons.MarkedOption.Text }} {{else}}{{color "default" }} {{ $.Config.Icons.UnmarkedOption.Text }} {{end}}
+    {{- color "reset"}}
+    {{- " "}}{{$option.Value}}{{"\n"}}
+  {{- end}}
+{{- end}}`
+
 	core.TemplateFuncs["split"] = func(s string, sep string) []string {
 		return strings.Split(s, sep)
 	}
@@ -218,6 +238,33 @@ func (p Prompt) SelectOne(message, help string, options []string, promptOpts ...
 	}
 
 	var result string
+	err := p(prompt, &result, stdio(), icons())
+	return result, err
+}
+
+// MultiSelect prompts the user with a list of options to choose from with the arrow keys and enter key.
+func (p Prompt) MultiSelect(message, help string, options []string, promptOpts ...Option) ([]string, error) {
+	var result []string
+	if len(options) <= 0 {
+		// returns nil slice if error
+		return result, ErrEmptyOptions
+	}
+	multiselect := &survey.MultiSelect{
+		Message: message,
+		Options: options,
+		Default: options[0],
+	}
+	if help != "" {
+		multiselect.Help = color.Help(help)
+	}
+
+	prompt := &prompt{
+		prompter: multiselect,
+	}
+	for _, option := range promptOpts {
+		option(prompt)
+	}
+
 	err := p(prompt, &result, stdio(), icons())
 	return result, err
 }
