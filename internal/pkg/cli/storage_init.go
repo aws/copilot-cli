@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -673,5 +674,37 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
+
+	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
+	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
+	requiredFlags.AddFlag(cmd.Flags().Lookup(svcFlag))
+
+	ddbFlags := pflag.NewFlagSet("DynamoDB Flags", pflag.ContinueOnError)
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storageAttributeFlag))
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
+	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
+	cmd.Annotations = map[string]string{
+		// The order of the sections we want to display.
+		"sections":       `Required,DynamoDB Flags`,
+		"Required":       requiredFlags.FlagUsages(),
+		"DynamoDB Flags": ddbFlags.FlagUsages(),
+	}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
+  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
+
+{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
+{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
+
+{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+{{h1 "Global Flags"}}
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
+
+{{h1 "Examples"}}{{code .Example}}{{end}}
+`)
 	return cmd
 }
