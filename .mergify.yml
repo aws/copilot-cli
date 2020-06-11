@@ -1,7 +1,7 @@
 pull_request_rules:
   - name: Merge on CI success and review approval
     conditions:
-      - base~=(master|rename-commands)
+      - base~=(mainline|rename-commands)
       - "#approved-reviews-by>=2"
       - approved-reviews-by=@aws/aws-ecs-devx
       - -approved-reviews-by~=author
@@ -19,7 +19,7 @@ pull_request_rules:
         commit_message: title+body
   - name: Automatically approve Dependabot PRs
     conditions:
-      - base=master
+      - base=mainline
       - status-success=AWS CodeBuild us-west-2 (ecs-cli-v2-ci)
       - status-success=Semantic Pull Request
       - author~=^dependabot(|-preview)\[bot\]$
