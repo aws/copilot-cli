@@ -28,3 +28,51 @@ Conditions:
     IsProd: !Equals [!Ref Env, prod]
 
 Transform: AWS::Serverless-2016-10-31
+
+Resources:
+    MyTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+            TableName: !Sub '${App}-${Env}-${Name}-mytable'
+            AttributeDefinitions:
+                - AttributeName: id
+                  AttributeType: S
+            KeySchema:
+                - AttributeName: id
+                  KeyType: HASH
+            ProvisionedThroughput:
+                ReadCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, Ref: Env, RCU]
+                WriteCapacityUnits:
+                    Fn::FindInMap: [MyTableDynamoDBSettings, Ref: Env, WCU]
+
+    MyTableAccessPolicy:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+            Description: !Sub
+                - Grants CRUD access to MyTable
+                - { Table: !Ref MyTable }
+            PolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                    - Sid: DDBActions
+                      Effect: Allow
+                      Action:
+                          - dynamodb:BatchGet*
+                          - dynamodb:DescribeStream
+                          - dynamodb:DescribeTable
+                          - dynamodb:Get*
+                          - dynamodb:Query
+                          - dynamodb:Scan
+                          - dynamodb:BatchWrite*
+                          - dynamodb:Create*
+                          - dynamodb:Delete*
+                          - dynamodb:Update*
+                          - dynamodb:PutItem
+                      Resource: !Sub ${ MyTable.Arn}
+                    - Sid: DDBLSIActions
+                      Action:
+                          - dynamodb:Query
+                          - dynamodb:Scan
+                      Effect: Allow
+                      Resource: !Sub ${ MyTable.Arn}/Index/*
