@@ -87,6 +87,20 @@ func (e *errMappingAlreadyExists) HumanError() string {
 	return fmt.Sprintf(`The Mapping %s`, e.errKeyAlreadyExists.HumanError())
 }
 
+// errConditionAlreadyExists occurs if two addons have the same Conditions key but with different values.
+type errConditionAlreadyExists struct {
+	*errKeyAlreadyExists
+}
+
+func (e *errConditionAlreadyExists) Error() string {
+	return fmt.Sprintf(`condition "%s" already exists with a different definition`, e.Key)
+}
+
+// HumanError returns a string that explains the error with human-friendly details.
+func (e *errConditionAlreadyExists) HumanError() string {
+	return fmt.Sprintf(`The Condition %s`, e.errKeyAlreadyExists.HumanError())
+}
+
 // wrapKeyAlreadyExistsErr wraps the err if its an errKeyAlreadyExists error with additional cfn section metadata.
 // If the error is not an errKeyAlreadyExists, then return it as is.
 func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
@@ -105,6 +119,10 @@ func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
 		}
 	case mappingsSection:
 		return &errMappingAlreadyExists{
+			keyExistsErr,
+		}
+	case conditionsSection:
+		return &errConditionAlreadyExists{
 			keyExistsErr,
 		}
 	default:

@@ -23,3 +23,6 @@ Mappings:
         prod:
             RCU: 50
             WCU: 25
+
+Conditions:
+    IsProd: !Equals [!Ref Env, prod]

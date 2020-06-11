@@ -16,6 +16,7 @@ const (
 	metadataSection cfnSection = iota + 1
 	parametersSection
 	mappingsSection
+	conditionsSection
 )
 
 // cfnTemplate represents a parsed YAML AWS CloudFormation template.
@@ -23,6 +24,7 @@ type cfnTemplate struct {
 	Metadata   yaml.Node `yaml:"Metadata,omitempty"`
 	Parameters yaml.Node `yaml:"Parameters,omitempty"`
 	Mappings   yaml.Node `yaml:"Mappings,omitempty"`
+	Conditions yaml.Node `yaml:"Conditions,omitempty"`
 }
 
 // merge combines non-empty fields of other with t's fields.
@@ -34,6 +36,9 @@ func (t *cfnTemplate) merge(other cfnTemplate) error {
 		return err
 	}
 	if err := t.mergeMappings(other.Mappings); err != nil {
+		return err
+	}
+	if err := t.mergeConditions(other.Conditions); err != nil {
 		return err
 	}
 	return nil
@@ -62,6 +67,15 @@ func (t *cfnTemplate) mergeParameters(params yaml.Node) error {
 func (t *cfnTemplate) mergeMappings(mappings yaml.Node) error {
 	if err := mergeTwoLevelMaps(&t.Mappings, &mappings); err != nil {
 		return wrapKeyAlreadyExistsErr(mappingsSection, err)
+	}
+	return nil
+}
+
+// mergeConditions updates t's Conditions with additional conditions.
+// If a condition already exists with a different value, returns errConditionAlreadyExists.
+func (t *cfnTemplate) mergeConditions(conditions yaml.Node) error {
+	if err := mergeSingleLevelMaps(&t.Conditions, &conditions); err != nil {
+		return wrapKeyAlreadyExistsErr(conditionsSection, err)
 	}
 	return nil
 }
