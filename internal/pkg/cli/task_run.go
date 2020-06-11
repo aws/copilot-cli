@@ -6,39 +6,13 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"regexp"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"regexp"
-	"strings"
 )
-
-var regions = []string{
-	"us-east-1",
-	"us-east-2",
-	"us-west-1",
-	"us-west-2",
-	"af-south-1",
-	"ap-east-1",
-	"ap-south-1",
-	"ap-northeast-1",
-	"ap-northeast-2",
-	"ap-northeast-3",
-	"ap-southeast-1",
-	"ap-southeast-2",
-	"ca-central-1",
-	"cn-north-1",
-	"cn-northwest-1",
-	"eu-central-1",
-	"eu-west-1",
-	"eu-west-2",
-	"eu-south-1",
-	"eu-west-3",
-	"eu-north-1",
-	"me-south-1",
-	"sa-east-1",
-}
 
 type runTaskVars struct {
 	*GlobalOpts
@@ -152,9 +126,7 @@ func (o *runTaskOpts) Validate() error {
 }
 
 func (o *runTaskOpts) validateImageName() error {
-	regionsRegex := fmt.Sprintf("(%s)", strings.Join(regions, "|"))
-
-	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.`+regionsRegex+`.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
+	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.[a-z0-9\-]+.amazonaws.com/[a-z][a-z0-9\-]*$`, o.Image)
 	if err != nil {
 		return fmt.Errorf("validate image name: %w", err)
 	}
