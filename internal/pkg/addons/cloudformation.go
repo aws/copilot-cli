@@ -17,6 +17,7 @@ const (
 	parametersSection
 	mappingsSection
 	conditionsSection
+	resourcesSection
 )
 
 // cfnTemplate represents a parsed YAML AWS CloudFormation template.
@@ -26,6 +27,7 @@ type cfnTemplate struct {
 	Mappings   yaml.Node `yaml:"Mappings,omitempty"`
 	Conditions yaml.Node `yaml:"Conditions,omitempty"`
 	Transform  yaml.Node `yaml:"Transform,omitempty"`
+	Resources  yaml.Node `yaml:"Resources"` // Don't omit as this is the only section that's required by CloudFormation.
 }
 
 // merge combines non-empty fields of other with t's fields.
@@ -43,6 +45,9 @@ func (t *cfnTemplate) merge(other cfnTemplate) error {
 		return err
 	}
 	if err := t.mergeTransform(other.Transform); err != nil {
+		return err
+	}
+	if err := t.mergeResources(other.Resources); err != nil {
 		return err
 	}
 	return nil
@@ -87,6 +92,15 @@ func (t *cfnTemplate) mergeConditions(conditions yaml.Node) error {
 // mergeTransform adds transform's contents to t's Transform.
 func (t *cfnTemplate) mergeTransform(transform yaml.Node) error {
 	addToSet(&t.Transform, &transform)
+	return nil
+}
+
+// mergeResources updates t's Resources with additional resources.
+// If a resource already exists with a different value, returns errResourceAlreadyExists.
+func (t *cfnTemplate) mergeResources(resources yaml.Node) error {
+	if err := mergeSingleLevelMaps(&t.Resources, &resources); err != nil {
+		return wrapKeyAlreadyExistsErr(resourcesSection, err)
+	}
 	return nil
 }
 
