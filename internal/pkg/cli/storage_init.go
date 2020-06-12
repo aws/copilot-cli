@@ -458,7 +458,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return fmt.Errorf("confirm add LSI to table: %w", err)
 	}
 	o.noLsi = !addLsi
-	if addLsi != true {
+	if !addLsi  {
 		return nil
 	}
 
