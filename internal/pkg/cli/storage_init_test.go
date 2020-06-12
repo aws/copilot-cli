@@ -342,6 +342,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(true, nil)
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
 					color.HighlightUserInput("sort key"),
@@ -374,6 +375,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
@@ -390,6 +392,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
+					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
 				m.EXPECT().Get(gomock.Any(),
@@ -412,6 +415,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBSortKeyConfirm),
+					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
 				m.EXPECT().Get(gomock.Any(),
@@ -482,6 +486,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreAttributesPrompt),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(true, nil)
 				attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
 				m.EXPECT().Get(gomock.Eq(storageInitDDBAttributePrompt),
@@ -498,9 +503,10 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreAttributesPrompt),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(false, nil)
 				// Don't add an LSI.
-				m.EXPECT().Confirm(gomock.Any(), gomock.Any()).Return(false, nil)
+				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
 
@@ -517,6 +523,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreAttributesPrompt),
+					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
 				m.EXPECT().Get(gomock.Any(),
@@ -541,6 +548,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Any(),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
@@ -557,6 +565,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
+					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
@@ -615,6 +624,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(true, nil)
 				m.EXPECT().MultiSelect(
 					gomock.Eq(storageInitDDBLSINamePrompt),
@@ -640,6 +650,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
+					gomock.Any(),
 				).Return(true, nil)
 				m.EXPECT().MultiSelect(
 					gomock.Eq(storageInitDDBLSINamePrompt),
@@ -664,6 +675,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Any(),
 					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},

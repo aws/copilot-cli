@@ -272,7 +272,7 @@ func validateDynamoDataType(val interface{}) error {
 	return nil
 }
 
-func validateAttributes(val interface{}) error {
+func validateAttributeNames(val interface{}) error {
 	s, ok := val.([]string)
 	if !ok {
 		return errValueNotAStringSlice

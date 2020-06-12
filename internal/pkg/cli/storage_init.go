@@ -219,7 +219,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	if len(o.attributes) != 0 {
-		if err := validateAttributes(o.attributes); err != nil {
+		if err := validateAttributeNames(o.attributes); err != nil {
 			return err
 		}
 	}
@@ -372,7 +372,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 		return nil
 	}
 
-	response, err := o.prompt.Confirm(storageInitDDBSortKeyConfirm, storageInitDDBSortKeyHelp)
+	response, err := o.prompt.Confirm(storageInitDDBSortKeyConfirm, storageInitDDBSortKeyHelp, prompt.WithFinalMessage("Sort key?"))
 	if err != nil {
 		return fmt.Errorf("confirm DDB sort key: %w", err)
 	}
@@ -424,7 +424,7 @@ func (o *initStorageOpts) askDynamoAttributes() error {
 	attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
 	attributeTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbAttributeString)
 	for {
-		moreAtt, err := o.prompt.Confirm(storageInitDDBMoreAttributesPrompt, storageInitDDBMoreAttributesHelp)
+		moreAtt, err := o.prompt.Confirm(storageInitDDBMoreAttributesPrompt, storageInitDDBMoreAttributesHelp, prompt.WithFinalMessage("Additional attributes?"))
 		if err != nil {
 			return fmt.Errorf("confirm add more attributes: %w", err)
 		}
@@ -466,6 +466,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	addLsi, err := o.prompt.Confirm(
 		storageInitDDBLSIPrompt,
 		storageInitDDBLSIHelp,
+		prompt.WithFinalMessage("Additional sort keys?"),
 	)
 	if err != nil {
 		return fmt.Errorf("confirm add LSI to table: %w", err)
