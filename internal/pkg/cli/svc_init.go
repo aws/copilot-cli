@@ -385,10 +385,10 @@ func (o *initSvcOpts) setHealthCheck() (*manifest.ContainerHealthCheck, error) {
 	var hcPointer *manifest.ContainerHealthCheck
 	if hc != nil {
 		hcPointer = &manifest.ContainerHealthCheck{
-			Interval:    &(hc.Interval),
-			Timeout:     &(hc.Timeout),
-			StartPeriod: &(hc.StartPeriod),
-			Retries:     &(hc.Retries),
+			Interval:    &hc.Interval,
+			Timeout:     &hc.Timeout,
+			StartPeriod: &hc.StartPeriod,
+			Retries:     &hc.Retries,
 			Command:     hc.Cmd,
 		}
 	}

@@ -19,13 +19,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testInterval    = 10 * time.Second
-	testRetries     = 2
-	testTimeout     = 5 * time.Second
-	testStartPeriod = 0 * time.Second
-)
-
 func TestSvcInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		inSvcType        string
@@ -354,6 +347,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 }
 
 func TestAppInitOpts_Execute(t *testing.T) {
+	var (
+		testInterval    = 10 * time.Second
+		testRetries     = 2
+		testTimeout     = 5 * time.Second
+		testStartPeriod = 0 * time.Second
+	)
 	testCases := map[string]struct {
 		inSvcPort        uint16
 		inSvcType        string
@@ -654,7 +653,6 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					DockerfilePath: tc.inDockerfilePath,
 					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
 				},
-				fs:          &afero.Afero{Fs: afero.NewMemMapFs()},
 				setupParser: func(o *initSvcOpts) {},
 			}
 			tc.mockDependencies(ctrl, &opts)
