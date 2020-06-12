@@ -59,10 +59,6 @@ We'll deploy the Cloudformation for the storage when you run 'svc deploy'.`
 var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
 
 // DDB-specific questions and help prompts.
-var fmtStorageInitDynamoInfoText = `We're going to ask you some questions about your database schema and datatypes.
-You can change any of this information at the end by editing the CloudFormation
-generated at %s`
-
 var (
 	fmtStorageInitDDBKeyPrompt     = "What would you like to name the %s of this %s?"
 	storageInitDDBPartitionKeyHelp = "The partition key of this table. This key, along with the sort key, will make up the primary key."
