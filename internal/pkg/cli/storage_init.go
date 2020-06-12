@@ -53,7 +53,7 @@ S3 is a web object store built to store and retrieve any amount of data from any
 
 	storageInitSvcPrompt = "Which " + color.Emphasize("service") + " would you like to associate with this storage resource?"
 	storageInitSvcHelp   = `The service you'd like to have access to this storage resource. 
-We'll deploy the Cloudformation for the storage when you run 'svc deploy'.`
+We'll deploy the resources for the storage when you run 'svc deploy'.`
 )
 
 var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
