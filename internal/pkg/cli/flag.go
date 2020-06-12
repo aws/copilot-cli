@@ -124,7 +124,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	storageServiceFlagDescription = "Name of the service to associate with storage."
 
 	numFlagDescription              = "Optional. The number of tasks to set up. Default to 1."
-	cpuFlagDescription              = "Optional. The number of cpu-units to reserve. Default to 256."
+	cpuFlagDescription              = "Optional. The number of CPU units to reserve. Default is 256 (1/4 vCPU)."
 	memoryFlagDescription           = "Optional. The amount of memory to reserve. Default to 512."
 	imageFlagDescription            = "Optional. The image to run instead of building a dockerfile."
 	taskRoleFlagDescription         = "Optional. The role for the task to use."
