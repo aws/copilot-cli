@@ -704,9 +704,9 @@ func BuildStorageInitCmd() *cobra.Command {
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":       `Required,DynamoDB Flags`,
-		"Required":       requiredFlags.FlagUsages(),
-		"DynamoDB Flags": ddbFlags.FlagUsages(),
+		"sections": `Required,DynamoDB`,
+		"Required": requiredFlags.FlagUsages(),
+		"DynamoDB": ddbFlags.FlagUsages(),
 	}
 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
