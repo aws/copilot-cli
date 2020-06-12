@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -276,7 +277,8 @@ func (o *initStorageOpts) askStorageType() error {
 	storageType, err := o.prompt.SelectOne(fmt.Sprintf(
 		fmtStorageInitTypePrompt, color.HighlightUserInput(o.storageSvc)),
 		storageInitTypeHelp,
-		storageTypes)
+		storageTypes,
+		prompt.WithFinalMessage("Storage type:"))
 	if err != nil {
 		return fmt.Errorf("select storage type: %w", err)
 	}
@@ -303,7 +305,8 @@ func (o *initStorageOpts) askStorageName() error {
 	name, err := o.prompt.Get(fmt.Sprintf(fmtStorageInitNamePrompt,
 		color.HighlightUserInput(friendlyText)),
 		storageInitNameHelp,
-		validator)
+		validator,
+		prompt.WithFinalMessage("Storage resource name:"))
 
 	if err != nil {
 		return fmt.Errorf("input storage name: %w", err)
@@ -338,6 +341,7 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 	key, err := o.prompt.Get(keyPrompt,
 		storageInitDDBPartitionKeyHelp,
 		dynamoTableNameValidation,
+		prompt.WithFinalMessage("Partition key:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB partition key: %w", err)
@@ -349,6 +353,7 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
 		attributeTypesLong,
+		prompt.WithFinalMessage("Partition key datatype:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB partition key datatype: %w", err)
@@ -383,6 +388,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	key, err := o.prompt.Get(keyPrompt,
 		storageInitDDBSortKeyHelp,
 		dynamoTableNameValidation,
+		prompt.WithFinalMessage("Sort key:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB sort key: %w", err)
@@ -393,6 +399,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
 		attributeTypesLong,
+		prompt.WithFinalMessage("Sort key datatype:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get DDB sort key datatype: %w", err)
@@ -426,13 +433,16 @@ func (o *initStorageOpts) askDynamoAttributes() error {
 		}
 		att, err := o.prompt.Get(storageInitDDBAttributePrompt,
 			storageInitDDBAttributeHelp,
-			dynamoTableNameValidation)
+			dynamoTableNameValidation,
+			prompt.WithFinalMessage("Attribute:"),
+		)
 		if err != nil {
 			return fmt.Errorf("get DDB attribute name: %w", err)
 		}
 		attType, err := o.prompt.SelectOne(attributeTypePrompt,
 			attributeTypeHelp,
 			attributeTypesLong,
+			prompt.WithFinalMessage("Attribute type:"),
 		)
 		if err != nil {
 			return fmt.Errorf("get DDB attribute type: %w", err)
@@ -450,6 +460,9 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	if o.noSort {
 		return nil
 	}
+	if len(o.lsiSorts) != 0 {
+		return nil
+	}
 	addLsi, err := o.prompt.Confirm(
 		storageInitDDBLSIPrompt,
 		storageInitDDBLSIHelp,
@@ -458,7 +471,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return fmt.Errorf("confirm add LSI to table: %w", err)
 	}
 	o.noLsi = !addLsi
-	if !addLsi  {
+	if !addLsi {
 		return nil
 	}
 
@@ -474,6 +487,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	names, err := o.prompt.MultiSelect(storageInitDDBLSINamePrompt,
 		storageInitDDBLSIHelp,
 		attributeNames,
+		prompt.WithFinalMessage("Alternate sort keys:"),
 	)
 	if err != nil {
 		return fmt.Errorf("get LSI sort keys: %w", err)
@@ -637,8 +651,12 @@ func BuildStorageInitCmd() *cobra.Command {
 		Use:    "init",
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
-  Create a "my-table" DynamoDB table in the "test" environment.
-  /code $ copilot storage init --name my-table --storage-type dynamo-db --svc frontend`,
+  Create a "my-bucket" S3 bucket bucket attached to the "frontend" service.
+  /code $ copilot storage init -n my-bucket -t S3 -s frontend
+  Create a basic DynamoDB table named "my-table" attached to the "frontend" service.
+  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
+  Create a DynamoDB table with multiple alternate sort keys.
+  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --att Points:N --att Goodness:N --lsi Points --lsi Goodness`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -671,12 +689,12 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
-	requiredFlags := pflag.NewFlagSet("Required Flags", pflag.ContinueOnError)
+	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(storageTypeFlag))
 	requiredFlags.AddFlag(cmd.Flags().Lookup(svcFlag))
 
-	ddbFlags := pflag.NewFlagSet("DynamoDB Flags", pflag.ContinueOnError)
+	ddbFlags := pflag.NewFlagSet("DynamoDB", pflag.ContinueOnError)
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
