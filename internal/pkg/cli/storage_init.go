@@ -691,7 +691,7 @@ func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
 	attributes := []attribute{}
 	props := &addons.DynamoDBProps{
-		StorageProps: &addons.StorageProps{
+		Storage: &addons.StorageProps{
 			Name:        o.StorageName,
 			ReourceName: logicalIDSafe(o.StorageName),
 		},
