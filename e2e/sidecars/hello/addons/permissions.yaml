@@ -1,0 +1,30 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application name.
+  Env:
+    Type: String
+    Description: The environment name your service is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service being deployed.
+
+Resources:
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:CreateLogGroup
+              - logs:DescribeLogStreams
+              - logs:PutLogEvents
+            Resource: "*"
+
+Outputs:
+  AdditionalResourcesPolicyArn:
+    Description: ARN of the policy to access additional resources from.
+    Value: !Ref AdditionalResourcesPolicy

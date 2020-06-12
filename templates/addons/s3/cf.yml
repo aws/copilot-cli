@@ -1,13 +1,56 @@
-{{.BucketResourceName}}:
-  Type: AWS::S3::Bucket
-  DeletionPolicy: Retain
-  Properties:
-    AccessControl: Private
-    BucketEncryption: 
-      ServerSideEncryptionConfiguration:
-      - ServerSideEncryptionByDefault:
-          SSEAlgorithm: AES256
-    BucketName: !Sub '${App}-${Env}-${Name}-{{.BucketName}}'
-    PublicAccessBlockConfiguration: 
-      BlockPublicAcls: true
-      BlockPublicPolicy: true
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+Resources:
+  {{.BucketResourceName}}:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      BucketName: !Sub '${App}-${Env}-${Name}-{{.BucketName}}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+
+  {{.BucketResourceName}}AccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants CRUD access to the S3 bucket ${Bucket}
+        - { Bucket: !Ref {{.BucketResourceName}} }
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3ObjectActions
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectACL
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+              - s3:RestoreObject
+            Resource: !Sub ${{{.BucketResourceName}}.Arn}/*
+          - Sid: S3ListAction
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub ${{{.BucketResourceName}}.Arn}
+
+Outputs:
+  {{.BucketResourceName}}BucketName:
+    Description: "The name of a user-defined bucket."
+    Value: !Ref {{.BucketResourceName}}
+{{.BucketResourceName}}AccessPolicy:
+    Description: "The IAM::ManagedPolicy to attach to the task role"
+    Value: !Ref {{.BucketResourceName}}AccessPolicy
