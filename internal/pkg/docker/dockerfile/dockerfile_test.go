@@ -200,30 +200,30 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte
-		wantedConfig   *healthCheck
+		wantedConfig   *HealthCheck
 		wantedErr      error
 	}{
 		"correctly parses healthcheck with default values": {
 			dockerfile: []byte(`HEALTHCHECK CMD curl -f http://localhost/ || exit 1`),
 			wantedErr:  nil,
-			wantedConfig: &healthCheck{
-				interval:    30,
-				timeout:     30,
-				startPeriod: 0,
-				retries:     3,
-				cmd:         "CMD curl -f http://localhost/ || exit 1",
+			wantedConfig: &HealthCheck{
+				Interval:    10000000000,
+				Timeout:     5000000000,
+				StartPeriod: 0,
+				Retries:     2,
+				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with user's values": {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m --timeout=3s --start-period=2s --retries=3 \
 			CMD curl -f http://localhost/ || exit 1`),
 			wantedErr: nil,
-			wantedConfig: &healthCheck{
-				interval:    300,
-				timeout:     3,
-				startPeriod: 2,
-				retries:     3,
-				cmd:         "CMD curl -f http://localhost/ || exit 1",
+			wantedConfig: &HealthCheck{
+				Interval:    300000000000,
+				Timeout:     3000000000,
+				StartPeriod: 2000000000,
+				Retries:     3,
+				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with NONE": {
