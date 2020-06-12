@@ -80,7 +80,7 @@ You must specify a sort key if you wish to add alternate sort keys later.`
 	storageInitDDBLSIHelp   = `Alternate sort keys create Local Secondary Indexes, which allow you to sort the table using the same 
 partition key but a different sort key.`
 
-	storageInitDDBLSINamePrompt  = "What would you like to name this " + color.Emphasize("LSI") + "?"
+	storageInitDDBLSINamePrompt  = "What other attributes would you like to use as " + color.Emphasize("alternate sort keys") + "?"
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
@@ -647,7 +647,7 @@ func BuildStorageInitCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, //TODO remove when ready for production
+		Hidden: false, //TODO remove when ready for production
 		Use:    "init",
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
