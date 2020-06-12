@@ -188,6 +188,7 @@ func TestPrompt_SelectOne(t *testing.T) {
 func TestPrompt_MultiSelect(t *testing.T) {
 	mockError := fmt.Errorf("error")
 	mockMessage := "Which dogs are best?"
+	mockFinalMessage := "Best dogs:"
 
 	testCases := map[string]struct {
 		inPrompt Prompt
@@ -200,7 +201,7 @@ func TestPrompt_MultiSelect(t *testing.T) {
 			inPrompt: func(p survey.Prompt, out interface{}, opts ...survey.AskOpt) error {
 				internalPrompt, ok := p.(*prompt)
 				require.True(t, ok, "input prompt should be type *prompt")
-				require.Empty(t, internalPrompt.FinalMessage)
+				require.Equal(t, mockFinalMessage, internalPrompt.FinalMessage)
 
 				sel, ok := internalPrompt.prompter.(*survey.MultiSelect)
 				require.True(t, ok, "internal prompt should be type *survey.MultiSelect")
@@ -237,7 +238,7 @@ func TestPrompt_MultiSelect(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotValue, gotError := tc.inPrompt.MultiSelect(mockMessage, "", tc.inOpts)
+			gotValue, gotError := tc.inPrompt.MultiSelect(mockMessage, "", tc.inOpts, WithFinalMessage(mockFinalMessage))
 
 			require.Equal(t, tc.wantValue, gotValue)
 			require.Equal(t, tc.wantError, gotError)
