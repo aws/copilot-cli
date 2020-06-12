@@ -1,0 +1,52 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your app name.
+  Env:
+    Type: String
+    Description: The environment name your service is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service being deployed.
+Resources:
+  HelloTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: Name
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Name
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  AdditionalResourcesPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - "dynamodb:BatchGet*"
+              - "dynamodb:DescribeStream"
+              - "dynamodb:DescribeTable"
+              - "dynamodb:Get*"
+              - "dynamodb:Query"
+              - "dynamodb:Scan"
+              - "dynamodb:BatchWrite*"
+              - "dynamodb:CreateTable"
+              - "dynamodb:Delete*"
+              - "dynamodb:Update*"
+              - "dynamodb:PutItem"
+            Resource: !Sub
+              - "arn:aws:dynamodb:*:*:table/${Table}"
+              - { Table: !Ref HelloTable }
+Outputs:
+  AdditionalResourcesPolicyArn:
+    Description: ARN of the policy to access additional resources from.
+    Value: !Ref AdditionalResourcesPolicy
+  HelloTableName:
+    Value: !Ref HelloTable
