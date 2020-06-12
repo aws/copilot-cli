@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding"
 	"fmt"
 	"regexp"
 	"strings"
@@ -641,6 +642,25 @@ func getAttrFromKey(input string) (attribute, error) {
 		name:        attrs[1],
 		ddbDataType: strings.ToUpper(attrs[2]),
 	}, nil
+}
+
+func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
+	switch o.storageType {
+	case dynamoDBStorageType:
+		return o.newDynamoDBAddon()
+	case s3StorageType:
+		return o.newS3Addon()
+	default:
+		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.StorageType)
+	}
+}
+
+func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
+
+}
+
+func (o *initStorageOpts) newS3Addon() (*addons.S3Bucket, error) {
+
 }
 
 func BuildStorageInitCmd() *cobra.Command {
