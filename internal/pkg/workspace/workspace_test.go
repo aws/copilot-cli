@@ -636,7 +636,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			}
 
 			// WHEN
-			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.fname)
+			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.storageName)
 
 			// THEN
 			if tc.wantedErr != nil {

@@ -4,19 +4,19 @@
 package cli
 
 import (
-	"bytes"
 	"encoding"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -108,29 +108,9 @@ const (
 	ddbSortKeyType      = "RANGE"
 )
 
-type dynamoDBConfig struct {
-	tableName    string
-	partitionKey string
-	sortKey      string
-	hasLsi       bool
-	lsis         []localSecondaryIndex
-	attributes   []attribute
-}
-
 type attribute struct {
-	name        string
-	ddbDataType string
-}
-
-type localSecondaryIndex struct {
-	name         string
-	partitionKey string
-	sortKey      string
-	attributes   []attribute
-}
-
-type s3Config struct {
-	// TODO add website config
+	name     string
+	dataType string
 }
 
 type initStorageVars struct {
@@ -459,6 +439,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return nil
 	}
 	if o.noSort {
+		o.noLsi = true
 		return nil
 	}
 	if len(o.lsiSorts) != 0 {
@@ -515,84 +496,7 @@ func (o *initStorageOpts) validateServiceName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	params := `
-App:
-  Type: String
-  Description: Your application's name.
-Env:
-  Type: String
-  Description: The environment name your service, job, or workflow is being deployed to.
-Name:
-  Type: String
-  Description: The name of the service, job, or workflow being deployed.`
-	output := `
-%[1]sBucketName:
-  Description: "The name of a user-defined bucket."
-  Value: !Ref %[1]s
-%[1]sAccessPolicy:
-  Description: "The IAM::ManagedPolicy to attach to the task role"
-  Value: !Ref %[1]sAccessPolicy`
-	policy := `
-%[1]sAccessPolicy:
-  Type: AWS::IAM::ManagedPolicy
-  Properties:
-    Description: !Sub
-      - Grants CRUD access to the S3 bucket ${Bucket}
-      - { Bucket: !Ref %[1]s }
-    PolicyDocument:
-      Version: 2012-10-17
-      Statement:
-        - Sid: S3ObjectActions
-          Effect: Allow
-          Action:
-          - s3:GetObject
-          - s3:PutObject
-          - s3:PutObjectACL
-          - s3:PutObjectTagging
-          - s3:DeleteObject
-          - s3:RestoreObject
-          Resource: !Sub ${%[1]s.Arn}/*
-        - Sid: S3ListAction
-          Effect: Allow
-          Action: s3:ListBucket
-          Resource: !Sub ${%[1]s.Arn}`
-	cf := `%[2]s:
-  Type: AWS::S3::Bucket
-  DeletionPolicy: Retain
-  Properties:
-    AccessControl: Private
-    BucketEncryption:
-      ServerSideEncryptionConfiguration:
-      - ServerSideEncryptionByDefault:
-          SSEAlgorithm: AES256
-    BucketName: !Sub '${App}-${Env}-${Name}-%[1]s'
-    PublicAccessBlockConfiguration:
-      BlockPublicAcls: true
-      BlockPublicPolicy: true`
-	logicalIDName := logicalIDSafe(o.storageName)
-	output = fmt.Sprintf(output, logicalIDName)
-	policy = fmt.Sprintf(policy, logicalIDName)
-	cf = fmt.Sprintf(cf, o.storageName, logicalIDName)
-
-	paramsOut := &template.Content{
-		Buffer: bytes.NewBufferString(params),
-	}
-	outputOut := &template.Content{
-		Buffer: bytes.NewBufferString(output),
-	}
-	policyOut := &template.Content{
-		Buffer: bytes.NewBufferString(policy),
-	}
-	cfOut := &template.Content{
-		Buffer: bytes.NewBufferString(cf),
-	}
-
-	o.ws.WriteAddon(paramsOut, o.storageSvc, "params")
-	o.ws.WriteAddon(outputOut, o.storageSvc, "outputs")
-	o.ws.WriteAddon(policyOut, o.storageSvc, "policy")
-	o.ws.WriteAddon(cfOut, o.storageSvc, "s3")
-
-	return nil
+	return o.createAddons()
 }
 
 var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
@@ -602,72 +506,43 @@ func logicalIDSafe(input string) string {
 	return nonAlphaNum.ReplaceAllString(input, "")
 }
 
-func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
-	cfg := &dynamoDBConfig{}
-	cfg.tableName = o.storageName
-	hashAttr, err := getAttrFromKey(o.partitionKey)
-	if err != nil {
-		return nil, err
-	}
-	rangeAttr, err := getAttrFromKey(o.sortKey)
-	if err != nil {
-		return nil, err
-	}
-	cfg.attributes = []attribute{
-		hashAttr,
-		rangeAttr,
-	}
-	if len(o.lsiSorts) != 0 {
-		for _, k := range o.lsiSorts {
-			lsiAttr, err := getAttrFromKey(k)
-			if err != nil {
-				return nil, err
-			}
-			cfg.attributes = append(cfg.attributes, lsiAttr)
-		}
-	}
-	cfg.partitionKey = hashAttr.name
-	cfg.sortKey = rangeAttr.name
-
-	return nil, nil
-}
-
 var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
 
+// getAttFromKey parses the DDB type and name out of keys specified in the form "Email:S"
 func getAttrFromKey(input string) (attribute, error) {
 	attrs := regexpMatchAttribute.FindStringSubmatch(input)
 	if len(attrs) == 0 {
 		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
 	}
 	return attribute{
-		name:        attrs[1],
-		ddbDataType: strings.ToUpper(attrs[2]),
+		name:     attrs[1],
+		dataType: strings.ToUpper(attrs[2]),
 	}, nil
 }
 
-func (o *initStorageOpts) createAddons() (string, error) {
+func (o *initStorageOpts) createAddons() error {
 	addonCf, err := o.newAddons()
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	addonPath, err := o.ws.WriteAddon(addonCf, o.StorageSvc, o.StorageName)
+	addonPath, err := o.ws.WriteAddon(addonCf, o.storageSvc, o.storageName)
 	if err != nil {
 		e, ok := err.(*workspace.ErrFileExists)
 		if !ok {
-			return "", err
+			return err
 		}
-		return "", fmt.Errorf("addon already exists: %w", e)
+		return fmt.Errorf("addon already exists: %w", e)
 	}
 	addonPath, err = relPath(addonPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
 	log.Successf(addonMsgFmt,
 		color.Emphasize(s3BucketFriendlyText),
-		color.HighlightUserInput(o.StorageName),
+		color.HighlightUserInput(o.storageName),
 		color.HighlightResource(addonPath),
 	)
 	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
@@ -675,7 +550,7 @@ the IAM policy necessary for an ECS task to access that resource, and outputs
 which are injected into the Copilot service this addon is associated with.`))
 	log.Infoln()
 
-	return addonPath, nil
+	return nil
 }
 func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 	switch o.storageType {
@@ -684,30 +559,85 @@ func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 	case s3StorageType:
 		return o.newS3Addon()
 	default:
-		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.StorageType)
+		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
 	}
+}
+
+func newAddonsDDBAttribute(input string) (*addons.DDBAttribute, error) {
+	attr, err := getAttrFromKey(input)
+	if err != nil {
+		return nil, err
+	}
+	return &addons.DDBAttribute{
+		Name:     aws.String(attr.name),
+		DataType: aws.String(attr.dataType),
+	}, nil
+}
+
+func newAddonsLSI(partitionKey string, lsis []string) ([]addons.LocalSecondaryIndex, error) {
+	var output []addons.LocalSecondaryIndex
+	for _, lsi := range lsis {
+		output = append(output, addons.LocalSecondaryIndex{
+			PartitionKey: aws.String(partitionKey),
+			SortKey:      aws.String(lsi),
+			Name:         aws.String(lsi),
+		})
+	}
+	return output, nil
 }
 
 func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
-	attributes := []attribute{}
-	props := &addons.DynamoDBProps{
-		Storage: &addons.StorageProps{
-			Name:        o.StorageName,
-			ReourceName: logicalIDSafe(o.StorageName),
-		},
-		Attributes: &[]addons.Attribute{
-			Name:     o.partitionKey,
-			DataType: dynamoPartitionKeyType,
-		},
+	props := addons.DynamoDbAddonProps{}
+
+	var attributes []addons.DDBAttribute
+	partKey, err := newAddonsDDBAttribute(o.partitionKey)
+	if err != nil {
+		return nil, err
 	}
-	return addons.NewDynamoDB(props), nil
+	props.PartitionKey = partKey.Name
+	attributes = append(attributes, *partKey)
+	if !o.noSort {
+		sortKey, err := newAddonsDDBAttribute(o.sortKey)
+		if err != nil {
+			return nil, err
+		}
+		attributes = append(attributes, *sortKey)
+		props.SortKey = sortKey.Name
+	}
+	for _, att := range o.attributes {
+		currAtt, err := newAddonsDDBAttribute(att)
+		if err != nil {
+			return nil, err
+		}
+		attributes = append(attributes, *currAtt)
+	}
+	props.Attributes = attributes
+	// only configure LSI if we haven't specified the --no-lsi flag.
+	props.HasLSI = false
+	if !o.noLsi {
+		props.HasLSI = true
+		lsiConfig, err := newAddonsLSI(
+			aws.StringValue(partKey.Name),
+			o.lsiSorts,
+		)
+		if err != nil {
+			return nil, err
+		}
+		props.LSIs = lsiConfig
+	}
+
+	props.StorageProps = &addons.StorageProps{
+		Name:         o.storageName,
+		ResourceName: logicalIDSafe(o.storageName),
+	}
+	return addons.NewDynamoDBAddon(&props), nil
 }
 
-func (o *initStorageOpts) newS3Addon() (*addons.S3Bucket, error) {
-	props := &addons.S3BucketProps{
+func (o *initStorageOpts) newS3Addon() (*addons.S3, error) {
+	props := &addons.S3AddonProps{
 		StorageProps: &addons.StorageProps{
-			Name:         o.StorageName,
-			ResourceName: logicalIDSafe(o.StorageName),
+			Name:         o.storageName,
+			ResourceName: logicalIDSafe(o.storageName),
 		},
 	}
 	return addons.NewS3Addon(props), nil

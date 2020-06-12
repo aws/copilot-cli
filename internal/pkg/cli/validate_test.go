@@ -270,7 +270,7 @@ func TestGetAttributeFromKey(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 				require.Equal(t, tc.wantName, got.name)
-				require.Equal(t, tc.wantType, got.ddbDataType)
+				require.Equal(t, tc.wantType, got.dataType)
 			}
 		})
 	}
