@@ -46,7 +46,13 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	storageTypeFlag = "storage-type"
+	storageTypeFlag         = "storage-type"
+	storagePartitionKeyFlag = "partition-key"
+	storageSortKeyFlag      = "sort-key"
+	storageNoSortFlag       = "no-sort"
+	storageLSIConfigFlag    = "lsi"
+	storageNoLSIFlag        = "no-lsi"
+	storageAttributeFlag    = "att"
 
 	numFlag            = "num"
 	cpuFlag            = "cpu"
@@ -120,6 +126,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 
+<<<<<<< HEAD
 	storageFlagDescription        = "Name of the storage resource to create."
 	storageServiceFlagDescription = "Name of the service to associate with storage."
 
@@ -132,6 +139,19 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use."
 	envVarsFlagDescription        = "Optional. A key=value list of environment variables."
 	commandFlagDescription        = "Optional. List of commands that are passed to docker run."
+=======
+	storageFlagDescription             = "Name of the storage resource to create."
+	storageServiceFlagDescription      = "Name of the service to associate with storage."
+	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageNoSortFlagDescription    = "Optional. Skip configuring sort keys."
+	storageAttributeFlagDescription = `Optional. Attributes for a DDB table.
+Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
+	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
+	storageLSIConfigFlagDescription = "Optional. Attribute to use as an alternate sort key. May be specified up to 5 times."
+>>>>>>> f1d34945f0bdc92b5f4a9a9fa0f2952cb44bb70e
 )
 
 func quoteAll(elems []string) []string {

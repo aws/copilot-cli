@@ -6,7 +6,7 @@ ENV GOPROXY direct
 ENV GOBIN /go/bin
 
 # Install Go, Git and other dependencies so we can run ginkgo
-RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git
+RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git aws-cli jq
 
 RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 

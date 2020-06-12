@@ -143,6 +143,8 @@ func (p *prompt) Cleanup(config *survey.PromptConfig, val interface{}) error {
 		typedPrompt.Message = p.FinalMessage
 	case *survey.Confirm:
 		typedPrompt.Message = p.FinalMessage
+	case *survey.MultiSelect:
+		typedPrompt.Message = p.FinalMessage
 	}
 	return p.prompter.Cleanup(config, val)
 }

@@ -1,7 +1,0 @@
-AdditionalResourcesPolicyArn:
-  Description: ARN of the policy to access additional resources from.
-  Value: !Ref AdditionalResourcesPolicy
-HelloTableName:
-  Value: !Ref HelloTable
-PasswordSecret:
-  Value: !Ref PasswordSecret

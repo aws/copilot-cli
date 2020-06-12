@@ -17,6 +17,8 @@ const (
 	parametersSection
 	mappingsSection
 	conditionsSection
+	resourcesSection
+	outputsSection
 )
 
 // cfnTemplate represents a parsed YAML AWS CloudFormation template.
@@ -25,6 +27,9 @@ type cfnTemplate struct {
 	Parameters yaml.Node `yaml:"Parameters,omitempty"`
 	Mappings   yaml.Node `yaml:"Mappings,omitempty"`
 	Conditions yaml.Node `yaml:"Conditions,omitempty"`
+	Transform  yaml.Node `yaml:"Transform,omitempty"`
+	Resources  yaml.Node `yaml:"Resources"` // Don't omit as this is the only section that's required by CloudFormation.
+	Outputs    yaml.Node `yaml:"Outputs,omitempty"`
 }
 
 // merge combines non-empty fields of other with t's fields.
@@ -39,6 +44,15 @@ func (t *cfnTemplate) merge(other cfnTemplate) error {
 		return err
 	}
 	if err := t.mergeConditions(other.Conditions); err != nil {
+		return err
+	}
+	if err := t.mergeTransform(other.Transform); err != nil {
+		return err
+	}
+	if err := t.mergeResources(other.Resources); err != nil {
+		return err
+	}
+	if err := t.mergeOutputs(other.Outputs); err != nil {
 		return err
 	}
 	return nil
@@ -76,6 +90,30 @@ func (t *cfnTemplate) mergeMappings(mappings yaml.Node) error {
 func (t *cfnTemplate) mergeConditions(conditions yaml.Node) error {
 	if err := mergeSingleLevelMaps(&t.Conditions, &conditions); err != nil {
 		return wrapKeyAlreadyExistsErr(conditionsSection, err)
+	}
+	return nil
+}
+
+// mergeTransform adds transform's contents to t's Transform.
+func (t *cfnTemplate) mergeTransform(transform yaml.Node) error {
+	addToSet(&t.Transform, &transform)
+	return nil
+}
+
+// mergeResources updates t's Resources with additional resources.
+// If a resource already exists with a different value, returns errResourceAlreadyExists.
+func (t *cfnTemplate) mergeResources(resources yaml.Node) error {
+	if err := mergeSingleLevelMaps(&t.Resources, &resources); err != nil {
+		return wrapKeyAlreadyExistsErr(resourcesSection, err)
+	}
+	return nil
+}
+
+// mergeOutputs updates t's Outputs with additional outputs.
+// If an output already exists with a different value, returns errOutputAlreadyExists.
+func (t *cfnTemplate) mergeOutputs(outputs yaml.Node) error {
+	if err := mergeSingleLevelMaps(&t.Outputs, &outputs); err != nil {
+		return wrapKeyAlreadyExistsErr(outputsSection, err)
 	}
 	return nil
 }
@@ -168,6 +206,39 @@ func mergeMapNodes(dst, src *yaml.Node, handler keyExistsHandler) error {
 	}
 	dst.Content = append(dst.Content, newContent...)
 	return nil
+}
+
+// addToSet adds a non-zero node to a set. If the node represents a sequence,
+// then adds its contents to the set.
+//
+// If the node or its contents already exist in the set, does nothing.
+// Otherwise, appends the node or its contents to the set.
+func addToSet(set, node *yaml.Node) {
+	if node.IsZero() {
+		return
+	}
+	nodes := []*yaml.Node{node}
+	if node.Kind == yaml.SequenceNode {
+		// If node is a list, we should add its contents to the set instead.
+		nodes = node.Content
+	}
+	if set.IsZero() {
+		*set = yaml.Node{
+			Kind:    yaml.SequenceNode,
+			Content: nodes,
+		}
+		return
+	}
+
+	var newElements []*yaml.Node
+	for _, c := range set.Content {
+		for _, n := range nodes {
+			if !isEqual(c, n) {
+				newElements = append(newElements, n)
+			}
+		}
+	}
+	set.Content = append(set.Content, newElements...)
 }
 
 // mappingNode transforms a flat "mapping" yaml.Node to a hashmap.
