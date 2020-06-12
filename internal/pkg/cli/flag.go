@@ -122,7 +122,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
-	storageNoSortFlagDescription    = "Optional. Don't ask about configuring sort keys."
+	storageNoSortFlagDescription    = "Optional. Skip configuring sort keys."
 	storageAttributeFlagDescription = `Optional. Attributes for a DDB table.
 Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
