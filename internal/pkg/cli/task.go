@@ -16,7 +16,7 @@ func BuildTaskCmd() *cobra.Command {
 		Short: `Commands for tasks.
 Tasks are one-off Amazon ECS tasks.`,
 		Long: `Commands for tasks
-Tasks are one-off Amazon ECS tasks.`,
+Tasks are one-off container images that run once in a given environment, then terminate.`,
 	}
 
 	cmd.AddCommand(BuildTaskRunCmd())

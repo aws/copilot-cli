@@ -123,15 +123,15 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	storageFlagDescription        = "Name of the storage resource to create."
 	storageServiceFlagDescription = "Name of the service to associate with storage."
 
-	numFlagDescription              = "Optional. The number of tasks to set up. Default to 1."
-	cpuFlagDescription              = "Optional. The number of CPU units to reserve. Default is 256 (1/4 vCPU)."
-	memoryFlagDescription           = "Optional. The amount of memory to reserve. Default to 512."
-	imageFlagDescription            = "Optional. The image to run instead of building a dockerfile."
-	taskRoleFlagDescription         = "Optional. The role for the task to use."
-	subnetIDFlagDescription         = "Optional. The subnet id for the task to use."
-	securityGroupIDsFlagDescription = "Optional. The security group id(s) for the task to use."
-	envVarsFlagDescription          = "Optional. A key=value list of environment variables."
-	commandFlagDescription          = "Optional. List of commands that are passed to docker run."
+	numFlagDescription            = "Optional. The number of tasks to set up. Default to 1."
+	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task. Default is 256 (1/4 vCPU)."
+	memoryFlagDescription         = "Optional. The amount of memory to reserve for each task. Default is 512."
+	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription       = "Optional. The role for the task to use."
+	subnetFlagDescription         = "Optional. The subnet id for the task to use."
+	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use."
+	envVarsFlagDescription        = "Optional. A key=value list of environment variables."
+	commandFlagDescription        = "Optional. List of commands that are passed to docker run."
 )
 
 func quoteAll(elems []string) []string {

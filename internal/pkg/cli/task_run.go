@@ -6,12 +6,16 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"regexp"
-
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+)
+
+var (
+	errNumNotPositive = errors.New("number of tasks must be positive")
+	errCpuNotPositive = errors.New("CPU units must be positive")
+	errMemNotPositive = errors.New("memory must be positive")
 )
 
 type runTaskVars struct {
@@ -66,26 +70,22 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
 	if o.num <= 0 {
-		return errors.New("number of tasks must be positive")
+		return errNumNotPositive
 	}
 
 	if o.cpu <= 0 {
-		return errors.New("cpu units must be positive")
+		return errCpuNotPositive
 	}
 
 	if o.memory <= 0 {
-		return errors.New("memory must be positive")
+		return errMemNotPositive
 	}
 
 	if o.image != "" && o.dockerfilePath != "" {
 		return errors.New("cannot specify both image and Dockerfile path")
 	}
 
-	if o.image != "" {
-		if err := o.validateImageName(); err != nil {
-			return err
-		}
-	} else if o.dockerfilePath != "" {
+	if o.dockerfilePath != "" {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
@@ -105,19 +105,6 @@ func (o *runTaskOpts) Validate() error {
 		if err := o.validateEnvName(); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func (o *runTaskOpts) validateImageName() error {
-	valid, err := regexp.MatchString(`^\d+\.dkr\.ecr\.[a-z0-9\-]+.amazonaws.com/[a-z][a-z0-9\-]*$`, o.image)
-	if err != nil {
-		return fmt.Errorf("validate image name: %w", err)
-	}
-
-	if !valid {
-		return errors.New("image name is malformed")
 	}
 
 	return nil

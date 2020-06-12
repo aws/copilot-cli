@@ -108,7 +108,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    256,
 				inMemory: 512,
 			},
-			wantedError: errors.New("number of tasks must be positive"),
+			wantedError: errNumNotPositive,
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{
@@ -116,7 +116,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    -15,
 				inMemory: 512,
 			},
-			wantedError: errors.New("CPU units must be positive"),
+			wantedError: errCpuNotPositive,
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
@@ -124,7 +124,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    256,
 				inMemory: -1024,
 			},
-			wantedError: errors.New("memory must be positive"),
+			wantedError: errMemNotPositive,
 		},
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
@@ -139,12 +139,6 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 			inDockerfilePath: "world/hello/Dockerfile",
 			wantedError:      errors.New("open world/hello/Dockerfile: file does not exist"),
-		},
-		"malformed image name": {
-			basicOpts: defaultOpts,
-
-			inImage:     "image name",
-			wantedError: errors.New("image name is malformed"),
 		},
 		"specified app exists": {
 			basicOpts: defaultOpts,
