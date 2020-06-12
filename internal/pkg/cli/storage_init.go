@@ -587,10 +587,11 @@ Name:
 		Buffer: bytes.NewBufferString(cf),
 	}
 
-	o.ws.WriteAddon(paramsOut, o.storageSvc, "params.yaml")
-	o.ws.WriteAddon(outputOut, o.storageSvc, "outputs.yaml")
-	o.ws.WriteAddon(policyOut, o.storageSvc, "policy.yaml")
-	o.ws.WriteAddon(cfOut, o.storageSvc, "s3.yaml")
+	o.ws.WriteAddon(paramsOut, o.storageSvc, "params")
+	o.ws.WriteAddon(outputOut, o.storageSvc, "outputs")
+	o.ws.WriteAddon(policyOut, o.storageSvc, "policy")
+	o.ws.WriteAddon(cfOut, o.storageSvc, "s3")
+
 	return nil
 }
 
@@ -644,6 +645,38 @@ func getAttrFromKey(input string) (attribute, error) {
 	}, nil
 }
 
+func (o *initStorageOpts) createAddons() (string, error) {
+	addonCf, err := o.newAddons()
+	if err != nil {
+		return "", err
+	}
+
+	addonPath, err := o.ws.WriteAddon(addonCf, o.StorageSvc, o.StorageName)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", err
+		}
+		return "", fmt.Errorf("addon already exists: %w", e)
+	}
+	addonPath, err = relPath(addonPath)
+	if err != nil {
+		return "", err
+	}
+
+	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
+	log.Successf(addonMsgFmt,
+		color.Emphasize(s3BucketFriendlyText),
+		color.HighlightUserInput(o.StorageName),
+		color.HighlightResource(addonPath),
+	)
+	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
+the IAM policy necessary for an ECS task to access that resource, and outputs
+which are injected into the Copilot service this addon is associated with.`))
+	log.Infoln()
+
+	return addonPath, nil
+}
 func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 	switch o.storageType {
 	case dynamoDBStorageType:
@@ -656,11 +689,28 @@ func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 }
 
 func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
-
+	attributes := []attribute{}
+	props := &addons.DynamoDBProps{
+		StorageProps: &addons.StorageProps{
+			Name:        o.StorageName,
+			ReourceName: logicalIDSafe(o.StorageName),
+		},
+		Attributes: &[]addons.Attribute{
+			Name:     o.partitionKey,
+			DataType: dynamoPartitionKeyType,
+		},
+	}
+	return addons.NewDynamoDB(props), nil
 }
 
 func (o *initStorageOpts) newS3Addon() (*addons.S3Bucket, error) {
-
+	props := &addons.S3BucketProps{
+		StorageProps: &addons.StorageProps{
+			Name:         o.StorageName,
+			ResourceName: logicalIDSafe(o.StorageName),
+		},
+	}
+	return addons.NewS3Addon(props), nil
 }
 
 func BuildStorageInitCmd() *cobra.Command {
