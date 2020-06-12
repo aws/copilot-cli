@@ -535,6 +535,7 @@ func addDeployCalls(m *mocks.Mockapi, changeSetType string) {
 		Capabilities: aws.StringSlice([]string{
 			cloudformation.CapabilityCapabilityIam,
 			cloudformation.CapabilityCapabilityNamedIam,
+			cloudformation.CapabilityCapabilityAutoExpand,
 		}),
 	}).Return(nil, nil)
 	m.EXPECT().WaitUntilChangeSetCreateCompleteWithContext(gomock.Any(), &cloudformation.DescribeChangeSetInput{
