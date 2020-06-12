@@ -466,7 +466,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	addLsi, err := o.prompt.Confirm(
 		storageInitDDBLSIPrompt,
 		storageInitDDBLSIHelp,
-		prompt.WithFinalMessage("Additional sort keys?"),
+		prompt.WithFinalMessage("Alternate sort keys?"),
 	)
 	if err != nil {
 		return fmt.Errorf("confirm add LSI to table: %w", err)
@@ -648,7 +648,7 @@ func BuildStorageInitCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: false, //TODO remove when ready for production
+		Hidden: true, //TODO remove when ready for production
 		Use:    "init",
 		Short:  "Creates a new storage table in an environment.",
 		Example: `
