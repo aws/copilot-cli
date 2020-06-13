@@ -213,7 +213,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:    "test",
 			inSubnet: "subnet id",
 
-			wantedError: errors.New("neither subnet nor Security Groups should be specified if environment is specified"),
+			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
 		},
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
@@ -221,7 +221,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:            "test",
 			inSecurityGroups: []string{"security group id1", "securty group id2"},
 
-			wantedError: errors.New("neither subnet nor Security Groups should be specified if environment is specified"),
+			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
 		},
 	}
 
