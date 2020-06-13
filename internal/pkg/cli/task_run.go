@@ -34,7 +34,7 @@ type runTaskVars struct {
 	env            string
 
 	envVars  map[string]string
-	commands string
+	commands []string
 }
 
 type runTaskOpts struct {
@@ -92,7 +92,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.env != "" && (o.subnet != "" || o.securityGroups != nil) {
-		return errors.New("neither subnet nor Security Groups should be specified if environment is specified")
+		return errors.New("neither subnet nor security groups should be specified if environment is specified")
 	}
 
 	if o.appName != "" {
@@ -145,6 +145,8 @@ Run a task in the "test" environment under the current workspace.
 /code $ copilot task run --env test
 Starts 4 tasks with 2GB memory, Runs a particular image.
 /code $ copilot task run --num 4 --memory 2048 --task-role frontend-exec-role
+Run a task with environment variables.
+/code $ copilot task run --env-vars name=myName,user=myUser
 `,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
@@ -173,7 +175,7 @@ Starts 4 tasks with 2GB memory, Runs a particular image.
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringVar(&vars.commands, commandFlag, "", commandFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.commands, commandsFlag, nil, commandsFlagDescription)
 
 	return cmd
 }

@@ -40,7 +40,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inSecurityGroups []string
 
 		inEnvVars  map[string]string
-		inCommands string
+		inCommands []string
 
 		appName string
 
@@ -65,7 +65,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"NAME": "my-app",
 				"ENV":  "dev",
 			},
-			inCommands: "echo \"docker commands\"",
+			inCommands: []string{"echo hello world"},
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
@@ -94,7 +94,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"NAME": "pj",
 				"ENV":  "dev",
 			},
-			inCommands: "echo \"docker commands\"",
+			inCommands: []string{"echo hello world"},
 
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello/world", 0755)
