@@ -108,6 +108,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
