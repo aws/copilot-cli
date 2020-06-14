@@ -38,7 +38,8 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 		"converts stages": {
 			stages: []manifest.PipelineStage{
 				{
-					Name: "test",
+					Name:         "test",
+					TestCommands: []string{"make test", "echo \"made test\""},
 				},
 			},
 			inAppName: "badgoose",
@@ -65,6 +66,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Prod:      false,
 					},
 					LocalServices: []string{"frontend", "backend"},
+					TestCommands:  []string{"make test", "echo \"made test\""},
 				},
 			},
 			expectedError: nil,
@@ -106,7 +108,6 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
@@ -182,8 +183,13 @@ source:
 stages:
     -
       name: chicken
+      test_commands:
+        - make test
+        - echo "made test"
     -
       name: wings
+      test_commands:
+        - echo "bok bok bok"
 `
 	)
 

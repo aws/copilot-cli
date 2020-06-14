@@ -20,5 +20,8 @@ source:
 # to your environments.
 stages:{{range .Stages}}
     - # The name of the environment to deploy to.
-      name: {{.Name}}{{end}}
+      name: {{.Name}}
+      # The commands to run a set of tests for your service in this stage.
+      test_commands: {{.TestCommands}}{{end}}
+        - # Enter commands, one per line, to run when deploying to this environment.
 {{end}}

@@ -97,7 +97,8 @@ type Source struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name string `yaml:"name`
+	Name         string   `yaml:"name"`
+	TestCommands []string `yaml:"test_commands"`
 }
 
 // CreatePipeline returns a pipeline manifest object.
@@ -110,7 +111,7 @@ func CreatePipeline(pipelineName string, provider Provider, stageNames []string)
 
 	stages := make([]PipelineStage, 0, len(stageNames))
 	for _, name := range stageNames {
-		stages = append(stages, PipelineStage{Name: name})
+		stages = append(stages, PipelineStage{Name: name, TestCommands: []string{}})
 	}
 
 	return &PipelineManifest{
