@@ -23,5 +23,4 @@ stages:{{range .Stages}}
       name: {{.Name}}
       # The commands to run a set of tests for your service in this stage.
       test_commands: {{.TestCommands}}{{end}}
-        - # Enter commands, one per line, to run when deploying to this environment.
 {{end}}

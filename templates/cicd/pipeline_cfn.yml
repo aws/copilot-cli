@@ -259,7 +259,7 @@ Resources:
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: BuildOutput::infrastructure/{{$stage.ServiceTemplatePath $svc}}
                 TemplateConfiguration: BuildOutput::infrastructure/{{$stage.ServiceTemplateConfigurationPath $svc}}
-                # The ARN of the IAM role (in the env account) that
+                # The ARN of the IAM role (in the env accountn) that
                 # AWS CloudFormation assumes when it operates on resources
                 # in a stack in an environment account.
                 RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-CFNExecutionRole
