@@ -232,7 +232,7 @@ type wsAppManager interface {
 }
 
 type wsAddonManager interface {
-	WriteAddon(f encoding.BinaryMarshaler, svc, storageName string) (string, error)
+	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
 	wsSvcReader
 }
 

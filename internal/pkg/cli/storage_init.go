@@ -541,14 +541,24 @@ func (o *initStorageOpts) createAddons() error {
 	}
 
 	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
+	var addonFriendlyText string
+	switch o.storageType {
+	case dynamoDBStorageType:
+		addonFriendlyText = dynamoDBTableFriendlyText
+	case s3StorageType:
+		addonFriendlyText = s3BucketFriendlyText
+	default:
+		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+	}
 	log.Successf(addonMsgFmt,
-		color.Emphasize(s3BucketFriendlyText),
+		color.Emphasize(addonFriendlyText),
 		color.HighlightUserInput(o.storageName),
 		color.HighlightResource(addonPath),
 	)
 	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
 the IAM policy necessary for an ECS task to access that resource, and outputs
-which are injected into the Copilot service this addon is associated with.`))
+which are injected as environment variables into the Copilot service this addon
+is associated with.`))
 	log.Infoln()
 
 	return nil
