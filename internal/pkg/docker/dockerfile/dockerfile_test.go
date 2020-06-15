@@ -5,6 +5,7 @@ package dockerfile
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -207,8 +208,8 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			dockerfile: []byte(`HEALTHCHECK CMD curl -f http://localhost/ || exit 1`),
 			wantedErr:  nil,
 			wantedConfig: &HealthCheck{
-				Interval:    10000000000,
-				Timeout:     5000000000,
+				Interval:    10 * time.Second,
+				Timeout:     5 * time.Second,
 				StartPeriod: 0,
 				Retries:     2,
 				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
@@ -219,9 +220,9 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			CMD curl -f http://localhost/ || exit 1`),
 			wantedErr: nil,
 			wantedConfig: &HealthCheck{
-				Interval:    300000000000,
-				Timeout:     3000000000,
-				StartPeriod: 2000000000,
+				Interval:    300 * time.Second,
+				Timeout:     3 * time.Second,
+				StartPeriod: 2 * time.Second,
 				Retries:     3,
 				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
 			},

@@ -254,7 +254,7 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
-	hcPointer, err := o.setHealthCheck()
+	hc, err := o.parseHealthCheck()
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, err
 			Dockerfile: o.DockerfilePath,
 		},
 		Port:        o.Port,
-		HealthCheck: hcPointer,
+		HealthCheck: hc,
 	}), nil
 }
 
@@ -376,11 +376,11 @@ func (o *initSvcOpts) askSvcPort() error {
 	return nil
 }
 
-func (o *initSvcOpts) setHealthCheck() (*manifest.ContainerHealthCheck, error) {
+func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
 	o.setupParser(o)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
-		return nil, fmt.Errorf("setting healthcheck: %w", err)
+		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.DockerfilePath, err)
 	}
 	var hcPointer *manifest.ContainerHealthCheck
 	if hc != nil {

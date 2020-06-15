@@ -231,8 +231,6 @@ func parseExpose(line string) []portConfig {
 
 // parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
 func parseHealthCheck(content string) (*HealthCheck, error) {
-	var hc HealthCheck
-
 	if content[hcInstrStartIndex:] == "NONE" {
 		return nil, nil
 	}
@@ -250,14 +248,13 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		return nil, err
 	}
 
-	hc = HealthCheck{
+	return &HealthCheck{
 		Interval:    interval,
 		Timeout:     timeout,
 		StartPeriod: startPeriod,
 		Retries:     retries,
 		Cmd:         []string{regexp.MustCompile("CMD.*").FindString(content)},
-	}
-	return &hc, nil
+	}, nil
 }
 
 // GetHealthCheck returns a HealthCheck struct.
