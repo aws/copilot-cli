@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/aws-sdk-go/aws"
@@ -345,6 +347,12 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 }
 
 func TestAppInitOpts_Execute(t *testing.T) {
+	var (
+		testInterval    = 10 * time.Second
+		testRetries     = 2
+		testTimeout     = 5 * time.Second
+		testStartPeriod = 0 * time.Second
+	)
 	testCases := map[string]struct {
 		inSvcPort        uint16
 		inSvcType        string
@@ -511,6 +519,124 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
+		"no healthcheck options": {
+			inSvcType:        manifest.BackendServiceType,
+			inAppName:        "app",
+			inSvcName:        "backend",
+			inDockerfilePath: "backend/Dockerfile",
+			inSvcPort:        80,
+
+			mockDependencies: func(ctrl *gomock.Controller, opts *initSvcOpts) {
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).
+					Do(func(m *manifest.BackendService, _ string) {
+						require.Equal(t, *m.Service.Type, manifest.BackendServiceType)
+						require.Nil(t, m.Image.HealthCheck)
+					}).Return("/backend/manifest.yml", nil)
+
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Service) {
+						require.Equal(t, &config.Service{
+							Name: "backend",
+							App:  "app",
+							Type: manifest.BackendServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				mockstore.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+
+				mockappDeployer := mocks.NewMockappDeployer(ctrl)
+				mockappDeployer.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "backend")
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(fmt.Sprintf(fmtAddSvcToAppStart, "backend"))
+				mockProg.EXPECT().Stop(log.Ssuccessf(fmtAddSvcToAppComplete, "backend"))
+
+				mockDf := mocks.NewMockdockerfileParser(ctrl)
+				mockDf.EXPECT().GetHealthCheck().Return(nil, nil)
+
+				opts.ws = mockWriter
+				opts.store = mockstore
+				opts.appDeployer = mockappDeployer
+				opts.prog = mockProg
+				opts.setupParser = func(o *initSvcOpts) {
+					o.df = mockDf
+				}
+			},
+		},
+		"default healthcheck options": {
+			inSvcType:        manifest.BackendServiceType,
+			inAppName:        "app",
+			inSvcName:        "backend",
+			inDockerfilePath: "backend/Dockerfile",
+			inSvcPort:        80,
+
+			mockDependencies: func(ctrl *gomock.Controller, opts *initSvcOpts) {
+				mockWriter := mocks.NewMocksvcManifestWriter(ctrl)
+				mockWriter.EXPECT().WriteServiceManifest(gomock.Any(), opts.Name).
+					Do(func(m *manifest.BackendService, _ string) {
+						require.Equal(t, *m.Service.Type, manifest.BackendServiceType)
+						require.Equal(t, *m.Image.HealthCheck, manifest.ContainerHealthCheck{
+							Interval:    &testInterval,
+							Retries:     &testRetries,
+							Timeout:     &testTimeout,
+							StartPeriod: &testStartPeriod,
+							Command:     []string{"CMD curl -f http://localhost/ || exit 1"}})
+					}).Return("/backend/manifest.yml", nil)
+
+				mockstore := mocks.NewMockstore(ctrl)
+				mockstore.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Service) {
+						require.Equal(t, &config.Service{
+							Name: "backend",
+							App:  "app",
+							Type: manifest.BackendServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				mockstore.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+
+				mockappDeployer := mocks.NewMockappDeployer(ctrl)
+				mockappDeployer.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "backend")
+
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(fmt.Sprintf(fmtAddSvcToAppStart, "backend"))
+				mockProg.EXPECT().Stop(log.Ssuccessf(fmtAddSvcToAppComplete, "backend"))
+
+				mockDf := mocks.NewMockdockerfileParser(ctrl)
+				mockDf.EXPECT().GetHealthCheck().
+					Return(&dockerfile.HealthCheck{
+						Interval:    10000000000,
+						Retries:     2,
+						Timeout:     5000000000,
+						StartPeriod: 0,
+						Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"}},
+						nil)
+
+				opts.ws = mockWriter
+				opts.store = mockstore
+				opts.appDeployer = mockappDeployer
+				opts.prog = mockProg
+				opts.setupParser = func(o *initSvcOpts) {
+					o.df = mockDf
+				}
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -527,6 +653,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 					DockerfilePath: tc.inDockerfilePath,
 					GlobalOpts:     &GlobalOpts{appName: tc.inAppName},
 				},
+				setupParser: func(o *initSvcOpts) {},
 			}
 			tc.mockDependencies(ctrl, &opts)
 			// WHEN
