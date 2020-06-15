@@ -73,7 +73,7 @@ type LocalSecondaryIndex struct {
 	Name         *string
 }
 
-// MarshalBinary serializes the DynamoDB object into a binary YAMl CF template.
+// MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (d *DynamoDB) MarshalBinary() ([]byte, error) {
 	content, err := d.parser.Parse(dynamoDbAddonPath, *d)
@@ -102,7 +102,7 @@ func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
 	return ddbCf
 }
 
-// MarshalBinary serializes the S3 object into a binary YAMl CF template.
+// MarshalBinary serializes the S3 object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *S3) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(s3AddonPath, *s)
