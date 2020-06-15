@@ -381,7 +381,8 @@ func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
 		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.DockerfilePath, err)
-	} else if hc == nil {
+	}
+	if hc == nil {
 		return nil, nil
 	}
 	return &manifest.ContainerHealthCheck{
