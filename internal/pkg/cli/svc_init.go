@@ -254,12 +254,17 @@ func (o *initSvcOpts) newLoadBalancedWebServiceManifest() (*manifest.LoadBalance
 }
 
 func (o *initSvcOpts) newBackendServiceManifest() (*manifest.BackendService, error) {
+	hc, err := o.parseHealthCheck()
+	if err != nil {
+		return nil, err
+	}
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		ServiceProps: manifest.ServiceProps{
 			Name:       o.Name,
 			Dockerfile: o.DockerfilePath,
 		},
-		Port: o.Port,
+		Port:        o.Port,
+		HealthCheck: hc,
 	}), nil
 }
 
@@ -369,6 +374,24 @@ func (o *initSvcOpts) askSvcPort() error {
 	o.Port = uint16(portUint)
 
 	return nil
+}
+
+func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error) {
+	o.setupParser(o)
+	hc, err := o.df.GetHealthCheck()
+	if err != nil {
+		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.DockerfilePath, err)
+	}
+	if hc == nil {
+		return nil, nil
+	}
+	return &manifest.ContainerHealthCheck{
+		Interval:    &hc.Interval,
+		Timeout:     &hc.Timeout,
+		StartPeriod: &hc.StartPeriod,
+		Retries:     &hc.Retries,
+		Command:     hc.Cmd,
+	}, nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
