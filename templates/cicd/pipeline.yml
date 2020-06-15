@@ -21,6 +21,6 @@ source:
 stages:{{range .Stages}}
     - # The name of the environment to deploy to.
       name: {{.Name}}
-      # The commands to run a set of tests for your service in this stage.
-      test_commands: {{.TestCommands}}{{end}}
-{{end}}
+      # Optional: use test commands to validate this stage of your build.
+      # test_commands: {{.TestCommands}}
+  {{end}}{{end}}

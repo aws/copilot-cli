@@ -35,7 +35,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 		expectedStages []deploy.PipelineStage
 		expectedError  error
 	}{
-		"converts stages": {
+		"converts stages with test commands": {
 			stages: []manifest.PipelineStage{
 				{
 					Name:         "test",
@@ -67,6 +67,41 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 					},
 					LocalServices: []string{"frontend", "backend"},
 					TestCommands:  []string{"make test", "echo \"made test\""},
+				},
+			},
+			expectedError: nil,
+		},
+		"converts stages without test commands": {
+			stages: []manifest.PipelineStage{
+				{
+					Name: "test",
+				},
+			},
+			inAppName: "badgoose",
+			callMocks: func(m updatePipelineMocks) {
+				mockEnv := &config.Environment{
+					Name:      "test",
+					App:       "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      false,
+				}
+				gomock.InOrder(
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
+			},
+
+			expectedStages: []deploy.PipelineStage{
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+						Prod:      false,
+					},
+					LocalServices: []string{"frontend", "backend"},
+					TestCommands:  []string(nil),
 				},
 			},
 			expectedError: nil,

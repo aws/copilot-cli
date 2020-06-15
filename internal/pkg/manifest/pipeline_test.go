@@ -75,9 +75,9 @@ func TestCreatePipeline(t *testing.T) {
 			inputStages: []string{"chicken", "wings"},
 			expectedStages: []PipelineStage{
 				{Name: "chicken",
-					TestCommands: []string{}},
+					TestCommands: []string(nil)},
 				{Name: "wings",
-					TestCommands: []string{}},
+					TestCommands: []string(nil)},
 			},
 		},
 	}
