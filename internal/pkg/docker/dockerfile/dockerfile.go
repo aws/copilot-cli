@@ -257,7 +257,8 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 	}, nil
 }
 
-// GetHealthCheck returns a HealthCheck struct.
+// GetHealthCheck parses the HEALTHCHECK instruction from the Dockerfile and returns it.
+// If the HEALTHCHECK is NONE or there is no instruction, returns nil.
 func (df *Dockerfile) GetHealthCheck() (*HealthCheck, error) {
 	if !df.parsed {
 		if err := df.parse(); err != nil {

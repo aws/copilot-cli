@@ -381,18 +381,16 @@ func (o *initSvcOpts) parseHealthCheck() (*manifest.ContainerHealthCheck, error)
 	hc, err := o.df.GetHealthCheck()
 	if err != nil {
 		return nil, fmt.Errorf("get healthcheck from Dockerfile: %s, %w", o.DockerfilePath, err)
+	} else if hc == nil {
+		return nil, nil
 	}
-	var hcPointer *manifest.ContainerHealthCheck
-	if hc != nil {
-		hcPointer = &manifest.ContainerHealthCheck{
-			Interval:    &hc.Interval,
-			Timeout:     &hc.Timeout,
-			StartPeriod: &hc.StartPeriod,
-			Retries:     &hc.Retries,
-			Command:     hc.Cmd,
-		}
-	}
-	return hcPointer, nil
+	return &manifest.ContainerHealthCheck{
+		Interval:    &hc.Interval,
+		Timeout:     &hc.Timeout,
+		StartPeriod: &hc.StartPeriod,
+		Retries:     &hc.Retries,
+		Command:     hc.Cmd,
+	}, nil
 }
 
 // RecommendedActions returns follow-up actions the user can take after successfully executing the command.
