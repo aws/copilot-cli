@@ -1,4 +1,4 @@
-# Buildspec run in the build stage of your pipeline.
+# Buildspec runs in the build stage of your pipeline.
 version: 0.2
 phases:
   install:
@@ -47,7 +47,7 @@ phases:
         done;
       # Build images
       # - For each manifest file:
-      #   - Read the path to the Dockerfile by translating the YAML file into JSON
+      #   - Read the path to the Dockerfile by translating the YAML file into JSON.
       #   - Run docker build.
       #   - For each environment:
       #     - Retrieve the ECR repository.

@@ -7,7 +7,6 @@ package addons
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
@@ -17,12 +16,6 @@ import (
 const (
 	// StackName is the name of the addons nested stack resource.
 	StackName = "AddonsStack"
-
-	addonsTemplatePath = "addons/cf.yml"
-
-	paramsFileWithoutExt  = "params"
-	outputsFileWithoutExt = "outputs"
-	resourcesFiles        = "resources"
 )
 
 type workspaceReader interface {
@@ -51,60 +44,11 @@ func New(svcName string) (*Addons, error) {
 	}, nil
 }
 
-// Template merges the files under the "addons/" directory of a service
-// into a single CloudFormation template and returns it.
-func (a *Addons) Template() (string, error) {
-	fileNames, err := a.ws.ReadAddonsDir(a.svcName)
-	if err != nil {
-		return "", &ErrDirNotExist{
-			SvcName:   a.svcName,
-			ParentErr: err,
-		}
-	}
-
-	addonFiles := make(map[string]string)
-	for _, fileName := range filterYAMLfiles(fileNames) {
-		content, err := a.ws.ReadAddon(a.svcName, fileName)
-		if err != nil {
-			return "", fmt.Errorf("read addons file %s under service %s: %w", fileName, a.svcName, err)
-		}
-		trimmedContent := strings.TrimSpace(string(content))
-		switch nameWithoutExt := strings.TrimSuffix(fileName, filepath.Ext(fileName)); nameWithoutExt {
-		case paramsFileWithoutExt:
-			addonFiles[paramsFileWithoutExt] = trimmedContent
-		case outputsFileWithoutExt:
-			addonFiles[outputsFileWithoutExt] = trimmedContent
-		default:
-			addonFiles[resourcesFiles] += trimmedContent + "\n"
-		}
-	}
-	if err := validateNoMissingFiles(addonFiles); err != nil {
-		return "", err
-	}
-
-	content, err := a.parser.Parse(addonsTemplatePath, struct {
-		SvcName    string
-		Parameters []string
-		Resources  []string
-		Outputs    []string
-	}{
-		SvcName:    a.svcName,
-		Parameters: strings.Split(strings.TrimSpace(addonFiles[paramsFileWithoutExt]), "\n"),
-		Resources:  strings.Split(strings.TrimSpace(addonFiles[resourcesFiles]), "\n"),
-		Outputs:    strings.Split(strings.TrimSpace(addonFiles[outputsFileWithoutExt]), "\n"),
-	})
-	if err != nil {
-		return "", err
-	}
-	return content.String(), nil
-}
-
-// template will replace Template.
-// template merges CloudFormation templates under the "addons/" directory of a service
+// Template merges CloudFormation templates under the "addons/" directory of a service
 // into a single CloudFormation template and returns it.
 //
 // If the addons directory doesn't exist, it returns the empty string and ErrDirNotExist.
-func (a *Addons) template() (string, error) {
+func (a *Addons) Template() (string, error) {
 	fnames, err := a.ws.ReadAddonsDir(a.svcName)
 	if err != nil {
 		return "", &ErrDirNotExist{
@@ -154,22 +98,4 @@ func contains(arr []string, el string) bool {
 		}
 	}
 	return false
-}
-
-func validateNoMissingFiles(f map[string]string) error {
-	var missingFiles []string
-	if f[paramsFileWithoutExt] == "" {
-		missingFiles = append(missingFiles, fmt.Sprintf("%s.yaml", paramsFileWithoutExt))
-	}
-	if f[outputsFileWithoutExt] == "" {
-		missingFiles = append(missingFiles, fmt.Sprintf("%s.yaml", outputsFileWithoutExt))
-	}
-	if f[resourcesFiles] == "" {
-		missingFiles = append(missingFiles, `at least one resource YAML file such as "s3-bucket.yaml"`)
-	}
-
-	if missingFiles != nil {
-		return fmt.Errorf("addons directory has missing file(s): %s", strings.Join(missingFiles, ", "))
-	}
-	return nil
 }
