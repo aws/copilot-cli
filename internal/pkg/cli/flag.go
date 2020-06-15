@@ -46,7 +46,13 @@ const (
 	deleteSecretFlag      = "delete-secret"
 	svcPortFlag           = "port"
 
-	storageTypeFlag = "storage-type"
+	storageTypeFlag         = "storage-type"
+	storagePartitionKeyFlag = "partition-key"
+	storageSortKeyFlag      = "sort-key"
+	storageNoSortFlag       = "no-sort"
+	storageLSIConfigFlag    = "lsi"
+	storageNoLSIFlag        = "no-lsi"
+	storageAttributeFlag    = "att"
 )
 
 // Short flag names.
@@ -110,8 +116,17 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "Optional. The port on which your service listens."
 
-	storageFlagDescription        = "Name of the storage resource to create."
-	storageServiceFlagDescription = "Name of the service to associate with storage."
+	storageFlagDescription             = "Name of the storage resource to create."
+	storageServiceFlagDescription      = "Name of the service to associate with storage."
+	storagePartitionKeyFlagDescription = `Partition key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
+Must be of the format '<keyName>:<dataType>'.`
+	storageNoSortFlagDescription    = "Optional. Skip configuring sort keys."
+	storageAttributeFlagDescription = `Optional. Attributes for a DDB table.
+Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
+	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
+	storageLSIConfigFlagDescription = "Optional. Attribute to use as an alternate sort key. May be specified up to 5 times."
 )
 
 func quoteAll(elems []string) []string {

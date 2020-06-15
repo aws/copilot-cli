@@ -115,6 +115,20 @@ func (e *errResourceAlreadyExists) HumanError() string {
 	return fmt.Sprintf(`The Resource %s`, e.errKeyAlreadyExists.HumanError())
 }
 
+// errOutputAlreadyExists occurs if two addons have the same output under Outputs but with different values.
+type errOutputAlreadyExists struct {
+	*errKeyAlreadyExists
+}
+
+func (e *errOutputAlreadyExists) Error() string {
+	return fmt.Sprintf(`output "%s" already exists with a different definition`, e.Key)
+}
+
+// HumanError returns a string that explains the error with human-friendly details.
+func (e *errOutputAlreadyExists) HumanError() string {
+	return fmt.Sprintf(`The Output %s`, e.errKeyAlreadyExists.HumanError())
+}
+
 // wrapKeyAlreadyExistsErr wraps the err if its an errKeyAlreadyExists error with additional cfn section metadata.
 // If the error is not an errKeyAlreadyExists, then return it as is.
 func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
@@ -141,6 +155,10 @@ func wrapKeyAlreadyExistsErr(section cfnSection, err error) error {
 		}
 	case resourcesSection:
 		return &errResourceAlreadyExists{
+			keyExistsErr,
+		}
+	case outputsSection:
+		return &errOutputAlreadyExists{
 			keyExistsErr,
 		}
 	default:

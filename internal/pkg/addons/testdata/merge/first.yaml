@@ -76,3 +76,11 @@ Resources:
                           - dynamodb:Scan
                       Effect: Allow
                       Resource: !Sub ${ MyTable.Arn}/Index/*
+
+Outputs:
+    MyTableName:
+        Description: "The name of this DynamoDB."
+        Value: !Ref MyTable
+    MyTableAccessPolicy:
+        Description: "The IAM::ManagedPolicy to attach to the task role."
+        Value: !Ref MyTableAccessPolicy

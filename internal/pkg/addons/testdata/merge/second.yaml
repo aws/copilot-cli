@@ -102,3 +102,14 @@ Resources:
               Effect: Allow
               Action: s3:ListBucket
               Resource: !Sub ${MyBucket.Arn}
+
+Outputs:
+    MyBucketName:
+      Description: "The name of a user-defined bucket."
+      Value: !Ref MyBucketName
+    MyBucketAccessPolicy:
+      Description: "The IAM::ManagedPolicy to attach to the task role"
+      Value: !Ref MyBucketAccessPolicy
+    MyTableName:
+          Description: "The name of this DynamoDB."
+          Value: !Ref MyTable
