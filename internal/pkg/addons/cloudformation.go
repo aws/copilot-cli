@@ -6,6 +6,7 @@ package addons
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
@@ -115,6 +116,10 @@ func (t *cfnTemplate) mergeOutputs(outputs yaml.Node) error {
 
 // assignNewNodesTo associates every new node added to the template t with the tplName.
 func (t *cfnTemplate) assignNewNodesTo(tplName string) {
+	if t == nil {
+		return
+	}
+
 	var assign func(node *yaml.Node)
 	assign = func(node *yaml.Node) {
 		if node == nil {
@@ -130,13 +135,19 @@ func (t *cfnTemplate) assignNewNodesTo(tplName string) {
 		}
 	}
 
-	assign(&t.Metadata)
-	assign(&t.Parameters)
-	assign(&t.Mappings)
-	assign(&t.Conditions)
-	assign(&t.Transform)
-	assign(&t.Resources)
-	assign(&t.Outputs)
+	// Call assign() only on fields that represent CloudFormation sections.
+	tpl := reflect.ValueOf(*t)
+	for i := 0; i < tpl.NumField(); i += 1 {
+		field := tpl.Field(i)
+		if !field.CanInterface() {
+			// Fields that are not exported will panic if we call Interface(), therefore
+			// check the type only against exported cfnTemplate fields.
+			continue
+		}
+		if section, ok := field.Interface().(yaml.Node); ok {
+			assign(&section)
+		}
+	}
 }
 
 // mergeTwoLevelMaps merges the top and second level keys of src node to dst.
