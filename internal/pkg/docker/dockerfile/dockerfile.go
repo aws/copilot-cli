@@ -28,16 +28,16 @@ const reFindAllMatches = -1 // regexp package uses this as shorthand for "find a
 
 const (
 	intervalFlag    = "interval"
-	intervalDefault = 30 * time.Second
+	intervalDefault = 10 * time.Second
 
 	timeoutFlag    = "timeout"
-	timeoutDefault = 30 * time.Second
+	timeoutDefault = 5 * time.Second
 
 	startPeriodFlag    = "start-period"
 	startPeriodDefault = 0
 
 	retriesFlag    = "retries"
-	retriesDefault = 3
+	retriesDefault = 2
 
 	hcInstrStartIndex = len("HEALTHCHECK ")
 )
@@ -53,18 +53,19 @@ type portConfig struct {
 	err       error
 }
 
-type healthCheck struct {
-	interval    uint16
-	timeout     uint16
-	startPeriod uint16
-	retries     uint16
-	cmd         string
+// HealthCheck represents health check options for a Dockerfile.
+type HealthCheck struct {
+	Interval    time.Duration
+	Timeout     time.Duration
+	StartPeriod time.Duration
+	Retries     int
+	Cmd         []string
 }
 
 // Dockerfile represents a parsed Dockerfile.
 type Dockerfile struct {
 	ExposedPorts []portConfig
-	HealthCheck  *healthCheck
+	HealthCheck  *HealthCheck
 	parsed       bool
 	path         string
 
@@ -164,11 +165,11 @@ func parse(content string) (*Dockerfile, error) {
 			currentPorts := parseExpose(inst)
 			df.ExposedPorts = append(df.ExposedPorts, currentPorts...)
 		case "healthcheck":
-			healthCheckOptions, err := parseHealthCheck(inst)
+			healthcheckOptions, err := parseHealthCheck(inst)
 			if err != nil {
 				return nil, err
 			}
-			df.HealthCheck = healthCheckOptions
+			df.HealthCheck = healthcheckOptions
 		}
 	}
 	return &df, nil
@@ -229,9 +230,7 @@ func parseExpose(line string) []portConfig {
 }
 
 // parseHealthCheck takes a HEALTHCHECK directives and turns into a healthCheck struct.
-func parseHealthCheck(content string) (*healthCheck, error) {
-	var hc healthCheck
-
+func parseHealthCheck(content string) (*HealthCheck, error) {
 	if content[hcInstrStartIndex:] == "NONE" {
 		return nil, nil
 	}
@@ -249,18 +248,18 @@ func parseHealthCheck(content string) (*healthCheck, error) {
 		return nil, err
 	}
 
-	hc = healthCheck{
-		interval:    uint16(interval.Seconds()),
-		timeout:     uint16(timeout.Seconds()),
-		startPeriod: uint16(startPeriod.Seconds()),
-		retries:     uint16(retries),
-		cmd:         regexp.MustCompile("CMD.*").FindString(content),
-	}
-	return &hc, nil
+	return &HealthCheck{
+		Interval:    interval,
+		Timeout:     timeout,
+		StartPeriod: startPeriod,
+		Retries:     retries,
+		Cmd:         []string{regexp.MustCompile("CMD.*").FindString(content)},
+	}, nil
 }
 
-// GetHealthCheck returns a healthCheck struct.
-func (df *Dockerfile) GetHealthCheck() (*healthCheck, error) {
+// GetHealthCheck parses the HEALTHCHECK instruction from the Dockerfile and returns it.
+// If the HEALTHCHECK is NONE or there is no instruction, returns nil.
+func (df *Dockerfile) GetHealthCheck() (*HealthCheck, error) {
 	if !df.parsed {
 		if err := df.parse(); err != nil {
 			return nil, err
