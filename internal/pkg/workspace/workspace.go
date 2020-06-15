@@ -236,14 +236,14 @@ func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
 	return ws.read(svc, addonsDirName, fname)
 }
 
-// WriteAddon writes the content of an addon file under "{svc}/addons/{storageName}.yml".
+// WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
-func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, storageName string) (string, error) {
+func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {
 	data, err := content.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal binary addon content: %w", err)
 	}
-	fname := storageName + ymlFileExtension
+	fname := name + ymlFileExtension
 	return ws.write(data, svc, addonsDirName, fname)
 }
 
