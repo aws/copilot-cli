@@ -12,6 +12,7 @@ import (
 	addon "github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
@@ -643,6 +644,23 @@ func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
 	return addon.NewS3(props), nil
 }
 
+func (o *initStorageOpts) RecommendedActions() []string {
+	var storageTypeEnvVar string
+	switch o.storageType {
+	case dynamoDBStorageType:
+		storageTypeEnvVar = "TableName"
+	case s3StorageType:
+		storageTypeEnvVar = "BucketName"
+	}
+	newVar := template.ToSnakeCase(logicalIDSafe(o.storageName) + storageTypeEnvVar)
+
+	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
+
+	return []string{
+		fmt.Sprintf("Update your service code to leverage the injected environment variable %s", color.HighlightCode(newVar)),
+		fmt.Sprintf("Run %s to deploy your storage resources to your environments.", color.HighlightCode(svcDeployCmd)),
+	}
+}
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
@@ -673,9 +691,9 @@ func BuildStorageInitCmd() *cobra.Command {
 				return err
 			}
 			log.Infoln("Recommended follow-up actions:")
-			// for _, followup := range opts.RecommendedActions() {
-			// 	log.Infof("- %s\n", followup)
-			// }
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
 			return nil
 		}),
 	}
