@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -109,7 +109,7 @@ func TestBackendService_Template(t *testing.T) {
 						Timeout:     aws.Int64(10),
 					},
 					NestedStack: &template.ServiceNestedStackOpts{
-						StackName:       addons.StackName,
+						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
 					},
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)

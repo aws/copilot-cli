@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	addon "github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -563,21 +563,21 @@ func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 	}
 }
 
-func newAddonsDDBAttribute(input string) (*addons.DDBAttribute, error) {
+func newAddonsDDBAttribute(input string) (*addon.DDBAttribute, error) {
 	attr, err := getAttrFromKey(input)
 	if err != nil {
 		return nil, err
 	}
-	return &addons.DDBAttribute{
+	return &addon.DDBAttribute{
 		Name:     aws.String(attr.name),
 		DataType: aws.String(attr.dataType),
 	}, nil
 }
 
-func newAddonsLSI(partitionKey string, lsis []string) ([]addons.LocalSecondaryIndex, error) {
-	var output []addons.LocalSecondaryIndex
+func newAddonsLSI(partitionKey string, lsis []string) ([]addon.LocalSecondaryIndex, error) {
+	var output []addon.LocalSecondaryIndex
 	for _, lsi := range lsis {
-		output = append(output, addons.LocalSecondaryIndex{
+		output = append(output, addon.LocalSecondaryIndex{
 			PartitionKey: aws.String(partitionKey),
 			SortKey:      aws.String(lsi),
 			Name:         aws.String(lsi),
@@ -586,10 +586,10 @@ func newAddonsLSI(partitionKey string, lsis []string) ([]addons.LocalSecondaryIn
 	return output, nil
 }
 
-func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
-	props := addons.DynamoDbAddonProps{}
+func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
+	props := addon.DynamoDBProps{}
 
-	var attributes []addons.DDBAttribute
+	var attributes []addon.DDBAttribute
 	partKey, err := newAddonsDDBAttribute(o.partitionKey)
 	if err != nil {
 		return nil, err
@@ -626,21 +626,21 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addons.DynamoDB, error) {
 		props.LSIs = lsiConfig
 	}
 
-	props.StorageProps = &addons.StorageProps{
+	props.StorageProps = &addon.StorageProps{
 		Name:         o.storageName,
 		ResourceName: logicalIDSafe(o.storageName),
 	}
-	return addons.NewDynamoDBAddon(&props), nil
+	return addon.NewDynamoDB(&props), nil
 }
 
-func (o *initStorageOpts) newS3Addon() (*addons.S3, error) {
-	props := &addons.S3AddonProps{
-		StorageProps: &addons.StorageProps{
+func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
+	props := &addon.S3Props{
+		StorageProps: &addon.StorageProps{
 			Name:         o.storageName,
 			ResourceName: logicalIDSafe(o.storageName),
 		},
 	}
-	return addons.NewS3Addon(props), nil
+	return addon.NewS3(props), nil
 }
 
 func BuildStorageInitCmd() *cobra.Command {

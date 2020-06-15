@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package addons contains the service to manage addons.
-package addons
+package addon
 
 import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
