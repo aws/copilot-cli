@@ -23,4 +23,4 @@ stages:{{range .Stages}}
       name: {{.Name}}
       # Optional: use test commands to validate this stage of your build.
       # test_commands: {{.TestCommands}}
-  {{end}}{{end}}
+{{end}}{{end}}
