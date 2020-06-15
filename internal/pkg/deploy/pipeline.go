@@ -163,6 +163,7 @@ func (s *Source) Owner() (string, error) {
 type PipelineStage struct {
 	*AssociatedEnvironment
 	LocalServices []string
+	TestCommands  []string
 }
 
 // ServiceTemplatePath returns the full path to the service CFN template
