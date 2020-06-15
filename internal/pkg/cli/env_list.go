@@ -48,14 +48,6 @@ func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 	}, nil
 }
 
-// Validate returns an error if the values passed by flags are invalid.
-func (o *listEnvOpts) Validate() error {
-	if o.AppName() == "" {
-		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
-	}
-	return nil
-}
-
 // Ask asks for fields that are required but not passed in.
 func (o *listEnvOpts) Ask() error {
 	if o.AppName() != "" {
@@ -133,9 +125,6 @@ func BuildEnvListCmd() *cobra.Command {
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newListEnvOpts(vars)
 			if err != nil {
-				return err
-			}
-			if err := opts.Validate(); err != nil {
 				return err
 			}
 			if err := opts.Ask(); err != nil {
