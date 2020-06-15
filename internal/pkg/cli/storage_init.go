@@ -497,7 +497,7 @@ func (o *initStorageOpts) validateServiceName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	return o.createAddons()
+	return o.createAddon()
 }
 
 var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
@@ -521,8 +521,8 @@ func getAttrFromKey(input string) (attribute, error) {
 	}, nil
 }
 
-func (o *initStorageOpts) createAddons() error {
-	addonCf, err := o.newAddons()
+func (o *initStorageOpts) createAddon() error {
+	addonCf, err := o.newAddon()
 	if err != nil {
 		return err
 	}
@@ -548,7 +548,7 @@ func (o *initStorageOpts) createAddons() error {
 	case s3StorageType:
 		addonFriendlyText = s3BucketFriendlyText
 	default:
-		return fmt.Errorf(fmtErrInvalidStorageType, storageType, prettify(storageTypes))
+		return fmt.Errorf(fmtErrInvalidStorageType, o.storageType, prettify(storageTypes))
 	}
 	log.Successf(addonMsgFmt,
 		color.Emphasize(addonFriendlyText),
@@ -563,7 +563,7 @@ is associated with.`))
 
 	return nil
 }
-func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
+func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
 	switch o.storageType {
 	case dynamoDBStorageType:
 		return o.newDynamoDBAddon()
@@ -574,7 +574,7 @@ func (o *initStorageOpts) newAddons() (encoding.BinaryMarshaler, error) {
 	}
 }
 
-func newAddonsDDBAttribute(input string) (*addon.DDBAttribute, error) {
+func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
 	attr, err := getAttrFromKey(input)
 	if err != nil {
 		return nil, err
@@ -585,7 +585,7 @@ func newAddonsDDBAttribute(input string) (*addon.DDBAttribute, error) {
 	}, nil
 }
 
-func newAddonsLSI(partitionKey string, lsis []string) ([]addon.LocalSecondaryIndex, error) {
+func newLSI(partitionKey string, lsis []string) ([]addon.LocalSecondaryIndex, error) {
 	var output []addon.LocalSecondaryIndex
 	for _, lsi := range lsis {
 		output = append(output, addon.LocalSecondaryIndex{
@@ -601,14 +601,14 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	props := addon.DynamoDBProps{}
 
 	var attributes []addon.DDBAttribute
-	partKey, err := newAddonsDDBAttribute(o.partitionKey)
+	partKey, err := newDDBAttribute(o.partitionKey)
 	if err != nil {
 		return nil, err
 	}
 	props.PartitionKey = partKey.Name
 	attributes = append(attributes, *partKey)
 	if !o.noSort {
-		sortKey, err := newAddonsDDBAttribute(o.sortKey)
+		sortKey, err := newDDBAttribute(o.sortKey)
 		if err != nil {
 			return nil, err
 		}
@@ -616,7 +616,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 		props.SortKey = sortKey.Name
 	}
 	for _, att := range o.attributes {
-		currAtt, err := newAddonsDDBAttribute(att)
+		currAtt, err := newDDBAttribute(att)
 		if err != nil {
 			return nil, err
 		}
@@ -627,7 +627,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	props.HasLSI = false
 	if !o.noLsi {
 		props.HasLSI = true
-		lsiConfig, err := newAddonsLSI(
+		lsiConfig, err := newLSI(
 			aws.StringValue(partKey.Name),
 			o.lsiSorts,
 		)
@@ -671,6 +671,8 @@ func (o *initStorageOpts) RecommendedActions() []string {
 		fmt.Sprintf("Run %s to deploy your storage resources to your environments.", color.HighlightCode(svcDeployCmd)),
 	}
 }
+
+// BuildStorageInitCmd builds the command and adds it to the CLI.
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
