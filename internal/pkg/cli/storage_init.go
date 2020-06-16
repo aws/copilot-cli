@@ -81,7 +81,7 @@ You must specify a sort key if you wish to add alternate sort keys later.`
 	storageInitDDBLSIHelp   = `Alternate sort keys create Local Secondary Indexes, which allow you to sort the table using the same 
 partition key but a different sort key.`
 
-	storageInitDDBLSINamePrompt  = "What other attributes would you like to use as " + color.Emphasize("alternate sort keys") + "?"
+	storageInitDDBLSINamePrompt  = "What other attributes would you like to use as " + color.Emphasize("alternate sort keys") + "?\n"
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
