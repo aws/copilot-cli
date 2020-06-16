@@ -15,44 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestListEnvOpts_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inAppName string
-
-		wantedErr string
-	}{
-		"valid app": {
-			inAppName: "phonetool",
-		},
-		"invalid app": {
-			inAppName: "",
-
-			wantedErr: fmt.Sprint("no application found: run `app init` or `cd` into your workspace please"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			opts := &initEnvOpts{
-				initEnvVars: initEnvVars{
-					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
-				},
-			}
-
-			// WHEN
-			err := opts.Validate()
-
-			// THEN
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
-			} else {
-				require.Nil(t, err)
-			}
-		})
-	}
-}
-
 func TestEnvList_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inputApp string

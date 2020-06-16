@@ -98,6 +98,7 @@ func (cs *changeSet) create(conf *stackConfig) error {
 		Capabilities: aws.StringSlice([]string{
 			cloudformation.CapabilityCapabilityIam,
 			cloudformation.CapabilityCapabilityNamedIam,
+			cloudformation.CapabilityCapabilityAutoExpand,
 		}),
 	})
 	if err != nil {

@@ -72,8 +72,13 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages:    []string{"chicken", "wings"},
-			expectedStages: []PipelineStage{{"chicken"}, {"wings"}},
+			inputStages: []string{"chicken", "wings"},
+			expectedStages: []PipelineStage{
+				{Name: "chicken",
+					TestCommands: []string(nil)},
+				{Name: "wings",
+					TestCommands: []string(nil)},
+			},
 		},
 	}
 
@@ -182,8 +187,10 @@ source:
 stages:
     -
       name: chicken
+      test_commands: []
     -
       name: wings
+      test_commands: []
 `,
 			expectedManifest: &PipelineManifest{
 				Name:    "pipepiper",
@@ -197,8 +204,15 @@ stages:
 					},
 				},
 				Stages: []PipelineStage{
-					PipelineStage{"chicken"},
-					PipelineStage{"wings"}},
+					{
+						Name:         "chicken",
+						TestCommands: []string{},
+					},
+					{
+						Name:         "wings",
+						TestCommands: []string{},
+					},
+				},
 			},
 		},
 	}
