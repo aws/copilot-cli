@@ -18,24 +18,19 @@ type storage struct {
 	Name         *string
 }
 
-// DynamoDB contains configuration options which fully descibe a DynamoDB table.DynamoDB
+// DynamoDB contains configuration options which fully descibe a DynamoDB table.
 // Implements the encoding.BinaryMarshaler interface.
 type DynamoDB struct {
-	storage
-
-	Attributes   []DDBAttribute
-	LSIs         []LocalSecondaryIndex
-	HasLSI       bool
-	SortKey      *string
-	PartitionKey *string
+	DynamoDBProps
 
 	parser template.Parser
 }
 
-// S3 contains configuration options which fully describe an S3 bucker.
+// S3 contains configuration options which fully describe an S3 bucket.
 // Implements the encoding.BinaryMarshaler interface.
 type S3 struct {
-	storage
+	S3Props
+
 	parser template.Parser
 }
 
@@ -54,20 +49,20 @@ type S3Props struct {
 type DynamoDBProps struct {
 	*StorageProps
 	Attributes   []DDBAttribute
-	LSIs         []LocalSecondaryIndex
+	LSIs         []DDBLocalSecondaryIndex
 	SortKey      *string
 	PartitionKey *string
 	HasLSI       bool
 }
 
-// DDBAttribute holds the attribute definition of a DynamoDB attribute (keys, local secondary indices)
+// DDBAttribute holds the attribute definition of a DynamoDB attribute (keys, local secondary indices).
 type DDBAttribute struct {
 	Name     *string
 	DataType *string // Must be one of "N", "S", "B"
 }
 
-// LocalSecondaryIndex holds a representation of an LSI
-type LocalSecondaryIndex struct {
+// DDBLocalSecondaryIndex holds a representation of an LSI.
+type DDBLocalSecondaryIndex struct {
 	PartitionKey *string
 	SortKey      *string
 	Name         *string
@@ -84,22 +79,13 @@ func (d *DynamoDB) MarshalBinary() ([]byte, error) {
 }
 
 // NewDynamoDB creates a DynamoDB cloudformation template specifying attributes,
-// primary key schema, and local secondary index configuration
+// primary key schema, and local secondary index configuration.
 func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
-	ddbCf := &DynamoDB{
-		storage: storage{
-			Name:         &input.Name,
-			ResourceName: &input.ResourceName,
-		},
-		Attributes:   input.Attributes,
-		LSIs:         input.LSIs,
-		HasLSI:       input.HasLSI,
-		PartitionKey: input.PartitionKey,
-		SortKey:      input.SortKey,
+	return &DynamoDB{
+		DynamoDBProps: *input,
 
 		parser: template.New(),
 	}
-	return ddbCf
 }
 
 // MarshalBinary serializes the S3 object into a binary YAML CF template.
@@ -114,13 +100,9 @@ func (s *S3) MarshalBinary() ([]byte, error) {
 
 // NewS3 creates a new S3 marshaler which can be used to write CF via addonWriter.
 func NewS3(input *S3Props) *S3 {
-	s3Cf := &S3{
-		storage: storage{
-			Name:         &input.Name,
-			ResourceName: &input.ResourceName,
-		},
+	return &S3{
+		S3Props: *input,
 
 		parser: template.New(),
 	}
-	return s3Cf
 }

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	addon "github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -584,10 +584,10 @@ func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
 	}, nil
 }
 
-func newLSI(partitionKey string, lsis []string) ([]addon.LocalSecondaryIndex, error) {
-	var output []addon.LocalSecondaryIndex
+func newLSI(partitionKey string, lsis []string) ([]addon.DDBLocalSecondaryIndex, error) {
+	var output []addon.DDBLocalSecondaryIndex
 	for _, lsi := range lsis {
-		output = append(output, addon.LocalSecondaryIndex{
+		output = append(output, addon.DDBLocalSecondaryIndex{
 			PartitionKey: &partitionKey,
 			SortKey:      &lsi,
 			Name:         &lsi,
