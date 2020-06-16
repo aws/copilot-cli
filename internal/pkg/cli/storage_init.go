@@ -17,7 +17,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -580,8 +579,8 @@ func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
 		return nil, err
 	}
 	return &addon.DDBAttribute{
-		Name:     aws.String(attr.name),
-		DataType: aws.String(attr.dataType),
+		Name:     &attr.name,
+		DataType: &attr.dataType,
 	}, nil
 }
 
@@ -589,9 +588,9 @@ func newLSI(partitionKey string, lsis []string) ([]addon.LocalSecondaryIndex, er
 	var output []addon.LocalSecondaryIndex
 	for _, lsi := range lsis {
 		output = append(output, addon.LocalSecondaryIndex{
-			PartitionKey: aws.String(partitionKey),
-			SortKey:      aws.String(lsi),
-			Name:         aws.String(lsi),
+			PartitionKey: &partitionKey,
+			SortKey:      &lsi,
+			Name:         &lsi,
 		})
 	}
 	return output, nil
@@ -628,7 +627,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	if !o.noLsi {
 		props.HasLSI = true
 		lsiConfig, err := newLSI(
-			aws.StringValue(partKey.Name),
+			*partKey.Name,
 			o.lsiSorts,
 		)
 		if err != nil {
@@ -662,6 +661,8 @@ func (o *initStorageOpts) RecommendedActions() []string {
 	case s3StorageType:
 		storageTypeEnvVar = "BucketName"
 	}
+
+	// TODO: refactor this into a template function, or standardize generating env var names in another way
 	newVar := template.ToSnakeCase(logicalIDSafe(o.storageName) + storageTypeEnvVar)
 
 	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
