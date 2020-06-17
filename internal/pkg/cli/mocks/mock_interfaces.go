@@ -2198,18 +2198,18 @@ func (m *MockwsAddonManager) EXPECT() *MockwsAddonManagerMockRecorder {
 }
 
 // WriteAddon mocks base method
-func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, storageName string) (string, error) {
+func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteAddon", f, svc, storageName)
+	ret := m.ctrl.Call(m, "WriteAddon", f, svc, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WriteAddon indicates an expected call of WriteAddon
-func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, storageName interface{}) *gomock.Call {
+func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, storageName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
 // ServiceNames mocks base method
