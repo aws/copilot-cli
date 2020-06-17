@@ -254,7 +254,7 @@ func validateKey(val interface{}) error {
 	if err != nil {
 		return errValueBadFormatWithPeriodUnderscore
 	}
-	err = validateDynamoDataType(attr.ddbDataType)
+	err = validateDynamoDataType(attr.dataType)
 	if err != nil {
 		return err
 	}

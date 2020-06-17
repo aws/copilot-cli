@@ -99,7 +99,7 @@ func (t *Template) parseSvc(name string, data interface{}, options ...ParseOptio
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":    toSnakeCase,
+			"toSnakeCase":    ToSnakeCase,
 			"hasSecrets":     hasSecrets,
 			"stringifySlice": stringifySlice,
 			"quoteAll":       quoteAll,
@@ -107,9 +107,9 @@ func withSvcParsingFuncs() ParseOption {
 	}
 }
 
-// toSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
+// ToSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
 // For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
-func toSnakeCase(s string) string {
+func ToSnakeCase(s string) string {
 	var name string
 	for i, r := range s {
 		if unicode.IsUpper(r) && i != 0 {

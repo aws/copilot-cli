@@ -6,7 +6,7 @@ package stack
 import (
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 )
 
 const (
@@ -31,7 +31,7 @@ func safeLogicalIDToOriginal(safeLogicalID string) string {
 	return strings.ReplaceAll(safeLogicalID, dashReplacement, "-")
 }
 
-func secretOutputNames(outputs []addons.Output) []string {
+func secretOutputNames(outputs []addon.Output) []string {
 	var secrets []string
 	for _, out := range outputs {
 		if out.IsSecret {
@@ -41,7 +41,7 @@ func secretOutputNames(outputs []addons.Output) []string {
 	return secrets
 }
 
-func managedPolicyOutputNames(outputs []addons.Output) []string {
+func managedPolicyOutputNames(outputs []addon.Output) []string {
 	var policies []string
 	for _, out := range outputs {
 		if out.IsManagedPolicy {
@@ -51,7 +51,7 @@ func managedPolicyOutputNames(outputs []addons.Output) []string {
 	return policies
 }
 
-func envVarOutputNames(outputs []addons.Output) []string {
+func envVarOutputNames(outputs []addon.Output) []string {
 	var envVars []string
 	for _, out := range outputs {
 		if !out.IsSecret && !out.IsManagedPolicy {

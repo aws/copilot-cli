@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	addon "github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/golang/mock/gomock"
@@ -344,7 +344,7 @@ func TestSvcDeployOpts_pushAddonsTemplateToS3Bucket(t *testing.T) {
 		"should return empty url if the service doesn't have any addons": {
 			inputSvc: "mockSvc",
 			mockAddons: func(m *mocks.Mocktemplater) {
-				m.EXPECT().Template().Return("", &addons.ErrDirNotExist{
+				m.EXPECT().Template().Return("", &addon.ErrDirNotExist{
 					SvcName: "mockSvc",
 				})
 			},

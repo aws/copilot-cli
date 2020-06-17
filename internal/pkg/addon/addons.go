@@ -1,8 +1,8 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package addons contains the service to manage addons.
-package addons
+// Package addon contains the service to manage addons.
+package addon
 
 import (
 	"fmt"

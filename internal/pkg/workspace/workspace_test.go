@@ -594,9 +594,9 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 
 func TestWorkspace_WriteAddon(t *testing.T) {
 	testCases := map[string]struct {
-		marshaler mockBinaryMarshaler
-		svc       string
-		fname     string
+		marshaler   mockBinaryMarshaler
+		svc         string
+		storageName string
 
 		wantedPath string
 		wantedErr  error
@@ -605,8 +605,8 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			marshaler: mockBinaryMarshaler{
 				content: []byte("hello"),
 			},
-			svc:   "webhook",
-			fname: "s3.yml",
+			svc:         "webhook",
+			storageName: "s3",
 
 			wantedPath: "/copilot/webhook/addons/s3.yml",
 		},
@@ -614,8 +614,8 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			marshaler: mockBinaryMarshaler{
 				err: errors.New("some error"),
 			},
-			svc:   "webhook",
-			fname: "s3.yml",
+			svc:         "webhook",
+			storageName: "s3",
 
 			wantedErr: errors.New("marshal binary addon content: some error"),
 		},
@@ -636,7 +636,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			}
 
 			// WHEN
-			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.fname)
+			actualPath, actualErr := ws.WriteAddon(tc.marshaler, tc.svc, tc.storageName)
 
 			// THEN
 			if tc.wantedErr != nil {

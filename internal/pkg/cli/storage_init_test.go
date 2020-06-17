@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -738,4 +739,137 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStorageInitOpts_Execute(t *testing.T) {
+	const (
+		wantedAppName      = "ddos"
+		wantedSvcName      = "frontend"
+		wantedBucketName   = "coolBucket"
+		wantedTableName    = "coolTable"
+		wantedPartitionKey = "DogName:S"
+		wantedSortKey      = "PhotoId:N"
+	)
+	fileExistsError := &workspace.ErrFileExists{FileName: "my-file"}
+	testCases := map[string]struct {
+		inAppName     string
+		inStorageType string
+		inSvcName     string
+		inStorageName string
+		inAttributes  []string
+		inPartition   string
+		inSort        string
+		inLSISorts    []string
+		inNoLsi       bool
+		inNoSort      bool
+
+		mockWs func(m *mocks.MockwsAddonManager)
+
+		wantedErr error
+	}{
+		"happy calls for S3": {
+			inAppName:     wantedAppName,
+			inStorageType: s3StorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-bucket",
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("/frontend/addons/my-bucket.yml", nil)
+			},
+
+			wantedErr: nil,
+		},
+		"happy calls for DDB": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inNoLsi:       true,
+			inNoSort:      true,
+			inPartition:   wantedPartitionKey,
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
+			},
+
+			wantedErr: nil,
+		},
+		"happy calls for DDB with LSI": {
+			inAppName:     wantedAppName,
+			inStorageType: dynamoDBStorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-table",
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+			inAttributes:  []string{"goodness:N"},
+			inLSISorts:    []string{"goodness"},
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
+			},
+
+			wantedErr: nil,
+		},
+		"error addon exists": {
+			inAppName:     wantedAppName,
+			inStorageType: s3StorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-bucket",
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("", fileExistsError)
+			},
+
+			wantedErr: fmt.Errorf("addon already exists: %w", fileExistsError),
+		},
+		"unrecognized error handled": {
+			inAppName:     wantedAppName,
+			inStorageType: s3StorageType,
+			inSvcName:     wantedSvcName,
+			inStorageName: "my-bucket",
+
+			mockWs: func(m *mocks.MockwsAddonManager) {
+				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("", errors.New("some error"))
+			},
+
+			wantedErr: fmt.Errorf("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAddon := mocks.NewMockwsAddonManager(ctrl)
+			opts := initStorageOpts{
+				initStorageVars: initStorageVars{
+					GlobalOpts: &GlobalOpts{
+						appName: tc.inAppName,
+					},
+					storageType:  tc.inStorageType,
+					storageName:  tc.inStorageName,
+					storageSvc:   tc.inSvcName,
+					attributes:   tc.inAttributes,
+					partitionKey: tc.inPartition,
+					sortKey:      tc.inSort,
+					lsiSorts:     tc.inLSISorts,
+					noLsi:        tc.inNoLsi,
+					noSort:       tc.inNoSort,
+				},
+				ws: mockAddon,
+			}
+			tc.mockWs(mockAddon)
+			// WHEN
+			err := opts.Execute()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Nil(t, err)
+			}
+		})
+	}
+
 }

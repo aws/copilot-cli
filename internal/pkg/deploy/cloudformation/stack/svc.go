@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -141,19 +141,19 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 	stack, err := s.addons.Template()
 	if err != nil {
-		var noAddonsErr *addons.ErrDirNotExist
+		var noAddonsErr *addon.ErrDirNotExist
 		if !errors.As(err, &noAddonsErr) {
 			return nil, fmt.Errorf("generate addons template for service %s: %w", s.name, err)
 		}
 		return nil, nil // Addons directory does not exist, so there are no outputs and error.
 	}
 
-	out, err := addons.Outputs(stack)
+	out, err := addon.Outputs(stack)
 	if err != nil {
 		return nil, fmt.Errorf("get addons outputs for service %s: %w", s.name, err)
 	}
 	return &template.ServiceNestedStackOpts{
-		StackName:       addons.StackName,
+		StackName:       addon.StackName,
 		VariableOutputs: envVarOutputNames(out),
 		SecretOutputs:   secretOutputNames(out),
 		PolicyOutputs:   managedPolicyOutputNames(out),

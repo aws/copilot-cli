@@ -95,7 +95,7 @@ func TestToSnakeCase(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, toSnakeCase(tc.in))
+			require.Equal(t, tc.wanted, ToSnakeCase(tc.in))
 		})
 	}
 }
