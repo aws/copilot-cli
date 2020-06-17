@@ -97,7 +97,8 @@ type Source struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name string `yaml:"name`
+	Name         string   `yaml:"name"`
+	TestCommands []string `yaml:"test_commands,omitempty"`
 }
 
 // CreatePipeline returns a pipeline manifest object.

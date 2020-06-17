@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -299,6 +300,7 @@ type domainValidator interface {
 
 type dockerfileParser interface {
 	GetExposedPorts() ([]uint16, error)
+	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
 type serviceArnGetter interface {

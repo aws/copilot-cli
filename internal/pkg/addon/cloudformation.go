@@ -6,6 +6,7 @@ package addon
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +18,7 @@ const (
 	parametersSection
 	mappingsSection
 	conditionsSection
+	transformSection
 	resourcesSection
 	outputsSection
 )
@@ -30,68 +32,68 @@ type cfnTemplate struct {
 	Transform  yaml.Node `yaml:"Transform,omitempty"`
 	Resources  yaml.Node `yaml:"Resources"` // Don't omit as this is the only section that's required by CloudFormation.
 	Outputs    yaml.Node `yaml:"Outputs,omitempty"`
+
+	name            string
+	templateNameFor map[*yaml.Node]string // Maps a node to the name of the first template where it was defined.
+}
+
+func newCFNTemplate(name string) *cfnTemplate {
+	return &cfnTemplate{
+		name:            name,
+		templateNameFor: make(map[*yaml.Node]string),
+	}
 }
 
 // merge combines non-empty fields of other with t's fields.
-func (t *cfnTemplate) merge(other cfnTemplate) error {
+func (t *cfnTemplate) merge(other *cfnTemplate) error {
 	if err := t.mergeMetadata(other.Metadata); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(metadataSection, t, other, err)
 	}
 	if err := t.mergeParameters(other.Parameters); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(parametersSection, t, other, err)
 	}
 	if err := t.mergeMappings(other.Mappings); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(mappingsSection, t, other, err)
 	}
 	if err := t.mergeConditions(other.Conditions); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(conditionsSection, t, other, err)
 	}
 	if err := t.mergeTransform(other.Transform); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(transformSection, t, other, err)
 	}
 	if err := t.mergeResources(other.Resources); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(resourcesSection, t, other, err)
 	}
 	if err := t.mergeOutputs(other.Outputs); err != nil {
-		return err
+		return wrapKeyAlreadyExistsErr(outputsSection, t, other, err)
 	}
+
+	t.assignNewNodesTo(other.name)
 	return nil
 }
 
 // mergeMetadata updates t's Metadata with additional metadata.
 // If the key already exists in Metadata but with a different definition, returns errMetadataAlreadyExists.
 func (t *cfnTemplate) mergeMetadata(metadata yaml.Node) error {
-	if err := mergeSingleLevelMaps(&t.Metadata, &metadata); err != nil {
-		return wrapKeyAlreadyExistsErr(metadataSection, err)
-	}
-	return nil
+	return mergeSingleLevelMaps(&t.Metadata, &metadata)
 }
 
 // mergeParameters updates t's Parameters with additional parameters.
 // If the parameterLogicalID already exists but with a different value, returns errParameterAlreadyExists.
 func (t *cfnTemplate) mergeParameters(params yaml.Node) error {
-	if err := mergeSingleLevelMaps(&t.Parameters, &params); err != nil {
-		return wrapKeyAlreadyExistsErr(parametersSection, err)
-	}
-	return nil
+	return mergeSingleLevelMaps(&t.Parameters, &params)
 }
 
 // mergeMappings updates t's Mappings with additional mappings.
 // If a mapping already exists with a different value, returns errMappingAlreadyExists.
 func (t *cfnTemplate) mergeMappings(mappings yaml.Node) error {
-	if err := mergeTwoLevelMaps(&t.Mappings, &mappings); err != nil {
-		return wrapKeyAlreadyExistsErr(mappingsSection, err)
-	}
-	return nil
+	return mergeTwoLevelMaps(&t.Mappings, &mappings)
 }
 
 // mergeConditions updates t's Conditions with additional conditions.
 // If a condition already exists with a different value, returns errConditionAlreadyExists.
 func (t *cfnTemplate) mergeConditions(conditions yaml.Node) error {
-	if err := mergeSingleLevelMaps(&t.Conditions, &conditions); err != nil {
-		return wrapKeyAlreadyExistsErr(conditionsSection, err)
-	}
-	return nil
+	return mergeSingleLevelMaps(&t.Conditions, &conditions)
 }
 
 // mergeTransform adds transform's contents to t's Transform.
@@ -103,19 +105,49 @@ func (t *cfnTemplate) mergeTransform(transform yaml.Node) error {
 // mergeResources updates t's Resources with additional resources.
 // If a resource already exists with a different value, returns errResourceAlreadyExists.
 func (t *cfnTemplate) mergeResources(resources yaml.Node) error {
-	if err := mergeSingleLevelMaps(&t.Resources, &resources); err != nil {
-		return wrapKeyAlreadyExistsErr(resourcesSection, err)
-	}
-	return nil
+	return mergeSingleLevelMaps(&t.Resources, &resources)
 }
 
 // mergeOutputs updates t's Outputs with additional outputs.
 // If an output already exists with a different value, returns errOutputAlreadyExists.
 func (t *cfnTemplate) mergeOutputs(outputs yaml.Node) error {
-	if err := mergeSingleLevelMaps(&t.Outputs, &outputs); err != nil {
-		return wrapKeyAlreadyExistsErr(outputsSection, err)
+	return mergeSingleLevelMaps(&t.Outputs, &outputs)
+}
+
+// assignNewNodesTo associates every new node added to the template t with the tplName.
+func (t *cfnTemplate) assignNewNodesTo(tplName string) {
+	if t == nil {
+		return
 	}
-	return nil
+
+	var assign func(node *yaml.Node)
+	assign = func(node *yaml.Node) {
+		if node == nil {
+			return
+		}
+		if _, ok := t.templateNameFor[node]; ok {
+			// node is already associated with a previous template.
+			return
+		}
+		t.templateNameFor[node] = tplName
+		for _, c := range node.Content {
+			assign(c)
+		}
+	}
+
+	// Call assign() only on fields that represent CloudFormation sections.
+	tpl := reflect.ValueOf(*t)
+	for i := 0; i < tpl.NumField(); i += 1 {
+		field := tpl.Field(i)
+		if !field.CanInterface() {
+			// Fields that are not exported will panic if we call Interface(), therefore
+			// check the type only against exported cfnTemplate fields.
+			continue
+		}
+		if section, ok := field.Interface().(yaml.Node); ok {
+			assign(&section)
+		}
+	}
 }
 
 // mergeTwoLevelMaps merges the top and second level keys of src node to dst.

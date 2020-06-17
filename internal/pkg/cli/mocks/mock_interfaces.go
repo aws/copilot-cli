@@ -14,6 +14,7 @@ import (
 	deploy "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
 	stack "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
+	dockerfile "github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
 	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
 	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	session "github.com/aws/aws-sdk-go/aws/session"
@@ -3104,6 +3105,21 @@ func (m *MockdockerfileParser) GetExposedPorts() ([]uint16, error) {
 func (mr *MockdockerfileParserMockRecorder) GetExposedPorts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExposedPorts", reflect.TypeOf((*MockdockerfileParser)(nil).GetExposedPorts))
+}
+
+// GetHealthCheck mocks base method
+func (m *MockdockerfileParser) GetHealthCheck() (*dockerfile.HealthCheck, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHealthCheck")
+	ret0, _ := ret[0].(*dockerfile.HealthCheck)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHealthCheck indicates an expected call of GetHealthCheck
+func (mr *MockdockerfileParserMockRecorder) GetHealthCheck() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHealthCheck", reflect.TypeOf((*MockdockerfileParser)(nil).GetHealthCheck))
 }
 
 // MockserviceArnGetter is a mock of serviceArnGetter interface

@@ -35,7 +35,7 @@ type CreatePipelineInput struct {
 	Source *Source
 
 	// The stages of the pipeline. The order of stages in this list
-	// will be the order we deploy to
+	// will be the order we deploy to.
 	Stages []PipelineStage
 
 	// A list of artifact buckets and corresponding KMS keys that will
@@ -138,7 +138,7 @@ func (s *Source) parseOwnerAndRepo() (*ownerAndRepo, error) {
 }
 
 // Repository returns the repository portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2"
+// given "aws/amazon-ecs-cli-v2", this function returns "amazon-ecs-cli-v2".
 func (s *Source) Repository() (string, error) {
 	oAndR, err := s.parseOwnerAndRepo()
 	if err != nil {
@@ -148,7 +148,7 @@ func (s *Source) Repository() (string, error) {
 }
 
 // Owner returns the repository owner portion. For example,
-// given "aws/amazon-ecs-cli-v2", this function returns "aws"
+// given "aws/amazon-ecs-cli-v2", this function returns "aws".
 func (s *Source) Owner() (string, error) {
 	oAndR, err := s.parseOwnerAndRepo()
 	if err != nil {
@@ -159,10 +159,11 @@ func (s *Source) Owner() (string, error) {
 
 // PipelineStage represents configuration for each deployment stage
 // of a workspace. A stage consists of the Config Environment the pipeline
-// is deloying to and the containerized services that will be deployed.
+// is deploying to and the containerized services that will be deployed.
 type PipelineStage struct {
 	*AssociatedEnvironment
 	LocalServices []string
+	TestCommands  []string
 }
 
 // ServiceTemplatePath returns the full path to the service CFN template
@@ -179,7 +180,7 @@ func (s *PipelineStage) ServiceTemplateConfigurationPath(svcName string) string 
 	)
 }
 
-// AssociatedEnvironment defines the necessary information a pipline stage
+// AssociatedEnvironment defines the necessary information a pipeline stage
 // needs for an Config Environment.
 type AssociatedEnvironment struct {
 	// Name of the environment, must be unique within an application.
