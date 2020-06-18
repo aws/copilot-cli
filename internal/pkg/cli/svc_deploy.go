@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	addon "github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	awscloudformation "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/s3"
@@ -266,7 +266,7 @@ func (o *deploySvcOpts) configureClients() error {
 	// CF client against env account profile AND target environment region
 	o.svcCFN = cloudformation.New(envSession)
 
-	addonsSvc, err := addons.New(o.Name)
+	addonsSvc, err := addon.New(o.Name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -337,7 +337,7 @@ func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 func (o *deploySvcOpts) pushAddonsTemplateToS3Bucket() (string, error) {
 	template, err := o.addons.Template()
 	if err != nil {
-		var notExistErr *addons.ErrDirNotExist
+		var notExistErr *addon.ErrDirNotExist
 		if errors.As(err, &notExistErr) {
 			// addons doesn't exist for service, the url is empty.
 			return "", nil

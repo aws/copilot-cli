@@ -9,12 +9,12 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 Resources:
-  {{.TableResourceName}}:
+  {{.ResourceName}}:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     Properties:
-      TableName: !Sub ${App}-${Env}-${Name}-{{.TableName}}
-      AttributeDefinitions:
+      TableName: !Sub ${App}-${Env}-${Name}-{{.Name}}
+      AttributeDefinitions:{{range .Attributes}}
         - AttributeName: {{.Name}}
           AttributeType: "{{.DataType}}"{{end}}
       BillingMode: PAY_PER_REQUEST
@@ -33,12 +33,12 @@ Resources:
           Projection:
             ProjectionType: ALL{{end}}{{end}}
 
-  {{.TableResourceName}}AccessPolicy:
+  {{.ResourceName}}AccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
         - Grants CRUD access to the Dynamo DB table ${Table}
-        - { Table: !Ref {{.TableResourceName}} }
+        - { Table: !Ref {{.ResourceName}} }
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -56,18 +56,18 @@ Resources:
               - dynamodb:Delete*
               - dynamodb:Update*
               - dynamodb:PutItem
-            Resource: !Sub ${ {{.TableResourceName}}.Arn}
+            Resource: !Sub ${ {{.ResourceName}}.Arn}
           - Sid: DDBLSIActions
             Action:
               - dynamodb:Query
               - dynamodb:Scan
             Effect: Allow
-            Resource: !Sub ${ {{.TableResourceName}}.Arn}/Index/*
+            Resource: !Sub ${ {{.ResourceName}}.Arn}/Index/*
 
 Outputs:
-  {{.TableResourceName}}TableName:
+  {{.ResourceName}}TableName:
     Description: "The name of this DynamoDB."
-    Value: !Ref {{.TableResourceName}}
-  {{.TableResourceName}}AccessPolicy:
+    Value: !Ref {{.ResourceName}}
+  {{.ResourceName}}AccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role."
-    Value: !Ref {{.TableResourceName}}AccessPolicy
+    Value: !Ref {{.ResourceName}}AccessPolicy

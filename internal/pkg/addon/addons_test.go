@@ -1,7 +1,7 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package addons
+package addon
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

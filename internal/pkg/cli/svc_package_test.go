@@ -8,7 +8,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
@@ -308,7 +308,7 @@ count: 1`), nil)
 
 				mockAddons := mocks.NewMocktemplater(ctrl)
 				mockAddons.EXPECT().Template().
-					Return("", &addons.ErrDirNotExist{})
+					Return("", &addon.ErrDirNotExist{})
 
 				opts.store = mockStore
 				opts.ws = mockWs

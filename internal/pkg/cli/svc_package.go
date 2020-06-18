@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
@@ -30,7 +30,7 @@ const (
 )
 
 var initPackageAddonsSvc = func(o *packageSvcOpts) error {
-	addonsSvc, err := addons.New(o.Name)
+	addonsSvc, err := addon.New(o.Name)
 	if err != nil {
 		return fmt.Errorf("initiate addons service: %w", err)
 	}
@@ -179,7 +179,7 @@ func (o *packageSvcOpts) Execute() error {
 
 	addonsTemplate, err := o.getAddonsTemplate()
 	// return nil if addons dir doesn't exist.
-	var notExistErr *addons.ErrDirNotExist
+	var notExistErr *addon.ErrDirNotExist
 	if errors.As(err, &notExistErr) {
 		return nil
 	}
