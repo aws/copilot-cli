@@ -260,7 +260,8 @@ Resources:
                 Version: 1
                 Provider: Manual
               RunOrder: 1{{end}}{{range $svc := $stage.LocalServices}}
-            - Name: TestCommands{{if $stage.TestCommands}}
+          {{if $stage.TestCommands}}
+            - Name: TestCommands
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -268,9 +269,9 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommands{{$index}}
-              RunOrder: 1{{end}}
+              RunOrder: 1
               InputArtifacts:
-                - Name: SCCheckoutArtifact
+                - Name: SCCheckoutArtifact{{end}}
             - Name: CreateOrUpdate-{{$svc}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
