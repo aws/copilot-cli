@@ -203,7 +203,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 					// deleteWs
 					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
-					mocks.ws.EXPECT().DeleteAll().Return(nil),
+					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
 				)
 			},
@@ -244,7 +244,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 					// deleteWs
 					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
-					mocks.ws.EXPECT().DeleteAll().Return(nil),
+					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
 				)
 			},

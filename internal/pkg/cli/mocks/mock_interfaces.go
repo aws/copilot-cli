@@ -1708,18 +1708,18 @@ func (m *MockworkspaceDeleter) EXPECT() *MockworkspaceDeleterMockRecorder {
 	return m.recorder
 }
 
-// DeleteAll mocks base method
-func (m *MockworkspaceDeleter) DeleteAll() error {
+// DeleteWorkspaceFile mocks base method
+func (m *MockworkspaceDeleter) DeleteWorkspaceFile() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAll")
+	ret := m.ctrl.Call(m, "DeleteWorkspaceFile")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteAll indicates an expected call of DeleteAll
-func (mr *MockworkspaceDeleterMockRecorder) DeleteAll() *gomock.Call {
+// DeleteWorkspaceFile indicates an expected call of DeleteWorkspaceFile
+func (mr *MockworkspaceDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteAll))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteWorkspaceFile))
 }
 
 // MocksvcManifestReader is a mock of svcManifestReader interface
@@ -1889,43 +1889,6 @@ func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler)
 }
 
-// MockwsSvcDeleter is a mock of wsSvcDeleter interface
-type MockwsSvcDeleter struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsSvcDeleterMockRecorder
-}
-
-// MockwsSvcDeleterMockRecorder is the mock recorder for MockwsSvcDeleter
-type MockwsSvcDeleterMockRecorder struct {
-	mock *MockwsSvcDeleter
-}
-
-// NewMockwsSvcDeleter creates a new mock instance
-func NewMockwsSvcDeleter(ctrl *gomock.Controller) *MockwsSvcDeleter {
-	mock := &MockwsSvcDeleter{ctrl: ctrl}
-	mock.recorder = &MockwsSvcDeleterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsSvcDeleter) EXPECT() *MockwsSvcDeleterMockRecorder {
-	return m.recorder
-}
-
-// DeleteService mocks base method
-func (m *MockwsSvcDeleter) DeleteService(name string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteService", name)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteService indicates an expected call of DeleteService
-func (mr *MockwsSvcDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsSvcDeleter)(nil).DeleteService), name)
-}
-
 // MockwsServiceLister is a mock of wsServiceLister interface
 type MockwsServiceLister struct {
 	ctrl     *gomock.Controller
@@ -2038,20 +2001,6 @@ func NewMockwsPipelineDeleter(ctrl *gomock.Controller) *MockwsPipelineDeleter {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockwsPipelineDeleter) EXPECT() *MockwsPipelineDeleterMockRecorder {
 	return m.recorder
-}
-
-// DeletePipelineManifest mocks base method
-func (m *MockwsPipelineDeleter) DeletePipelineManifest() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePipelineManifest")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeletePipelineManifest indicates an expected call of DeletePipelineManifest
-func (mr *MockwsPipelineDeleterMockRecorder) DeletePipelineManifest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipelineManifest", reflect.TypeOf((*MockwsPipelineDeleter)(nil).DeletePipelineManifest))
 }
 
 // ReadPipelineManifest mocks base method

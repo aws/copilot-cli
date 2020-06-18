@@ -189,23 +189,9 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 	return ws.write(data, pipelineFileName)
 }
 
-// DeletePipelineManifest removes the pipeline manifest from the copilot/ directory.
-func (ws *Workspace) DeletePipelineManifest() error {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return err
-	}
-
-	return ws.fsUtils.Remove(filepath.Join(copilotPath, pipelineFileName))
-}
-
-// DeleteService removes the service directory from the copilot/ directory.
-func (ws *Workspace) DeleteService(name string) error {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return err
-	}
-	return ws.fsUtils.RemoveAll(filepath.Join(copilotPath, name))
+// DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
+func (ws *Workspace) DeleteWorkspaceFile() error {
+	return ws.fsUtils.Remove(CopilotDirName + "/" + workspaceSummaryFileName)
 }
 
 // DeleteAll removes the copilot/ directory and all of its contents.

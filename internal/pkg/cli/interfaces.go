@@ -184,7 +184,7 @@ type describer interface {
 }
 
 type workspaceDeleter interface {
-	DeleteAll() error
+	DeleteWorkspaceFile() error
 }
 
 type svcManifestReader interface {
@@ -204,10 +204,6 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsSvcDeleter interface {
-	DeleteService(name string) error
-}
-
 type wsServiceLister interface {
 	ServiceNames() ([]string, error)
 }
@@ -218,7 +214,6 @@ type wsSvcReader interface {
 }
 
 type wsPipelineDeleter interface {
-	DeletePipelineManifest() error
 	wsPipelineManifestReader
 }
 
