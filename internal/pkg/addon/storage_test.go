@@ -26,7 +26,7 @@ func TestDynamoDB_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDB) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbAddonPath, *ddb).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(dynamoDbAddonPath, *ddb, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -35,7 +35,7 @@ func TestDynamoDB_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, ddb *DynamoDB) {
 				m := mocks.NewMockParser(ctrl)
 				ddb.parser = m
-				m.EXPECT().Parse(dynamoDbAddonPath, *ddb).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(dynamoDbAddonPath, *ddb, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -72,7 +72,7 @@ func TestS3_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3AddonPath, *s3).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(s3AddonPath, *s3, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -81,7 +81,7 @@ func TestS3_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3AddonPath, *s3).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(s3AddonPath, *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 

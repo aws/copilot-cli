@@ -5,6 +5,8 @@
 package addon
 
 import (
+	"regexp"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 )
 
@@ -14,8 +16,7 @@ const (
 )
 
 type storage struct {
-	ResourceName *string
-	Name         *string
+	Name *string
 }
 
 // DynamoDB contains configuration options which fully descibe a DynamoDB table.
@@ -36,8 +37,7 @@ type S3 struct {
 
 // StorageProps holds basic input properties for addon.NewDynamoDB() or addon.NewS3().
 type StorageProps struct {
-	Name         string
-	ResourceName string
+	Name string
 }
 
 // S3Props contains S3-specific properties for addon.NewS3().
@@ -71,7 +71,7 @@ type DDBLocalSecondaryIndex struct {
 // MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (d *DynamoDB) MarshalBinary() ([]byte, error) {
-	content, err := d.parser.Parse(dynamoDbAddonPath, *d)
+	content, err := d.parser.Parse(dynamoDbAddonPath, *d, template.WithFuncs(templateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
 // MarshalBinary serializes the S3 object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *S3) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(s3AddonPath, *s)
+	content, err := s.parser.Parse(s3AddonPath, *s, template.WithFuncs(templateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -105,4 +105,20 @@ func NewS3(input *S3Props) *S3 {
 
 		parser: template.New(),
 	}
+}
+
+var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+// LogicalIDSafe strips non-alphanumeric characters from an input string.
+func LogicalIDSafe(s string) string {
+	return nonAlphaNum.ReplaceAllString(s, "")
+}
+
+func EnvVarName(s string) string {
+	return LogicalIDSafe(s) + "Name"
+}
+
+var templateFunctions = map[string]interface{}{
+	"logicalIDSafe": LogicalIDSafe,
+	"envVarName":    EnvVarName,
 }
