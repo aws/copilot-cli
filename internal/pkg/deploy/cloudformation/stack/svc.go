@@ -159,3 +159,33 @@ func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 		PolicyOutputs:   managedPolicyOutputNames(out),
 	}, nil
 }
+
+func secretOutputNames(outputs []addon.Output) []string {
+	var secrets []string
+	for _, out := range outputs {
+		if out.IsSecret {
+			secrets = append(secrets, out.Name)
+		}
+	}
+	return secrets
+}
+
+func managedPolicyOutputNames(outputs []addon.Output) []string {
+	var policies []string
+	for _, out := range outputs {
+		if out.IsManagedPolicy {
+			policies = append(policies, out.Name)
+		}
+	}
+	return policies
+}
+
+func envVarOutputNames(outputs []addon.Output) []string {
+	var envVars []string
+	for _, out := range outputs {
+		if !out.IsSecret && !out.IsManagedPolicy {
+			envVars = append(envVars, out.Name)
+		}
+	}
+	return envVars
+}

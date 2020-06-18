@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-	"unicode"
 
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
@@ -105,19 +104,6 @@ func withSvcParsingFuncs() ParseOption {
 			"quoteAll":       quoteAll,
 		})
 	}
-}
-
-// ToSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
-// For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
-func ToSnakeCase(s string) string {
-	var name string
-	for i, r := range s {
-		if unicode.IsUpper(r) && i != 0 {
-			name += "_"
-		}
-		name += string(unicode.ToUpper(r))
-	}
-	return name
 }
 
 func hasSecrets(opts ServiceOpts) bool {

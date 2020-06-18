@@ -5,8 +5,6 @@
 package addon
 
 import (
-	"regexp"
-
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 )
 
@@ -107,18 +105,7 @@ func NewS3(input *S3Props) *S3 {
 	}
 }
 
-var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
-
-// LogicalIDSafe strips non-alphanumeric characters from an input string.
-func LogicalIDSafe(s string) string {
-	return nonAlphaNum.ReplaceAllString(s, "")
-}
-
-func EnvVarName(s string) string {
-	return LogicalIDSafe(s) + "Name"
-}
-
 var templateFunctions = map[string]interface{}{
-	"logicalIDSafe": LogicalIDSafe,
-	"envVarName":    EnvVarName,
+	"logicalIDSafe": template.StorageLogicalIDSafe,
+	"envVarName":    template.EnvVarName,
 }
