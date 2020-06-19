@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 const (
@@ -43,17 +42,22 @@ func EnvVarName(s string) string {
 	return StorageLogicalIDSafe(s) + "Name"
 }
 
+// Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
+// before the next capital as capturing group 1, and the first capital in the
+// next word as capturing group 2. Will match "yC" in "MyCamel" and "y2ndC" in"My2ndCamel"
+var lowerUpperRegexp = regexp.MustCompile("([a-z0-9]+)([A-Z])")
+
+// Grabs word boundaries of the form "DD[B][In]dex". Matches the last uppercase
+// letter of an acronym as CG1, and the next uppercase + lowercase combo (indicating
+// a new word) as CG2. Will match "BTa" in"MyDDBTableWithLSI" or "2Wi" in"MyDDB2WithLSI"
+var upperLowerRegexp = regexp.MustCompile("([A-Z0-9])([A-Z][a-z])")
+
 // ToSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
 // For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
 func ToSnakeCase(s string) string {
-	var name string
-	for i, r := range s {
-		if unicode.IsUpper(r) && i != 0 {
-			name += "_"
-		}
-		name += string(unicode.ToUpper(r))
-	}
-	return name
+	sSnake := lowerUpperRegexp.ReplaceAllString(s, "${1}_${2}")
+	sSnake = upperLowerRegexp.ReplaceAllString(sSnake, "${1}_${2}")
+	return strings.ToUpper(sSnake)
 }
 
 // Inc increments an integer value and returns the result.

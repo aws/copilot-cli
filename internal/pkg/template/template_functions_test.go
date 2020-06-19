@@ -26,6 +26,18 @@ func TestToSnakeCase(t *testing.T) {
 			in:     "myddbtable",
 			wanted: "MYDDBTABLE",
 		},
+		"has capitals in acronym": {
+			in:     "myDDBTable",
+			wanted: "MY_DDB_TABLE",
+		},
+		"has capitals and numbers": {
+			in:     "my2ndDDBTable",
+			wanted: "MY2ND_DDB_TABLE",
+		},
+		"has capitals at end": {
+			in:     "myTableWithLSI",
+			wanted: "MY_TABLE_WITH_LSI",
+		},
 	}
 
 	for name, tc := range testCases {
