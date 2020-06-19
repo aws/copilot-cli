@@ -13,6 +13,11 @@ const (
 	s3AddonPath       = "addons/s3/cf.yml"
 )
 
+var storageTemplateFunctions = map[string]interface{}{
+	"logicalIDSafe": template.StorageLogicalIDSafe,
+	"envVarName":    template.EnvVarName,
+}
+
 type storage struct {
 	Name *string
 }
@@ -103,9 +108,4 @@ func NewS3(input *S3Props) *S3 {
 
 		parser: template.New(),
 	}
-}
-
-var storageTemplateFunctions = map[string]interface{}{
-	"logicalIDSafe": template.StorageLogicalIDSafe,
-	"envVarName":    template.EnvVarName,
 }

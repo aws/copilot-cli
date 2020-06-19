@@ -30,16 +30,15 @@ func DashReplacedLogicalIDToOriginal(safeLogicalID string) string {
 
 var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
-// StorageLogicalIDSafe strips non-alphanumeric characters from an input string.
-func StorageLogicalIDSafe(s string) string {
+// LogicalIDSafe strips non-alphanumeric characters from an input string.
+func LogicalIDSafe(s string) string {
 	return nonAlphaNum.ReplaceAllString(s, "")
 }
 
 // EnvVarName converts an input resource name to LogicalIDSafe, then appends
-// "Name" to the end. When generating environment variables, this string
-// is then passed through the "toSnakeCase" method
+// "Name" to the end.
 func EnvVarName(s string) string {
-	return StorageLogicalIDSafe(s) + "Name"
+	return LogicalIDSafe(s) + "Name"
 }
 
 // Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
