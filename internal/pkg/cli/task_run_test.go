@@ -307,7 +307,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, gomock.Any(), []string{"test", "prod", "None"}).Return("test", nil)
+				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, gomock.Any(), []string{"test", "prod", envNameNone}).Return("test", nil)
 			},
 
 			wantedEnv: "test",
