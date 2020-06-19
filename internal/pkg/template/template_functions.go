@@ -14,11 +14,11 @@ const (
 	dashReplacement = "DASH"
 )
 
-// ReplaceDashes takes a CloudFormation logical ID, and
+// ReplaceDashesFunc takes a CloudFormation logical ID, and
 // sanitizes it by removing "-" characters (not allowed)
 // and replacing them with "DASH" (allowed by CloudFormation but
 // not permitted in ecs-cli generated resource names).
-func ReplaceDashes(logicalID string) string {
+func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
 }
 
@@ -30,15 +30,15 @@ func DashReplacedLogicalIDToOriginal(safeLogicalID string) string {
 
 var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
-// LogicalIDSafe strips non-alphanumeric characters from an input string.
-func LogicalIDSafe(s string) string {
+// LogicalIDSafeFunc strips non-alphanumeric characters from an input string.
+func LogicalIDSafeFunc(s string) string {
 	return nonAlphaNum.ReplaceAllString(s, "")
 }
 
-// EnvVarName converts an input resource name to LogicalIDSafe, then appends
+// EnvVarNameFunc converts an input resource name to LogicalIDSafe, then appends
 // "Name" to the end.
-func EnvVarName(s string) string {
-	return LogicalIDSafe(s) + "Name"
+func EnvVarNameFunc(s string) string {
+	return LogicalIDSafeFunc(s) + "Name"
 }
 
 // Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
@@ -51,28 +51,46 @@ var lowerUpperRegexp = regexp.MustCompile("([a-z0-9]+)([A-Z])")
 // a new word) as CG2. Will match "BTa" in"MyDDBTableWithLSI" or "2Wi" in"MyDDB2WithLSI"
 var upperLowerRegexp = regexp.MustCompile("([A-Z0-9])([A-Z][a-z])")
 
-// ToSnakeCase transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
+// ToSnakeCaseFunc transforms a CamelCase input string s into an upper SNAKE_CASE string and returns it.
 // For example, "usersDdbTableName" becomes "USERS_DDB_TABLE_NAME".
-func ToSnakeCase(s string) string {
+func ToSnakeCaseFunc(s string) string {
 	sSnake := lowerUpperRegexp.ReplaceAllString(s, "${1}_${2}")
 	sSnake = upperLowerRegexp.ReplaceAllString(sSnake, "${1}_${2}")
 	return strings.ToUpper(sSnake)
 }
 
-// Inc increments an integer value and returns the result.
-func Inc(i int) int { return i + 1 }
+// IncFunc increments an integer value and returns the result.
+func IncFunc(i int) int { return i + 1 }
 
-// FmtSlice renders a string representation of a go string slice, surrounded by brackets
+// FmtSliceFunc renders a string representation of a go string slice, surrounded by brackets
 // and joined by commas.
-func FmtSlice(elems []string) string {
+func FmtSliceFunc(elems []string) string {
 	return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
 }
 
-// QuoteSlice places quotation marks around all elements of a go string slice.
-func QuoteSlice(elems []string) []string {
-	quotedElems := make([]string, len(elems))
+// QuoteSliceFunc places quotation marks around all elements of a go string slice.
+func QuoteSliceFunc(elems []string) []string {
+	var quotedElems []string
+	if len(elems) == 0 {
+		return quotedElems
+	}
+	quotedElems = make([]string, len(elems))
 	for i, el := range elems {
 		quotedElems[i] = strconv.Quote(el)
+	}
+	return quotedElems
+}
+
+// QuotePSliceFunc places quotation marks around all
+// dereferenced elements of elems and returns a []string slice.
+func QuotePSliceFunc(elems []*string) []string {
+	var quotedElems []string
+	if len(elems) == 0 {
+		return quotedElems
+	}
+	quotedElems = make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(*el)
 	}
 	return quotedElems
 }

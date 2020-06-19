@@ -646,7 +646,7 @@ func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
 
 func (o *initStorageOpts) RecommendedActions() []string {
 
-	newVar := template.ToSnakeCase(template.EnvVarName(o.storageName))
+	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
 
 	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
 

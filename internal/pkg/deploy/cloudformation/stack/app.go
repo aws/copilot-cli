@@ -62,7 +62,7 @@ const (
 )
 
 var cfTemplateFunctions = map[string]interface{}{
-	"logicalIDSafe": template.ReplaceDashes,
+	"logicalIDSafe": template.ReplaceDashesFunc,
 }
 
 // AppConfigFrom takes a template file and extracts the metadata block,

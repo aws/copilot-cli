@@ -130,7 +130,7 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 		Parameters: params,
 		Tags:       tc.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": template.Inc,
+		"inc": template.IncFunc,
 	}))
 	if err != nil {
 		return "", err

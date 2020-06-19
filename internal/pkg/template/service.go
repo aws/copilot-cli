@@ -6,8 +6,6 @@ package template
 import (
 	"bytes"
 	"fmt"
-	"strconv"
-	"strings"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/service/ecs"
@@ -98,10 +96,10 @@ func (t *Template) parseSvc(name string, data interface{}, options ...ParseOptio
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":    ToSnakeCase,
-			"hasSecrets":     hasSecrets,
-			"stringifySlice": stringifySlice,
-			"quoteAll":       quoteAll,
+			"toSnakeCase": ToSnakeCaseFunc,
+			"hasSecrets":  hasSecrets,
+			"fmtSlice":    FmtSliceFunc,
+			"quoteSlice":  QuotePSliceFunc,
 		})
 	}
 }
@@ -114,20 +112,4 @@ func hasSecrets(opts ServiceOpts) bool {
 		return true
 	}
 	return false
-}
-
-func stringifySlice(elems []string) string {
-	return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
-}
-
-func quoteAll(elems []*string) []string {
-	if elems == nil {
-		return nil
-	}
-
-	quotedElems := make([]string, len(elems))
-	for i, el := range elems {
-		quotedElems[i] = strconv.Quote(*el)
-	}
-	return quotedElems
 }

@@ -6,10 +6,11 @@ package template
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
-func TestReplaceDashes(t *testing.T) {
+func TestReplaceDashesFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -30,7 +31,7 @@ func TestReplaceDashes(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, ReplaceDashes(tc.in))
+			require.Equal(t, tc.wanted, ReplaceDashesFunc(tc.in))
 		})
 	}
 }
@@ -60,7 +61,7 @@ func TestDashReplacedLogicalIDToOriginal(t *testing.T) {
 		})
 	}
 }
-func TestLogicalIDSafe(t *testing.T) {
+func TestLogicalIDSafeFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -81,12 +82,12 @@ func TestLogicalIDSafe(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, LogicalIDSafe(tc.in))
+			require.Equal(t, tc.wanted, LogicalIDSafeFunc(tc.in))
 		})
 	}
 }
 
-func TestEnvVarName(t *testing.T) {
+func TestEnvVarNameFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -107,12 +108,12 @@ func TestEnvVarName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, EnvVarName(tc.in))
+			require.Equal(t, tc.wanted, EnvVarNameFunc(tc.in))
 		})
 	}
 }
 
-func TestToSnakeCase(t *testing.T) {
+func TestToSnakeCaseFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -145,12 +146,12 @@ func TestToSnakeCase(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, ToSnakeCase(tc.in))
+			require.Equal(t, tc.wanted, ToSnakeCaseFunc(tc.in))
 		})
 	}
 }
 
-func TestInc(t *testing.T) {
+func TestIncFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     int
 		wanted int
@@ -171,12 +172,12 @@ func TestInc(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, Inc(tc.in))
+			require.Equal(t, tc.wanted, IncFunc(tc.in))
 		})
 	}
 }
 
-func TestFmtSlice(t *testing.T) {
+func TestFmtSliceFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     []string
 		wanted string
@@ -185,16 +186,20 @@ func TestFmtSlice(t *testing.T) {
 			in:     []string{"my", "elements", "go", "here"},
 			wanted: "[my, elements, go, here]",
 		},
+		"no elements": {
+			in:     []string{},
+			wanted: "[]",
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, FmtSlice(tc.in))
+			require.Equal(t, tc.wanted, FmtSliceFunc(tc.in))
 		})
 	}
 }
 
-func TestQuoteSlice(t *testing.T) {
+func TestQuoteSliceFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     []string
 		wanted []string
@@ -203,11 +208,26 @@ func TestQuoteSlice(t *testing.T) {
 			in:     []string{"my", "elements", "go", "here"},
 			wanted: []string{"\"my\"", "\"elements\"", "\"go\"", "\"here\""},
 		},
+		"no elements": {
+			in:     []string{},
+			wanted: []string(nil),
+		},
+		"nil input": {
+			in:     []string(nil),
+			wanted: []string(nil),
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, QuoteSlice(tc.in))
+			require.Equal(t, tc.wanted, QuoteSliceFunc(tc.in))
 		})
 	}
+}
+
+func TestQuotePSliceFunc(t *testing.T) {
+	require.Equal(t, []string(nil), QuotePSliceFunc(nil))
+	require.Equal(t, []string(nil), QuotePSliceFunc([]*string{}))
+	require.Equal(t, []string{`"a"`}, QuotePSliceFunc(aws.StringSlice([]string{"a"})))
+	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, QuotePSliceFunc(aws.StringSlice([]string{"a", "b", "c"})))
 }
