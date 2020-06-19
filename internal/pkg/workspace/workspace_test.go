@@ -241,23 +241,6 @@ func TestWorkspace_Create(t *testing.T) {
 	}
 }
 
-func TestWorkspace_DeleteAll(t *testing.T) {
-	t.Run("should delete the folder", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
-		err := fs.Mkdir(CopilotDirName, 0755)
-		require.NoError(t, err)
-		ws := Workspace{
-			fsUtils: &afero.Afero{
-				Fs: fs,
-			},
-		}
-
-		got := ws.DeleteAll()
-
-		require.NoError(t, got)
-	})
-}
-
 func TestWorkspace_ServiceNames(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
