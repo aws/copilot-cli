@@ -49,7 +49,7 @@ type deletePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	prog             progress
 	secretsmanager   secretsManager
-	ws               wsPipelineDeleter
+	ws               wsPipelineReader
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {

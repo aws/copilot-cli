@@ -27,7 +27,7 @@ type deletePipelineMocks struct {
 	prog           *mocks.Mockprogress
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
-	ws             *mocks.MockwsPipelineDeleter
+	ws             *mocks.MockwsPipelineReader
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
@@ -86,7 +86,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mocks := deletePipelineMocks{
 				ws: mockWorkspace,
 			}
@@ -285,7 +285,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			mockProg := mocks.NewMockprogress(ctrl)
 			mockDeployer := mocks.NewMockpipelineDeployer(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,

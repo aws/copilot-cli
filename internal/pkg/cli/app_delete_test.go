@@ -132,7 +132,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
-	ws              *mocks.MockworkspaceDeleter
+	ws              *mocks.MockwsFileDeleter
 	sessProvider    *session.Provider
 	deployer        *mocks.Mockdeployer
 	svcDeleter      *mocks.Mockexecutor
@@ -260,7 +260,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockWorkspace := mocks.NewMockworkspaceDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
 			mockSession := session.NewProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 

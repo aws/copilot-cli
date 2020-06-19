@@ -183,7 +183,7 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
-type workspaceDeleter interface {
+type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
@@ -211,10 +211,6 @@ type wsServiceLister interface {
 type wsSvcReader interface {
 	wsServiceLister
 	svcManifestReader
-}
-
-type wsPipelineDeleter interface {
-	wsPipelineManifestReader
 }
 
 type wsPipelineReader interface {
