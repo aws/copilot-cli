@@ -472,6 +472,42 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedErr: nil,
 		},
+		"ask for LSI if not specified": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageType: dynamoDBStorageType,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
+				lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
+				m.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Return(true, nil)
+				m.EXPECT().Get(
+					gomock.Eq(storageInitDDBLSINamePrompt),
+					gomock.Eq(storageInitDDBLSINameHelp),
+					gomock.Any(),
+					gomock.Any(),
+				).Return("Email", nil)
+				m.EXPECT().SelectOne(
+					gomock.Eq(lsiTypePrompt),
+					gomock.Eq(lsiTypeHelp),
+					gomock.Eq(attributeTypesLong),
+					gomock.Any(),
+				).Return(ddbStringType, nil)
+				m.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBMoreLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Return(false, nil)
+			},
+			mockCfg: func(m *mocks.MockconfigSelector) {},
+		},
 		"error if lsi name misspecified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
@@ -503,7 +539,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inNoLsi:       false,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -523,7 +558,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inNoLsi:       false,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(

@@ -393,11 +393,12 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 	lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
 	lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
+
+	moreLSI, err := o.prompt.Confirm(storageInitDDBLSIPrompt, storageInitDDBLSIHelp, prompt.WithFinalMessage("Additional sort keys?"))
+	if err != nil {
+		return fmt.Errorf("confirm add alternate sort key: %w", err)
+	}
 	for {
-		moreLSI, err := o.prompt.Confirm(storageInitDDBLSIPrompt, storageInitDDBLSIHelp, prompt.WithFinalMessage("Additional sort keys?"))
-		if err != nil {
-			return fmt.Errorf("confirm add alternate sort key: %w", err)
-		}
 		if !moreLSI {
 			break
 		}
@@ -423,6 +424,15 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		}
 
 		o.lsiSorts = append(o.lsiSorts, lsiName+":"+lsiType)
+
+		moreLSI, err = o.prompt.Confirm(
+			storageInitDDBMoreLSIPrompt,
+			storageInitDDBLSIHelp,
+			prompt.WithFinalMessage("Additional sort keys?"),
+		)
+		if err != nil {
+			return fmt.Errorf("confirm add alternate sort key: %w", err)
+		}
 	}
 	return nil
 }
