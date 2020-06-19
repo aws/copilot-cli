@@ -312,7 +312,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: "test",
 		},
-		"don't prompt if flags are provided": {
+		"don't prompt if env is provided": {
 			basicOpts: defaultOpts,
 
 			inName:  "my-task",
@@ -326,7 +326,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: "test",
 		},
-		"don't prompt if no app is present": {
+		"don't prompt if no workspace": {
 			basicOpts: defaultOpts,
 
 			inName: "my-task",
@@ -338,7 +338,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: envNameNone,
 		},
-		"default to 'None' environment if no env is present": {
+		"default to 'None' environment if no env is found": {
 			basicOpts: defaultOpts,
 
 			inName:  "my-task",
