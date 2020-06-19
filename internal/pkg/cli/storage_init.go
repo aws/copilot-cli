@@ -716,7 +716,6 @@ func BuildStorageInitCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
-	cmd.Flags().StringArrayVar(&vars.attributes, storageAttributeFlag, []string{}, storageAttributeFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
@@ -730,7 +729,6 @@ func BuildStorageInitCmd() *cobra.Command {
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageAttributeFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
 	cmd.Annotations = map[string]string{

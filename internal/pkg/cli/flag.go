@@ -52,7 +52,6 @@ const (
 	storageNoSortFlag       = "no-sort"
 	storageLSIConfigFlag    = "lsi"
 	storageNoLSIFlag        = "no-lsi"
-	storageAttributeFlag    = "att"
 
 	numFlag            = "num"
 	cpuFlag            = "cpu"
@@ -133,10 +132,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageNoSortFlagDescription    = "Optional. Skip configuring sort keys."
-	storageAttributeFlagDescription = `Optional. Attributes for a DDB table.
-Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
-	storageLSIConfigFlagDescription = "Optional. Attribute to use as an alternate sort key. May be specified up to 5 times."
+	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
+Must be of the format '<keyName>:<dataType>'.`
 
 	numFlagDescription            = "Optional. The number of tasks to set up. Default 1."
 	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task. Default 256 (1/4 vCPU)."
