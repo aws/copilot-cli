@@ -307,7 +307,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				}, nil)
 			},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, []string{"test", "prod", "None"}).Return("test", nil)
+				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, gomock.Any(), []string{"test", "prod", "None"}).Return("test", nil)
 			},
 
 			wantedEnv: "test",
@@ -356,7 +356,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			mockStore: func(m *mocks.Mockstore) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(fmt.Sprintf(fmtTaskRunFamilyNamePrompt, "name"), gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
 			},
 
 			wantedName: "my-task",

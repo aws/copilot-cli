@@ -20,10 +20,10 @@ var (
 	errMemNotPositive = errors.New("memory must be positive")
 
 	fmtTaskRunEnvPrompt        = "Select an environment"
-	fmtTaskRunFamilyNamePrompt = "What would you like to %s your task family?"
+	fmtTaskRunFamilyNamePrompt = fmt.Sprintf("What would you like to %s your task family?", color.Emphasize("name"))
 
-	taskRunEnvPromptHelp = "Task will be deployed to the selected environment.\n" +
-		"Select None to run the task in your default VPC instead of any existing environment."
+	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. " +
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envNameNone))
 	taskRunFamilyNamePromptHelp = "The family name of the task. Tasks with the same family name share the same set of resources."
 
 	envNameNone = "None"
@@ -160,7 +160,7 @@ func (o *runTaskOpts) askTaskFamilyName() error {
 	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
 
 	familyName, err := o.prompt.Get(
-		fmt.Sprintf(fmtTaskRunFamilyNamePrompt, color.Emphasize("name")),
+		fmtTaskRunFamilyNamePrompt,
 		taskRunFamilyNamePromptHelp,
 		validateTaskFamilyName,
 		prompt.WithFinalMessage("Task family name:"))
@@ -182,7 +182,7 @@ func (o *runTaskOpts) askEnvName() error {
 	}
 
 	if len(existingEnv) == 0 {
-		log.Infof("Couldn't find any environments associated with app %s, defaulting to %s (task will run in your default VPC)\n",
+		log.Infof("No environment found associated with app %s, defaulting to %s (task will run in your default VPC)\n",
 			color.HighlightUserInput(o.AppName()), color.Emphasize(envNameNone))
 		o.env = envNameNone
 		return nil
