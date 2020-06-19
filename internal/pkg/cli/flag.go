@@ -53,6 +53,16 @@ const (
 	storageLSIConfigFlag    = "lsi"
 	storageNoLSIFlag        = "no-lsi"
 	storageAttributeFlag    = "att"
+
+	numFlag            = "num"
+	cpuFlag            = "cpu"
+	memoryFlag         = "memory"
+	imageFlag          = "image"
+	taskRoleFlag       = "task-role"
+	subnetFlag         = "subnet"
+	securityGroupsFlag = "security-groups"
+	envVarsFlag        = "env-vars"
+	commandsFlag       = "commands"
 )
 
 // Short flag names.
@@ -127,6 +137,16 @@ Must be of the format '<keyName>:<dataType>'.`
 Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = "Optional. Attribute to use as an alternate sort key. May be specified up to 5 times."
+
+	numFlagDescription            = "Optional. The number of tasks to set up. Default 1."
+	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task. Default 256 (1/4 vCPU)."
+	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task. Default 512."
+	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription       = "Optional. The role for the task to use."
+	subnetFlagDescription         = "Optional. The subnet id for the task to use."
+	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use. Can be specified multiple times."
+	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
+	commandsFlagDescription       = "Optional. List of commands that are passed to docker run. Can be specified multiple times."
 )
 
 func quoteAll(elems []string) []string {
