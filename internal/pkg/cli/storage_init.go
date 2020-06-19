@@ -72,16 +72,15 @@ You must specify a sort key if you wish to add alternate sort keys later.`
 	fmtStorageInitDDBKeyTypePrompt = "What datatype is this %s?"
 	fmtStorageInitDDBKeyTypeHelp   = "The datatype to store in the %s. N is number, S is string, B is binary."
 
-	storageInitDDBMoreAttributesPrompt = "Would you like to add more attributes to this table?"
-	storageInitDDBMoreAttributesHelp   = "You can use these extra attributes to specify additional sort keys or alternate partition keys."
-	storageInitDDBAttributePrompt      = "What would you like to name this " + color.Emphasize(ddbAttributeString) + "?"
-	storageInitDDBAttributeHelp        = "You can use the the characters [a-zA-Z0-9.-_]"
-
 	storageInitDDBLSIPrompt = "Would you like to add any alternate sort keys to this table?"
 	storageInitDDBLSIHelp   = `Alternate sort keys create Local Secondary Indexes, which allow you to sort the table using the same 
-partition key but a different sort key.`
+partition key but a different sort key. You may specify up to 5 alternate sort keys.`
 
-	storageInitDDBLSINamePrompt  = "What other attributes would you like to use as " + color.Emphasize("alternate sort keys") + "?\n"
+	storageInitDDBMoreLSIPrompt = "Would you like to add more alternate sort keys to this table?"
+
+	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
+	storageInitDDBLSINameHelp   = "You can use the the characters [a-zA-Z0-9.-_]"
+
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
@@ -122,8 +121,7 @@ type initStorageVars struct {
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
 	sortKey      string
-	attributes   []string // Attributes collected as "attName:T" where T is one of [SNB]
-	lsiSorts     []string // lsi sort keys collected as names of existing attributes
+	lsiSorts     []string // lsi sort keys collected as "name:T" where T is one of [SNB]
 	noLsi        bool
 	noSort       bool
 }
@@ -199,11 +197,6 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
-	if len(o.attributes) != 0 {
-		if err := validateAttributeNames(o.attributes); err != nil {
-			return err
-		}
-	}
 	// --no-lsi and --lsi are mutually exclusive.
 	if o.noLsi && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
@@ -214,7 +207,7 @@ func (o *initStorageOpts) Validate() error {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
 	}
 	if len(o.lsiSorts) != 0 {
-		if err := validateLsi(o.lsiSorts, o.attributes); err != nil {
+		if err := validateLSIs(o.lsiSorts); err != nil {
 			return err
 		}
 	}
@@ -238,9 +231,6 @@ func (o *initStorageOpts) Ask() error {
 			return err
 		}
 		if err := o.askDynamoSortKey(); err != nil {
-			return err
-		}
-		if err := o.askDynamoAttributes(); err != nil {
 			return err
 		}
 		if err := o.askDynamoLSIConfig(); err != nil {
@@ -388,97 +378,52 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	o.sortKey = key + ":" + keyType
 	return nil
 }
-func (o *initStorageOpts) askDynamoAttributes() error {
-	// Extra attributes have been specified by flags.
-	if len(o.attributes) != 0 {
+func (o *initStorageOpts) askDynamoLSIConfig() error {
+	// LSI has already been specified by flags.
+	if len(o.lsiSorts) > 0 {
 		return nil
 	}
-	// If --no-lsi has been specified, there is no need to ask for more attributes
+	// If --no-lsi has been specified, there is no need to ask for local secondary indices.
 	if o.noLsi {
 		return nil
 	}
-
-	// If --no-sort has been specified, there is no need to ask for more attributes
+	// If --no-sort has been specified, there is no need to ask for local secondary indices.
 	if o.noSort {
 		return nil
 	}
-	attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
-	attributeTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbAttributeString)
+	lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
+	lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
 	for {
-		moreAtt, err := o.prompt.Confirm(storageInitDDBMoreAttributesPrompt, storageInitDDBMoreAttributesHelp, prompt.WithFinalMessage("Additional attributes?"))
+		moreLSI, err := o.prompt.Confirm(storageInitDDBLSIPrompt, storageInitDDBLSIHelp, prompt.WithFinalMessage("Additional sort keys?"))
 		if err != nil {
-			return fmt.Errorf("confirm add more attributes: %w", err)
+			return fmt.Errorf("confirm add alternate sort key: %w", err)
 		}
-		if !moreAtt {
+		if !moreLSI {
 			break
 		}
-		att, err := o.prompt.Get(storageInitDDBAttributePrompt,
-			storageInitDDBAttributeHelp,
+		if len(o.lsiSorts) > 5 {
+			log.Infof("You may not specify more than 5 alternate sort keys. Continuing...")
+			break
+		}
+		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
+			storageInitDDBLSINameHelp,
 			dynamoTableNameValidation,
-			prompt.WithFinalMessage("Attribute:"),
+			prompt.WithFinalMessage("Alternate Sort Key:"),
 		)
 		if err != nil {
-			return fmt.Errorf("get DDB attribute name: %w", err)
+			return fmt.Errorf("get DDB alternate sort key name: %w", err)
 		}
-		attType, err := o.prompt.SelectOne(attributeTypePrompt,
-			attributeTypeHelp,
+		lsiType, err := o.prompt.SelectOne(lsiTypePrompt,
+			lsiTypeHelp,
 			attributeTypesLong,
 			prompt.WithFinalMessage("Attribute type:"),
 		)
 		if err != nil {
-			return fmt.Errorf("get DDB attribute type: %w", err)
+			return fmt.Errorf("get DDB alternate sort key type: %w", err)
 		}
 
-		o.attributes = append(o.attributes, att+":"+attType)
+		o.lsiSorts = append(o.lsiSorts, lsiName+":"+lsiType)
 	}
-	return nil
-}
-
-func (o *initStorageOpts) askDynamoLSIConfig() error {
-	if o.noLsi {
-		return nil
-	}
-	if o.noSort {
-		o.noLsi = true
-		return nil
-	}
-	if len(o.lsiSorts) != 0 {
-		return nil
-	}
-	addLsi, err := o.prompt.Confirm(
-		storageInitDDBLSIPrompt,
-		storageInitDDBLSIHelp,
-		prompt.WithFinalMessage("Alternate sort keys?"),
-	)
-	if err != nil {
-		return fmt.Errorf("confirm add LSI to table: %w", err)
-	}
-	o.noLsi = !addLsi
-	if !addLsi {
-		return nil
-	}
-
-	var attributeNames []string
-	for _, att := range o.attributes {
-		attributeParts, err := getAttrFromKey(att)
-		if err != nil {
-			return fmt.Errorf("get name from attribute: %w", err)
-		}
-		attributeNames = append(attributeNames, attributeParts.name)
-	}
-
-	names, err := o.prompt.MultiSelect(storageInitDDBLSINamePrompt,
-		storageInitDDBLSIHelp,
-		attributeNames,
-		prompt.WithFinalMessage("Alternate sort keys:"),
-	)
-	if err != nil {
-		return fmt.Errorf("get LSI sort keys: %w", err)
-	}
-	if len(names) > 5 {
-		return fmt.Errorf("cannot specify more than 5 alternate sort keys")
-	}
-	o.lsiSorts = names
 	return nil
 }
 
@@ -496,6 +441,7 @@ func (o *initStorageOpts) validateServiceName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
+
 	return o.createAddon()
 }
 
@@ -587,10 +533,14 @@ func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
 func newLSI(partitionKey string, lsis []string) ([]addon.DDBLocalSecondaryIndex, error) {
 	var output []addon.DDBLocalSecondaryIndex
 	for _, lsi := range lsis {
+		lsiAttr, err := getAttrFromKey(lsi)
+		if err != nil {
+			return nil, err
+		}
 		output = append(output, addon.DDBLocalSecondaryIndex{
 			PartitionKey: &partitionKey,
-			SortKey:      &lsi,
-			Name:         &lsi,
+			SortKey:      &lsiAttr.name,
+			Name:         &lsiAttr.name,
 		})
 	}
 	return output, nil
@@ -614,7 +564,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 		attributes = append(attributes, *sortKey)
 		props.SortKey = sortKey.Name
 	}
-	for _, att := range o.attributes {
+	for _, att := range o.lsiSorts {
 		currAtt, err := newDDBAttribute(att)
 		if err != nil {
 			return nil, err
@@ -688,7 +638,7 @@ func BuildStorageInitCmd() *cobra.Command {
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --att Points:N --att Goodness:N --lsi Points --lsi Goodness`,
+  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
