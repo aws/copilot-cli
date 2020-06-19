@@ -294,7 +294,7 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 func (o *deleteAppOpts) deleteWs() error {
 	o.spinner.Start(deleteAppWsStartMsg)
 	if err := o.ws.DeleteWorkspaceFile(); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting .workspace file."))
+		o.spinner.Stop(log.Serrorf("Error deleting %s file.", workspace.WorkspaceSummaryFileName))
 		return fmt.Errorf("delete %s file: %w", workspace.WorkspaceSummaryFileName, err)
 	}
 	o.spinner.Stop(log.Ssuccess(deleteAppWsStopMsg))
