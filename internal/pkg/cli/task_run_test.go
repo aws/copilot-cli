@@ -20,13 +20,13 @@ type basicOpts struct {
 	inMemory int16
 }
 
-func TestTaskRunOpts_Validate(t *testing.T) {
-	defaultOpts := basicOpts{
-		inNum:    1,
-		inCPU:    256,
-		inMemory: 512,
-	}
+var defaultOpts = basicOpts{
+	inNum:    1,
+	inCPU:    256,
+	inMemory: 512,
+}
 
+func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
 
@@ -169,7 +169,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			appName: "my-app",
-			inEnv: "dev",
+			inEnv:   "dev",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(&config.Environment{
@@ -187,7 +187,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			appName: "my-app",
-			inEnv: "dev",
+			inEnv:   "dev",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(nil, &config.ErrNoSuchEnvironment{
@@ -266,6 +266,112 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestTaskRunOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		basicOpts
+
+		inEnv   string
+		appName string
+
+		mockPrompt func(mockPrompter *mocks.Mockprompter)
+		mockStore  func(m *mocks.Mockstore)
+		setUpMock  func(ctrl *gomock.Controller, opts *runTaskOpts)
+
+		wantedError error
+		wantedEnv   string
+	}{
+		"prompt for env": {
+			basicOpts: defaultOpts,
+			appName:   "my-app",
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
+					{Name: "test"},
+					{Name: "prod"},
+				}, nil)
+			},
+			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
+				mockPrompter.
+					EXPECT().
+					SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, []string{"test", "prod", "None"}).
+					Return("test", nil)
+			},
+
+			wantedEnv: "test",
+		},
+		"don't prompt if flags are provided": {
+			basicOpts: defaultOpts,
+
+			inEnv:   "test",
+			appName: "my-app",
+
+			mockStore: func(m *mocks.Mockstore) {},
+			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
+				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "test",
+		},
+		"don't prompt if no app is present": {
+			basicOpts: defaultOpts,
+
+			mockStore: func(m *mocks.Mockstore) {},
+			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
+				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+		},
+		"default to 'None' environment if no env is present": {
+			basicOpts: defaultOpts,
+
+			appName: "my-app",
+
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{}, nil)
+			},
+			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
+				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedEnv: envNameNone,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPrompter := mocks.NewMockprompter(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			tc.mockPrompt(mockPrompter)
+			tc.mockStore(mockStore)
+
+			opts := runTaskOpts{
+				runTaskVars: runTaskVars{
+					GlobalOpts: &GlobalOpts{
+						appName: tc.appName,
+						prompt: mockPrompter,
+					},
+					num:    tc.inNum,
+					cpu:    tc.inCPU,
+					memory: tc.inMemory,
+
+					env: tc.inEnv,
+				},
+				store: mockStore,
+			}
+
+			err := opts.Ask()
+
+			if tc.wantedError == nil {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedEnv, opts.env)
+			} else {
+				require.EqualError(t, tc.wantedError, err.Error())
 			}
 		})
 	}

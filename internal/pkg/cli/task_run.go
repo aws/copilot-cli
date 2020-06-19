@@ -7,7 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -16,6 +17,11 @@ var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
+
+	fmtTaskRunEnvPrompt  = "Select an environment"
+	taskRunEnvPromptHelp = "Task will be deployed to the selected environment.\n" +
+		"Select None to run the task in your default VPC instead of any existing environment."
+	envNameNone = "None"
 )
 
 type runTaskVars struct {
@@ -44,9 +50,6 @@ type runTaskOpts struct {
 	fs     afero.Fs
 	store  store
 	parser dockerfileParser
-
-	// sets up Dockerfile parser using fs and input path
-	setupParser func(opts *runTaskOpts)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -58,12 +61,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	return &runTaskOpts{
 		runTaskVars: vars,
 
-		fs:    &afero.Afero{Fs: afero.NewOsFs()},
-		store: store,
-
-		setupParser: func(o *runTaskOpts) {
-			o.parser = dockerfile.New(o.fs, o.dockerfilePath)
-		},
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		store:  store,
 	}, nil
 }
 
@@ -110,6 +109,14 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
+// Ask prompts the user for any important fields that are not provided.
+func (o *runTaskOpts) Ask() error {
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (o *runTaskOpts) validateAppName() error {
 	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
@@ -126,6 +133,37 @@ func (o *runTaskOpts) validateEnvName() error {
 		return errNoAppInWorkspace
 	}
 
+	return nil
+}
+
+func (o *runTaskOpts) askEnvName() error {
+	if o.env != "" || o.AppName() == "" {
+		return nil
+	}
+
+	existingEnv, err := o.store.ListEnvironments(o.AppName())
+	if err != nil {
+		return fmt.Errorf("list environments: %w", err)
+	}
+
+	if len(existingEnv) == 0 {
+		log.Infof("Couldn't find any environments associated with app %s, defaulting to %s (task will run in your default VPC)\n",
+			color.HighlightUserInput(o.AppName()), color.Emphasize(envNameNone))
+		o.env = envNameNone
+		return nil
+	}
+
+	envNames := make([]string, len(existingEnv)+1)
+	for ind, env := range existingEnv {
+		envNames[ind] = env.Name
+	}
+	envNames[len(existingEnv)] = envNameNone
+
+	selectedEnvName, err := o.prompt.SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, envNames)
+	if err != nil {
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.env = selectedEnvName
 	return nil
 }
 
@@ -154,6 +192,10 @@ Run a task with environment variables.
 				return err
 			}
 			if err := opts.Validate(); err != nil { // validate flags
+				return err
+			}
+
+			if err := opts.Ask(); err != nil {
 				return err
 			}
 			return nil
