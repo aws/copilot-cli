@@ -69,7 +69,7 @@ type DDBLocalSecondaryIndex struct {
 // MarshalBinary serializes the DynamoDB object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (d *DynamoDB) MarshalBinary() ([]byte, error) {
-	content, err := d.parser.Parse(dynamoDbAddonPath, *d, template.WithFuncs(templateFunctions))
+	content, err := d.parser.Parse(dynamoDbAddonPath, *d, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func NewDynamoDB(input *DynamoDBProps) *DynamoDB {
 // MarshalBinary serializes the S3 object into a binary YAML CF template.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *S3) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(s3AddonPath, *s, template.WithFuncs(templateFunctions))
+	content, err := s.parser.Parse(s3AddonPath, *s, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func NewS3(input *S3Props) *S3 {
 	}
 }
 
-var templateFunctions = map[string]interface{}{
+var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StorageLogicalIDSafe,
 	"envVarName":    template.EnvVarName,
 }

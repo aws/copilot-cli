@@ -4,7 +4,9 @@
 package template
 
 import (
+	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -13,7 +15,7 @@ const (
 	dashReplacement = "DASH"
 )
 
-// replaceDashes takes a CloudFormation logical ID, and
+// ReplaceDashes takes a CloudFormation logical ID, and
 // sanitizes it by removing "-" characters (not allowed)
 // and replacing them with "DASH" (allowed by CloudFormation but
 // not permitted in ecs-cli generated resource names).
@@ -21,7 +23,7 @@ func ReplaceDashes(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
 }
 
-// dashReplacedLogicalIDToOriginal takes a "sanitized" logical ID
+// DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID
 // and converts it back to its original form, with dashes.
 func DashReplacedLogicalIDToOriginal(safeLogicalID string) string {
 	return strings.ReplaceAll(safeLogicalID, dashReplacement, "-")
@@ -52,4 +54,22 @@ func ToSnakeCase(s string) string {
 		name += string(unicode.ToUpper(r))
 	}
 	return name
+}
+
+// Inc increments an integer value and returns the result.
+func Inc(i int) int { return i + 1 }
+
+// FmtSlice renders a string representation of a go string slice, surrounded by brackets
+// and joined by commas.
+func FmtSlice(elems []string) string {
+	return fmt.Sprintf("[%s]", strings.Join(elems, ", "))
+}
+
+// QuoteSlice places quotation marks around all elements of a go string slice.
+func QuoteSlice(elems []string) []string {
+	quotedElems := make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(el)
+	}
+	return quotedElems
 }

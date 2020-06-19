@@ -61,7 +61,7 @@ const (
 	appDNSDelegationRoleName      = "DNSDelegationRole"
 )
 
-var templateFunctions = map[string]interface{}{
+var cfTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.ReplaceDashes,
 }
 
@@ -103,7 +103,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 	}{
 		config,
 		ServiceTagKey,
-	}, template.WithFuncs(templateFunctions))
+	}, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err
 	}
