@@ -178,11 +178,11 @@ Resources:
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
       Roles:
-        - !Ref PipelineRole{{range $index, $stage := .Stages}}
-  BuildTestCommands{{$index}}:
+        - !Ref PipelineRole{{range $index, $stage := .Stages}}  {{if $stage.TestCommands}}
+  BuildTestCommands{{$stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: BuildTestCommands{{$index}}
+      Name: BuildTestCommands-{{$stage.Name}}
       EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
@@ -193,7 +193,7 @@ Resources:
         ComputeType: BUILD_GENERAL1_SMALL
       Source:
         Type: NO_SOURCE
-        BuildSpec: "version: 0.2\nphases:\n  build:\n    commands: [{{range $index, $command := $stage.TestCommands}}{{if $index}},{{end}}\"{{$command}}\"{{end}}]"{{end}}
+        BuildSpec: "version: 0.2\nphases:\n  build:\n    commands: [{{range $index, $command := $stage.TestCommands}}{{if $index}},{{end}}\"{{$command}}\"{{end}}]"{{end}}{{end}}
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -266,7 +266,7 @@ Resources:
                 Version: 1
                 Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref BuildTestCommands{{$index}}
+                ProjectName: !Ref BuildTestCommands{{$stage.Name}}
               RunOrder: 1
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{range $svc := $stage.LocalServices}}
