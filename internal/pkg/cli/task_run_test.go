@@ -30,6 +30,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
 
+		inName string
+
 		inImage          string
 		inDockerfilePath string
 
@@ -55,6 +57,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"valid with flags image and env": {
 			basicOpts: defaultOpts,
+
+			inName: "my-task",
 
 			inImage:    "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inTaskRole: "exec-role",
@@ -83,6 +87,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"valid without flags image and env": {
 			basicOpts: defaultOpts,
+
+			inName: "my-task",
 
 			inDockerfilePath: "hello/world/Dockerfile",
 			inTaskRole:       "exec-role",
@@ -240,6 +246,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					num:            tc.inNum,
 					cpu:            tc.inCPU,
 					memory:         tc.inMemory,
+					familyName:     tc.inName,
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
@@ -275,19 +282,23 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
 
+		inName string
+
 		inEnv   string
 		appName string
 
-		mockPrompt func(mockPrompter *mocks.Mockprompter)
+		mockPrompt func(m *mocks.Mockprompter)
 		mockStore  func(m *mocks.Mockstore)
-		setUpMock  func(ctrl *gomock.Controller, opts *runTaskOpts)
 
 		wantedError error
 		wantedEnv   string
+		wantedName  string
 	}{
 		"prompt for env": {
 			basicOpts: defaultOpts,
-			appName:   "my-app",
+
+			inName:  "my-task",
+			appName: "my-app",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
@@ -295,11 +306,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					{Name: "prod"},
 				}, nil)
 			},
-			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
-				mockPrompter.
-					EXPECT().
-					SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, []string{"test", "prod", "None"}).
-					Return("test", nil)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, []string{"test", "prod", "None"}).Return("test", nil)
 			},
 
 			wantedEnv: "test",
@@ -307,12 +315,13 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		"don't prompt if flags are provided": {
 			basicOpts: defaultOpts,
 
+			inName:  "my-task",
 			inEnv:   "test",
 			appName: "my-app",
 
 			mockStore: func(m *mocks.Mockstore) {},
-			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
-				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedEnv: "test",
@@ -320,23 +329,37 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		"don't prompt if no app is present": {
 			basicOpts: defaultOpts,
 
+			inName: "my-task",
+
 			mockStore: func(m *mocks.Mockstore) {},
-			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
-				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"default to 'None' environment if no env is present": {
 			basicOpts: defaultOpts,
 
+			inName:  "my-task",
 			appName: "my-app",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{}, nil)
 			},
-			mockPrompt: func(mockPrompter *mocks.Mockprompter) {
-				mockPrompter.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedEnv: envNameNone,
+
+			wantedEnv:  envNameNone,
+		},
+		"prompt for task family name": {
+			basicOpts: defaultOpts,
+
+			mockStore: func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(fmt.Sprintf(fmtTaskRunFamilyNamePrompt, "name"), gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+			},
+
+			wantedName: "my-task",
 		},
 	}
 
@@ -354,13 +377,14 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				runTaskVars: runTaskVars{
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
-						prompt: mockPrompter,
+						prompt:  mockPrompter,
 					},
 					num:    tc.inNum,
 					cpu:    tc.inCPU,
 					memory: tc.inMemory,
 
-					env: tc.inEnv,
+					familyName: tc.inName,
+					env:        tc.inEnv,
 				},
 				store: mockStore,
 			}
@@ -369,7 +393,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			if tc.wantedError == nil {
 				require.Nil(t, err)
-				require.Equal(t, tc.wantedEnv, opts.env)
+				if tc.wantedEnv != "" {
+					require.Equal(t, tc.wantedEnv, opts.env)
+				}
+				if tc.wantedName != "" {
+					require.Equal(t, tc.wantedName, opts.familyName)
+				}
 			} else {
 				require.EqualError(t, tc.wantedError, err.Error())
 			}

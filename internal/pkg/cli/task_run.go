@@ -9,6 +9,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -18,9 +19,13 @@ var (
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 
-	fmtTaskRunEnvPrompt  = "Select an environment"
+	fmtTaskRunEnvPrompt        = "Select an environment"
+	fmtTaskRunFamilyNamePrompt = "What would you like to %s your task family?"
+
 	taskRunEnvPromptHelp = "Task will be deployed to the selected environment.\n" +
 		"Select None to run the task in your default VPC instead of any existing environment."
+	taskRunFamilyNamePromptHelp = "The family name of the task. Tasks with the same family name share the same set of resources."
+
 	envNameNone = "None"
 )
 
@@ -29,6 +34,8 @@ type runTaskVars struct {
 	num    int8
 	cpu    int16
 	memory int16
+
+	familyName string
 
 	image          string
 	dockerfilePath string
@@ -61,8 +68,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	return &runTaskOpts{
 		runTaskVars: vars,
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		store:  store,
+		fs:    &afero.Afero{Fs: afero.NewOsFs()},
+		store: store,
 	}, nil
 }
 
@@ -78,6 +85,12 @@ func (o *runTaskOpts) Validate() error {
 
 	if o.memory <= 0 {
 		return errMemNotPositive
+	}
+
+	if o.familyName != "" {
+		if err := validateTaskFamilyName(o.familyName); err != nil {
+			return err
+		}
 	}
 
 	if o.image != "" && o.dockerfilePath != "" {
@@ -109,8 +122,11 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts the user for any important fields that are not provided.
+// Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
+	if err := o.askTaskFamilyName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -133,6 +149,25 @@ func (o *runTaskOpts) validateEnvName() error {
 		return errNoAppInWorkspace
 	}
 
+	return nil
+}
+
+func (o *runTaskOpts) askTaskFamilyName() error {
+	if o.familyName != "" {
+		return nil
+	}
+
+	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
+
+	familyName, err := o.prompt.Get(
+		fmt.Sprintf(fmtTaskRunFamilyNamePrompt, color.Emphasize("name")),
+		taskRunFamilyNamePromptHelp,
+		validateTaskFamilyName,
+		prompt.WithFinalMessage("Task family name:"))
+	if err != nil {
+		return fmt.Errorf("prompt get task family name: %w", err)
+	}
+	o.familyName = familyName
 	return nil
 }
 
@@ -179,8 +214,8 @@ func BuildTaskRunCmd() *cobra.Command {
 		Example: `
 Run a task with default setting.
 /code $ copilot task run
-Run a task in the "test" environment under the current workspace.
-/code $ copilot task run --env test
+Run a task named "db-migrate" in the "test" environment under the current workspace.
+/code $ copilot task run -n db-migrate --env test
 Starts 4 tasks with 2GB memory, Runs a particular image.
 /code $ copilot task run --num 4 --memory 2048 --task-role frontend-exec-role
 Run a task with environment variables.
@@ -205,6 +240,8 @@ Run a task with environment variables.
 	cmd.Flags().Int8Var(&vars.num, numFlag, 1, numFlagDescription)
 	cmd.Flags().Int16Var(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
 	cmd.Flags().Int16Var(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+
+	cmd.Flags().StringVarP(&vars.familyName, nameFlag, nameFlagShort, "", taskFamilyFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)

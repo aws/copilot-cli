@@ -119,6 +119,13 @@ func validateEnvironmentName(val interface{}) error {
 	return nil
 }
 
+func validateTaskFamilyName(val interface{}) error {
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf("task family name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
 func basicNameValidation(val interface{}) error {
 	s, ok := val.(string)
 	if !ok {
