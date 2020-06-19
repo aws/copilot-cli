@@ -335,6 +335,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
+
+			wantedEnv: envNameNone,
 		},
 		"default to 'None' environment if no env is present": {
 			basicOpts: defaultOpts,

@@ -172,7 +172,12 @@ func (o *runTaskOpts) askTaskFamilyName() error {
 }
 
 func (o *runTaskOpts) askEnvName() error {
-	if o.env != "" || o.AppName() == "" {
+	if o.env != "" {
+		return nil
+	}
+
+	if o.AppName() == "" {
+		o.env = envNameNone
 		return nil
 	}
 
