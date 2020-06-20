@@ -14,7 +14,7 @@ const (
 )
 
 var storageTemplateFunctions = map[string]interface{}{
-	"logicalIDSafe": template.LogicalIDSafeFunc,
+	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
 }
 

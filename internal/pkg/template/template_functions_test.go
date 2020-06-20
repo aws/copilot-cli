@@ -61,7 +61,7 @@ func TestDashReplacedLogicalIDToOriginal(t *testing.T) {
 		})
 	}
 }
-func TestLogicalIDSafeFunc(t *testing.T) {
+func TestStripNonAlphaNumFunc(t *testing.T) {
 	testCases := map[string]struct {
 		in     string
 		wanted string
@@ -82,7 +82,7 @@ func TestLogicalIDSafeFunc(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, LogicalIDSafeFunc(tc.in))
+			require.Equal(t, tc.wanted, StripNonAlphaNumFunc(tc.in))
 		})
 	}
 }
