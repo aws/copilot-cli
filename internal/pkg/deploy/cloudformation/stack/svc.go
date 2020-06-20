@@ -130,7 +130,7 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 		Parameters: params,
 		Tags:       tc.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": func(i int) int { return i + 1 },
+		"inc": template.IncFunc,
 	}))
 	if err != nil {
 		return "", err
@@ -158,4 +158,34 @@ func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 		SecretOutputs:   secretOutputNames(out),
 		PolicyOutputs:   managedPolicyOutputNames(out),
 	}, nil
+}
+
+func secretOutputNames(outputs []addon.Output) []string {
+	var secrets []string
+	for _, out := range outputs {
+		if out.IsSecret {
+			secrets = append(secrets, out.Name)
+		}
+	}
+	return secrets
+}
+
+func managedPolicyOutputNames(outputs []addon.Output) []string {
+	var policies []string
+	for _, out := range outputs {
+		if out.IsManagedPolicy {
+			policies = append(policies, out.Name)
+		}
+	}
+	return policies
+}
+
+func envVarOutputNames(outputs []addon.Output) []string {
+	var envVars []string
+	for _, out := range outputs {
+		if !out.IsSecret && !out.IsManagedPolicy {
+			envVars = append(envVars, out.Name)
+		}
+	}
+	return envVars
 }

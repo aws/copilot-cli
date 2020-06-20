@@ -61,6 +61,10 @@ const (
 	appDNSDelegationRoleName      = "DNSDelegationRole"
 )
 
+var cfTemplateFunctions = map[string]interface{}{
+	"logicalIDSafe": template.ReplaceDashesFunc,
+}
+
 // AppConfigFrom takes a template file and extracts the metadata block,
 // and parses it into an AppStackConfig
 func AppConfigFrom(template *string) (*AppResourcesConfig, error) {
@@ -99,7 +103,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 	}{
 		config,
 		ServiceTagKey,
-	}, template.WithFuncs(templateFunctions))
+	}, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err
 	}
@@ -215,7 +219,7 @@ func ToAppRegionalResources(stack *cloudformation.Stack) (*AppRegionalResources,
 			safeSvcName := strings.TrimPrefix(key, appOutputECRRepoPrefix)
 			// It's possible we had to sanitize the service name (removing dashes),
 			// so return it back to its original form.
-			originalSvcName := safeLogicalIDToOriginal(safeSvcName)
+			originalSvcName := template.DashReplacedLogicalIDToOriginal(safeSvcName)
 			regionalResources.RepositoryURLs[originalSvcName] = uri
 		}
 	}
