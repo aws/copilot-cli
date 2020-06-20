@@ -249,7 +249,7 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-{{- $length := len .Stages}}{{if gt $length 0}}{{range $index, $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
+{{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:{{if $stage.Prod}}
             - Name: ApprovePromotionTo-{{$stage.Name}}
