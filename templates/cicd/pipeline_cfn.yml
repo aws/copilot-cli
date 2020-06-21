@@ -249,7 +249,7 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-{{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
+        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:{{if $stage.Prod}}
             - Name: ApprovePromotionTo-{{$stage.Name}}
@@ -258,18 +258,7 @@ Resources:
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 1{{end}}{{if $stage.TestCommands}}
-            - Name: TestCommands
-              ActionTypeId:
-                Category: Test
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref BuildTestCommands{{$stage.Name}}
-              RunOrder: 1
-              InputArtifacts:
-                - Name: SCCheckoutArtifact{{end}}{{range $svc := $stage.LocalServices}}
+              RunOrder: 1{{end}}{{range $svc := $stage.LocalServices}}
             - Name: CreateOrUpdate-{{$svc}}-{{$stage.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
@@ -291,8 +280,19 @@ Resources:
                 RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
+              RunOrder: 1
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{end}}{{end}}{{end}}
+              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{if $stage.TestCommands}}
+            - Name: TestCommands
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildTestCommands{{$stage.Name}}
+              RunOrder: 2
+              InputArtifacts:
+                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
