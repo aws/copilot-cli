@@ -19,7 +19,7 @@ var (
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 
-	fmtTaskRunEnvPrompt        = "Select an environment"
+	fmtTaskRunEnvPrompt        = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 	fmtTaskRunFamilyNamePrompt = fmt.Sprintf("What would you like to %s your task family?", color.Emphasize("name"))
 
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. " +
