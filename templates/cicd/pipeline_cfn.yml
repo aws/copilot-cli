@@ -178,7 +178,22 @@ Resources:
             Resource:{{range $stage := .Stages}}
               - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
       Roles:
-        - !Ref PipelineRole
+        - !Ref PipelineRole{{range $index, $stage := .Stages}}  {{if $stage.TestCommands}}
+  BuildTestCommands{{$stage.Name}}:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: BuildTestCommands-{{$.AppName}}-{{$stage.Name}}
+      EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        ComputeType: BUILD_GENERAL1_SMALL
+      Source:
+        Type: NO_SOURCE
+        BuildSpec: "version: 0.2\nphases:\n  build:\n    commands: [{{range $index, $command := $stage.TestCommands}}{{if $index}},{{end}}\"{{$command}}\"{{end}}]"{{end}}{{end}}
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
@@ -234,15 +249,15 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-{{$length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
+        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
         - Name: DeployTo-{{$stage.Name}}
           Actions:{{if $stage.Prod}}
             - Name: ApprovePromotionTo-{{$stage.Name}}
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
-                Provider: Manual
                 Version: 1
+                Provider: Manual
               RunOrder: 1{{end}}{{range $svc := $stage.LocalServices}}
             - Name: CreateOrUpdate-{{$svc}}-{{$stage.Name}}
               Region: {{$stage.Region}}
@@ -269,4 +284,15 @@ Resources:
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{end}}{{end}}{{end}}
+              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{if $stage.TestCommands}}
+            - Name: TestCommands
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildTestCommands{{$stage.Name}}
+              RunOrder: 3
+              InputArtifacts:
+                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}

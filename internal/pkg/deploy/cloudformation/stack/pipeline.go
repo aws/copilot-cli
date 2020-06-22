@@ -29,7 +29,7 @@ func (p *pipelineStackConfig) StackName() string {
 }
 
 func (p *pipelineStackConfig) Template() (string, error) {
-	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(templateFunctions))
+	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err
 	}

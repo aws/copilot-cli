@@ -172,7 +172,7 @@ func (o *showSvcOpts) askSvcName() error {
 	}
 
 	if len(svcNames) == 0 {
-		log.Infof("No services found in application %s\n.", color.HighlightUserInput(o.AppName()))
+		log.Infof("No services found in application %s.\n", color.HighlightUserInput(o.AppName()))
 		return nil
 	}
 	if len(svcNames) == 1 {
