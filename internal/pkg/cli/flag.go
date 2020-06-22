@@ -147,7 +147,7 @@ Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use. Can be specified multiple times."
 	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
 	commandsFlagDescription       = "Optional. List of commands that are passed to docker run. Can be specified multiple times."
-	taskFamilyFlagDescription     = "Required. The family name of the task. Tasks with the same family name share the same set of resources."
+	taskFamilyFlagDescription     = "The family name of the task. Tasks with the same family name share the same set of resources."
 )
 
 func quoteAll(elems []string) []string {

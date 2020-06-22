@@ -114,7 +114,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    256,
 				inMemory: 512,
 			},
-			wantedError: errNumNotPositive,
+			wantedError: errNumInvalid,
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{

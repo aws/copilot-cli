@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	errNumNotPositive = errors.New("number of tasks must be positive")
+	errNumInvalid = errors.New("number of tasks must be positive and at most 10")
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 
@@ -75,8 +75,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
-	if o.num <= 0 {
-		return errNumNotPositive
+	if o.num <= 0 || o.num > 10 {
+		return errNumInvalid
 	}
 
 	if o.cpu <= 0 {
