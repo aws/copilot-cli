@@ -132,7 +132,7 @@ func TestDeleteAppOpts_Ask(t *testing.T) {
 type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
-	ws              *mocks.MockworkspaceDeleter
+	ws              *mocks.MockwsFileDeleter
 	sessProvider    *session.Provider
 	deployer        *mocks.Mockdeployer
 	svcDeleter      *mocks.Mockexecutor
@@ -202,9 +202,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
 
 					// deleteWs
-					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
-					mocks.ws.EXPECT().DeleteAll().Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName)),
+					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName))),
 				)
 			},
 			wantedError: nil,
@@ -243,9 +243,9 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppConfigStopMsg)),
 
 					// deleteWs
-					mocks.spinner.EXPECT().Start(deleteAppWsStartMsg),
-					mocks.ws.EXPECT().DeleteAll().Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppWsStopMsg)),
+					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName)),
+					mocks.ws.EXPECT().DeleteWorkspaceFile().Return(nil),
+					mocks.spinner.EXPECT().Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName))),
 				)
 			},
 			wantedError: nil,
@@ -260,7 +260,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
-			mockWorkspace := mocks.NewMockworkspaceDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
 			mockSession := session.NewProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 

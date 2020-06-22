@@ -271,7 +271,6 @@ type deleteSvcMocks struct {
 	secretsmanager *mocks.MocksecretsManager
 	sessProvider   *session.Provider
 	appCFN         *mocks.MocksvcRemoverFromApp
-	ws             *mocks.MockwsSvcDeleter
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MocksvcDeleter
 	ecr            *mocks.MockimageRemover
@@ -326,9 +325,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					// deleteSSMParam
 					mocks.store.EXPECT().DeleteService(mockAppName, mockSvcName).Return(nil),
-
-					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteService(mockSvcName).Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -356,9 +352,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					// deleteSSMParam
 					mocks.store.EXPECT().DeleteService(mockAppName, mockSvcName).Return(nil),
-
-					// deleteWorkspaceFile
-					mocks.ws.EXPECT().DeleteService(mockSvcName).Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -389,7 +382,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockWorkspace := mocks.NewMockwsSvcDeleter(ctrl)
 			mockSession := session.NewProvider()
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
 			mockSvcCFN := mocks.NewMocksvcDeleter(ctrl)
@@ -405,7 +397,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			mocks := deleteSvcMocks{
 				store:          mockstore,
 				secretsmanager: mockSecretsManager,
-				ws:             mockWorkspace,
 				sessProvider:   mockSession,
 				appCFN:         mockAppCFN,
 				spinner:        mockSpinner,
@@ -424,7 +415,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					EnvName: test.inEnvName,
 				},
 				store:     mockstore,
-				ws:        mockWorkspace,
 				sess:      mockSession,
 				spinner:   mockSpinner,
 				appCFN:    mockAppCFN,
