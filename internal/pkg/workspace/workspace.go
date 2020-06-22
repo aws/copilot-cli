@@ -28,8 +28,8 @@ import (
 const (
 	// CopilotDirName is the name of the directory where generated infrastructure code for an application will be stored.
 	CopilotDirName = "copilot"
-	// WorkspaceSummaryFileName is the name of the file that is associated with the application
-	WorkspaceSummaryFileName = ".workspace"
+	// SummaryFileName is the name of the file that is associated with the application.
+	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
 	maximumParentDirsToSearch = 5
@@ -193,7 +193,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
 // This will be called during app delete, we do not want to delete any other generated files
 func (ws *Workspace) DeleteWorkspaceFile() error {
-	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, WorkspaceSummaryFileName))
+	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
@@ -262,7 +262,7 @@ func (ws *Workspace) summaryPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	workspaceSummaryPath := filepath.Join(copilotPath, WorkspaceSummaryFileName)
+	workspaceSummaryPath := filepath.Join(copilotPath, SummaryFileName)
 	return workspaceSummaryPath, nil
 }
 

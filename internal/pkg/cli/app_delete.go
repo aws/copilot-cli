@@ -34,8 +34,8 @@ const (
 	deleteAppConfigStartMsg = "Deleting application configuration."
 	deleteAppConfigStopMsg  = "Deleted application configuration."
 
-	deleteAppWsStartMsg = "Deleting local .workspace file."
-	deleteAppWsStopMsg  = "Deleted local .workspace file."
+	fmtDeleteAppWsStartMsg = "Deleting local %s file."
+	fmtDeleteAppWsStopMsg  = "Deleted local %s file."
 )
 
 var (
@@ -292,12 +292,12 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 }
 
 func (o *deleteAppOpts) deleteWs() error {
-	o.spinner.Start(deleteAppWsStartMsg)
+	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
 	if err := o.ws.DeleteWorkspaceFile(); err != nil {
-		o.spinner.Stop(log.Serrorf("Error deleting %s file.", workspace.WorkspaceSummaryFileName))
-		return fmt.Errorf("delete %s file: %w", workspace.WorkspaceSummaryFileName, err)
+		o.spinner.Stop(log.Serrorf("Error deleting %s file.", workspace.SummaryFileName))
+		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
 	}
-	o.spinner.Stop(log.Ssuccess(deleteAppWsStopMsg))
+	o.spinner.Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
 	return nil
 }
 
