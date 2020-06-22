@@ -27,7 +27,7 @@ type deletePipelineMocks struct {
 	prog           *mocks.Mockprogress
 	secretsmanager *mocks.MocksecretsManager
 	deployer       *mocks.MockpipelineDeployer
-	ws             *mocks.MockwsPipelineDeleter
+	ws             *mocks.MockwsPipelineReader
 }
 
 func TestDeletePipelineOpts_Validate(t *testing.T) {
@@ -86,7 +86,7 @@ stages:
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 			mocks := deletePipelineMocks{
 				ws: mockWorkspace,
 			}
@@ -208,7 +208,6 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
-					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -230,7 +229,6 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
-					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -254,7 +252,6 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(nil),
 					mocks.prog.EXPECT().Stop(log.Ssuccessf(fmtDeletePipelineComplete, testPipelineName, testAppName)),
-					mocks.ws.EXPECT().DeletePipelineManifest().Return(nil),
 				)
 			},
 			wantedError: nil,
@@ -272,7 +269,6 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 					mocks.prog.EXPECT().Start(fmt.Sprintf(fmtDeletePipelineStart, testPipelineName, testAppName)),
 					mocks.deployer.EXPECT().DeletePipeline(testPipelineName).Times(1).Return(testError),
 					mocks.prog.EXPECT().Stop(log.Serrorf(fmtDeletePipelineFailed, testPipelineName, testAppName, testError)),
-					mocks.ws.EXPECT().DeletePipelineManifest().Times(0),
 				)
 			},
 			wantedError: testError,
@@ -289,7 +285,7 @@ func TestDeletePipelineOpts_Execute(t *testing.T) {
 			mockProg := mocks.NewMockprogress(ctrl)
 			mockDeployer := mocks.NewMockpipelineDeployer(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockWorkspace := mocks.NewMockwsPipelineDeleter(ctrl)
+			mockWorkspace := mocks.NewMockwsPipelineReader(ctrl)
 
 			mocks := deletePipelineMocks{
 				prompt:         mockPrompter,
