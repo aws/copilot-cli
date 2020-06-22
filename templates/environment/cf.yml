@@ -160,6 +160,8 @@ Resources:
 
   Cluster:
     Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders: ['FARGATE', 'FARGATE_SPOT']
 
   PublicLoadBalancerSecurityGroup:
     Condition: CreatePublicLoadBalancer
