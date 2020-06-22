@@ -16,7 +16,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +50,6 @@ type deleteSvcOpts struct {
 
 	// Interfaces to dependencies.
 	store     store
-	ws        wsSvcDeleter
 	sess      sessionProvider
 	spinner   progress
 	appCFN    svcRemoverFromApp
@@ -63,11 +61,6 @@ type deleteSvcOpts struct {
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("intialize workspace client: %w", err)
-	}
-
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
@@ -82,7 +75,6 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 	return &deleteSvcOpts{
 		deleteSvcVars: vars,
 
-		ws:      ws,
 		store:   store,
 		spinner: termprogress.NewSpinner(),
 		sess:    provider,
@@ -152,9 +144,6 @@ func (o *deleteSvcOpts) Execute() error {
 		return err
 	}
 	if err := o.deleteSSMParam(); err != nil {
-		return err
-	}
-	if err := o.deleteWorkspaceFile(); err != nil {
 		return err
 	}
 
@@ -297,14 +286,6 @@ func (o *deleteSvcOpts) removeSvcFromApp() error {
 func (o *deleteSvcOpts) deleteSSMParam() error {
 	if err := o.store.DeleteService(o.appName, o.Name); err != nil {
 		return fmt.Errorf("delete service %s in application %s from config store: %w", o.Name, o.appName, err)
-	}
-
-	return nil
-}
-
-func (o *deleteSvcOpts) deleteWorkspaceFile() error {
-	if err := o.ws.DeleteService(o.Name); err != nil {
-		return fmt.Errorf("delete service %s directory: %w", o.Name, err)
 	}
 
 	return nil

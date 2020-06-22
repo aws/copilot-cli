@@ -49,7 +49,7 @@ type deletePipelineOpts struct {
 	pipelineDeployer pipelineDeployer
 	prog             progress
 	secretsmanager   secretsManager
-	ws               wsPipelineDeleter
+	ws               wsPipelineReader
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
@@ -123,10 +123,6 @@ func (o *deletePipelineOpts) Execute() error {
 		return err
 	}
 
-	if err := o.deletePipelineFile(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -186,14 +182,6 @@ func (o *deletePipelineOpts) deleteStack() error {
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeletePipelineComplete, o.PipelineName, o.AppName()))
 	return nil
-}
-
-func (o *deletePipelineOpts) deletePipelineFile() error {
-	err := o.ws.DeletePipelineManifest()
-	if err == nil {
-		log.Successln("Deleted pipeline manifest from workspace.")
-	}
-	return err
 }
 
 // RecommendedActions is a no-op for this command.
