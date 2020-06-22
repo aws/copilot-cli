@@ -499,13 +499,6 @@ func (o *initStorageOpts) Execute() error {
 	return o.createAddon()
 }
 
-var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
-
-// Strip non-alphanumeric characters from an input string
-func logicalIDSafe(input string) string {
-	return nonAlphaNum.ReplaceAllString(input, "")
-}
-
 var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
 
 // getAttFromKey parses the DDB type and name out of keys specified in the form "Email:S"
@@ -637,8 +630,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	}
 
 	props.StorageProps = &addon.StorageProps{
-		Name:         o.storageName,
-		ResourceName: logicalIDSafe(o.storageName),
+		Name: o.storageName,
 	}
 	return addon.NewDynamoDB(&props), nil
 }
@@ -646,24 +638,15 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
 	props := &addon.S3Props{
 		StorageProps: &addon.StorageProps{
-			Name:         o.storageName,
-			ResourceName: logicalIDSafe(o.storageName),
+			Name: o.storageName,
 		},
 	}
 	return addon.NewS3(props), nil
 }
 
 func (o *initStorageOpts) RecommendedActions() []string {
-	var storageTypeEnvVar string
-	switch o.storageType {
-	case dynamoDBStorageType:
-		storageTypeEnvVar = "TableName"
-	case s3StorageType:
-		storageTypeEnvVar = "BucketName"
-	}
 
-	// TODO: refactor this into a template function, or standardize generating env var names in another way
-	newVar := template.ToSnakeCase(logicalIDSafe(o.storageName) + storageTypeEnvVar)
+	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
 
 	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
 
