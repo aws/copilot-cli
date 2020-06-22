@@ -280,7 +280,7 @@ Resources:
                 RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 1
+              RunOrder: 2
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
@@ -293,6 +293,6 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommands{{$stage.Name}}
-              RunOrder: 2
+              RunOrder: 3
               InputArtifacts:
                 - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
