@@ -159,7 +159,8 @@ func (s *Source) Owner() (string, error) {
 
 // PipelineStage represents configuration for each deployment stage
 // of a workspace. A stage consists of the Config Environment the pipeline
-// is deploying to and the containerized services that will be deployed.
+// is deploying to, the containerized services that will be deployed, and
+// test commands, if the user has opted to add any.
 type PipelineStage struct {
 	*AssociatedEnvironment
 	LocalServices []string

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 )
 
 var (
@@ -317,6 +318,6 @@ func validateLsi(lsis []string, attributes []string) error {
 }
 
 func prettify(inputStrings []string) string {
-	prettyTypes := quoteAll(inputStrings)
+	prettyTypes := template.QuoteSliceFunc(inputStrings)
 	return strings.Join(prettyTypes, ", ")
 }

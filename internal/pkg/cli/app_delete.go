@@ -34,8 +34,8 @@ const (
 	deleteAppConfigStartMsg = "Deleting application configuration."
 	deleteAppConfigStopMsg  = "Deleted application configuration."
 
-	deleteAppWsStartMsg = "Deleting local workspace folder."
-	deleteAppWsStopMsg  = "Deleted local workspace folder."
+	fmtDeleteAppWsStartMsg = "Deleting local %s file."
+	fmtDeleteAppWsStopMsg  = "Deleted local %s file."
 )
 
 var (
@@ -53,7 +53,7 @@ type deleteAppOpts struct {
 	spinner progress
 
 	store                store
-	ws                   workspaceDeleter
+	ws                   wsFileDeleter
 	sessProvider         sessionProvider
 	cfn                  deployer
 	s3                   func(session *awssession.Session) bucketEmptier
@@ -292,12 +292,12 @@ func (o *deleteAppOpts) deleteAppConfigs() error {
 }
 
 func (o *deleteAppOpts) deleteWs() error {
-	o.spinner.Start(deleteAppWsStartMsg)
-	if err := o.ws.DeleteAll(); err != nil {
-		o.spinner.Stop(log.Serror("Error deleting local workspace folder."))
-		return fmt.Errorf("delete workspace: %w", err)
+	o.spinner.Start(fmt.Sprintf(fmtDeleteAppWsStartMsg, workspace.SummaryFileName))
+	if err := o.ws.DeleteWorkspaceFile(); err != nil {
+		o.spinner.Stop(log.Serrorf("Error deleting %s file.", workspace.SummaryFileName))
+		return fmt.Errorf("delete %s file: %w", workspace.SummaryFileName, err)
 	}
-	o.spinner.Stop(log.Ssuccess(deleteAppWsStopMsg))
+	o.spinner.Stop(log.Ssuccess(fmt.Sprintf(fmtDeleteAppWsStopMsg, workspace.SummaryFileName)))
 	return nil
 }
 

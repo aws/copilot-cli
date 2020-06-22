@@ -5,10 +5,10 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 )
 
 // Long flag names.
@@ -84,9 +84,9 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s`, strings.Join(quoteAll(manifest.ServiceTypes), ", "))
+%s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s`, strings.Join(quoteAll(storageTypes), ", "))
+%s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 )
 
 const (
@@ -149,11 +149,3 @@ Must be of the format '<name>:<dataType>'. Can be specified multiple times.`
 	commandsFlagDescription       = "Optional. List of commands that are passed to docker run. Can be specified multiple times."
 	taskFamilyFlagDescription     = "Required. The family name of the task. Tasks with the same family name share the same set of resources."
 )
-
-func quoteAll(elems []string) []string {
-	quotedElems := make([]string, len(elems))
-	for i, el := range elems {
-		quotedElems[i] = strconv.Quote(el)
-	}
-	return quotedElems
-}
