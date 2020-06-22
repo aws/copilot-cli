@@ -403,7 +403,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 			break
 		}
 		if len(o.lsiSorts) > 5 {
-			log.Infof("You may not specify more than 5 alternate sort keys. Continuing...")
+			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
 			break
 		}
 		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
