@@ -15,13 +15,13 @@ import (
 )
 
 type basicOpts struct {
-	inNum    int8
+	inCount  int8
 	inCPU    int16
 	inMemory int16
 }
 
 var defaultOpts = basicOpts{
-	inNum:    1,
+	inCount:  1,
 	inCPU:    256,
 	inMemory: 512,
 }
@@ -110,7 +110,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{
-				inNum:    -1,
+				inCount:  -1,
 				inCPU:    256,
 				inMemory: 512,
 			},
@@ -118,7 +118,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{
-				inNum:    1,
+				inCount:  1,
 				inCPU:    -15,
 				inMemory: 512,
 			},
@@ -126,7 +126,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
-				inNum:    1,
+				inCount:  1,
 				inCPU:    256,
 				inMemory: -1024,
 			},
@@ -243,10 +243,10 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
 					},
-					num:            tc.inNum,
+					count:            tc.inCount,
 					cpu:            tc.inCPU,
 					memory:         tc.inMemory,
-					familyName:     tc.inName,
+					groupName:      tc.inName,
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
@@ -334,7 +334,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(fmtTaskRunFamilyNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+				m.EXPECT().Get(fmtTaskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
 			},
 
 			wantedName: "my-task",
@@ -363,12 +363,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 						appName: tc.appName,
 						prompt:  mockPrompter,
 					},
-					num:    tc.inNum,
+					count:    tc.inCount,
 					cpu:    tc.inCPU,
 					memory: tc.inMemory,
 
-					familyName: tc.inName,
-					env:        tc.inEnv,
+					groupName: tc.inName,
+					env:       tc.inEnv,
 				},
 				sel:   mockSel,
 			}
@@ -381,7 +381,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					require.Equal(t, tc.wantedEnv, opts.env)
 				}
 				if tc.wantedName != "" {
-					require.Equal(t, tc.wantedName, opts.familyName)
+					require.Equal(t, tc.wantedName, opts.groupName)
 				}
 			} else {
 				require.EqualError(t, tc.wantedError, err.Error())

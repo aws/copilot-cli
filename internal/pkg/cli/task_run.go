@@ -19,21 +19,21 @@ var (
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 
-	fmtTaskRunEnvPrompt        = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
-	fmtTaskRunFamilyNamePrompt = fmt.Sprintf("What would you like to %s your task family?", color.Emphasize("name"))
+	fmtTaskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
+	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
 
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. " +
 		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(config.EnvNameNone))
-	taskRunFamilyNamePromptHelp = "The family name of the task. Tasks with the same family name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
+	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
 type runTaskVars struct {
 	*GlobalOpts
-	num    int8
+	count  int8
 	cpu    int16
 	memory int16
 
-	familyName string
+	groupName string
 
 	image          string
 	dockerfilePath string
@@ -75,7 +75,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
-	if o.num <= 0 {
+	if o.count <= 0 {
 		return errNumNotPositive
 	}
 
@@ -87,8 +87,8 @@ func (o *runTaskOpts) Validate() error {
 		return errMemNotPositive
 	}
 
-	if o.familyName != "" {
-		if err := basicNameValidation(o.familyName); err != nil {
+	if o.groupName != "" {
+		if err := basicNameValidation(o.groupName); err != nil {
 			return err
 		}
 	}
@@ -124,7 +124,7 @@ func (o *runTaskOpts) Validate() error {
 
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
-	if err := o.askTaskFamilyName(); err != nil {
+	if err := o.askTaskGroupName(); err != nil {
 		return err
 	}
 	if err := o.askEnvName(); err != nil {
@@ -152,22 +152,22 @@ func (o *runTaskOpts) validateEnvName() error {
 	return nil
 }
 
-func (o *runTaskOpts) askTaskFamilyName() error {
-	if o.familyName != "" {
+func (o *runTaskOpts) askTaskGroupName() error {
+	if o.groupName != "" {
 		return nil
 	}
 
 	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
 
-	familyName, err := o.prompt.Get(
-		fmtTaskRunFamilyNamePrompt,
-		taskRunFamilyNamePromptHelp,
+	groupName, err := o.prompt.Get(
+		fmtTaskRunGroupNamePrompt,
+		taskRunGroupNamePromptHelp,
 		basicNameValidation,
-		prompt.WithFinalMessage("Task family name:"))
+		prompt.WithFinalMessage("Task group name:"))
 	if err != nil {
-		return fmt.Errorf("prompt get task family name: %w", err)
+		return fmt.Errorf("prompt get task group name: %w", err)
 	}
-	o.familyName = familyName
+	o.groupName = groupName
 	return nil
 }
 
@@ -224,11 +224,11 @@ Run a task with environment variables.
 		}),
 	}
 
-	cmd.Flags().Int8Var(&vars.num, numFlag, 1, numFlagDescription)
+	cmd.Flags().Int8Var(&vars.count, countFlag, 1, countFlagDescription)
 	cmd.Flags().Int16Var(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
 	cmd.Flags().Int16Var(&vars.memory, memoryFlag, 512, memoryFlagDescription)
 
-	cmd.Flags().StringVarP(&vars.familyName, nameFlag, nameFlagShort, "", taskFamilyFlagDescription)
+	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
