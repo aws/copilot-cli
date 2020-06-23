@@ -21,7 +21,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
-		inAttributes  []string
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
@@ -134,7 +133,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
-					attributes:   tc.inAttributes,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -170,7 +168,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
-		inAttributes  []string
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
@@ -475,7 +472,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedErr: nil,
 		},
-		"asks for attributes": {
+		"ask for LSI if not specified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: dynamoDBStorageType,
@@ -484,36 +481,34 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inSort:        wantedSortKey,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
+				lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
+				lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
 				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBMoreAttributesPrompt),
-					gomock.Any(),
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
 					gomock.Any(),
 				).Return(true, nil)
-				attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
-				m.EXPECT().Get(gomock.Eq(storageInitDDBAttributePrompt),
+				m.EXPECT().Get(
+					gomock.Eq(storageInitDDBLSINamePrompt),
+					gomock.Eq(storageInitDDBLSINameHelp),
 					gomock.Any(),
 					gomock.Any(),
+				).Return("Email", nil)
+				m.EXPECT().SelectOne(
+					gomock.Eq(lsiTypePrompt),
+					gomock.Eq(lsiTypeHelp),
+					gomock.Eq(attributeTypesLong),
 					gomock.Any(),
-				).Return("points", nil)
-				m.EXPECT().SelectOne(gomock.Eq(attributeTypePrompt),
-					gomock.Any(),
-					attributeTypesLong,
-					gomock.Any(),
-				).Return(ddbIntType, nil)
-				// Stop adding attributes now
+				).Return(ddbStringType, nil)
 				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBMoreAttributesPrompt),
-					gomock.Any(),
+					gomock.Eq(storageInitDDBMoreLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
 					gomock.Any(),
 				).Return(false, nil)
-				// Don't add an LSI.
-				m.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
-
-			wantedErr: nil,
 		},
-		"error if attributes misspecified": {
+		"error if lsi name misspecified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: dynamoDBStorageType,
@@ -523,7 +518,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBMoreAttributesPrompt),
+					gomock.Eq(storageInitDDBLSIPrompt),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(true, nil)
@@ -535,9 +530,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
 
-			wantedErr: fmt.Errorf("get DDB attribute name: some error"),
+			wantedErr: fmt.Errorf("get DDB alternate sort key name: some error"),
 		},
-		"errors if fail to confirm attribute type": {
+		"errors if fail to confirm lsi": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: dynamoDBStorageType,
@@ -554,9 +549,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
 
-			wantedErr: fmt.Errorf("confirm add more attributes: some error"),
+			wantedErr: fmt.Errorf("confirm add alternate sort key: some error"),
 		},
-		"error if attribute type misspecified": {
+		"error if lsi type misspecified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: dynamoDBStorageType,
@@ -584,105 +579,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
 
-			wantedErr: fmt.Errorf("get DDB attribute type: some error"),
-		},
-		"asks for LSI configuration": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
-			inStorageName: wantedTableName,
-			inPartition:   wantedPartitionKey,
-			inSort:        wantedSortKey,
-			inAttributes:  []string{"email:S", "points:N"},
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBLSIPrompt),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(true, nil)
-				m.EXPECT().MultiSelect(
-					gomock.Eq(storageInitDDBLSINamePrompt),
-					gomock.Any(),
-					[]string{"email", "points"},
-					gomock.Any(),
-				).Return([]string{"email"}, nil)
-			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
-
-			wantedErr: nil,
-		},
-		"error if more than 5 lsis specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
-			inStorageName: wantedTableName,
-			inPartition:   wantedPartitionKey,
-			inSort:        wantedSortKey,
-			inAttributes:  []string{"email:S", "points:N", "awesomeness:N", "badness:N", "heart:N", "justice:N"},
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBLSIPrompt),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(true, nil)
-				m.EXPECT().MultiSelect(
-					gomock.Eq(storageInitDDBLSINamePrompt),
-					gomock.Any(),
-					[]string{"email", "points", "awesomeness", "badness", "heart", "justice"},
-					gomock.Any(),
-				).Return([]string{"email", "points", "awesomeness", "badness", "heart", "justice"}, nil)
-			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
-
-			wantedErr: fmt.Errorf("cannot specify more than 5 alternate sort keys"),
-		},
-		"error if LSIs specified incorrectly": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
-			inStorageName: wantedTableName,
-			inPartition:   wantedPartitionKey,
-			inSort:        wantedSortKey,
-			inAttributes:  []string{"email:S", "points:N", "awesomeness:N", "badness:N", "heart:N", "justice:N"},
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBLSIPrompt),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(true, nil)
-				m.EXPECT().MultiSelect(
-					gomock.Eq(storageInitDDBLSINamePrompt),
-					gomock.Any(),
-					[]string{"email", "points", "awesomeness", "badness", "heart", "justice"},
-					gomock.Any(),
-				).Return([]string{}, errors.New("some error"))
-			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
-
-			wantedErr: fmt.Errorf("get LSI sort keys: some error"),
-		},
-		"error if LSIs not confirmed": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageType: dynamoDBStorageType,
-			inStorageName: wantedTableName,
-			inPartition:   wantedPartitionKey,
-			inSort:        wantedSortKey,
-			inAttributes:  []string{"email:S", "points:N", "awesomeness:N", "badness:N", "heart:N", "justice:N"},
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Confirm(
-					gomock.Eq(storageInitDDBLSIPrompt),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(false, errors.New("some error"))
-			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
-
-			wantedErr: fmt.Errorf("confirm add LSI to table: some error"),
+			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
 		},
 		"no error or asks when fully specified": {
 			inAppName:     wantedAppName,
@@ -691,8 +588,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inAttributes:  []string{"email:S", "points:N"},
-			inLSISorts:    []string{"email"},
+			inLSISorts:    []string{"email:S"},
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockconfigSelector) {},
@@ -717,7 +613,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
-					attributes:   tc.inAttributes,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
@@ -756,7 +651,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inStorageType string
 		inSvcName     string
 		inStorageName string
-		inAttributes  []string
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
@@ -801,8 +695,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-table",
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inAttributes:  []string{"goodness:N"},
-			inLSISorts:    []string{"goodness"},
+			inLSISorts:    []string{"goodness:N"},
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
@@ -850,7 +743,6 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					storageType:  tc.inStorageType,
 					storageName:  tc.inStorageName,
 					storageSvc:   tc.inSvcName,
-					attributes:   tc.inAttributes,
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
