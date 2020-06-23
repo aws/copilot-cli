@@ -144,7 +144,7 @@ func (s *Select) Environment(prompt, help, app string) (string, error) {
 func (s *Select) EnvironmentWithNone(prompt, help, app string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
-		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
+		return "", err
 	}
 
 	if len(envs) == 0 {

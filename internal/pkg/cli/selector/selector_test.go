@@ -565,6 +565,16 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("select environment: error selecting"),
 		},
+		"with error listing environments": {
+			mocking: func() {
+				mockEnvLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return(nil, fmt.Errorf("error listing environments")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("list environments: error listing environments"),
+		},
 	}
 
 	sel := Select{

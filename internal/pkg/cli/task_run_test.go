@@ -339,6 +339,25 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedName: "my-task",
 		},
+		"error getting task group name": {
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("error getting task group name"))
+			},
+			wantedError: errors.New("prompt get task group name: error getting task group name"),
+		},
+		"error selecting environment": {
+			basicOpts: defaultOpts,
+
+			inName: "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any()).Return(config.EnvNameNone, fmt.Errorf("error selecting environment"))
+			},
+
+			wantedError: errors.New("ask for environment: error selecting environment"),
+			wantedEnv: config.EnvNameNone,
+		},
 	}
 
 	for name, tc := range testCases {
