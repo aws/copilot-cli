@@ -276,41 +276,28 @@ func TestGetAttributeFromKey(t *testing.T) {
 	}
 
 }
-func TestValidateLsi(t *testing.T) {
+func TestValidateLSIs(t *testing.T) {
 	testCases := map[string]struct {
 		inputAttributes []string
 		inputLsis       []string
 		wantError       error
 	}{
 		"good case": {
-			inputAttributes: []string{"userID:S"},
-			inputLsis:       []string{"userID"},
-			wantError:       nil,
+			inputLsis: []string{"userID:S"},
+			wantError: nil,
 		},
-		"lsi not in attributes": {
-			inputAttributes: []string{"userID:S"},
-			inputLsis:       []string{"email"},
-			wantError:       errLsiAttributeNotPresent,
-		},
-		"bad attribute structure": {
-			inputAttributes: []string{"userID"},
-			inputLsis:       []string{"userID"},
-			wantError:       errDDBAttributeBadFormat,
-		},
-		"no lsis": {
-			inputAttributes: []string{"userID:S"},
-			inputLsis:       []string{},
-			wantError:       nil,
+		"bad lsi structure": {
+			inputLsis: []string{"userID"},
+			wantError: errDDBAttributeBadFormat,
 		},
 		"too many lsis": {
-			inputAttributes: []string{"bowie:S", "clyde:S", "keno:S", "kava:S", "meow:S", "hana:S"},
-			inputLsis:       []string{"bowie", "clyde", "keno", "kava", "meow", "hana"},
-			wantError:       errTooManyLsiKeys,
+			inputLsis: []string{"bowie:S", "clyde:S", "keno:S", "kava:S", "meow:S", "hana:S"},
+			wantError: errTooManyLsiKeys,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateLsi(tc.inputLsis, tc.inputAttributes)
+			got := validateLSIs(tc.inputLsis)
 			if tc.wantError != nil {
 				require.EqualError(t, got, tc.wantError.Error())
 			} else {
