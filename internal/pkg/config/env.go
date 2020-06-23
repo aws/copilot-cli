@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
+const EnvNameNone = "None"
+
 // Environment represents a deployment environment in an application.
 type Environment struct {
 	App              string `json:"app"`              // Name of the app this environment belongs to.
