@@ -6,16 +6,16 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 var (
-	errNumInvalid = errors.New("number of tasks must be positive and at most 10")
+	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
 
@@ -23,10 +23,8 @@ var (
 	fmtTaskRunFamilyNamePrompt = fmt.Sprintf("What would you like to %s your task family?", color.Emphasize("name"))
 
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. " +
-		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envNameNone))
-	taskRunFamilyNamePromptHelp = "The family name of the task. Tasks with the same family name share the same set of resources."
-
-	envNameNone = "None"
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(config.EnvNameNone))
+	taskRunFamilyNamePromptHelp = "The family name of the task. Tasks with the same family name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
 type runTaskVars struct {
@@ -57,6 +55,7 @@ type runTaskOpts struct {
 	fs     afero.Fs
 	store  store
 	parser dockerfileParser
+	sel    appEnvWithNoneSelector
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -70,13 +69,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		fs:    &afero.Afero{Fs: afero.NewOsFs()},
 		store: store,
+		sel:   selector.NewSelect(vars.prompt, store),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
-	if o.num <= 0 || o.num > 10 {
-		return errNumInvalid
+	if o.num <= 0 {
+		return errNumNotPositive
 	}
 
 	if o.cpu <= 0 {
@@ -88,7 +88,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.familyName != "" {
-		if err := validateTaskFamilyName(o.familyName); err != nil {
+		if err := basicNameValidation(o.familyName); err != nil {
 			return err
 		}
 	}
@@ -162,7 +162,7 @@ func (o *runTaskOpts) askTaskFamilyName() error {
 	familyName, err := o.prompt.Get(
 		fmtTaskRunFamilyNamePrompt,
 		taskRunFamilyNamePromptHelp,
-		validateTaskFamilyName,
+		basicNameValidation,
 		prompt.WithFinalMessage("Task family name:"))
 	if err != nil {
 		return fmt.Errorf("prompt get task family name: %w", err)
@@ -177,33 +177,15 @@ func (o *runTaskOpts) askEnvName() error {
 	}
 
 	if o.AppName() == "" {
-		o.env = envNameNone
+		o.env = config.EnvNameNone
 		return nil
 	}
 
-	existingEnv, err := o.store.ListEnvironments(o.AppName())
+	env, err := o.sel.EnvironmentWithNone(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName())
 	if err != nil {
-		return fmt.Errorf("list environments: %w", err)
+		return fmt.Errorf("ask for environment: %w", err)
 	}
-
-	if len(existingEnv) == 0 {
-		log.Infof("No environment found associated with app %s, defaulting to %s (task will run in your default VPC)\n",
-			color.HighlightUserInput(o.AppName()), color.Emphasize(envNameNone))
-		o.env = envNameNone
-		return nil
-	}
-
-	envNames := make([]string, len(existingEnv)+1)
-	for ind, env := range existingEnv {
-		envNames[ind] = env.Name
-	}
-	envNames[len(existingEnv)] = envNameNone
-
-	selectedEnvName, err := o.prompt.SelectOne(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, envNames)
-	if err != nil {
-		return fmt.Errorf("select environment: %w", err)
-	}
-	o.env = selectedEnvName
+	o.env = env
 	return nil
 }
 

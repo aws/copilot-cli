@@ -114,7 +114,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    256,
 				inMemory: 512,
 			},
-			wantedError: errNumInvalid,
+			wantedError: errNumNotPositive,
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{
@@ -287,8 +287,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inEnv   string
 		appName string
 
+		mockSel    func(m *mocks.MockappEnvWithNoneSelector)
 		mockPrompt func(m *mocks.Mockprompter)
-		mockStore  func(m *mocks.Mockstore)
 
 		wantedError error
 		wantedEnv   string
@@ -300,14 +300,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
-					{Name: "test"},
-					{Name: "prod"},
-				}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmtTaskRunEnvPrompt, gomock.Any(), []string{"test", "prod", envNameNone}).Return("test", nil)
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), "my-app").Return("test", nil)
 			},
 
 			wantedEnv: "test",
@@ -319,9 +313,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inEnv:   "test",
 			appName: "my-app",
 
-			mockStore: func(m *mocks.Mockstore) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedEnv: "test",
@@ -331,34 +324,17 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			inName: "my-task",
 
-			mockStore: func(m *mocks.Mockstore) {},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedEnv: envNameNone,
-		},
-		"default to 'None' environment if no env is found": {
-			basicOpts: defaultOpts,
-
-			inName:  "my-task",
-			appName: "my-app",
-
-			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{}, nil)
-			},
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv:  envNameNone,
+			wantedEnv: config.EnvNameNone,
 		},
 		"prompt for task family name": {
 			basicOpts: defaultOpts,
 
-			mockStore: func(m *mocks.Mockstore) {},
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+				m.EXPECT().Get(fmtTaskRunFamilyNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
 			},
 
 			wantedName: "my-task",
@@ -370,10 +346,16 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			mockSel := mocks.NewMockappEnvWithNoneSelector(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			tc.mockPrompt(mockPrompter)
-			tc.mockStore(mockStore)
+
+			if tc.mockSel != nil {
+				tc.mockSel(mockSel)
+			}
+
+			if tc.mockPrompt != nil {
+				tc.mockPrompt(mockPrompter)
+			}
 
 			opts := runTaskOpts{
 				runTaskVars: runTaskVars{
@@ -388,7 +370,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					familyName: tc.inName,
 					env:        tc.inEnv,
 				},
-				store: mockStore,
+				sel:   mockSel,
 			}
 
 			err := opts.Ask()
