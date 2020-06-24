@@ -16,11 +16,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/dustin/go-humanize"
 )
-
-// humanizeTime is overriden in tests so that its output is constant as time passes.
-var humanizeTime = humanize.Time
 
 type alarmStatusGetter interface {
 	GetAlarmsWithTags(tags map[string]string) ([]cloudwatch.AlarmStatus, error)

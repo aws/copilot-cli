@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/dustin/go-humanize"
 	"io"
 )
 
@@ -18,6 +19,9 @@ const (
 	paddingChar            = ' ' // character in between columns.
 	noAdditionalFormatting = 0
 )
+
+// humanizeTime is overriden in tests so that its output is constant as time passes.
+var humanizeTime = humanize.Time
 
 // HumanJSONStringer contains methods that stringify app info for output.
 type HumanJSONStringer interface {
