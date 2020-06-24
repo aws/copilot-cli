@@ -47,6 +47,17 @@ var _ = Describe("addons flow", func() {
 			Expect(appShowOutput.Name).To(Equal(appName))
 			Expect(appShowOutput.URI).To(BeEmpty())
 		})
+
+		It("app delete does delete .workspace", func() {
+			_, err := cli.AppDelete(map[string]string{"test": "default"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
+
+			_, initErr = cli.AppInit(&client.AppInitRequest{
+				AppName: appName,
+			})
+			Expect(initErr).NotTo(HaveOccurred())
+		})
 	})
 
 	Context("when creating a new environment", func() {
@@ -133,6 +144,7 @@ var _ = Describe("addons flow", func() {
 	Context("when deploying svc", func() {
 		var (
 			appDeployErr error
+			svcInitErr   error
 		)
 		BeforeAll(func() {
 			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
@@ -212,6 +224,22 @@ var _ = Describe("addons flow", func() {
 				Expect(logLine.Timestamp).NotTo(Equal(0))
 				Expect(logLine.IngestionTime).NotTo(Equal(0))
 			}
+		})
+
+		It("svc delete should not delete local files", func() {
+			_, err := cli.SvcDelete(svcName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect("./copilot/hello/addons").Should(BeAnExistingFile())
+			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/.workspace").Should(BeAnExistingFile())
+
+			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
+				Name:       svcName,
+				SvcType:    "Load Balanced Web Service",
+				Dockerfile: "./hello/Dockerfile",
+				SvcPort:    "80",
+			})
+			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
 	})
 })
