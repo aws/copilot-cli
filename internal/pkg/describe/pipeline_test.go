@@ -230,7 +230,7 @@ Resources
 `,
 			expectedJSONString: "{\"name\":\"pipeline-dinder-badgoose-repo\",\"region\":\"us-west-2\",\"accountId\":\"1234567890\",\"stages\":[{\"name\":\"Source\",\"category\":\"Source\",\"provider\":\"GitHub\",\"details\":\"Repository: badgoose/repo\"},{\"name\":\"Build\",\"category\":\"Build\",\"provider\":\"CodeBuild\",\"details\":\"BuildProject: pipeline-dinder-badgoose-repo-BuildProject\"},{\"name\":\"DeployTo-test\",\"category\":\"Deploy\",\"provider\":\"CloudFormation\",\"details\":\"StackName: dinder-test-test\"}],\"createdAt\":\"2020-02-02T15:04:05Z\",\"updatedAt\":\"2020-02-02T15:04:05Z\",\"resources\":[{\"type\":\"AWS::CodeBuild::Project\",\"physicalID\":\"pipeline-dinder-badgoose-repo-BuildProject\"},{\"type\":\"AWS::IAM::Policy\",\"physicalID\":\"pipel-Buil-1PEASDDL44ID2\"},{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"pipeline-dinder-badgoose-repo-BuildProjectRole-A4V6VSG1XIIJ\"},{\"type\":\"AWS::CodePipeline::Pipeline\",\"physicalID\":\"pipeline-dinder-badgoose-repo\"},{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"pipeline-dinder-badgoose-repo-PipelineRole-100SEEQN6CU0F\"},{\"type\":\"AWS::IAM::Policy\",\"physicalID\":\"pipel-Pipe-EO4QGE10RJ8F\"}]}\n",
 		},
-		"correct output witouth resources": {
+		"correct output without resources": {
 			inPipeline: &Pipeline{*mockPipeline, nil},
 			expectedHumanString: `About
 
