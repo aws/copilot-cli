@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -188,6 +189,14 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 }
 
 func TestPipelineDescriber_String(t *testing.T) {
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-06-19T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
 	testCases := map[string]struct {
 		inPipeline          *Pipeline
 		expectedHumanString string
@@ -200,8 +209,8 @@ func TestPipelineDescriber_String(t *testing.T) {
   Name              pipeline-dinder-badgoose-repo
   Region            us-west-2
   AccountID         1234567890
-  Created At        3 months ago
-  Updated At        3 months ago
+  Created At        4 months ago
+  Updated At        4 months ago
 
 Stages
 
@@ -228,8 +237,8 @@ Resources
   Name              pipeline-dinder-badgoose-repo
   Region            us-west-2
   AccountID         1234567890
-  Created At        3 months ago
-  Updated At        3 months ago
+  Created At        4 months ago
+  Updated At        4 months ago
 
 Stages
 
@@ -246,7 +255,7 @@ Stages
 		human := tc.inPipeline.HumanString()
 		json, _ := tc.inPipeline.JSONString()
 
-		require.NotEmpty(t, tc.expectedHumanString, human, "expected human output to not be empty")
+		require.Equal(t, tc.expectedHumanString, human, "expected human output to match")
 		require.Equal(t, tc.expectedJSONString, json, "expected JSON output to match")
 	}
 }
