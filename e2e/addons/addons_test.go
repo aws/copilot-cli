@@ -48,18 +48,6 @@ var _ = Describe("addons flow", func() {
 			Expect(appShowOutput.Name).To(Equal(appName))
 			Expect(appShowOutput.URI).To(BeEmpty())
 		})
-
-		It("app delete does delete .workspace", func() {
-			_, err := cli.AppDelete(map[string]string{"": ""})
-			Expect(err).NotTo(HaveOccurred())
-			Expect("./copilot").Should(BeADirectory())
-			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
-
-			_, initErr = cli.AppInit(&client.AppInitRequest{
-				AppName: appName,
-			})
-			Expect(initErr).NotTo(HaveOccurred())
-		})
 	})
 
 	Context("when creating a new environment", func() {
@@ -147,6 +135,7 @@ var _ = Describe("addons flow", func() {
 		var (
 			appDeployErr error
 			svcInitErr   error
+			initErr      error
 		)
 		BeforeAll(func() {
 			_, appDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
@@ -242,6 +231,20 @@ var _ = Describe("addons flow", func() {
 				SvcPort:    "80",
 			})
 			Expect(svcInitErr).NotTo(HaveOccurred())
+		})
+
+		It("app delete does remove .workspace but keep local files", func() {
+			_, err := cli.AppDelete(map[string]string{"test": "default"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect("./copilot").Should(BeADirectory())
+			Expect("./copilot/hello/addons").Should(BeADirectory())
+			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
+
+			_, initErr = cli.AppInit(&client.AppInitRequest{
+				AppName: appName,
+			})
+			Expect(initErr).NotTo(HaveOccurred())
 		})
 	})
 })
