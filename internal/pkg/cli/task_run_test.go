@@ -15,20 +15,22 @@ import (
 )
 
 type basicOpts struct {
-	inNum    int8
+	inCount  int8
 	inCPU    int16
 	inMemory int16
 }
 
-func TestTaskRunOpts_Validate(t *testing.T) {
-	defaultOpts := basicOpts{
-		inNum:    1,
-		inCPU:    256,
-		inMemory: 512,
-	}
+var defaultOpts = basicOpts{
+	inCount:  1,
+	inCPU:    256,
+	inMemory: 512,
+}
 
+func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
+
+		inName string
 
 		inImage          string
 		inDockerfilePath string
@@ -55,6 +57,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"valid with flags image and env": {
 			basicOpts: defaultOpts,
+
+			inName: "my-task",
 
 			inImage:    "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inTaskRole: "exec-role",
@@ -84,6 +88,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"valid without flags image and env": {
 			basicOpts: defaultOpts,
 
+			inName: "my-task",
+
 			inDockerfilePath: "hello/world/Dockerfile",
 			inTaskRole:       "exec-role",
 
@@ -104,7 +110,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid number of tasks": {
 			basicOpts: basicOpts{
-				inNum:    -1,
+				inCount:  -1,
 				inCPU:    256,
 				inMemory: 512,
 			},
@@ -112,7 +118,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid number of CPU units": {
 			basicOpts: basicOpts{
-				inNum:    1,
+				inCount:  1,
 				inCPU:    -15,
 				inMemory: 512,
 			},
@@ -120,7 +126,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
-				inNum:    1,
+				inCount:  1,
 				inCPU:    256,
 				inMemory: -1024,
 			},
@@ -169,7 +175,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			appName: "my-app",
-			inEnv: "dev",
+			inEnv:   "dev",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(&config.Environment{
@@ -187,7 +193,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			appName: "my-app",
-			inEnv: "dev",
+			inEnv:   "dev",
 
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("my-app", "dev").Return(nil, &config.ErrNoSuchEnvironment{
@@ -237,9 +243,10 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
 					},
-					num:            tc.inNum,
+					count:            tc.inCount,
 					cpu:            tc.inCPU,
 					memory:         tc.inMemory,
+					groupName:      tc.inName,
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
@@ -266,6 +273,137 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.Nil(t, err)
+			}
+		})
+	}
+}
+
+func TestTaskRunOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		basicOpts
+
+		inName string
+
+		inEnv   string
+		appName string
+
+		mockSel    func(m *mocks.MockappEnvWithNoneSelector)
+		mockPrompt func(m *mocks.Mockprompter)
+
+		wantedError error
+		wantedEnv   string
+		wantedName  string
+	}{
+		"prompt for env": {
+			basicOpts: defaultOpts,
+
+			inName:  "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), "my-app").Return("test", nil)
+			},
+
+			wantedEnv: "test",
+		},
+		"don't prompt if env is provided": {
+			basicOpts: defaultOpts,
+
+			inName:  "my-task",
+			inEnv:   "test",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "test",
+		},
+		"don't prompt if no workspace": {
+			basicOpts: defaultOpts,
+
+			inName: "my-task",
+
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: config.EnvNameNone,
+		},
+		"prompt for task family name": {
+			basicOpts: defaultOpts,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(fmtTaskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+			},
+
+			wantedName: "my-task",
+		},
+		"error getting task group name": {
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("error getting task group name"))
+			},
+			wantedError: errors.New("prompt get task group name: error getting task group name"),
+		},
+		"error selecting environment": {
+			basicOpts: defaultOpts,
+
+			inName: "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
+				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any()).Return(config.EnvNameNone, fmt.Errorf("error selecting environment"))
+			},
+
+			wantedError: errors.New("ask for environment: error selecting environment"),
+			wantedEnv: config.EnvNameNone,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockSel := mocks.NewMockappEnvWithNoneSelector(ctrl)
+			mockPrompter := mocks.NewMockprompter(ctrl)
+
+			if tc.mockSel != nil {
+				tc.mockSel(mockSel)
+			}
+
+			if tc.mockPrompt != nil {
+				tc.mockPrompt(mockPrompter)
+			}
+
+			opts := runTaskOpts{
+				runTaskVars: runTaskVars{
+					GlobalOpts: &GlobalOpts{
+						appName: tc.appName,
+						prompt:  mockPrompter,
+					},
+					count:    tc.inCount,
+					cpu:    tc.inCPU,
+					memory: tc.inMemory,
+
+					groupName: tc.inName,
+					env:       tc.inEnv,
+				},
+				sel:   mockSel,
+			}
+
+			err := opts.Ask()
+
+			if tc.wantedError == nil {
+				require.Nil(t, err)
+				if tc.wantedEnv != "" {
+					require.Equal(t, tc.wantedEnv, opts.env)
+				}
+				if tc.wantedName != "" {
+					require.Equal(t, tc.wantedName, opts.groupName)
+				}
+			} else {
+				require.EqualError(t, tc.wantedError, err.Error())
 			}
 		})
 	}

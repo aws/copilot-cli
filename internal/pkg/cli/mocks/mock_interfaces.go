@@ -3454,6 +3454,59 @@ func (mr *MockappEnvSelectorMockRecorder) Environment(prompt, help, app interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockappEnvSelector)(nil).Environment), prompt, help, app)
 }
 
+// MockappEnvWithNoneSelector is a mock of appEnvWithNoneSelector interface
+type MockappEnvWithNoneSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockappEnvWithNoneSelectorMockRecorder
+}
+
+// MockappEnvWithNoneSelectorMockRecorder is the mock recorder for MockappEnvWithNoneSelector
+type MockappEnvWithNoneSelectorMockRecorder struct {
+	mock *MockappEnvWithNoneSelector
+}
+
+// NewMockappEnvWithNoneSelector creates a new mock instance
+func NewMockappEnvWithNoneSelector(ctrl *gomock.Controller) *MockappEnvWithNoneSelector {
+	mock := &MockappEnvWithNoneSelector{ctrl: ctrl}
+	mock.recorder = &MockappEnvWithNoneSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappEnvWithNoneSelector) EXPECT() *MockappEnvWithNoneSelectorMockRecorder {
+	return m.recorder
+}
+
+// Application mocks base method
+func (m *MockappEnvWithNoneSelector) Application(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Application", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Application indicates an expected call of Application
+func (mr *MockappEnvWithNoneSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).Application), prompt, help)
+}
+
+// EnvironmentWithNone mocks base method
+func (m *MockappEnvWithNoneSelector) EnvironmentWithNone(prompt, help, app string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentWithNone", prompt, help, app)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentWithNone indicates an expected call of EnvironmentWithNone
+func (mr *MockappEnvWithNoneSelectorMockRecorder) EnvironmentWithNone(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentWithNone", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).EnvironmentWithNone), prompt, help, app)
+}
+
 // MockconfigSelector is a mock of configSelector interface
 type MockconfigSelector struct {
 	ctrl     *gomock.Controller
