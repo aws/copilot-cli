@@ -376,6 +376,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				ActionStates: []*codepipeline.ActionState{
 					{
 						ActionName:      aws.String("action1"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
+					},
+					{
+						ActionName:      aws.String("TestCommands"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusFailed)},
 					},
 				},
@@ -421,6 +425,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 							},
 						},
 						Transition: "",
+						TestAction: &TestAction{
+							ActionName:   "",
+							ActionStatus: "",
+						},
 					},
 					{
 						StageName: "Build",
@@ -439,20 +447,36 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 							},
 						},
 						Transition: "ENABLED",
+						TestAction: &TestAction{
+							ActionName:   "",
+							ActionStatus: "",
+						},
 					},
 					{
 						StageName: "DeployTo-test",
 						Actions: []StageAction{
 							{
 								Name:   "action1",
+								Status: "Succeeded",
+							},
+							{
+								Name:   "TestCommands",
 								Status: "Failed",
 							},
 						},
 						Transition: "ENABLED",
+						TestAction: &TestAction{
+							ActionName:   "TestCommands",
+							ActionStatus: "Failed",
+						},
 					},
 					{
 						StageName:  "DeployTo-prod",
 						Transition: "DISABLED",
+						TestAction: &TestAction{
+							ActionName:   "",
+							ActionStatus: "",
+						},
 					},
 				},
 				UpdatedAt: &mockTime,
