@@ -425,10 +425,6 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 							},
 						},
 						Transition: "",
-						TestAction: &TestAction{
-							ActionName:   "",
-							ActionStatus: "",
-						},
 					},
 					{
 						StageName: "Build",
@@ -447,10 +443,6 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 							},
 						},
 						Transition: "ENABLED",
-						TestAction: &TestAction{
-							ActionName:   "",
-							ActionStatus: "",
-						},
 					},
 					{
 						StageName: "DeployTo-test",
@@ -465,18 +457,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 							},
 						},
 						Transition: "ENABLED",
-						TestAction: &TestAction{
-							ActionName:   "TestCommands",
-							ActionStatus: "Failed",
-						},
 					},
 					{
 						StageName:  "DeployTo-prod",
 						Transition: "DISABLED",
-						TestAction: &TestAction{
-							ActionName:   "",
-							ActionStatus: "",
-						},
 					},
 				},
 				UpdatedAt: &mockTime,

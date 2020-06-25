@@ -6,6 +6,7 @@ package codepipeline
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
@@ -61,19 +62,12 @@ type StageState struct {
 	StageName  string        `json:"stageName"`
 	Actions    []StageAction `json:"actions,omitempty"`
 	Transition string        `json:"transition"`
-	TestAction *TestAction   `json:"test_actions,omitempty"`
 }
 
 // StageAction wraps a CodePipeline stage action.
 type StageAction struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
-}
-
-// TestAction wraps a CodePipeline test action.
-type TestAction struct {
-	ActionName   string `json:"name,omitempty"`
-	ActionStatus string `json:"status,omitempty"`
 }
 
 // AggregateStatus returns the collective status of a stage by looking at each individual action's status.
@@ -244,26 +238,18 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 			}
 		}
 		var actions []StageAction
-		var testAction TestAction
 		for _, actionState := range stage.ActionStates {
 			if actionState.LatestExecution != nil {
 				actions = append(actions, StageAction{
 					Name:   aws.StringValue(actionState.ActionName),
 					Status: aws.StringValue(actionState.LatestExecution.Status),
 				})
-				if *actionState.ActionName == "TestCommands" {
-					testAction = TestAction{
-						ActionName:   aws.StringValue(actionState.ActionName),
-						ActionStatus: aws.StringValue(actionState.LatestExecution.Status),
-					}
-				}
 			}
 		}
 		stageStates = append(stageStates, &StageState{
 			StageName:  stageName,
 			Actions:    actions,
 			Transition: transition,
-			TestAction: &testAction,
 		})
 	}
 	return &PipelineState{
@@ -286,9 +272,10 @@ func (ss *StageState) HumanString() string {
 	if transition == "" {
 		transition = empty
 	}
-	if ss.TestAction.ActionStatus == "" {
-		return fmt.Sprintf("  %s\t%s\t%s\n", ss.StageName, status, transition)
-	} else {
-		return fmt.Sprintf("  %s\t%s\t%s\n    %s\t%s\n", ss.StageName, status, transition, ss.TestAction.ActionName, ss.TestAction.ActionStatus)
+	var formattedActions []string
+	for _, action := range ss.Actions {
+		formattedActions = append(formattedActions, "    "+action.Name+"\t"+action.Status+"\n")
 	}
+	joinedActions := strings.Join(formattedActions, "")
+	return fmt.Sprintf("  %s\t%s\t%s\n%s", ss.StageName, status, transition, joinedActions)
 }
