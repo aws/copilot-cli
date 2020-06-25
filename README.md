@@ -50,7 +50,6 @@ $ copilot init --app demo                \
   --svc api                              \
   --svc-type 'Load Balanced Web Service' \
   --dockerfile './Dockerfile'            \
-  --port 80                              \
   --deploy
 ```
 
