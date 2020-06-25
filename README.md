@@ -44,7 +44,7 @@ Make sure you have the AWS command line tool installed and have already run `aws
 To get a sample app up and running in one command, run the following:
 
 ```sh
-$ git clone git@github.com:aws-samples/amazon-ecs-cli-sample-app.git demo-app
+$ git clone git@github.com:aws-samples/aws-copilot-sample-service.git demo-app
 $ cd demo-app
 $ copilot init --app demo                \
   --svc api                              \
