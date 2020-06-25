@@ -463,7 +463,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 						Transition: "DISABLED",
 					},
 				},
-				UpdatedAt: &mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},

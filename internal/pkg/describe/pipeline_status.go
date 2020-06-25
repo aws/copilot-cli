@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"text/tabwriter"
-	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
@@ -74,7 +73,7 @@ func (p PipelineStatus) HumanString() string {
 	}
 	writer.Flush()
 	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(time.Unix(p.UpdatedAt.Unix(), 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
 	return b.String()
 }

@@ -54,7 +54,7 @@ type Stage struct {
 type PipelineState struct {
 	PipelineName string        `json:"pipelineName"`
 	StageStates  []*StageState `json:"stageStates"`
-	UpdatedAt    *time.Time    `json:"updatedAt"`
+	UpdatedAt    time.Time     `json:"updatedAt"`
 }
 
 // StageState wraps a CodePipeline stage state.
@@ -255,7 +255,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	return &PipelineState{
 		PipelineName: aws.StringValue(resp.PipelineName),
 		StageStates:  stageStates,
-		UpdatedAt:    resp.Updated,
+		UpdatedAt:    *resp.Updated,
 	}, nil
 }
 
