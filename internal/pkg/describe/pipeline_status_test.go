@@ -29,16 +29,6 @@ var mockPipelineState = &codepipeline.PipelineState{
 	StageStates: []*codepipeline.StageState{
 		{
 			StageName: "Source",
-			Actions: []codepipeline.StageAction{
-				{
-					Name:   "action1",
-					Status: "Succeeded",
-				},
-				{
-					Name:   "action2",
-					Status: "Succeeded",
-				},
-			},
 		},
 		{
 			StageName: "Build",
@@ -152,9 +142,7 @@ func TestPipelineStatusDescriber_String(t *testing.T) {
 
   Stage             Status              Transition
   -----             ------              ----------
-  Source            Succeeded             -
-    action1         Succeeded
-    action2         Succeeded
+  Source              -                   -
   Build             InProgress          ENABLED
     action1         Failed
     action2         InProgress
@@ -169,7 +157,7 @@ Last Deployment
 
   Updated At        14 years ago
 `,
-			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"action2\",\"status\":\"Succeeded\"}],\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"}],\"transition\":\"DISABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"TestCommands\",\"status\":\"Failed\"}],\"transition\":\"\"}],\"updatedAt\":\"2006-01-02T15:04:05Z\"}\n",
+			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"}],\"transition\":\"DISABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"TestCommands\",\"status\":\"Failed\"}],\"transition\":\"\"}],\"updatedAt\":\"2006-01-02T15:04:05Z\"}\n",
 		},
 	}
 	for _, tc := range testCases {
