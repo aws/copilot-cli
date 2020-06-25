@@ -97,11 +97,12 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// DockerfilePath returns the image build path.
+// DockerfilePath returns the path to the dockerfile from workspace root.
 func (s *BackendService) DockerfilePath() string {
 	return aws.StringValue(s.BackendServiceConfig.Image.Build)
 }
 
+// DockerfileContext returns the build context directory.
 func (s *BackendService) DockerfileContext() string {
 	return aws.StringValue(s.Image.Context)
 }
