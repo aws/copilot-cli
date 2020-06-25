@@ -31,7 +31,7 @@ var _ = Describe("addons flow", func() {
 			Expect(initErr).NotTo(HaveOccurred())
 		})
 
-		It("app init creates an copilot directory", func() {
+		It("app init creates an copilot directory and workspace file", func() {
 			Expect("./copilot").Should(BeADirectory())
 			Expect("./copilot/.workspace").Should(BeAnExistingFile())
 		})
