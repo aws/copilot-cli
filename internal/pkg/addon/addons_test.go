@@ -1,7 +1,7 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package addons
+package addon
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons/mocks"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -53,7 +53,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-metadata.yaml under service mysvc: metadata key "Services" already exists with a different definition`),
+			wantedErr: errors.New(`metadata key "Services" defined in "first.yaml" at Ln 4, Col 7 is different than in "invalid-metadata.yaml" at Ln 3, Col 5`),
 		},
 		"returns err on invalid Parameters fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -70,7 +70,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-parameters.yaml under service mysvc: parameter logical ID "Name" already exists with a different definition`),
+			wantedErr: errors.New(`parameter logical ID "Name" defined in "first.yaml" at Ln 15, Col 9 is different than in "invalid-parameters.yaml" at Ln 3, Col 7`),
 		},
 		"returns err on invalid Mappings fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -87,7 +87,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-mappings.yaml under service mysvc: mapping "MyTableDynamoDBSettings.test" already exists with a different definition`),
+			wantedErr: errors.New(`mapping "MyTableDynamoDBSettings.test" defined in "first.yaml" at Ln 21, Col 13 is different than in "invalid-mappings.yaml" at Ln 4, Col 7`),
 		},
 		"returns err on invalid Conditions fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -104,7 +104,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-conditions.yaml under service mysvc: condition "IsProd" already exists with a different definition`),
+			wantedErr: errors.New(`condition "IsProd" defined in "first.yaml" at Ln 28, Col 13 is different than in "invalid-conditions.yaml" at Ln 2, Col 13`),
 		},
 		"returns err on invalid Resources fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -121,7 +121,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-resources.yaml under service mysvc: resource "MyTable" already exists with a different definition`),
+			wantedErr: errors.New(`resource "MyTable" defined in "first.yaml" at Ln 34, Col 9 is different than in "invalid-resources.yaml" at Ln 3, Col 5`),
 		},
 		"returns err on invalid Outputs fields": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
@@ -138,7 +138,7 @@ func TestAddons_Template(t *testing.T) {
 					ws:      ws,
 				}
 			},
-			wantedErr: errors.New(`merge addon invalid-outputs.yaml under service mysvc: output "MyTableAccessPolicy" already exists with a different definition`),
+			wantedErr: errors.New(`output "MyTableAccessPolicy" defined in "first.yaml" at Ln 85, Col 9 is different than in "invalid-outputs.yaml" at Ln 3, Col 5`),
 		},
 		"merge fields successfully": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {

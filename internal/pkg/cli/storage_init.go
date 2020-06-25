@@ -4,11 +4,12 @@
 package cli
 
 import (
-	"bytes"
+	"encoding"
 	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -71,16 +72,15 @@ You must specify a sort key if you wish to add alternate sort keys later.`
 	fmtStorageInitDDBKeyTypePrompt = "What datatype is this %s?"
 	fmtStorageInitDDBKeyTypeHelp   = "The datatype to store in the %s. N is number, S is string, B is binary."
 
-	storageInitDDBMoreAttributesPrompt = "Would you like to add more attributes to this table?"
-	storageInitDDBMoreAttributesHelp   = "You can use these extra attributes to specify additional sort keys or alternate partition keys."
-	storageInitDDBAttributePrompt      = "What would you like to name this " + color.Emphasize(ddbAttributeString) + "?"
-	storageInitDDBAttributeHelp        = "You can use the the characters [a-zA-Z0-9.-_]"
-
 	storageInitDDBLSIPrompt = "Would you like to add any alternate sort keys to this table?"
 	storageInitDDBLSIHelp   = `Alternate sort keys create Local Secondary Indexes, which allow you to sort the table using the same 
-partition key but a different sort key.`
+partition key but a different sort key. You may specify up to 5 alternate sort keys.`
 
-	storageInitDDBLSINamePrompt  = "What other attributes would you like to use as " + color.Emphasize("alternate sort keys") + "?"
+	storageInitDDBMoreLSIPrompt = "Would you like to add more alternate sort keys to this table?"
+
+	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
+	storageInitDDBLSINameHelp   = "You can use the the characters [a-zA-Z0-9.-_]"
+
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
@@ -107,29 +107,9 @@ const (
 	ddbSortKeyType      = "RANGE"
 )
 
-type dynamoDBConfig struct {
-	tableName    string
-	partitionKey string
-	sortKey      string
-	hasLsi       bool
-	lsis         []localSecondaryIndex
-	attributes   []attribute
-}
-
 type attribute struct {
-	name        string
-	ddbDataType string
-}
-
-type localSecondaryIndex struct {
-	name         string
-	partitionKey string
-	sortKey      string
-	attributes   []attribute
-}
-
-type s3Config struct {
-	// TODO add website config
+	name     string
+	dataType string
 }
 
 type initStorageVars struct {
@@ -141,8 +121,7 @@ type initStorageVars struct {
 	// Dynamo DB specific values collected via flags or prompts
 	partitionKey string
 	sortKey      string
-	attributes   []string // Attributes collected as "attName:T" where T is one of [SNB]
-	lsiSorts     []string // lsi sort keys collected as names of existing attributes
+	lsiSorts     []string // lsi sort keys collected as "name:T" where T is one of [SNB]
 	noLsi        bool
 	noSort       bool
 }
@@ -218,11 +197,6 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
-	if len(o.attributes) != 0 {
-		if err := validateAttributeNames(o.attributes); err != nil {
-			return err
-		}
-	}
 	// --no-lsi and --lsi are mutually exclusive.
 	if o.noLsi && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
@@ -233,7 +207,7 @@ func (o *initStorageOpts) Validate() error {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once")
 	}
 	if len(o.lsiSorts) != 0 {
-		if err := validateLsi(o.lsiSorts, o.attributes); err != nil {
+		if err := validateLSIs(o.lsiSorts); err != nil {
 			return err
 		}
 	}
@@ -257,9 +231,6 @@ func (o *initStorageOpts) Ask() error {
 			return err
 		}
 		if err := o.askDynamoSortKey(); err != nil {
-			return err
-		}
-		if err := o.askDynamoAttributes(); err != nil {
 			return err
 		}
 		if err := o.askDynamoLSIConfig(); err != nil {
@@ -407,96 +378,62 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	o.sortKey = key + ":" + keyType
 	return nil
 }
-func (o *initStorageOpts) askDynamoAttributes() error {
-	// Extra attributes have been specified by flags.
-	if len(o.attributes) != 0 {
+func (o *initStorageOpts) askDynamoLSIConfig() error {
+	// LSI has already been specified by flags.
+	if len(o.lsiSorts) > 0 {
 		return nil
 	}
-	// If --no-lsi has been specified, there is no need to ask for more attributes
+	// If --no-lsi has been specified, there is no need to ask for local secondary indices.
 	if o.noLsi {
 		return nil
 	}
-
-	// If --no-sort has been specified, there is no need to ask for more attributes
+	// If --no-sort has been specified, there is no need to ask for local secondary indices.
 	if o.noSort {
 		return nil
 	}
-	attributeTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize(ddbAttributeString))
-	attributeTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, ddbAttributeString)
+	lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
+	lsiTypeHelp := fmt.Sprintf(fmtStorageInitDDBKeyTypeHelp, "alternate sort key")
+
+	moreLSI, err := o.prompt.Confirm(storageInitDDBLSIPrompt, storageInitDDBLSIHelp, prompt.WithFinalMessage("Additional sort keys?"))
+	if err != nil {
+		return fmt.Errorf("confirm add alternate sort key: %w", err)
+	}
 	for {
-		moreAtt, err := o.prompt.Confirm(storageInitDDBMoreAttributesPrompt, storageInitDDBMoreAttributesHelp, prompt.WithFinalMessage("Additional attributes?"))
-		if err != nil {
-			return fmt.Errorf("confirm add more attributes: %w", err)
-		}
-		if !moreAtt {
+		if !moreLSI {
 			break
 		}
-		att, err := o.prompt.Get(storageInitDDBAttributePrompt,
-			storageInitDDBAttributeHelp,
+		if len(o.lsiSorts) > 5 {
+			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
+			break
+		}
+		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
+			storageInitDDBLSINameHelp,
 			dynamoTableNameValidation,
-			prompt.WithFinalMessage("Attribute:"),
+			prompt.WithFinalMessage("Alternate Sort Key:"),
 		)
 		if err != nil {
-			return fmt.Errorf("get DDB attribute name: %w", err)
+			return fmt.Errorf("get DDB alternate sort key name: %w", err)
 		}
-		attType, err := o.prompt.SelectOne(attributeTypePrompt,
-			attributeTypeHelp,
+		lsiType, err := o.prompt.SelectOne(lsiTypePrompt,
+			lsiTypeHelp,
 			attributeTypesLong,
 			prompt.WithFinalMessage("Attribute type:"),
 		)
 		if err != nil {
-			return fmt.Errorf("get DDB attribute type: %w", err)
+			return fmt.Errorf("get DDB alternate sort key type: %w", err)
 		}
 
-		o.attributes = append(o.attributes, att+":"+attType)
-	}
-	return nil
-}
+		o.lsiSorts = append(o.lsiSorts, lsiName+":"+lsiType)
 
-func (o *initStorageOpts) askDynamoLSIConfig() error {
-	if o.noLsi {
-		return nil
-	}
-	if o.noSort {
-		return nil
-	}
-	if len(o.lsiSorts) != 0 {
-		return nil
-	}
-	addLsi, err := o.prompt.Confirm(
-		storageInitDDBLSIPrompt,
-		storageInitDDBLSIHelp,
-		prompt.WithFinalMessage("Alternate sort keys?"),
-	)
-	if err != nil {
-		return fmt.Errorf("confirm add LSI to table: %w", err)
-	}
-	o.noLsi = !addLsi
-	if !addLsi {
-		return nil
-	}
-
-	var attributeNames []string
-	for _, att := range o.attributes {
-		attributeParts, err := getAttrFromKey(att)
+		moreLSI, err = o.prompt.Confirm(
+			storageInitDDBMoreLSIPrompt,
+			storageInitDDBLSIHelp,
+			prompt.WithFinalMessage("Additional sort keys?"),
+		)
 		if err != nil {
-			return fmt.Errorf("get name from attribute: %w", err)
+			return fmt.Errorf("confirm add alternate sort key: %w", err)
 		}
-		attributeNames = append(attributeNames, attributeParts.name)
 	}
-
-	names, err := o.prompt.MultiSelect(storageInitDDBLSINamePrompt,
-		storageInitDDBLSIHelp,
-		attributeNames,
-		prompt.WithFinalMessage("Alternate sort keys:"),
-	)
-	if err != nil {
-		return fmt.Errorf("get LSI sort keys: %w", err)
-	}
-	if len(names) > 5 {
-		return fmt.Errorf("cannot specify more than 5 alternate sort keys")
-	}
-	o.lsiSorts = names
 	return nil
 }
 
@@ -514,135 +451,172 @@ func (o *initStorageOpts) validateServiceName() error {
 }
 
 func (o *initStorageOpts) Execute() error {
-	params := `
-App:
-  Type: String
-  Description: Your application's name.
-Env:
-  Type: String
-  Description: The environment name your service, job, or workflow is being deployed to.
-Name:
-  Type: String
-  Description: The name of the service, job, or workflow being deployed.`
-	output := `
-%[1]sBucketName:
-  Description: "The name of a user-defined bucket."
-  Value: !Ref %[1]s
-%[1]sAccessPolicy:
-  Description: "The IAM::ManagedPolicy to attach to the task role"
-  Value: !Ref %[1]sAccessPolicy`
-	policy := `
-%[1]sAccessPolicy:
-  Type: AWS::IAM::ManagedPolicy
-  Properties:
-    Description: !Sub
-      - Grants CRUD access to the S3 bucket ${Bucket}
-      - { Bucket: !Ref %[1]s }
-    PolicyDocument:
-      Version: 2012-10-17
-      Statement:
-        - Sid: S3ObjectActions
-          Effect: Allow
-          Action:
-          - s3:GetObject
-          - s3:PutObject
-          - s3:PutObjectACL
-          - s3:PutObjectTagging
-          - s3:DeleteObject
-          - s3:RestoreObject
-          Resource: !Sub ${%[1]s.Arn}/*
-        - Sid: S3ListAction
-          Effect: Allow
-          Action: s3:ListBucket
-          Resource: !Sub ${%[1]s.Arn}`
-	cf := `%[2]s:
-  Type: AWS::S3::Bucket
-  DeletionPolicy: Retain
-  Properties:
-    AccessControl: Private
-    BucketEncryption:
-      ServerSideEncryptionConfiguration:
-      - ServerSideEncryptionByDefault:
-          SSEAlgorithm: AES256
-    BucketName: !Sub '${App}-${Env}-${Name}-%[1]s'
-    PublicAccessBlockConfiguration:
-      BlockPublicAcls: true
-      BlockPublicPolicy: true`
-	logicalIDName := logicalIDSafe(o.storageName)
-	output = fmt.Sprintf(output, logicalIDName)
-	policy = fmt.Sprintf(policy, logicalIDName)
-	cf = fmt.Sprintf(cf, o.storageName, logicalIDName)
 
-	paramsOut := &template.Content{
-		Buffer: bytes.NewBufferString(params),
-	}
-	outputOut := &template.Content{
-		Buffer: bytes.NewBufferString(output),
-	}
-	policyOut := &template.Content{
-		Buffer: bytes.NewBufferString(policy),
-	}
-	cfOut := &template.Content{
-		Buffer: bytes.NewBufferString(cf),
-	}
-
-	o.ws.WriteAddon(paramsOut, o.storageSvc, "params.yaml")
-	o.ws.WriteAddon(outputOut, o.storageSvc, "outputs.yaml")
-	o.ws.WriteAddon(policyOut, o.storageSvc, "policy.yaml")
-	o.ws.WriteAddon(cfOut, o.storageSvc, "s3.yaml")
-	return nil
-}
-
-var nonAlphaNum = regexp.MustCompile("[^a-zA-Z0-9]+")
-
-// Strip non-alphanumeric characters from an input string
-func logicalIDSafe(input string) string {
-	return nonAlphaNum.ReplaceAllString(input, "")
-}
-
-func (o *initStorageOpts) generateDynamoDBConfig() (*dynamoDBConfig, error) {
-	cfg := &dynamoDBConfig{}
-	cfg.tableName = o.storageName
-	hashAttr, err := getAttrFromKey(o.partitionKey)
-	if err != nil {
-		return nil, err
-	}
-	rangeAttr, err := getAttrFromKey(o.sortKey)
-	if err != nil {
-		return nil, err
-	}
-	cfg.attributes = []attribute{
-		hashAttr,
-		rangeAttr,
-	}
-	if len(o.lsiSorts) != 0 {
-		for _, k := range o.lsiSorts {
-			lsiAttr, err := getAttrFromKey(k)
-			if err != nil {
-				return nil, err
-			}
-			cfg.attributes = append(cfg.attributes, lsiAttr)
-		}
-	}
-	cfg.partitionKey = hashAttr.name
-	cfg.sortKey = rangeAttr.name
-
-	return nil, nil
+	return o.createAddon()
 }
 
 var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
 
+// getAttFromKey parses the DDB type and name out of keys specified in the form "Email:S"
 func getAttrFromKey(input string) (attribute, error) {
 	attrs := regexpMatchAttribute.FindStringSubmatch(input)
 	if len(attrs) == 0 {
 		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
 	}
 	return attribute{
-		name:        attrs[1],
-		ddbDataType: strings.ToUpper(attrs[2]),
+		name:     attrs[1],
+		dataType: strings.ToUpper(attrs[2]),
 	}, nil
 }
 
+func (o *initStorageOpts) createAddon() error {
+	addonCf, err := o.newAddon()
+	if err != nil {
+		return err
+	}
+
+	addonPath, err := o.ws.WriteAddon(addonCf, o.storageSvc, o.storageName)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return err
+		}
+		return fmt.Errorf("addon already exists: %w", e)
+	}
+	addonPath, err = relPath(addonPath)
+	if err != nil {
+		return err
+	}
+
+	addonMsgFmt := "Wrote CloudFormation template for %[1]s %[2]s at %[3]s\n"
+	var addonFriendlyText string
+	switch o.storageType {
+	case dynamoDBStorageType:
+		addonFriendlyText = dynamoDBTableFriendlyText
+	case s3StorageType:
+		addonFriendlyText = s3BucketFriendlyText
+	default:
+		return fmt.Errorf(fmtErrInvalidStorageType, o.storageType, prettify(storageTypes))
+	}
+	log.Successf(addonMsgFmt,
+		color.Emphasize(addonFriendlyText),
+		color.HighlightUserInput(o.storageName),
+		color.HighlightResource(addonPath),
+	)
+	log.Infoln(color.Help(`The Cloudformation template is a nested stack which fully describes your resource,
+the IAM policy necessary for an ECS task to access that resource, and outputs
+which are injected as environment variables into the Copilot service this addon
+is associated with.`))
+	log.Infoln()
+
+	return nil
+}
+func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
+	switch o.storageType {
+	case dynamoDBStorageType:
+		return o.newDynamoDBAddon()
+	case s3StorageType:
+		return o.newS3Addon()
+	default:
+		return nil, fmt.Errorf("storage type %s doesn't have a CF template", o.storageType)
+	}
+}
+
+func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
+	attr, err := getAttrFromKey(input)
+	if err != nil {
+		return nil, err
+	}
+	return &addon.DDBAttribute{
+		Name:     &attr.name,
+		DataType: &attr.dataType,
+	}, nil
+}
+
+func newLSI(partitionKey string, lsis []string) ([]addon.DDBLocalSecondaryIndex, error) {
+	var output []addon.DDBLocalSecondaryIndex
+	for _, lsi := range lsis {
+		lsiAttr, err := getAttrFromKey(lsi)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, addon.DDBLocalSecondaryIndex{
+			PartitionKey: &partitionKey,
+			SortKey:      &lsiAttr.name,
+			Name:         &lsiAttr.name,
+		})
+	}
+	return output, nil
+}
+
+func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
+	props := addon.DynamoDBProps{}
+
+	var attributes []addon.DDBAttribute
+	partKey, err := newDDBAttribute(o.partitionKey)
+	if err != nil {
+		return nil, err
+	}
+	props.PartitionKey = partKey.Name
+	attributes = append(attributes, *partKey)
+	if !o.noSort {
+		sortKey, err := newDDBAttribute(o.sortKey)
+		if err != nil {
+			return nil, err
+		}
+		attributes = append(attributes, *sortKey)
+		props.SortKey = sortKey.Name
+	}
+	for _, att := range o.lsiSorts {
+		currAtt, err := newDDBAttribute(att)
+		if err != nil {
+			return nil, err
+		}
+		attributes = append(attributes, *currAtt)
+	}
+	props.Attributes = attributes
+	// only configure LSI if we haven't specified the --no-lsi flag.
+	props.HasLSI = false
+	if !o.noLsi {
+		props.HasLSI = true
+		lsiConfig, err := newLSI(
+			*partKey.Name,
+			o.lsiSorts,
+		)
+		if err != nil {
+			return nil, err
+		}
+		props.LSIs = lsiConfig
+	}
+
+	props.StorageProps = &addon.StorageProps{
+		Name: o.storageName,
+	}
+	return addon.NewDynamoDB(&props), nil
+}
+
+func (o *initStorageOpts) newS3Addon() (*addon.S3, error) {
+	props := &addon.S3Props{
+		StorageProps: &addon.StorageProps{
+			Name: o.storageName,
+		},
+	}
+	return addon.NewS3(props), nil
+}
+
+func (o *initStorageOpts) RecommendedActions() []string {
+
+	newVar := template.ToSnakeCaseFunc(template.EnvVarNameFunc(o.storageName))
+
+	svcDeployCmd := fmt.Sprintf("copilot svc deploy --name %s", o.storageSvc)
+
+	return []string{
+		fmt.Sprintf("Update your service code to leverage the injected environment variable %s", color.HighlightCode(newVar)),
+		fmt.Sprintf("Run %s to deploy your storage resources to your environments.", color.HighlightCode(svcDeployCmd)),
+	}
+}
+
+// BuildStorageInitCmd builds the command and adds it to the CLI.
 func BuildStorageInitCmd() *cobra.Command {
 	vars := initStorageVars{
 		GlobalOpts: NewGlobalOpts(),
@@ -657,7 +631,7 @@ func BuildStorageInitCmd() *cobra.Command {
   Create a basic DynamoDB table named "my-table" attached to the "frontend" service.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
-  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --att Points:N --att Goodness:N --lsi Points --lsi Goodness`,
+  /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -673,9 +647,9 @@ func BuildStorageInitCmd() *cobra.Command {
 				return err
 			}
 			log.Infoln("Recommended follow-up actions:")
-			// for _, followup := range opts.RecommendedActions() {
-			// 	log.Infof("- %s\n", followup)
-			// }
+			for _, followup := range opts.RecommendedActions() {
+				log.Infof("- %s\n", followup)
+			}
 			return nil
 		}),
 	}
@@ -685,7 +659,6 @@ func BuildStorageInitCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
-	cmd.Flags().StringArrayVar(&vars.attributes, storageAttributeFlag, []string{}, storageAttributeFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
 	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
@@ -699,7 +672,6 @@ func BuildStorageInitCmd() *cobra.Command {
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storagePartitionKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageSortKeyFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoSortFlag))
-	ddbFlags.AddFlag(cmd.Flags().Lookup(storageAttributeFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageLSIConfigFlag))
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
 	cmd.Annotations = map[string]string{

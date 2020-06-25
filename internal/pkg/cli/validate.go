@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 )
 
 var (
@@ -254,7 +255,7 @@ func validateKey(val interface{}) error {
 	if err != nil {
 		return errValueBadFormatWithPeriodUnderscore
 	}
-	err = validateDynamoDataType(attr.ddbDataType)
+	err = validateDynamoDataType(attr.dataType)
 	if err != nil {
 		return err
 	}
@@ -272,10 +273,13 @@ func validateDynamoDataType(val interface{}) error {
 	return nil
 }
 
-func validateAttributeNames(val interface{}) error {
+func validateLSIs(val interface{}) error {
 	s, ok := val.([]string)
 	if !ok {
 		return errValueNotAStringSlice
+	}
+	if len(s) > 5 {
+		return errTooManyLsiKeys
 	}
 	for _, att := range s {
 		err := validateKey(att)
@@ -286,30 +290,7 @@ func validateAttributeNames(val interface{}) error {
 	return nil
 }
 
-func validateLsi(lsis []string, attributes []string) error {
-	if len(lsis) == 0 {
-		return nil
-	}
-	if len(lsis) > 5 {
-		return errTooManyLsiKeys
-	}
-	attributeMap := make(map[string]bool)
-	for _, att := range attributes {
-		attStruct, err := getAttrFromKey(att)
-		if err != nil {
-			return errDDBAttributeBadFormat
-		}
-		attributeMap[attStruct.name] = true
-	}
-	for _, lsi := range lsis {
-		if !attributeMap[lsi] {
-			return errLsiAttributeNotPresent
-		}
-	}
-	return nil
-}
-
 func prettify(inputStrings []string) string {
-	prettyTypes := quoteAll(inputStrings)
+	prettyTypes := template.QuoteSliceFunc(inputStrings)
 	return strings.Join(prettyTypes, ", ")
 }

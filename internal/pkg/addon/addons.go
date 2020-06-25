@@ -1,8 +1,8 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package addons contains the service to manage addons.
-package addons
+// Package addon contains the service to manage addons.
+package addon
 
 import (
 	"fmt"
@@ -57,21 +57,21 @@ func (a *Addons) Template() (string, error) {
 		}
 	}
 
-	var mergedTemplate cfnTemplate
+	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range filterYAMLfiles(fnames) {
 		out, err := a.ws.ReadAddon(a.svcName, fname)
 		if err != nil {
 			return "", fmt.Errorf("read addon %s under service %s: %w", fname, a.svcName, err)
 		}
-		var tpl cfnTemplate
-		if err := yaml.Unmarshal(out, &tpl); err != nil {
+		tpl := newCFNTemplate(fname)
+		if err := yaml.Unmarshal(out, tpl); err != nil {
 			return "", fmt.Errorf("unmarshal addon %s under service %s: %w", fname, a.svcName, err)
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
-			return "", fmt.Errorf("merge addon %s under service %s: %w", fname, a.svcName, err)
+			return "", err
 		}
 	}
-	out, err := yaml.Marshal(&mergedTemplate)
+	out, err := yaml.Marshal(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
 	}

@@ -137,6 +137,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			{
 				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
 				LocalServices:         []string{"frontend", "backend"},
+				TestCommands:          []string{"echo 'bok bok bok'", "make test"},
 			},
 			{
 				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),

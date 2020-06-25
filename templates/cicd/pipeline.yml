@@ -20,5 +20,7 @@ source:
 # to your environments.
 stages:{{range .Stages}}
     - # The name of the environment to deploy to.
-      name: {{.Name}}{{end}}
-{{end}}
+      name: {{.Name}}
+      # Optional: use test commands to validate this stage of your build.
+      # test_commands: [echo 'running tests', make test]
+{{end}}{{end}}

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -130,7 +130,7 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 		Parameters: params,
 		Tags:       tc.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": func(i int) int { return i + 1 },
+		"inc": template.IncFunc,
 	}))
 	if err != nil {
 		return "", err
@@ -141,21 +141,51 @@ func (s *svc) templateConfiguration(tc templateConfigurer) (string, error) {
 func (s *svc) addonsOutputs() (*template.ServiceNestedStackOpts, error) {
 	stack, err := s.addons.Template()
 	if err != nil {
-		var noAddonsErr *addons.ErrDirNotExist
+		var noAddonsErr *addon.ErrDirNotExist
 		if !errors.As(err, &noAddonsErr) {
 			return nil, fmt.Errorf("generate addons template for service %s: %w", s.name, err)
 		}
 		return nil, nil // Addons directory does not exist, so there are no outputs and error.
 	}
 
-	out, err := addons.Outputs(stack)
+	out, err := addon.Outputs(stack)
 	if err != nil {
 		return nil, fmt.Errorf("get addons outputs for service %s: %w", s.name, err)
 	}
 	return &template.ServiceNestedStackOpts{
-		StackName:       addons.StackName,
+		StackName:       addon.StackName,
 		VariableOutputs: envVarOutputNames(out),
 		SecretOutputs:   secretOutputNames(out),
 		PolicyOutputs:   managedPolicyOutputNames(out),
 	}, nil
+}
+
+func secretOutputNames(outputs []addon.Output) []string {
+	var secrets []string
+	for _, out := range outputs {
+		if out.IsSecret {
+			secrets = append(secrets, out.Name)
+		}
+	}
+	return secrets
+}
+
+func managedPolicyOutputNames(outputs []addon.Output) []string {
+	var policies []string
+	for _, out := range outputs {
+		if out.IsManagedPolicy {
+			policies = append(policies, out.Name)
+		}
+	}
+	return policies
+}
+
+func envVarOutputNames(outputs []addon.Output) []string {
+	var envVars []string
+	for _, out := range outputs {
+		if !out.IsSecret && !out.IsManagedPolicy {
+			envVars = append(envVars, out.Name)
+		}
+	}
+	return envVars
 }

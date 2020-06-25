@@ -28,13 +28,16 @@ import (
 const (
 	// CopilotDirName is the name of the directory where generated infrastructure code for an application will be stored.
 	CopilotDirName = "copilot"
+	// SummaryFileName is the name of the file that is associated with the application.
+	SummaryFileName = ".workspace"
 
 	addonsDirName             = "addons"
-	workspaceSummaryFileName  = ".workspace"
 	maximumParentDirsToSearch = 5
 	pipelineFileName          = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
 	buildspecFileName         = "buildspec.yml"
+
+	ymlFileExtension = ".yml"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -187,28 +190,10 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler) (
 	return ws.write(data, pipelineFileName)
 }
 
-// DeletePipelineManifest removes the pipeline manifest from the copilot/ directory.
-func (ws *Workspace) DeletePipelineManifest() error {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return err
-	}
-
-	return ws.fsUtils.Remove(filepath.Join(copilotPath, pipelineFileName))
-}
-
-// DeleteService removes the service directory from the copilot/ directory.
-func (ws *Workspace) DeleteService(name string) error {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return err
-	}
-	return ws.fsUtils.RemoveAll(filepath.Join(copilotPath, name))
-}
-
-// DeleteAll removes the copilot/ directory and all of its contents.
-func (ws *Workspace) DeleteAll() error {
-	return ws.fsUtils.RemoveAll(CopilotDirName)
+// DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
+// This will be called during app delete, we do not want to delete any other generated files
+func (ws *Workspace) DeleteWorkspaceFile() error {
+	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
@@ -234,13 +219,14 @@ func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
 	return ws.read(svc, addonsDirName, fname)
 }
 
-// WriteAddon writes the content of an addon file under "{svc}/addons/{fname}".
+// WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
-func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, fname string) (string, error) {
+func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {
 	data, err := content.MarshalBinary()
 	if err != nil {
 		return "", fmt.Errorf("marshal binary addon content: %w", err)
 	}
+	fname := name + ymlFileExtension
 	return ws.write(data, svc, addonsDirName, fname)
 }
 
@@ -276,7 +262,7 @@ func (ws *Workspace) summaryPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	workspaceSummaryPath := filepath.Join(copilotPath, workspaceSummaryFileName)
+	workspaceSummaryPath := filepath.Join(copilotPath, SummaryFileName)
 	return workspaceSummaryPath, nil
 }
 

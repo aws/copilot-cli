@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/gobuffalo/packd"
 	"github.com/stretchr/testify/require"
 )
@@ -74,32 +73,6 @@ func TestTemplate_ParseSvc(t *testing.T) {
 	}
 }
 
-func TestToSnakeCase(t *testing.T) {
-	testCases := map[string]struct {
-		in     string
-		wanted string
-	}{
-		"camel case: starts with uppercase": {
-			in:     "AdditionalResourcesPolicyArn",
-			wanted: "ADDITIONAL_RESOURCES_POLICY_ARN",
-		},
-		"camel case: starts with lowercase": {
-			in:     "additionalResourcesPolicyArn",
-			wanted: "ADDITIONAL_RESOURCES_POLICY_ARN",
-		},
-		"all lower case": {
-			in:     "myddbtable",
-			wanted: "MYDDBTABLE",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, toSnakeCase(tc.in))
-		})
-	}
-}
-
 func TestHasSecrets(t *testing.T) {
 	testCases := map[string]struct {
 		in     ServiceOpts
@@ -138,16 +111,4 @@ func TestHasSecrets(t *testing.T) {
 			require.Equal(t, tc.wanted, hasSecrets(tc.in))
 		})
 	}
-}
-
-func TestStringifySlice(t *testing.T) {
-	require.Equal(t, "[]", stringifySlice(nil))
-	require.Equal(t, "[a]", stringifySlice([]string{"a"}))
-	require.Equal(t, "[a, b, c]", stringifySlice([]string{"a", "b", "c"}))
-}
-
-func TestQuoteAll(t *testing.T) {
-	require.Equal(t, []string(nil), quoteAll(nil))
-	require.Equal(t, []string{`"a"`}, quoteAll(aws.StringSlice([]string{"a"})))
-	require.Equal(t, []string{`"a"`, `"b"`, `"c"`}, quoteAll(aws.StringSlice([]string{"a", "b", "c"})))
 }

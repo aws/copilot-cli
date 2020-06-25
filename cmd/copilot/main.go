@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
 )
 
@@ -23,6 +24,7 @@ func init() {
 func main() {
 	cmd := buildRootCmd()
 	if err := cmd.Execute(); err != nil {
+		log.Errorln(err.Error())
 		os.Exit(1)
 	}
 }
@@ -38,7 +40,8 @@ func buildRootCmd() *cobra.Command {
 			// If we don't set a Run() function the help menu doesn't show up.
 			// See https://github.com/spf13/cobra/issues/790
 		},
-		SilenceUsage: true,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	// Sets version for --version flag. Version command gives more detailed
@@ -56,7 +59,10 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildEnvCmd())
 	cmd.AddCommand(cli.BuildSvcCmd())
 
-	cmd.AddCommand(cli.BuildStorageCmd())
+	// "Addons" command group
+	//cmd.AddCommand(cli.BuildStorageCmd())
+
+	// "Operational" command group.
 
 	// "Settings" command group.
 	cmd.AddCommand(cli.BuildVersionCmd())

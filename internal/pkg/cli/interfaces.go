@@ -183,8 +183,8 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
-type workspaceDeleter interface {
-	DeleteAll() error
+type wsFileDeleter interface {
+	DeleteWorkspaceFile() error
 }
 
 type svcManifestReader interface {
@@ -204,10 +204,6 @@ type wsPipelineWriter interface {
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler) (string, error)
 }
 
-type wsSvcDeleter interface {
-	DeleteService(name string) error
-}
-
 type wsServiceLister interface {
 	ServiceNames() ([]string, error)
 }
@@ -215,11 +211,6 @@ type wsServiceLister interface {
 type wsSvcReader interface {
 	wsServiceLister
 	svcManifestReader
-}
-
-type wsPipelineDeleter interface {
-	DeletePipelineManifest() error
-	wsPipelineManifestReader
 }
 
 type wsPipelineReader interface {
@@ -233,7 +224,7 @@ type wsAppManager interface {
 }
 
 type wsAddonManager interface {
-	WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error)
+	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
 	wsSvcReader
 }
 
@@ -344,6 +335,11 @@ type appSelector interface {
 type appEnvSelector interface {
 	appSelector
 	Environment(prompt, help, app string) (string, error)
+}
+
+type appEnvWithNoneSelector interface {
+	appSelector
+	EnvironmentWithNone(prompt, help, app string) (string, error)
 }
 
 type configSelector interface {

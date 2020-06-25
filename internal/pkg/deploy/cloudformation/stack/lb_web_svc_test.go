@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -143,7 +143,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 					RulePriorityLambda: "lambda",
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 
-				addons := mockTemplater{err: &addons.ErrDirNotExist{}}
+				addons := mockTemplater{err: &addon.ErrDirNotExist{}}
 				c.parser = m
 				c.svc.addons = addons
 			},
@@ -156,7 +156,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.ServiceOpts{
 					NestedStack: &template.ServiceNestedStackOpts{
-						StackName:       addons.StackName,
+						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},
 						SecretOutputs:   []string{"MySecretArn"},
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},

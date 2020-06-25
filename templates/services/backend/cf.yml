@@ -46,7 +46,7 @@ Resources:
 {{include "logconfig" . | indent 10}}
 {{- if .HealthCheck}}
           HealthCheck:
-            Command: {{quoteAll .HealthCheck.Command | stringifySlice}}
+            Command: {{quoteSlice .HealthCheck.Command | fmtSlice}}
             Interval: {{.HealthCheck.Interval}}
             Retries: {{.HealthCheck.Retries}}
             StartPeriod: {{.HealthCheck.StartPeriod}}

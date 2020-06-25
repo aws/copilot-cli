@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addons"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
@@ -46,7 +46,7 @@ type LoadBalancedWebService struct {
 // NewLoadBalancedWebService creates a new LoadBalancedWebService stack from a manifest file.
 func NewLoadBalancedWebService(mft *manifest.LoadBalancedWebService, env, app string, rc RuntimeConfig) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addons.New(aws.StringValue(mft.Name))
+	addons, err := addon.New(aws.StringValue(mft.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}

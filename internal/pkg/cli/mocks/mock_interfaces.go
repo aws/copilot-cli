@@ -1685,41 +1685,41 @@ func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
-// MockworkspaceDeleter is a mock of workspaceDeleter interface
-type MockworkspaceDeleter struct {
+// MockwsFileDeleter is a mock of wsFileDeleter interface
+type MockwsFileDeleter struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkspaceDeleterMockRecorder
+	recorder *MockwsFileDeleterMockRecorder
 }
 
-// MockworkspaceDeleterMockRecorder is the mock recorder for MockworkspaceDeleter
-type MockworkspaceDeleterMockRecorder struct {
-	mock *MockworkspaceDeleter
+// MockwsFileDeleterMockRecorder is the mock recorder for MockwsFileDeleter
+type MockwsFileDeleterMockRecorder struct {
+	mock *MockwsFileDeleter
 }
 
-// NewMockworkspaceDeleter creates a new mock instance
-func NewMockworkspaceDeleter(ctrl *gomock.Controller) *MockworkspaceDeleter {
-	mock := &MockworkspaceDeleter{ctrl: ctrl}
-	mock.recorder = &MockworkspaceDeleterMockRecorder{mock}
+// NewMockwsFileDeleter creates a new mock instance
+func NewMockwsFileDeleter(ctrl *gomock.Controller) *MockwsFileDeleter {
+	mock := &MockwsFileDeleter{ctrl: ctrl}
+	mock.recorder = &MockwsFileDeleterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockworkspaceDeleter) EXPECT() *MockworkspaceDeleterMockRecorder {
+func (m *MockwsFileDeleter) EXPECT() *MockwsFileDeleterMockRecorder {
 	return m.recorder
 }
 
-// DeleteAll mocks base method
-func (m *MockworkspaceDeleter) DeleteAll() error {
+// DeleteWorkspaceFile mocks base method
+func (m *MockwsFileDeleter) DeleteWorkspaceFile() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAll")
+	ret := m.ctrl.Call(m, "DeleteWorkspaceFile")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeleteAll indicates an expected call of DeleteAll
-func (mr *MockworkspaceDeleterMockRecorder) DeleteAll() *gomock.Call {
+// DeleteWorkspaceFile indicates an expected call of DeleteWorkspaceFile
+func (mr *MockwsFileDeleterMockRecorder) DeleteWorkspaceFile() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAll", reflect.TypeOf((*MockworkspaceDeleter)(nil).DeleteAll))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspaceFile", reflect.TypeOf((*MockwsFileDeleter)(nil).DeleteWorkspaceFile))
 }
 
 // MocksvcManifestReader is a mock of svcManifestReader interface
@@ -1889,43 +1889,6 @@ func (mr *MockwsPipelineWriterMockRecorder) WritePipelineManifest(marshaler inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WritePipelineManifest", reflect.TypeOf((*MockwsPipelineWriter)(nil).WritePipelineManifest), marshaler)
 }
 
-// MockwsSvcDeleter is a mock of wsSvcDeleter interface
-type MockwsSvcDeleter struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsSvcDeleterMockRecorder
-}
-
-// MockwsSvcDeleterMockRecorder is the mock recorder for MockwsSvcDeleter
-type MockwsSvcDeleterMockRecorder struct {
-	mock *MockwsSvcDeleter
-}
-
-// NewMockwsSvcDeleter creates a new mock instance
-func NewMockwsSvcDeleter(ctrl *gomock.Controller) *MockwsSvcDeleter {
-	mock := &MockwsSvcDeleter{ctrl: ctrl}
-	mock.recorder = &MockwsSvcDeleterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsSvcDeleter) EXPECT() *MockwsSvcDeleterMockRecorder {
-	return m.recorder
-}
-
-// DeleteService mocks base method
-func (m *MockwsSvcDeleter) DeleteService(name string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteService", name)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteService indicates an expected call of DeleteService
-func (mr *MockwsSvcDeleterMockRecorder) DeleteService(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*MockwsSvcDeleter)(nil).DeleteService), name)
-}
-
 // MockwsServiceLister is a mock of wsServiceLister interface
 type MockwsServiceLister struct {
 	ctrl     *gomock.Controller
@@ -2015,58 +1978,6 @@ func (m *MockwsSvcReader) ReadServiceManifest(svcName string) ([]byte, error) {
 func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
-}
-
-// MockwsPipelineDeleter is a mock of wsPipelineDeleter interface
-type MockwsPipelineDeleter struct {
-	ctrl     *gomock.Controller
-	recorder *MockwsPipelineDeleterMockRecorder
-}
-
-// MockwsPipelineDeleterMockRecorder is the mock recorder for MockwsPipelineDeleter
-type MockwsPipelineDeleterMockRecorder struct {
-	mock *MockwsPipelineDeleter
-}
-
-// NewMockwsPipelineDeleter creates a new mock instance
-func NewMockwsPipelineDeleter(ctrl *gomock.Controller) *MockwsPipelineDeleter {
-	mock := &MockwsPipelineDeleter{ctrl: ctrl}
-	mock.recorder = &MockwsPipelineDeleterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockwsPipelineDeleter) EXPECT() *MockwsPipelineDeleterMockRecorder {
-	return m.recorder
-}
-
-// DeletePipelineManifest mocks base method
-func (m *MockwsPipelineDeleter) DeletePipelineManifest() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePipelineManifest")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeletePipelineManifest indicates an expected call of DeletePipelineManifest
-func (mr *MockwsPipelineDeleterMockRecorder) DeletePipelineManifest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipelineManifest", reflect.TypeOf((*MockwsPipelineDeleter)(nil).DeletePipelineManifest))
-}
-
-// ReadPipelineManifest mocks base method
-func (m *MockwsPipelineDeleter) ReadPipelineManifest() ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadPipelineManifest")
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadPipelineManifest indicates an expected call of ReadPipelineManifest
-func (mr *MockwsPipelineDeleterMockRecorder) ReadPipelineManifest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineDeleter)(nil).ReadPipelineManifest))
 }
 
 // MockwsPipelineReader is a mock of wsPipelineReader interface
@@ -2198,18 +2109,18 @@ func (m *MockwsAddonManager) EXPECT() *MockwsAddonManagerMockRecorder {
 }
 
 // WriteAddon mocks base method
-func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, path string) (string, error) {
+func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteAddon", f, svc, path)
+	ret := m.ctrl.Call(m, "WriteAddon", f, svc, name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // WriteAddon indicates an expected call of WriteAddon
-func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, path interface{}) *gomock.Call {
+func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
 // ServiceNames mocks base method
@@ -3541,6 +3452,59 @@ func (m *MockappEnvSelector) Environment(prompt, help, app string) (string, erro
 func (mr *MockappEnvSelectorMockRecorder) Environment(prompt, help, app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockappEnvSelector)(nil).Environment), prompt, help, app)
+}
+
+// MockappEnvWithNoneSelector is a mock of appEnvWithNoneSelector interface
+type MockappEnvWithNoneSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockappEnvWithNoneSelectorMockRecorder
+}
+
+// MockappEnvWithNoneSelectorMockRecorder is the mock recorder for MockappEnvWithNoneSelector
+type MockappEnvWithNoneSelectorMockRecorder struct {
+	mock *MockappEnvWithNoneSelector
+}
+
+// NewMockappEnvWithNoneSelector creates a new mock instance
+func NewMockappEnvWithNoneSelector(ctrl *gomock.Controller) *MockappEnvWithNoneSelector {
+	mock := &MockappEnvWithNoneSelector{ctrl: ctrl}
+	mock.recorder = &MockappEnvWithNoneSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockappEnvWithNoneSelector) EXPECT() *MockappEnvWithNoneSelectorMockRecorder {
+	return m.recorder
+}
+
+// Application mocks base method
+func (m *MockappEnvWithNoneSelector) Application(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Application", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Application indicates an expected call of Application
+func (mr *MockappEnvWithNoneSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).Application), prompt, help)
+}
+
+// EnvironmentWithNone mocks base method
+func (m *MockappEnvWithNoneSelector) EnvironmentWithNone(prompt, help, app string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentWithNone", prompt, help, app)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentWithNone indicates an expected call of EnvironmentWithNone
+func (mr *MockappEnvWithNoneSelectorMockRecorder) EnvironmentWithNone(prompt, help, app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentWithNone", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).EnvironmentWithNone), prompt, help, app)
 }
 
 // MockconfigSelector is a mock of configSelector interface
