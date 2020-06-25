@@ -24,9 +24,9 @@ type pipelineDescriberMocks struct {
 }
 
 var pipelineName = "pipeline-dinder-badgoose-repo"
-var mockTime = func() *time.Time {
+var mockTime = func() time.Time {
 	t, _ := time.Parse(time.RFC3339, "2020-02-02T15:04:05+00:00")
-	return &t
+	return t
 }
 var mockPipeline = &codepipeline.Pipeline{
 	Name:      pipelineName,

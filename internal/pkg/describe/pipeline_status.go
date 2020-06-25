@@ -11,7 +11,6 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"text/tabwriter"
-	"time"
 )
 
 type pipelineStateGetter interface {
@@ -74,7 +73,7 @@ func (p PipelineStatus) HumanString() string {
 	}
 	writer.Flush()
 	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(time.Unix(p.UpdatedAt.Unix(), 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
 	return b.String()
 }
