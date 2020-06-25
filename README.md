@@ -19,7 +19,7 @@ Use Copilot to:
 
 Read more about the Copilot charter and tenets [here](CHARTER.md).
 
-![copilot help](https://user-images.githubusercontent.com/879348/85748055-a4032d80-b6bc-11ea-9562-b7adf38d5c26.png)
+![copilot help](https://user-images.githubusercontent.com/828419/85797638-e181ae00-b6f0-11ea-8751-3a7552e3fa7f.png)
 
 ## Installing
 
