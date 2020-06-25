@@ -485,3 +485,113 @@ func TestSelect_Application(t *testing.T) {
 		})
 	}
 }
+
+func TestSelect_EnvironmentWithNone(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockEnvLister := mocks.NewMockstore(ctrl)
+	mockPrompt := mocks.NewMockprompter(ctrl)
+	defer ctrl.Finish()
+
+	appName := "myapp"
+
+	testCases := map[string]struct {
+		mocking func()
+		wantErr error
+		want    string
+	}{
+		"with no environments": {
+			mocking: func() {
+				mockEnvLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{}, nil).
+					Times(1)
+				mockPrompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+
+			},
+			want: config.EnvNameNone,
+		},
+		"with multiple environments": {
+			mocking: func() {
+				mockEnvLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{
+						&config.Environment{
+							App:  appName,
+							Name: "env1",
+						},
+						&config.Environment{
+							App:  appName,
+							Name: "env2",
+						},
+					}, nil).
+					Times(1)
+				mockPrompt.
+					EXPECT().
+					SelectOne(
+						gomock.Eq("Select an environment"),
+						gomock.Eq("Help text"),
+						gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
+					Return("env1", nil).
+					Times(1)
+			},
+			want: "env1",
+		},
+		"with error selecting environments": {
+			mocking: func() {
+				mockEnvLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{
+						&config.Environment{
+							App:  appName,
+							Name: "env1",
+						},
+						&config.Environment{
+							App:  appName,
+							Name: "env2",
+						},
+					}, nil).
+					Times(1)
+				mockPrompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
+					Return("", fmt.Errorf("error selecting")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("select environment: error selecting"),
+		},
+		"with error listing environments": {
+			mocking: func() {
+				mockEnvLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return(nil, fmt.Errorf("error listing environments")).
+					Times(1)
+			},
+			wantErr: fmt.Errorf("list environments: error listing environments"),
+		},
+	}
+
+	sel := Select{
+		prompt: mockPrompt,
+		lister: mockEnvLister,
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tc.mocking()
+
+			got, err := sel.EnvironmentWithNone("Select an environment", "Help text", appName)
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.want, got)
+			}
+		})
+	}
+}

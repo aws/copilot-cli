@@ -6,8 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -16,13 +18,22 @@ var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
+
+	fmtTaskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
+	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
+
+	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. " +
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(config.EnvNameNone))
+	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
 type runTaskVars struct {
 	*GlobalOpts
-	num    int8
+	count  int8
 	cpu    int16
 	memory int16
+
+	groupName string
 
 	image          string
 	dockerfilePath string
@@ -44,9 +55,7 @@ type runTaskOpts struct {
 	fs     afero.Fs
 	store  store
 	parser dockerfileParser
-
-	// sets up Dockerfile parser using fs and input path
-	setupParser func(opts *runTaskOpts)
+	sel    appEnvWithNoneSelector
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -60,16 +69,13 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		fs:    &afero.Afero{Fs: afero.NewOsFs()},
 		store: store,
-
-		setupParser: func(o *runTaskOpts) {
-			o.parser = dockerfile.New(o.fs, o.dockerfilePath)
-		},
+		sel:   selector.NewSelect(vars.prompt, store),
 	}, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
-	if o.num <= 0 {
+	if o.count <= 0 {
 		return errNumNotPositive
 	}
 
@@ -79,6 +85,12 @@ func (o *runTaskOpts) Validate() error {
 
 	if o.memory <= 0 {
 		return errMemNotPositive
+	}
+
+	if o.groupName != "" {
+		if err := basicNameValidation(o.groupName); err != nil {
+			return err
+		}
 	}
 
 	if o.image != "" && o.dockerfilePath != "" {
@@ -110,6 +122,17 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
+// Ask prompts the user for any required or important fields that are not provided.
+func (o *runTaskOpts) Ask() error {
+	if err := o.askTaskGroupName(); err != nil {
+		return err
+	}
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (o *runTaskOpts) validateAppName() error {
 	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
@@ -129,6 +152,43 @@ func (o *runTaskOpts) validateEnvName() error {
 	return nil
 }
 
+func (o *runTaskOpts) askTaskGroupName() error {
+	if o.groupName != "" {
+		return nil
+	}
+
+	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
+
+	groupName, err := o.prompt.Get(
+		fmtTaskRunGroupNamePrompt,
+		taskRunGroupNamePromptHelp,
+		basicNameValidation,
+		prompt.WithFinalMessage("Task group name:"))
+	if err != nil {
+		return fmt.Errorf("prompt get task group name: %w", err)
+	}
+	o.groupName = groupName
+	return nil
+}
+
+func (o *runTaskOpts) askEnvName() error {
+	if o.env != "" {
+		return nil
+	}
+
+	if o.AppName() == "" {
+		o.env = config.EnvNameNone
+		return nil
+	}
+
+	env, err := o.sel.EnvironmentWithNone(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName())
+	if err != nil {
+		return fmt.Errorf("ask for environment: %w", err)
+	}
+	o.env = env
+	return nil
+}
+
 // BuildTaskRunCmd build the command for running a new task
 func BuildTaskRunCmd() *cobra.Command {
 	vars := runTaskVars{
@@ -141,8 +201,8 @@ func BuildTaskRunCmd() *cobra.Command {
 		Example: `
 Run a task with default setting.
 /code $ copilot task run
-Run a task in the "test" environment under the current workspace.
-/code $ copilot task run --env test
+Run a task named "db-migrate" in the "test" environment under the current workspace.
+/code $ copilot task run -n db-migrate --env test
 Starts 4 tasks with 2GB memory, Runs a particular image.
 /code $ copilot task run --num 4 --memory 2048 --task-role frontend-exec-role
 Run a task with environment variables.
@@ -156,13 +216,19 @@ Run a task with environment variables.
 			if err := opts.Validate(); err != nil { // validate flags
 				return err
 			}
+
+			if err := opts.Ask(); err != nil {
+				return err
+			}
 			return nil
 		}),
 	}
 
-	cmd.Flags().Int8Var(&vars.num, numFlag, 1, numFlagDescription)
+	cmd.Flags().Int8Var(&vars.count, countFlag, 1, countFlagDescription)
 	cmd.Flags().Int16Var(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
 	cmd.Flags().Int16Var(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+
+	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
