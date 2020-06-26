@@ -7,6 +7,7 @@ package cloudwatch
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
@@ -35,12 +36,12 @@ type CloudWatch struct {
 
 // AlarmStatus contains CloudWatch alarm status.
 type AlarmStatus struct {
-	Arn          string `json:"arn"`
-	Name         string `json:"name"`
-	Reason       string `json:"reason"`
-	Status       string `json:"status"`
-	Type         string `json:"type"`
-	UpdatedTimes int64  `json:"updatedTimes"`
+	Arn          string    `json:"arn"`
+	Name         string    `json:"name"`
+	Reason       string    `json:"reason"`
+	Status       string    `json:"status"`
+	Type         string    `json:"type"`
+	UpdatedTimes time.Time `json:"updatedTimes"`
 }
 
 // New returns a CloudWatch struct configured against the input session.
@@ -115,7 +116,7 @@ func (cw *CloudWatch) compositeAlarmsStatus(alarms []*cloudwatch.CompositeAlarm)
 			Reason:       aws.StringValue(alarm.StateReason),
 			Status:       aws.StringValue(alarm.StateValue),
 			Type:         compositeAlarmType,
-			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
+			UpdatedTimes: *alarm.StateUpdatedTimestamp,
 		})
 	}
 	return alarmStatusList
@@ -130,7 +131,7 @@ func (cw *CloudWatch) metricAlarmsStatus(alarms []*cloudwatch.MetricAlarm) []Ala
 			Reason:       aws.StringValue(alarm.StateReason),
 			Status:       aws.StringValue(alarm.StateValue),
 			Type:         metricAlarmType,
-			UpdatedTimes: alarm.StateUpdatedTimestamp.Unix(),
+			UpdatedTimes: *alarm.StateUpdatedTimestamp,
 		})
 	}
 	return alarmStatusList

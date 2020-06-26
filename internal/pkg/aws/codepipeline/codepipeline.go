@@ -33,12 +33,12 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name      string     `json:"name"`
-	Region    string     `json:"region"`
-	AccountID string     `json:"accountId"`
-	Stages    []*Stage   `json:"stages"`
-	CreatedAt *time.Time `json:"createdAt"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	AccountID string    `json:"accountId"`
+	Stages    []*Stage  `json:"stages"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // Stage wraps the codepipeline pipeline stage.
@@ -53,7 +53,7 @@ type Stage struct {
 type PipelineState struct {
 	PipelineName string        `json:"pipelineName"`
 	StageStates  []*StageState `json:"stageStates"`
-	UpdatedAt    *time.Time    `json:"updatedAt"`
+	UpdatedAt    time.Time     `json:"updatedAt"`
 }
 
 // StageState wraps a CodePipeline stage state.
@@ -137,8 +137,8 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		Region:    parsedArn.Region,
 		AccountID: parsedArn.AccountID,
 		Stages:    stages,
-		CreatedAt: metadata.Created,
-		UpdatedAt: metadata.Updated,
+		CreatedAt: *metadata.Created,
+		UpdatedAt: *metadata.Updated,
 	}, nil
 }
 
@@ -255,7 +255,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	return &PipelineState{
 		PipelineName: aws.StringValue(resp.PipelineName),
 		StageStates:  stageStates,
-		UpdatedAt:    resp.Updated,
+		UpdatedAt:    *resp.Updated,
 	}, nil
 }
 

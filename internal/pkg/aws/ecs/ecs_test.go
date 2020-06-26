@@ -384,8 +384,8 @@ func TestTask_TaskStatus(t *testing.T) {
 		taskArn       *string
 		containers    []*ecs.Container
 		lastStatus    *string
-		startedAt     *time.Time
-		stoppedAt     *time.Time
+		startedAt     time.Time
+		stoppedAt     time.Time
 		stoppedReason *string
 
 		wantTaskStatus *TaskStatus
@@ -428,7 +428,7 @@ func TestTask_TaskStatus(t *testing.T) {
 			},
 			health:     aws.String("HEALTHY"),
 			lastStatus: aws.String("UNKNOWN"),
-			startedAt:  &startTime,
+			startedAt:  startTime,
 
 			wantTaskStatus: &TaskStatus{
 				Health: "HEALTHY",
@@ -440,7 +440,7 @@ func TestTask_TaskStatus(t *testing.T) {
 					},
 				},
 				LastStatus: "UNKNOWN",
-				StartedAt:  1136214245,
+				StartedAt:  startTime,
 			},
 		},
 		"success with a stopped task": {
@@ -453,8 +453,8 @@ func TestTask_TaskStatus(t *testing.T) {
 			},
 			health:        aws.String("HEALTHY"),
 			lastStatus:    aws.String("UNKNOWN"),
-			startedAt:     &startTime,
-			stoppedAt:     &stopTime,
+			startedAt:     startTime,
+			stoppedAt:     stopTime,
 			stoppedReason: aws.String("some reason"),
 
 			wantTaskStatus: &TaskStatus{
@@ -467,8 +467,8 @@ func TestTask_TaskStatus(t *testing.T) {
 					},
 				},
 				LastStatus:    "UNKNOWN",
-				StartedAt:     1136214245,
-				StoppedAt:     1136217845,
+				StartedAt:     startTime,
+				StoppedAt:     stopTime,
 				StoppedReason: "some reason",
 			},
 		},
@@ -485,8 +485,8 @@ func TestTask_TaskStatus(t *testing.T) {
 				TaskArn:       tc.taskArn,
 				Containers:    tc.containers,
 				LastStatus:    tc.lastStatus,
-				StartedAt:     tc.startedAt,
-				StoppedAt:     tc.stoppedAt,
+				StartedAt:     &tc.startedAt,
+				StoppedAt:     &tc.stoppedAt,
 				StoppedReason: tc.stoppedReason,
 			}
 
@@ -511,8 +511,8 @@ func TestTaskStatus_HumanString(t *testing.T) {
 		health      string
 		lastStatus  string
 		imageDigest string
-		startedAt   int64
-		stoppedAt   int64
+		startedAt   time.Time
+		stoppedAt   time.Time
 
 		wantTaskStatus string
 	}{
@@ -520,8 +520,8 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			health:      "HEALTHY",
 			id:          "aslhfnqo39j8qomimvoiqm89349",
 			lastStatus:  "RUNNING",
-			startedAt:   startTime.Unix(),
-			stoppedAt:   stopTime.Unix(),
+			startedAt:   startTime,
+			stoppedAt:   stopTime,
 			imageDigest: mockImageDigest,
 
 			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\tHEALTHY\t14 years ago\t14 years ago\n",

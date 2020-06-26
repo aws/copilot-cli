@@ -20,9 +20,9 @@ type pipelineStatusDescriberMocks struct {
 }
 
 var mockPipelineName = "pipeline-dinder-badgoose-repo"
-var mockParsedTime = func() *time.Time {
+var mockParsedTime = func() time.Time {
 	t, _ := time.Parse(time.RFC3339, "2020-02-02T15:04:05+00:00")
-	return &t
+	return t
 }
 var mockPipelineState = &codepipeline.PipelineState{
 	PipelineName: mockPipelineName,
