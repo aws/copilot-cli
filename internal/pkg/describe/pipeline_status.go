@@ -7,10 +7,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
+	"text/tabwriter"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"text/tabwriter"
 )
 
 type pipelineStateGetter interface {
@@ -65,8 +67,7 @@ func (p PipelineStatus) HumanString() string {
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("Pipeline Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t\n", "Stage", "Status", "Transition")
-	writer.Flush()
+	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "Stage", "Status", "Transition")
 	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "-----", "------", "----------")
 	for _, stage := range p.StageStates {
 		fmt.Fprintf(writer, stage.HumanString())

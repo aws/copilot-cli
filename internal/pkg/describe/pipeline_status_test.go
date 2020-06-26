@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -29,16 +31,6 @@ var mockPipelineState = &codepipeline.PipelineState{
 	StageStates: []*codepipeline.StageState{
 		{
 			StageName: "Source",
-			Actions: []codepipeline.StageAction{
-				{
-					Name:   "action1",
-					Status: "Succeeded",
-				},
-				{
-					Name:   "action2",
-					Status: "Succeeded",
-				},
-			},
 		},
 		{
 			StageName: "Build",
@@ -63,14 +55,23 @@ var mockPipelineState = &codepipeline.PipelineState{
 			Actions: []codepipeline.StageAction{
 				{
 					Name:   "action1",
+					Status: "Succeeded",
+				},
+			},
+			Transition: "DISABLED",
+		},
+		{
+			StageName: "DeployTo-prod",
+			Actions: []codepipeline.StageAction{
+				{
+					Name:   "action1",
+					Status: "Succeeded",
+				},
+				{
+					Name:   "TestCommands",
 					Status: "Failed",
 				},
 			},
-			Transition: "ENABLED",
-		},
-		{
-			StageName:  "DeployTo-prod",
-			Transition: "DISABLED",
 		},
 	},
 	UpdatedAt: mockParsedTime(),
@@ -132,34 +133,49 @@ func TestPipelineStatusDescriber_Describe(t *testing.T) {
 }
 
 func TestPipelineStatusDescriber_String(t *testing.T) {
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-06-19T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
 	testCases := map[string]struct {
 		testPipelineStatus  *PipelineStatus
 		expectedHumanString string
 		expectedJSONString  string
 	}{
-		"correct output": {
+		"correct output with correct aggregate statuses": {
 			testPipelineStatus: &PipelineStatus{*mockPipelineState},
 			expectedHumanString: `Pipeline Status
 
-  Stage             Status              Transition          
+  Stage             Status              Transition
   -----             ------              ----------
-  Source            Succeeded             -
+  Source              -                   -
+
   Build             InProgress          ENABLED
-  DeployTo-test     Failed              ENABLED
-  DeployTo-prod       -                 DISABLED
+    action1         Failed
+    action2         InProgress
+    action3         Succeeded
+  DeployTo-test     Succeeded           DISABLED
+    action1         Succeeded
+  DeployTo-prod     Failed                -
+    action1         Succeeded
+    TestCommands    Failed
 
 Last Deployment
 
-  Updated At        3 months ago
+  Updated At        4 months ago
 `,
-			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"action2\",\"status\":\"Succeeded\"}],\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":null,\"transition\":\"DISABLED\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
+			expectedJSONString: "{\"pipelineName\":\"pipeline-dinder-badgoose-repo\",\"stageStates\":[{\"stageName\":\"Source\",\"transition\":\"\"},{\"stageName\":\"Build\",\"actions\":[{\"name\":\"action1\",\"status\":\"Failed\"},{\"name\":\"action2\",\"status\":\"InProgress\"},{\"name\":\"action3\",\"status\":\"Succeeded\"}],\"transition\":\"ENABLED\"},{\"stageName\":\"DeployTo-test\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"}],\"transition\":\"DISABLED\"},{\"stageName\":\"DeployTo-prod\",\"actions\":[{\"name\":\"action1\",\"status\":\"Succeeded\"},{\"name\":\"TestCommands\",\"status\":\"Failed\"}],\"transition\":\"\"}],\"updatedAt\":\"2020-02-02T15:04:05Z\"}\n",
 		},
 	}
 	for _, tc := range testCases {
 		human := tc.testPipelineStatus.HumanString()
 		json, _ := tc.testPipelineStatus.JSONString()
 
-		require.NotEmpty(t, tc.expectedHumanString, human, "expected human output to not be empty")
+		require.Equal(t, tc.expectedHumanString, human, "expected human output to match")
 		require.Equal(t, tc.expectedJSONString, json, "expected JSON output to match")
 	}
 }
