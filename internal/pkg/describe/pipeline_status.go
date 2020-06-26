@@ -12,6 +12,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"text/tabwriter"
 )
 
 type pipelineStateGetter interface {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"text/tabwriter"
-	"time"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
@@ -94,8 +93,8 @@ func (p *Pipeline) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", p.Name)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", p.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "AccountID", p.AccountID)
-	fmt.Fprintf(writer, "  %s\t%s\n", "Created At", humanizeTime(time.Unix(p.CreatedAt.Unix(), 0)))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(time.Unix(p.UpdatedAt.Unix(), 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Created At", humanizeTime(p.CreatedAt))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
 	fmt.Fprintf(writer, color.Bold.Sprint("\nStages\n\n"))
 	writer.Flush()

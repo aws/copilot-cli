@@ -34,12 +34,12 @@ type CodePipeline struct {
 
 // Pipeline represents an existing CodePipeline resource.
 type Pipeline struct {
-	Name      string     `json:"name"`
-	Region    string     `json:"region"`
-	AccountID string     `json:"accountId"`
-	Stages    []*Stage   `json:"stages"`
-	CreatedAt *time.Time `json:"createdAt"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+	Name      string    `json:"name"`
+	Region    string    `json:"region"`
+	AccountID string    `json:"accountId"`
+	Stages    []*Stage  `json:"stages"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // Stage wraps the codepipeline pipeline stage.
@@ -138,8 +138,8 @@ func (c *CodePipeline) GetPipeline(name string) (*Pipeline, error) {
 		Region:    parsedArn.Region,
 		AccountID: parsedArn.AccountID,
 		Stages:    stages,
-		CreatedAt: metadata.Created,
-		UpdatedAt: metadata.Updated,
+		CreatedAt: *metadata.Created,
+		UpdatedAt: *metadata.Updated,
 	}, nil
 }
 
