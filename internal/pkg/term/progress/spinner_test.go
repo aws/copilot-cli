@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress/mocks"
 	spin "github.com/briandowns/spinner"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

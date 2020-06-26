@@ -1,4 +1,4 @@
-module github.com/aws/amazon-ecs-cli-v2/e2e/multi-app-project/front-end
+module github.com/aws/copilot-cli/e2e/multi-app-project/front-end
 
 go 1.13
 

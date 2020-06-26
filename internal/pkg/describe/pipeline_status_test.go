@@ -11,8 +11,8 @@ import (
 
 	"github.com/dustin/go-humanize"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

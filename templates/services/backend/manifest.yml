@@ -1,6 +1,6 @@
 # The manifest for the "{{.Name}}" service.
 # Read the full specification for the "{{.Type}}" type at:
-#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#backend-svc
+#  https://github.com/aws/copilot-cli/wiki/Manifests#backend-svc
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: {{.Name}}

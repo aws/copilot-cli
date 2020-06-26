@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	progress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // Mockprogress is a mock of progress interface

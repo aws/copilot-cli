@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	template "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	template "github.com/aws/copilot-cli/internal/pkg/template"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockParser is a mock of Parser interface

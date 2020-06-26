@@ -6,7 +6,7 @@ package progress
 import (
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/stretchr/testify/require"
 )
 

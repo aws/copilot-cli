@@ -6,21 +6,22 @@ package mocks
 
 import (
 	encoding "encoding"
-	cloudwatchlogs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
-	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
-	ecr "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
-	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	config "github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	deploy "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	stack "github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	describe "github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	dockerfile "github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
-	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
-	workspace "github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
-	session "github.com/aws/aws-sdk-go/aws/session"
-	gomock "github.com/golang/mock/gomock"
 	io "io"
 	reflect "reflect"
+
+	session "github.com/aws/aws-sdk-go/aws/session"
+	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	ecr "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	config "github.com/aws/copilot-cli/internal/pkg/config"
+	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
+	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	command "github.com/aws/copilot-cli/internal/pkg/term/command"
+	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockactionCommand is a mock of actionCommand interface

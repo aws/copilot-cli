@@ -10,7 +10,7 @@ import (
 
 	"github.com/xlab/treeprint"
 
-	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"

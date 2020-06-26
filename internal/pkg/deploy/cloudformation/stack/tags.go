@@ -4,9 +4,9 @@
 package stack
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 )
 
 // Tag keys used while creating stacks.

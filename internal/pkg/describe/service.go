@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 const (
@@ -125,7 +125,7 @@ func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResou
 	}
 	var resources []*cloudformation.StackResource
 	// TODO: rename this url once repo name changes.
-	// See https://github.com/aws/amazon-ecs-cli-v2/issues/621
+	// See https://github.com/aws/copilot-cli/issues/621
 	ignoredResources := map[string]bool{
 		rulePriorityFunction: true,
 		waitCondition:        true,

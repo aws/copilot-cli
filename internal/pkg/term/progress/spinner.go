@@ -9,8 +9,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/cursor"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/cursor"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/briandowns/spinner"
 )
 
