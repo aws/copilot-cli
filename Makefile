@@ -60,6 +60,7 @@ packr-clean: tools package-custom-resources-clean
 	${GOBIN}/packr2 clean &&\
 	cd ..\
 
+
 .PHONY: test
 test: packr-build run-unit-test custom-resource-tests packr-clean
 
