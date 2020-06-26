@@ -663,7 +663,7 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
-	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLsiFlagDescription)
+	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)

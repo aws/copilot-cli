@@ -524,7 +524,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				lsiSorts:     []string{"Email:S"},
 			},
 		},
-		"noLsi is set correctly if no lsis specified": {
+		"noLSI is set correctly if no lsis specified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageType: dynamoDBStorageType,
@@ -704,7 +704,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
-		inNoLsi       bool
+		inNoLSI       bool
 		inNoSort      bool
 
 		mockWs func(m *mocks.MockwsAddonManager)
@@ -728,7 +728,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-table",
-			inNoLsi:       true,
+			inNoLSI:       true,
 			inNoSort:      true,
 			inPartition:   wantedPartitionKey,
 
@@ -796,7 +796,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
-					noLSI:        tc.inNoLsi,
+					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
 				ws: mockAddon,
