@@ -153,6 +153,7 @@ func TestPipelineStatusDescriber_String(t *testing.T) {
   Stage             Status              Transition
   -----             ------              ----------
   Source              -                   -
+
   Build             InProgress          ENABLED
     action1         Failed
     action2         InProgress
