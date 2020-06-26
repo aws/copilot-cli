@@ -509,6 +509,20 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
+
+			wantedVars: &initStorageVars{
+				GlobalOpts: &GlobalOpts{
+					appName: wantedAppName,
+				},
+				storageName: wantedTableName,
+				storageSvc:  wantedSvcName,
+				storageType: dynamoDBStorageType,
+
+				partitionKey: wantedPartitionKey,
+				sortKey:      wantedSortKey,
+				noLsi:        false,
+				lsiSorts:     []string{"Email:S"},
+			},
 		},
 		"noLsi is set correctly if no lsis specified": {
 			inAppName:     wantedAppName,
