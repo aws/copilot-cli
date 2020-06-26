@@ -171,13 +171,15 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
-		inNoLsi       bool
+		inNoLSI       bool
 		inNoSort      bool
 
 		mockPrompt func(m *mocks.Mockprompter)
 		mockCfg    func(m *mocks.MockconfigSelector)
 
 		wantedErr error
+
+		wantedVars *initStorageVars
 	}{
 		"Asks for storage type": {
 			inAppName:     wantedAppName,
@@ -265,7 +267,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inSort:        wantedSortKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
@@ -334,7 +336,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -438,7 +440,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockconfigSelector) {},
@@ -452,7 +454,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockconfigSelector) {},
@@ -507,6 +509,50 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(false, nil)
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
+
+			wantedVars: &initStorageVars{
+				GlobalOpts: &GlobalOpts{
+					appName: wantedAppName,
+				},
+				storageName: wantedTableName,
+				storageSvc:  wantedSvcName,
+				storageType: dynamoDBStorageType,
+
+				partitionKey: wantedPartitionKey,
+				sortKey:      wantedSortKey,
+				noLSI:        false,
+				lsiSorts:     []string{"Email:S"},
+			},
+		},
+		"noLSI is set correctly if no lsis specified": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageType: dynamoDBStorageType,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Return(false, nil)
+			},
+			mockCfg: func(m *mocks.MockconfigSelector) {},
+
+			wantedVars: &initStorageVars{
+				GlobalOpts: &GlobalOpts{
+					appName: wantedAppName,
+				},
+				storageName: wantedTableName,
+				storageSvc:  wantedSvcName,
+				storageType: dynamoDBStorageType,
+
+				partitionKey: wantedPartitionKey,
+				sortKey:      wantedSortKey,
+				noLSI:        true,
+			},
 		},
 		"error if lsi name misspecified": {
 			inAppName:     wantedAppName,
@@ -616,7 +662,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
-					noLsi:        tc.inNoLsi,
+					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
 				sel: mockConfig,
@@ -631,6 +677,10 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Nil(t, err)
+			}
+			if tc.wantedVars != nil {
+				tc.wantedVars.prompt = opts.prompt
+				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
 			}
 		})
 	}
@@ -654,7 +704,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
-		inNoLsi       bool
+		inNoLSI       bool
 		inNoSort      bool
 
 		mockWs func(m *mocks.MockwsAddonManager)
@@ -678,7 +728,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inSvcName:     wantedSvcName,
 			inStorageName: "my-table",
-			inNoLsi:       true,
+			inNoLSI:       true,
 			inNoSort:      true,
 			inPartition:   wantedPartitionKey,
 
@@ -746,7 +796,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
-					noLsi:        tc.inNoLsi,
+					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
 				ws: mockAddon,

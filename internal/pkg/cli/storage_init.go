@@ -122,7 +122,7 @@ type initStorageVars struct {
 	partitionKey string
 	sortKey      string
 	lsiSorts     []string // lsi sort keys collected as "name:T" where T is one of [SNB]
-	noLsi        bool
+	noLSI        bool
 	noSort       bool
 }
 
@@ -198,7 +198,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	// --no-lsi and --lsi are mutually exclusive.
-	if o.noLsi && len(o.lsiSorts) != 0 {
+	if o.noLSI && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
 	}
 
@@ -384,7 +384,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return nil
 	}
 	// If --no-lsi has been specified, there is no need to ask for local secondary indices.
-	if o.noLsi {
+	if o.noLSI {
 		return nil
 	}
 	// If --no-sort has been specified, there is no need to ask for local secondary indices.
@@ -399,13 +399,16 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return fmt.Errorf("confirm add alternate sort key: %w", err)
 	}
 	for {
-		if !moreLSI {
-			break
-		}
 		if len(o.lsiSorts) > 5 {
 			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
-			break
+			moreLSI = false
 		}
+		// This will execute last in the loop if moreLSI is set to false by any confirm prompts.
+		if !moreLSI {
+			o.noLSI = len(o.lsiSorts) == 0
+			return nil
+		}
+
 		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
 			storageInitDDBLSINameHelp,
 			dynamoTableNameValidation,
@@ -577,7 +580,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	props.Attributes = attributes
 	// only configure LSI if we haven't specified the --no-lsi flag.
 	props.HasLSI = false
-	if !o.noLsi {
+	if !o.noLSI {
 		props.HasLSI = true
 		lsiConfig, err := newLSI(
 			*partKey.Name,
@@ -660,7 +663,7 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
-	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
+	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
