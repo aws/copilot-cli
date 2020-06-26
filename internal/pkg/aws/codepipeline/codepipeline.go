@@ -259,8 +259,8 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	}, nil
 }
 
-func (sa StageAction) humanStringAction() string {
-	return "    " + sa.Name + "\t" + sa.Status + "\n"
+func (sa StageAction) humanString() string {
+	return "    " + sa.Name + "\t" + sa.Status
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
@@ -278,8 +278,8 @@ func (ss *StageState) HumanString() string {
 	}
 	var formattedActions []string
 	for _, action := range ss.Actions {
-		formattedActions = append(formattedActions, action.humanStringAction())
+		formattedActions = append(formattedActions, action.humanString())
 	}
-	joinedActions := strings.Join(formattedActions, "")
-	return fmt.Sprintf("  %s\t%s\t%s\n%s", ss.StageName, status, transition, joinedActions)
+	joinedActions := strings.Join(formattedActions, "\n")
+	return fmt.Sprintf("  %s\t%s\t%s\n%s\n", ss.StageName, status, transition, joinedActions)
 }
