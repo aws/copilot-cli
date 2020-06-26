@@ -178,6 +178,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		mockCfg    func(m *mocks.MockconfigSelector)
 
 		wantedErr error
+
+		wantedVars *initStorageVars
 	}{
 		"Asks for storage type": {
 			inAppName:     wantedAppName,
@@ -508,6 +510,36 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 			mockCfg: func(m *mocks.MockconfigSelector) {},
 		},
+		"noLsi is set correctly if no lsis specified": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageType: dynamoDBStorageType,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+			inSort:        wantedSortKey,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBLSIPrompt),
+					gomock.Eq(storageInitDDBLSIHelp),
+					gomock.Any(),
+				).Return(false, nil)
+			},
+			mockCfg: func(m *mocks.MockconfigSelector) {},
+
+			wantedVars: &initStorageVars{
+				GlobalOpts: &GlobalOpts{
+					appName: wantedAppName,
+				},
+				storageName: wantedTableName,
+				storageSvc:  wantedSvcName,
+				storageType: dynamoDBStorageType,
+
+				partitionKey: wantedPartitionKey,
+				sortKey:      wantedSortKey,
+				noLsi:        true,
+			},
+		},
 		"error if lsi name misspecified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
@@ -632,8 +664,16 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			} else {
 				require.Nil(t, err)
 			}
+			if tc.wantedVars != nil {
+				tc.wantedVars.prompt = opts.prompt
+				require.Equal(t, *tc.wantedVars, opts.initStorageVars)
+			}
 		})
 	}
+}
+
+func TestStorageInitOpts_AskOutputs(t *testing.T) {
+
 }
 
 func TestStorageInitOpts_Execute(t *testing.T) {

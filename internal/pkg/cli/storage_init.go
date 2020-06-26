@@ -400,6 +400,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 	for {
 		if !moreLSI {
+			o.noLsi = true
 			break
 		}
 		if len(o.lsiSorts) > 5 {
