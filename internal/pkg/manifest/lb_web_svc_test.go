@@ -26,7 +26,7 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -35,7 +35,7 @@ func TestLoadBalancedWebSvc_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, manifest *LoadBalancedWebService) {
 				m := mocks.NewMockParser(ctrl)
 				manifest.parser = m
-				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse(lbWebSvcManifestPath, *manifest, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 

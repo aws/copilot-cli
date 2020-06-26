@@ -12,7 +12,7 @@ image:
   # Path to your service's Dockerfile.
   build: ./subscribers/Dockerfile
   # Path to the build context directory relative to workspace root.
-  context: ./subscribers
+  context: subscribers
   # Port exposed through your container to route traffic to it.
   port: 8080
   healthcheck:
