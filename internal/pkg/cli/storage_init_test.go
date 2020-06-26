@@ -686,10 +686,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 	}
 }
 
-func TestStorageInitOpts_AskOutputs(t *testing.T) {
-
-}
-
 func TestStorageInitOpts_Execute(t *testing.T) {
 	const (
 		wantedAppName      = "ddos"
