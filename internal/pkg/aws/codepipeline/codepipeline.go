@@ -259,6 +259,10 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	}, nil
 }
 
+func (sa StageAction) humanStringAction() string {
+	return "    " + sa.Name + "\t" + sa.Status + "\n"
+}
+
 // HumanString returns the stringified PipelineState struct with human readable format.
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
@@ -274,7 +278,7 @@ func (ss *StageState) HumanString() string {
 	}
 	var formattedActions []string
 	for _, action := range ss.Actions {
-		formattedActions = append(formattedActions, "    "+action.Name+"\t"+action.Status+"\n")
+		formattedActions = append(formattedActions, action.humanStringAction())
 	}
 	joinedActions := strings.Join(formattedActions, "")
 	return fmt.Sprintf("  %s\t%s\t%s\n%s", ss.StageName, status, transition, joinedActions)
