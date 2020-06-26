@@ -171,7 +171,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
-		inNoLsi       bool
+		inNoLSI       bool
 		inNoSort      bool
 
 		mockPrompt func(m *mocks.Mockprompter)
@@ -267,7 +267,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inSort:        wantedSortKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				keyPrompt := fmt.Sprintf(fmtStorageInitDDBKeyPrompt,
@@ -336,7 +336,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: dynamoDBStorageType,
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Confirm(
@@ -440,7 +440,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inNoSort:      true,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockconfigSelector) {},
@@ -454,7 +454,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inNoLsi:       true,
+			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockconfigSelector) {},
@@ -520,7 +520,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
-				noLsi:        false,
+				noLSI:        false,
 				lsiSorts:     []string{"Email:S"},
 			},
 		},
@@ -551,7 +551,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
-				noLsi:        true,
+				noLSI:        true,
 			},
 		},
 		"error if lsi name misspecified": {
@@ -662,7 +662,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
-					noLsi:        tc.inNoLsi,
+					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 				},
 				sel: mockConfig,
@@ -796,7 +796,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
-					noLsi:        tc.inNoLsi,
+					noLSI:        tc.inNoLsi,
 					noSort:       tc.inNoSort,
 				},
 				ws: mockAddon,
