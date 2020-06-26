@@ -399,6 +399,11 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return fmt.Errorf("confirm add alternate sort key: %w", err)
 	}
 	for {
+		if len(o.lsiSorts) > 5 {
+			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
+			moreLSI = false
+		}
+		// This will execute last in the loop if moreLSI is set to false by any confirm prompts.
 		if !moreLSI {
 			if len(o.lsiSorts) == 0 {
 				o.noLsi = true
@@ -407,10 +412,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 			}
 			break
 		}
-		if len(o.lsiSorts) > 5 {
-			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
-			break
-		}
+
 		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
 			storageInitDDBLSINameHelp,
 			dynamoTableNameValidation,
