@@ -224,6 +224,7 @@ var _ = Describe("addons flow", func() {
 			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
 			Expect("./copilot/.workspace").Should(BeAnExistingFile())
 
+			// Need to recreate the service for AfterSuite testing.
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       svcName,
 				SvcType:    "Load Balanced Web Service",
@@ -241,6 +242,7 @@ var _ = Describe("addons flow", func() {
 			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
 			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
 
+			// Need to recreate the app for AfterSuite testing.
 			_, initErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
 			})
