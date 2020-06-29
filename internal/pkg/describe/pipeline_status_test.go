@@ -150,19 +150,18 @@ func TestPipelineStatusDescriber_String(t *testing.T) {
 			testPipelineStatus: &PipelineStatus{*mockPipelineState},
 			expectedHumanString: `Pipeline Status
 
-  Stage             Status              Transition
-  -----             ------              ----------
-  Source              -                   -
-
-  Build             InProgress          ENABLED
-    action1         Failed
-    action2         InProgress
-    action3         Succeeded
-  DeployTo-test     Succeeded           DISABLED
-    action1         Succeeded
-  DeployTo-prod     Failed                -
-    action1         Succeeded
-    TestCommands    Failed
+Stage               Status              Transition
+-----               ------              ----------
+Source                -                   -
+Build               InProgress          ENABLED
+├── action1         Failed
+├── action2         InProgress
+└── action3         Succeeded
+DeployTo-test       Succeeded           DISABLED
+└── action1         Succeeded
+DeployTo-prod       Failed                -
+├── action1         Succeeded
+└── TestCommands    Failed
 
 Last Deployment
 
