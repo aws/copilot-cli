@@ -134,7 +134,7 @@ type initStorageOpts struct {
 	store store
 
 	app *config.Application
-	sel configSelector
+	sel wsSelector
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -154,7 +154,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:    &afero.Afero{Fs: afero.NewOsFs()},
 		store: store,
 		ws:    ws,
-		sel:   selector.NewConfigSelect(vars.prompt, store),
+		sel:   selector.NewWorkspaceSelect(vars.prompt, store, ws),
 	}, nil
 }
 
@@ -292,7 +292,6 @@ func (o *initStorageOpts) askStorageSvc() error {
 	}
 	svc, err := o.sel.Service(storageInitSvcPrompt,
 		storageInitSvcHelp,
-		o.AppName(),
 	)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
