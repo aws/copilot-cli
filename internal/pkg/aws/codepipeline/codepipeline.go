@@ -277,8 +277,8 @@ func (ss *StageState) HumanString() string {
 	if transition == "" {
 		transition = empty
 	}
-	tree := treeprint.New()
 	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, status, transition)
+	tree := treeprint.New()
 	tree = tree.AddBranch(stageString)
 	var formattedActions []string
 	for _, action := range ss.Actions {
