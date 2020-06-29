@@ -279,25 +279,25 @@ func TestGetAttributeFromKey(t *testing.T) {
 func TestValidateLSIs(t *testing.T) {
 	testCases := map[string]struct {
 		inputAttributes []string
-		inputLsis       []string
+		inputLSIs       []string
 		wantError       error
 	}{
 		"good case": {
-			inputLsis: []string{"userID:S"},
+			inputLSIs: []string{"userID:S"},
 			wantError: nil,
 		},
 		"bad lsi structure": {
-			inputLsis: []string{"userID"},
+			inputLSIs: []string{"userID"},
 			wantError: errDDBAttributeBadFormat,
 		},
 		"too many lsis": {
-			inputLsis: []string{"bowie:S", "clyde:S", "keno:S", "kava:S", "meow:S", "hana:S"},
-			wantError: errTooManyLsiKeys,
+			inputLSIs: []string{"bowie:S", "clyde:S", "keno:S", "kava:S", "meow:S", "hana:S"},
+			wantError: errTooManyLSIKeys,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateLSIs(tc.inputLsis)
+			got := validateLSIs(tc.inputLSIs)
 			if tc.wantError != nil {
 				require.EqualError(t, got, tc.wantError.Error())
 			} else {

@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/dustin/go-humanize"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -23,9 +24,9 @@ type pipelineDescriberMocks struct {
 }
 
 var pipelineName = "pipeline-dinder-badgoose-repo"
-var mockTime = func() *time.Time {
+var mockTime = func() time.Time {
 	t, _ := time.Parse(time.RFC3339, "2020-02-02T15:04:05+00:00")
-	return &t
+	return t
 }
 var mockPipeline = &codepipeline.Pipeline{
 	Name:      pipelineName,
@@ -188,6 +189,14 @@ func TestPipelineDescriber_Describe(t *testing.T) {
 }
 
 func TestPipelineDescriber_String(t *testing.T) {
+	oldHumanize := humanizeTime
+	humanizeTime = func(then time.Time) string {
+		now, _ := time.Parse(time.RFC3339, "2020-06-19T00:00:00+00:00")
+		return humanize.RelTime(then, now, "ago", "from now")
+	}
+	defer func() {
+		humanizeTime = oldHumanize
+	}()
 	testCases := map[string]struct {
 		inPipeline          *Pipeline
 		expectedHumanString string
@@ -200,8 +209,8 @@ func TestPipelineDescriber_String(t *testing.T) {
   Name              pipeline-dinder-badgoose-repo
   Region            us-west-2
   AccountID         1234567890
-  Created At        3 months ago
-  Updated At        3 months ago
+  Created At        4 months ago
+  Updated At        4 months ago
 
 Stages
 
@@ -221,15 +230,15 @@ Resources
 `,
 			expectedJSONString: "{\"name\":\"pipeline-dinder-badgoose-repo\",\"region\":\"us-west-2\",\"accountId\":\"1234567890\",\"stages\":[{\"name\":\"Source\",\"category\":\"Source\",\"provider\":\"GitHub\",\"details\":\"Repository: badgoose/repo\"},{\"name\":\"Build\",\"category\":\"Build\",\"provider\":\"CodeBuild\",\"details\":\"BuildProject: pipeline-dinder-badgoose-repo-BuildProject\"},{\"name\":\"DeployTo-test\",\"category\":\"Deploy\",\"provider\":\"CloudFormation\",\"details\":\"StackName: dinder-test-test\"}],\"createdAt\":\"2020-02-02T15:04:05Z\",\"updatedAt\":\"2020-02-02T15:04:05Z\",\"resources\":[{\"type\":\"AWS::CodeBuild::Project\",\"physicalID\":\"pipeline-dinder-badgoose-repo-BuildProject\"},{\"type\":\"AWS::IAM::Policy\",\"physicalID\":\"pipel-Buil-1PEASDDL44ID2\"},{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"pipeline-dinder-badgoose-repo-BuildProjectRole-A4V6VSG1XIIJ\"},{\"type\":\"AWS::CodePipeline::Pipeline\",\"physicalID\":\"pipeline-dinder-badgoose-repo\"},{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"pipeline-dinder-badgoose-repo-PipelineRole-100SEEQN6CU0F\"},{\"type\":\"AWS::IAM::Policy\",\"physicalID\":\"pipel-Pipe-EO4QGE10RJ8F\"}]}\n",
 		},
-		"correct output witouth resources": {
+		"correct output without resources": {
 			inPipeline: &Pipeline{*mockPipeline, nil},
 			expectedHumanString: `About
 
   Name              pipeline-dinder-badgoose-repo
   Region            us-west-2
   AccountID         1234567890
-  Created At        3 months ago
-  Updated At        3 months ago
+  Created At        4 months ago
+  Updated At        4 months ago
 
 Stages
 
@@ -246,7 +255,7 @@ Stages
 		human := tc.inPipeline.HumanString()
 		json, _ := tc.inPipeline.JSONString()
 
-		require.NotEmpty(t, tc.expectedHumanString, human, "expected human output to not be empty")
+		require.Equal(t, tc.expectedHumanString, human, "expected human output to match")
 		require.Equal(t, tc.expectedJSONString, json, "expected JSON output to match")
 	}
 }

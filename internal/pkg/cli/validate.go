@@ -29,8 +29,8 @@ var (
 	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
 	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
-	errLsiAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
-	errTooManyLsiKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
+	errLSIAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
+	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
@@ -279,7 +279,7 @@ func validateLSIs(val interface{}) error {
 		return errValueNotAStringSlice
 	}
 	if len(s) > 5 {
-		return errTooManyLsiKeys
+		return errTooManyLSIKeys
 	}
 	for _, att := range s {
 		err := validateKey(att)

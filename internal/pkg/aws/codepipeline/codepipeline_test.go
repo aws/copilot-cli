@@ -168,8 +168,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 						Details:  "StackName: dinder-test-test",
 					},
 				},
-				CreatedAt: &mockTime,
-				UpdatedAt: &mockTime,
+				CreatedAt: mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},
@@ -210,8 +210,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 						Details:  "",
 					},
 				},
-				CreatedAt: &mockTime,
-				UpdatedAt: &mockTime,
+				CreatedAt: mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},
@@ -376,6 +376,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				ActionStates: []*codepipeline.ActionState{
 					{
 						ActionName:      aws.String("action1"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
+					},
+					{
+						ActionName:      aws.String("TestCommands"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusFailed)},
 					},
 				},
@@ -445,6 +449,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 						Actions: []StageAction{
 							{
 								Name:   "action1",
+								Status: "Succeeded",
+							},
+							{
+								Name:   "TestCommands",
 								Status: "Failed",
 							},
 						},
@@ -455,7 +463,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 						Transition: "DISABLED",
 					},
 				},
-				UpdatedAt: &mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},

@@ -15,11 +15,25 @@ ExecutionRole:
             - Effect: 'Allow'
               Action:
                 - 'ssm:GetParameters'
-                - 'secretsmanager:GetSecretValue'
-                - 'kms:Decrypt'
               Resource:
                 - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+              Condition:
+                StringEquals:
+                  'ssm:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'ssm:ResourceTag/copilot-environment': !Sub '${EnvName}'
+            - Effect: 'Allow'
+              Action:
+                - 'secretsmanager:GetSecretValue'
+              Resource:
                 - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+              Condition:
+                StringEquals:
+                  'secretsmanager:ResourceTag/copilot-application': !Sub '${AppName}'
+                  'secretsmanager:ResourceTag/copilot-environment': !Sub '${EnvName}'
+            - Effect: 'Allow'
+              Action:
+                - 'kms:Decrypt'
+              Resource:
                 - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
     ManagedPolicyArns:
       - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
