@@ -83,7 +83,7 @@ func (s *WorkspaceSelect) Service(prompt, help string) (string, error) {
 		return "", fmt.Errorf("list services: %w", err)
 	}
 	if len(serviceNames) == 1 {
-		log.Infof("Only found one service, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
+		log.Infof("Only found one service in workspace, defaulting to: %s\n", color.HighlightUserInput(serviceNames[0]))
 		return serviceNames[0], nil
 	}
 

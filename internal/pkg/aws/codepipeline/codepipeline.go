@@ -6,8 +6,9 @@ package codepipeline
 
 import (
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/xlab/treeprint"
 
 	rg "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups"
 
@@ -260,7 +261,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 }
 
 func (sa StageAction) humanString() string {
-	return "    " + sa.Name + "\t" + sa.Status
+	return sa.Name + "\t" + sa.Status
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
@@ -276,10 +277,12 @@ func (ss *StageState) HumanString() string {
 	if transition == "" {
 		transition = empty
 	}
+	tree := treeprint.New()
+	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, status, transition)
+	tree = tree.AddBranch(stageString)
 	var formattedActions []string
 	for _, action := range ss.Actions {
-		formattedActions = append(formattedActions, action.humanString())
+		formattedActions = append(formattedActions, tree.AddNode(action.humanString()).String())
 	}
-	joinedActions := strings.Join(formattedActions, "\n")
-	return fmt.Sprintf("  %s\t%s\t%s\n%s\n", ss.StageName, status, transition, joinedActions)
+	return tree.String()
 }

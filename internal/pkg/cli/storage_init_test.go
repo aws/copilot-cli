@@ -175,7 +175,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		inNoSort      bool
 
 		mockPrompt func(m *mocks.Mockprompter)
-		mockCfg    func(m *mocks.MockconfigSelector)
+		mockCfg    func(m *mocks.MockwsSelector)
 
 		wantedErr error
 
@@ -189,7 +189,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Eq(storageTypes), gomock.Any()).Return(s3StorageType, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -201,7 +201,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("select storage type: some error"),
 		},
@@ -211,8 +211,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Eq(storageInitSvcPrompt), gomock.Any(), gomock.Eq(wantedAppName)).Return(wantedSvcName, nil)
+			mockCfg: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Eq(storageInitSvcPrompt), gomock.Any()).Return(wantedSvcName, nil)
 			},
 
 			wantedErr: nil,
@@ -223,8 +223,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageType: s3StorageType,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Service(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			mockCfg: func(m *mocks.MockwsSelector) {
+				m.EXPECT().Service(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 
 			wantedErr: fmt.Errorf("retrieve local service names: some error"),
@@ -245,7 +245,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(wantedBucketName, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -257,7 +257,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("input storage name: some error"),
 		},
@@ -286,7 +286,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(ddbStringType, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -303,7 +303,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB partition key: some error"),
 		},
@@ -326,7 +326,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB partition key datatype: some error"),
 		},
@@ -360,7 +360,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(ddbStringType, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -378,7 +378,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("confirm DDB sort key: some error"),
 		},
@@ -401,7 +401,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB sort key: some error"),
 		},
@@ -429,7 +429,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB sort key datatype: some error"),
 		},
@@ -443,7 +443,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockconfigSelector) {},
+			mockCfg:    func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -457,7 +457,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inNoLSI:       true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockconfigSelector) {},
+			mockCfg:    func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -470,7 +470,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inNoSort:      true,
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockconfigSelector) {},
+			mockCfg:    func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -508,7 +508,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(false, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
 				GlobalOpts: &GlobalOpts{
@@ -539,7 +539,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(false, nil)
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedVars: &initStorageVars{
 				GlobalOpts: &GlobalOpts{
@@ -574,7 +574,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return("", errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB alternate sort key name: some error"),
 		},
@@ -593,7 +593,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 				).Return(false, errors.New("some error"))
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("confirm add alternate sort key: some error"),
 		},
@@ -623,7 +623,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return("", errors.New("some error"))
 
 			},
-			mockCfg: func(m *mocks.MockconfigSelector) {},
+			mockCfg: func(m *mocks.MockwsSelector) {},
 
 			wantedErr: fmt.Errorf("get DDB alternate sort key type: some error"),
 		},
@@ -637,7 +637,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inLSISorts:    []string{"email:S"},
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockconfigSelector) {},
+			mockCfg:    func(m *mocks.MockwsSelector) {},
 
 			wantedErr: nil,
 		},
@@ -649,7 +649,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockConfig := mocks.NewMockconfigSelector(ctrl)
+			mockConfig := mocks.NewMockwsSelector(ctrl)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
 					GlobalOpts: &GlobalOpts{
