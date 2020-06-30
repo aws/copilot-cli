@@ -1,4 +1,4 @@
-publishDocs = "../docs"
+publishDir = "../docs"
 baseURL = "aws.github.io/copilot-cli/"
 title = "AWS Copilot CLI"
 
