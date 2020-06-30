@@ -1,0 +1,6 @@
+{{- $.Scratch.Add "offline-search-index" slice -}}
+{{- range where .Site.AllPages ".Params.exclude_search" "!=" true -}}
+{{/* We have to apply `htmlUnescape` again after `truncate` because `truncate` applies `html.EscapeString` if the argument is not HTML. */}}
+{{- $.Scratch.Add "offline-search-index" (dict "title" .Title "ref" .RelPermalink "body" (.Plain | htmlUnescape) "excerpt" (.Plain | htmlUnescape | truncate (.Site.Params.offlineSearchSummaryLength | default 70) | htmlUnescape)) -}}
+{{- end -}}
+{{- $.Scratch.Get "offline-search-index" | jsonify -}}

@@ -1,0 +1,78 @@
+
+.td-content {
+	// Highlighted code.
+    .highlight {
+        @extend .card;
+
+        margin: 2rem 0;
+        padding: 1rem;
+        background-color: $gray-100;
+
+        pre, div {
+            background-color: inherit !important;
+        }
+
+        pre {
+            margin: 0;
+            padding: 0;
+        }
+    }
+
+    // Inline code
+    p code, li > code, table code {
+        color: #fff;
+        background-color: $primary;
+        padding: 0.1em 0.2em;
+        margin: 0;
+        font-size: 85%;
+        word-break: normal;
+        border-radius: $border-radius;
+        display: inline-block;
+
+
+        &::after {
+            content: ""
+        }
+
+        &::before {
+            content: ""
+        }
+
+        br {
+            display: none;
+        }
+
+
+    }
+
+
+    // Code blocks
+    pre {
+        word-wrap: normal;
+        background-color: $gray-100;
+        padding: $spacer;
+
+
+        > code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            word-break: normal;
+            white-space: pre;
+            border: 0;
+        }
+    }
+}
+
+p {
+
+    code {
+        background-color: #F1F8FF;
+        color: #1074e7 !important;
+        padding: 4px !important;
+        display: inline-block !important;
+        font-family: Menlo, monospace;
+        font-size: 0.875rem;
+        border-radius: 3px !important;
+    }
+}
