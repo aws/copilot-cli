@@ -554,6 +554,35 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				noLSI:        true,
 			},
 		},
+		"noLSI is set correctly if no sort key": {
+			inAppName:     wantedAppName,
+			inSvcName:     wantedSvcName,
+			inStorageType: dynamoDBStorageType,
+			inStorageName: wantedTableName,
+			inPartition:   wantedPartitionKey,
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(
+					gomock.Eq(storageInitDDBSortKeyConfirm),
+					gomock.Eq(storageInitDDBSortKeyHelp),
+					gomock.Any(),
+				).Return(false, nil)
+			},
+			mockCfg: func(m *mocks.MockwsSelector) {},
+
+			wantedVars: &initStorageVars{
+				GlobalOpts: &GlobalOpts{
+					appName: wantedAppName,
+				},
+				storageName: wantedTableName,
+				storageSvc:  wantedSvcName,
+				storageType: dynamoDBStorageType,
+
+				partitionKey: wantedPartitionKey,
+				noLSI:        true,
+				noSort:       true,
+			},
+		},
 		"error if lsi name misspecified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
