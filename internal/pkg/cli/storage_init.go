@@ -212,6 +212,11 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 
+	// auto-set noLSI if noSort specified.
+	if o.noSort {
+		o.noLSI = true
+	}
+
 	return nil
 }
 
@@ -348,6 +353,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	}
 	if response == false {
 		o.noSort = true
+		o.noLSI = true
 		return nil
 	}
 
@@ -577,9 +583,9 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 		attributes = append(attributes, *currAtt)
 	}
 	props.Attributes = attributes
-	// only configure LSI if we haven't specified the --no-lsi flag.
+	// only configure LSI if we haven't specified the --no-lsi or --no-sort flag.
 	props.HasLSI = false
-	if !o.noLSI {
+	if !o.noLSI && !o.noSort {
 		props.HasLSI = true
 		lsiConfig, err := newLSI(
 			*partKey.Name,
