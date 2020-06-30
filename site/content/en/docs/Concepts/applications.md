@@ -14,7 +14,7 @@ To set up our vote app with two services, we can run `copilot init` twice. The f
 
 Your application configuration (which services and environments belong to it) is stored in your AWS account, so any other users in your account will be able to develop on the “vote" app as well. This means that you can have a teammate work on one service while you develop the other.
 
-![](/docs/concepts/app-concept.png)
+<img src="/docs/concepts/app-concept.png" class="img-fluid">
 
 ## Creating an App
 
@@ -46,7 +46,7 @@ $ copilot app init                             \
 
 While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources, as well.
 
-![](/docs/concepts/app-infra.png)
+<img src="/docs/concepts/app-infra.png" class="img-fluid">
 
 ### ECR Repositories
 ECR Repositories are regional resources which store your service images. Each service has its own ECR Repository per region in your app.

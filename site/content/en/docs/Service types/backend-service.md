@@ -16,4 +16,5 @@ A service that's not reachable from the internet, but can be reached with [servi
 **APIs**. Any internal API service.
 
 #### Architecture
-![Screen Shot 2020-04-06 at 4 44 19 PM](https://user-images.githubusercontent.com/879348/78615432-5f3ac980-7826-11ea-9c03-ff0e6866152c.png)
+
+<img src="https://user-images.githubusercontent.com/879348/78615432-5f3ac980-7826-11ea-9c03-ff0e6866152c.png" class="img-fluid">

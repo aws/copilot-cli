@@ -20,13 +20,13 @@
 
     // Inline code
     p code, li > code, table code {
-        color: #fff;
-        background-color: $primary;
-        padding: 0.1em 0.2em;
-        margin: 0;
-        font-size: 85%;
+        background-color: #F1F8FF;
+        color: #1074e7 !important;
+        padding: 4px !important;
+        font-family: Menlo, monospace;
+        font-size: 0.875rem;
+        border-radius: 3px !important;
         word-break: normal;
-        border-radius: $border-radius;
         display: inline-block;
 
 

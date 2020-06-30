@@ -58,7 +58,7 @@ After that, you'll be prompted to enter a service name and select a Dockerfile. 
 
 Once you press _enter_, Copilot will spin up some resources to create ECR repositories, S3 buckets and KMS keys. Copilot uses these resources to securely store your container images and configuration. Once those resources are spun up, you'll be asked if you want to deploy to a test environment. Select _yes_ and Copilot will spin up your network, ECS cluster and services, an Application Load Balancer and will start a deployment to your service stack.
 
-![Step By Step Setup](https://user-images.githubusercontent.com/828419/69770895-91813f80-113f-11ea-8be9-60df6c2bf3fc.gif)
+<img src="https://user-images.githubusercontent.com/828419/69770895-91813f80-113f-11ea-8be9-60df6c2bf3fc.gif" class="img-fluid">
 
 > A sped up view of setting up a hello-world project and a front-end app
 

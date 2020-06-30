@@ -112,4 +112,4 @@ Now that your `pipeline.yml` and `buildspec.yml` are created, check them in and 
 
 This parses your `pipeline.yml`, creates a CodePipeline in the same account and region as your project (though it can deploy cross account and cross region) and kicks off a pipeline execution. Log into the AWS Console to watch your Pipeline go.
 
-![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
+<img src="https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png" class="img-fluid" alt="Your completed pipeline">

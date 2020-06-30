@@ -11,7 +11,7 @@ While Copilot creates a test environment for you when you get started, it's comm
 
 In the diagram below we have an application called _MyApp_ with two services, _API_ and _Backend_. Those two services are deployed to the two environments, _test_ and _prod_. You can see that in the _test_ environment, both services are running only one container while the _prod_ services have more containers running. Services can use different configurations depending on the environment they're deployed in. For more check out the [using environment variables](developing/using-environment-variables) guide.
 
-![](/docs/concepts/env-concept.png)
+<img src="/docs/concepts/env-concept.png" class="img-fluid">
 
 ## Creating an Environment
 
@@ -31,7 +31,7 @@ When you first create a new environment, no services are deployed to it. To depl
 
 ## Environment Infrastructure
 
-![](/docs/concepts/env-infrastructure.png)
+<img src="/docs/concepts/env-infrastructure.png" class="img-fluid">
 
 
 ### VPC and Networking

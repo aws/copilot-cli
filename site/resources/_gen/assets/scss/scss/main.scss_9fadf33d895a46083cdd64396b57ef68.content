@@ -12311,13 +12311,13 @@ readers do not read off random characters that represent icons */
     padding: 0; }
 
 .td-content p code, .td-content li > code, .td-content table code {
-  color: #fff;
-  background-color: #fff;
-  padding: 0.1em 0.2em;
-  margin: 0;
-  font-size: 85%;
+  background-color: #F1F8FF;
+  color: #1074e7 !important;
+  padding: 4px !important;
+  font-family: Menlo, monospace;
+  font-size: 0.875rem;
+  border-radius: 3px !important;
   word-break: normal;
-  border-radius: 0.25rem;
   display: inline-block; }
   .td-content p code::after, .td-content li > code::after, .td-content table code::after {
     content: ""; }
@@ -12622,7 +12622,16 @@ button.navbar-toggler:not(:disabled):not(.disabled) {
       color: #403F4C; }
 
 .td-content p {
-  max-width: 100%; }
+  max-width: 100%;
+  line-height: 1.6; }
+
+.td-content h1 {
+  margin-bottom: 40px;
+  font-weight: 700; }
+
+.td-content h2, .td-content h3, .td-content h4, .td-content h4 {
+  margin-bottom: 20px;
+  font-weight: 700; }
 
 .td-search-input {
   background: transparent;
