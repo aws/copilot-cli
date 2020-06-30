@@ -102,7 +102,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 		ServiceTagKey string
 	}{
 		config,
-		ServiceTagKey,
+		deploy.ServiceTagKey,
 	}, template.WithFuncs(cfTemplateFunctions))
 	if err != nil {
 		return "", err
@@ -143,7 +143,7 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 // Tags returns the tags that should be applied to the Application CloudFormation stack.
 func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{
-		AppTagKey: c.Name,
+		deploy.AppTagKey: c.Name,
 	})
 }
 

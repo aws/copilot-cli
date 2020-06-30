@@ -191,13 +191,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					},
 				},
 				Resources: map[string][]*CfnResource{
-					"test": []*CfnResource{
+					"test": {
 						{
 							Type:       "AWS::EC2::SecurityGroupIngress",
 							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
 						},
 					},
-					"prod": []*CfnResource{
+					"prod": {
 						{
 							Type:       "AWS::EC2::SecurityGroup",
 							PhysicalID: "sg-0758ed6b233743530",
@@ -325,13 +325,13 @@ Resources
 				},
 			}
 			resources := map[string][]*CfnResource{
-				"test": []*CfnResource{
+				"test": {
 					{
 						PhysicalID: "sg-0758ed6b233743530",
 						Type:       "AWS::EC2::SecurityGroup",
 					},
 				},
-				"prod": []*CfnResource{
+				"prod": {
 					{
 						Type:       "AWS::EC2::SecurityGroupIngress",
 						PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",

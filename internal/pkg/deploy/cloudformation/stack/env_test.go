@@ -214,18 +214,18 @@ func TestEnvTags(t *testing.T) {
 			Name:    "env",
 			AppName: "project",
 			AdditionalTags: map[string]string{
-				"owner":   "boss",
-				AppTagKey: "overrideproject",
+				"owner":          "boss",
+				deploy.AppTagKey: "overrideproject",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(AppTagKey),
+			Key:   aws.String(deploy.AppTagKey),
 			Value: aws.String("project"), // Ignore user's overrides.
 		},
 		{
-			Key:   aws.String(EnvTagKey),
+			Key:   aws.String(deploy.EnvTagKey),
 			Value: aws.String("env"),
 		},
 		{

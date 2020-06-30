@@ -27,10 +27,14 @@ type api interface {
 	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
 }
 
+type resourceGetter interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+}
+
 // CodePipeline wraps the AWS CodePipeline client.
 type CodePipeline struct {
 	client   api
-	rgClient rg.ResourceGroupsClient
+	rgClient resourceGetter
 }
 
 // Pipeline represents an existing CodePipeline resource.
@@ -51,7 +55,7 @@ type Stage struct {
 	Details  string `json:"details"`
 }
 
-// PipelineStatus represents a Pipeline's status.
+// PipelineState represents a Pipeline's status.
 type PipelineState struct {
 	PipelineName string        `json:"pipelineName"`
 	StageStates  []*StageState `json:"stageStates"`
@@ -85,7 +89,7 @@ func (ss StageState) AggregateStatus() string {
 		"Succeeded":  0,
 	}
 	for _, action := range ss.Actions {
-		status[action.Status] += 1
+		status[action.Status]++
 	}
 	if status["InProgress"] > 0 {
 		return "InProgress"
@@ -216,7 +220,7 @@ func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
 	return parsedArn.Resource, nil
 }
 
-// GetPipelineStatus retrieves status information from a given pipeline.
+// GetPipelineState retrieves status information from a given pipeline.
 func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	input := &cp.GetPipelineStateInput{
 		Name: aws.String(name),

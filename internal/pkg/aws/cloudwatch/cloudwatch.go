@@ -28,10 +28,14 @@ type api interface {
 	DescribeAlarms(input *cloudwatch.DescribeAlarmsInput) (*cloudwatch.DescribeAlarmsOutput, error)
 }
 
+type resourceGetter interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+}
+
 // CloudWatch wraps an Amazon CloudWatch client.
 type CloudWatch struct {
 	cwClient api
-	rgClient resourcegroups.ResourceGroupsClient
+	rgClient resourceGetter
 }
 
 // AlarmStatus contains CloudWatch alarm status.

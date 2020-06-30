@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
@@ -128,7 +129,7 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 
 func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
 	tags := map[string]string{
-		stack.EnvTagKey: e.env.Name,
+		deploy.EnvTagKey: e.env.Name,
 	}
 	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -171,7 +171,7 @@ func (o *showPipelineOpts) askPipelineName() error {
 
 func (o *showPipelineOpts) retrieveAllPipelines() ([]string, error) {
 	pipelines, err := o.pipelineSvc.ListPipelineNamesByTags(map[string]string{
-		stack.AppTagKey: o.AppName(),
+		deploy.AppTagKey: o.AppName(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
