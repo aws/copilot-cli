@@ -12,15 +12,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/e2e/internal/client"
-	"github.com/aws/amazon-ecs-cli-v2/e2e/internal/command"
+	"github.com/aws/copilot-cli/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 const manifest = `# The manifest for the "hello" service.
 # Read the full specification for the "Load Balanced Web Service" type at:
-#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-svc
+#  https://github.com/aws/copilot-cli/wiki/Manifests#load-balanced-web-svc
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
 name: hello

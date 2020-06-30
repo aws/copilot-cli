@@ -5,11 +5,12 @@
 package mocks
 
 import (
-	cloudformation "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
-	stackset "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation/stackset"
-	cloudformation0 "github.com/aws/aws-sdk-go/service/cloudformation"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	cloudformation0 "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockStackConfiguration is a mock of StackConfiguration interface

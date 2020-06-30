@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	prompt "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // Mockprompter is a mock of prompter interface

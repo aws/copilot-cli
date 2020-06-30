@@ -188,7 +188,7 @@ func parseExpose(line string) []portConfig {
 	// check that there are matches, if not return port with only raw data
 	// there will only ever be length 0 or 4 arrays
 	// TODO implement arg parser regex
-	// https://github.com/aws/amazon-ecs-cli-v2/issues/827
+	// https://github.com/aws/copilot-cli/issues/827
 	if len(matches) == 0 {
 		return []portConfig{
 			{

@@ -1,4 +1,4 @@
-# ECS CLI v2 Charter
+# AWS Copilot CLI Charter
 
 ## Mission
 Our mission is to help customers build, release and operate applications on Amazon ECS with dev-ops best practices and production ready infrastructure patterns.

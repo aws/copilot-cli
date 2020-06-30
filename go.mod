@@ -1,4 +1,4 @@
-module github.com/aws/amazon-ecs-cli-v2
+module github.com/aws/copilot-cli
 
 go 1.13
 

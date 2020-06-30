@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	identity "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/identity"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	identity "github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockidentityService is a mock of identityService interface

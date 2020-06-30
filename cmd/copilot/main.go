@@ -9,11 +9,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
+	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/cli"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 func init() {

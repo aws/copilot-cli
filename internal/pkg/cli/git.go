@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/command"
 )
 
 func getVersionTag(runner runner) (string, error) {

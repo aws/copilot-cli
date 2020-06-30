@@ -6,8 +6,8 @@ package cli
 import (
 	"errors"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
 )
 

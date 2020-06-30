@@ -5,9 +5,10 @@
 package mocks
 
 import (
-	codepipeline "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockpipelineStateGetter is a mock of pipelineStateGetter interface

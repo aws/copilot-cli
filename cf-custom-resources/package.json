@@ -2,7 +2,7 @@
   "name": "ecs_cli_custom_resources",
   "private": true,
   "version": "0.0.1",
-  "description": "This module is part of the [ECS CLI V2](https://github.com/aws/amazon-ecs-cli-v2) project.",
+  "description": "This module is part of the [AWS Copilot CLI](https://github.com/aws/copilot-cli) project.",
   "main": "lib/index.js",
   "directories": {
     "test": "test"

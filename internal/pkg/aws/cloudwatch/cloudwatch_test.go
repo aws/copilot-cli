@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	cwmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch/mocks"
-	rgmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	cwmocks "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch/mocks"
+	rgmocks "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

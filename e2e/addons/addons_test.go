@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aws/amazon-ecs-cli-v2/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

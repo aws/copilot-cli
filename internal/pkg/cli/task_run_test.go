@@ -6,12 +6,13 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type basicOpts struct {
@@ -243,7 +244,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
 					},
-					count:            tc.inCount,
+					count:          tc.inCount,
 					cpu:            tc.inCPU,
 					memory:         tc.inMemory,
 					groupName:      tc.inName,
@@ -348,7 +349,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		"error selecting environment": {
 			basicOpts: defaultOpts,
 
-			inName: "my-task",
+			inName:  "my-task",
 			appName: "my-app",
 
 			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
@@ -356,7 +357,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
-			wantedEnv: config.EnvNameNone,
+			wantedEnv:   config.EnvNameNone,
 		},
 	}
 
@@ -382,14 +383,14 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 						appName: tc.appName,
 						prompt:  mockPrompter,
 					},
-					count:    tc.inCount,
+					count:  tc.inCount,
 					cpu:    tc.inCPU,
 					memory: tc.inMemory,
 
 					groupName: tc.inName,
 					env:       tc.inEnv,
 				},
-				sel:   mockSel,
+				sel: mockSel,
 			}
 
 			err := opts.Ask()
