@@ -22,7 +22,7 @@ __Python__
 database_name = os.getenv('DATABASE_NAME')
 ```
 
-### What are the Default Environment Variables?
+### What are the default Environment Variables?
 
 By default, the Copilot CLI passes in some default environment variables for your app to use. 
 

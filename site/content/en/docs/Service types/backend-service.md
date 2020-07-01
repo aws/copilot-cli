@@ -4,7 +4,7 @@ linkTitle: "Backend Service"
 weight: 2
 ---
 
-A service that's not reachable from the internet, but can be reached with [service discovery](https://github.com/aws/copilot-cli/wiki/Developing-With-Service-Discovery) from your other services.
+A service that's not reachable from the internet, but can be reached with [service discovery](docs/developing/service-discovery) from your other services.
 
 #### Why
 * **Privacy**. If your services are always accessible publicly, then you need to duplicate your authentication and authorization mechanisms across services. 

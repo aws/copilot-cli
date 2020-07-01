@@ -7,7 +7,7 @@ Additional AWS resources, referred as "addons" in the CLI, are any additional AW
 that a [service manifest](docs/manifests) does not integrate by default. For example, an addon can be a DynamoDB table or
  S3 bucket that your service needs to read or write to.
 
-## How to create an addon?
+### How to create an addon?
 
 Let's say you have a service named `webhook` in your workspace:
 ```bash
@@ -29,7 +29,7 @@ Typically each file under the `addons/` directory represents a separate addon an
  
 When your service gets deployed, Copilot merges all these files into a single AWS CloudFormation template and creates a nested stack under your service's stack.
 
-## What does an addon template look like?
+### What does an addon template look like?
 An addon template can be any valid CloudFormation template.   
 However, Copilot will pass by default the `App`, `Env` and `Name` [Parameters](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html) for you to customize your resource properties with [Conditions](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) or [Mappings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html) if you wish to.
 

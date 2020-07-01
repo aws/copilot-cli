@@ -20,23 +20,16 @@
 
     // Inline code
     p code, li > code, table code {
-        background-color: #F1F8FF;
-        color: #1074e7 !important;
-        padding: 4px !important;
+        background-color: $gray-100;
+        color: #222 !important;
+        padding: 0.1em 0.2em;
         font-family: Menlo, monospace;
         font-size: 0.875rem;
-        border-radius: 3px !important;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        border-radius: 0.25rem;
         word-break: normal;
         display: inline-block;
 
-
-        &::after {
-            content: ""
-        }
-
-        &::before {
-            content: ""
-        }
 
         br {
             display: none;
@@ -69,7 +62,7 @@ p {
     code {
         background-color: #F1F8FF;
         color: #1074e7 !important;
-        padding: 4px !important;
+        padding: 4px;
         display: inline-block !important;
         font-family: Menlo, monospace;
         font-size: 0.875rem;

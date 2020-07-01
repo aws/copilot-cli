@@ -12311,18 +12311,15 @@ readers do not read off random characters that represent icons */
     padding: 0; }
 
 .td-content p code, .td-content li > code, .td-content table code {
-  background-color: #F1F8FF;
-  color: #1074e7 !important;
-  padding: 4px !important;
+  background-color: #f8f9fa;
+  color: #222 !important;
+  padding: 0.1em 0.2em;
   font-family: Menlo, monospace;
   font-size: 0.875rem;
-  border-radius: 3px !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 0.25rem;
   word-break: normal;
   display: inline-block; }
-  .td-content p code::after, .td-content li > code::after, .td-content table code::after {
-    content: ""; }
-  .td-content p code::before, .td-content li > code::before, .td-content table code::before {
-    content: ""; }
   .td-content p code br, .td-content li > code br, .td-content table code br {
     display: none; }
 
@@ -12341,7 +12338,7 @@ readers do not read off random characters that represent icons */
 p code {
   background-color: #F1F8FF;
   color: #1074e7 !important;
-  padding: 4px !important;
+  padding: 4px;
   display: inline-block !important;
   font-family: Menlo, monospace;
   font-size: 0.875rem;
