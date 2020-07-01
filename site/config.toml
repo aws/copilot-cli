@@ -1,5 +1,5 @@
 publishDir = "../docs"
-baseURL = "aws.github.io/copilot-cli/"
+baseURL = "https://aws.github.io/copilot-cli/"
 title = "AWS Copilot CLI"
 
 enableRobotsTXT = true

@@ -3,12 +3,11 @@ title: "Services"
 date: 2017-01-05
 weight: 4
 ---
-
 One of the awesome things about containers is that once you've written your code, running it locally is as easy as typing  _docker run_. 
 Copilot makes running those same containers on AWS as easy as running _copilot init_. 
 Copilot will build your image, push it to Amazon ECR and set up all the infrastructure to run your service in a scalable and secure way.
   
-## Creating a Service
+### Creating a Service
 
 Creating a service to run your containers on AWS can be done in a few ways. The easiest way is by running the _init_ command from the same directory as your Dockerfile.
 
@@ -20,7 +19,7 @@ You'll be asked which application do you want this service to be a part of (or t
 
 After selecting a service type, Copilot will detect any health checks or exposed ports from your Dockerfile and ask if you'd like to deploy.
 
-## Choosing a Service Type
+### Choosing a Service Type
 
 We mentioned before that Copilot will set up all the infrastructure your service needs to run. But how does it know what kind of infrastructure to use?
 
@@ -32,7 +31,7 @@ Currently there are a few service types supported:
 * Load Balanced Web Service
 * Backend Service
 
-## Config and the Manifest
+### Config and the Manifest
 
 After you've run _copilot init_ you might have noticed that Copilot created a file called `manifest.yml` in the copilot directory. This manifest file contains common configuration options for your service. While the exact set of options depends on the type of service you're running, common ones include the resources allocated to your service (like memory and CPU), health checks, and environment variables.
 
@@ -77,38 +76,38 @@ environments:
     count: 2               # Number of tasks to run for the "test" environment.
 ```
 
-### Image
+#### Image
 
 The image section contains just a few parameters, the location of the Dockerfile and the port exposed. For a Load Balanced Web Service, the port is where traffic is forwarded to. Copilot will auto-populate this field if there's an `EXPOSE` command in your Dockerfile.
 
-### HTTP
+#### HTTP
 
 The HTTP section is unique to the Load Balanced Web Service type. When a request comes to the load balancer, traffic will be fowraded to this service if the path matches '/' - meaning any traffic will be forwarded to this service. You could update this so that only traffic to the _front-end_ path would be routed to this service by updating the path to be `path: 'front-end'`.
 
 There's also an optional health check path. This path is invoked every couple of seconds so that the load balancer can ensure your service is healthy. By default the health check path is `/` - but this can be changed to anything.
 
-### Scaling
+#### Scaling
 
 The next sectionin includes the resources allocated to your service. Load Balanced Web Services are run on AWS Fargate, meaning all you have to do is say how much CPU and memory your service needs. This section also includes how many coppies of your service you want up and running. By default, only one copy of your service is spun up, but that number can be increased to handle more load.
 
-### Variables
+#### Variables
 
 The variable section includes environment variables that will be passed to your service. There are a number of environment variables that are passed in by default.
 
-### Secrets
+#### Secrets
 
 The secrets section let's you pass in secret values to your service as environment variables, securely. In this example, the environment variable `GITHUB_TOKEN` will be set in your service and the value will be extracted from an AWS SSM Parameter named `GH_SECRET_TOKEN`.
 
-### Environments
+#### Environments
 
 The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the _count_ parameter so that we can run 2 coppies of our service in or _prod_ environment.
 
-## Deploying a Service
+### Deploying a Service
 
 Once you've set up your service, you can deploy it (and any changes to your manifest) by running the deploy command:
 
-```yaml
-copilot deploy
+```bash
+$ copilot deploy
 ```
 
 Running this command will:
@@ -120,11 +119,11 @@ Running this command will:
 
 If you have multiple environments, you'll be prompted to select which environment you want to deploy to.
 
-## Digging into your Service
+### Digging into your Service
 
 Now that we've got a service up and running, we can check on it using Copilot. Below are a few common ways to check in on your deployed service.
 
-### What's in your service?
+#### What's in your service?
 
 Running `copilot svc show` will show you a summary of your service. Here's an example of the output you might see for a load balanced web application. This output includes the configuration of your service for each environment, all the endpoints for your service, and the environment variables passed into your service. You can also provide an optional `--resources` flag to see all AWS resources associated with your service.
 
@@ -161,7 +160,7 @@ Variables
   COPILOT_SERVICE_NAME                test                front-end
 ```
 
-### What's your service status?
+#### What's your service status?
 
 Often it's handy to be able to check on the status of your service. Are all the instances of my service healthy? Are there any alarms firing? To do that, you can run `copilot svc status` to get a summary of your service's status.
 
@@ -188,7 +187,7 @@ Alarms
   CPU-Utilization   OK                  5 minutes ago       -
 ```
 
-### Where are my service logs?
+#### Where are my service logs?
 
 Checking the your service logs is easy as well. Running `copilot svc logs` will show the most recent logs of your service. You can follow your logs live with the `--follow` flag.
 

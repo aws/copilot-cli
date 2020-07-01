@@ -11,15 +11,12 @@ A service is your code and all of the supporting infrastructure needed to get it
 
 Once you've told Copilot what type of service you're building, Copilot will take care of building your code's Dockerfile and storing the images securely an Amazon ECR. Copilot will also create a simple file called the _manifest_ which contains all the knobs and toggles for your service. This includes things like how much memory and CPU should be allocated to each copy of your service, how many copies of your service you want running, and more.
 
-For more details on services. manifests and more check out the [services concept](/docs/concepts/services) section.
 
 #### Environments
 
 Rumor has it, there are people out there that can write perfect code on the first go without any bugs. While we tip our hats to those folks, we believe it's important to be able to test new code on a non-customer facing version of your service before promoting to production. In Copilot we do this by using _environments_. Each environment can have its own version of a service running allowing you to create a "test" and "production" environment. You can deploy your service to the test environment, make sure everything looks good, then deploy to your production environment. Since each environment is independent, if you deploy a bug to your test environment, customers using a service deployed to your production environment will be fine.
 
 Until now we've been talking about just one service, but what happens when you want to add another service? Perhaps you want to add a backend service to compliment your frontend service. Each environment contains a set of resources shared between all the deployed services - these resources include the network (VPC, Subnets, Security Groups, etc), the ECS Cluster, and the load balancer. If you deploy both your frontend and backend service to your test environment, both services will share the same network and cluster.
-
-For more details on environments check out the [environments concept](/docs/concepts/enviroments) section.
 
 
 #### Applications
@@ -31,3 +28,4 @@ An Application is a collection of services and environments. When you get starte
 Now that you've got an application with a few services deployed to a couple of environments, staying on top of those deployments can become tricky. Copilot can help by setting up a release pipeline that deploys your service whenever you push to your git repositry. When a push is detected, your pipeline will build your service, push the image to ECR, and deploy to your environments.
 
 A common pattern is to set up a pipeline for a particular service that deploys to a test environment, runs automated testing, then deploys to the production environment.
+

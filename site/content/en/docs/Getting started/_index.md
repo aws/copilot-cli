@@ -4,71 +4,74 @@ linkTitle: "Getting started"
 weight: 4
 ---
 
-Copilot is a tool to help you create, develop and manage your containerized apps on Amazon ECS. To get started, all you need is an AWS account, a Dockerfile, the AWS CLI and Copilot installed.
+AWS Copilot makes it easy to deploy your containers to AWS in just a few steps. In this tutorial we’re going to do just that - we’re going to deploy a sample front end service that you can visit in your browser. While we’ll be using a sample static website in this example, you can use AWS Copilot to build and deploy any container app with a Dockerfile. After we get your service all set up, we’ll show you how to delete the resources Copilot created to avoid charges.
 
-#### Deploying in one command
+Sound fun? Let’s do it!
 
-Make sure you have the AWS command line tool installed and have already run `aws configure` before you start.
+#### Step 1: Download & Configure AWS Copilot
 
-To deploy your app in one command, run the following in your terminal:
+You’ll need a few things to use AWS Copilot - the AWS Copilot binary, AWS CLI, Docker Desktop and AWS credentials. 
+
+Follow our instructions here on how to set up and configure all these tools. 
+
+#### Step 2: Download some code to deploy
+
+In this example, we’ll be using a sample app that’s just a simple static website - but if you already have something you’d like to deploy, just open your terminal and `cd` into your Dockerfile’s directory. 
+
+Otherwise you can just clone our sample repository. In your terminal, copy and paste this code. This will clone our sample app and change directories to it. 
+
 
 ```bash
-$ git clone git@github.com:aws-samples/amazon-ecs-cli-sample-app.git demo-app
-$ cd demo-app                                                                  
-$ copilot init                                                                     \
-  --app demo                                                                     \
-  --service api                                                                  \
-  --service-type 'Load Balanced Web Service'                                     \
-  --dockerfile './Dockerfile'                                                    \
-  --port 80                                                                      \
-  --deploy
+$ git clone https://github.com/aws-samples/aws-copilot-sample-service example
+$ cd example
 ```
 
+#### Step 3: Setting up our app
 
-### Deploying, step by step
+Now this is where the fun starts! We have our service code and our Dockerfile and we want to get it deployed to AWS. Let’s have AWS Copilot help us do just that!
 
-To get started with a sample app, you can follow the instructions below:
-
-#### Step 1: Configure your credentials
-Copilot uses [profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) to connect with your AWS account, so before you get started make sure to run _aws configure_. This will set up a default profile, which Copilot will use to manage your application and services.
-
-```bash
-$ aws configure
-```
-
-#### Step 2: Get some code
-With Copilot, you can easily deploy your containerized service. To get you up and running, you can clone our simple demo service. It's just a simple Flask service and a Dockerfile that describes how to deploy it. Feel free to poke around or update the code.
-
-```bash
-$ git clone git@github.com:aws-samples/amazon-ecs-cli-sample-app.git demo-app && cd demo-app
-```
-
-#### Step 3: Set up your Application
-Now that you've got some awesome code, what better to do next than deploy it? We know that most interesting containerized apps consist of more than just one single service, so Copilot organizes related services into an _application_. Running the _init_ command will walk you through setting up an app.
+From within your code directory run:
 
 ```bash
 $ copilot init
 ```
-You'll be prompted to enter the name of an app - _demo_ is a good choice. Your application is a collection of all your related services and the environments you run those services in. We'll talk a bit more about apps, services and environments later in the _concepts_ section.
 
-#### Step 4: Set up your service
-Rather than require you to manually configure exactly which resources you need, what type of load balancer or which VPC configuration to use, you can tell us the _kind_ of service you're building. In our case, we're building a simple Flask API service so let's select a `Load Balanced Web Service`.
+<img class="img-fluid" alt="gettingstarted" src="https://user-images.githubusercontent.com/879348/86040246-8d304400-b9f8-11ea-9590-2878c3a1d3de.png">
 
-After that, you'll be prompted to enter a service name and select a Dockerfile. Let's call your service _api_.
+#### Step 4: Answer a few questions
 
-Once you press _enter_, Copilot will spin up some resources to create ECR repositories, S3 buckets and KMS keys. Copilot uses these resources to securely store your container images and configuration. Once those resources are spun up, you'll be asked if you want to deploy to a test environment. Select _yes_ and Copilot will spin up your network, ECS cluster and services, an Application Load Balancer and will start a deployment to your service stack.
-
-<img src="https://user-images.githubusercontent.com/828419/69770895-91813f80-113f-11ea-8be9-60df6c2bf3fc.gif" class="img-fluid">
-
-> A sped up view of setting up a hello-world project and a front-end app
+The next thing we’re going to do is answer a few questions from Copilot. Copilot will use these questions to help us choose the best AWS infrastructure for your service. There’s only a few so let’s go through them:
 
 
-#### Step 5: Cleaning up
+1. _“What would you like to name your application”_ - an application is a collection of services. In this example we’ll only have one service in our app, but if you wanted to have a multi-service app, Copilot makes that easy. Let’s call this app **example-app**.
+2. _“Which service type best represents your service's architecture?”_ - Copilot is asking us what we want our service to do - do we want it to service traffic? Do we want it to be a private backend service? For us, we want our app to be accessible from the web, so let's hit enter and select **Load Balanced Web Service**.
+3. _“What do you want to name this Load Balanced Web Service?”_ - now what should we call our service in our app? Be as creative as you want - but I recommend naming this service **front-end**.
+4. _“Which Dockerfile would you like to use for front-end?”_ - go ahead and choose the default Dockerfile here. This is the service that Copilot will build and deploy for you. 
 
-To delete and clean up all the resources, run:
+Once you choose your Dockerfile, Copilot will start setting up the AWS infrastructure to manage your service. 
+<img class="img-fluid" alt="init" src="https://user-images.githubusercontent.com/879348/86040314-ab963f80-b9f8-11ea-8de6-c8caea8f6abf.png">
+## Step 5: Deploy your service
+
+Once Copilot finishes setting up the infrastructure to manage your app, you’ll be asked if you want to deploy your service to a test environment type **yes.**
+
+Now we can wait a few minutes ⏳ while Copilot sets up all the resources needed to run your service. After all the infrastructure for your service is set up, Copilot will build your image and push it to Amazon ECR, and start deploying to Amazon ECS. 
+
+After your deployment completes your service will be up and running on AWS Fargate and Copilot will print a link to the URL 🎉! 
+
+<img class="img-fluid" alt="deploy" src="https://user-images.githubusercontent.com/879348/86040356-be107900-b9f8-11ea-82cd-3bf2a5eb5c9d.png">
+
+#### Cleaning up
+
+Now that you've deployed your service, let's go ahead and run `copilot app delete` - this will delete all the resources Copilot set up for your application, including your ECS Service and the ECR Repository. To delete everything run:
 
 ```bash
 $ copilot app delete --env-profiles test=default
 ```
 
-This will delete all the services and environments in your app.
+<img class="img-fluid" alt="delete" src="https://user-images.githubusercontent.com/879348/86040380-c9fc3b00-b9f8-11ea-87c2-6d42518d39dd.png">
+
+#### Congratulations!
+
+Congratulations! You have learned how to setup, deploy, and delete your container application to Amazon ECS using AWS Copilot. AWS Copilot is a command line tool that helps you develop, release and operate your container apps on AWS. 
+
+We hope you had fun deploying your app. Ready to dive deeper into AWS Copilot and learn how to build and manage production ready container apps on AWS? Check out the _Developing_ section in the sidebar. 

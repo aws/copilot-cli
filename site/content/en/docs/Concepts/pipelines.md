@@ -3,18 +3,17 @@ title: "Pipelines"
 date: 2017-01-05
 weight: 5
 ---
-
 Having an automated release process is one of the most important parts of software delivery so Copilot wants to make setting up that automated release process as easy as possible 🚀.
 
 In this section, we'll talk about using Copilot to set up a CodePipeline which automatically builds your service code when you push to GitHub, deploys to your environments, and runs automated testing.
 
-## Why?
+### Why?
 
 I won't get too philosophical about releasing software, but what's the point of having a release pipeline? With `copilot deploy` you can deploy your service directly from your computer to ECS, why add a middleman? That's a great question. For some apps, manually using `deploy` is enough, but as your release process gets more complicated (as you add more environments or add automated testing for example) you want to offload the boring work of repeatably orchestrating that process to a service. Having two services, each having two environments (test and production, say) and wanting to run integration tests after you deploy to your test environment becomes surprisingly cumbersome to do by hand.
 
 Using an automated release tool like CodePipeline helps make your release manageable. Even if your release isn't particularly complicated, knowing that you can just `git push` to deploy your change always feels a little magical 🌈.
 
-## Pipeline structure
+### Pipeline structure
 
 Copilot can set up a CodePipeline for you with a few commands - but before we jump into that, let's talk a little bit about the structure of the pipeline we'll be generating. Our pipeline will have the following basic structure:
 
@@ -26,7 +25,7 @@ Once you've set up a CodePipeline using Copilot, all you'll have to do is push t
 
 Want to learn more about CodePipeline? Check out their [getting started docs](https://docs.aws.amazon.com/codepipeline/latest/userguide/welcome-introducing.html).
 
-## Creating a Pipeline in 3 steps
+### Creating a Pipeline in 3 steps
 Creating a Pipeline only requires three steps:
 
 1. Preparing the pipeline structure.
@@ -43,7 +42,7 @@ $ copilot pipeline update
 
 ✨ And you'll have a new pipeline configured in your application account. Want to understand a little bit more what's going on? Read on!
 
-## Setting up a Pipeline, step by step
+### Setting up a Pipeline, step by step
 
 __Step 1: Configuring your Pipeline__
 

@@ -7,27 +7,10 @@ menu:
   main:
     weight: 20
 ---
+Welcome to the Copilot CLI 🎉
 
-Welcome to the AWS Copilot CLI developer guide and documentation. Throughout these docs we'll help you use Copilot to 
-deploy your container to AWS, grow and release them to production and operate them.
+The Copilot CLI is a tool for developers to develop, release, and operate production ready containerized applications on Amazon ECS. From getting started, pushing to staging and releasing to production, Copilot can help manage the entire lifecycle of your application development.
 
-#### What is Copilot?
+This site contains descriptions and examples of different commands as well as descriptions of the infrastructure that we'll spin up on your behalf. 
 
-Copilot is a CLI from Amazon Web Services which helps you build, release and operate your containerized applications on AWS and Amazon ECS.
-
-With Copilot, you focus on the architectures of your application, rather than the infrastructure which supports it. 
-Want to deploy a public service? We will provision all the resources for a well architected, secure and load balanced web service on ECS.
-
-Want to add more services to your application? No problem. Beyond helping you spin up new services, 
-Copilot also helps you model and operate all of your applicaiton's services together from the comfort of your terminal.
-
-#### Key Features 🔑
-
-Copilot is full of features that help make developing, operating and releasing container apps on AWS delightful, including:
-* Multi service applications with built in service discovery
-* Model all of your test, staging and production environments in one place
-* Continuous delivery pipelines for your services with one command
-* Operations built in with loging, alarming and status built in
-* Simple yet powerful configuration for your services
-* Custom domain name and TLS support
-* And much more ...
+<img src="https://user-images.githubusercontent.com/828419/85797638-e181ae00-b6f0-11ea-8751-3a7552e3fa7f.png" class="img-fluid">

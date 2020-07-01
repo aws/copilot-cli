@@ -2,10 +2,7 @@
 title: "Applications"
 date: 2017-01-05
 weight: 2
-resources:
-- src: "images/**.{png}"
 ---
-
 An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constelation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".
 
 Let's walk through an example. We want to build a voting app which needs to collect votes and aggregate the results.
@@ -14,14 +11,14 @@ To set up our vote app with two services, we can run `copilot init` twice. The f
 
 Your application configuration (which services and environments belong to it) is stored in your AWS account, so any other users in your account will be able to develop on the “vote" app as well. This means that you can have a teammate work on one service while you develop the other.
 
-<img src="/docs/concepts/app-concept.png" class="img-fluid">
+<img class="img-fluid" src="https://user-images.githubusercontent.com/879348/85869625-cd858d00-b780-11ea-817c-638814049d2d.png">
 
-## Creating an App
+### Creating an App
 
 To set up an application, you can just run `copilot init`. You'll be asked if you want to set up an app or choose an use app.
 
 ```bash title=copilot&nbsp;init
-$ copilot init
+copilot init
 ```
 
 Once you've created an application, Copilot stores that application in SSM Parameter store in your AWS account. The account used to set up your application is known as the "applicaiton account". This is where your app's configuration lives, and anyone who has access to this account can use this app.
@@ -30,7 +27,7 @@ All resources created within this application will be tagged with the `copilot-a
 
 The name of your applicaiton has to be unique within your account (even across region).
 
-### Additional App Configurations
+#### Additional App Configurations
 You can also provide more granular configuration for your application by running `copilot app init`. This includes options to:
 
 * Tag all application, service and environment resources with an additional set of [aws resource tags](https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html)
@@ -42,13 +39,13 @@ $ copilot app init                             \
   --resource-tags department=MyDept,team=MyTeam
 ```
 
-## App Infrastructure
+### App Infrastructure
 
 While the bulk of the infrastructure Copilot provisions is specific to an environment and service, there are some application-wide resources, as well.
 
-<img src="/docs/concepts/app-infra.png" class="img-fluid">
+<img class="img-fluid" src="https://user-images.githubusercontent.com/879348/85869637-d0807d80-b780-11ea-8359-6d75933c562a.png" style="margin-bottom: 20px;">
 
-### ECR Repositories
+#### ECR Repositories
 ECR Repositories are regional resources which store your service images. Each service has its own ECR Repository per region in your app.
 
 In the above diagram, the app has several environments spread across three regions. Each of those regions has its own ECR repository for every service in your app. In this case, there are three services.
@@ -57,16 +54,16 @@ Every time you add a service, we create an ECR Repository in every region. We do
 
 These ECR Repositories all live within your app's account (not the environment accounts) - and have policies which allow your environment accounts to pull from them.
 
-### Release Infrastructure
+#### Release Infrastructure
 For every region represented in your app, we create a KMS Key and an S3 bucket. These resources are used by CodePipeline to enable cross region and cross account deployments. All Pipelines in your app share these same resources.
 
 Similar to the ECR Repositories, the S3 bucket and KMS keys have policies which allow for all of your environments, even in other accounts, to read encrypted deployment artifacts. This makes your cross-account, cross-region CodePipelines possible.
 
-## Digging into your App
+### Digging into your App
 
 Now that we've set up an app, we can check on it using Copilot. Below are a few common ways to check in on your app.
 
-### What applications are in my account?
+#### What applications are in my account?
 
 To see all the apps in your current account and region you can run `copilot app ls`.
 
@@ -76,7 +73,7 @@ vote
 ecs-kudos
 ```
 
-### What's in my application?
+#### What's in my application?
 
 Running `copilot app show` will show you a summary of your application, including all the services and environments in your app.
 
