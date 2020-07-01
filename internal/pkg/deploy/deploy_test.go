@@ -26,7 +26,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 		setupMocks func(mocks storeMock)
 
 		wantedError error
-		wantedSvcs  []*config.Service
+		wantedSvcs  []string
 	}{
 		"return error if fail to get resources by tag": {
 			inputApp: "mockApp",
@@ -110,16 +110,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 				)
 			},
 
-			wantedSvcs: []*config.Service{
-				{
-					App:  "mockApp",
-					Name: "mockSvc1",
-				},
-				{
-					App:  "mockApp",
-					Name: "mockSvc2",
-				},
-			},
+			wantedSvcs: []string{"mockSvc1", "mockSvc2"},
 		},
 	}
 
@@ -139,9 +130,9 @@ func TestStore_ListDeployedServices(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:     mockRgGetter,
-				configStore:  mockConfigStore,
-				initRgClient: func(*Store, string, string) error { return nil },
+				rgClient:           mockRgGetter,
+				configStore:        mockConfigStore,
+				newRgClientFromIDs: func(string, string) error { return nil },
 			}
 
 			// WHEN
@@ -165,7 +156,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 		setupMocks func(mocks storeMock)
 
 		wantedError error
-		wantedEnvs  []*config.Environment
+		wantedEnvs  []string
 	}{
 		"return error if fail to list all config environments": {
 			inputApp: "mockApp",
@@ -230,12 +221,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 				)
 			},
 
-			wantedEnvs: []*config.Environment{
-				{
-					App:  "mockApp",
-					Name: "mockEnv1",
-				},
-			},
+			wantedEnvs: []string{"mockEnv1"},
 		},
 	}
 
@@ -255,9 +241,9 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:     mockRgGetter,
-				configStore:  mockConfigStore,
-				initRgClient: func(*Store, string, string) error { return nil },
+				rgClient:            mockRgGetter,
+				configStore:         mockConfigStore,
+				newRgClientFromRole: func(string, string) error { return nil },
 			}
 
 			// WHEN
@@ -353,9 +339,9 @@ func TestStore_IsDeployed(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:     mockRgGetter,
-				configStore:  mockConfigStore,
-				initRgClient: func(*Store, string, string) error { return nil },
+				rgClient:           mockRgGetter,
+				configStore:        mockConfigStore,
+				newRgClientFromIDs: func(string, string) error { return nil },
 			}
 
 			// WHEN
