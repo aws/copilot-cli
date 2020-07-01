@@ -260,7 +260,7 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 }
 
 func (sa StageAction) humanString() string {
-	return sa.Name + "\t\t" + addColor(sa.Status)
+	return sa.Name + "\t\t" + fmtStatus(sa.Status)
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
@@ -269,7 +269,7 @@ func (sa StageAction) humanString() string {
 func (ss *StageState) HumanString() string {
 	status := ss.AggregateStatus()
 	transition := ss.Transition
-	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, addColor(transition), addColor(status))
+	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, fmtStatus(transition), fmtStatus(status))
 	tree := treeprint.New()
 	tree = tree.AddBranch(stageString)
 	var formattedActions []string
@@ -279,7 +279,7 @@ func (ss *StageState) HumanString() string {
 	return tree.String()
 }
 
-func addColor(status string) string {
+func fmtStatus(status string) string {
 	const empty = "  -"
 	switch status {
 	case "":
