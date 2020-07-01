@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xlab/treeprint"
-
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cp "github.com/aws/aws-sdk-go/service/codepipeline"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/xlab/treeprint"
 )
 
 const (
@@ -261,23 +260,16 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 }
 
 func (sa StageAction) humanString() string {
-	return sa.Name + "\t" + sa.Status
+	return sa.Name + "\t\t" + addColor(sa.Status)
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (ss *StageState) HumanString() string {
-	const empty = "  -"
 	status := ss.AggregateStatus()
 	transition := ss.Transition
-	if status == "" {
-		status = empty
-	}
-	if transition == "" {
-		transition = empty
-	}
-	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, status, transition)
+	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, addColor(transition), addColor(status))
 	tree := treeprint.New()
 	tree = tree.AddBranch(stageString)
 	var formattedActions []string
@@ -285,4 +277,20 @@ func (ss *StageState) HumanString() string {
 		formattedActions = append(formattedActions, tree.AddNode(action.humanString()).String())
 	}
 	return tree.String()
+}
+
+func addColor(status string) string {
+	const empty = "  -"
+	switch status {
+	case "":
+		return empty
+	case "InProgress":
+		return color.Emphasize(status)
+	case "Failed":
+		return color.Red.Sprint(status)
+	case "DISABLED":
+		return color.Faint.Sprint(status)
+	default:
+		return status
+	}
 }
