@@ -250,8 +250,6 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		return nil, err
 	}
 
-	// cmdIndex holds the starting index of "CMD"
-	// command extracts the CMD out of the command
 	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out
 	cmdIndex := strings.Index(content, "CMD")
 	command := content[cmdIndex+len(cmdLength):]
