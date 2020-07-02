@@ -51,13 +51,13 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 				gomock.InOrder(
 					m.mockecsClient.EXPECT().TaskDefinition("phonetool-test-jobs").Return(&ecs.TaskDefinition{
 						ContainerDefinitions: []*ecsapi.ContainerDefinition{
-							&ecsapi.ContainerDefinition{
+							{
 								Environment: []*ecsapi.KeyValuePair{
-									&ecsapi.KeyValuePair{
+									{
 										Name:  aws.String("COPILOT_SERVICE_NAME"),
 										Value: aws.String("my-svc"),
 									},
-									&ecsapi.KeyValuePair{
+									{
 										Name:  aws.String("COPILOT_ENVIRONMENT_NAME"),
 										Value: aws.String("prod"),
 									},
@@ -144,19 +144,19 @@ func TestServiceDescriber_ServiceStackResources(t *testing.T) {
 			setupMocks: func(m svcDescriberMocks) {
 				gomock.InOrder(
 					m.mockStackDescriber.EXPECT().StackResources(stack.NameForService(testApp, testEnv, testSvc)).Return([]*cloudformation.StackResource{
-						&cloudformation.StackResource{
+						{
 							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
 						},
-						&cloudformation.StackResource{
+						{
 							ResourceType:       aws.String("AWS::CloudFormation::WaitConditionHandle"),
 							PhysicalResourceId: aws.String("https://cloudformation-waitcondition-us-west-2.s3-us-west-2.amazonaws.com/"),
 						},
-						&cloudformation.StackResource{
+						{
 							ResourceType:       aws.String("Custom::RulePriorityFunction"),
 							PhysicalResourceId: aws.String("alb-rule-priority-HTTPRulePriorityAction"),
 						},
-						&cloudformation.StackResource{
+						{
 							ResourceType:       aws.String("AWS::CloudFormation::WaitCondition"),
 							PhysicalResourceId: aws.String(" arn:aws:cloudformation:us-west-2:1234567890"),
 						},

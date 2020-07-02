@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xlab/treeprint"
-
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cp "github.com/aws/aws-sdk-go/service/codepipeline"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/xlab/treeprint"
 )
 
 const (
@@ -27,10 +26,14 @@ type api interface {
 	GetPipelineState(*cp.GetPipelineStateInput) (*cp.GetPipelineStateOutput, error)
 }
 
+type resourceGetter interface {
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+}
+
 // CodePipeline wraps the AWS CodePipeline client.
 type CodePipeline struct {
 	client   api
-	rgClient rg.ResourceGroupsClient
+	rgClient resourceGetter
 }
 
 // Pipeline represents an existing CodePipeline resource.
@@ -51,7 +54,7 @@ type Stage struct {
 	Details  string `json:"details"`
 }
 
-// PipelineStatus represents a Pipeline's status.
+// PipelineState represents a Pipeline's status.
 type PipelineState struct {
 	PipelineName string        `json:"pipelineName"`
 	StageStates  []*StageState `json:"stageStates"`
@@ -85,7 +88,7 @@ func (ss StageState) AggregateStatus() string {
 		"Succeeded":  0,
 	}
 	for _, action := range ss.Actions {
-		status[action.Status] += 1
+		status[action.Status]++
 	}
 	if status["InProgress"] > 0 {
 		return "InProgress"
@@ -216,7 +219,7 @@ func (c *CodePipeline) getPipelineName(resourceArn string) (string, error) {
 	return parsedArn.Resource, nil
 }
 
-// GetPipelineStatus retrieves status information from a given pipeline.
+// GetPipelineState retrieves status information from a given pipeline.
 func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 	input := &cp.GetPipelineStateInput{
 		Name: aws.String(name),
@@ -261,23 +264,16 @@ func (c *CodePipeline) GetPipelineState(name string) (*PipelineState, error) {
 }
 
 func (sa StageAction) humanString() string {
-	return sa.Name + "\t" + sa.Status
+	return sa.Name + "\t\t" + fmtStatus(sa.Status)
 }
 
 // HumanString returns the stringified PipelineState struct with human readable format.
 // Example output:
 //   DeployTo-test	Deploy	Cloudformation	stackname: dinder-test-test
 func (ss *StageState) HumanString() string {
-	const empty = "  -"
 	status := ss.AggregateStatus()
 	transition := ss.Transition
-	if status == "" {
-		status = empty
-	}
-	if transition == "" {
-		transition = empty
-	}
-	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, status, transition)
+	stageString := fmt.Sprintf("%s\t%s\t%s", ss.StageName, fmtStatus(transition), fmtStatus(status))
 	tree := treeprint.New()
 	tree = tree.AddBranch(stageString)
 	var formattedActions []string
@@ -285,4 +281,20 @@ func (ss *StageState) HumanString() string {
 		formattedActions = append(formattedActions, tree.AddNode(action.humanString()).String())
 	}
 	return tree.String()
+}
+
+func fmtStatus(status string) string {
+	const empty = "  -"
+	switch status {
+	case "":
+		return empty
+	case "InProgress":
+		return color.Emphasize(status)
+	case "Failed":
+		return color.Red.Sprint(status)
+	case "DISABLED":
+		return color.Faint.Sprint(status)
+	default:
+		return status
+	}
 }

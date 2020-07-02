@@ -118,8 +118,8 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
-		AppTagKey: e.AppName,
-		EnvTagKey: e.Name,
+		deploy.AppTagKey: e.AppName,
+		deploy.EnvTagKey: e.Name,
 	})
 }
 

@@ -9,13 +9,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 )
 
-// Tag keys used while creating stacks.
-const (
-	AppTagKey     = "copilot-application"
-	EnvTagKey     = "copilot-environment"
-	ServiceTagKey = "copilot-service"
-)
-
 func mergeAndFlattenTags(additionalTags map[string]string, cliTags map[string]string) []*cloudformation.Tag {
 	var flatTags []*cloudformation.Tag
 	for k, v := range tags.Merge(additionalTags, cliTags) {

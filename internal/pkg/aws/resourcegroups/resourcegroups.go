@@ -7,6 +7,7 @@ package resourcegroups
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -24,11 +25,6 @@ type api interface {
 // ResourceGroups wraps an AWS ResourceGroups client.
 type ResourceGroups struct {
 	client api
-}
-
-// ResourceGroupsClient wraps the API for ResourceGroups, for easier testing when used by other services
-type ResourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
 type tagFilter struct {

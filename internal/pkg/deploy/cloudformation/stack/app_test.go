@@ -144,7 +144,7 @@ func TestAppResourceTemplate(t *testing.T) {
 						Version:  1,
 						App:      "testapp",
 					},
-					ServiceTagKey,
+					deploy.ServiceTagKey,
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
@@ -214,13 +214,13 @@ func TestAppTags(t *testing.T) {
 			AdditionalTags: map[string]string{
 				"confidentiality": "public",
 				"owner":           "finance",
-				AppTagKey:         "overrideapp",
+				deploy.AppTagKey:  "overrideapp",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(AppTagKey),
+			Key:   aws.String(deploy.AppTagKey),
 			Value: aws.String(app.Name),
 		},
 		{

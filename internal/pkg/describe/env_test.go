@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -80,7 +81,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	}
 	allSvcs := []*config.Service{testSvc1, testSvc2, testSvc3}
 	envSvcs := []*config.Service{testSvc1, testSvc2}
-	rgTags := map[string]string{stack.EnvTagKey: "testEnv"}
+	rgTags := map[string]string{deploy.EnvTagKey: "testEnv"}
 	stackTags := []*cloudformation.Tag{
 		{
 			Key:   aws.String("copilot-application"),
