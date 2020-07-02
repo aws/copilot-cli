@@ -121,11 +121,13 @@ tools:
 .PHONY: start-docs
 start-docs:
 	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
 	hugo server -D
 
 # Build and minify the documentation to the docs/ directory.
 build-docs:
 	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
 	npm install &&\
 	hugo &&\
 	cd ..
