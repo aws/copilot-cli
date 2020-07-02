@@ -66,8 +66,8 @@ func (p PipelineStatus) HumanString() string {
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("Pipeline Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "%s\t%s\t%s\n", "Stage", "Status", "Transition")
-	fmt.Fprintf(writer, "%s\t%s\t%s\n", "-----", "------", "----------")
+	fmt.Fprintf(writer, "%s\t%s\t%s\n", "Stage", "Transition", "Status")
+	fmt.Fprintf(writer, "%s\t%s\t%s\n", "-----", "----------", "------")
 	for _, stage := range p.StageStates {
 		fmt.Fprintf(writer, stage.HumanString())
 	}
