@@ -239,6 +239,14 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`),
 			wantedErr:  fmt.Errorf("parse instructions: Unknown flag: randomFlag"),
 		},
+		"healthcheck does not contain CMD": {
+			dockerfile: []byte(`HEALTHCHECK --interval=5m curl -f http://localhost/ || exit 1`),
+			wantedErr:  fmt.Errorf("parse instructions: Unknown type \"CURL\" in HEALTHCHECK (try CMD)"),
+		},
+		"healthcheck does not contain command": {
+			dockerfile: []byte(`HEALTHCHECK --interval=5m CMD`),
+			wantedErr:  fmt.Errorf("parse instructions: Missing command after HEALTHCHECK CMD"),
+		},
 	}
 
 	for name, tc := range testCases {

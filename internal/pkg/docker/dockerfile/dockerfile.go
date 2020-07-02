@@ -40,6 +40,7 @@ const (
 	retriesDefault = 2
 
 	hcInstrStartIndex = len("HEALTHCHECK ")
+	cmdLength         = "CMD "
 	cmdShell          = "CMD-SHELL"
 )
 
@@ -249,10 +250,11 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		return nil, err
 	}
 
-	// cmdIndex holds the starting and ending index of "CMD"
+	// cmdIndex holds the starting index of "CMD", -1 if not present
 	// command extracts the CMD out of the command
-	cmdIndex := regexp.MustCompile("CMD").FindStringIndex(content)
-	command := content[cmdIndex[1]+1:]
+	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out
+	cmdIndex := strings.Index(content, "CMD")
+	command := content[cmdIndex+len(cmdLength):]
 
 	return &HealthCheck{
 		Interval:    interval,
