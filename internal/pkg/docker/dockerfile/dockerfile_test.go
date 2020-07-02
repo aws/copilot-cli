@@ -212,7 +212,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				Timeout:     5 * time.Second,
 				StartPeriod: 0,
 				Retries:     2,
-				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
+				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with user's values": {
@@ -224,7 +224,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				Timeout:     3 * time.Second,
 				StartPeriod: 2 * time.Second,
 				Retries:     3,
-				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
+				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with NONE": {
@@ -235,6 +235,14 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 		"healthcheck contains an invalid flag": {
 			dockerfile: []byte(`HEALTHCHECK --interval=5m --randomFlag=4s CMD curl -f http://localhost/ || exit 1`),
 			wantedErr:  fmt.Errorf("parse instructions: Unknown flag: randomFlag"),
+		},
+		"healthcheck does not contain CMD": {
+			dockerfile: []byte(`HEALTHCHECK --interval=5m curl -f http://localhost/ || exit 1`),
+			wantedErr:  fmt.Errorf("parse instructions: Unknown type \"CURL\" in HEALTHCHECK (try CMD)"),
+		},
+		"healthcheck does not contain command": {
+			dockerfile: []byte(`HEALTHCHECK --interval=5m CMD`),
+			wantedErr:  fmt.Errorf("parse instructions: Missing command after HEALTHCHECK CMD"),
 		},
 	}
 
