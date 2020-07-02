@@ -5,6 +5,7 @@ BINARY_NAME=copilot
 PACKAGES=./internal...
 SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
 BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
+SOURDE_DOCS=${PWD}/site
 GOBIN=${PWD}/bin/tools
 COVERAGE=coverage.out
 
@@ -115,6 +116,21 @@ tools:
 	GOBIN=${GOBIN} go get github.com/gobuffalo/packr/v2/packr2
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
+
+# Run the docs locally.
+.PHONY: start-docs
+start-docs:
+	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
+	hugo server -D
+
+# Build and minify the documentation to the docs/ directory.
+build-docs:
+	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
+	npm install &&\
+	hugo &&\
+	cd ..
 
 .PHONY: gen-mocks
 gen-mocks: tools
