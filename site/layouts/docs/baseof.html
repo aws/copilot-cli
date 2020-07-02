@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="{{ .Site.Language.Lang }}" class="no-js">
+<head>
+    <base href="{{ .Site.BaseURL }}">
+    {{ partial "head.html" . }}
+</head>
+<body class="td-{{ .Kind }}">
+<header>
+    {{ partial "navbar.html" . }}
+</header>
+<div class="container-fluid td-outer">
+    <div class="container">
+        <div class="td-main">
+            <div class="row flex-xl-nowrap">
+                <div class="col-12 col-md-3 col-xl-3 td-sidebar d-print-none" style="padding-top: 5.5rem;">
+                    {{ partial "sidebar.html" . }}
+                </div>
+                <main class="col-12 col-md-9 col-xl-9 pl-md-5 documentation" role="main">
+                    {{ partial "version-banner.html" . }}
+                    {{ if not .Site.Params.ui.breadcrumb_disable }}{{ partial "breadcrumb.html" . }}{{ end }}
+                    {{ block "main" . }}{{ end }}
+                </main>
+            </div>
+        </div>
+    </div>
+</div>
+{{ partial "scripts.html" . }}
+</body>
+</html>
