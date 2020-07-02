@@ -198,9 +198,6 @@ EXPOSE 8080/tcp 5000`),
 }
 
 func TestDockerfile_GetHealthCheck(t *testing.T) {
-	var (
-		cmdShell = "CMD-SHELL"
-	)
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte
