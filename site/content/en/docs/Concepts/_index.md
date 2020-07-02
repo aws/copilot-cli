@@ -2,6 +2,7 @@
 title: "Concepts"
 linkTitle: "Concepts"
 weight: 5
+expand: true
 ---
 Copilot makes it super easy to set up and deploy your containers on AWS - but getting started is only the first step of the journey. What happens when you want to have one copy of your service running only for testing and another copy serving production traffic? What happens when you want to add another service? How do you manage deploying to all of these services? Copilot wants to help you with all of these things so let's jump into some of Copilot's core concepts to understand how they can help.
 

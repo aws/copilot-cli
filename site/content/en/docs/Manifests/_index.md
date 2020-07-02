@@ -2,6 +2,7 @@
 title: "Manifests"
 linkTitle: "Manifests"
 weight: 7
+expand: true
 ---
 The AWS Copilot CLI manifests describe a service’s architecture as infrastructure-as-code. 
 

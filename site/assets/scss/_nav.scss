@@ -20,6 +20,15 @@ button.navbar-toggler:not(:disabled):not(.disabled) {
     }
 }
 
+.nav-link-breadcrumb {
+    color: #24292e;
+    font-size: 14px;
+
+    &:hover {
+        color: $secondary;
+    }
+}
+
 .td-navbar-cover {
     background: $primary;
 
@@ -42,6 +51,29 @@ button.navbar-toggler:not(:disabled):not(.disabled) {
     opacity: inherit;
 }
 
+.navbar-brand {
+    text-transform: none;
+    text-align: middle;
+    padding-top: 0.7rem;
+
+    .nav-link {
+        display: inline-block;
+        margin-right: -30px;
+    }
+
+    .site-title {
+        font-family: Menlo, monospace;
+        font-size: 16px;
+        padding-left: 1.5rem;
+    }
+
+    svg {
+        display: inline-block;
+        margin: 0 10px;
+        height: 30px;
+    }
+}
+
 .td-navbar {
     background: $primary;
     min-height: 4rem;
@@ -52,30 +84,6 @@ button.navbar-toggler:not(:disabled):not(.disabled) {
         position: fixed;
         top: 0;
         width: 100%;
-    }
-
-
-    .navbar-brand {
-        text-transform: none;
-        text-align: middle;
-        padding-top: 0.7rem;
-
-        .nav-link {
-            display: inline-block;
-            margin-right: -30px;
-        }
-
-        .site-title {
-            font-family: Menlo, monospace;
-            font-size: 16px;
-            padding-left: 1.5rem;
-        }
-
-        svg {
-            display: inline-block;
-            margin: 0 10px;
-            height: 30px;
-        }
     }
 
     .nav-link {
