@@ -5,10 +5,11 @@
     padding-right: 0.5rem;
     margin-right: -15px;
     margin-left: -15px;
+    font-size: 0.95rem;
 
     @include media-breakpoint-up(md) {
         @supports (position: sticky) {
-            max-height: calc(100vh - 10rem);
+            max-height: 100%;
             overflow-y: auto;
         }
     }
@@ -31,7 +32,7 @@
 
         @include media-breakpoint-up(md) {
             & > ul {
-                padding-left: .5rem;
+                padding-left: 1rem;
             }
         }
 
@@ -86,7 +87,6 @@
 
 .td-sidebar {
     @include media-breakpoint-up(md) {
-        padding-top: 4rem;
         background-color: $td-sidebar-bg-color;
         padding-right: 1rem;
         border-right: 1px solid $td-sidebar-border-color;
@@ -113,7 +113,6 @@
         @include media-breakpoint-up(md) {
             @supports (position: sticky) {
                 position: sticky;
-                top: 4rem;
                 z-index: 10;
                 height: calc(100vh - 6rem);
             }
