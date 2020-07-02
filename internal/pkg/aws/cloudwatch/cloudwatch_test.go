@@ -11,15 +11,14 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	cwmocks "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch/mocks"
-	rgmocks "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type cloudWatchMocks struct {
-	cw *cwmocks.Mockapi
-	rg *rgmocks.MockResourceGroupsClient
+	cw *mocks.Mockapi
+	rg *mocks.MockresourceGetter
 }
 
 func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
@@ -181,8 +180,8 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockcwClient := cwmocks.NewMockapi(ctrl)
-			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mockcwClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
 			mocks := cloudWatchMocks{
 				cw: mockcwClient,
 				rg: mockrgClient,

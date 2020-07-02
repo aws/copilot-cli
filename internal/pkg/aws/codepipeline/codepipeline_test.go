@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	cpmocks "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline/mocks"
-	rgmocks "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline/mocks"
 	"github.com/golang/mock/gomock"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
@@ -19,8 +18,8 @@ import (
 )
 
 type codepipelineMocks struct {
-	cp *cpmocks.Mockapi
-	rg *rgmocks.MockResourceGroupsClient
+	cp *mocks.Mockapi
+	rg *mocks.MockresourceGetter
 }
 
 func TestCodePipeline_GetPipeline(t *testing.T) {
@@ -234,8 +233,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
-			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
 			mocks := codepipelineMocks{
 				cp: mockClient,
 				rg: mockrgClient,
@@ -308,8 +307,8 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
-			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
 			mocks := codepipelineMocks{
 				cp: mockClient,
 				rg: mockrgClient,
@@ -485,7 +484,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
 
 			mocks := codepipelineMocks{
 				cp: mockClient,

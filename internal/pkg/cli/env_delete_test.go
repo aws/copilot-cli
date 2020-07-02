@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
@@ -255,11 +255,11 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 						{
 							Tags: []*resourcegroupstaggingapi.Tag{
 								{
-									Key:   aws.String(stack.ServiceTagKey),
+									Key:   aws.String(deploy.ServiceTagKey),
 									Value: aws.String("frontend"),
 								},
 								{
-									Key:   aws.String(stack.ServiceTagKey),
+									Key:   aws.String(deploy.ServiceTagKey),
 									Value: aws.String("backend"),
 								},
 							},
