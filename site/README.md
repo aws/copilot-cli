@@ -3,7 +3,12 @@ Copilot's website is built with [hugo](https://gohugo.io/) and the [docsy](https
 
 ### Pre-requisites
 1. Make sure that you have installed the [hugo](https://gohugo.io/getting-started/installing/) binary.
-2. Install the [CSS processing libraries](https://www.docsy.dev/docs/getting-started/#install-postcss) required by docsy:
+2. Pull down the docsy theme. The docsy theme submodule is listed under the `.gitmodules` file.
+   ```bash
+   $ cd site/
+   $ git submodule update --init --recursive
+   ```
+3. Install the [CSS processing libraries](https://www.docsy.dev/docs/getting-started/#install-postcss) required by docsy:
    ```bash
    $ cd site/
    $ npm run install
