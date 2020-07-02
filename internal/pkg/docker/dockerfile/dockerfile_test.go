@@ -198,6 +198,9 @@ EXPOSE 8080/tcp 5000`),
 }
 
 func TestDockerfile_GetHealthCheck(t *testing.T) {
+	var (
+		cmdShell = "CMD-SHELL"
+	)
 	testCases := map[string]struct {
 		dockerfilePath string
 		dockerfile     []byte
@@ -212,7 +215,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				Timeout:     5 * time.Second,
 				StartPeriod: 0,
 				Retries:     2,
-				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
+				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with user's values": {
@@ -224,7 +227,7 @@ func TestDockerfile_GetHealthCheck(t *testing.T) {
 				Timeout:     3 * time.Second,
 				StartPeriod: 2 * time.Second,
 				Retries:     3,
-				Cmd:         []string{"CMD curl -f http://localhost/ || exit 1"},
+				Cmd:         []string{cmdShell, "curl -f http://localhost/ || exit 1"},
 			},
 		},
 		"correctly parses healthcheck with NONE": {
