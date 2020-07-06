@@ -5,12 +5,11 @@
 package mocks
 
 import (
-	reflect "reflect"
-
-	cloudformation0 "github.com/aws/aws-sdk-go/service/cloudformation"
-	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	stackset "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockStackConfiguration is a mock of StackConfiguration interface
@@ -66,10 +65,10 @@ func (mr *MockStackConfigurationMockRecorder) Template() *gomock.Call {
 }
 
 // Parameters mocks base method
-func (m *MockStackConfiguration) Parameters() ([]*cloudformation0.Parameter, error) {
+func (m *MockStackConfiguration) Parameters() ([]*cloudformation.Parameter, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parameters")
-	ret0, _ := ret[0].([]*cloudformation0.Parameter)
+	ret0, _ := ret[0].([]*cloudformation.Parameter)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -81,10 +80,10 @@ func (mr *MockStackConfigurationMockRecorder) Parameters() *gomock.Call {
 }
 
 // Tags mocks base method
-func (m *MockStackConfiguration) Tags() []*cloudformation0.Tag {
+func (m *MockStackConfiguration) Tags() []*cloudformation.Tag {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Tags")
-	ret0, _ := ret[0].([]*cloudformation0.Tag)
+	ret0, _ := ret[0].([]*cloudformation.Tag)
 	return ret0
 }
 
@@ -118,7 +117,7 @@ func (m *MockcfnClient) EXPECT() *MockcfnClientMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockcfnClient) Create(arg0 *cloudformation.Stack) error {
+func (m *MockcfnClient) Create(arg0 *cloudformation0.Stack) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
 	ret0, _ := ret[0].(error)
@@ -132,7 +131,7 @@ func (mr *MockcfnClientMockRecorder) Create(arg0 interface{}) *gomock.Call {
 }
 
 // CreateAndWait mocks base method
-func (m *MockcfnClient) CreateAndWait(arg0 *cloudformation.Stack) error {
+func (m *MockcfnClient) CreateAndWait(arg0 *cloudformation0.Stack) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAndWait", arg0)
 	ret0, _ := ret[0].(error)
@@ -160,7 +159,7 @@ func (mr *MockcfnClientMockRecorder) WaitForCreate(stackName interface{}) *gomoc
 }
 
 // Update mocks base method
-func (m *MockcfnClient) Update(arg0 *cloudformation.Stack) error {
+func (m *MockcfnClient) Update(arg0 *cloudformation0.Stack) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", arg0)
 	ret0, _ := ret[0].(error)
@@ -174,7 +173,7 @@ func (mr *MockcfnClientMockRecorder) Update(arg0 interface{}) *gomock.Call {
 }
 
 // UpdateAndWait mocks base method
-func (m *MockcfnClient) UpdateAndWait(arg0 *cloudformation.Stack) error {
+func (m *MockcfnClient) UpdateAndWait(arg0 *cloudformation0.Stack) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAndWait", arg0)
 	ret0, _ := ret[0].(error)
@@ -216,10 +215,10 @@ func (mr *MockcfnClientMockRecorder) DeleteAndWait(stackName interface{}) *gomoc
 }
 
 // Describe mocks base method
-func (m *MockcfnClient) Describe(stackName string) (*cloudformation.StackDescription, error) {
+func (m *MockcfnClient) Describe(stackName string) (*cloudformation0.StackDescription, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Describe", stackName)
-	ret0, _ := ret[0].(*cloudformation.StackDescription)
+	ret0, _ := ret[0].(*cloudformation0.StackDescription)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -231,10 +230,10 @@ func (mr *MockcfnClientMockRecorder) Describe(stackName interface{}) *gomock.Cal
 }
 
 // Events mocks base method
-func (m *MockcfnClient) Events(stackName string) ([]cloudformation.StackEvent, error) {
+func (m *MockcfnClient) Events(stackName string) ([]cloudformation0.StackEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Events", stackName)
-	ret0, _ := ret[0].([]cloudformation.StackEvent)
+	ret0, _ := ret[0].([]cloudformation0.StackEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

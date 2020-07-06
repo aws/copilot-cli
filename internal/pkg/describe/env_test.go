@@ -20,7 +20,7 @@ import (
 )
 
 type envDescriberMocks struct {
-	storeSvc                 *mocks.MockstoreSvc
+	storeSvc                 *mocks.MockconfigStoreSvc
 	mockResourceGroupsClient *mocks.MockresourceGroupsClient
 	mockStackDescriber       *mocks.MockstackAndResourcesDescriber
 }
@@ -182,7 +182,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockstoreSvc(ctrl)
+			mockStore := mocks.NewMockconfigStoreSvc(ctrl)
 			mockResourceGroupsClient := mocks.NewMockresourceGroupsClient(ctrl)
 			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := envDescriberMocks{
