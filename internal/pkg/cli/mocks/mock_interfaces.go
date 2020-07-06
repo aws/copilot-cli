@@ -6,9 +6,6 @@ package mocks
 
 import (
 	encoding "encoding"
-	io "io"
-	reflect "reflect"
-
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -22,6 +19,8 @@ import (
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
+	io "io"
+	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface
@@ -1173,6 +1172,59 @@ func (mr *MockecrServiceMockRecorder) GetECRAuth() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetECRAuth", reflect.TypeOf((*MockecrService)(nil).GetECRAuth))
 }
 
+// MockvpcService is a mock of vpcService interface
+type MockvpcService struct {
+	ctrl     *gomock.Controller
+	recorder *MockvpcServiceMockRecorder
+}
+
+// MockvpcServiceMockRecorder is the mock recorder for MockvpcService
+type MockvpcServiceMockRecorder struct {
+	mock *MockvpcService
+}
+
+// NewMockvpcService creates a new mock instance
+func NewMockvpcService(ctrl *gomock.Controller) *MockvpcService {
+	mock := &MockvpcService{ctrl: ctrl}
+	mock.recorder = &MockvpcServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockvpcService) EXPECT() *MockvpcServiceMockRecorder {
+	return m.recorder
+}
+
+// GetSubnetIDs mocks base method
+func (m *MockvpcService) GetSubnetIDs(app, env string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubnetIDs", app, env)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSubnetIDs indicates an expected call of GetSubnetIDs
+func (mr *MockvpcServiceMockRecorder) GetSubnetIDs(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubnetIDs", reflect.TypeOf((*MockvpcService)(nil).GetSubnetIDs), app, env)
+}
+
+// GetSecurityGroups mocks base method
+func (m *MockvpcService) GetSecurityGroups(app, env string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecurityGroups", app, env)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecurityGroups indicates an expected call of GetSecurityGroups
+func (mr *MockvpcServiceMockRecorder) GetSecurityGroups(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecurityGroups", reflect.TypeOf((*MockvpcService)(nil).GetSecurityGroups), app, env)
+}
+
 // MockcwlogService is a mock of cwlogService interface
 type MockcwlogService struct {
 	ctrl     *gomock.Controller
@@ -1229,6 +1281,44 @@ func (m *MockcwlogService) LogGroupExists(logGroupName string) (bool, error) {
 func (mr *MockcwlogServiceMockRecorder) LogGroupExists(logGroupName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogGroupExists", reflect.TypeOf((*MockcwlogService)(nil).LogGroupExists), logGroupName)
+}
+
+// MockecsService is a mock of ecsService interface
+type MockecsService struct {
+	ctrl     *gomock.Controller
+	recorder *MockecsServiceMockRecorder
+}
+
+// MockecsServiceMockRecorder is the mock recorder for MockecsService
+type MockecsServiceMockRecorder struct {
+	mock *MockecsService
+}
+
+// NewMockecsService creates a new mock instance
+func NewMockecsService(ctrl *gomock.Controller) *MockecsService {
+	mock := &MockecsService{ctrl: ctrl}
+	mock.recorder = &MockecsServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockecsService) EXPECT() *MockecsServiceMockRecorder {
+	return m.recorder
+}
+
+// DefaultClusters mocks base method
+func (m *MockecsService) DefaultClusters() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultClusters")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DefaultClusters indicates an expected call of DefaultClusters
+func (mr *MockecsServiceMockRecorder) DefaultClusters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultClusters", reflect.TypeOf((*MockecsService)(nil).DefaultClusters))
 }
 
 // Mocktemplater is a mock of templater interface
@@ -2308,6 +2398,80 @@ func (m *MockenvironmentDeployer) GetEnvironment(appName, envName string) (*conf
 func (mr *MockenvironmentDeployerMockRecorder) GetEnvironment(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).GetEnvironment), appName, envName)
+}
+
+// MocktaskResourceDeployer is a mock of taskResourceDeployer interface
+type MocktaskResourceDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskResourceDeployerMockRecorder
+}
+
+// MocktaskResourceDeployerMockRecorder is the mock recorder for MocktaskResourceDeployer
+type MocktaskResourceDeployerMockRecorder struct {
+	mock *MocktaskResourceDeployer
+}
+
+// NewMocktaskResourceDeployer creates a new mock instance
+func NewMocktaskResourceDeployer(ctrl *gomock.Controller) *MocktaskResourceDeployer {
+	mock := &MocktaskResourceDeployer{ctrl: ctrl}
+	mock.recorder = &MocktaskResourceDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskResourceDeployer) EXPECT() *MocktaskResourceDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeployTask mocks base method
+func (m *MocktaskResourceDeployer) DeployTask(input *deploy.CreateTaskResourcesInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployTask", input)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployTask indicates an expected call of DeployTask
+func (mr *MocktaskResourceDeployerMockRecorder) DeployTask(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskResourceDeployer)(nil).DeployTask), input)
+}
+
+// MocktaskStarter is a mock of taskStarter interface
+type MocktaskStarter struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskStarterMockRecorder
+}
+
+// MocktaskStarterMockRecorder is the mock recorder for MocktaskStarter
+type MocktaskStarterMockRecorder struct {
+	mock *MocktaskStarter
+}
+
+// NewMocktaskStarter creates a new mock instance
+func NewMocktaskStarter(ctrl *gomock.Controller) *MocktaskStarter {
+	mock := &MocktaskStarter{ctrl: ctrl}
+	mock.recorder = &MocktaskStarterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskStarter) EXPECT() *MocktaskStarterMockRecorder {
+	return m.recorder
+}
+
+// RunTask mocks base method
+func (m *MocktaskStarter) RunTask(input ecs.RunTaskInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunTask", input)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RunTask indicates an expected call of RunTask
+func (mr *MocktaskStarterMockRecorder) RunTask(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*MocktaskStarter)(nil).RunTask), input)
 }
 
 // MocksvcDeleter is a mock of svcDeleter interface

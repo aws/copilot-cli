@@ -133,9 +133,18 @@ type ecrService interface {
 	GetECRAuth() (ecr.Auth, error)
 }
 
+type vpcService interface {
+	GetSubnetIDs(app string, env string) ([]string, error)
+	GetSecurityGroups(app string, env string) ([]string, error)
+}
+
 type cwlogService interface {
 	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 	LogGroupExists(logGroupName string) (bool, error)
+}
+
+type ecsService interface {
+	DefaultClusters() ([]string, error)
 }
 
 type templater interface {
@@ -242,6 +251,14 @@ type environmentDeployer interface {
 	StreamEnvironmentCreation(env *deploy.CreateEnvironmentInput) (<-chan []deploy.ResourceEvent, <-chan deploy.CreateEnvironmentResponse)
 	DeleteEnvironment(appName, envName string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
+}
+
+type taskResourceDeployer interface {
+	DeployTask(input *deploy.CreateTaskResourcesInput) error
+}
+
+type taskStarter interface {
+	RunTask(input ecs.RunTaskInput) error
 }
 
 type svcDeleter interface {
