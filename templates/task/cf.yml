@@ -1,0 +1,105 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template that represents a task on Amazon ECS."
+Parameters:
+  TaskName:
+    Type: String
+  TaskCPU:
+    Type: String
+  TaskMemory:
+    Type: String
+  LogRetention:
+    Type: Number
+    Default: 30
+  ContainerImage:
+    Type: String
+  TaskRole:
+    Type: String
+  Command:
+    Type: String
+Conditions:
+  HasImage:
+    !Not [!Equals [!Ref ContainerImage, ""]]
+  UseDefaultTaskRole:
+    !Equals [!Ref TaskRole, ""]
+  HasCommand:
+    !Not [!Equals [!Ref Command, ""]]
+Resources:
+  TaskDefinition:
+    Condition: HasImage
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: ECRRepo
+    Properties:
+      ContainerDefinitions:
+        -
+          Image: !Ref ContainerImage
+          Command: !If [HasCommand, !Split [" ", !Ref Command], !Ref "AWS::NoValue"]
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot-task
+          Name: !Ref TaskName
+          {{if .EnvVars}}Environment:{{range $name, $value := .EnvVars}}
+          - Name: {{$name}}
+          - Value: {{$value}}{{end}}{{end}}
+      Family: !Join ['-', ["copilot", !Ref TaskName]]
+      RequiresCompatibilities:
+        - "FARGATE"
+      NetworkMode: awsvpc
+      Cpu: !Ref TaskCPU
+      Memory: !Ref TaskMemory
+      ExecutionRoleArn: !Ref ExecutionRole
+      TaskRoleArn:
+        !If [UseDefaultTaskRole, !Ref DefaultTaskRole, !Ref TaskRole]
+  DefaultTaskRole:
+    Condition: UseDefaultTaskRole
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  ECRRepo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Join ["-", ["copilot", !Ref TaskName]]
+      RepositoryPolicyText:
+        Version: '2008-10-17'
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:BatchCheckLayerAvailability
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', ["/copilot/", !Ref TaskName]]
+      RetentionInDays: !Ref LogRetention
+Outputs:
+  ECRRepo:
+    Description: ECR Repo used to store images of task.
+    Value: !GetAtt ECRRepo.Arn

@@ -21,6 +21,8 @@ const (
 	EnvTagKey = "copilot-environment"
 	// ServiceTagKey is tag key for Copilot svc.
 	ServiceTagKey = "copilot-service"
+	// TaskTagKey is tag key for Copilot task.
+	TaskTagKey = "copilot-task"
 )
 
 const (
