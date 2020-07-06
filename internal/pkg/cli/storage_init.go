@@ -212,11 +212,6 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 
-	// auto-set noLSI if noSort specified.
-	if o.noSort {
-		o.noLSI = true
-	}
-
 	return nil
 }
 
@@ -567,6 +562,8 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	}
 	props.PartitionKey = partKey.Name
 	attributes = append(attributes, *partKey)
+
+	ok := props.BuildSortKey(o.noSort, o.sortKey)
 	if !o.noSort {
 		sortKey, err := newDDBAttribute(o.sortKey)
 		if err != nil {
