@@ -28,15 +28,15 @@ type BackendServiceDescriber struct {
 
 // NewBackendServiceDescriber instantiates a backend service describer.
 func NewBackendServiceDescriber(app, svc string) (*BackendServiceDescriber, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := store.GetService(app, svc)
+	meta, err := configStore.GetService(app, svc)
 	if err != nil {
 		return nil, err
 	}
-	deployStore, err := deploy.NewStore()
+	deployStore, err := deploy.NewStore(configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}

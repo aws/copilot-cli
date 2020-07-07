@@ -44,7 +44,8 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
-type configStoreClient interface {
+// ConfigStoreClient wraps config store methods utilized by deploy store.
+type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	GetService(appName, svcName string) (*config.Service, error)
@@ -53,17 +54,13 @@ type configStoreClient interface {
 // Store fetches information on deployed services.
 type Store struct {
 	rgClient            resourceGetter
-	configStore         configStoreClient
+	configStore         ConfigStoreClient
 	newRgClientFromIDs  func(string, string) error
 	newRgClientFromRole func(string, string) error
 }
 
 // NewStore returns a new store.
-func NewStore() (*Store, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
-	}
+func NewStore(store ConfigStoreClient) (*Store, error) {
 	s := &Store{
 		configStore: store,
 	}

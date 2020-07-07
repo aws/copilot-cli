@@ -94,7 +94,7 @@ func NewWebServiceDescriber(app, svc string) (*WebServiceDescriber, error) {
 	if err != nil {
 		return nil, err
 	}
-	deployStore, err := deploy.NewStore()
+	deployStore, err := deploy.NewStore(configStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
