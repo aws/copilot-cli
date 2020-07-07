@@ -1,4 +1,4 @@
-## AWS Copilot CLI (beta)
+## AWS Copilot CLI (preview)
 ###### _Develop, Release and Operate Container Apps on AWS._
 
 [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
