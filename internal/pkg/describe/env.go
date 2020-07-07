@@ -44,7 +44,7 @@ type EnvDescriber struct {
 	svcs            []*config.Service
 	enableResources bool
 
-	store          storeSvc
+	store          configStoreSvc
 	rgClient       resourceGroupsClient
 	stackDescriber stackAndResourcesDescriber
 }

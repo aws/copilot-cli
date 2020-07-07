@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -58,7 +57,7 @@ func TestWebServiceURI_String(t *testing.T) {
 }
 
 type webSvcDescriberMocks struct {
-	storeSvc     *mocks.MockstoreSvc
+	storeSvc     *mocks.MockdeployStoreSvc
 	svcDescriber *mocks.MocksvcDescriber
 }
 
@@ -177,15 +176,6 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		prodSvcPath      = "*"
 	)
 	mockErr := errors.New("some error")
-	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
-	testEnvironment := config.Environment{
-		App:  testApp,
-		Name: testEnv,
-	}
-	prodEnvironment := config.Environment{
-		App:  testApp,
-		Name: prodEnv,
-	}
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
@@ -197,17 +187,15 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to list environment": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return(nil, mockErr),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("list environments: some error"),
+			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve URI": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
 			},
@@ -216,9 +204,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve service deployment configuration": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -240,9 +226,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -264,36 +248,11 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
 		},
-		"skip if not deployed": {
-			shouldOutputResources: true,
-			setupMocks: func(m webSvcDescriberMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockNotExistErr),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockNotExistErr),
-				)
-			},
-			wantedWebSvc: &webSvcDesc{
-				Service:          testSvc,
-				Type:             "",
-				App:              testApp,
-				Configurations:   []*ServiceConfig(nil),
-				Routes:           []*WebServiceRoute(nil),
-				ServiceDiscovery: []*ServiceDiscovery(nil),
-				Variables:        []*EnvVars(nil),
-				Resources:        make(map[string][]*CfnResource),
-			},
-		},
 		"success": {
 			shouldOutputResources: true,
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-						&prodEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
 
 					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
@@ -414,7 +373,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockstoreSvc(ctrl)
+			mockStore := mocks.NewMockdeployStoreSvc(ctrl)
 			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := webSvcDescriberMocks{
 				storeSvc:     mockStore,
