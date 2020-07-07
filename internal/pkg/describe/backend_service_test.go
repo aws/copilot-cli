@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -19,7 +18,7 @@ import (
 )
 
 type backendSvcDescriberMocks struct {
-	storeSvc     *mocks.MockstoreSvc
+	storeSvc     *mocks.MockdeployStoreSvc
 	svcDescriber *mocks.MocksvcDescriber
 }
 
@@ -33,15 +32,6 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		prodSvcPath = "*"
 	)
 	mockErr := errors.New("some error")
-	mockNotExistErr := awserr.New("ValidationError", "Stack with id mockID does not exist", nil)
-	testEnvironment := config.Environment{
-		App:  testApp,
-		Name: testEnv,
-	}
-	prodEnvironment := config.Environment{
-		App:  testApp,
-		Name: prodEnv,
-	}
 	testCases := map[string]struct {
 		shouldOutputResources bool
 
@@ -53,17 +43,15 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to list environment": {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return(nil, mockErr),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("list environments for application phonetool: some error"),
+			wantedError: fmt.Errorf("list deployed environments for application phonetool: some error"),
 		},
 		"return error if fail to retrieve service deployment configuration": {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
@@ -72,9 +60,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
@@ -86,35 +72,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
-		"skip if not deployed": {
-			shouldOutputResources: true,
-			setupMocks: func(m backendSvcDescriberMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(nil, mockNotExistErr),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockNotExistErr),
-				)
-			},
-			wantedBackendSvc: &backendSvcDesc{
-				Service:          testSvc,
-				Type:             "",
-				App:              testApp,
-				Configurations:   []*ServiceConfig(nil),
-				ServiceDiscovery: []*ServiceDiscovery(nil),
-				Variables:        []*EnvVars(nil),
-				Resources:        make(map[string][]*CfnResource),
-			},
-		},
 		"success": {
 			shouldOutputResources: true,
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironments(testApp).Return([]*config.Environment{
-						&testEnvironment,
-						&prodEnvironment,
-					}, nil),
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
 
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "5000",
@@ -213,7 +175,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockstoreSvc(ctrl)
+			mockStore := mocks.NewMockdeployStoreSvc(ctrl)
 			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := backendSvcDescriberMocks{
 				storeSvc:     mockStore,

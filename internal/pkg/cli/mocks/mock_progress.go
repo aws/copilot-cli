@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // Mockprogress is a mock of progress interface

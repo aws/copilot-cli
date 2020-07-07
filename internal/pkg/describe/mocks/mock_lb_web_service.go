@@ -5,39 +5,38 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
-// MockstoreSvc is a mock of storeSvc interface
-type MockstoreSvc struct {
+// MockconfigStoreSvc is a mock of configStoreSvc interface
+type MockconfigStoreSvc struct {
 	ctrl     *gomock.Controller
-	recorder *MockstoreSvcMockRecorder
+	recorder *MockconfigStoreSvcMockRecorder
 }
 
-// MockstoreSvcMockRecorder is the mock recorder for MockstoreSvc
-type MockstoreSvcMockRecorder struct {
-	mock *MockstoreSvc
+// MockconfigStoreSvcMockRecorder is the mock recorder for MockconfigStoreSvc
+type MockconfigStoreSvcMockRecorder struct {
+	mock *MockconfigStoreSvc
 }
 
-// NewMockstoreSvc creates a new mock instance
-func NewMockstoreSvc(ctrl *gomock.Controller) *MockstoreSvc {
-	mock := &MockstoreSvc{ctrl: ctrl}
-	mock.recorder = &MockstoreSvcMockRecorder{mock}
+// NewMockconfigStoreSvc creates a new mock instance
+func NewMockconfigStoreSvc(ctrl *gomock.Controller) *MockconfigStoreSvc {
+	mock := &MockconfigStoreSvc{ctrl: ctrl}
+	mock.recorder = &MockconfigStoreSvcMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockstoreSvc) EXPECT() *MockstoreSvcMockRecorder {
+func (m *MockconfigStoreSvc) EXPECT() *MockconfigStoreSvcMockRecorder {
 	return m.recorder
 }
 
 // GetEnvironment mocks base method
-func (m *MockstoreSvc) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+func (m *MockconfigStoreSvc) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
 	ret0, _ := ret[0].(*config.Environment)
@@ -46,13 +45,13 @@ func (m *MockstoreSvc) GetEnvironment(appName, environmentName string) (*config.
 }
 
 // GetEnvironment indicates an expected call of GetEnvironment
-func (mr *MockstoreSvcMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+func (mr *MockconfigStoreSvcMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockstoreSvc)(nil).GetEnvironment), appName, environmentName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockconfigStoreSvc)(nil).GetEnvironment), appName, environmentName)
 }
 
 // ListEnvironments mocks base method
-func (m *MockstoreSvc) ListEnvironments(appName string) ([]*config.Environment, error) {
+func (m *MockconfigStoreSvc) ListEnvironments(appName string) ([]*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEnvironments", appName)
 	ret0, _ := ret[0].([]*config.Environment)
@@ -61,9 +60,47 @@ func (m *MockstoreSvc) ListEnvironments(appName string) ([]*config.Environment, 
 }
 
 // ListEnvironments indicates an expected call of ListEnvironments
-func (mr *MockstoreSvcMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+func (mr *MockconfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockstoreSvc)(nil).ListEnvironments), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockconfigStoreSvc)(nil).ListEnvironments), appName)
+}
+
+// MockdeployStoreSvc is a mock of deployStoreSvc interface
+type MockdeployStoreSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeployStoreSvcMockRecorder
+}
+
+// MockdeployStoreSvcMockRecorder is the mock recorder for MockdeployStoreSvc
+type MockdeployStoreSvcMockRecorder struct {
+	mock *MockdeployStoreSvc
+}
+
+// NewMockdeployStoreSvc creates a new mock instance
+func NewMockdeployStoreSvc(ctrl *gomock.Controller) *MockdeployStoreSvc {
+	mock := &MockdeployStoreSvc{ctrl: ctrl}
+	mock.recorder = &MockdeployStoreSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdeployStoreSvc) EXPECT() *MockdeployStoreSvcMockRecorder {
+	return m.recorder
+}
+
+// ListEnvironmentsDeployedTo mocks base method
+func (m *MockdeployStoreSvc) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironmentsDeployedTo", appName, svcName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironmentsDeployedTo indicates an expected call of ListEnvironmentsDeployedTo
+func (mr *MockdeployStoreSvcMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockdeployStoreSvc)(nil).ListEnvironmentsDeployedTo), appName, svcName)
 }
 
 // MocksvcDescriber is a mock of svcDescriber interface
