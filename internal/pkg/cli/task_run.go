@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -195,7 +194,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	if err := o.createAndUpdateTaskResources(); err != nil {
+	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
 
@@ -208,7 +207,7 @@ func (o *runTaskOpts) Execute() error {
 		o.image = fmt.Sprintf(fmtImageURL, uri, o.imageTag)
 
 		// update image to stack
-		if err := o.createAndUpdateTaskResources(); err != nil {
+		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
 	}
@@ -218,11 +217,11 @@ func (o *runTaskOpts) Execute() error {
 
 func (o *runTaskOpts) getCluster() (string, error) {
 	if o.env == config.EnvNameNone {
-		clusters, err := o.ecsGetter.DefaultClusters()
+		cluster, err := o.ecsGetter.DefaultCluster()
 		if err != nil {
 			return "", fmt.Errorf("get default cluster: %w", err)
 		}
-		return clusters[0], nil
+		return cluster, nil
 	}
 
 	clusters, err := o.resourceGetter.GetResourcesByTags(clusterResourceType, map[string]string{
@@ -231,9 +230,12 @@ func (o *runTaskOpts) getCluster() (string, error) {
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("get cluster: %w", err)
+		return "", fmt.Errorf("get cluster by env %s: %w", o.env, err)
 	}
 
+	if len(clusters) == 0 {
+		return "", fmt.Errorf("no cluster found under env %s in app %s", o.env, o.AppName())
+	}
 	return clusters[0], nil
 }
 
@@ -277,9 +279,31 @@ func (o *runTaskOpts) getNetworkConfig() error {
 	return nil
 }
 
-func (o *runTaskOpts) createAndUpdateTaskResources() error {
+func (o *runTaskOpts) deployTaskResources() error {
 	o.spinner.Start(fmt.Sprintf("Deploying resources for task %s", color.HighlightUserInput(o.groupName)))
-	if err := o.resourceDeployer.DeployTask(&deploy.CreateTaskResourcesInput{
+	if err := o.deploy(); err != nil {
+		var errChangeSetEmpty *awscfn.ErrChangeSetEmpty
+		if !errors.As(err, &errChangeSetEmpty) {
+			o.spinner.Stop(log.Serrorln("Failed to deploy task resources."))
+			return fmt.Errorf("failed to deploy resources for task %s: %w", o.groupName, err)
+		}
+	}
+	o.spinner.Stop(log.Ssuccessln("Successfully deployed task resources."))
+	return nil
+}
+
+func (o *runTaskOpts) updateTaskResources() error {
+	o.spinner.Start(fmt.Sprintf("Updating image to task %s", color.HighlightUserInput(o.groupName)))
+	if err := o.deploy(); err != nil {
+		o.spinner.Stop(log.Serrorln("Failed to update task resources."))
+		return fmt.Errorf("failed to update resources for task %s: %w", o.groupName, err)
+	}
+	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
+	return nil
+}
+
+func (o *runTaskOpts) deploy() error {
+	return o.resourceDeployer.DeployTask(&deploy.CreateTaskResourcesInput{
 		Name:     o.groupName,
 		Cpu:      o.cpu,
 		Memory:   o.memory,
@@ -287,15 +311,7 @@ func (o *runTaskOpts) createAndUpdateTaskResources() error {
 		TaskRole: o.taskRole,
 		Command:  o.command,
 		EnvVars:  o.envVars,
-	}); err != nil {
-		var errChangeSetEmpty *awscfn.ErrChangeSetEmpty
-		if !errors.As(err, &errChangeSetEmpty) {
-			o.spinner.Stop(log.Serrorln("Failed to deploy task resources."))
-			return fmt.Errorf("failed to deploy resources for task %s: %w", o.groupName, err)
-		}
-	}
-	o.spinner.Stop("\n")
-	return nil
+	})
 }
 
 func (o *runTaskOpts) pushToECRRepo() (string, error) {
@@ -320,7 +336,7 @@ func (o *runTaskOpts) pushToECRRepo() (string, error) {
 	}
 
 	if err := o.docker.Push(uri, o.imageTag); err != nil {
-		return "", fmt.Errorf("push to repo: %w", err)
+		return "", fmt.Errorf("push to repo %s: %w", repoName, err)
 	}
 	return uri, nil
 }
@@ -428,17 +444,17 @@ Run a task with environment variables.
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
-	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", appFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", envFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.subnets, subnetFlag, nil, subnetFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringVar(&vars.command, commandsFlag, "", commandsFlagDescription)
+	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
 
 	return cmd
 }

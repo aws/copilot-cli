@@ -333,7 +333,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedError    error
-		wantedClusters []string
+		wantedClusters string
 	}{
 		"get default clusters success": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -353,7 +353,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 					}, nil)
 			},
 
-			wantedClusters: []string{"arn:aws:ecs:us-east-1:0123456:cluster/cluster1", "arn:aws:ecs:us-east-1:0123456:cluster/cluster2"},
+			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster1",
 		},
 		"failed to get default clusters": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -361,7 +361,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 					DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(nil, errors.New("error"))
 			},
-			wantedError: fmt.Errorf("get default clusters: %s", "error"),
+			wantedError: fmt.Errorf("get default cluster: %s", "error"),
 		},
 	}
 
@@ -376,7 +376,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 			ecs := ECS{
 				client: mockECSClient,
 			}
-			clusters, err := ecs.DefaultClusters()
+			clusters, err := ecs.DefaultCluster()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {

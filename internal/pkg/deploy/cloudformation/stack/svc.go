@@ -16,6 +16,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+const (
+	logRetention = "30"
+)
+
 // Template rendering configuration common across services.
 const (
 	svcParamsTemplatePath = "services/params.json.tmpl"
@@ -96,7 +100,7 @@ func (s *svc) Parameters() []*cloudformation.Parameter {
 		},
 		{
 			ParameterKey:   aws.String(ServiceLogRetentionParamKey),
-			ParameterValue: aws.String("30"),
+			ParameterValue: aws.String(logRetention),
 		},
 		{
 			ParameterKey:   aws.String(ServiceAddonsTemplateURLParamKey),

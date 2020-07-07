@@ -1306,19 +1306,19 @@ func (m *MockecsService) EXPECT() *MockecsServiceMockRecorder {
 	return m.recorder
 }
 
-// DefaultClusters mocks base method
-func (m *MockecsService) DefaultClusters() ([]string, error) {
+// DefaultCluster mocks base method
+func (m *MockecsService) DefaultCluster() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DefaultClusters")
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "DefaultCluster")
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DefaultClusters indicates an expected call of DefaultClusters
-func (mr *MockecsServiceMockRecorder) DefaultClusters() *gomock.Call {
+// DefaultCluster indicates an expected call of DefaultCluster
+func (mr *MockecsServiceMockRecorder) DefaultCluster() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultClusters", reflect.TypeOf((*MockecsService)(nil).DefaultClusters))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockecsService)(nil).DefaultCluster))
 }
 
 // Mocktemplater is a mock of templater interface

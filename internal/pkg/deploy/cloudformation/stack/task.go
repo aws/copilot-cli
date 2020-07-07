@@ -13,7 +13,6 @@ import (
 
 const (
 	taskTemplatePath = "task/cf.yml"
-	taskLogRetention = "30"
 
 	TaskNameParamKey         = "TaskName"
 	TaskCPUParamKey          = "TaskCPU"
@@ -86,7 +85,7 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(TaskLogRetentionParamKey),
-			ParameterValue: aws.String(taskLogRetention),
+			ParameterValue: aws.String(logRetention),
 		},
 		{
 			ParameterKey:   aws.String(TaskContainerImageParamKey),

@@ -43,7 +43,7 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// GetDefaultSubnetIDs finds the subnet IDs associated with the environment of the application; if env is a None env,
+// GetSubnetIDs finds the subnet IDs associated with the environment of the application; if env is a None env,
 // it finds the default subnet IDs.
 func (c *EC2) GetSubnetIDs(app string, env string) ([]string, error) {
 	if env == config.EnvNameNone {
@@ -63,7 +63,7 @@ func (c *EC2) GetSubnetIDs(app string, env string) ([]string, error) {
 	return c.getSubnetIDs(filters)
 }
 
-// GetDefaultSubnetIDs finds the security group IDs associated with the environment of the application;
+// GetSecurityGroups finds the security group IDs associated with the environment of the application;
 // if env is a None env, it returns nil
 func (c *EC2) GetSecurityGroups(app string, env string) ([]string, error) {
 	if env == config.EnvNameNone {
@@ -94,11 +94,11 @@ func (c *EC2) getSubnetIDs(filters []*ec2.Filter) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("find subnet IDs: %w", err)
+		return nil, fmt.Errorf("find subnets: %w", err)
 	}
 
 	if len(response.Subnets) == 0 {
-		return nil, errors.New("no subnet ID found")
+		return nil, errors.New("no subnets found")
 	}
 
 	subnetIDs := make([]string, len(response.Subnets))

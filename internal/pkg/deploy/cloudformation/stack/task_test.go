@@ -86,7 +86,7 @@ func TestTask_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(TaskLogRetentionParamKey),
-			ParameterValue: aws.String(taskLogRetention),
+			ParameterValue: aws.String(logRetention),
 		},
 		{
 			ParameterKey:   aws.String(TaskTaskRoleParamKey),

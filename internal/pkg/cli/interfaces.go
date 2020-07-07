@@ -144,7 +144,7 @@ type cwlogService interface {
 }
 
 type ecsService interface {
-	DefaultClusters() ([]string, error)
+	DefaultCluster() (string, error)
 }
 
 type templater interface {

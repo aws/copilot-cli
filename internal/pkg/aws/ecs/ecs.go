@@ -182,14 +182,14 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 }
 
 // DefaultClusters returns the default clusters in the account and region
-func (e *ECS) DefaultClusters() ([]string, error) {
+func (e *ECS) DefaultCluster() (string, error) {
 	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{})
 	if err != nil {
-		return nil, fmt.Errorf("get default clusters: %w", err)
+		return "", fmt.Errorf("get default cluster: %w", err)
 	}
 
 	if len(resp.Clusters) == 0 {
-		return nil, errors.New("no default cluster is found")
+		return "", errors.New("no default cluster is found")
 	}
 
 	clusters := make([]string, len(resp.Clusters))
@@ -197,7 +197,7 @@ func (e *ECS) DefaultClusters() ([]string, error) {
 		clusters[idx] = aws.StringValue(cluster.ClusterArn)
 	}
 
-	return clusters, nil
+	return clusters[0], nil
 }
 
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
