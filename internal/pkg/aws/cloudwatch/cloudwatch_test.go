@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch/mocks"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -51,14 +52,14 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 		},
 		"errors if failed to get alarm names because of invalid ARN": {
 			setupMocks: func(m cloudWatchMocks) {
-				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{"badArn"}, nil)
+				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{Arn: "badArn"}}, nil)
 			},
 
 			wantErr: fmt.Errorf("parse alarm ARN badArn: arn: invalid prefix"),
 		},
 		"errors if failed to get alarm names because of bad ARN resource": {
 			setupMocks: func(m cloudWatchMocks) {
-				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{"arn:aws:cloudwatch:us-west-2:1234567890:alarm:badAlarm:Names"}, nil)
+				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{Arn: "arn:aws:cloudwatch:us-west-2:1234567890:alarm:badAlarm:Names"}}, nil)
 			},
 
 			wantErr: fmt.Errorf("cannot parse alarm ARN resource alarm:badAlarm:Names"),
@@ -66,7 +67,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 		"errors if failed to describe CloudWatch alarms": {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
-					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{mockAlarmArn}, nil),
+					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{Arn: mockAlarmArn}}, nil),
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
@@ -78,7 +79,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 		},
 		"return an empty array if no alarms found": {
 			setupMocks: func(m cloudWatchMocks) {
-				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{}, nil)
+				m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{}, nil)
 			},
 
 			wantAlarmStatus: []AlarmStatus{},
@@ -86,7 +87,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 		"success": {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
-					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{mockAlarmArn}, nil),
+					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{Arn: mockAlarmArn}}, nil),
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName"}),
@@ -119,7 +120,7 @@ func TestCloudWatch_GetAlarmsWithTags(t *testing.T) {
 		"success with pagination": {
 			setupMocks: func(m cloudWatchMocks) {
 				gomock.InOrder(
-					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]string{mockArn1, mockArn2}, nil),
+					m.rg.EXPECT().GetResourcesByTags(cloudwatchResourceType, gomock.Eq(testTags)).Return([]*rg.Resource{{Arn: mockArn1}, {Arn: mockArn2}}, nil),
 					m.cw.EXPECT().DescribeAlarms(&cloudwatch.DescribeAlarmsInput{
 						NextToken:  nil,
 						AlarmNames: aws.StringSlice([]string{"mockAlarmName1", "mockAlarmName2"}),

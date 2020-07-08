@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -19,7 +19,7 @@ import (
 
 const (
 	resourceQueryType      = "TAG_FILTERS_1_0"
-	cloudwatchResourceType = "AWS::CloudWatch::Alarm"
+	cloudwatchResourceType = "cloudwatch:alarm"
 	compositeAlarmType     = "Composite"
 	metricAlarmType        = "Metric"
 )
@@ -29,7 +29,7 @@ type api interface {
 }
 
 type resourceGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
 // CloudWatch wraps an Amazon CloudWatch client.
@@ -52,7 +52,7 @@ type AlarmStatus struct {
 func New(s *session.Session) *CloudWatch {
 	return &CloudWatch{
 		cwClient: cloudwatch.New(s),
-		rgClient: resourcegroups.New(s),
+		rgClient: rg.New(s),
 	}
 }
 
@@ -60,13 +60,13 @@ func New(s *session.Session) *CloudWatch {
 func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, error) {
 	var alarmNames []*string
 
-	arns, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
+	resources, err := cw.rgClient.GetResourcesByTags(cloudwatchResourceType, tags)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, arn := range arns {
-		name, err := cw.getAlarmName(arn)
+	for _, resource := range resources {
+		name, err := cw.getAlarmName(resource.Arn)
 		if err != nil {
 			return nil, err
 		}

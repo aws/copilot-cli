@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
@@ -34,10 +35,10 @@ func (m *MockresourceGetter) EXPECT() *MockresourceGetterMockRecorder {
 }
 
 // GetResourcesByTags mocks base method
-func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
+func (m *MockresourceGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]*resourcegroups.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -48,31 +49,31 @@ func (mr *MockresourceGetterMockRecorder) GetResourcesByTags(resourceType, tags 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGetter)(nil).GetResourcesByTags), resourceType, tags)
 }
 
-// MockconfigStoreClient is a mock of configStoreClient interface
-type MockconfigStoreClient struct {
+// MockConfigStoreClient is a mock of ConfigStoreClient interface
+type MockConfigStoreClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockconfigStoreClientMockRecorder
+	recorder *MockConfigStoreClientMockRecorder
 }
 
-// MockconfigStoreClientMockRecorder is the mock recorder for MockconfigStoreClient
-type MockconfigStoreClientMockRecorder struct {
-	mock *MockconfigStoreClient
+// MockConfigStoreClientMockRecorder is the mock recorder for MockConfigStoreClient
+type MockConfigStoreClientMockRecorder struct {
+	mock *MockConfigStoreClient
 }
 
-// NewMockconfigStoreClient creates a new mock instance
-func NewMockconfigStoreClient(ctrl *gomock.Controller) *MockconfigStoreClient {
-	mock := &MockconfigStoreClient{ctrl: ctrl}
-	mock.recorder = &MockconfigStoreClientMockRecorder{mock}
+// NewMockConfigStoreClient creates a new mock instance
+func NewMockConfigStoreClient(ctrl *gomock.Controller) *MockConfigStoreClient {
+	mock := &MockConfigStoreClient{ctrl: ctrl}
+	mock.recorder = &MockConfigStoreClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockconfigStoreClient) EXPECT() *MockconfigStoreClientMockRecorder {
+func (m *MockConfigStoreClient) EXPECT() *MockConfigStoreClientMockRecorder {
 	return m.recorder
 }
 
 // GetEnvironment mocks base method
-func (m *MockconfigStoreClient) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
+func (m *MockConfigStoreClient) GetEnvironment(appName, environmentName string) (*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEnvironment", appName, environmentName)
 	ret0, _ := ret[0].(*config.Environment)
@@ -81,13 +82,13 @@ func (m *MockconfigStoreClient) GetEnvironment(appName, environmentName string) 
 }
 
 // GetEnvironment indicates an expected call of GetEnvironment
-func (mr *MockconfigStoreClientMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
+func (mr *MockConfigStoreClientMockRecorder) GetEnvironment(appName, environmentName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockconfigStoreClient)(nil).GetEnvironment), appName, environmentName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnvironment", reflect.TypeOf((*MockConfigStoreClient)(nil).GetEnvironment), appName, environmentName)
 }
 
 // ListEnvironments mocks base method
-func (m *MockconfigStoreClient) ListEnvironments(appName string) ([]*config.Environment, error) {
+func (m *MockConfigStoreClient) ListEnvironments(appName string) ([]*config.Environment, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEnvironments", appName)
 	ret0, _ := ret[0].([]*config.Environment)
@@ -96,13 +97,13 @@ func (m *MockconfigStoreClient) ListEnvironments(appName string) ([]*config.Envi
 }
 
 // ListEnvironments indicates an expected call of ListEnvironments
-func (mr *MockconfigStoreClientMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
+func (mr *MockConfigStoreClientMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockconfigStoreClient)(nil).ListEnvironments), appName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreClient)(nil).ListEnvironments), appName)
 }
 
 // GetService mocks base method
-func (m *MockconfigStoreClient) GetService(appName, svcName string) (*config.Service, error) {
+func (m *MockConfigStoreClient) GetService(appName, svcName string) (*config.Service, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetService", appName, svcName)
 	ret0, _ := ret[0].(*config.Service)
@@ -111,7 +112,7 @@ func (m *MockconfigStoreClient) GetService(appName, svcName string) (*config.Ser
 }
 
 // GetService indicates an expected call of GetService
-func (mr *MockconfigStoreClientMockRecorder) GetService(appName, svcName interface{}) *gomock.Call {
+func (mr *MockConfigStoreClientMockRecorder) GetService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetService", reflect.TypeOf((*MockconfigStoreClient)(nil).GetService), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetService", reflect.TypeOf((*MockConfigStoreClient)(nil).GetService), appName, svcName)
 }

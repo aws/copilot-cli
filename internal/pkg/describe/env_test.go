@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -109,13 +110,13 @@ func TestEnvDescriber_Describe(t *testing.T) {
 						Return(nil, mockError),
 				)
 			},
-			wantedError: fmt.Errorf("get AWS::CloudFormation::Stack resources for env testEnv: some error"),
+			wantedError: fmt.Errorf("get cloudformation:stack resources for env testEnv: some error"),
 		},
 		"error if getStackName fails because can't parse resource ARN": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
-						unparsableARN,
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
+						{Arn: unparsableARN},
 					}, nil),
 				)
 			},
@@ -124,8 +125,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		"error if getStackName fails because resource ARN can't be split": {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
-						noSlashARN,
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
+						{Arn: noSlashARN},
 					}, nil),
 				)
 			},
@@ -135,9 +136,9 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: false,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
-						testARN1,
-						testARN2,
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
+						{Arn: testARN1},
+						{Arn: testARN2},
 					}, nil),
 					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
 						Tags: stackTags,
@@ -154,9 +155,9 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
-					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]string{
-						testARN1,
-						testARN2,
+					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
+						{Arn: testARN1},
+						{Arn: testARN2},
 					}, nil),
 					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
 						Tags: stackTags,
