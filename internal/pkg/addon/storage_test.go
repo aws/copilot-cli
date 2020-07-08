@@ -185,3 +185,104 @@ func TestnewLSI(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildPartitionKey(t *testing.T) {
+	wantDataType := "S"
+	wantName := "userID"
+	testCases := map[string]struct {
+		input            string
+		wantPartitionKey string
+		wantAttributes   []DDBAttribute
+		wantError        error
+	}{
+		"good case": {
+			input:            "userID:S",
+			wantPartitionKey: wantName,
+			wantAttributes: []DDBAttribute{
+				{
+					DataType: &wantDataType,
+					Name:     &wantName,
+				},
+			},
+			wantError: nil,
+		},
+		"error getting attribute": {
+			input:     "userID",
+			wantError: fmt.Errorf("parse attribute from key: userID"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			props := DynamoDBProps{}
+			err := props.BuildPartitionKey(tc.input)
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantPartitionKey, *props.PartitionKey)
+				require.Equal(t, tc.wantAttributes, props.Attributes)
+			}
+		})
+	}
+}
+
+func TestBuildSortKey(t *testing.T) {
+	wantDataType := "S"
+	wantName := "userID"
+	testCases := map[string]struct {
+		inSortKey      string
+		inNoSort       bool
+		wantSortKey    string
+		wantHasSortKey bool
+		wantAttributes []DDBAttribute
+		wantError      error
+	}{
+		"with sort key": {
+			inSortKey:   "userID:S",
+			inNoSort:    false,
+			wantSortKey: wantName,
+			wantAttributes: []DDBAttribute{
+				{
+					DataType: &wantDataType,
+					Name:     &wantName,
+				},
+			},
+			wantHasSortKey: true,
+			wantError:      nil,
+		},
+		"with noSort specified": {
+			inNoSort:       true,
+			inSortKey:      "userID:S",
+			wantSortKey:    "",
+			wantHasSortKey: false,
+		},
+		"no sort key without noSort specified": {
+			inNoSort:       false,
+			inSortKey:      "",
+			wantSortKey:    "",
+			wantHasSortKey: false,
+		},
+		"error getting attribute": {
+			inSortKey: "userID",
+			wantError: fmt.Errorf("parse attribute from key: userID"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			props := DynamoDBProps{}
+			got, err := props.BuildSortKey(tc.inNoSort, tc.inSortKey)
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantAttributes, props.Attributes)
+				require.Equal(t, tc.wantHasSortKey, got)
+				if tc.wantSortKey == "" {
+					require.Nil(t, props.SortKey)
+				} else {
+					require.Equal(t, tc.wantSortKey, *props.SortKey)
+				}
+			}
+		})
+	}
+}

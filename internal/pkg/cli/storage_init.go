@@ -185,6 +185,13 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
+	if err := o.validateDDB(); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (o *initStorageOpts) validateDDB() error {
 	if o.partitionKey != "" {
 		if err := validateKey(o.partitionKey); err != nil {
 			return err
@@ -210,9 +217,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 
-	return nil
 }
-
 func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageSvc(); err != nil {
 		return err
