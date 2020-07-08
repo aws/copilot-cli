@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/addons"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 var (
@@ -247,7 +248,7 @@ func validateKey(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	attr, err := getAttrFromKey(s)
+	attr, err := addons.DDBAttributeFromKey(s)
 	if err != nil {
 		return errDDBAttributeBadFormat
 	}

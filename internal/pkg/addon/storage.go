@@ -5,7 +5,11 @@
 package addon
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 const (
@@ -108,4 +112,87 @@ func NewS3(input *S3Props) *S3 {
 
 		parser: template.New(),
 	}
+}
+
+// BuildPartitionKey generates the properties required to specify the partition key
+// based on customer inputs.
+func (p *DynamoDBProps) BuildPartitionKey(partitionKey string) error {
+	partitionKeyAttribute, err := DDBAttributeFromKey(partitionKey)
+	if err != nil {
+		return err
+	}
+	p.Attributes = append(p.Attributes, partitionKeyAttribute)
+	p.PartitionKey = partitionKeyAttribute.Name
+	return nil
+}
+
+// BuildSortKey generates the correct property configuration based on customer inputs.
+func (p *DynamoDBProps) BuildSortKey(noSort bool, sortKey string) (bool, error) {
+	if noSort || sortKey == "" {
+		return false, nil
+	}
+	sortKeyAttribute, err := DDBAttributeFromKey(sortKey)
+	if err != nil {
+		return false, err
+	}
+	p.Attributes = append(p.Attributes, sortKeyAttribute)
+	p.SortKey = sortKeyAttribute.Name
+	return true, nil
+}
+
+// BuildLocalSecondaryIndex generates the correct LocalSecondaryIndex property configuration
+// based on customer input to ensure that the CF template is valid.
+func (p *DynamoDBProps) BuildLocalSecondaryIndex(noSort bool, noLSI bool, lsiSorts []string) (bool, error) {
+	if p.PartitionKey == nil {
+		return false, fmt.Errorf("partition key not specified")
+	}
+	if noSort || noLSI || len(lsiSorts) == 0 {
+		p.HasLSI = false
+		return false, nil
+	}
+	for _, att := range lsiSorts {
+		currAtt, err := DDBAttributeFromKey(att)
+		if err != nil {
+			return false, err
+		}
+		p.Attributes = append(p.Attributes, currAtt)
+	}
+	p.HasLSI = true
+	lsiConfig, err := newLSI(*p.PartitionKey, lsiSorts)
+	if err != nil {
+		return false, err
+	}
+	p.LSIs = lsiConfig
+	return true, nil
+}
+
+var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
+
+// DDBAttributeFromKey parses the DDB type and name out of keys specified in the form "Email:S"
+func DDBAttributeFromKey(input string) (DDBAttribute, error) {
+	attrs := regexpMatchAttribute.FindStringSubmatch(input)
+	if len(attrs) == 0 {
+		return DDBAttribute{}, fmt.Errorf("parse attribute from key: %s", input)
+	}
+	upperString := strings.ToUpper(attrs[2])
+	return DDBAttribute{
+		Name:     &attrs[1],
+		DataType: &upperString,
+	}, nil
+}
+
+func newLSI(partitionKey string, lsis []string) ([]DDBLocalSecondaryIndex, error) {
+	var output []DDBLocalSecondaryIndex
+	for _, lsi := range lsis {
+		lsiAttr, err := DDBAttributeFromKey(lsi)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, DDBLocalSecondaryIndex{
+			PartitionKey: &partitionKey,
+			SortKey:      lsiAttr.Name,
+			Name:         lsiAttr.Name,
+		})
+	}
+	return output, nil
 }

@@ -7,6 +7,7 @@ package addon
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
@@ -103,6 +104,84 @@ func TestS3_MarshalBinary(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.wantedError, err)
 			require.Equal(t, tc.wantedBinary, b)
+		})
+	}
+}
+
+func TestDDBAttributeFromKey(t *testing.T) {
+	testCases := map[string]struct {
+		input     string
+		wantName  string
+		wantType  string
+		wantError error
+	}{
+		"good case": {
+			input:     "userID:S",
+			wantName:  "userID",
+			wantType:  "S",
+			wantError: nil,
+		},
+		"bad case": {
+			input:     "userID",
+			wantError: fmt.Errorf("parse attribute from key: %s", "userID"),
+		},
+		"non-ideal input": {
+			input:     "userId_cool-table.d:binary",
+			wantName:  "userId_cool-table.d",
+			wantType:  "B",
+			wantError: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := DDBAttributeFromKey(tc.input)
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantName, *got.Name)
+				require.Equal(t, tc.wantType, *got.DataType)
+			}
+		})
+	}
+}
+
+func TestnewLSI(t *testing.T) {
+	testPartitionKey := "Email"
+	testSortKey := "Goodness"
+	testCases := map[string]struct {
+		inPartitionKey string
+		inLSIs         []string
+		wantedLSI      []DDBLocalSecondaryIndex
+		wantError      error
+	}{
+		"happy case": {
+			inPartitionKey: "Email",
+			inLSIs:         []string{"Goodness:N"},
+			wantedLSI: []DDBLocalSecondaryIndex{
+				{
+					Name:         &testSortKey,
+					PartitionKey: &testPartitionKey,
+					SortKey:      &testSortKey,
+				},
+			},
+		},
+		"no error getting attribute": {
+			inPartitionKey: "Email",
+			inLSIs:         []string{"goodness"},
+			wantError:      fmt.Errorf("parse attribute from key: goodness"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got, err := newLSI(tc.inPartitionKey, tc.inLSIs)
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.Nil(t, err)
+				require.Equal(t, tc.wantedLSI, got)
+			}
 		})
 	}
 }

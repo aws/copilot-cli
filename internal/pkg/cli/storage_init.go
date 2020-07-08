@@ -6,8 +6,6 @@ package cli
 import (
 	"encoding"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
 	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
@@ -348,7 +346,6 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	}
 	if response == false {
 		o.noSort = true
-		o.noLSI = true
 		return nil
 	}
 
@@ -437,7 +434,6 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 			return fmt.Errorf("confirm add alternate sort key: %w", err)
 		}
 	}
-	return nil
 }
 
 func (o *initStorageOpts) validateServiceName() error {
@@ -456,20 +452,6 @@ func (o *initStorageOpts) validateServiceName() error {
 func (o *initStorageOpts) Execute() error {
 
 	return o.createAddon()
-}
-
-var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
-
-// getAttFromKey parses the DDB type and name out of keys specified in the form "Email:S"
-func getAttrFromKey(input string) (attribute, error) {
-	attrs := regexpMatchAttribute.FindStringSubmatch(input)
-	if len(attrs) == 0 {
-		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
-	}
-	return attribute{
-		name:     attrs[1],
-		dataType: strings.ToUpper(attrs[2]),
-	}, nil
 }
 
 func (o *initStorageOpts) createAddon() error {
@@ -525,78 +507,29 @@ func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
 	}
 }
 
-func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
-	attr, err := getAttrFromKey(input)
-	if err != nil {
-		return nil, err
-	}
-	return &addon.DDBAttribute{
-		Name:     &attr.name,
-		DataType: &attr.dataType,
-	}, nil
-}
-
-func newLSI(partitionKey string, lsis []string) ([]addon.DDBLocalSecondaryIndex, error) {
-	var output []addon.DDBLocalSecondaryIndex
-	for _, lsi := range lsis {
-		lsiAttr, err := getAttrFromKey(lsi)
-		if err != nil {
-			return nil, err
-		}
-		output = append(output, addon.DDBLocalSecondaryIndex{
-			PartitionKey: &partitionKey,
-			SortKey:      &lsiAttr.name,
-			Name:         &lsiAttr.name,
-		})
-	}
-	return output, nil
-}
-
 func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
-	props := addon.DynamoDBProps{}
+	props := addon.DynamoDBProps{
+		StorageProps: &addon.StorageProps{
+			Name: o.storageName,
+		},
+	}
 
-	var attributes []addon.DDBAttribute
-	partKey, err := newDDBAttribute(o.partitionKey)
+	if err := props.BuildPartitionKey(o.partitionKey); err != nil {
+		return nil, err
+	}
+
+	hasSortKey, err := props.BuildSortKey(o.noSort, o.sortKey)
 	if err != nil {
 		return nil, err
 	}
-	props.PartitionKey = partKey.Name
-	attributes = append(attributes, *partKey)
 
-	ok := props.BuildSortKey(o.noSort, o.sortKey)
-	if !o.noSort {
-		sortKey, err := newDDBAttribute(o.sortKey)
+	if hasSortKey {
+		_, err := props.BuildLocalSecondaryIndex(o.noSort, o.noLSI, o.lsiSorts)
 		if err != nil {
 			return nil, err
 		}
-		attributes = append(attributes, *sortKey)
-		props.SortKey = sortKey.Name
-	}
-	for _, att := range o.lsiSorts {
-		currAtt, err := newDDBAttribute(att)
-		if err != nil {
-			return nil, err
-		}
-		attributes = append(attributes, *currAtt)
-	}
-	props.Attributes = attributes
-	// only configure LSI if we haven't specified the --no-lsi or --no-sort flag.
-	props.HasLSI = false
-	if !o.noLSI && !o.noSort {
-		props.HasLSI = true
-		lsiConfig, err := newLSI(
-			*partKey.Name,
-			o.lsiSorts,
-		)
-		if err != nil {
-			return nil, err
-		}
-		props.LSIs = lsiConfig
 	}
 
-	props.StorageProps = &addon.StorageProps{
-		Name: o.storageName,
-	}
 	return addon.NewDynamoDB(&props), nil
 }
 
