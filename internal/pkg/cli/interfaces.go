@@ -113,6 +113,10 @@ type store interface {
 	serviceStore
 }
 
+type deployedEnvironmentLister interface {
+	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
+}
+
 // Secretsmanager interface.
 
 type secretsManager interface {
@@ -345,6 +349,11 @@ type appEnvWithNoneSelector interface {
 type configSelector interface {
 	appEnvSelector
 	Service(prompt, help, app string) (string, error)
+}
+
+type deploySelector interface {
+	appSelector
+	ServiceEnvironment(prompt, help, app string) (svc string, env string, err error)
 }
 
 type wsSelector interface {

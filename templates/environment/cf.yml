@@ -361,7 +361,8 @@ Resources:
               "ecs:ListTaskDefinitionFamilies",
               "ecs:DescribeTaskDefinition",
               "ecs:ListTaskDefinitions",
-              "ecs:ListClusters"
+              "ecs:ListClusters",
+              "ecs:ListTagsForResource"
             ]
             Resource: "*"
           - Sid: CloudFormation

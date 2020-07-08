@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -33,6 +34,10 @@ type wsSvcLister interface {
 	ServiceNames() ([]string, error)
 }
 
+type deployedServiceLister interface {
+	ListDeployedServices(appName string, envName string) ([]string, error)
+}
+
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
@@ -49,6 +54,12 @@ type ConfigSelect struct {
 type WorkspaceSelect struct {
 	*Select
 	svcLister wsSvcLister
+}
+
+// DeploySelect is a service and environment selector from the deploy store.
+type DeploySelect struct {
+	*Select
+	svcLister deployedServiceLister
 }
 
 // NewSelect returns a selector that chooses applications or environments.
@@ -74,6 +85,66 @@ func NewWorkspaceSelect(prompt Prompter, store *config.Store, ws *workspace.Work
 		Select:    NewSelect(prompt, store),
 		svcLister: ws,
 	}
+}
+
+// NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
+func NewDeploySelect(prompt Prompter, configStore *config.Store, deployStore *deploy.Store) *DeploySelect {
+	return &DeploySelect{
+		Select:    NewSelect(prompt, configStore),
+		svcLister: deployStore,
+	}
+}
+
+// ServiceEnvironment fetches all deployed services and environments in an application and then
+// prompts the user to select one combination.
+func (s *DeploySelect) ServiceEnvironment(prompt, help, app string) (svc string, env string, err error) {
+	type svcEnv struct {
+		svcName string
+		envName string
+	}
+	envNames, err := s.retrieveEnvironments(app)
+	if err != nil {
+		return "", "", fmt.Errorf("list environments: %w", err)
+	}
+	svcEnvs := make(map[string]svcEnv)
+	var svcEnvNames []string
+	for _, envName := range envNames {
+		svcNames, err := s.svcLister.ListDeployedServices(app, envName)
+		if err != nil {
+			return "", "", fmt.Errorf("list deployed service for environment %s: %w", envName, err)
+		}
+		for _, svcName := range svcNames {
+			svcEnv := svcEnv{
+				svcName: svcName,
+				envName: envName,
+			}
+			svcEnvName := fmt.Sprintf("%s (%s)", svcName, envName)
+			svcEnvs[svcEnvName] = svcEnv
+			svcEnvNames = append(svcEnvNames, svcEnvName)
+		}
+	}
+	if len(svcEnvNames) == 0 {
+		return "", "", fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput(app))
+	}
+	// return if only one deployed service found
+	if len(svcEnvNames) == 1 {
+		svc = svcEnvs[svcEnvNames[0]].svcName
+		env = svcEnvs[svcEnvNames[0]].envName
+		log.Infof("Showing logs of service %s deployed in environment %s\n", color.HighlightUserInput(svc), color.HighlightUserInput(env))
+		return
+	}
+	svcEnvName, err := s.prompt.SelectOne(
+		prompt,
+		help,
+		svcEnvNames,
+	)
+	if err != nil {
+		return "", "", fmt.Errorf("select deployed services for application %s: %w", app, err)
+	}
+	svc = svcEnvs[svcEnvName].svcName
+	env = svcEnvs[svcEnvName].envName
+
+	return
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.

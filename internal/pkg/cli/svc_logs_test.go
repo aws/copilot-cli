@@ -133,7 +133,7 @@ func TestSvcLogs_Validate(t *testing.T) {
 						appName: tc.inputApp,
 					},
 				},
-				store:         mockstore,
+				configStore:   mockstore,
 				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
 			}
 
@@ -548,7 +548,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 						prompt:  mockPrompter,
 					},
 				},
-				store:         mockstore,
+				configStore:   mockstore,
 				sel:           mockSel,
 				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),

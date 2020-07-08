@@ -27,6 +27,7 @@ type api interface {
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
+	ListTagsForResource(input *ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error)
 }
 
 // ECS wraps an AWS ECS client.
@@ -104,6 +105,26 @@ func New(s *session.Session) *ECS {
 	return &ECS{
 		client: ecs.New(s),
 	}
+}
+
+// GetTags list the tags for an Amazon ECS resource given its ARN.
+func (e *ECS) GetTags(arn string) (map[string]string, error) {
+	resp, err := e.client.ListTagsForResource(&ecs.ListTagsForResourceInput{
+		ResourceArn: aws.String(arn),
+	})
+	if err != nil {
+		return nil, err
+	}
+	tags := make(map[string]string)
+	for _, tag := range resp.Tags {
+		if tag == nil {
+			continue
+		}
+		if tag.Key != nil && tag.Value != nil {
+			tags[*tag.Key] = *tag.Value
+		}
+	}
+	return tags, nil
 }
 
 // TaskDefinition calls ECS API and returns the task definition.

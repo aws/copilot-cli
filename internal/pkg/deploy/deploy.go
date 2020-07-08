@@ -6,9 +6,10 @@ package deploy
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -44,6 +45,10 @@ type resourceGetter interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
+type tagGetter interface {
+	GetTags(arn string) (map[string]string, error)
+}
+
 // ConfigStoreClient wraps config store methods utilized by deploy store.
 type ConfigStoreClient interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
@@ -53,10 +58,12 @@ type ConfigStoreClient interface {
 
 // Store fetches information on deployed services.
 type Store struct {
-	rgClient            resourceGetter
-	configStore         ConfigStoreClient
-	newRgClientFromIDs  func(string, string) error
-	newRgClientFromRole func(string, string) error
+	rgClient              resourceGetter
+	configStore           ConfigStoreClient
+	ecsClient             tagGetter
+	newClientFromIDs      func(string, string) error
+	newClientFromRole     func(string, string) error
+	newEcsServiceFromRole func(string, string) error
 }
 
 // NewStore returns a new store.
@@ -64,7 +71,7 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 	s := &Store{
 		configStore: store,
 	}
-	s.newRgClientFromIDs = func(appName, envName string) error {
+	s.newClientFromIDs = func(appName, envName string) error {
 		env, err := s.configStore.GetEnvironment(appName, envName)
 		if err != nil {
 			return fmt.Errorf("get environment config %s: %w", envName, err)
@@ -73,14 +80,16 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 		if err != nil {
 			return fmt.Errorf("create new session from env role: %w", err)
 		}
+		s.ecsClient = ecs.New(sess)
 		s.rgClient = rg.New(sess)
 		return nil
 	}
-	s.newRgClientFromRole = func(roleARN, region string) error {
+	s.newClientFromRole = func(roleARN, region string) error {
 		sess, err := session.NewProvider().FromRole(roleARN, region)
 		if err != nil {
 			return fmt.Errorf("create new session from env role: %w", err)
 		}
+		s.ecsClient = ecs.New(sess)
 		s.rgClient = rg.New(sess)
 		return nil
 	}
@@ -89,7 +98,7 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 
 // ListDeployedServices returns the names of deployed services in an environment part of an application.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	err := s.newRgClientFromIDs(appName, envName)
+	err := s.newClientFromIDs(appName, envName)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +111,7 @@ func (s *Store) ListDeployedServices(appName string, envName string) ([]string, 
 	}
 	svcs := make([]string, len(svcARNs))
 	for ind, svcARN := range svcARNs {
-		svcName, err := s.getServiceName(svcARN)
+		svcName, err := s.getServiceName(svcARN, appName, envName)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +132,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 	}
 	var envsWithDeployment []string
 	for _, env := range envs {
-		err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
+		err := s.newClientFromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +154,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 
 // IsDeployed returns whether a service is deployed in an environment or not.
 func (s *Store) IsDeployed(appName string, envName string, svcName string) (bool, error) {
-	err := s.newRgClientFromIDs(appName, envName)
+	err := s.newClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
 	}
@@ -163,17 +172,29 @@ func (s *Store) IsDeployed(appName string, envName string, svcName string) (bool
 	return false, nil
 }
 
+// // getServiceName gets the ECS service name given a specific ARN.
+// // For example: arn:aws:ecs:us-west-2:123456789012:service/my-app-test-Cluster-cdgG2k6XIBtM/my-app-test-my-svc-Service-WLYA7MGACV1F
+// // returns my-service
+// func (s *Store) getServiceName(svcARN string) (string, error) {
+// 	tags, err := s.ecsClient.GetTags(svcARN)
+// 	if err != nil {
+// 		return "", fmt.Errorf("get tags for ECS service: %w", err)
+// 	}
+// 	if _, ok := tags[ServiceTagKey]; !ok {
+// 		return "", fmt.Errorf("service with ARN %s is not tagged with %s", svcARN, ServiceTagKey)
+// 	}
+// 	return tags[ServiceTagKey], nil
+// }
+
 // getServiceName gets the ECS service name given a specific ARN.
-// For example: arn:aws:ecs:us-west-2:123456789012:service/my-http-service
-// returns my-http-service
-func (s *Store) getServiceName(svcARN string) (string, error) {
-	resp, err := arn.Parse(svcARN)
-	if err != nil {
-		return "", fmt.Errorf("parse service ARN %s: %w", svcARN, err)
+// For example: arn:aws:ecs:us-west-2:123456789012:service/my-app-test-Cluster-cdgG2k6XIBtM/my-app-test-my-svc-Service-WLYA7MGACV1F
+// returns my-service
+func (s *Store) getServiceName(svcARN, appName, envName string) (string, error) {
+	appEnvName := fmt.Sprintf("%s-%s", appName, envName)
+	re := regexp.MustCompile(fmt.Sprintf("%s-[a-zA-Z0-9-]+-Service", appEnvName))
+	match := re.FindAllString(svcARN, -1)
+	if len(match) != 1 {
+		return "", fmt.Errorf("cannot parse service ARN %s to get service name", svcARN)
 	}
-	resource := strings.Split(resp.Resource, "/")
-	if len(resource) != 2 {
-		return "", fmt.Errorf(`cannot parse service ARN resource "%s"`, resp.Resource)
-	}
-	return resource[1], nil
+	return strings.TrimSuffix(strings.TrimPrefix(match[0], appEnvName+"-"), "-Service"), nil
 }
