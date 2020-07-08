@@ -28,7 +28,7 @@ Read more about the Copilot charter and tenets [here](CHARTER.md).
 ### Homebrew 🍻
 
 ```sh
-brew install aws/tap/copilot-cli
+$ brew install aws/tap/copilot-cli
 ```
 
 ### Manually 
