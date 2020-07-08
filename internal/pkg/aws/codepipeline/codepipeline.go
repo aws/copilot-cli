@@ -200,7 +200,7 @@ func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string
 	}
 
 	for _, resource := range resources {
-		name, err := c.getPipelineName(resource.Arn)
+		name, err := c.getPipelineName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}

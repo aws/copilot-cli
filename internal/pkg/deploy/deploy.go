@@ -102,7 +102,7 @@ func (s *Store) ListDeployedServices(appName string, envName string) ([]string, 
 	for ind, resource := range resources {
 		svcName := resource.Tags[ServiceTagKey]
 		if svcName == "" {
-			return nil, fmt.Errorf("service with ARN %s is not tagged with %s", resource.Arn, ServiceTagKey)
+			return nil, fmt.Errorf("service with ARN %s is not tagged with %s", resource.ARN, ServiceTagKey)
 		}
 		svc, err := s.configStore.GetService(appName, svcName)
 		if err != nil {

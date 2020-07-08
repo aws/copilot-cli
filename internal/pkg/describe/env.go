@@ -138,7 +138,7 @@ func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
 
 	stacksOfEnvironment := make(map[string]bool)
 	for _, resource := range resources {
-		stack, err := e.getStackName(resource.Arn)
+		stack, err := e.getStackName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}

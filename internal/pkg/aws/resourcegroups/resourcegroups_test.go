@@ -68,7 +68,7 @@ func TestResourceGroups_GetResourcesByTags(t *testing.T) {
 			},
 			expectedOut: []*Resource{
 				{
-					Arn:  testArn,
+					ARN:  testArn,
 					Tags: testTags,
 				},
 			},
@@ -119,11 +119,11 @@ func TestResourceGroups_GetResourcesByTags(t *testing.T) {
 			},
 			expectedOut: []*Resource{
 				{
-					Arn:  mockArn1,
+					ARN:  mockArn1,
 					Tags: testTags,
 				},
 				{
-					Arn:  mockArn2,
+					ARN:  mockArn2,
 					Tags: testTags,
 				},
 			},

@@ -262,7 +262,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 	mockPipelineName := "pipeline-dinder-badgoose-repo"
 	mockError := errors.New("mockError")
 	mockOutput := []*rg.Resource{
-		{Arn: "arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName},
+		{ARN: "arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName},
 	}
 	testTags := map[string]string{
 		"copilot-application": mockProjectName,
@@ -295,7 +295,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 		"should return error for bad arns": {
 			inProjectName: mockProjectName,
 			callMocks: func(m codepipelineMocks) {
-				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]*rg.Resource{{Arn: badArn}}, nil)
+				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]*rg.Resource{{ARN: badArn}}, nil)
 			},
 			expectedOut:   nil,
 			expectedError: fmt.Errorf("parse pipeline ARN: %s", badArn),

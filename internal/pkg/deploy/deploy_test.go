@@ -53,7 +53,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
-					}).Return([]*rg.Resource{{Arn: "mockARN", Tags: map[string]string{}}}, nil),
+					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{}}}, nil),
 				)
 			},
 
@@ -68,7 +68,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
-					}).Return([]*rg.Resource{{Arn: "mockARN", Tags: map[string]string{ServiceTagKey: "mockSvc"}}}, nil),
+					}).Return([]*rg.Resource{{ARN: "mockARN", Tags: map[string]string{ServiceTagKey: "mockSvc"}}}, nil),
 					m.configStore.EXPECT().GetService("mockApp", "mockSvc").Return(nil, errors.New("some error")),
 				)
 			},
@@ -84,8 +84,8 @@ func TestStore_ListDeployedServices(t *testing.T) {
 					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
 						AppTagKey: "mockApp",
 						EnvTagKey: "mockEnv",
-					}).Return([]*rg.Resource{{Arn: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockSvc1"}},
-						{Arn: "mockARN2", Tags: map[string]string{ServiceTagKey: "mockSvc2"}}}, nil),
+					}).Return([]*rg.Resource{{ARN: "mockARN1", Tags: map[string]string{ServiceTagKey: "mockSvc1"}},
+						{ARN: "mockARN2", Tags: map[string]string{ServiceTagKey: "mockSvc2"}}}, nil),
 					m.configStore.EXPECT().GetService("mockApp", "mockSvc1").Return(&config.Service{
 						App:  "mockApp",
 						Name: "mockSvc1",
@@ -199,7 +199,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv1",
 						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{{Arn: "mockSvcARN"}}, nil),
+					}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil),
 					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv2",
@@ -302,7 +302,7 @@ func TestStore_IsDeployed(t *testing.T) {
 						AppTagKey:     "mockApp",
 						EnvTagKey:     "mockEnv",
 						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{{Arn: "mockSvcARN"}}, nil),
+					}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil),
 				)
 			},
 

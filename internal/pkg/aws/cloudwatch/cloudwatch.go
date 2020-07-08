@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	resourceQueryType      = "TAG_FILTERS_1_0"
 	cloudwatchResourceType = "cloudwatch:alarm"
 	compositeAlarmType     = "Composite"
 	metricAlarmType        = "Metric"
@@ -66,7 +65,7 @@ func (cw *CloudWatch) GetAlarmsWithTags(tags map[string]string) ([]AlarmStatus, 
 	}
 
 	for _, resource := range resources {
-		name, err := cw.getAlarmName(resource.Arn)
+		name, err := cw.getAlarmName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}

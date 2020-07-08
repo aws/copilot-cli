@@ -116,7 +116,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
-						{Arn: unparsableARN},
+						{ARN: unparsableARN},
 					}, nil),
 				)
 			},
@@ -126,7 +126,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
-						{Arn: noSlashARN},
+						{ARN: noSlashARN},
 					}, nil),
 				)
 			},
@@ -137,8 +137,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
-						{Arn: testARN1},
-						{Arn: testARN2},
+						{ARN: testARN1},
+						{ARN: testARN2},
 					}, nil),
 					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
 						Tags: stackTags,
@@ -156,8 +156,8 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			setupMocks: func(m envDescriberMocks) {
 				gomock.InOrder(
 					m.mockResourceGroupsClient.EXPECT().GetResourcesByTags(cloudformationResourceType, rgTags).Return([]*rg.Resource{
-						{Arn: testARN1},
-						{Arn: testARN2},
+						{ARN: testARN1},
+						{ARN: testARN2},
 					}, nil),
 					m.mockStackDescriber.EXPECT().Stack(stack.NameForEnv(testApp.Name, testEnv.Name)).Return(&cloudformation.Stack{
 						Tags: stackTags,

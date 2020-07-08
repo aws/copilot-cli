@@ -29,7 +29,7 @@ type tagFilter struct {
 
 // Resource contains the ARN and the tags of the resource.
 type Resource struct {
-	Arn  string
+	ARN  string
 	Tags map[string]string
 }
 
@@ -43,8 +43,6 @@ func New(s *session.Session) *ResourceGroups {
 // GetResourcesByTags gets tag set and ARN for the resource with input resource type and tags.
 func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[string]string) ([]*Resource, error) {
 	var resources []*Resource
-	var err error
-	resourceResp := &resourcegroupstaggingapi.GetResourcesOutput{}
 	var tagFilter []*resourcegroupstaggingapi.TagFilter
 	for k, v := range tags {
 		tagFilter = append(tagFilter, &resourcegroupstaggingapi.TagFilter{
@@ -52,7 +50,9 @@ func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[strin
 			Values: aws.StringSlice([]string{v}),
 		})
 	}
+	resourceResp := &resourcegroupstaggingapi.GetResourcesOutput{}
 	for {
+		var err error
 		resourceResp, err = rg.client.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
 			PaginationToken:     resourceResp.PaginationToken,
 			ResourceTypeFilters: aws.StringSlice([]string{resourceType}),
@@ -70,18 +70,14 @@ func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[strin
 				tags[*tag.Key] = aws.StringValue(tag.Value)
 			}
 			resources = append(resources, &Resource{
-				Arn:  aws.StringValue(resourceTagMapping.ResourceARN),
+				ARN:  aws.StringValue(resourceTagMapping.ResourceARN),
 				Tags: tags,
 			})
 		}
 		// usually pagination token is "" when it doesn't have any next page. However, since it
 		// is type *string, it is safer for us to check nil value for it as well.
-		if resourceResp.PaginationToken == nil {
+		if token := resourceResp.PaginationToken; aws.StringValue(token) == "" {
 			break
-		} else {
-			if aws.StringValue(resourceResp.PaginationToken) == "" {
-				break
-			}
 		}
 	}
 
