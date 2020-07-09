@@ -17,16 +17,16 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 )
 
 const (
-	cloudformationResourceType = "AWS::CloudFormation::Stack"
+	cloudformationResourceType = "cloudformation:stack"
 )
 
 type resourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
 // EnvDescription contains the information about an environment.
@@ -80,7 +80,7 @@ func NewEnvDescriber(appName, envName string) (*EnvDescriber, error) {
 		enableResources: false,
 
 		store:          store,
-		rgClient:       resourcegroups.New(sess),
+		rgClient:       rg.New(sess),
 		stackDescriber: stackAndResourcesDescriber(d),
 	}, nil
 }
@@ -131,14 +131,14 @@ func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
 	tags := map[string]string{
 		deploy.EnvTagKey: e.env.Name,
 	}
-	arns, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
+	resources, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
 	if err != nil {
 		return nil, fmt.Errorf("get %s resources for env %s: %w", cloudformationResourceType, e.env.Name, err)
 	}
 
 	stacksOfEnvironment := make(map[string]bool)
-	for _, arn := range arns {
-		stack, err := e.getStackName(arn)
+	for _, resource := range resources {
+		stack, err := e.getStackName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}

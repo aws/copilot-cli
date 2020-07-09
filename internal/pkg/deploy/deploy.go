@@ -6,9 +6,7 @@ package deploy
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -24,7 +22,7 @@ const (
 )
 
 const (
-	ecsServiceResourceType = "AWS::ECS::Service"
+	ecsServiceResourceType = "ecs:service"
 )
 
 // Resource represents an AWS resource.
@@ -41,7 +39,7 @@ type ResourceEvent struct {
 }
 
 type resourceGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
 // ConfigStoreClient wraps config store methods utilized by deploy store.
@@ -93,18 +91,18 @@ func (s *Store) ListDeployedServices(appName string, envName string) ([]string, 
 	if err != nil {
 		return nil, err
 	}
-	svcARNs, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
 		AppTagKey: appName,
 		EnvTagKey: envName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get resources by Copilot tags: %w", err)
 	}
-	svcs := make([]string, len(svcARNs))
-	for ind, svcARN := range svcARNs {
-		svcName, err := s.getServiceName(svcARN)
-		if err != nil {
-			return nil, err
+	svcs := make([]string, len(resources))
+	for ind, resource := range resources {
+		svcName := resource.Tags[ServiceTagKey]
+		if svcName == "" {
+			return nil, fmt.Errorf("service with ARN %s is not tagged with %s", resource.ARN, ServiceTagKey)
 		}
 		svc, err := s.configStore.GetService(appName, svcName)
 		if err != nil {
@@ -127,7 +125,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 		if err != nil {
 			return nil, err
 		}
-		svcARNs, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+		resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
 			AppTagKey:     appName,
 			EnvTagKey:     env.Name,
 			ServiceTagKey: svcName,
@@ -136,7 +134,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 			return nil, fmt.Errorf("get resources by Copilot tags: %w", err)
 		}
 		// If no resources found, the resp length is 0.
-		if len(svcARNs) != 0 {
+		if len(resources) != 0 {
 			envsWithDeployment = append(envsWithDeployment, env.Name)
 		}
 	}
@@ -161,19 +159,4 @@ func (s *Store) IsDeployed(appName string, envName string, svcName string) (bool
 		return true, nil
 	}
 	return false, nil
-}
-
-// getServiceName gets the ECS service name given a specific ARN.
-// For example: arn:aws:ecs:us-west-2:123456789012:service/my-http-service
-// returns my-http-service
-func (s *Store) getServiceName(svcARN string) (string, error) {
-	resp, err := arn.Parse(svcARN)
-	if err != nil {
-		return "", fmt.Errorf("parse service ARN %s: %w", svcARN, err)
-	}
-	resource := strings.Split(resp.Resource, "/")
-	if len(resource) != 2 {
-		return "", fmt.Errorf(`cannot parse service ARN resource "%s"`, resp.Resource)
-	}
-	return resource[1], nil
 }
