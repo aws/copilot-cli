@@ -18,6 +18,7 @@ Parameters:
   Command:
     Type: String
 Conditions:
+  # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
     !Not [!Equals [!Ref ContainerImage, ""]]
   UseDefaultTaskRole:
@@ -26,7 +27,7 @@ Conditions:
     !Not [!Equals [!Ref Command, ""]]
 Resources:
   TaskDefinition:
-    Condition: HasImage
+    Condition: HasImage # NOTE: We only create TaskDefinition if an image is provided
     Type: AWS::ECS::TaskDefinition
     DependsOn: ECRRepo
     Properties:
