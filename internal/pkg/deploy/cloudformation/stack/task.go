@@ -1,7 +1,11 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package stack
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -23,20 +27,11 @@ const (
 	taskTaskRoleParamKey       = "TaskRole"
 	taskCommandParamKey        = "Command"
 
-	taskLogRetention = "1"
+	taskLogRetentionInDays = "1"
 )
 
 type taskStackConfig struct {
-	Name string
-
-	Cpu    int
-	Memory int
-
-	ImageURL string
-	TaskRole string
-	Command  string
-	EnvVars map[string]string
-
+	*deploy.CreateTaskResourcesInput
 	parser template.ReadParser
 }
 
@@ -44,15 +39,7 @@ type taskStackConfig struct {
 // to deploy the task resources stack.
 func NewTaskStackConfig(taskOpts *deploy.CreateTaskResourcesInput) *taskStackConfig {
 	return &taskStackConfig{
-		Name:   taskOpts.Name,
-		Cpu:    taskOpts.Cpu,
-		Memory: taskOpts.Memory,
-
-		ImageURL: taskOpts.Image,
-		TaskRole: taskOpts.TaskRole,
-		Command:  taskOpts.Command,
-		EnvVars: taskOpts.EnvVars,
-
+		CreateTaskResourcesInput: taskOpts,
 		parser: template.New(),
 	}
 }
@@ -84,19 +71,19 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(taskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(&t.Cpu))),
+			ParameterValue: aws.String(strconv.Itoa(t.CPU)),
 		},
 		{
 			ParameterKey:   aws.String(taskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(&t.Memory))),
+			ParameterValue: aws.String(strconv.Itoa(t.Memory)),
 		},
 		{
 			ParameterKey:   aws.String(taskLogRetentionParamKey),
-			ParameterValue: aws.String(taskLogRetention),
+			ParameterValue: aws.String(taskLogRetentionInDays),
 		},
 		{
 			ParameterKey:   aws.String(taskContainerImageParamKey),
-			ParameterValue: aws.String(t.ImageURL),
+			ParameterValue: aws.String(t.Image),
 		},
 		{
 			ParameterKey:   aws.String(taskTaskRoleParamKey),
@@ -111,7 +98,14 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 
 // Tags returns the tags that should be applied to the task CloudFormation.
 func (t *taskStackConfig) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(map[string]string{
+	appEnvTags := make(map[string]string)
+
+	if t.Env != config.EnvNameNone {
+		appEnvTags[deploy.AppTagKey] = t.App
+		appEnvTags[deploy.EnvTagKey] = t.Env
+	}
+
+	return mergeAndFlattenTags(appEnvTags, map[string]string{
 		deploy.TaskTagKey: t.Name,
-	}, nil)
+	})
 }
