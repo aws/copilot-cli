@@ -26,18 +26,29 @@ type BackendServiceDescriber struct {
 	initServiceDescriber func(string) error
 }
 
+// NewBackendServiceConfig contains fields that initiates BackendServiceDescriber struct.
+type NewBackendServiceConfig struct {
+	NewServiceConfig
+	EnableResources bool
+	DeployStore     deployStoreSvc
+}
+
 // NewBackendServiceDescriber instantiates a backend service describer.
-func NewBackendServiceDescriber(opt *NewServiceDescriberOption) (*BackendServiceDescriber, error) {
+func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDescriber, error) {
 	describer := &BackendServiceDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
-		enableResources: false,
+		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 		svcDescriber:    make(map[string]svcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
-		opt.Env = env
-		d, err := NewServiceDescriber(opt)
+		d, err := NewServiceDescriber(NewServiceConfig{
+			App:         opt.App,
+			Env:         env,
+			Svc:         opt.Svc,
+			ConfigStore: opt.ConfigStore,
+		})
 		if err != nil {
 			return err
 		}
@@ -45,16 +56,6 @@ func NewBackendServiceDescriber(opt *NewServiceDescriberOption) (*BackendService
 		return nil
 	}
 	return describer, nil
-}
-
-// NewBackendServiceDescriberWithResources instantiates a backend service describer with stack resources.
-func NewBackendServiceDescriberWithResources(opt *NewServiceDescriberOption) (*BackendServiceDescriber, error) {
-	d, err := NewBackendServiceDescriber(opt)
-	if err != nil {
-		return nil, err
-	}
-	d.enableResources = true
-	return d, nil
 }
 
 // URI returns the service discovery namespace and is used to make

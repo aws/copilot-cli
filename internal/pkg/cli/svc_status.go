@@ -53,7 +53,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 		w:             log.OutputWriter,
 		sel:           selector.NewConfigSelect(vars.prompt, store),
 		initSvcDescriber: func(o *svcStatusOpts, envName, svcName string) error {
-			d, err := describe.NewServiceDescriber(&describe.NewServiceDescriberOption{
+			d, err := describe.NewServiceDescriber(describe.NewServiceConfig{
 				App:         o.AppName(),
 				Svc:         svcName,
 				Env:         envName,

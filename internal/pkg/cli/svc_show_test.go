@@ -309,7 +309,7 @@ func TestSvcShow_Execute(t *testing.T) {
 					},
 				},
 				describer:     mockSvcDescriber,
-				initDescriber: func(bool) error { return nil },
+				initDescriber: func() error { return nil },
 				w:             b,
 			}
 

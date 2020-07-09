@@ -38,7 +38,7 @@ type showSvcOpts struct {
 	store         store
 	describer     describer
 	sel           configSelector
-	initDescriber func(bool) error // Overriden in tests.
+	initDescriber func() error // Overriden in tests.
 }
 
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
@@ -57,31 +57,33 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		w:           log.OutputWriter,
 		sel:         selector.NewConfigSelect(vars.prompt, ssmStore),
 	}
-	opts.initDescriber = func(enableResources bool) error {
+	opts.initDescriber = func() error {
 		var d describer
 		svc, err := opts.store.GetService(opts.AppName(), opts.svcName)
 		if err != nil {
 			return err
 		}
-		options := &describe.NewServiceDescriberOption{
-			App:         opts.AppName(),
-			Svc:         opts.svcName,
-			ConfigStore: ssmStore,
-			DeployStore: deployStore,
-		}
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
-			if enableResources {
-				d, err = describe.NewWebServiceDescriberWithResources(options)
-			} else {
-				d, err = describe.NewWebServiceDescriber(options)
-			}
+			d, err = describe.NewWebServiceDescriber(describe.NewWebServiceConfig{
+				NewServiceConfig: describe.NewServiceConfig{
+					App:         opts.AppName(),
+					Svc:         opts.svcName,
+					ConfigStore: ssmStore,
+				},
+				DeployStore:     deployStore,
+				EnableResources: opts.shouldOutputResources,
+			})
 		case manifest.BackendServiceType:
-			if enableResources {
-				d, err = describe.NewBackendServiceDescriberWithResources(options)
-			} else {
-				d, err = describe.NewBackendServiceDescriber(options)
-			}
+			d, err = describe.NewBackendServiceDescriber(describe.NewBackendServiceConfig{
+				NewServiceConfig: describe.NewServiceConfig{
+					App:         opts.AppName(),
+					Svc:         opts.svcName,
+					ConfigStore: ssmStore,
+				},
+				DeployStore:     deployStore,
+				EnableResources: opts.shouldOutputResources,
+			})
 		default:
 			return fmt.Errorf("invalid service type %s", svc.Type)
 		}
@@ -125,7 +127,7 @@ func (o *showSvcOpts) Execute() error {
 		// If there are no local services in the workspace, we exit without error.
 		return nil
 	}
-	err := o.initDescriber(o.shouldOutputResources)
+	err := o.initDescriber()
 	if err != nil {
 		return err
 	}

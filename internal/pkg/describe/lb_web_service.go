@@ -76,18 +76,29 @@ type WebServiceDescriber struct {
 	svcParams map[string]string
 }
 
+// NewWebServiceConfig contains fields that initiates WebServiceDescriber struct.
+type NewWebServiceConfig struct {
+	NewServiceConfig
+	EnableResources bool
+	DeployStore     deployStoreSvc
+}
+
 // NewWebServiceDescriber instantiates a load balanced service describer.
-func NewWebServiceDescriber(opt *NewServiceDescriberOption) (*WebServiceDescriber, error) {
+func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, error) {
 	describer := &WebServiceDescriber{
 		app:             opt.App,
 		svc:             opt.Svc,
-		enableResources: false,
+		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 		svcDescriber:    make(map[string]svcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
-		opt.Env = env
-		d, err := NewServiceDescriber(opt)
+		d, err := NewServiceDescriber(NewServiceConfig{
+			App:         opt.App,
+			Env:         env,
+			Svc:         opt.Svc,
+			ConfigStore: opt.ConfigStore,
+		})
 		if err != nil {
 			return err
 		}
@@ -95,16 +106,6 @@ func NewWebServiceDescriber(opt *NewServiceDescriberOption) (*WebServiceDescribe
 		return nil
 	}
 	return describer, nil
-}
-
-// NewWebServiceDescriberWithResources instantiates a load balanced service with stack resources.
-func NewWebServiceDescriberWithResources(opt *NewServiceDescriberOption) (*WebServiceDescriber, error) {
-	d, err := NewWebServiceDescriber(opt)
-	if err != nil {
-		return nil, err
-	}
-	d.enableResources = true
-	return d, nil
 }
 
 // Describe returns info of a web service.

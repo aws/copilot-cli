@@ -70,17 +70,16 @@ type ServiceDescriber struct {
 	stackDescriber stackAndResourcesDescriber
 }
 
-// NewServiceDescriberOption contains fields that initiates ServiceDescriber struct.
-type NewServiceDescriberOption struct {
+// NewServiceConfig contains fields that initiates ServiceDescriber struct.
+type NewServiceConfig struct {
 	App         string
 	Env         string
 	Svc         string
 	ConfigStore configStoreSvc
-	DeployStore deployStoreSvc
 }
 
 // NewServiceDescriber instantiates a new service.
-func NewServiceDescriber(opt *NewServiceDescriberOption) (*ServiceDescriber, error) {
+func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
