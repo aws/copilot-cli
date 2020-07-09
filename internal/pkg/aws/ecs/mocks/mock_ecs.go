@@ -92,3 +92,47 @@ func (mr *MockapiMockRecorder) ListTasks(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTasks", reflect.TypeOf((*Mockapi)(nil).ListTasks), input)
 }
+
+// DescribeClusters mocks base method
+func (m *Mockapi) DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeClusters", input)
+	ret0, _ := ret[0].(*ecs.DescribeClustersOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeClusters indicates an expected call of DescribeClusters
+func (mr *MockapiMockRecorder) DescribeClusters(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeClusters", reflect.TypeOf((*Mockapi)(nil).DescribeClusters), input)
+}
+
+// RunTask mocks base method
+func (m *Mockapi) RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RunTask", input)
+	ret0, _ := ret[0].(*ecs.RunTaskOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RunTask indicates an expected call of RunTask
+func (mr *MockapiMockRecorder) RunTask(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunTask", reflect.TypeOf((*Mockapi)(nil).RunTask), input)
+}
+
+// WaitUntilTasksRunning mocks base method
+func (m *Mockapi) WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilTasksRunning", input)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitUntilTasksRunning indicates an expected call of WaitUntilTasksRunning
+func (mr *MockapiMockRecorder) WaitUntilTasksRunning(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilTasksRunning", reflect.TypeOf((*Mockapi)(nil).WaitUntilTasksRunning), input)
+}
