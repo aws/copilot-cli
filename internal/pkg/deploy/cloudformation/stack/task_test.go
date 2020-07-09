@@ -53,8 +53,7 @@ func TestTaskStackConfig_Template(t *testing.T) {
 				tc.mockReadParser(mockReadParser)
 			}
 
-			taskInput := deploy.CreateTaskResourcesInput{
-			}
+			taskInput := deploy.CreateTaskResourcesInput{}
 
 			taskStackConfig := &taskStackConfig{
 				CreateTaskResourcesInput: &taskInput,
