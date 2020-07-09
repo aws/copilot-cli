@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	command "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
+	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )

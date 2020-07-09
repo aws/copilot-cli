@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
+	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/cli/group"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/spf13/cobra"
 )

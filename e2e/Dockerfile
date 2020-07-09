@@ -14,9 +14,9 @@ RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 ADD bin/local/copilot-amd64 /bin/copilot
 
 # Add the e2e directory and the project go.mod
-ADD e2e/ github.com/aws/amazon-ecs-cli-v2/e2e/
-ADD go.mod github.com/aws/amazon-ecs-cli-v2/
-ADD go.sum github.com/aws/amazon-ecs-cli-v2/
+ADD e2e/ github.com/aws/copilot-cli/e2e/
+ADD go.mod github.com/aws/copilot-cli/
+ADD go.sum github.com/aws/copilot-cli/
 
 # Startup script which inits dockerd and then runs the e2e tests
 COPY e2e/e2e.sh /bin/

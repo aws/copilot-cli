@@ -1,0 +1,25 @@
+/*
+
+Add styles or override variables from the theme here.
+
+*/
+
+$primary: #fff;
+$secondary: #0071E3;
+
+$link-color: #0071E3;
+
+$enable-gradients: false;
+$enable-rounded: false;
+$enable-shadows: false;
+
+$td-enable-google-fonts: true;
+$google_font_name: "Roboto";
+$google_font_family: "Roboto:300,300i,400,400i,700,700i";
+
+$td-sidebar-bg-color: #fff;
+$td-sidebar-border-color: #dee2e6;
+
+.text-gray {
+    color: #586069;
+}

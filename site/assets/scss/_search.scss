@@ -1,0 +1,31 @@
+// Search
+
+.td-search-input {
+    background: transparent;
+
+    box-shadow: 0 0 0 1px #fff;
+    &.form-control:focus {
+        box-shadow: 0 0 0 1px #fff;
+        background: transparent;
+        color: #fff;
+    }
+
+    @if $enable-rounded {
+        border-radius: 0rem;
+    }
+
+    font-family: "Font Awesome 5 Free", $font-family-base;
+}
+
+.popover.offline-search-result {
+    // Override bootstrap default style (max-width: $popover-max-width;)
+    max-width: 90%;
+
+    .card {
+        margin-bottom: $spacer * .5;
+
+        .card-header {
+            font-weight: bold;
+        }
+    }
+}

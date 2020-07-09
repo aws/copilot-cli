@@ -3,7 +3,7 @@
 
 package cli
 
-import termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
+import termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 // progress is the interface to inform the user that a long operation is taking place.
 type progress interface {

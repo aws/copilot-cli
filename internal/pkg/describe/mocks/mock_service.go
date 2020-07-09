@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )

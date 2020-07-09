@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -144,7 +144,7 @@ func TestAppResourceTemplate(t *testing.T) {
 						Version:  1,
 						App:      "testapp",
 					},
-					ServiceTagKey,
+					deploy.ServiceTagKey,
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
@@ -214,13 +214,13 @@ func TestAppTags(t *testing.T) {
 			AdditionalTags: map[string]string{
 				"confidentiality": "public",
 				"owner":           "finance",
-				AppTagKey:         "overrideapp",
+				deploy.AppTagKey:  "overrideapp",
 			},
 		},
 	}
 	expectedTags := []*cloudformation.Tag{
 		{
-			Key:   aws.String(AppTagKey),
+			Key:   aws.String(deploy.AppTagKey),
 			Value: aws.String(app.Name),
 		},
 		{

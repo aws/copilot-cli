@@ -4,7 +4,7 @@
 package cloudformation
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/gobuffalo/packd"
 )
 

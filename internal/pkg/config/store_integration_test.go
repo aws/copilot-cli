@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 

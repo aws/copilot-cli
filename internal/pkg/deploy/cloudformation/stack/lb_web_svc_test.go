@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -482,10 +483,10 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 				ImageRepoURL: testImageRepoURL,
 				ImageTag:     testImageTag,
 				AdditionalTags: map[string]string{
-					"owner":       "boss",
-					AppTagKey:     "overrideapp",
-					EnvTagKey:     "overrideenv",
-					ServiceTagKey: "overridesvc",
+					"owner":              "boss",
+					deploy.AppTagKey:     "overrideapp",
+					deploy.EnvTagKey:     "overrideenv",
+					deploy.ServiceTagKey: "overridesvc",
 				},
 			},
 		},
@@ -498,15 +499,15 @@ func TestLoadBalancedWebService_Tags(t *testing.T) {
 	// THEN
 	require.ElementsMatch(t, []*cloudformation.Tag{
 		{
-			Key:   aws.String(AppTagKey),
+			Key:   aws.String(deploy.AppTagKey),
 			Value: aws.String("phonetool"),
 		},
 		{
-			Key:   aws.String(EnvTagKey),
+			Key:   aws.String(deploy.EnvTagKey),
 			Value: aws.String("test"),
 		},
 		{
-			Key:   aws.String(ServiceTagKey),
+			Key:   aws.String(deploy.ServiceTagKey),
 			Value: aws.String("frontend"),
 		},
 		{

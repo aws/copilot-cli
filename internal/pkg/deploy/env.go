@@ -5,7 +5,7 @@
 // This file defines environment deployment resources.
 package deploy
 
-import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+import "github.com/aws/copilot-cli/internal/pkg/config"
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {

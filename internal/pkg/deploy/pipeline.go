@@ -12,8 +12,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 // NOTE: this is duplicated from validate.go

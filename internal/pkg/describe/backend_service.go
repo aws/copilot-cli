@@ -10,9 +10,10 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // BackendServiceDescriber retrieves information about a backend service.
@@ -20,25 +21,29 @@ type BackendServiceDescriber struct {
 	service         *config.Service
 	enableResources bool
 
-	store                storeSvc
+	store                deployStoreSvc
 	svcDescriber         svcDescriber
 	initServiceDescriber func(string) error
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.
 func NewBackendServiceDescriber(app, svc string) (*BackendServiceDescriber, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to store: %w", err)
 	}
-	meta, err := store.GetService(app, svc)
+	meta, err := configStore.GetService(app, svc)
 	if err != nil {
 		return nil, err
+	}
+	deployStore, err := deploy.NewStore(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 	opts := &BackendServiceDescriber{
 		service:         meta,
 		enableResources: false,
-		store:           store,
+		store:           deployStore,
 	}
 	opts.initServiceDescriber = func(env string) error {
 		d, err := NewServiceDescriber(app, env, svc)
@@ -81,33 +86,30 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 
 // Describe returns info of a backend service.
 func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.service.App)
+	environments, err := d.store.ListEnvironmentsDeployedTo(d.service.App, d.service.Name)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for application %s: %w", d.service.App, err)
+		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.service.App, err)
 	}
 
 	var configs []*ServiceConfig
 	var services []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initServiceDescriber(env.Name)
+		err := d.initServiceDescriber(env)
 		if err != nil {
 			return nil, err
 		}
 		svcParams, err := d.svcDescriber.Params()
-		if err != nil && !IsStackNotExistsErr(err) {
-			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
-		}
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
 		services = appendServiceDiscovery(services, serviceDiscovery{
 			Service: d.service.Name,
 			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
 			App:     d.service.App,
-		}, env.Name)
+		}, env)
 		configs = append(configs, &ServiceConfig{
-			Environment: env.Name,
+			Environment: env,
 			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
 			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
 			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
@@ -117,7 +119,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env.Name, backendSvcEnvVars)...)
+		envVars = append(envVars, flattenEnvVars(env, backendSvcEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -126,13 +128,10 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.svcDescriber.ServiceStackResources()
-			if err != nil && !IsStackNotExistsErr(err) {
+			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
-			if err != nil {
-				continue
-			}
-			resources[env.Name] = flattenResources(stackResources)
+			resources[env] = flattenResources(stackResources)
 		}
 	}
 

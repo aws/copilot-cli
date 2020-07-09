@@ -4,16 +4,9 @@
 package stack
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/tags"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-)
-
-// Tag keys used while creating stacks.
-const (
-	AppTagKey     = "copilot-application"
-	EnvTagKey     = "copilot-environment"
-	ServiceTagKey = "copilot-service"
+	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 )
 
 func mergeAndFlattenTags(additionalTags map[string]string, cliTags map[string]string) []*cloudformation.Tag {
