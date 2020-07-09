@@ -1,8 +1,8 @@
 TaskRole:
   Type: AWS::IAM::Role
-  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}
+  Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
     ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
-    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}
+    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow

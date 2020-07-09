@@ -10,10 +10,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -30,7 +30,7 @@ func NewGlobalOpts() *GlobalOpts {
 
 	return &GlobalOpts{
 		// Leave the appName as empty in case it's overwritten by a global flag.
-		// See https://github.com/aws/amazon-ecs-cli-v2/issues/570#issuecomment-569133741
+		// See https://github.com/aws/copilot-cli/issues/570#issuecomment-569133741
 		prompt: prompt.New(),
 	}
 }

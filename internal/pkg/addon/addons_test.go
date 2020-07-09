@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/addon/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

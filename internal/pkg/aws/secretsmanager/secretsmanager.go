@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 )
 
 type api interface {

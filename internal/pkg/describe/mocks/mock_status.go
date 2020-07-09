@@ -5,8 +5,8 @@
 package mocks
 
 import (
-	cloudwatch "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
-	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )

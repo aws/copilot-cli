@@ -1,4 +1,4 @@
-## AWS Copilot CLI (beta)
+## AWS Copilot CLI (preview)
 ###### _Develop, Release and Operate Container Apps on AWS._
 
 [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
@@ -21,8 +21,17 @@ Read more about the Copilot charter and tenets [here](CHARTER.md).
 
 ![copilot help menu](https://user-images.githubusercontent.com/828419/85797638-e181ae00-b6f0-11ea-8751-3a7552e3fa7f.png)
 
+> Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms (https://aws.amazon.com/service-terms/).
+
 ## Installing
 
+### Homebrew 🍻
+
+```sh
+$ brew install aws/tap/copilot-cli
+```
+
+### Manually 
 We're distributing binaries from our GitHub releases. Instructions for installing Copilot for your platform:
 
 <details>

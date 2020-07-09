@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // EnvStackConfig is for providing all the values to set up an
@@ -118,8 +118,8 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
 func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.AdditionalTags, map[string]string{
-		AppTagKey: e.AppName,
-		EnvTagKey: e.Name,
+		deploy.AppTagKey: e.AppName,
+		deploy.EnvTagKey: e.Name,
 	})
 }
 

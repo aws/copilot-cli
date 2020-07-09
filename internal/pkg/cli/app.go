@@ -6,8 +6,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/aws/amazon-ecs-cli-v2/cmd/copilot/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/group"
+	"github.com/aws/copilot-cli/cmd/copilot/template"
+	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 )
 
 // BuildAppCmd builds the top level app command and related subcommands.

@@ -40,6 +40,8 @@ const (
 	retriesDefault = 2
 
 	hcInstrStartIndex = len("HEALTHCHECK ")
+	cmdLength         = "CMD "
+	cmdShell          = "CMD-SHELL"
 )
 
 var (
@@ -188,7 +190,7 @@ func parseExpose(line string) []portConfig {
 	// check that there are matches, if not return port with only raw data
 	// there will only ever be length 0 or 4 arrays
 	// TODO implement arg parser regex
-	// https://github.com/aws/amazon-ecs-cli-v2/issues/827
+	// https://github.com/aws/copilot-cli/issues/827
 	if len(matches) == 0 {
 		return []portConfig{
 			{
@@ -248,12 +250,16 @@ func parseHealthCheck(content string) (*HealthCheck, error) {
 		return nil, err
 	}
 
+	// if HEALTHCHECK instruction is not "NONE", there must be a "CMD" instruction otherwise will error out
+	cmdIndex := strings.Index(content, "CMD")
+	command := content[cmdIndex+len(cmdLength):]
+
 	return &HealthCheck{
 		Interval:    interval,
 		Timeout:     timeout,
 		StartPeriod: startPeriod,
 		Retries:     retries,
-		Cmd:         []string{regexp.MustCompile("CMD.*").FindString(content)},
+		Cmd:         []string{cmdShell, command},
 	}, nil
 }
 

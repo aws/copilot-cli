@@ -8,11 +8,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // Template rendering configuration common across services.
@@ -107,9 +108,9 @@ func (s *svc) Parameters() []*cloudformation.Parameter {
 // Tags returns the list of tags to apply to the CloudFormation stack.
 func (s *svc) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(s.rc.AdditionalTags, map[string]string{
-		AppTagKey:     s.app,
-		EnvTagKey:     s.env,
-		ServiceTagKey: s.name,
+		deploy.AppTagKey:     s.app,
+		deploy.EnvTagKey:     s.env,
+		deploy.ServiceTagKey: s.name,
 	})
 }
 

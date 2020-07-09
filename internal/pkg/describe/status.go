@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 type alarmStatusGetter interface {
@@ -110,9 +110,9 @@ func (w *ServiceStatus) Describe() (*ServiceStatusDesc, error) {
 		taskStatus = append(taskStatus, *status)
 	}
 	alarms, err := w.CwSvc.GetAlarmsWithTags(map[string]string{
-		stack.AppTagKey:     w.AppName,
-		stack.EnvTagKey:     w.EnvName,
-		stack.ServiceTagKey: w.SvcName,
+		deploy.AppTagKey:     w.AppName,
+		deploy.EnvTagKey:     w.EnvName,
+		deploy.ServiceTagKey: w.SvcName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("get CloudWatch alarms: %w", err)
