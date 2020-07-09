@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
@@ -56,9 +57,13 @@ func (s *serviceDiscovery) String() string {
 	return fmt.Sprintf("%s.%s.local:%s", s.Service, s.App, s.Port)
 }
 
-type storeSvc interface {
+type configStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
+type deployStoreSvc interface {
+	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 }
 
 type svcDescriber interface {
@@ -74,25 +79,29 @@ type WebServiceDescriber struct {
 	service         *config.Service
 	enableResources bool
 
-	store                storeSvc
+	store                deployStoreSvc
 	svcDescriber         svcDescriber
 	initServiceDescriber func(string) error
 }
 
 // NewWebServiceDescriber instantiates a load balanced service describer.
 func NewWebServiceDescriber(app, svc string) (*WebServiceDescriber, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
+		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	meta, err := store.GetService(app, svc)
+	meta, err := configStore.GetService(app, svc)
 	if err != nil {
 		return nil, err
+	}
+	deployStore, err := deploy.NewStore(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 	opts := &WebServiceDescriber{
 		service:         meta,
 		enableResources: false,
-		store:           store,
+		store:           deployStore,
 	}
 	opts.initServiceDescriber = func(env string) error {
 		d, err := NewServiceDescriber(app, env, svc)
@@ -117,9 +126,9 @@ func NewWebServiceDescriberWithResources(app, svc string) (*WebServiceDescriber,
 
 // Describe returns info of a web service.
 func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.service.App)
+	environments, err := d.store.ListEnvironmentsDeployedTo(d.service.App, d.service.Name)
 	if err != nil {
-		return nil, fmt.Errorf("list environments: %w", err)
+		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.service.App, err)
 	}
 
 	var routes []*WebServiceRoute
@@ -127,19 +136,16 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initServiceDescriber(env.Name)
+		err := d.initServiceDescriber(env)
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, err := d.URI(env.Name)
-		if err != nil && !IsStackNotExistsErr(err) {
+		webServiceURI, err := d.URI(env)
+		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
-		if err != nil {
-			continue
-		}
 		routes = append(routes, &WebServiceRoute{
-			Environment: env.Name,
+			Environment: env,
 			URL:         webServiceURI,
 		})
 		svcParams, err := d.svcDescriber.Params()
@@ -147,7 +153,7 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
 		configs = append(configs, &ServiceConfig{
-			Environment: env.Name,
+			Environment: env,
 			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
 			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
 			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
@@ -157,12 +163,12 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Service: d.service.Name,
 			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
 			App:     d.service.App,
-		}, env.Name)
+		}, env)
 		webSvcEnvVars, err := d.svcDescriber.EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env.Name, webSvcEnvVars)...)
+		envVars = append(envVars, flattenEnvVars(env, webSvcEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -171,13 +177,10 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	if d.enableResources {
 		for _, env := range environments {
 			stackResources, err := d.svcDescriber.ServiceStackResources()
-			if err != nil && !IsStackNotExistsErr(err) {
+			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
-			if err != nil {
-				continue
-			}
-			resources[env.Name] = flattenResources(stackResources)
+			resources[env] = flattenResources(stackResources)
 		}
 	}
 

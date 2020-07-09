@@ -6,9 +6,6 @@ package mocks
 
 import (
 	encoding "encoding"
-	io "io"
-	reflect "reflect"
-
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -22,6 +19,8 @@ import (
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
 	gomock "github.com/golang/mock/gomock"
+	io "io"
+	reflect "reflect"
 )
 
 // MockactionCommand is a mock of actionCommand interface

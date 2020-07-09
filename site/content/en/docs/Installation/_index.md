@@ -4,9 +4,16 @@ linkTitle: "Installation"
 weight: 3
 ---
 
-Installing the AWS Copilot CLI currently requires you to download our binary from the GitHub releases page manually. In the future, we'll distribute the binary through homebrew and other binaries as well.
+You can install AWS Copilot through [Homebrew](https://brew.sh/) or by downloading the binaries directly.
 
-In the meantime, to install, copy and paste the command into your terminal.
+## Homebrew 🍻
+
+```sh
+brew install aws/tap/copilot-cli
+```
+
+## Manually
+Copy and paste the command into your terminal.
 
 | Platform | Command to install |
 |---------|---------
