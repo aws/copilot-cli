@@ -216,8 +216,9 @@ func (o *initStorageOpts) validateDDB() error {
 			return err
 		}
 	}
-
+	return nil
 }
+
 func (o *initStorageOpts) Ask() error {
 	if err := o.askStorageSvc(); err != nil {
 		return err
@@ -391,6 +392,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 	// If --no-sort has been specified, there is no need to ask for local secondary indices.
 	if o.noSort {
+		o.noLSI = true
 		return nil
 	}
 	lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
@@ -529,7 +531,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	}
 
 	if hasSortKey {
-		_, err := props.BuildLocalSecondaryIndex(o.noSort, o.noLSI, o.lsiSorts)
+		_, err := props.BuildLocalSecondaryIndex(o.noLSI, o.lsiSorts)
 		if err != nil {
 			return nil, err
 		}

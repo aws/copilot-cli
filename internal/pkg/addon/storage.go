@@ -141,12 +141,16 @@ func (p *DynamoDBProps) BuildSortKey(noSort bool, sortKey string) (bool, error) 
 }
 
 // BuildLocalSecondaryIndex generates the correct LocalSecondaryIndex property configuration
-// based on customer input to ensure that the CF template is valid.
-func (p *DynamoDBProps) BuildLocalSecondaryIndex(noSort bool, noLSI bool, lsiSorts []string) (bool, error) {
+// based on customer input to ensure that the CF template is valid. BuildLocalSecondaryIndex
+// should be called last, after BuildPartitionKey && BuildSortKey
+func (p *DynamoDBProps) BuildLocalSecondaryIndex(noLSI bool, lsiSorts []string) (bool, error) {
+	// If there isn't yet a partition key on the struct, we can't do anything with this call.
 	if p.PartitionKey == nil {
 		return false, fmt.Errorf("partition key not specified")
 	}
-	if noSort || noLSI || len(lsiSorts) == 0 {
+	// If a sort key hasn't been specified, or the customer has specified that there is no LSI,
+	// or there is implicitly no LSI based on the input lsiSorts value, do nothing.
+	if p.SortKey == nil || noLSI || len(lsiSorts) == 0 {
 		p.HasLSI = false
 		return false, nil
 	}

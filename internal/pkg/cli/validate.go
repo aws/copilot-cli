@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/addons"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -248,15 +248,15 @@ func validateKey(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	attr, err := addons.DDBAttributeFromKey(s)
+	attr, err := addon.DDBAttributeFromKey(s)
 	if err != nil {
 		return errDDBAttributeBadFormat
 	}
-	err = dynamoTableNameValidation(attr.name)
+	err = dynamoTableNameValidation(*attr.Name)
 	if err != nil {
 		return errValueBadFormatWithPeriodUnderscore
 	}
-	err = validateDynamoDataType(attr.dataType)
+	err = validateDynamoDataType(*attr.DataType)
 	if err != nil {
 		return err
 	}
