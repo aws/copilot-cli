@@ -4,17 +4,16 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +37,6 @@ type showSvcOpts struct {
 	w             io.Writer
 	store         store
 	describer     describer
-	ws            wsSvcReader
 	sel           configSelector
 	initDescriber func(bool) error // Overriden in tests.
 }
@@ -46,17 +44,16 @@ type showSvcOpts struct {
 func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 	ssmStore, err := config.NewStore()
 	if err != nil {
-		return nil, fmt.Errorf("connect to environment datastore: %w", err)
+		return nil, fmt.Errorf("connect to config store: %w", err)
 	}
-	ws, err := workspace.New()
+	deployStore, err := deploy.NewStore(ssmStore)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 
 	opts := &showSvcOpts{
 		showSvcVars: vars,
 		store:       ssmStore,
-		ws:          ws,
 		w:           log.OutputWriter,
 		sel:         selector.NewConfigSelect(vars.prompt, ssmStore),
 	}
@@ -66,18 +63,24 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		if err != nil {
 			return err
 		}
+		options := &describe.NewServiceDescriberOption{
+			App:         opts.AppName(),
+			Svc:         opts.svcName,
+			ConfigStore: ssmStore,
+			DeployStore: deployStore,
+		}
 		switch svc.Type {
 		case manifest.LoadBalancedWebServiceType:
 			if enableResources {
-				d, err = describe.NewWebServiceDescriberWithResources(opts.AppName(), opts.svcName)
+				d, err = describe.NewWebServiceDescriberWithResources(options)
 			} else {
-				d, err = describe.NewWebServiceDescriber(opts.AppName(), opts.svcName)
+				d, err = describe.NewWebServiceDescriber(options)
 			}
 		case manifest.BackendServiceType:
 			if enableResources {
-				d, err = describe.NewBackendServiceDescriberWithResources(opts.AppName(), opts.svcName)
+				d, err = describe.NewBackendServiceDescriberWithResources(options)
 			} else {
-				d, err = describe.NewBackendServiceDescriber(opts.AppName(), opts.svcName)
+				d, err = describe.NewBackendServiceDescriber(options)
 			}
 		default:
 			return fmt.Errorf("invalid service type %s", svc.Type)
@@ -158,62 +161,17 @@ func (o *showSvcOpts) askApp() error {
 }
 
 func (o *showSvcOpts) askSvcName() error {
-	// return if service name is set by flag
 	if o.svcName != "" {
 		return nil
 	}
-
-	svcNames, err := o.retrieveLocalService()
-	if err != nil {
-		svcNames, err = o.retrieveAllServices()
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(svcNames) == 0 {
-		log.Infof("No services found in application %s.\n", color.HighlightUserInput(o.AppName()))
-		return nil
-	}
-	if len(svcNames) == 1 {
-		o.svcName = svcNames[0]
-		return nil
-	}
-	svcName, err := o.prompt.SelectOne(
-		fmt.Sprintf(svcShowSvcNamePrompt, color.HighlightUserInput(o.AppName())),
-		svcShowSvcNameHelpPrompt,
-		svcNames,
-	)
+	svcName, err := o.sel.Service(fmt.Sprintf(svcShowSvcNamePrompt, color.HighlightUserInput(o.AppName())),
+		svcShowSvcNameHelpPrompt, o.AppName())
 	if err != nil {
 		return fmt.Errorf("select service for application %s: %w", o.AppName(), err)
 	}
 	o.svcName = svcName
 
 	return nil
-}
-
-func (o *showSvcOpts) retrieveLocalService() ([]string, error) {
-	localSvcNames, err := o.ws.ServiceNames()
-	if err != nil {
-		return nil, err
-	}
-	if len(localSvcNames) == 0 {
-		return nil, errors.New("no service found")
-	}
-	return localSvcNames, nil
-}
-
-func (o *showSvcOpts) retrieveAllServices() ([]string, error) {
-	svcs, err := o.store.ListServices(o.AppName())
-	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", o.AppName(), err)
-	}
-	svcNames := make([]string, len(svcs))
-	for ind, svc := range svcs {
-		svcNames[ind] = svc.Name
-	}
-
-	return svcNames, nil
 }
 
 // BuildSvcShowCmd builds the command for showing services in an application.

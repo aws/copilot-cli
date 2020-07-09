@@ -144,78 +144,14 @@ func TestSvcShow_Ask(t *testing.T) {
 			wantedSvc:   "my-svc",
 			wantedError: nil,
 		},
-		"retrieve all service names if fail to retrieve service name from local": {
+		"success": {
 			inputApp: "",
 			inputSvc: "",
 
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
-
-					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
-						{Name: "my-svc"},
-						{Name: "archer-svc"},
-					}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, []string{"my-svc", "archer-svc"}).Return("my-svc", nil).Times(1),
-				)
-			},
-
-			wantedApp:   "my-app",
-			wantedSvc:   "my-svc",
-			wantedError: nil,
-		},
-		"retrieve all service names if no service found in local dir": {
-			inputApp: "",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				gomock.InOrder(
-					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
-
-					m.ws.EXPECT().ServiceNames().Return([]string{}, nil),
-					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
-						{Name: "my-svc"},
-						{Name: "archer-svc"},
-					}, nil),
-
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, []string{"my-svc", "archer-svc"}).Return("my-svc", nil).Times(1),
-				)
-			},
-
-			wantedApp:   "my-app",
-			wantedSvc:   "my-svc",
-			wantedError: nil,
-		},
-		"retrieve local service names": {
-			inputApp: "",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				gomock.InOrder(
-					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
-
-					m.ws.EXPECT().ServiceNames().Return([]string{"my-svc", "archer-svc"}, nil),
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, []string{"my-svc", "archer-svc"}).Return("my-svc", nil).Times(1),
-				)
-			},
-
-			wantedApp:   "my-app",
-			wantedSvc:   "my-svc",
-			wantedError: nil,
-		},
-		"skip selecting if only one service found": {
-			inputApp: "my-app",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				gomock.InOrder(
-					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
-						{
-							Name: "my-svc",
-						},
-					}, nil),
+					m.sel.EXPECT().Service(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, "my-app").Return("my-svc", nil),
 				)
 			},
 
@@ -233,21 +169,6 @@ func TestSvcShow_Ask(t *testing.T) {
 
 			wantedError: fmt.Errorf("select application name: some error"),
 		},
-		"returns error when fail to list services": {
-			inputApp: "",
-			inputSvc: "",
-
-			setupMocks: func(m showSvcMocks) {
-				gomock.InOrder(
-					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
-
-					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListServices("my-app").Return(nil, fmt.Errorf("some error")),
-				)
-			},
-
-			wantedError: fmt.Errorf("list services for application my-app: some error"),
-		},
 		"returns error when fail to select services": {
 			inputApp: "",
 			inputSvc: "",
@@ -255,14 +176,7 @@ func TestSvcShow_Ask(t *testing.T) {
 			setupMocks: func(m showSvcMocks) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(svcShowAppNamePrompt, svcShowAppNameHelpPrompt).Return("my-app", nil),
-
-					m.ws.EXPECT().ServiceNames().Return(nil, errors.New("some error")),
-					m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Service{
-						{Name: "my-svc"},
-						{Name: "archer-svc"},
-					}, nil),
-
-					m.prompt.EXPECT().SelectOne(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, []string{"my-svc", "archer-svc"}).Return("", fmt.Errorf("some error")).Times(1),
+					m.sel.EXPECT().Service(fmt.Sprintf(svcShowSvcNamePrompt, "my-app"), svcShowSvcNameHelpPrompt, "my-app").Return("", errors.New("some error")),
 				)
 			},
 
@@ -298,7 +212,6 @@ func TestSvcShow_Ask(t *testing.T) {
 					},
 				},
 				store: mockStoreReader,
-				ws:    mockWorkspace,
 				sel:   mockSelector,
 			}
 

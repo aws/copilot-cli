@@ -10,55 +10,46 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // BackendServiceDescriber retrieves information about a backend service.
 type BackendServiceDescriber struct {
-	service         *config.Service
+	app             string
+	svc             string
 	enableResources bool
 
 	store                deployStoreSvc
-	svcDescriber         svcDescriber
+	svcDescriber         map[string]svcDescriber
 	initServiceDescriber func(string) error
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.
-func NewBackendServiceDescriber(app, svc string) (*BackendServiceDescriber, error) {
-	configStore, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
-	}
-	meta, err := configStore.GetService(app, svc)
-	if err != nil {
-		return nil, err
-	}
-	deployStore, err := deploy.NewStore(configStore)
-	if err != nil {
-		return nil, fmt.Errorf("connect to deploy store: %w", err)
-	}
-	opts := &BackendServiceDescriber{
-		service:         meta,
+func NewBackendServiceDescriber(opt *NewServiceDescriberOption) (*BackendServiceDescriber, error) {
+	describer := &BackendServiceDescriber{
+		app:             opt.App,
+		svc:             opt.Svc,
 		enableResources: false,
-		store:           deployStore,
+		store:           opt.DeployStore,
+		svcDescriber:    make(map[string]svcDescriber),
 	}
-	opts.initServiceDescriber = func(env string) error {
-		d, err := NewServiceDescriber(app, env, svc)
+	describer.initServiceDescriber = func(env string) error {
+		opt.Env = env
+		d, err := NewServiceDescriber(opt)
 		if err != nil {
 			return err
 		}
-		opts.svcDescriber = d
+		describer.svcDescriber[env] = d
 		return nil
 	}
-	return opts, nil
+	return describer, nil
 }
 
 // NewBackendServiceDescriberWithResources instantiates a backend service describer with stack resources.
-func NewBackendServiceDescriberWithResources(app, svc string) (*BackendServiceDescriber, error) {
-	d, err := NewBackendServiceDescriber(app, svc)
+func NewBackendServiceDescriberWithResources(opt *NewServiceDescriberOption) (*BackendServiceDescriber, error) {
+	d, err := NewBackendServiceDescriber(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -72,23 +63,23 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err := d.initServiceDescriber(envName); err != nil {
 		return "", err
 	}
-	svcParams, err := d.svcDescriber.Params()
+	svcParams, err := d.svcDescriber[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
 	}
 	s := serviceDiscovery{
-		Service: d.service.Name,
+		Service: d.svc,
 		Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-		App:     d.service.App,
+		App:     d.app,
 	}
 	return s.String(), nil
 }
 
 // Describe returns info of a backend service.
 func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironmentsDeployedTo(d.service.App, d.service.Name)
+	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)
 	if err != nil {
-		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.service.App, err)
+		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
 	var configs []*ServiceConfig
@@ -99,14 +90,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		svcParams, err := d.svcDescriber.Params()
+		svcParams, err := d.svcDescriber[env].Params()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
 		services = appendServiceDiscovery(services, serviceDiscovery{
-			Service: d.service.Name,
+			Service: d.svc,
 			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-			App:     d.service.App,
+			App:     d.app,
 		}, env)
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
@@ -115,7 +106,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
 			Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
 		})
-		backendSvcEnvVars, err := d.svcDescriber.EnvVars()
+		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
@@ -127,7 +118,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
 		for _, env := range environments {
-			stackResources, err := d.svcDescriber.ServiceStackResources()
+			stackResources, err := d.svcDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
@@ -136,9 +127,9 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &backendSvcDesc{
-		Service:          d.service.Name,
-		Type:             d.service.Type,
-		App:              d.service.App,
+		Service:          d.svc,
+		Type:             manifest.BackendServiceType,
+		App:              d.app,
 		Configurations:   configs,
 		ServiceDiscovery: services,
 		Variables:        envVars,
