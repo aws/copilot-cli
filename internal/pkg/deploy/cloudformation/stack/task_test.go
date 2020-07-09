@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,7 +20,7 @@ const (
 	testTaskName = "my-task"
 )
 
-func TestTask_Template(t *testing.T) {
+func TestTaskStackConfig_Template(t *testing.T) {
 	testCases := map[string]struct {
 		mockReadParser func(m *mocks.MockReadParser)
 
@@ -51,11 +53,15 @@ func TestTask_Template(t *testing.T) {
 				tc.mockReadParser(mockReadParser)
 			}
 
-			taskStack := &taskStackConfig{
+			taskInput := deploy.CreateTaskResourcesInput{
+			}
+
+			taskStackConfig := &taskStackConfig{
+				CreateTaskResourcesInput: &taskInput,
 				parser: mockReadParser,
 			}
 
-			got, err := taskStack.Template()
+			got, err := taskStackConfig.Template()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
@@ -66,7 +72,7 @@ func TestTask_Template(t *testing.T) {
 	}
 }
 
-func TestTask_Parameters(t *testing.T) {
+func TestTaskStackConfig_Parameters(t *testing.T) {
 	expectedParams := []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(taskNameParamKey),
@@ -86,7 +92,7 @@ func TestTask_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(taskLogRetentionParamKey),
-			ParameterValue: aws.String(taskLogRetention),
+			ParameterValue: aws.String(taskLogRetentionInDays),
 		},
 		{
 			ParameterKey:   aws.String(taskTaskRoleParamKey),
@@ -98,23 +104,89 @@ func TestTask_Parameters(t *testing.T) {
 		},
 	}
 
-	task := &taskStackConfig{
+	taskInput := deploy.CreateTaskResourcesInput{
 		Name:   "my-task",
-		Cpu:    256,
+		CPU:    256,
 		Memory: 512,
 
-		ImageURL: "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
+		Image: "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
 		TaskRole: "task-role",
 		Command:  "echo hooray",
+	}
+
+	task := &taskStackConfig{
+		CreateTaskResourcesInput: &taskInput,
 	}
 	params, _ := task.Parameters()
 	require.ElementsMatch(t, expectedParams, params)
 }
 
-func TestTask_StackName(t *testing.T) {
+func TestTaskStackConfig_StackName(t *testing.T) {
+	taskInput := deploy.CreateTaskResourcesInput{
+		Name:   "my-task",
+	}
+
 	task := &taskStackConfig{
-		Name: testTaskName,
+		CreateTaskResourcesInput: &taskInput,
 	}
 	got := task.StackName()
 	require.Equal(t, got, fmt.Sprintf("task-%s", testTaskName))
+}
+
+func TestTaskStackConfig_Tags(t *testing.T) {
+	testCases := map[string]struct {
+		input deploy.CreateTaskResourcesInput
+
+		expectedTags []*cloudformation.Tag
+	}{
+		"with app and env": {
+			input: deploy.CreateTaskResourcesInput{
+				Name:   "my-task",
+
+				App: "my-app",
+				Env: "test",
+			},
+
+			expectedTags: []*cloudformation.Tag{
+				{
+					Key: aws.String(deploy.TaskTagKey),
+					Value: aws.String("my-task"),
+				},
+				{
+					Key: aws.String(deploy.AppTagKey),
+					Value: aws.String("my-app"),
+				},
+				{
+					Key: aws.String(deploy.EnvTagKey),
+					Value: aws.String("test"),
+				},
+			},
+		},
+		"input without app or env": {
+			input: deploy.CreateTaskResourcesInput{
+				Name:   "my-task",
+
+				Env: config.EnvNameNone,
+			},
+
+			expectedTags: []*cloudformation.Tag{
+				{
+					Key: aws.String(deploy.TaskTagKey),
+					Value: aws.String("my-task"),
+				},
+			},
+		},
+	}
+
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			taskStackConfig := &taskStackConfig{
+				CreateTaskResourcesInput: &tc.input,
+			}
+			tags := taskStackConfig.Tags()
+
+			require.ElementsMatch(t, tc.expectedTags, tags)
+		})
+	}
 }

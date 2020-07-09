@@ -8,10 +8,14 @@ package deploy
 // CreateTaskResourcesInput holds the fields required to create a task stack.
 type CreateTaskResourcesInput struct {
 	Name     string
-	Cpu      int
+	CPU      int
 	Memory   int
+
 	Image    string
 	TaskRole string
 	Command  string
 	EnvVars  map[string]string
+
+	App      string
+	Env      string
 }
