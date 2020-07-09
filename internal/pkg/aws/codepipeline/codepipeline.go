@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	pipelineResourceType = "AWS::CodePipeline::Pipeline"
+	pipelineResourceType = "codepipeline:pipeline"
 )
 
 type api interface {
@@ -27,7 +27,7 @@ type api interface {
 }
 
 type resourceGetter interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
+	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
 }
 
 // CodePipeline wraps the AWS CodePipeline client.
@@ -194,13 +194,13 @@ func (s *Stage) HumanString() string {
 // ListPipelineNamesByTags retrieves the names of all pipelines for a project.
 func (c *CodePipeline) ListPipelineNamesByTags(tags map[string]string) ([]string, error) {
 	var pipelineNames []string
-	arns, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
+	resources, err := c.rgClient.GetResourcesByTags(pipelineResourceType, tags)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, arn := range arns {
-		name, err := c.getPipelineName(arn)
+	for _, resource := range resources {
+		name, err := c.getPipelineName(resource.ARN)
 		if err != nil {
 			return nil, err
 		}

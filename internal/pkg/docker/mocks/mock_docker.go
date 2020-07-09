@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // Mockrunner is a mock of runner interface

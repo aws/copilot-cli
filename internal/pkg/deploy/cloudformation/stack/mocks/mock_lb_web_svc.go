@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	template "github.com/aws/copilot-cli/internal/pkg/template"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockloadBalancedWebSvcReadParser is a mock of loadBalancedWebSvcReadParser interface

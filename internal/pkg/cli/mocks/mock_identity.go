@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	identity "github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockidentityService is a mock of identityService interface

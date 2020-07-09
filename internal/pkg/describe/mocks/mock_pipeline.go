@@ -5,11 +5,10 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockstackResourcesDescriber is a mock of stackResourcesDescriber interface
