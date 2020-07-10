@@ -5,7 +5,6 @@
 package ecs
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -103,6 +102,7 @@ type Image struct {
 	Digest string
 }
 
+// RunTaskInput holds the fields needed to run tasks.
 type RunTaskInput struct {
 	Cluster        string
 	Count          int
@@ -189,7 +189,7 @@ func (e *ECS) DefaultCluster() (string, error) {
 	}
 
 	if len(resp.Clusters) == 0 {
-		return "", errors.New("no default cluster is found")
+		return "", &ErrNoDefaultCluster{}
 	}
 
 	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
@@ -215,22 +215,22 @@ func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
 		},
 	})
 	if err != nil {
-		return []string{}, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)
+		return nil, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)
 	}
 
-	taskArns := make([]string, len(resp.Tasks))
+	taskARNs := make([]string, len(resp.Tasks))
 	for idx, task := range resp.Tasks {
-		taskArns[idx] = aws.StringValue(task.TaskArn)
+		taskARNs[idx] = aws.StringValue(task.TaskArn)
 	}
 
 	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
-		Tasks:   aws.StringSlice(taskArns),
+		Tasks:   aws.StringSlice(taskARNs),
 	}); err != nil {
-		return taskArns, fmt.Errorf("wait for tasks to be running: %w", err)
+		return taskARNs, fmt.Errorf("wait for tasks to be running: %w", err)
 	}
 
-	return taskArns, nil
+	return taskARNs, nil
 }
 
 // TaskStatus returns the status of the running task.

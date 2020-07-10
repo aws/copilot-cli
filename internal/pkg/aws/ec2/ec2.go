@@ -39,7 +39,9 @@ type api interface {
 
 // Filter contains the name and values of a filter.
 type Filter struct {
+	// Name is the name of a filter that will be applied to subnets, for available filter names see: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSubnets.html
 	Name string
+	// Value is the value of the filter
 	Values []string
 }
 
@@ -55,8 +57,8 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// GetSubnetIDs finds the subnet IDs using filters.
-func (c *EC2) GetSubnetIDs(filters []Filter) ([]string, error) {
+// GetSubnetIDs finds the subnet IDs with optional filters
+func (c *EC2) GetSubnetIDs(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
 
 	response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
@@ -74,8 +76,8 @@ func (c *EC2) GetSubnetIDs(filters []Filter) ([]string, error) {
 	return subnetIDs, nil
 }
 
-// GetSecurityGroups finds the security group IDs using filters
-func (c *EC2) GetSecurityGroups(filters []Filter) ([]string, error) {
+// GetSecurityGroups finds the security group IDs with optional filters
+func (c *EC2) GetSecurityGroups(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
 
 	response, err := c.client.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
