@@ -189,7 +189,7 @@ func (e *ECS) DefaultCluster() (string, error) {
 	}
 
 	if len(resp.Clusters) == 0 {
-		return "", &ErrNoDefaultCluster{}
+		return "", ErrNoDefaultCluster
 	}
 
 	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
