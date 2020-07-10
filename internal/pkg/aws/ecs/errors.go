@@ -1,11 +1,10 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package ecs
 
-import "fmt"
+import "errors"
 
 // ErrNoDefaultCluster occurs when the default cluster is not found.
-type ErrNoDefaultCluster struct {}
-
-func (e *ErrNoDefaultCluster) Error() string {
-    return fmt.Sprintf("no default cluster is found")
-}
+var ErrNoDefaultCluster = errors.New("default cluster does not exist")
 
