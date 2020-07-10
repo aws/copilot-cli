@@ -23,6 +23,25 @@ Resources:
         BlockPublicAcls: true
         BlockPublicPolicy: true
 
+  {{logicalIDSafe .Name}}BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Retain
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: 
+              - !Sub ${ {{logicalIDSafe .Name}}.Arn}/*
+              - !Sub ${ {{logicalIDSafe .Name}}.Arn}
+            Condition: 
+              Bool:
+                "aws:SecureTransport": false
+      Bucket: !Ref {{logicalIDSafe .Name}}
+
   {{logicalIDSafe .Name}}AccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
