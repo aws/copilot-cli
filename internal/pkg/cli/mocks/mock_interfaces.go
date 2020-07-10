@@ -11,6 +11,7 @@ import (
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ecr "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	selector "github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -990,6 +991,74 @@ func (m *Mockstore) DeleteService(appName, svcName string) error {
 func (mr *MockstoreMockRecorder) DeleteService(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteService", reflect.TypeOf((*Mockstore)(nil).DeleteService), appName, svcName)
+}
+
+// MockdeployedEnvironmentLister is a mock of deployedEnvironmentLister interface
+type MockdeployedEnvironmentLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeployedEnvironmentListerMockRecorder
+}
+
+// MockdeployedEnvironmentListerMockRecorder is the mock recorder for MockdeployedEnvironmentLister
+type MockdeployedEnvironmentListerMockRecorder struct {
+	mock *MockdeployedEnvironmentLister
+}
+
+// NewMockdeployedEnvironmentLister creates a new mock instance
+func NewMockdeployedEnvironmentLister(ctrl *gomock.Controller) *MockdeployedEnvironmentLister {
+	mock := &MockdeployedEnvironmentLister{ctrl: ctrl}
+	mock.recorder = &MockdeployedEnvironmentListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdeployedEnvironmentLister) EXPECT() *MockdeployedEnvironmentListerMockRecorder {
+	return m.recorder
+}
+
+// ListEnvironmentsDeployedTo mocks base method
+func (m *MockdeployedEnvironmentLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironmentsDeployedTo", appName, svcName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironmentsDeployedTo indicates an expected call of ListEnvironmentsDeployedTo
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
+}
+
+// ListDeployedServices mocks base method
+func (m *MockdeployedEnvironmentLister) ListDeployedServices(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedServices indicates an expected call of ListDeployedServices
+func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
+}
+
+// IsDeployed mocks base method
+func (m *MockdeployedEnvironmentLister) IsDeployed(appName, envName, svcName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDeployed", appName, envName, svcName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsDeployed indicates an expected call of IsDeployed
+func (mr *MockdeployedEnvironmentListerMockRecorder) IsDeployed(appName, envName, svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDeployed", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).IsDeployed), appName, envName, svcName)
 }
 
 // MocksecretsManager is a mock of secretsManager interface
@@ -3573,6 +3642,65 @@ func (m *MockconfigSelector) Service(prompt, help, app string) (string, error) {
 func (mr *MockconfigSelectorMockRecorder) Service(prompt, help, app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockconfigSelector)(nil).Service), prompt, help, app)
+}
+
+// MockdeploySelector is a mock of deploySelector interface
+type MockdeploySelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeploySelectorMockRecorder
+}
+
+// MockdeploySelectorMockRecorder is the mock recorder for MockdeploySelector
+type MockdeploySelectorMockRecorder struct {
+	mock *MockdeploySelector
+}
+
+// NewMockdeploySelector creates a new mock instance
+func NewMockdeploySelector(ctrl *gomock.Controller) *MockdeploySelector {
+	mock := &MockdeploySelector{ctrl: ctrl}
+	mock.recorder = &MockdeploySelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdeploySelector) EXPECT() *MockdeploySelectorMockRecorder {
+	return m.recorder
+}
+
+// Application mocks base method
+func (m *MockdeploySelector) Application(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Application", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Application indicates an expected call of Application
+func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), prompt, help)
+}
+
+// ServiceEnvironment mocks base method
+func (m *MockdeploySelector) ServiceEnvironment(prompt, help, app string, opts ...selector.GetServiceEnvironmentOpts) (string, string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ServiceEnvironment", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ServiceEnvironment indicates an expected call of ServiceEnvironment
+func (mr *MockdeploySelectorMockRecorder) ServiceEnvironment(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help, app}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceEnvironment", reflect.TypeOf((*MockdeploySelector)(nil).ServiceEnvironment), varargs...)
 }
 
 // MockwsSelector is a mock of wsSelector interface
