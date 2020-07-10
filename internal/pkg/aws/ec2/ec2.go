@@ -57,7 +57,7 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// GetSubnetIDs finds the subnet IDs with optional filters
+// GetSubnetIDs finds the subnet IDs with optional filters.
 func (c *EC2) GetSubnetIDs(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
 
@@ -76,7 +76,7 @@ func (c *EC2) GetSubnetIDs(filters ...Filter) ([]string, error) {
 	return subnetIDs, nil
 }
 
-// GetSecurityGroups finds the security group IDs with optional filters
+// GetSecurityGroups finds the security group IDs with optional filters.
 func (c *EC2) GetSecurityGroups(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
 

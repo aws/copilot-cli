@@ -181,7 +181,7 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 	return tasks, nil
 }
 
-// DefaultCluster returns the default clusters in the account and region.
+// DefaultCluster returns the default cluster ARN in the account and region.
 func (e *ECS) DefaultCluster() (string, error) {
 	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{})
 	if err != nil {
