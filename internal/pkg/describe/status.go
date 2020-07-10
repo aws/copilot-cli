@@ -52,8 +52,8 @@ type ServiceStatusDesc struct {
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
 
-// NewServiceStatusOption contains fields that initiates ServiceStatus struct.
-type NewServiceStatusOption struct {
+// NewServiceStatusConfig contains fields that initiates ServiceStatus struct.
+type NewServiceStatusConfig struct {
 	App         string
 	Env         string
 	Svc         string
@@ -61,7 +61,7 @@ type NewServiceStatusOption struct {
 }
 
 // NewServiceStatus instantiates a new ServiceStatus struct.
-func NewServiceStatus(opt *NewServiceStatusOption) (*ServiceStatus, error) {
+func NewServiceStatus(opt *NewServiceStatusConfig) (*ServiceStatus, error) {
 	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)

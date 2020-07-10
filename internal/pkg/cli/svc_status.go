@@ -66,7 +66,7 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 			return nil
 		},
 		initStatusDescriber: func(o *svcStatusOpts) error {
-			d, err := describe.NewServiceStatus(&describe.NewServiceStatusOption{
+			d, err := describe.NewServiceStatus(&describe.NewServiceStatusConfig{
 				App:         o.AppName(),
 				Env:         o.envName,
 				Svc:         o.svcName,

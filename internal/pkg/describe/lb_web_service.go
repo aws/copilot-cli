@@ -93,6 +93,9 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 		svcDescriber:    make(map[string]svcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
+		if _, ok := describer.svcDescriber[env]; ok {
+			return nil
+		}
 		d, err := NewServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
@@ -156,6 +159,10 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
 		for _, env := range environments {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				return nil, err
+			}
 			stackResources, err := d.svcDescriber[env].ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
