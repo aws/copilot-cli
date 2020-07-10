@@ -180,7 +180,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoose//notEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoose//notEvenAURL: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`"),
 		},
 		"returns error if fail to get GitHub access token": {
 			inEnvironments:      []string{},
