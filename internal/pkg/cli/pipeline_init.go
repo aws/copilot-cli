@@ -443,7 +443,7 @@ func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error
 	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
 	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
 	if len(ownerRepo) != 2 {
-		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
+		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`", url)
 	}
 	return ownerRepo[0], ownerRepo[1], nil
 }
