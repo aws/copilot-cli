@@ -124,11 +124,9 @@ func (o *showSvcOpts) Ask() error {
 // Execute shows the services through the prompt.
 func (o *showSvcOpts) Execute() error {
 	if o.svcName == "" {
-		// If there are no local services in the workspace, we exit without error.
 		return nil
 	}
-	err := o.initDescriber()
-	if err != nil {
+	if err := o.initDescriber(); err != nil {
 		return err
 	}
 	svc, err := o.describer.Describe()
