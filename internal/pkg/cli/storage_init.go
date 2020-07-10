@@ -79,7 +79,7 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 	storageInitDDBMoreLSIPrompt = "Would you like to add more alternate sort keys to this table?"
 
 	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
-	storageInitDDBLSINameHelp   = "You can use the the characters [a-zA-Z0-9.-_]"
+	storageInitDDBLSINameHelp   = "You can use the characters [a-zA-Z0-9.-_]"
 
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
