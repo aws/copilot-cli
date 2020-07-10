@@ -59,7 +59,7 @@ production
 
 #### What's in your environment?
 
-Running `copilot env show` will show you a summary of your environment. Here's an example of the output you might see for our test environment. This output includes the the account and region the environment is in, the services deployed to that environment and the tag that all resources created in this environment will have. You can also provide an optional `--resources` flag to see all AWS resources associated with this environment.
+Running `copilot env show` will show you a summary of your environment. Here's an example of the output you might see for our test environment. This output includes the account and the region the environment is in, the services deployed to that environment and the tag that all resources created in this environment will have. You can also provide an optional `--resources` flag to see all AWS resources associated with this environment.
 
 ```bash title=copilot&nbsp;env&nbsp;show
 $ copilot env show --name test
