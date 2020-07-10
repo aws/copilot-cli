@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -116,7 +115,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedBackendSvc: &backendSvcDesc{
 				Service: testSvc,
-				Type:    "",
+				Type:    "Backend Service",
 				App:     testApp,
 				Configurations: []*ServiceConfig{
 					{
@@ -185,13 +184,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &BackendServiceDescriber{
-				service: &config.Service{
-					App:  testApp,
-					Name: testSvc,
+				app:             testApp,
+				svc:             testSvc,
+				enableResources: tc.shouldOutputResources,
+				store:           mockStore,
+				svcDescriber: map[string]svcDescriber{
+					"test": mockSvcDescriber,
+					"prod": mockSvcDescriber,
 				},
-				enableResources:      tc.shouldOutputResources,
-				store:                mockStore,
-				svcDescriber:         mockSvcDescriber,
 				initServiceDescriber: func(string) error { return nil },
 			}
 
