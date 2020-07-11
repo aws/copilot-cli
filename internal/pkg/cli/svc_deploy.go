@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -49,7 +50,7 @@ type deploySvcOpts struct {
 	deploySvcVars
 
 	store        store
-	ws           wsSvcReader
+	ws           wsSvcDirReader
 	ecr          ecrService
 	docker       dockerService
 	s3           artifactUploader
@@ -332,12 +333,19 @@ func (o *deploySvcOpts) getDockerfilePath() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
 	}
-	return mf.DockerfilePath(), nil
+
+	copilotDir, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get workspace root directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDir)
+	return filepath.Join(wsRoot, mf.DockerfilePath()), nil
 }
 
 func (o *deploySvcOpts) getDockerfileContext() (string, error) {
 	type dfContext interface {
 		DockerfileContext() string
+		DockerfilePath() string
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
@@ -351,9 +359,22 @@ func (o *deploySvcOpts) getDockerfileContext() (string, error) {
 	}
 	mf, ok := svc.(dfContext)
 	if !ok {
-		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
+		return "", fmt.Errorf("service %s does not have both dockerfile context and path", o.Name)
 	}
-	return mf.DockerfileContext(), nil
+	copilotDir, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return "", fmt.Errorf("get workspace root directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDir)
+
+	ctx := mf.DockerfileContext()
+	// Default to directory of dockerfile.
+	if ctx != "" {
+		return filepath.Join(wsRoot, mf.DockerfileContext()), nil
+	}
+	dfPath := mf.DockerfilePath()
+	dfDir := filepath.Dir(dfPath)
+	return filepath.Join(wsRoot, dfDir), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

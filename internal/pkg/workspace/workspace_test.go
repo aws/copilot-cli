@@ -99,7 +99,7 @@ func TestWorkspace_copilotDirPath(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: fs},
 				copilotDir: tc.presetManifestDir,
 			}
-			manifestDirPath, err := ws.copilotDirPath()
+			manifestDirPath, err := ws.CopilotDirPath()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedManifestDir, manifestDirPath)

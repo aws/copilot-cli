@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -23,13 +24,13 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		inEnvName string
 		inSvcName string
 
-		mockWs    func(m *mocks.MockwsSvcReader)
+		mockWs    func(m *mocks.MockwsSvcDirReader)
 		mockStore func(m *mocks.Mockstore)
 
 		wantedError error
 	}{
 		"no existing applications": {
-			mockWs:    func(m *mocks.MockwsSvcReader) {},
+			mockWs:    func(m *mocks.MockwsSvcDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: errNoAppInWorkspace,
@@ -37,7 +38,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with workspace error": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ServiceNames().Return(nil, errors.New("some error"))
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -47,7 +48,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with service not in workspace": {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ServiceNames().Return([]string{}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {},
@@ -57,7 +58,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 		"with unknown environment": {
 			inAppName: "phonetool",
 			inEnvName: "test",
-			mockWs:    func(m *mocks.MockwsSvcReader) {},
+			mockWs:    func(m *mocks.MockwsSvcDirReader) {},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetEnvironment("phonetool", "test").
 					Return(nil, errors.New("unknown env"))
@@ -69,7 +70,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			inAppName: "phonetool",
 			inSvcName: "frontend",
 			inEnvName: "test",
-			mockWs: func(m *mocks.MockwsSvcReader) {
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
 				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
@@ -84,7 +85,8 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockWs := mocks.NewMockwsSvcReader(ctrl)
+
+			mockWs := mocks.NewMockwsSvcDirReader(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			tc.mockWs(mockWs)
 			tc.mockStore(mockStore)
@@ -192,8 +194,6 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 }
 
 func TestSvcDeployOpts_getDockerfilePath(t *testing.T) {
-	var mockWorkspace *mocks.MockwsSvcReader
-
 	mockError := errors.New("mockError")
 	mockManifest := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
@@ -204,33 +204,27 @@ image:
 	tests := map[string]struct {
 		inputSvc   string
 		setupMocks func(controller *gomock.Controller)
+		mockWs     func(m *mocks.MockwsSvcDirReader)
 
 		wantPath string
 		wantErr  error
 	}{
 		"should return error if ws ReadFile returns error": {
 			inputSvc: "serviceA",
-			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockwsSvcReader(controller)
-
-				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError),
-				)
-			},
 			wantPath: "",
 			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError)
+			},
 		},
 		"success": {
 			inputSvc: "serviceA",
-			setupMocks: func(controller *gomock.Controller) {
-				mockWorkspace = mocks.NewMockwsSvcReader(controller)
-
-				gomock.InOrder(
-					mockWorkspace.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil),
-				)
-			},
-			wantPath: "serviceA/Dockerfile",
+			wantPath: filepath.Join("/ws", "root", "serviceA/Dockerfile"),
 			wantErr:  nil,
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil)
+			},
 		},
 	}
 
@@ -238,7 +232,9 @@ image:
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			test.setupMocks(ctrl)
+
+			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
+			test.mockWs(mockWorkspace)
 			opts := deploySvcOpts{
 				deploySvcVars: deploySvcVars{
 					Name: test.inputSvc,
@@ -247,6 +243,78 @@ image:
 			}
 
 			gotPath, gotErr := opts.getDockerfilePath()
+
+			require.Equal(t, test.wantPath, gotPath)
+			require.Equal(t, test.wantErr, gotErr)
+		})
+	}
+}
+
+func TestSvcDeployOpts_getDockerfileContext(t *testing.T) {
+	mockError := errors.New("mockError")
+	mockManifest := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+image:
+  build: path/to/Dockerfile
+  context: path
+`)
+	mockMftNoContext := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+image:
+  build: path/to/dockerfile
+`)
+
+	tests := map[string]struct {
+		inputSvc   string
+		setupMocks func(controller *gomock.Controller)
+		mockWs     func(m *mocks.MockwsSvcDirReader)
+
+		wantPath string
+		wantErr  error
+	}{
+		"should return error if ws ReadFile returns error": {
+			inputSvc: "serviceA",
+			wantPath: "",
+			wantErr:  fmt.Errorf("read manifest file %s: %w", "serviceA", mockError),
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(nil, mockError)
+			},
+		},
+		"success": {
+			inputSvc: "serviceA",
+			wantPath: filepath.Join("/ws", "root", "path"),
+			wantErr:  nil,
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil)
+			},
+		},
+		"no context field (backwards compatible)": {
+			inputSvc: "serviceA",
+			wantPath: filepath.Join("/ws", "root", "path", "to"),
+			wantErr:  nil,
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockMftNoContext, nil)
+				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockWorkspace := mocks.NewMockwsSvcDirReader(ctrl)
+			test.mockWs(mockWorkspace)
+			opts := deploySvcOpts{
+				deploySvcVars: deploySvcVars{
+					Name: test.inputSvc,
+				},
+				ws: mockWorkspace,
+			}
+
+			gotPath, gotErr := opts.getDockerfileContext()
 
 			require.Equal(t, test.wantPath, gotPath)
 			require.Equal(t, test.wantErr, gotErr)

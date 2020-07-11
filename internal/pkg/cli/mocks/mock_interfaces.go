@@ -2059,6 +2059,74 @@ func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
 }
 
+// MockwsSvcDirReader is a mock of wsSvcDirReader interface
+type MockwsSvcDirReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsSvcDirReaderMockRecorder
+}
+
+// MockwsSvcDirReaderMockRecorder is the mock recorder for MockwsSvcDirReader
+type MockwsSvcDirReaderMockRecorder struct {
+	mock *MockwsSvcDirReader
+}
+
+// NewMockwsSvcDirReader creates a new mock instance
+func NewMockwsSvcDirReader(ctrl *gomock.Controller) *MockwsSvcDirReader {
+	mock := &MockwsSvcDirReader{ctrl: ctrl}
+	mock.recorder = &MockwsSvcDirReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsSvcDirReader) EXPECT() *MockwsSvcDirReaderMockRecorder {
+	return m.recorder
+}
+
+// ServiceNames mocks base method
+func (m *MockwsSvcDirReader) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsSvcDirReaderMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcDirReader)(nil).ServiceNames))
+}
+
+// ReadServiceManifest mocks base method
+func (m *MockwsSvcDirReader) ReadServiceManifest(svcName string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsSvcDirReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadServiceManifest), svcName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MockwsSvcDirReader) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
+}
+
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller

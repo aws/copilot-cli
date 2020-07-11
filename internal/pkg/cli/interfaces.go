@@ -220,6 +220,11 @@ type wsSvcReader interface {
 	svcManifestReader
 }
 
+type wsSvcDirReader interface {
+	wsSvcReader
+	CopilotDirPath() (string, error)
+}
+
 type wsPipelineReader interface {
 	wsServiceLister
 	wsPipelineManifestReader
