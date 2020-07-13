@@ -33,11 +33,15 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput) erro
        return fmt.Errorf("create stack: %w", err)
     }
 
-    if err := cf.cfnClient.UpdateAndWait(stack); err != nil {
-        var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
-        if !errors.As(err, &errChangeSetEmpty) {
-            return fmt.Errorf("update stack: %w", err)
-        }
+    err = cf.cfnClient.UpdateAndWait(stack)
+    if err == nil {
+        return nil
     }
+
+    var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
+    if !errors.As(err, &errChangeSetEmpty) {
+        return fmt.Errorf("update stack: %w", err)
+    }
+
     return nil
 }
