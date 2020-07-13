@@ -27,6 +27,9 @@ type api interface {
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
+	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
+	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
+	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
 // ECS wraps an AWS ECS client.
@@ -99,6 +102,16 @@ type Image struct {
 	Digest string
 }
 
+// RunTaskInput holds the fields needed to run tasks.
+type RunTaskInput struct {
+	Cluster        string
+	Count          int
+	Subnets        []string
+	SecurityGroups []string
+	TaskFamilyName string
+	StartedBy      string
+}
+
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
 	return &ECS{
@@ -166,6 +179,58 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 		}
 	}
 	return tasks, nil
+}
+
+// DefaultCluster returns the default cluster ARN in the account and region.
+func (e *ECS) DefaultCluster() (string, error) {
+	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{})
+	if err != nil {
+		return "", fmt.Errorf("get default cluster: %w", err)
+	}
+
+	if len(resp.Clusters) == 0 {
+		return "", ErrNoDefaultCluster
+	}
+
+	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
+	cluster := resp.Clusters[0]
+	return aws.StringValue(cluster.ClusterArn), nil
+}
+
+// RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
+// the task(s) is running or fails to run, along with task ARNs if possible.
+func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
+	resp, err := e.client.RunTask(&ecs.RunTaskInput{
+		Cluster:        aws.String(input.Cluster),
+		Count:          aws.Int64(int64(input.Count)),
+		LaunchType:     aws.String(ecs.LaunchTypeFargate),
+		StartedBy:      aws.String(input.StartedBy),
+		TaskDefinition: aws.String(input.TaskFamilyName),
+		NetworkConfiguration: &ecs.NetworkConfiguration{
+			AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+				AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+				Subnets:        aws.StringSlice(input.Subnets),
+				SecurityGroups: aws.StringSlice(input.SecurityGroups),
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)
+	}
+
+	taskARNs := make([]string, len(resp.Tasks))
+	for idx, task := range resp.Tasks {
+		taskARNs[idx] = aws.StringValue(task.TaskArn)
+	}
+
+	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+		Cluster: aws.String(input.Cluster),
+		Tasks:   aws.StringSlice(taskARNs),
+	}); err != nil {
+		return taskARNs, fmt.Errorf("wait for tasks to be running: %w", err)
+	}
+
+	return taskARNs, nil
 }
 
 // TaskStatus returns the status of the running task.
