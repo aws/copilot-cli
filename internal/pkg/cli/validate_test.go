@@ -248,34 +248,6 @@ func TestValidateKey(t *testing.T) {
 	}
 }
 
-func TestGetAttributeFromKey(t *testing.T) {
-	testCases := map[string]struct {
-		input     string
-		wantName  string
-		wantType  string
-		wantError error
-	}{
-		"good case": {
-			input:     "userID:S",
-			wantName:  "userID",
-			wantType:  "S",
-			wantError: nil,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got, err := getAttrFromKey(tc.input)
-			if tc.wantError != nil {
-				require.EqualError(t, err, tc.wantError.Error())
-			} else {
-				require.Nil(t, err)
-				require.Equal(t, tc.wantName, got.name)
-				require.Equal(t, tc.wantType, got.dataType)
-			}
-		})
-	}
-
-}
 func TestValidateLSIs(t *testing.T) {
 	testCases := map[string]struct {
 		inputAttributes []string
