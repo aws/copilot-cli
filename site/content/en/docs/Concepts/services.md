@@ -27,7 +27,7 @@ When you're setting up a service, Copilot will ask you about what kind of servic
 
 If you want a service that can't be accessed externally, but only from other services within your application, you can create a __Backend Service__. Copilot will provision an ECS Service running on AWS Fargate, but won't set up any internet-facing endpoints.
 
-Currently there are a few service types supported:
+Currently these are the service types supported:
 * Load Balanced Web Service
 * Backend Service
 
@@ -73,7 +73,7 @@ variables:                    # Pass environment variables as key value pairs.
 # You can override any of the values defined above by environment.
 environments:
   prod:
-    count: 2               # Number of tasks to run for the "test" environment.
+    count: 2               # Number of tasks to run for the "prod" environment.
 ```
 
 #### Image
@@ -82,13 +82,13 @@ The image section contains just a few parameters, the location of the Dockerfile
 
 #### HTTP
 
-The HTTP section is unique to the Load Balanced Web Service type. When a request comes to the load balancer, traffic will be fowraded to this service if the path matches '/' - meaning any traffic will be forwarded to this service. You could update this so that only traffic to the _front-end_ path would be routed to this service by updating the path to be `path: 'front-end'`.
+The HTTP section is unique to the Load Balanced Web Service type. When a request comes to the load balancer, traffic will be forwarded to this service if the path matches '/' - meaning any traffic will be forwarded to this service. You could update this so that only traffic to the _front-end_ path would be routed to this service by updating the path to be `path: 'front-end'`.
 
 There's also an optional health check path. This path is invoked every couple of seconds so that the load balancer can ensure your service is healthy. By default the health check path is `/` - but this can be changed to anything.
 
 #### Scaling
 
-The next sectionin includes the resources allocated to your service. Load Balanced Web Services are run on AWS Fargate, meaning all you have to do is say how much CPU and memory your service needs. This section also includes how many coppies of your service you want up and running. By default, only one copy of your service is spun up, but that number can be increased to handle more load.
+The next sectionin includes the resources allocated to your service. Load Balanced Web Services are run on AWS Fargate, meaning all you have to do is say how much CPU and memory your service needs. This section also includes how many copies of your service you want up and running. By default, only one copy of your service is spun up, but that number can be increased to handle more load.
 
 #### Variables
 
@@ -100,7 +100,7 @@ The secrets section let's you pass in secret values to your service as environme
 
 #### Environments
 
-The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the _count_ parameter so that we can run 2 coppies of our service in or _prod_ environment.
+The environment section lets you overwrite any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the _count_ parameter so that we can run 2 copies of our service in our _prod_ environment.
 
 ### Deploying a Service
 

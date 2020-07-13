@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/golang/mock/gomock"
@@ -142,11 +141,11 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WebServiceDescriber{
-				service: &config.Service{
-					App:  testApp,
-					Name: testSvc,
+				app: testApp,
+				svc: testSvc,
+				svcDescriber: map[string]svcDescriber{
+					"test": mockSvcDescriber,
 				},
-				svcDescriber:         mockSvcDescriber,
 				initServiceDescriber: func(string) error { return nil },
 			}
 
@@ -209,13 +208,11 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
+						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
@@ -231,9 +228,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
@@ -258,9 +253,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
@@ -275,9 +268,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 					}, nil),
 					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: prodSvcPath,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+						stack.LBWebServiceRulePathParamKey:      prodSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "5000",
 						stack.ServiceTaskCountParamKey:          "2",
 						stack.ServiceTaskCPUParamKey:            "512",
@@ -304,7 +295,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedWebSvc: &webSvcDesc{
 				Service: testSvc,
-				Type:    "",
+				Type:    "Load Balanced Web Service",
 				App:     testApp,
 				Configurations: []*ServiceConfig{
 					{
@@ -383,13 +374,14 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WebServiceDescriber{
-				service: &config.Service{
-					App:  testApp,
-					Name: testSvc,
+				app:             testApp,
+				svc:             testSvc,
+				enableResources: tc.shouldOutputResources,
+				store:           mockStore,
+				svcDescriber: map[string]svcDescriber{
+					"test": mockSvcDescriber,
+					"prod": mockSvcDescriber,
 				},
-				enableResources:      tc.shouldOutputResources,
-				store:                mockStore,
-				svcDescriber:         mockSvcDescriber,
 				initServiceDescriber: func(string) error { return nil },
 			}
 

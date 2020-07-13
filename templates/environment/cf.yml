@@ -280,7 +280,7 @@ Resources:
           # This policy is more permissive than the managed PowerUserAccess
           # since it allows arbitrary role creation, which is needed for the
           # ECS task role specified by the customers.
-          # TODO: #335 Scope down the permissions given the the CFN execution
+          # TODO: #335 Scope down the permissions given the CFN execution
           # role.
           PolicyDocument:
             Version: '2012-10-17'
