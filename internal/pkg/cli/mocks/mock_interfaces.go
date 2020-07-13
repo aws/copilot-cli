@@ -1046,19 +1046,19 @@ func (mr *MockdeployedEnvironmentListerMockRecorder) ListDeployedServices(appNam
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).ListDeployedServices), appName, envName)
 }
 
-// IsDeployed mocks base method
-func (m *MockdeployedEnvironmentLister) IsDeployed(appName, envName, svcName string) (bool, error) {
+// IsServiceDeployed mocks base method
+func (m *MockdeployedEnvironmentLister) IsServiceDeployed(appName, envName, svcName string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDeployed", appName, envName, svcName)
+	ret := m.ctrl.Call(m, "IsServiceDeployed", appName, envName, svcName)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// IsDeployed indicates an expected call of IsDeployed
-func (mr *MockdeployedEnvironmentListerMockRecorder) IsDeployed(appName, envName, svcName interface{}) *gomock.Call {
+// IsServiceDeployed indicates an expected call of IsServiceDeployed
+func (mr *MockdeployedEnvironmentListerMockRecorder) IsServiceDeployed(appName, envName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDeployed", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).IsDeployed), appName, envName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsServiceDeployed", reflect.TypeOf((*MockdeployedEnvironmentLister)(nil).IsServiceDeployed), appName, envName, svcName)
 }
 
 // MocksecretsManager is a mock of secretsManager interface
@@ -3682,25 +3682,24 @@ func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), prompt, help)
 }
 
-// ServiceEnvironment mocks base method
-func (m *MockdeploySelector) ServiceEnvironment(prompt, help, app string, opts ...selector.GetServiceEnvironmentOpts) (string, string, error) {
+// DeployedService mocks base method
+func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "ServiceEnvironment", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret := m.ctrl.Call(m, "DeployedService", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedService)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// ServiceEnvironment indicates an expected call of ServiceEnvironment
-func (mr *MockdeploySelectorMockRecorder) ServiceEnvironment(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+// DeployedService indicates an expected call of DeployedService
+func (mr *MockdeploySelectorMockRecorder) DeployedService(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{prompt, help, app}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceEnvironment", reflect.TypeOf((*MockdeploySelector)(nil).ServiceEnvironment), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedService", reflect.TypeOf((*MockdeploySelector)(nil).DeployedService), varargs...)
 }
 
 // MockwsSelector is a mock of wsSelector interface

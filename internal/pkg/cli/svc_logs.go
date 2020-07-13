@@ -198,12 +198,12 @@ func (o *svcLogsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpt
 }
 
 func (o *svcLogsOpts) askSvcEnvName() error {
-	svcName, envName, err := o.sel.ServiceEnvironment(svcLogNamePrompt, svcLogNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
+	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.AppName(), err)
 	}
-	o.svcName = svcName
-	o.envName = envName
+	o.svcName = deployedService.Svc
+	o.envName = deployedService.Env
 	return nil
 }
 

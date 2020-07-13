@@ -117,7 +117,7 @@ type store interface {
 type deployedEnvironmentLister interface {
 	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
 	ListDeployedServices(appName, envName string) ([]string, error)
-	IsDeployed(appName, envName string, svcName string) (bool, error)
+	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
 }
 
 // Secretsmanager interface.
@@ -356,7 +356,7 @@ type configSelector interface {
 
 type deploySelector interface {
 	appSelector
-	ServiceEnvironment(prompt, help string, app string, opts ...selector.GetServiceEnvironmentOpts) (svc string, env string, err error)
+	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
 type wsSelector interface {

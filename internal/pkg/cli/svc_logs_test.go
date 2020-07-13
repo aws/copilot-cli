@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -171,8 +172,11 @@ func TestSvcLogs_Ask(t *testing.T) {
 
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().ServiceEnvironment(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return("mockSvc", "mockEnv", nil),
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil),
 				)
 			},
 
@@ -185,8 +189,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().ServiceEnvironment(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return("", "", errors.New("some error")),
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(nil, errors.New("some error")),
 				)
 			},
 
@@ -196,8 +200,11 @@ func TestSvcLogs_Ask(t *testing.T) {
 			setupMocks: func(m svcLogsMock) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil),
-					m.sel.EXPECT().ServiceEnvironment(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
-						gomock.Any(), gomock.Any()).Return("mockSvc", "mockEnv", nil),
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil),
 				)
 			},
 

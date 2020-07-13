@@ -15,8 +15,8 @@ import (
 )
 
 type deploySelectMocks struct {
-	deploySvc *mocks.MockdeployStoreClient
-	configSvc *mocks.MockappEnvLister
+	deploySvc *mocks.MockDeployStoreClient
+	configSvc *mocks.MockAppEnvLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -149,7 +149,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.deploySvc.
 					EXPECT().
-					IsDeployed(testApp, "test", "mockSvc").
+					IsServiceDeployed(testApp, "test", "mockSvc").
 					Return(false, errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("check if service mockSvc is deployed in environment test: some error"),
@@ -160,7 +160,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.deploySvc.
 					EXPECT().
-					IsDeployed(testApp, "test", "mockSvc").
+					IsServiceDeployed(testApp, "test", "mockSvc").
 					Return(true, nil)
 			},
 			wantEnv: "test",
@@ -173,8 +173,8 @@ func TestDeploySelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockdeploySvc := mocks.NewMockdeployStoreClient(ctrl)
-			mockconfigSvc := mocks.NewMockappEnvLister(ctrl)
+			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
+			mockconfigSvc := mocks.NewMockAppEnvLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := deploySelectMocks{
 				deploySvc: mockdeploySvc,
@@ -190,19 +190,19 @@ func TestDeploySelect_Service(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			gotSvc, gotEnv, err := sel.ServiceEnvironment("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithSvc(tc.svc))
+			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithSvc(tc.svc))
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
-				require.Equal(t, tc.wantSvc, gotSvc)
-				require.Equal(t, tc.wantEnv, gotEnv)
+				require.Equal(t, tc.wantSvc, gotDeployed.Svc)
+				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})
 	}
 }
 
 type workspaceSelectMocks struct {
-	serviceLister *mocks.MockwsSvcLister
+	serviceLister *mocks.MockWsSvcLister
 	prompt        *mocks.MockPrompter
 }
 
@@ -298,7 +298,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockwsSvcLister := mocks.NewMockwsSvcLister(ctrl)
+			mockwsSvcLister := mocks.NewMockWsSvcLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := workspaceSelectMocks{
 				serviceLister: mockwsSvcLister,
@@ -323,7 +323,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 }
 
 type configSelectMocks struct {
-	serviceLister *mocks.MockconfigLister
+	serviceLister *mocks.MockConfigLister
 	prompt        *mocks.MockPrompter
 }
 
@@ -432,7 +432,7 @@ func TestConfigSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockconfigLister := mocks.NewMockConfigLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := configSelectMocks{
 				serviceLister: mockconfigLister,
@@ -458,7 +458,7 @@ func TestConfigSelect_Service(t *testing.T) {
 }
 
 type environmentMocks struct {
-	envLister *mocks.MockappEnvLister
+	envLister *mocks.MockAppEnvLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -563,7 +563,7 @@ func TestSelect_Environment(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockenvLister := mocks.NewMockappEnvLister(ctrl)
+			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := environmentMocks{
 				envLister: mockenvLister,
@@ -587,7 +587,7 @@ func TestSelect_Environment(t *testing.T) {
 }
 
 type applicationMocks struct {
-	appLister *mocks.MockappEnvLister
+	appLister *mocks.MockAppEnvLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -685,7 +685,7 @@ func TestSelect_Application(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockappLister := mocks.NewMockappEnvLister(ctrl)
+			mockappLister := mocks.NewMockAppEnvLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := applicationMocks{
 				appLister: mockappLister,
@@ -709,7 +709,7 @@ func TestSelect_Application(t *testing.T) {
 }
 
 type envwithnoneMocks struct {
-	envLister *mocks.MockappEnvLister
+	envLister *mocks.MockAppEnvLister
 	prompt    *mocks.MockPrompter
 }
 
@@ -804,7 +804,7 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockenvLister := mocks.NewMockappEnvLister(ctrl)
+			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
 			mockprompt := mocks.NewMockPrompter(ctrl)
 			mocks := envwithnoneMocks{
 				envLister: mockenvLister,
