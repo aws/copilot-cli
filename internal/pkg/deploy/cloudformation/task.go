@@ -7,16 +7,15 @@ import (
     "errors"
     "fmt"
 
-    "github.com/aws/copilot-cli/internal/pkg/deploy"
-
     "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+    "github.com/aws/copilot-cli/internal/pkg/deploy"
     "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 // DeployTask deploys a task stack and waits until the deployment is done.
 // If the task stack doesn't exist, then it creates the stack.
 // If the task stack already exists, it updates the stack.
-// NOTE: It doesn't return an error if the change set is empty
+// If the task stack doesn't have any changes, it returns nil
 func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput) error {
     conf := stack.NewTaskStackConfig(input)
     stack, err := toStack(conf)
@@ -24,18 +23,20 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput) erro
         return err
     }
 
-    if err := cf.cfnClient.CreateAndWait(stack); err != nil {
-        var errAlreadyExists *cloudformation.ErrStackAlreadyExists
-        if !errors.As(err, &errAlreadyExists) {
-            return fmt.Errorf("create stack: %w", err)
-        }
+    err = cf.cfnClient.CreateAndWait(stack)
+    if err == nil {
+       return nil
+    }
 
-        if err := cf.cfnClient.UpdateAndWait(stack); err != nil {
-            var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
-            if !errors.As(err, &errChangeSetEmpty) {
-                return fmt.Errorf("update stack: %w", err)
-            }
-            return nil
+    var errAlreadyExists *cloudformation.ErrStackAlreadyExists
+    if !errors.As(err, &errAlreadyExists) {
+       return fmt.Errorf("create stack: %w", err)
+    }
+
+    if err := cf.cfnClient.UpdateAndWait(stack); err != nil {
+        var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
+        if !errors.As(err, &errChangeSetEmpty) {
+            return fmt.Errorf("update stack: %w", err)
         }
     }
     return nil
