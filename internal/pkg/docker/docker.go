@@ -5,6 +5,7 @@
 package docker
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -43,6 +44,27 @@ func (r Runner) Build(uri, imageTag, path string) error {
 	return nil
 }
 
+// BuildWithMultipleTags is the same as Build but is able to accept multiple tags.
+func (r Runner) BuildWithMultipleTags(uri, path string, imageTags []string) error {
+	if len(imageTags) == 0 {
+		return errors.New("must provide at least one image tag")
+	}
+
+	dfDir := filepath.Dir(path)
+
+	args := []string{"build"}
+	for _, tag := range imageTags {
+		args = append(args, "-t", imageName(uri, tag))
+	}
+	args = append(args, dfDir, "-f", path)
+
+	err := r.Run("docker", args)
+	if err != nil {
+		return fmt.Errorf("building image: %w", err)
+	}
+	return nil
+}
+
 // Login will run a `docker login` command against the Service repository URI with the input uri and auth data.
 func (r Runner) Login(uri, username, password string) error {
 	err := r.Run("docker",
@@ -69,6 +91,26 @@ func (r Runner) Push(uri, imageTag string) error {
 		log.Warningf("the image with tag %s may already exist.\n", imageTag)
 
 		return fmt.Errorf("docker push: %w", err)
+	}
+
+	return nil
+}
+
+// PushWithMultipleTags is the same as Push but but is able to accept multiple tags.
+func (r Runner) PushWithMultipleTags(uri string, imageTags []string) error {
+	var errMsg []string
+
+	for _, imageTag := range imageTags {
+		path := imageName(uri, imageTag)
+
+		errPush := r.Run("docker", []string{"push", path})
+		if errPush != nil {
+			errMsg = append(errMsg, fmt.Sprintf("push tag %s: %v", imageTag, errPush))
+		}
+	}
+
+	if len(errMsg) != 0 {
+		return fmt.Errorf("docker push with multiple tags: %s", strings.Join(errMsg, "; "))
 	}
 
 	return nil

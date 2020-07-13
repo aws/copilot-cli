@@ -153,3 +153,99 @@ func TestPush(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildWithMultipleTags(t *testing.T) {
+	mockURI := "mockURI"
+	mockPath := "mockPath/to/mockDockerfile"
+
+	var mockRunner *mocks.Mockrunner
+
+	tests := map[string]struct {
+		tags       []string
+		path       string
+		setupMocks func(controller *gomock.Controller)
+
+		wantedError error
+	}{
+		"failed to run": {
+			tags: []string{"tag1", "tag2"},
+			path: mockPath,
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, "tag1"), "-t", imageName(mockURI, "tag2"), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(errors.New("error"))
+			},
+			wantedError: fmt.Errorf("building image: error"),
+		},
+		"no tag is provided": {
+			tags: []string{},
+			path: mockPath,
+			setupMocks: func(controller *gomock.Controller) {},
+			wantedError: errors.New("must provide at least one image tag"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			tc.setupMocks(controller)
+			s := Runner{
+				runner: mockRunner,
+			}
+
+			got := s.BuildWithMultipleTags(mockURI, tc.path,  tc.tags)
+
+			require.EqualError(t, tc.wantedError, got.Error())
+		})
+	}
+}
+
+func TestPushWithMultipleTags(t *testing.T) {
+	mockError := errors.New("mockError")
+	mockURI := "mockURI"
+
+	mockTag1 := "tag1"
+	mockTag2 := "tag2"
+
+	inTags := []string{mockTag1, mockTag2}
+
+	var mockRunner *mocks.Mockrunner
+
+	tests := map[string]struct {
+		setupMocks func(controller *gomock.Controller)
+
+		want error
+	}{
+		"error running push": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(mockError).Times(1)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Return(mockError).Times(1)
+			},
+			want: fmt.Errorf("docker push with multiple tags: push tag tag1: mockError; push tag tag2: mockError"),
+		},
+		"success": {
+			setupMocks: func(controller *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(controller)
+
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Return(nil)
+			},
+			want: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			test.setupMocks(controller)
+			s := Runner{
+				runner: mockRunner,
+			}
+
+			got := s.PushWithMultipleTags(mockURI, inTags)
+
+			require.Equal(t, test.want, got)
+		})
+	}
+}
