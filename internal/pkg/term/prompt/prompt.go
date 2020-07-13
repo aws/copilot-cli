@@ -95,7 +95,7 @@ func init() {
   {{- end}}
 {{- end}}`
 
-	core.TemplateFuncs["split"] = func(s string, sep string) []string {
+	core.TemplateFuncsWithColor["split"] = func(s string, sep string) []string {
 		return strings.Split(s, sep)
 	}
 }
