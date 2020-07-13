@@ -10,13 +10,13 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/spf13/cobra"
@@ -217,9 +217,9 @@ func BuildPipelineStatusCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:    "status",
-		Short:  "Shows the status of a pipeline.",
-		Long:   "Shows the status of each stage of your pipeline.",
+		Use:   "status",
+		Short: "Shows the status of a pipeline.",
+		Long:  "Shows the status of each stage of your pipeline.",
 
 		Example: `
 Shows status of the pipeline "pipeline-myapp-myrepo".
