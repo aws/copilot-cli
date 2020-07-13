@@ -14,30 +14,35 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
-// Prompter wraps the method for users to select an option from a list of options.
+// Prompter wraps the method to select an option from a list of options.
 type Prompter interface {
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
 }
 
-type appEnvLister interface {
+// AppEnvLister wraps methods to list apps and envs in config store.
+type AppEnvLister interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListApplications() ([]*config.Application, error)
 }
 
-type configSvcLister interface {
+// ConfigSvcLister wraps the method to list svcs in config store.
+type ConfigSvcLister interface {
 	ListServices(appName string) ([]*config.Service, error)
 }
 
-type configLister interface {
-	appEnvLister
-	configSvcLister
+// ConfigLister wraps config store listing methods.
+type ConfigLister interface {
+	AppEnvLister
+	ConfigSvcLister
 }
 
-type wsSvcLister interface {
+// WsSvcLister wraps the method to get svcs in current workspace.
+type WsSvcLister interface {
 	ServiceNames() ([]string, error)
 }
 
-type deployStoreClient interface {
+// DeployStoreClient wraps methods of deploy store.
+type DeployStoreClient interface {
 	ListDeployedServices(appName string, envName string) ([]string, error)
 	IsDeployed(appName string, envName string, svcName string) (bool, error)
 }
@@ -45,31 +50,31 @@ type deployStoreClient interface {
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
-	lister appEnvLister
+	lister AppEnvLister
 }
 
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
 type ConfigSelect struct {
 	*Select
-	svcLister configSvcLister
+	svcLister ConfigSvcLister
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*Select
-	svcLister wsSvcLister
+	svcLister WsSvcLister
 }
 
 // DeploySelect is a service and environment selector from the deploy store.
 type DeploySelect struct {
 	*Select
-	deployStoreSvc deployStoreClient
+	deployStoreSvc DeployStoreClient
 	svc            string
 	env            string
 }
 
 // NewSelect returns a selector that chooses applications or environments.
-func NewSelect(prompt Prompter, store appEnvLister) *Select {
+func NewSelect(prompt Prompter, store AppEnvLister) *Select {
 	return &Select{
 		prompt: prompt,
 		lister: store,
@@ -77,7 +82,7 @@ func NewSelect(prompt Prompter, store appEnvLister) *Select {
 }
 
 // NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
-func NewConfigSelect(prompt Prompter, store configLister) *ConfigSelect {
+func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 	return &ConfigSelect{
 		Select:    NewSelect(prompt, store),
 		svcLister: store,
@@ -86,7 +91,7 @@ func NewConfigSelect(prompt Prompter, store configLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store appEnvLister, ws wsSvcLister) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt Prompter, store AppEnvLister, ws WsSvcLister) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		Select:    NewSelect(prompt, store),
 		svcLister: ws,
@@ -94,7 +99,7 @@ func NewWorkspaceSelect(prompt Prompter, store appEnvLister, ws wsSvcLister) *Wo
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
-func NewDeploySelect(prompt Prompter, configStore appEnvLister, deployStore deployStoreClient) *DeploySelect {
+func NewDeploySelect(prompt Prompter, configStore AppEnvLister, deployStore DeployStoreClient) *DeploySelect {
 	return &DeploySelect{
 		Select:         NewSelect(prompt, configStore),
 		deployStoreSvc: deployStore,
@@ -104,14 +109,14 @@ func NewDeploySelect(prompt Prompter, configStore appEnvLister, deployStore depl
 // GetServiceEnvironmentOpts sets up optional parameters for GetServiceEnvironmentOpts function.
 type GetServiceEnvironmentOpts func(*DeploySelect)
 
-// WithSvc sets up the svc name for DeploySelect
+// WithSvc sets up the svc name for DeploySelect.
 func WithSvc(svc string) GetServiceEnvironmentOpts {
 	return func(in *DeploySelect) {
 		in.svc = svc
 	}
 }
 
-// WithEnv sets up the env name for DeploySelect
+// WithEnv sets up the env name for DeploySelect.
 func WithEnv(env string) GetServiceEnvironmentOpts {
 	return func(in *DeploySelect) {
 		in.env = env

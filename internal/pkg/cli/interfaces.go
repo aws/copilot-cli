@@ -115,9 +115,9 @@ type store interface {
 }
 
 type deployedEnvironmentLister interface {
-	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
-	ListDeployedServices(appName string, envName string) ([]string, error)
-	IsDeployed(appName string, envName string, svcName string) (bool, error)
+	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
+	ListDeployedServices(appName, envName string) ([]string, error)
+	IsDeployed(appName, envName string, svcName string) (bool, error)
 }
 
 // Secretsmanager interface.
