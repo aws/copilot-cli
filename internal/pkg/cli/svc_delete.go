@@ -21,9 +21,11 @@ import (
 )
 
 const (
-	svcDeleteNamePrompt       = "Which service would you like to delete?"
-	fmtSvcDeleteConfirmPrompt = "Are you sure you want to delete %s from application %s?"
-	svcDeleteConfirmHelp      = "This will remove the service from all environments, delete the local workspace file, and remove ECR repositories."
+	svcDeleteNamePrompt              = "Which service would you like to delete?"
+	fmtSvcDeleteConfirmPrompt        = "Are you sure you want to delete %s from application %s?"
+	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
+	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
+	svcDeleteFromEnvConfirmHelp      = "This will remove the service from just the %s environment."
 )
 
 const (
@@ -116,9 +118,22 @@ func (o *deleteSvcOpts) Ask() error {
 		return nil
 	}
 
+	// When there's no env name passed in, we'll completely
+	// remove the service from the application.
+	deletePrompt := fmt.Sprintf(fmtSvcDeleteConfirmPrompt, o.Name, o.appName)
+	deleteConfirmHelp := svcDeleteConfirmHelp
+	if o.EnvName != "" {
+		// When a customer provides a particular environment,
+		// we'll just delete the service from that environment -
+		// but keep it in the app.
+		deletePrompt = fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, o.Name, o.EnvName)
+		deleteConfirmHelp = fmt.Sprintf(svcDeleteFromEnvConfirmHelp, o.EnvName)
+	}
+
 	deleteConfirmed, err := o.prompt.Confirm(
-		fmt.Sprintf(fmtSvcDeleteConfirmPrompt, o.Name, o.appName),
-		svcDeleteConfirmHelp)
+		deletePrompt,
+		deleteConfirmHelp)
+
 	if err != nil {
 		return fmt.Errorf("svc delete confirmation prompt: %w", err)
 	}
@@ -128,7 +143,9 @@ func (o *deleteSvcOpts) Ask() error {
 	return nil
 }
 
-// Execute deletes the application's CloudFormation stack, ECR repository, SSM parameter, and local file.
+// Execute deletes the service's CloudFormation stack.
+// If the service is being removed from the application, Execute will
+// also delete the ECR repository and the SSM parameter.
 func (o *deleteSvcOpts) Execute() error {
 	if err := o.appEnvironments(); err != nil {
 		return err
@@ -137,6 +154,13 @@ func (o *deleteSvcOpts) Execute() error {
 	if err := o.deleteStacks(); err != nil {
 		return err
 	}
+
+	// Skip removing the service from the application if
+	// we are only removing the stack from a particular environment.
+	if !o.needsAppCleanup() {
+		return nil
+	}
+
 	if err := o.emptyECRRepos(); err != nil {
 		return err
 	}
@@ -148,6 +172,7 @@ func (o *deleteSvcOpts) Execute() error {
 	}
 
 	log.Successf("Deleted service %s from application %s.\n", o.Name, o.appName)
+
 	return nil
 }
 
@@ -156,6 +181,14 @@ func (o *deleteSvcOpts) validateEnvName() error {
 		return err
 	}
 	return nil
+}
+
+func (o *deleteSvcOpts) needsAppCleanup() bool {
+	// Only remove from a service from the app if
+	// we're removing it from every environment.
+	// If we're just removing the service from one
+	// env, we keep the app configuration.
+	return o.EnvName == ""
 }
 
 func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
@@ -308,8 +341,11 @@ func BuildSvcDeleteCmd() *cobra.Command {
 		Use:   "delete",
 		Short: "Deletes a service from an application.",
 		Example: `
-  Delete the "test" service.
+  Delete the "test" service from the application.
   /code $ copilot svc delete --name test
+
+  Delete the "test" service from just the prod environment.
+  /code $ copilot svc delete --name test --env prod
 
   Delete the "test" service without confirmation prompt.
   /code $ copilot svc delete --name test --yes`,
