@@ -84,6 +84,9 @@ func (o *initAppOpts) Validate() error {
 		}
 	}
 	if o.DomainName != "" {
+		if err := validateDomainName(o.DomainName); err != nil {
+			return fmt.Errorf("domain name %s is invalid: %w", o.DomainName, err)
+		}
 		if err := o.validateDomain(o.DomainName); err != nil {
 			return err
 		}
