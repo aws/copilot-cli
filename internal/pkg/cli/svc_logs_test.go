@@ -10,14 +10,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+type svcLogsMock struct {
+	configStore *mocks.Mockstore
+	sel         *mocks.MockdeploySelector
+	cwlogsSvc   *mocks.MockcwlogService
+}
 
 func TestSvcLogs_Validate(t *testing.T) {
 	const (
@@ -133,8 +138,8 @@ func TestSvcLogs_Validate(t *testing.T) {
 						appName: tc.inputApp,
 					},
 				},
-				store:         mockstore,
-				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
+				configStore:   mockstore,
+				initCwLogsSvc: func(*svcLogsOpts, string) error { return nil },
 			}
 
 			// WHEN
@@ -156,10 +161,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		inputSvc     string
 		inputEnvName string
 
-		mockstore        func(m *mocks.Mockstore)
-		mockcwlogService func(ctrl *gomock.Controller) map[string]cwlogService
-		mockSelector     func(m *mocks.MockconfigSelector)
-		mockPrompter     func(m *mocks.Mockprompter)
+		setupMocks func(mocks svcLogsMock)
 
 		wantedError error
 	}{
@@ -168,362 +170,54 @@ func TestSvcLogs_Ask(t *testing.T) {
 			inputSvc:     "mockSvc",
 			inputEnvName: "mockEnv",
 
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
-					Name: "mockSvc",
-				}, nil)
-				m.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
-					Name: "mockEnv",
-				}, nil)
+			setupMocks: func(m svcLogsMock) {
+				gomock.InOrder(
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil),
+				)
 			},
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc")).Return(true, nil)
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
 
 			wantedError: nil,
 		},
-		"with all flag set and return error if fail to get service": {
+		"return error if fail to select deployed services": {
 			inputApp:     "mockApp",
 			inputSvc:     "mockSvc",
 			inputEnvName: "mockEnv",
 
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("mockApp", "mockSvc").Return(nil, errors.New("some error"))
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("get service: some error"),
-		},
-		"with all flag set and return error if fail to get environment": {
-			inputApp:     "mockApp",
-			inputSvc:     "mockSvc",
-			inputEnvName: "mockEnv",
-
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
-					Name: "mockSvc",
-				}, nil)
-				m.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, errors.New("some error"))
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("get environment: some error"),
-		},
-		"with only service flag set and not deployed in one of envs": {
-			inputApp: "mockApp",
-			inputSvc: "mockSvc",
-
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetService("mockApp", "mockSvc").Return(&config.Service{
-					Name: "mockSvc",
-				}, nil)
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockEnv",
-					},
-					{
-						Name: "mockTestEnv",
-					},
-					{
-						Name: "mockProdEnv",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockTestEnv", "mockSvc")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockProdEnv", "mockSvc")).Return(false, nil)
-				cwlogServices["mockEnv"] = m
-				cwlogServices["mockTestEnv"] = m
-				cwlogServices["mockProdEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockEnv)", "mockSvc (mockTestEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
-			},
-
-			wantedError: nil,
-		},
-		"with only env flag set": {
-			inputApp:     "mockApp",
-			inputEnvName: "mockEnv",
-
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
-					Name: "mockEnv",
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockFrontend",
-					},
-					{
-						Name: "mockBackend",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockFrontend")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockBackend")).Return(true, nil)
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockFrontend (mockEnv)", "mockBackend (mockEnv)"}).Return("mockFrontend (mockEnv)", nil).Times(1)
-			},
-
-			wantedError: nil,
-		},
-		"retrieve service name from ssm store": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockTestEnv",
-					},
-					{
-						Name: "mockProdEnv",
-					},
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockTestEnv", "mockSvc")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockProdEnv", "mockSvc")).Return(true, nil)
-				cwlogServices["mockTestEnv"] = m
-				cwlogServices["mockProdEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("mockSvc (mockTestEnv)", nil).Times(1)
-			},
-
-			wantedError: nil,
-		},
-		"skip selecting if only one deployed service found": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockTestEnv",
-					},
-					{
-						Name: "mockProdEnv",
-					},
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockTestEnv", "mockSvc")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockProdEnv", "mockSvc")).Return(false, nil)
-				cwlogServices["mockTestEnv"] = m
-				cwlogServices["mockProdEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: nil,
-		},
-		"returns error if fail to select application": {
-			mockstore: func(m *mocks.Mockstore) {},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("", errors.New("some error"))
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("select application: some error"),
-		},
-		"returns error if fail to retrieve services": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("mockApp").Return(nil, errors.New("some error"))
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("list services for application mockApp: some error"),
-		},
-		"returns error if no services found": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("no services found in application %s", color.HighlightUserInput("mockApp")),
-		},
-		"returns error if fail to list environments": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return(nil, errors.New("some error"))
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("list environments: some error"),
-		},
-		"returns error if no environment found": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				return nil
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("no environments found in application %s", color.HighlightUserInput("mockApp")),
-		},
-		"returns error if fail to check service deployed or not": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockEnv",
-					},
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc")).Return(false, errors.New("some error"))
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("check if the log group /copilot/mockApp-mockEnv-mockSvc exists: some error"),
-		},
-		"returns error if no deployed service found": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockEnv",
-					},
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockEnv", "mockSvc")).Return(false, nil)
-				cwlogServices["mockEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {},
-
-			wantedError: fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput("mockApp")),
-		},
-		"returns error if fail to select service env name": {
-			mockstore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-					{
-						Name: "mockTestEnv",
-					},
-					{
-						Name: "mockProdEnv",
-					},
-				}, nil)
-				m.EXPECT().ListServices("mockApp").Return([]*config.Service{
-					{
-						Name: "mockSvc",
-					},
-				}, nil)
-			},
-			mockSelector: func(m *mocks.MockconfigSelector) {
-				m.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil)
-			},
-			mockcwlogService: func(ctrl *gomock.Controller) map[string]cwlogService {
-				m := mocks.NewMockcwlogService(ctrl)
-				cwlogServices := make(map[string]cwlogService)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockTestEnv", "mockSvc")).Return(true, nil)
-				m.EXPECT().LogGroupExists(fmt.Sprintf(logGroupNamePattern, "mockApp", "mockProdEnv", "mockSvc")).Return(true, nil)
-				cwlogServices["mockTestEnv"] = m
-				cwlogServices["mockProdEnv"] = m
-				return cwlogServices
-			},
-			mockPrompter: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(fmt.Sprintf(svcLogNamePrompt), svcLogNameHelpPrompt, []string{"mockSvc (mockTestEnv)", "mockSvc (mockProdEnv)"}).Return("", errors.New("some error")).Times(1)
+			setupMocks: func(m svcLogsMock) {
+				gomock.InOrder(
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(nil, errors.New("some error")),
+				)
 			},
 
 			wantedError: fmt.Errorf("select deployed services for application mockApp: some error"),
+		},
+		"with no flag set": {
+			setupMocks: func(m svcLogsMock) {
+				gomock.InOrder(
+					m.sel.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("mockApp", nil),
+					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "mockApp",
+						gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
+						Env: "mockEnv",
+						Svc: "mockSvc",
+					}, nil),
+				)
+			},
+
+			wantedError: nil,
+		},
+		"returns error if fail to select app": {
+			setupMocks: func(m svcLogsMock) {
+				gomock.InOrder(
+					m.sel.EXPECT().Application(svcLogAppNamePrompt, svcLogAppNameHelpPrompt).Return("", errors.New("some error")),
+				)
+			},
+
+			wantedError: fmt.Errorf("select application: some error"),
 		},
 	}
 
@@ -533,11 +227,14 @@ func TestSvcLogs_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockstore := mocks.NewMockstore(ctrl)
-			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockSel := mocks.NewMockconfigSelector(ctrl)
-			tc.mockstore(mockstore)
-			tc.mockPrompter(mockPrompter)
-			tc.mockSelector(mockSel)
+			mockSel := mocks.NewMockdeploySelector(ctrl)
+
+			mocks := svcLogsMock{
+				configStore: mockstore,
+				sel:         mockSel,
+			}
+
+			tc.setupMocks(mocks)
 
 			svcLogs := &svcLogsOpts{
 				svcLogsVars: svcLogsVars{
@@ -545,13 +242,10 @@ func TestSvcLogs_Ask(t *testing.T) {
 					svcName: tc.inputSvc,
 					GlobalOpts: &GlobalOpts{
 						appName: tc.inputApp,
-						prompt:  mockPrompter,
 					},
 				},
-				store:         mockstore,
-				sel:           mockSel,
-				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
-				cwlogsSvc:     tc.mockcwlogService(ctrl),
+				configStore: mockstore,
+				sel:         mockSel,
 			}
 
 			// WHEN
@@ -710,7 +404,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 						appName: tc.inputApp,
 					},
 				},
-				initCwLogsSvc: func(*svcLogsOpts, *config.Environment) error { return nil },
+				initCwLogsSvc: func(*svcLogsOpts, string) error { return nil },
 				cwlogsSvc:     tc.mockcwlogService(ctrl),
 				w:             b,
 			}

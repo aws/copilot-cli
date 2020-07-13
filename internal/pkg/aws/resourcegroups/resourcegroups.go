@@ -5,20 +5,16 @@
 package resourcegroups
 
 import (
-	"encoding/json"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/resourcegroups"
-)
-
-const (
-	resourceQueryType = "TAG_FILTERS_1_0"
+	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 )
 
 type api interface {
-	SearchResources(input *resourcegroups.SearchResourcesInput) (*resourcegroups.SearchResourcesOutput, error)
+	GetResources(input *resourcegroupstaggingapi.GetResourcesInput) (*resourcegroupstaggingapi.GetResourcesOutput, error)
 }
 
 // ResourceGroups wraps an AWS ResourceGroups client.
@@ -26,79 +22,64 @@ type ResourceGroups struct {
 	client api
 }
 
-// ResourceGroupsClient wraps the API for ResourceGroups, for easier testing when used by other services
-type ResourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
-}
-
 type tagFilter struct {
 	Key    string
 	Values []string
 }
 
-type query struct {
-	ResourceTypeFilters []string
-	TagFilters          []tagFilter
+// Resource contains the ARN and the tags of the resource.
+type Resource struct {
+	ARN  string
+	Tags map[string]string
 }
 
 // New returns a ResourceGroup struct configured against the input session.
 func New(s *session.Session) *ResourceGroups {
 	return &ResourceGroups{
-		client: resourcegroups.New(s),
+		client: resourcegroupstaggingapi.New(s),
 	}
 }
 
-// GetResourcesByTags internally sets the type to TAG_FILTERS_1_0 and generates the query with input resource type and tags.
-func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
-	var resourceArns []string
-	resourceResp := &resourcegroups.SearchResourcesOutput{}
-
-	query, err := rg.searchResourcesQuery(resourceType, tags)
-	if err != nil {
-		return nil, fmt.Errorf("construct search resource query: %w", err)
+// GetResourcesByTags gets tag set and ARN for the resource with input resource type and tags.
+func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[string]string) ([]*Resource, error) {
+	var resources []*Resource
+	var tagFilter []*resourcegroupstaggingapi.TagFilter
+	for k, v := range tags {
+		tagFilter = append(tagFilter, &resourcegroupstaggingapi.TagFilter{
+			Key:    aws.String(k),
+			Values: aws.StringSlice([]string{v}),
+		})
 	}
+	resourceResp := &resourcegroupstaggingapi.GetResourcesOutput{}
 	for {
-		resourceResp, err = rg.client.SearchResources(&resourcegroups.SearchResourcesInput{
-			NextToken: resourceResp.NextToken,
-			ResourceQuery: &resourcegroups.ResourceQuery{
-				Type:  aws.String(resourceQueryType),
-				Query: aws.String(string(query)),
-			},
+		var err error
+		resourceResp, err = rg.client.GetResources(&resourcegroupstaggingapi.GetResourcesInput{
+			PaginationToken:     resourceResp.PaginationToken,
+			ResourceTypeFilters: aws.StringSlice([]string{resourceType}),
+			TagFilters:          tagFilter,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("search resource group with resource type %s: %w", resourceType, err)
+			return nil, fmt.Errorf("get resource: %w", err)
 		}
-		for _, identifier := range resourceResp.ResourceIdentifiers {
-			arn := aws.StringValue(identifier.ResourceArn)
-			resourceArns = append(resourceArns, arn)
+		for _, resourceTagMapping := range resourceResp.ResourceTagMappingList {
+			tags := make(map[string]string)
+			for _, tag := range resourceTagMapping.Tags {
+				if tag.Key == nil {
+					continue
+				}
+				tags[*tag.Key] = aws.StringValue(tag.Value)
+			}
+			resources = append(resources, &Resource{
+				ARN:  aws.StringValue(resourceTagMapping.ResourceARN),
+				Tags: tags,
+			})
 		}
-		if resourceResp.NextToken == nil {
+		// usually pagination token is "" when it doesn't have any next page. However, since it
+		// is type *string, it is safer for us to check nil value for it as well.
+		if token := resourceResp.PaginationToken; aws.StringValue(token) == "" {
 			break
 		}
 	}
 
-	return resourceArns, nil
-}
-
-// searchResourcesQuery returns a query string with the tag filters used to filter Resources
-func (rg *ResourceGroups) searchResourcesQuery(resourceType string, tags map[string]string) (string, error) {
-	var tagFilters []tagFilter
-	for k, v := range tags {
-		tagFilters = append(tagFilters, tagFilter{
-			Key:    k,
-			Values: []string{v},
-		})
-	}
-
-	q := query{
-		ResourceTypeFilters: []string{resourceType},
-		TagFilters:          tagFilters,
-	}
-	bytes, err := json.Marshal(q)
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil
+	return resources, nil
 }

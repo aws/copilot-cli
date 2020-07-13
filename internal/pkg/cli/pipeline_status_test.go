@@ -6,13 +6,14 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type pipelineStatusMocks struct {
@@ -114,6 +115,7 @@ func TestPipelineStatus_Ask(t *testing.T) {
 		"copilot-application": mockAppName,
 	}
 	mockPipelines := []string{mockPipelineName, "pipeline-the-other-one"}
+	mockTestCommands := []string{"make test", "echo 'honk'"}
 	pipelineData := `
 name: pipeline-dinder-badgoose-repo
 version: 1
@@ -128,6 +130,7 @@ source:
 stages:
     -
       name: test
+	  test_commands: [make test, echo 'honk']
     -
       name: prod
 `
@@ -137,9 +140,10 @@ stages:
 		testPipelineName string
 		setupMocks       func(mocks pipelineStatusMocks)
 
-		expectedApp      string
-		expectedPipeline string
-		expectedErr      error
+		expectedApp          string
+		expectedPipeline     string
+		expectedTestCommands []string
+		expectedErr          error
 	}{
 		"skips selecting if only one pipeline found": {
 			testAppName:      mockAppName,
@@ -154,16 +158,18 @@ stages:
 			expectedPipeline: mockPipelineName,
 			expectedErr:      nil,
 		},
-		"reads pipeline name from manifest": {
+		"reads pipeline name and test commands from manifest": {
 			testAppName: mockAppName,
 			setupMocks: func(mocks pipelineStatusMocks) {
 				gomock.InOrder(
 					mocks.ws.EXPECT().ReadPipelineManifest().Return([]byte(pipelineData), nil),
+					mocks.pipelineSvc.EXPECT().ListPipelineNamesByTags(testTags).Return([]string{mockPipelineName}, nil),
 				)
 			},
-			expectedApp:      mockAppName,
-			expectedPipeline: mockPipelineName,
-			expectedErr:      nil,
+			expectedApp:          mockAppName,
+			expectedPipeline:     mockPipelineName,
+			expectedTestCommands: mockTestCommands,
+			expectedErr:          nil,
 		},
 		"retrieves pipeline name from remote if no manifest found": {
 			testAppName: mockAppName,
@@ -228,10 +234,11 @@ stages:
 			testAppName:      mockAppName,
 			testPipelineName: mockPipelineName,
 
-			setupMocks:       func(mocks pipelineStatusMocks) {},
-			expectedApp:      mockAppName,
-			expectedPipeline: mockPipelineName,
-			expectedErr:      nil,
+			setupMocks:           func(mocks pipelineStatusMocks) {},
+			expectedApp:          mockAppName,
+			expectedPipeline:     mockPipelineName,
+			expectedTestCommands: mockTestCommands,
+			expectedErr:          nil,
 		},
 	}
 	for name, tc := range testCases {
@@ -355,7 +362,7 @@ func TestPipelineStatus_Execute(t *testing.T) {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
 				require.Nil(t, err)
-				require.NotEmpty(t, tc.expectedContent, b.String(), "expected output content to not be empty")
+				require.Equal(t, tc.expectedContent, b.String(), "expected output content to match")
 			}
 		})
 	}

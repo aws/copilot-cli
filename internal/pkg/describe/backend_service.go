@@ -10,55 +10,55 @@ import (
 	"sort"
 	"text/tabwriter"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // BackendServiceDescriber retrieves information about a backend service.
 type BackendServiceDescriber struct {
-	service         *config.Service
+	app             string
+	svc             string
 	enableResources bool
 
-	store                storeSvc
-	svcDescriber         svcDescriber
+	store                deployStoreSvc
+	svcDescriber         map[string]svcDescriber
 	initServiceDescriber func(string) error
 }
 
+// NewBackendServiceConfig contains fields that initiates BackendServiceDescriber struct.
+type NewBackendServiceConfig struct {
+	NewServiceConfig
+	EnableResources bool
+	DeployStore     deployStoreSvc
+}
+
 // NewBackendServiceDescriber instantiates a backend service describer.
-func NewBackendServiceDescriber(app, svc string) (*BackendServiceDescriber, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
+func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDescriber, error) {
+	describer := &BackendServiceDescriber{
+		app:             opt.App,
+		svc:             opt.Svc,
+		enableResources: opt.EnableResources,
+		store:           opt.DeployStore,
+		svcDescriber:    make(map[string]svcDescriber),
 	}
-	meta, err := store.GetService(app, svc)
-	if err != nil {
-		return nil, err
-	}
-	opts := &BackendServiceDescriber{
-		service:         meta,
-		enableResources: false,
-		store:           store,
-	}
-	opts.initServiceDescriber = func(env string) error {
-		d, err := NewServiceDescriber(app, env, svc)
+	describer.initServiceDescriber = func(env string) error {
+		if _, ok := describer.svcDescriber[env]; ok {
+			return nil
+		}
+		d, err := NewServiceDescriber(NewServiceConfig{
+			App:         opt.App,
+			Env:         env,
+			Svc:         opt.Svc,
+			ConfigStore: opt.ConfigStore,
+		})
 		if err != nil {
 			return err
 		}
-		opts.svcDescriber = d
+		describer.svcDescriber[env] = d
 		return nil
 	}
-	return opts, nil
-}
-
-// NewBackendServiceDescriberWithResources instantiates a backend service describer with stack resources.
-func NewBackendServiceDescriberWithResources(app, svc string) (*BackendServiceDescriber, error) {
-	d, err := NewBackendServiceDescriber(app, svc)
-	if err != nil {
-		return nil, err
-	}
-	d.enableResources = true
-	return d, nil
+	return describer, nil
 }
 
 // URI returns the service discovery namespace and is used to make
@@ -67,57 +67,54 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err := d.initServiceDescriber(envName); err != nil {
 		return "", err
 	}
-	svcParams, err := d.svcDescriber.Params()
+	svcParams, err := d.svcDescriber[envName].Params()
 	if err != nil {
 		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
 	}
 	s := serviceDiscovery{
-		Service: d.service.Name,
+		Service: d.svc,
 		Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-		App:     d.service.App,
+		App:     d.app,
 	}
 	return s.String(), nil
 }
 
 // Describe returns info of a backend service.
 func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
-	environments, err := d.store.ListEnvironments(d.service.App)
+	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)
 	if err != nil {
-		return nil, fmt.Errorf("list environments for application %s: %w", d.service.App, err)
+		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
 	var configs []*ServiceConfig
 	var services []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initServiceDescriber(env.Name)
+		err := d.initServiceDescriber(env)
 		if err != nil {
 			return nil, err
 		}
-		svcParams, err := d.svcDescriber.Params()
-		if err != nil && !IsStackNotExistsErr(err) {
+		svcParams, err := d.svcDescriber[env].Params()
+		if err != nil {
 			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
 		}
-		if err != nil {
-			continue
-		}
 		services = appendServiceDiscovery(services, serviceDiscovery{
-			Service: d.service.Name,
+			Service: d.svc,
 			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-			App:     d.service.App,
-		}, env.Name)
+			App:     d.app,
+		}, env)
 		configs = append(configs, &ServiceConfig{
-			Environment: env.Name,
+			Environment: env,
 			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
 			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
 			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
 			Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
 		})
-		backendSvcEnvVars, err := d.svcDescriber.EnvVars()
+		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
-		envVars = append(envVars, flattenEnvVars(env.Name, backendSvcEnvVars)...)
+		envVars = append(envVars, flattenEnvVars(env, backendSvcEnvVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
@@ -125,21 +122,22 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*CfnResource)
 	if d.enableResources {
 		for _, env := range environments {
-			stackResources, err := d.svcDescriber.ServiceStackResources()
-			if err != nil && !IsStackNotExistsErr(err) {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				return nil, err
+			}
+			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
-			if err != nil {
-				continue
-			}
-			resources[env.Name] = flattenResources(stackResources)
+			resources[env] = flattenResources(stackResources)
 		}
 	}
 
 	return &backendSvcDesc{
-		Service:          d.service.Name,
-		Type:             d.service.Type,
-		App:              d.service.App,
+		Service:          d.svc,
+		Type:             manifest.BackendServiceType,
+		App:              d.app,
 		Configurations:   configs,
 		ServiceDiscovery: services,
 		Variables:        envVars,

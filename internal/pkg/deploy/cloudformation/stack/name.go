@@ -21,3 +21,8 @@ func NameForService(app, env, svc string) string {
 func NameForEnv(app, env string) string {
 	return fmt.Sprintf("%s-%s", app, env)
 }
+
+// NameForTask returns the stack name for a task.
+func NameForTask(task string) string {
+	return fmt.Sprintf("task-%s", task)
+}

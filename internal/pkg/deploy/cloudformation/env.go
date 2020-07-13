@@ -5,9 +5,9 @@
 package cloudformation
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 // DeployEnvironment creates the CloudFormation stack for an environment by creating and executing a change set.

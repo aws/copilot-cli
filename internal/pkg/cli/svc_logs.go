@@ -9,12 +9,12 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/spf13/cobra"
 )
 
@@ -49,24 +49,33 @@ type svcLogsOpts struct {
 	endTime   int64
 
 	w             io.Writer
-	store         store
-	sel           configSelector
-	initCwLogsSvc func(*svcLogsOpts, *config.Environment) error // Overriden in tests.
+	configStore   store
+	deployStore   deployedEnvironmentLister
+	sel           deploySelector
+	initCwLogsSvc func(*svcLogsOpts, string) error // Overriden in tests.
 	cwlogsSvc     map[string]cwlogService
 }
 
 func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment config store: %w", err)
 	}
-
+	deployStore, err := deploy.NewStore(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
+	}
 	return &svcLogsOpts{
 		svcLogsVars: vars,
 		w:           log.OutputWriter,
-		store:       store,
-		sel:         selector.NewConfigSelect(vars.prompt, store),
-		initCwLogsSvc: func(o *svcLogsOpts, env *config.Environment) error {
+		configStore: configStore,
+		deployStore: deployStore,
+		sel:         selector.NewDeploySelect(vars.prompt, configStore, deployStore),
+		initCwLogsSvc: func(o *svcLogsOpts, envName string) error {
+			env, err := o.configStore.GetEnvironment(o.AppName(), envName)
+			if err != nil {
+				return fmt.Errorf("get environment: %w", err)
+			}
 			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err
@@ -81,7 +90,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 // Validate returns an error if the values provided by flags are invalid.
 func (o *svcLogsOpts) Validate() error {
 	if o.AppName() != "" {
-		_, err := o.store.GetApplication(o.AppName())
+		_, err := o.configStore.GetApplication(o.AppName())
 		if err != nil {
 			return err
 		}
@@ -140,6 +149,9 @@ func (o *svcLogsOpts) Execute() error {
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
 		LastEventTime: make(map[string]int64),
 	}
+	if err := o.initCwLogsSvc(o, o.envName); err != nil {
+		return err
+	}
 	var err error
 	for {
 		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.LastEventTime, o.generateGetLogEventOpts()...)
@@ -186,102 +198,13 @@ func (o *svcLogsOpts) generateGetLogEventOpts() []cloudwatchlogs.GetLogEventsOpt
 }
 
 func (o *svcLogsOpts) askSvcEnvName() error {
-	var svcNames []string
-	var envs []*config.Environment
-	var err error
-	if o.svcName == "" {
-		svcNames, err = o.retrieveSvcNames()
-		if err != nil {
-			return err
-		}
-		if len(svcNames) == 0 {
-			return fmt.Errorf("no services found in application %s", color.HighlightUserInput(o.AppName()))
-		}
-	} else {
-		svc, err := o.store.GetService(o.AppName(), o.svcName)
-		if err != nil {
-			return fmt.Errorf("get service: %w", err)
-		}
-		svcNames = []string{svc.Name}
-	}
-
-	if o.envName == "" {
-		envs, err = o.store.ListEnvironments(o.AppName())
-		if err != nil {
-			return fmt.Errorf("list environments: %w", err)
-		}
-		if len(envs) == 0 {
-			return fmt.Errorf("no environments found in application %s", color.HighlightUserInput(o.AppName()))
-		}
-	} else {
-		env, err := o.store.GetEnvironment(o.AppName(), o.envName)
-		if err != nil {
-			return fmt.Errorf("get environment: %w", err)
-		}
-		envs = []*config.Environment{env}
-	}
-
-	svcEnvs := make(map[string]svcEnv)
-	var svcEnvNames []string
-	for _, svcName := range svcNames {
-		for _, env := range envs {
-			if err := o.initCwLogsSvc(o, env); err != nil {
-				return err
-			}
-			logGroup := fmt.Sprintf(logGroupNamePattern, o.AppName(), env.Name, svcName)
-			deployed, err := o.cwlogsSvc[env.Name].LogGroupExists(logGroup)
-			if err != nil {
-				return fmt.Errorf("check if the log group %s exists: %w", logGroup, err)
-			}
-			if !deployed {
-				continue
-			}
-			svcEnv := svcEnv{
-				svcName: svcName,
-				envName: env.Name,
-			}
-			svcEnvName := svcEnv.String()
-			svcEnvs[svcEnvName] = svcEnv
-			svcEnvNames = append(svcEnvNames, svcEnvName)
-		}
-	}
-	if len(svcEnvNames) == 0 {
-		return fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput(o.AppName()))
-	}
-
-	// return if only one deployed service found
-	if len(svcEnvNames) == 1 {
-		o.svcName = svcEnvs[svcEnvNames[0]].svcName
-		o.envName = svcEnvs[svcEnvNames[0]].envName
-		log.Infof("Showing logs of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
-		return nil
-	}
-
-	svcEnvName, err := o.prompt.SelectOne(
-		fmt.Sprintf(svcLogNamePrompt),
-		svcLogNameHelpPrompt,
-		svcEnvNames,
-	)
+	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.AppName(), err)
 	}
-	o.svcName = svcEnvs[svcEnvName].svcName
-	o.envName = svcEnvs[svcEnvName].envName
-
+	o.svcName = deployedService.Svc
+	o.envName = deployedService.Env
 	return nil
-}
-
-func (o *svcLogsOpts) retrieveSvcNames() ([]string, error) {
-	svcs, err := o.store.ListServices(o.AppName())
-	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", o.AppName(), err)
-	}
-	svcNames := make([]string, len(svcs))
-	for ind, svc := range svcs {
-		svcNames[ind] = svc.Name
-	}
-
-	return svcNames, nil
 }
 
 func (o *svcLogsOpts) outputLogs(logs []*cloudwatchlogs.Event) error {

@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -33,10 +34,10 @@ func (m *MockresourceGroupsClient) EXPECT() *MockresourceGroupsClientMockRecorde
 }
 
 // GetResourcesByTags mocks base method
-func (m *MockresourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
+func (m *MockresourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]*resourcegroups.Resource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
 // DeployService deploys a service stack and waits until the deployment is done.

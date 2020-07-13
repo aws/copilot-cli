@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +53,12 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 		w:             log.OutputWriter,
 		sel:           selector.NewConfigSelect(vars.prompt, store),
 		initSvcDescriber: func(o *svcStatusOpts, envName, svcName string) error {
-			d, err := describe.NewServiceDescriber(o.AppName(), envName, svcName)
+			d, err := describe.NewServiceDescriber(describe.NewServiceConfig{
+				App:         o.AppName(),
+				Svc:         svcName,
+				Env:         envName,
+				ConfigStore: store,
+			})
 			if err != nil {
 				return fmt.Errorf("creating service describer for application %s, environment %s, and service %s: %w", o.AppName(), envName, svcName, err)
 			}
@@ -61,7 +66,12 @@ func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
 			return nil
 		},
 		initStatusDescriber: func(o *svcStatusOpts) error {
-			d, err := describe.NewServiceStatus(o.AppName(), o.envName, o.svcName)
+			d, err := describe.NewServiceStatus(&describe.NewServiceStatusConfig{
+				App:         o.AppName(),
+				Env:         o.envName,
+				Svc:         o.svcName,
+				ConfigStore: store,
+			})
 			if err != nil {
 				return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.AppName(), err)
 			}
@@ -134,6 +144,7 @@ func (o *svcStatusOpts) askApp() error {
 	return nil
 }
 
+// TODO: Move the logic to select pkg.
 func (o *svcStatusOpts) askSvcEnvName() error {
 	var err error
 	svcNames := []string{o.svcName}

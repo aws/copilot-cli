@@ -5,6 +5,7 @@ BINARY_NAME=copilot
 PACKAGES=./internal...
 SOURCE_CUSTOM_RESOURCES=${PWD}/cf-custom-resources
 BUILT_CUSTOM_RESOURCES=${PWD}/templates/custom-resources
+SOURDE_DOCS=${PWD}/site
 GOBIN=${PWD}/bin/tools
 COVERAGE=coverage.out
 
@@ -13,8 +14,8 @@ VERSION=$(shell git describe --always --tags)
 
 BINARY_S3_BUCKET_PATH=https://ecs-cli-v2-release.s3.amazonaws.com
 
-LINKER_FLAGS=-X github.com/aws/amazon-ecs-cli-v2/internal/pkg/version.Version=${VERSION}\
--X github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
+LINKER_FLAGS=-X github.com/aws/copilot-cli/internal/pkg/version.Version=${VERSION}\
+-X github.com/aws/copilot-cli/internal/pkg/cli.binaryS3BucketPath=${BINARY_S3_BUCKET_PATH}
 # RELEASE_BUILD_LINKER_FLAGS disables DWARF and symbol table generation to reduce binary size
 RELEASE_BUILD_LINKER_FLAGS=-s -w
 
@@ -116,6 +117,21 @@ tools:
 	@echo "Installing custom resource dependencies" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} && npm install
 
+# Run the docs locally.
+.PHONY: start-docs
+start-docs:
+	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
+	hugo server -D
+
+# Build and minify the documentation to the docs/ directory.
+build-docs:
+	cd ${SOURDE_DOCS} &&\
+	git submodule update --init --recursive &&\
+	npm install &&\
+	hugo &&\
+	cd ..
+
 .PHONY: gen-mocks
 gen-mocks: tools
 	# TODO: make this more extensible?
@@ -124,6 +140,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/progress.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_progress.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/prompter.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_prompter.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/selector/mocks/mock_selector.go -source=./internal/pkg/cli/selector/selector.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_lb_web_service.go -source=./internal/pkg/describe/lb_web_service.go
@@ -148,6 +165,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/cloudformation/stackset/mocks/mock_stackset.go -source=./internal/pkg/aws/cloudformation/stackset/stackset.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
 	${GOBIN}/mockgen -package=mocks -source=./internal/pkg/docker/docker.go -destination=./internal/pkg/docker/mocks/mock_docker.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/mocks/mock_deploy.go -source=./internal/pkg/deploy/deploy.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/mocks/mock_cloudformation.go -source=./internal/pkg/deploy/cloudformation/cloudformation.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_lb_web_svc.go -source=./internal/pkg/deploy/cloudformation/stack/lb_web_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_backend_svc.go -source=./internal/pkg/deploy/cloudformation/stack/backend_svc.go

@@ -1,0 +1,71 @@
+
+.td-content {
+	// Highlighted code.
+    .highlight {
+        @extend .card;
+
+        margin: 2rem 0;
+        padding: 1rem;
+        background-color: $gray-100;
+
+        pre, div {
+            background-color: inherit !important;
+        }
+
+        pre {
+            margin: 0;
+            padding: 0;
+        }
+    }
+
+    // Inline code
+    p code, li > code, table code {
+        background-color: $gray-100;
+        color: #222 !important;
+        padding: 0.1em 0.2em;
+        font-family: Menlo, monospace;
+        font-size: 0.875rem;
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        border-radius: 0.25rem;
+        word-break: normal;
+        display: inline-block;
+
+
+        br {
+            display: none;
+        }
+
+
+    }
+
+
+    // Code blocks
+    pre {
+        word-wrap: normal;
+        background-color: $gray-100;
+        padding: $spacer;
+
+
+        > code {
+            padding: 0;
+            margin: 0;
+            font-size: 100%;
+            word-break: normal;
+            white-space: pre;
+            border: 0;
+        }
+    }
+}
+
+p {
+
+    code {
+        background-color: #F1F8FF;
+        color: #1074e7 !important;
+        padding: 4px;
+        display: inline-block !important;
+        font-family: Menlo, monospace;
+        font-size: 0.875rem;
+        border-radius: 3px !important;
+    }
+}

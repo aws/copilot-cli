@@ -11,17 +11,17 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/version"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/version"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -443,7 +443,7 @@ func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error
 	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
 	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
 	if len(ownerRepo) != 2 {
-		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`", url)
+		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`", url)
 	}
 	return ownerRepo[0], ownerRepo[1], nil
 }

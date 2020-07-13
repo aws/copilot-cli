@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	cpmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline/mocks"
-	rgmocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/resourcegroups/mocks"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline/mocks"
+	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/golang/mock/gomock"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
@@ -19,8 +19,8 @@ import (
 )
 
 type codepipelineMocks struct {
-	cp *cpmocks.Mockapi
-	rg *rgmocks.MockResourceGroupsClient
+	cp *mocks.Mockapi
+	rg *mocks.MockresourceGetter
 }
 
 func TestCodePipeline_GetPipeline(t *testing.T) {
@@ -168,8 +168,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 						Details:  "StackName: dinder-test-test",
 					},
 				},
-				CreatedAt: &mockTime,
-				UpdatedAt: &mockTime,
+				CreatedAt: mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},
@@ -210,8 +210,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 						Details:  "",
 					},
 				},
-				CreatedAt: &mockTime,
-				UpdatedAt: &mockTime,
+				CreatedAt: mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},
@@ -234,8 +234,8 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
-			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
 			mocks := codepipelineMocks{
 				cp: mockClient,
 				rg: mockrgClient,
@@ -261,8 +261,8 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 	mockProjectName := "dinder"
 	mockPipelineName := "pipeline-dinder-badgoose-repo"
 	mockError := errors.New("mockError")
-	mockOutput := []string{
-		"arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName,
+	mockOutput := []*rg.Resource{
+		{ARN: "arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName},
 	}
 	testTags := map[string]string{
 		"copilot-application": mockProjectName,
@@ -295,7 +295,7 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 		"should return error for bad arns": {
 			inProjectName: mockProjectName,
 			callMocks: func(m codepipelineMocks) {
-				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]string{badArn}, nil)
+				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]*rg.Resource{{ARN: badArn}}, nil)
 			},
 			expectedOut:   nil,
 			expectedError: fmt.Errorf("parse pipeline ARN: %s", badArn),
@@ -308,8 +308,8 @@ func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
-			mockrgClient := rgmocks.NewMockResourceGroupsClient(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
+			mockrgClient := mocks.NewMockresourceGetter(ctrl)
 			mocks := codepipelineMocks{
 				cp: mockClient,
 				rg: mockrgClient,
@@ -376,6 +376,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 				ActionStates: []*codepipeline.ActionState{
 					{
 						ActionName:      aws.String("action1"),
+						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusSucceeded)},
+					},
+					{
+						ActionName:      aws.String("TestCommands"),
 						LatestExecution: &codepipeline.ActionExecution{Status: aws.String(codepipeline.ActionExecutionStatusFailed)},
 					},
 				},
@@ -445,6 +449,10 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 						Actions: []StageAction{
 							{
 								Name:   "action1",
+								Status: "Succeeded",
+							},
+							{
+								Name:   "TestCommands",
 								Status: "Failed",
 							},
 						},
@@ -455,7 +463,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 						Transition: "DISABLED",
 					},
 				},
-				UpdatedAt: &mockTime,
+				UpdatedAt: mockTime,
 			},
 			expectedError: nil,
 		},
@@ -477,7 +485,7 @@ func TestCodePipeline_GetPipelineState(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := cpmocks.NewMockapi(ctrl)
+			mockClient := mocks.NewMockapi(ctrl)
 
 			mocks := codepipelineMocks{
 				cp: mockClient,

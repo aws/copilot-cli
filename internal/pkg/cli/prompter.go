@@ -3,7 +3,7 @@
 
 package cli
 
-import "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
+import "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 
 type prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error)

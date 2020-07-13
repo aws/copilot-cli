@@ -27,6 +27,9 @@ type api interface {
 	DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error)
 	DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error)
 	ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error)
+	DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error)
+	RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error)
+	WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error
 }
 
 // ECS wraps an AWS ECS client.
@@ -45,22 +48,22 @@ type Task ecs.Task
 
 // ServiceStatus contains the status info of a service.
 type ServiceStatus struct {
-	DesiredCount     int64  `json:"desiredCount"`
-	RunningCount     int64  `json:"runningCount"`
-	Status           string `json:"status"`
-	LastDeploymentAt int64  `json:"lastDeploymentAt"`
-	TaskDefinition   string `json:"taskDefinition"`
+	DesiredCount     int64     `json:"desiredCount"`
+	RunningCount     int64     `json:"runningCount"`
+	Status           string    `json:"status"`
+	LastDeploymentAt time.Time `json:"lastDeploymentAt"`
+	TaskDefinition   string    `json:"taskDefinition"`
 }
 
 // TaskStatus contains the status info of a task.
 type TaskStatus struct {
-	Health        string  `json:"health"`
-	ID            string  `json:"id"`
-	Images        []Image `json:"images"`
-	LastStatus    string  `json:"lastStatus"`
-	StartedAt     int64   `json:"startedAt"`
-	StoppedAt     int64   `json:"stoppedAt"`
-	StoppedReason string  `json:"stoppedReason"`
+	Health        string    `json:"health"`
+	ID            string    `json:"id"`
+	Images        []Image   `json:"images"`
+	LastStatus    string    `json:"lastStatus"`
+	StartedAt     time.Time `json:"startedAt"`
+	StoppedAt     time.Time `json:"stoppedAt"`
+	StoppedReason string    `json:"stoppedReason"`
 }
 
 // HumanString returns the stringified TaskStatus struct with human readable format.
@@ -79,12 +82,12 @@ func (t TaskStatus) HumanString() string {
 		imageDigest = strings.Join(digest, ",")
 	}
 	startedSince := "-"
-	if t.StartedAt != 0 {
-		startedSince = humanize.Time(time.Unix(t.StartedAt, 0))
+	if !t.StartedAt.IsZero() {
+		startedSince = humanize.Time(t.StartedAt)
 	}
 	stoppedSince := "-"
-	if t.StoppedAt != 0 {
-		stoppedSince = humanize.Time(time.Unix(t.StoppedAt, 0))
+	if !t.StoppedAt.IsZero() {
+		stoppedSince = humanize.Time(t.StoppedAt)
 	}
 	shortTaskID := "-"
 	if len(t.ID) >= shortTaskIDLength {
@@ -97,6 +100,16 @@ func (t TaskStatus) HumanString() string {
 type Image struct {
 	ID     string
 	Digest string
+}
+
+// RunTaskInput holds the fields needed to run tasks.
+type RunTaskInput struct {
+	Cluster        string
+	Count          int
+	Subnets        []string
+	SecurityGroups []string
+	TaskFamilyName string
+	StartedBy      string
 }
 
 // New returns a Service configured against the input session.
@@ -168,19 +181,72 @@ func (e *ECS) ServiceTasks(clusterName, serviceName string) ([]*Task, error) {
 	return tasks, nil
 }
 
+// DefaultCluster returns the default cluster ARN in the account and region.
+func (e *ECS) DefaultCluster() (string, error) {
+	resp, err := e.client.DescribeClusters(&ecs.DescribeClustersInput{})
+	if err != nil {
+		return "", fmt.Errorf("get default cluster: %w", err)
+	}
+
+	if len(resp.Clusters) == 0 {
+		return "", ErrNoDefaultCluster
+	}
+
+	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
+	cluster := resp.Clusters[0]
+	return aws.StringValue(cluster.ClusterArn), nil
+}
+
+// RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
+// the task(s) is running or fails to run, along with task ARNs if possible.
+func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
+	resp, err := e.client.RunTask(&ecs.RunTaskInput{
+		Cluster:        aws.String(input.Cluster),
+		Count:          aws.Int64(int64(input.Count)),
+		LaunchType:     aws.String(ecs.LaunchTypeFargate),
+		StartedBy:      aws.String(input.StartedBy),
+		TaskDefinition: aws.String(input.TaskFamilyName),
+		NetworkConfiguration: &ecs.NetworkConfiguration{
+			AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+				AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+				Subnets:        aws.StringSlice(input.Subnets),
+				SecurityGroups: aws.StringSlice(input.SecurityGroups),
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("run task(s) %s: %w", input.TaskFamilyName, err)
+	}
+
+	taskARNs := make([]string, len(resp.Tasks))
+	for idx, task := range resp.Tasks {
+		taskARNs[idx] = aws.StringValue(task.TaskArn)
+	}
+
+	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+		Cluster: aws.String(input.Cluster),
+		Tasks:   aws.StringSlice(taskARNs),
+	}); err != nil {
+		return taskARNs, fmt.Errorf("wait for tasks to be running: %w", err)
+	}
+
+	return taskARNs, nil
+}
+
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
 	taskID, err := t.taskID(aws.StringValue(t.TaskArn))
 	if err != nil {
 		return nil, err
 	}
-	var startedAt, stoppedAt int64
+	var startedAt, stoppedAt time.Time
 	var stoppedReason string
+
 	if t.StoppedAt != nil {
-		stoppedAt = t.StoppedAt.Unix()
+		stoppedAt = *t.StoppedAt
 	}
 	if t.StartedAt != nil {
-		startedAt = t.StartedAt.Unix()
+		startedAt = *t.StartedAt
 	}
 	if t.StoppedReason != nil {
 		stoppedReason = aws.StringValue(t.StoppedReason)
@@ -229,7 +295,7 @@ func (s *Service) ServiceStatus() ServiceStatus {
 		Status:           aws.StringValue(s.Status),
 		DesiredCount:     aws.Int64Value(s.DesiredCount),
 		RunningCount:     aws.Int64Value(s.RunningCount),
-		LastDeploymentAt: s.Deployments[0].UpdatedAt.Unix(),
+		LastDeploymentAt: *s.Deployments[0].UpdatedAt, // FIXME Service assumed to have at least one deployment
 		TaskDefinition:   aws.StringValue(s.Deployments[0].TaskDefinition),
 	}
 }

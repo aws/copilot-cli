@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/ini"
+	"github.com/aws/copilot-cli/internal/pkg/ini"
 )
 
 const (

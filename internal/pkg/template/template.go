@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/aws/amazon-ecs-cli-v2/templates"
+	"github.com/aws/copilot-cli/templates"
 	"github.com/gobuffalo/packd"
 )
 

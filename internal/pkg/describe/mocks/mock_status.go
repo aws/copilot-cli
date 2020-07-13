@@ -5,8 +5,9 @@
 package mocks
 
 import (
-	cloudwatch "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatch"
-	ecs "github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
+	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
+	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	resourcegroups "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -47,6 +48,44 @@ func (m *MockalarmStatusGetter) GetAlarmsWithTags(tags map[string]string) ([]clo
 func (mr *MockalarmStatusGetterMockRecorder) GetAlarmsWithTags(tags interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlarmsWithTags", reflect.TypeOf((*MockalarmStatusGetter)(nil).GetAlarmsWithTags), tags)
+}
+
+// MockresourcesGetter is a mock of resourcesGetter interface
+type MockresourcesGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockresourcesGetterMockRecorder
+}
+
+// MockresourcesGetterMockRecorder is the mock recorder for MockresourcesGetter
+type MockresourcesGetterMockRecorder struct {
+	mock *MockresourcesGetter
+}
+
+// NewMockresourcesGetter creates a new mock instance
+func NewMockresourcesGetter(ctrl *gomock.Controller) *MockresourcesGetter {
+	mock := &MockresourcesGetter{ctrl: ctrl}
+	mock.recorder = &MockresourcesGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockresourcesGetter) EXPECT() *MockresourcesGetterMockRecorder {
+	return m.recorder
+}
+
+// GetResourcesByTags mocks base method
+func (m *MockresourcesGetter) GetResourcesByTags(resourceType string, tags map[string]string) ([]*resourcegroups.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
+	ret0, _ := ret[0].([]*resourcegroups.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetResourcesByTags indicates an expected call of GetResourcesByTags
+func (mr *MockresourcesGetterMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourcesGetter)(nil).GetResourcesByTags), resourceType, tags)
 }
 
 // MockecsServiceGetter is a mock of ecsServiceGetter interface
@@ -100,42 +139,4 @@ func (m *MockecsServiceGetter) Service(clusterName, serviceName string) (*ecs.Se
 func (mr *MockecsServiceGetterMockRecorder) Service(clusterName, serviceName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsServiceGetter)(nil).Service), clusterName, serviceName)
-}
-
-// MockserviceArnGetter is a mock of serviceArnGetter interface
-type MockserviceArnGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockserviceArnGetterMockRecorder
-}
-
-// MockserviceArnGetterMockRecorder is the mock recorder for MockserviceArnGetter
-type MockserviceArnGetterMockRecorder struct {
-	mock *MockserviceArnGetter
-}
-
-// NewMockserviceArnGetter creates a new mock instance
-func NewMockserviceArnGetter(ctrl *gomock.Controller) *MockserviceArnGetter {
-	mock := &MockserviceArnGetter{ctrl: ctrl}
-	mock.recorder = &MockserviceArnGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
-	return m.recorder
-}
-
-// GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn")
-	ret0, _ := ret[0].(*ecs.ServiceArn)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
 }

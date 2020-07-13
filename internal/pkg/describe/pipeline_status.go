@@ -7,11 +7,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
 	"text/tabwriter"
-	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 type pipelineStateGetter interface {
@@ -66,15 +66,14 @@ func (p PipelineStatus) HumanString() string {
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprintf(writer, color.Bold.Sprint("Pipeline Status\n\n"))
 	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\t\n", "Stage", "Status", "Transition")
-	writer.Flush()
-	fmt.Fprintf(writer, "  %s\t%s\t%s\n", "-----", "------", "----------")
+	fmt.Fprintf(writer, "%s\t%s\t%s\n", "Stage", "Transition", "Status")
+	fmt.Fprintf(writer, "%s\t%s\t%s\n", "-----", "----------", "------")
 	for _, stage := range p.StageStates {
 		fmt.Fprintf(writer, stage.HumanString())
 	}
 	writer.Flush()
 	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
-	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(time.Unix(p.UpdatedAt.Unix(), 0)))
+	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
 	return b.String()
 }

@@ -9,14 +9,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/addon"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/prompt"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -79,7 +79,7 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 	storageInitDDBMoreLSIPrompt = "Would you like to add more alternate sort keys to this table?"
 
 	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
-	storageInitDDBLSINameHelp   = "You can use the the characters [a-zA-Z0-9.-_]"
+	storageInitDDBLSINameHelp   = "You can use the characters [a-zA-Z0-9.-_]"
 
 	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
@@ -122,7 +122,7 @@ type initStorageVars struct {
 	partitionKey string
 	sortKey      string
 	lsiSorts     []string // lsi sort keys collected as "name:T" where T is one of [SNB]
-	noLsi        bool
+	noLSI        bool
 	noSort       bool
 }
 
@@ -134,7 +134,7 @@ type initStorageOpts struct {
 	store store
 
 	app *config.Application
-	sel configSelector
+	sel wsSelector
 }
 
 func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
@@ -154,7 +154,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:    &afero.Afero{Fs: afero.NewOsFs()},
 		store: store,
 		ws:    ws,
-		sel:   selector.NewConfigSelect(vars.prompt, store),
+		sel:   selector.NewWorkspaceSelect(vars.prompt, store, ws),
 	}, nil
 }
 
@@ -198,7 +198,7 @@ func (o *initStorageOpts) Validate() error {
 		}
 	}
 	// --no-lsi and --lsi are mutually exclusive.
-	if o.noLsi && len(o.lsiSorts) != 0 {
+	if o.noLSI && len(o.lsiSorts) != 0 {
 		return fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once")
 	}
 
@@ -292,7 +292,6 @@ func (o *initStorageOpts) askStorageSvc() error {
 	}
 	svc, err := o.sel.Service(storageInitSvcPrompt,
 		storageInitSvcHelp,
-		o.AppName(),
 	)
 	if err != nil {
 		return fmt.Errorf("retrieve local service names: %w", err)
@@ -384,7 +383,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return nil
 	}
 	// If --no-lsi has been specified, there is no need to ask for local secondary indices.
-	if o.noLsi {
+	if o.noLSI {
 		return nil
 	}
 	// If --no-sort has been specified, there is no need to ask for local secondary indices.
@@ -399,13 +398,16 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		return fmt.Errorf("confirm add alternate sort key: %w", err)
 	}
 	for {
-		if !moreLSI {
-			break
-		}
 		if len(o.lsiSorts) > 5 {
 			log.Infoln("You may not specify more than 5 alternate sort keys. Continuing...")
-			break
+			moreLSI = false
 		}
+		// This will execute last in the loop if moreLSI is set to false by any confirm prompts.
+		if !moreLSI {
+			o.noLSI = len(o.lsiSorts) == 0
+			return nil
+		}
+
 		lsiName, err := o.prompt.Get(storageInitDDBLSINamePrompt,
 			storageInitDDBLSINameHelp,
 			dynamoTableNameValidation,
@@ -577,7 +579,7 @@ func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
 	props.Attributes = attributes
 	// only configure LSI if we haven't specified the --no-lsi flag.
 	props.HasLSI = false
-	if !o.noLsi {
+	if !o.noLSI {
 		props.HasLSI = true
 		lsiConfig, err := newLSI(
 			*partKey.Name,
@@ -660,7 +662,7 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.partitionKey, storagePartitionKeyFlag, "", storagePartitionKeyFlagDescription)
 	cmd.Flags().StringVar(&vars.sortKey, storageSortKeyFlag, "", storageSortKeyFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.lsiSorts, storageLSIConfigFlag, []string{}, storageLSIConfigFlagDescription)
-	cmd.Flags().BoolVar(&vars.noLsi, storageNoLSIFlag, false, storageNoLsiFlagDescription)
+	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)

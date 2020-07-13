@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/manifest"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // Long flag names.
@@ -133,7 +133,7 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageSortKeyFlagDescription = `Optional. Sort key for the DDB table.
 Must be of the format '<keyName>:<dataType>'.`
 	storageNoSortFlagDescription    = "Optional. Skip configuring sort keys."
-	storageNoLsiFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
+	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 

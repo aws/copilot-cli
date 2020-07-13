@@ -6,9 +6,9 @@ package manifest
 import (
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
 

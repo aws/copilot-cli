@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 const (
@@ -31,6 +31,15 @@ type stackAndResourcesDescriber interface {
 
 type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
+}
+
+type configStoreSvc interface {
+	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
+	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
+type deployStoreSvc interface {
+	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 }
 
 // ServiceConfig contains serialized configuration parameters for a service.
@@ -61,19 +70,19 @@ type ServiceDescriber struct {
 	stackDescriber stackAndResourcesDescriber
 }
 
+// NewServiceConfig contains fields that initiates ServiceDescriber struct.
+type NewServiceConfig struct {
+	App         string
+	Env         string
+	Svc         string
+	ConfigStore configStoreSvc
+}
+
 // NewServiceDescriber instantiates a new service.
-func NewServiceDescriber(app, env, svc string) (*ServiceDescriber, error) {
-	store, err := config.NewStore()
+func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
+	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
-	}
-	meta, err := store.GetService(app, svc)
-	if err != nil {
-		return nil, fmt.Errorf("get service %s: %w", svc, err)
-	}
-	environment, err := store.GetEnvironment(app, env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", env, err)
+		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
 	}
 	sess, err := session.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
 	if err != nil {
@@ -81,9 +90,9 @@ func NewServiceDescriber(app, env, svc string) (*ServiceDescriber, error) {
 	}
 	d := newStackDescriber(sess)
 	return &ServiceDescriber{
-		app:     app,
-		service: meta.Name,
-		env:     environment.Name,
+		app:     opt.App,
+		service: opt.Svc,
+		env:     opt.Env,
 
 		ecsClient:      ecs.New(sess),
 		stackDescriber: d,
@@ -124,8 +133,6 @@ func (d *ServiceDescriber) ServiceStackResources() ([]*cloudformation.StackResou
 		return nil, err
 	}
 	var resources []*cloudformation.StackResource
-	// TODO: rename this url once repo name changes.
-	// See https://github.com/aws/amazon-ecs-cli-v2/issues/621
 	ignoredResources := map[string]bool{
 		rulePriorityFunction: true,
 		waitCondition:        true,

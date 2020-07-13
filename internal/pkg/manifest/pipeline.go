@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
 )

@@ -7,18 +7,19 @@ import (
 	"encoding"
 	"io"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/codepipeline"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecr"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/describe"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/docker/dockerfile"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/command"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
 // actionCommand is the interface that every command that creates a resource implements.
@@ -111,6 +112,12 @@ type store interface {
 	applicationStore
 	environmentStore
 	serviceStore
+}
+
+type deployedEnvironmentLister interface {
+	ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error)
+	ListDeployedServices(appName, envName string) ([]string, error)
+	IsServiceDeployed(appName, envName string, svcName string) (bool, error)
 }
 
 // Secretsmanager interface.
@@ -345,6 +352,11 @@ type appEnvWithNoneSelector interface {
 type configSelector interface {
 	appEnvSelector
 	Service(prompt, help, app string) (string, error)
+}
+
+type deploySelector interface {
+	appSelector
+	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
 }
 
 type wsSelector interface {

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"gopkg.in/yaml.v3"
 )
 

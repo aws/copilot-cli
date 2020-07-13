@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
 	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -115,6 +115,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 	tests := map[string]struct {
 		skipConfirmation bool
 		inName           string
+		envName          string
 
 		mockstore  func(m *mocks.Mockstore)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -231,6 +232,20 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 
 			wantedName: testSvcName,
 		},
+		"should return error nil if user confirms svc delete --env": {
+			inName:           testSvcName,
+			envName:          "test",
+			skipConfirmation: false,
+			mockstore:        func(m *mocks.Mockstore) {},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Confirm(
+					fmt.Sprintf(fmtSvcDeleteFromEnvConfirmPrompt, testSvcName, "test"),
+					fmt.Sprintf(svcDeleteFromEnvConfirmHelp, "test"),
+				).Times(1).Return(true, nil)
+			},
+
+			wantedName: testSvcName,
+		},
 	}
 
 	for name, test := range tests {
@@ -250,7 +265,8 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 						appName: testAppName,
 						prompt:  mockPrompter,
 					},
-					Name: test.inName,
+					Name:    test.inName,
+					EnvName: test.envName,
 				},
 				store: mockStore,
 			}
@@ -329,6 +345,9 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			},
 			wantedError: nil,
 		},
+		// A service can be deployed to multiple
+		// environments - and deleting it in one
+		// should not delete it form the entire app.
 		"happy path with environment passed in as flag": {
 			inAppName: mockAppName,
 			inSvcName: mockSvcName,
@@ -341,17 +360,15 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteService(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
-					// emptyECRRepos
-					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
 
-					// removeSvcFromApp
-					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteResourcesStart, mockSvcName, mockAppName)),
-					mocks.appCFN.EXPECT().RemoveServiceFromApp(mockApp, mockSvcName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteResourcesComplete, mockSvcName, mockAppName)),
+					// It should **not** emptyECRRepos
+					mocks.ecr.EXPECT().ClearRepository(gomock.Any()).Return(nil).Times(0),
 
-					// deleteSSMParam
-					mocks.store.EXPECT().DeleteService(mockAppName, mockSvcName).Return(nil),
+					// It should **not** removeSvcFromApp
+					mocks.appCFN.EXPECT().RemoveServiceFromApp(gomock.Any(), gomock.Any()).Return(nil).Times(0),
+
+					// It should **not** deleteSSMParam
+					mocks.store.EXPECT().DeleteService(gomock.Any(), gomock.Any()).Return(nil).Times(0),
 				)
 			},
 			wantedError: nil,

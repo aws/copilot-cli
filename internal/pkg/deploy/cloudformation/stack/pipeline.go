@@ -4,10 +4,10 @@
 package stack
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
 const pipelineCfnTemplatePath = "cicd/pipeline_cfn.yml"
@@ -42,6 +42,6 @@ func (p *pipelineStackConfig) Parameters() ([]*cloudformation.Parameter, error) 
 
 func (p *pipelineStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(p.AdditionalTags, map[string]string{
-		AppTagKey: p.AppName,
+		deploy.AppTagKey: p.AppName,
 	})
 }

@@ -5,7 +5,7 @@
 package addon
 
 import (
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 const (

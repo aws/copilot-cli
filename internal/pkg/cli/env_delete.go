@@ -8,17 +8,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/profile"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/session"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/selector"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/log"
-	termprogress "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/progress"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
+	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/spf13/cobra"
 )
 
@@ -164,15 +164,15 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 		ResourceTypeFilters: []*string{aws.String("cloudformation")},
 		TagFilters: []*resourcegroupstaggingapi.TagFilter{
 			{
-				Key:    aws.String(stack.ServiceTagKey),
+				Key:    aws.String(deploy.ServiceTagKey),
 				Values: []*string{}, // Matches any service stack.
 			},
 			{
-				Key:    aws.String(stack.EnvTagKey),
+				Key:    aws.String(deploy.EnvTagKey),
 				Values: []*string{aws.String(o.EnvName)},
 			},
 			{
-				Key:    aws.String(stack.AppTagKey),
+				Key:    aws.String(deploy.AppTagKey),
 				Values: []*string{aws.String(o.AppName())},
 			},
 		},
@@ -184,7 +184,7 @@ func (o *deleteEnvOpts) validateNoRunningServices() error {
 		var svcNames []string
 		for _, cfnStack := range stacks.ResourceTagMappingList {
 			for _, t := range cfnStack.Tags {
-				if *t.Key != stack.ServiceTagKey {
+				if *t.Key != deploy.ServiceTagKey {
 					continue
 				}
 				svcNames = append(svcNames, *t.Value)

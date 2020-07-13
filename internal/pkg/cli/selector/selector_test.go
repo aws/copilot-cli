@@ -4,36 +4,224 @@
 package selector
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/cli/selector/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestWorkspaceSelect_Service(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockServiceLister := mocks.NewMockwsServiceLister(ctrl)
-	mockPrompt := mocks.NewMockprompter(ctrl)
-	defer ctrl.Finish()
+type deploySelectMocks struct {
+	deploySvc *mocks.MockDeployStoreClient
+	configSvc *mocks.MockAppEnvLister
+	prompt    *mocks.MockPrompter
+}
 
+func TestDeploySelect_Service(t *testing.T) {
+	const testApp = "mockApp"
 	testCases := map[string]struct {
-		mocking func()
+		setupMocks func(mocks deploySelectMocks)
+		svc        string
+		env        string
+
 		wantErr error
-		want    string
+		wantEnv string
+		wantSvc string
+	}{
+		"return error if fail to retrieve environment": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return(nil, errors.New("some error"))
+
+			},
+			wantErr: fmt.Errorf("list environments: list environments: some error"),
+		},
+		"return error if fail to list deployed services": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test").
+					Return(nil, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("list deployed service for environment test: some error"),
+		},
+		"return error if no deployed services found": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test").
+					Return([]string{}, nil)
+			},
+			wantErr: fmt.Errorf("no deployed services found in application %s", testApp),
+		},
+		"return error if fail to select": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test").
+					Return([]string{"mockSvc1", "mockSvc2"}, nil)
+
+				m.prompt.
+					EXPECT().
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					Return("", errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("select deployed services for application %s: some error", testApp),
+		},
+		"success": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test").
+					Return([]string{"mockSvc1", "mockSvc2"}, nil)
+
+				m.prompt.
+					EXPECT().
+					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}).
+					Return("mockSvc1 (test)", nil)
+			},
+			wantEnv: "test",
+			wantSvc: "mockSvc1",
+		},
+		"skip with only one deployed service": {
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{
+							Name: "test",
+						},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedServices(testApp, "test").
+					Return([]string{"mockSvc"}, nil)
+			},
+			wantEnv: "test",
+			wantSvc: "mockSvc",
+		},
+		"return error if fail to check if service passed in by flag is deployed or not": {
+			env: "test",
+			svc: "mockSvc",
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					IsServiceDeployed(testApp, "test", "mockSvc").
+					Return(false, errors.New("some error"))
+			},
+			wantErr: fmt.Errorf("check if service mockSvc is deployed in environment test: some error"),
+		},
+		"success with flags": {
+			env: "test",
+			svc: "mockSvc",
+			setupMocks: func(m deploySelectMocks) {
+				m.deploySvc.
+					EXPECT().
+					IsServiceDeployed(testApp, "test", "mockSvc").
+					Return(true, nil)
+			},
+			wantEnv: "test",
+			wantSvc: "mockSvc",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockdeploySvc := mocks.NewMockDeployStoreClient(ctrl)
+			mockconfigSvc := mocks.NewMockAppEnvLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := deploySelectMocks{
+				deploySvc: mockdeploySvc,
+				configSvc: mockconfigSvc,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := DeploySelect{
+				Select: &Select{
+					lister: mockconfigSvc,
+					prompt: mockprompt,
+				},
+				deployStoreSvc: mockdeploySvc,
+			}
+			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, WithEnv(tc.env), WithSvc(tc.svc))
+			if tc.wantErr != nil {
+				require.EqualError(t, tc.wantErr, err.Error())
+			} else {
+				require.Equal(t, tc.wantSvc, gotDeployed.Svc)
+				require.Equal(t, tc.wantEnv, gotDeployed.Env)
+			}
+		})
+	}
+}
+
+type workspaceSelectMocks struct {
+	serviceLister *mocks.MockWsSvcLister
+	prompt        *mocks.MockPrompter
+}
+
+func TestWorkspaceSelect_Service(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks func(mocks workspaceSelectMocks)
+		wantErr    error
+		want       string
 	}{
 		"with no workspace services": {
-			mocking: func() {
+			setupMocks: func(m workspaceSelectMocks) {
 
-				mockServiceLister.
+				m.serviceLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{}, nil).
 					Times(1)
 
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -42,9 +230,9 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			wantErr: fmt.Errorf("list services: no services found in workspace"),
 		},
 		"with only one workspace service (skips prompting)": {
-			mocking: func() {
+			setupMocks: func(m workspaceSelectMocks) {
 
-				mockServiceLister.
+				m.serviceLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -52,7 +240,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					}, nil).
 					Times(1)
 
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -61,9 +249,9 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service1",
 		},
 		"with multiple workspace services": {
-			mocking: func() {
+			setupMocks: func(m workspaceSelectMocks) {
 
-				mockServiceLister.
+				m.serviceLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -72,7 +260,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					}, nil).
 					Times(1)
 
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(
 						gomock.Eq("Select a local service"),
@@ -84,9 +272,9 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			want: "service2",
 		},
 		"with error selecting services": {
-			mocking: func() {
+			setupMocks: func(m workspaceSelectMocks) {
 
-				mockServiceLister.
+				m.serviceLister.
 					EXPECT().
 					ServiceNames().
 					Return([]string{
@@ -95,7 +283,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 					}, nil).
 					Times(1)
 
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
 					Return("", fmt.Errorf("error selecting")).
@@ -105,17 +293,25 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 		},
 	}
 
-	sel := WorkspaceSelect{
-		Select: &Select{
-			prompt: mockPrompt,
-		},
-		svcLister: mockServiceLister,
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.mocking()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
+			mockwsSvcLister := mocks.NewMockWsSvcLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := workspaceSelectMocks{
+				serviceLister: mockwsSvcLister,
+				prompt:        mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := WorkspaceSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				svcLister: mockwsSvcLister,
+			}
 			got, err := sel.Service("Select a local service", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
@@ -126,27 +322,26 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 	}
 }
 
+type configSelectMocks struct {
+	serviceLister *mocks.MockConfigLister
+	prompt        *mocks.MockPrompter
+}
+
 func TestConfigSelect_Service(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockServiceLister := mocks.NewMockserviceLister(ctrl)
-	mockPrompt := mocks.NewMockprompter(ctrl)
-	defer ctrl.Finish()
-
 	appName := "myapp"
-
 	testCases := map[string]struct {
-		mocking func()
-		wantErr error
-		want    string
+		setupMocks func(m configSelectMocks)
+		wantErr    error
+		want       string
 	}{
 		"with no services": {
-			mocking: func() {
-				mockServiceLister.
+			setupMocks: func(m configSelectMocks) {
+				m.serviceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Service{}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -155,19 +350,19 @@ func TestConfigSelect_Service(t *testing.T) {
 			wantErr: fmt.Errorf("no services found in app myapp"),
 		},
 		"with only one service (skips prompting)": {
-			mocking: func() {
-				mockServiceLister.
+			setupMocks: func(m configSelectMocks) {
+				m.serviceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Service{
-						&config.Service{
+						{
 							App:  appName,
 							Name: "service1",
 							Type: "load balanced web service",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -176,24 +371,24 @@ func TestConfigSelect_Service(t *testing.T) {
 			want: "service1",
 		},
 		"with multiple services": {
-			mocking: func() {
-				mockServiceLister.
+			setupMocks: func(m configSelectMocks) {
+				m.serviceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Service{
-						&config.Service{
+						{
 							App:  appName,
 							Name: "service1",
 							Type: "load balanced web service",
 						},
-						&config.Service{
+						{
 							App:  appName,
 							Name: "service2",
 							Type: "backend service",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(
 						gomock.Eq("Select a service"),
@@ -205,24 +400,24 @@ func TestConfigSelect_Service(t *testing.T) {
 			want: "service2",
 		},
 		"with error selecting services": {
-			mocking: func() {
-				mockServiceLister.
+			setupMocks: func(m configSelectMocks) {
+				m.serviceLister.
 					EXPECT().
 					ListServices(gomock.Eq(appName)).
 					Return([]*config.Service{
-						&config.Service{
+						{
 							App:  appName,
 							Name: "service1",
 							Type: "load balanced web service",
 						},
-						&config.Service{
+						{
 							App:  appName,
 							Name: "service2",
 							Type: "backend service",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"service1", "service2"})).
 					Return("", fmt.Errorf("error selecting")).
@@ -232,16 +427,25 @@ func TestConfigSelect_Service(t *testing.T) {
 		},
 	}
 
-	sel := ConfigSelect{
-		Select: &Select{
-			prompt: mockPrompt,
-		},
-		svcLister: mockServiceLister,
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.mocking()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockconfigLister := mocks.NewMockConfigLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := configSelectMocks{
+				serviceLister: mockconfigLister,
+				prompt:        mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := ConfigSelect{
+				Select: &Select{
+					prompt: mockprompt,
+				},
+				svcLister: mockconfigLister,
+			}
 
 			got, err := sel.Service("Select a service", "Help text", appName)
 			if tc.wantErr != nil {
@@ -253,27 +457,27 @@ func TestConfigSelect_Service(t *testing.T) {
 	}
 }
 
-func TestSelect_Environment(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockEnvLister := mocks.NewMockstore(ctrl)
-	mockPrompt := mocks.NewMockprompter(ctrl)
-	defer ctrl.Finish()
+type environmentMocks struct {
+	envLister *mocks.MockAppEnvLister
+	prompt    *mocks.MockPrompter
+}
 
+func TestSelect_Environment(t *testing.T) {
 	appName := "myapp"
 
 	testCases := map[string]struct {
-		mocking func()
-		wantErr error
-		want    string
+		setupMocks func(m environmentMocks)
+		wantErr    error
+		want       string
 	}{
 		"with no environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -282,18 +486,18 @@ func TestSelect_Environment(t *testing.T) {
 			wantErr: fmt.Errorf("no environments found in app myapp"),
 		},
 		"with only one environment (skips prompting)": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env1",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -302,22 +506,22 @@ func TestSelect_Environment(t *testing.T) {
 			want: "env1",
 		},
 		"with multiple environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env1",
 						},
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(
 						gomock.Eq("Select an environment"),
@@ -329,22 +533,22 @@ func TestSelect_Environment(t *testing.T) {
 			want: "env2",
 		},
 		"with error selecting environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env1",
 						},
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2"})).
 					Return("", fmt.Errorf("error selecting")).
@@ -354,14 +558,23 @@ func TestSelect_Environment(t *testing.T) {
 		},
 	}
 
-	sel := Select{
-		prompt: mockPrompt,
-		lister: mockEnvLister,
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.mocking()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := environmentMocks{
+				envLister: mockenvLister,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := Select{
+				prompt: mockprompt,
+				lister: mockenvLister,
+			}
 
 			got, err := sel.Environment("Select an environment", "Help text", appName)
 			if tc.wantErr != nil {
@@ -373,25 +586,25 @@ func TestSelect_Environment(t *testing.T) {
 	}
 }
 
-func TestSelect_Application(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockAppLister := mocks.NewMockstore(ctrl)
-	mockPrompt := mocks.NewMockprompter(ctrl)
-	defer ctrl.Finish()
+type applicationMocks struct {
+	appLister *mocks.MockAppEnvLister
+	prompt    *mocks.MockPrompter
+}
 
+func TestSelect_Application(t *testing.T) {
 	testCases := map[string]struct {
-		mocking func()
-		wantErr error
-		want    string
+		setupMocks func(m applicationMocks)
+		wantErr    error
+		want       string
 	}{
 		"with no apps": {
-			mocking: func() {
-				mockAppLister.
+			setupMocks: func(m applicationMocks) {
+				m.appLister.
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -400,17 +613,17 @@ func TestSelect_Application(t *testing.T) {
 			wantErr: fmt.Errorf("no apps found"),
 		},
 		"with only one app (skips prompting)": {
-			mocking: func() {
-				mockAppLister.
+			setupMocks: func(m applicationMocks) {
+				m.appLister.
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{
-						&config.Application{
+						{
 							Name: "app1",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -419,20 +632,20 @@ func TestSelect_Application(t *testing.T) {
 			want: "app1",
 		},
 		"with multiple apps": {
-			mocking: func() {
-				mockAppLister.
+			setupMocks: func(m applicationMocks) {
+				m.appLister.
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{
-						&config.Application{
+						{
 							Name: "app1",
 						},
-						&config.Application{
+						{
 							Name: "app2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(
 						gomock.Eq("Select an app"),
@@ -444,20 +657,20 @@ func TestSelect_Application(t *testing.T) {
 			want: "app2",
 		},
 		"with error selecting apps": {
-			mocking: func() {
-				mockAppLister.
+			setupMocks: func(m applicationMocks) {
+				m.appLister.
 					EXPECT().
 					ListApplications().
 					Return([]*config.Application{
-						&config.Application{
+						{
 							Name: "app1",
 						},
-						&config.Application{
+						{
 							Name: "app2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"app1", "app2"})).
 					Return("", fmt.Errorf("error selecting")).
@@ -467,14 +680,23 @@ func TestSelect_Application(t *testing.T) {
 		},
 	}
 
-	sel := Select{
-		prompt: mockPrompt,
-		lister: mockAppLister,
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.mocking()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockappLister := mocks.NewMockAppEnvLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := applicationMocks{
+				appLister: mockappLister,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := Select{
+				prompt: mockprompt,
+				lister: mockappLister,
+			}
 
 			got, err := sel.Application("Select an app", "Help text")
 			if tc.wantErr != nil {
@@ -486,27 +708,27 @@ func TestSelect_Application(t *testing.T) {
 	}
 }
 
-func TestSelect_EnvironmentWithNone(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockEnvLister := mocks.NewMockstore(ctrl)
-	mockPrompt := mocks.NewMockprompter(ctrl)
-	defer ctrl.Finish()
+type envwithnoneMocks struct {
+	envLister *mocks.MockAppEnvLister
+	prompt    *mocks.MockPrompter
+}
 
+func TestSelect_EnvironmentWithNone(t *testing.T) {
 	appName := "myapp"
 
 	testCases := map[string]struct {
-		mocking func()
-		wantErr error
-		want    string
+		setupMocks func(m envwithnoneMocks)
+		wantErr    error
+		want       string
 	}{
 		"with no environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m envwithnoneMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
@@ -515,22 +737,22 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 			want: config.EnvNameNone,
 		},
 		"with multiple environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m envwithnoneMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env1",
 						},
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(
 						gomock.Eq("Select an environment"),
@@ -542,22 +764,22 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 			want: "env1",
 		},
 		"with error selecting environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m envwithnoneMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return([]*config.Environment{
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env1",
 						},
-						&config.Environment{
+						{
 							App:  appName,
 							Name: "env2",
 						},
 					}, nil).
 					Times(1)
-				mockPrompt.
+				m.prompt.
 					EXPECT().
 					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
 					Return("", fmt.Errorf("error selecting")).
@@ -566,8 +788,8 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 			wantErr: fmt.Errorf("select environment: error selecting"),
 		},
 		"with error listing environments": {
-			mocking: func() {
-				mockEnvLister.
+			setupMocks: func(m envwithnoneMocks) {
+				m.envLister.
 					EXPECT().
 					ListEnvironments(gomock.Eq(appName)).
 					Return(nil, fmt.Errorf("error listing environments")).
@@ -577,14 +799,23 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 		},
 	}
 
-	sel := Select{
-		prompt: mockPrompt,
-		lister: mockEnvLister,
-	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			tc.mocking()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
+			mockprompt := mocks.NewMockPrompter(ctrl)
+			mocks := envwithnoneMocks{
+				envLister: mockenvLister,
+				prompt:    mockprompt,
+			}
+			tc.setupMocks(mocks)
+
+			sel := Select{
+				prompt: mockprompt,
+				lister: mockenvLister,
+			}
 
 			got, err := sel.EnvironmentWithNone("Select an environment", "Help text", appName)
 			if tc.wantErr != nil {

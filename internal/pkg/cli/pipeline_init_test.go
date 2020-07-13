@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/secretsmanager"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/cli/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/config"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/template"
-	templatemocks "github.com/aws/amazon-ecs-cli-v2/internal/pkg/template/mocks"
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/workspace"
+	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	templatemocks "github.com/aws/copilot-cli/internal/pkg/template/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -180,7 +180,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			expectedGitHubRepo:        "",
 			expectedGitHubAccessToken: "",
 			expectedEnvironments:      []string{},
-			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoose//notEvenAURL: please pass the repository URL with the format `--url https://github.com/{owner}/{repositoryName}`"),
+			expectedError:             fmt.Errorf("unable to parse the GitHub repository owner and name from reallybadGoose//notEvenAURL: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`"),
 		},
 		"returns error if fail to get GitHub access token": {
 			inEnvironments:      []string{},

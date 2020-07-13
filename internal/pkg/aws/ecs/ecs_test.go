@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/amazon-ecs-cli-v2/internal/pkg/aws/ecs/mocks"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -328,6 +328,184 @@ func TestECS_Tasks(t *testing.T) {
 	}
 }
 
+func TestECS_DefaultCluster(t *testing.T) {
+	testCases := map[string]struct {
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantedError    error
+		wantedClusters string
+	}{
+		"get default clusters success": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							&ecs.Cluster{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
+								ClusterName: aws.String("cluster1"),
+							},
+							&ecs.Cluster{
+								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
+								ClusterName: aws.String("cluster2"),
+							},
+						},
+					}, nil)
+			},
+
+			wantedClusters: "arn:aws:ecs:us-east-1:0123456:cluster/cluster1",
+		},
+		"failed to get default clusters": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().
+					DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(nil, errors.New("error"))
+			},
+			wantedError: fmt.Errorf("get default cluster: %s", "error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			ecs := ECS{
+				client: mockECSClient,
+			}
+			clusters, err := ecs.DefaultCluster()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedClusters, clusters)
+			}
+		})
+	}
+}
+
+func TestECS_RunTask(t *testing.T) {
+	type input struct {
+		cluster        string
+		count          int
+		subnets        []string
+		securityGroups []string
+		taskFamilyName string
+		startedBy      string
+	}
+
+	runTaskInput := input{
+		cluster:        "my-cluster",
+		count:          3,
+		subnets:        []string{"subnet-1", "subnet-2"},
+		securityGroups: []string{"sg-1", "sg-2"},
+		taskFamilyName: "my-task",
+		startedBy:      "task",
+	}
+
+	testCases := map[string]struct {
+		input
+
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantedError error
+		wantedArns  []string
+	}{
+		"run task success": {
+			input: runTaskInput,
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().RunTask(&ecs.RunTaskInput{
+					Cluster:        aws.String("my-cluster"),
+					Count:          aws.Int64(3),
+					LaunchType:     aws.String(ecs.LaunchTypeFargate),
+					StartedBy:      aws.String("task"),
+					TaskDefinition: aws.String("my-task"),
+					NetworkConfiguration: &ecs.NetworkConfiguration{
+						AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+							AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+							Subnets:        aws.StringSlice([]string{"subnet-1", "subnet-2"}),
+							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
+						},
+					},
+				}).
+					Return(&ecs.RunTaskOutput{
+						Tasks: []*ecs.Task{
+							&ecs.Task{
+								TaskArn: aws.String("task-1"),
+							},
+							&ecs.Task{
+								TaskArn: aws.String("task-2"),
+							},
+							&ecs.Task{
+								TaskArn: aws.String("task-3"),
+							},
+						},
+				}, nil)
+				m.EXPECT().WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+					Cluster: aws.String("my-cluster"),
+					Tasks: aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
+				}).Times(1)
+			},
+
+			wantedArns: []string{"task-1", "task-2", "task-3"},
+		},
+		"run task failed": {
+			input: runTaskInput,
+
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().RunTask(&ecs.RunTaskInput{
+					Cluster:        aws.String("my-cluster"),
+					Count:          aws.Int64(3),
+					LaunchType:     aws.String(ecs.LaunchTypeFargate),
+					StartedBy:      aws.String("task"),
+					TaskDefinition: aws.String("my-task"),
+					NetworkConfiguration: &ecs.NetworkConfiguration{
+						AwsvpcConfiguration: &ecs.AwsVpcConfiguration{
+							AssignPublicIp: aws.String(ecs.AssignPublicIpEnabled),
+							Subnets:        aws.StringSlice([]string{"subnet-1", "subnet-2"}),
+							SecurityGroups: aws.StringSlice([]string{"sg-1", "sg-2"}),
+						},
+					},
+				}).
+					Return(&ecs.RunTaskOutput{}, errors.New("error"))
+				m.EXPECT().WaitUntilTasksRunning(gomock.Any()).Times(0)
+			},
+			wantedError: errors.New("run task(s) my-task: error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			ecs := ECS{
+				client: mockECSClient,
+			}
+
+			arns, err := ecs.RunTask(RunTaskInput{
+				Count:          tc.count,
+				Cluster:        tc.cluster,
+				TaskFamilyName: tc.taskFamilyName,
+				Subnets:        tc.subnets,
+				SecurityGroups: tc.securityGroups,
+				StartedBy:      tc.startedBy,
+			})
+
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.Equal(t, tc.wantedArns, arns)
+			}
+		})
+	}
+}
+
 func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
@@ -384,8 +562,8 @@ func TestTask_TaskStatus(t *testing.T) {
 		taskArn       *string
 		containers    []*ecs.Container
 		lastStatus    *string
-		startedAt     *time.Time
-		stoppedAt     *time.Time
+		startedAt     time.Time
+		stoppedAt     time.Time
 		stoppedReason *string
 
 		wantTaskStatus *TaskStatus
@@ -428,7 +606,7 @@ func TestTask_TaskStatus(t *testing.T) {
 			},
 			health:     aws.String("HEALTHY"),
 			lastStatus: aws.String("UNKNOWN"),
-			startedAt:  &startTime,
+			startedAt:  startTime,
 
 			wantTaskStatus: &TaskStatus{
 				Health: "HEALTHY",
@@ -440,7 +618,7 @@ func TestTask_TaskStatus(t *testing.T) {
 					},
 				},
 				LastStatus: "UNKNOWN",
-				StartedAt:  1136214245,
+				StartedAt:  startTime,
 			},
 		},
 		"success with a stopped task": {
@@ -453,8 +631,8 @@ func TestTask_TaskStatus(t *testing.T) {
 			},
 			health:        aws.String("HEALTHY"),
 			lastStatus:    aws.String("UNKNOWN"),
-			startedAt:     &startTime,
-			stoppedAt:     &stopTime,
+			startedAt:     startTime,
+			stoppedAt:     stopTime,
 			stoppedReason: aws.String("some reason"),
 
 			wantTaskStatus: &TaskStatus{
@@ -467,8 +645,8 @@ func TestTask_TaskStatus(t *testing.T) {
 					},
 				},
 				LastStatus:    "UNKNOWN",
-				StartedAt:     1136214245,
-				StoppedAt:     1136217845,
+				StartedAt:     startTime,
+				StoppedAt:     stopTime,
 				StoppedReason: "some reason",
 			},
 		},
@@ -485,8 +663,8 @@ func TestTask_TaskStatus(t *testing.T) {
 				TaskArn:       tc.taskArn,
 				Containers:    tc.containers,
 				LastStatus:    tc.lastStatus,
-				StartedAt:     tc.startedAt,
-				StoppedAt:     tc.stoppedAt,
+				StartedAt:     &tc.startedAt,
+				StoppedAt:     &tc.stoppedAt,
 				StoppedReason: tc.stoppedReason,
 			}
 
@@ -511,8 +689,8 @@ func TestTaskStatus_HumanString(t *testing.T) {
 		health      string
 		lastStatus  string
 		imageDigest string
-		startedAt   int64
-		stoppedAt   int64
+		startedAt   time.Time
+		stoppedAt   time.Time
 
 		wantTaskStatus string
 	}{
@@ -520,8 +698,8 @@ func TestTaskStatus_HumanString(t *testing.T) {
 			health:      "HEALTHY",
 			id:          "aslhfnqo39j8qomimvoiqm89349",
 			lastStatus:  "RUNNING",
-			startedAt:   startTime.Unix(),
-			stoppedAt:   stopTime.Unix(),
+			startedAt:   startTime,
+			stoppedAt:   stopTime,
 			imageDigest: mockImageDigest,
 
 			wantTaskStatus: "  aslhfnqo\t18f7eb6c\tRUNNING\tHEALTHY\t14 years ago\t14 years ago\n",

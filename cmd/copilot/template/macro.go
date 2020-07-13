@@ -7,7 +7,7 @@ package template
 import (
 	"strings"
 
-	termcolor "github.com/aws/amazon-ecs-cli-v2/internal/pkg/term/color"
+	termcolor "github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
