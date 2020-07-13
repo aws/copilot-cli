@@ -98,6 +98,10 @@ func init() {
 	core.TemplateFuncsWithColor["split"] = func(s string, sep string) []string {
 		return strings.Split(s, sep)
 	}
+
+	core.TemplateFuncsNoColor["split"] = func(s, string, sep string) []string {
+		return strings.Split(s, sep)
+	}
 }
 
 // ErrEmptyOptions indicates the input options list was empty.
