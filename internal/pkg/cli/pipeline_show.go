@@ -227,7 +227,6 @@ func BuildPipelineShowCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, // TODO remove when ready for production!
 		Use:    "show",
 		Short:  "Shows info about a deployed pipeline for an application.",
 		Long:   "Shows info about a deployed pipeline for an application, including information about each stage.",

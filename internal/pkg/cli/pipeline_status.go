@@ -217,7 +217,6 @@ func BuildPipelineStatusCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, // TODO: remove when ready for production!
 		Use:    "status",
 		Short:  "Shows the status of a pipeline.",
 		Long:   "Shows the status of each stage of your pipeline.",
