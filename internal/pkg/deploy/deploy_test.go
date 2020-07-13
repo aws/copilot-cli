@@ -332,7 +332,7 @@ func TestStore_IsDeployed(t *testing.T) {
 			}
 
 			// WHEN
-			deployed, err := store.IsDeployed(tc.inputApp, tc.inputEnv, tc.inputSvc)
+			deployed, err := store.IsServiceDeployed(tc.inputApp, tc.inputEnv, tc.inputSvc)
 
 			// THEN
 			if tc.wantedError != nil {

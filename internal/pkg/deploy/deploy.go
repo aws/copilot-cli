@@ -143,8 +143,8 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 	return envsWithDeployment, nil
 }
 
-// IsDeployed returns whether a service is deployed in an environment or not.
-func (s *Store) IsDeployed(appName string, envName string, svcName string) (bool, error) {
+// IsServiceDeployed returns whether a service is deployed in an environment or not.
+func (s *Store) IsServiceDeployed(appName string, envName string, svcName string) (bool, error) {
 	err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
