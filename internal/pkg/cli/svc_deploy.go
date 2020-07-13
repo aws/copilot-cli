@@ -53,6 +53,7 @@ type deploySvcOpts struct {
 	ws           wsSvcDirReader
 	ecr          ecrService
 	docker       dockerService
+	unmarshal    func(in []byte) (interface{}, error)
 	s3           artifactUploader
 	cmd          runner
 	addons       templater
@@ -79,12 +80,12 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-
 	return &deploySvcOpts{
 		deploySvcVars: vars,
 
 		store:        store,
 		ws:           ws,
+		unmarshal:    manifest.UnmarshalService,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		docker:       docker.New(),
@@ -290,17 +291,13 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return fmt.Errorf("get ECR repository URI: %w", err)
 	}
 
-	path, err := o.getDockerfilePath()
-	if err != nil {
-		return err
-	}
-	ctx, err := o.getDockerfileContext()
+	dfInfo, err := o.getDockerfile()
 	if err != nil {
 		return err
 	}
 
-	if err := o.docker.Build(uri, path, o.ImageTag); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", path, o.ImageTag, err)
+	if err := o.docker.Build(uri, dfInfo.Path, dfInfo.Context, o.ImageTag); err != nil {
+		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", dfInfo.Path, o.ImageTag, err)
 	}
 
 	auth, err := o.ecr.GetECRAuth()
@@ -314,35 +311,12 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 	return o.docker.Push(uri, o.ImageTag)
 }
 
-func (o *deploySvcOpts) getDockerfilePath() (string, error) {
-	type dfPath interface {
-		DockerfilePath() string
-	}
-
-	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
-	if err != nil {
-		return "", fmt.Errorf("read manifest file %s: %w", o.Name, err)
-	}
-
-	svc, err := manifest.UnmarshalService(manifestBytes)
-	if err != nil {
-		return "", fmt.Errorf("unmarshal svc manifest: %w", err)
-	}
-
-	mf, ok := svc.(dfPath)
-	if !ok {
-		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
-	}
-
-	copilotDir, err := o.ws.CopilotDirPath()
-	if err != nil {
-		return "", fmt.Errorf("get workspace root directory: %w", err)
-	}
-	wsRoot := filepath.Dir(copilotDir)
-	return filepath.Join(wsRoot, mf.DockerfilePath()), nil
+type dfPathContext struct {
+	path    string
+	context string
 }
 
-func (o *deploySvcOpts) getDockerfileContext() (string, error) {
+func (o *deploySvcOpts) getDockerfile() (*dfPathContext, error) {
 	type dfContext interface {
 		DockerfileContext() string
 		DockerfilePath() string
@@ -350,31 +324,39 @@ func (o *deploySvcOpts) getDockerfileContext() (string, error) {
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
 	if err != nil {
-		return "", fmt.Errorf("read manifest file %s: %w", o.Name, err)
+		return nil, fmt.Errorf("read manifest file %s: %w", o.Name, err)
 	}
-
-	svc, err := manifest.UnmarshalService(manifestBytes)
+	svc, err := o.unmarshal(manifestBytes)
 	if err != nil {
-		return "", fmt.Errorf("unmarshal svc manifest: %w", err)
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
 	}
 	mf, ok := svc.(dfContext)
 	if !ok {
-		return "", fmt.Errorf("service %s does not have both dockerfile context and path", o.Name)
+		return nil, fmt.Errorf("service %s does not have both context and type", o.Name)
 	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
-		return "", fmt.Errorf("get workspace root directory: %w", err)
+		return nil, fmt.Errorf("get copilot directory: %w", err)
 	}
 	wsRoot := filepath.Dir(copilotDir)
 
+	dfPath := filepath.Join(wsRoot, mf.DockerfilePath())
+
 	ctx := mf.DockerfileContext()
-	// Default to directory of dockerfile.
+	// Nonempty context field means we should join with the ws root and return that
 	if ctx != "" {
-		return filepath.Join(wsRoot, mf.DockerfileContext()), nil
+		return &dfPathContext{
+			path:    dfPath,
+			context: filepath.Join(wsRoot, mf.DockerfileContext()),
+		}, nil
 	}
-	dfPath := mf.DockerfilePath()
+	// Default to directory of dockerfile.
+
 	dfDir := filepath.Dir(dfPath)
-	return filepath.Join(wsRoot, dfDir), nil
+	return &dfPathContext{
+		path:    dfPath,
+		context: dfDir,
+	}, nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
@@ -408,7 +390,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
 	}
-	mft, err := manifest.UnmarshalService(raw)
+	mft, err := o.unmarshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
 	}
