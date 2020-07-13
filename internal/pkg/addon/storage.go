@@ -17,6 +17,8 @@ const (
 	s3AddonPath       = "addons/s3/cf.yml"
 )
 
+var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
+
 var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
@@ -169,8 +171,6 @@ func (p *DynamoDBProps) BuildLocalSecondaryIndex(noLSI bool, lsiSorts []string) 
 	p.LSIs = lsiConfig
 	return true, nil
 }
-
-var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
 
 // DDBAttributeFromKey parses the DDB type and name out of keys specified in the form "Email:S"
 func DDBAttributeFromKey(input string) (DDBAttribute, error) {
