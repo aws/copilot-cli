@@ -10,13 +10,13 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
@@ -227,9 +227,9 @@ func BuildPipelineShowCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:    "show",
-		Short:  "Shows info about a deployed pipeline for an application.",
-		Long:   "Shows info about a deployed pipeline for an application, including information about each stage.",
+		Use:   "show",
+		Short: "Shows info about a deployed pipeline for an application.",
+		Long:  "Shows info about a deployed pipeline for an application, including information about each stage.",
 		Example: `
   Shows info about the pipeline "pipeline-myapp-mycompany-myrepo".
   /code $ copilot pipeline show --app myapp --resources`,
