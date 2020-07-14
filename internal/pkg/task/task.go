@@ -39,7 +39,7 @@ var (
 	fmtTaskFamilyName    = "copilot-%s"
 )
 
-// Task gets information required to run a task.
+// Runner can run an Amazon ECS task in either the default VPC or a Copilot VPC.
 type Task struct {
 	count     int
 	groupName string
