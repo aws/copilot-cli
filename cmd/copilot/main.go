@@ -60,7 +60,7 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildSvcCmd())
 
 	// "Addons" command group
-	//cmd.AddCommand(cli.BuildStorageCmd())
+	cmd.AddCommand(cli.BuildStorageCmd())
 
 	// "Operational" command group.
 
