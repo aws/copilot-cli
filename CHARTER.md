@@ -3,7 +3,7 @@
 ## Mission
 Our mission is to help customers build, release and operate applications on Amazon ECS with DevOps best practices and production ready infrastructure patterns.
 
-## Tenets 🌟
+## Tenets (unless you know better ones) 🌟
 * **Users think in terms of architecture, not of infrastructure.**
 Developers creating a new microservice shouldn't have to specify VPCs, load balancer settings, or complex pipeline configuration.
 They may not know anything about other AWS services. They should be able to specify what "kind" of application it is and how
