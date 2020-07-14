@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestTask_RunInDefaultVPC(t *testing.T) {
+func TestRunner_RunInDefaultVPC(t *testing.T) {
 	testCases := map[string]struct {
 		count     int
 		groupName string
@@ -76,7 +76,7 @@ func TestTask_RunInDefaultVPC(t *testing.T) {
 			tc.mockClusterGetter(mockClusterGetter)
 			tc.mockStarter(mockStarter)
 
-			task := &Task{
+			runner := &Runner{
 				count:     tc.count,
 				groupName: tc.groupName,
 
@@ -85,7 +85,7 @@ func TestTask_RunInDefaultVPC(t *testing.T) {
 				starter:       mockStarter,
 			}
 
-			arns, err := task.RunInDefaultVPC()
+			arns, err := runner.RunInDefaultVPC()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {

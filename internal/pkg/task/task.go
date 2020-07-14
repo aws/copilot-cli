@@ -40,7 +40,7 @@ var (
 )
 
 // Runner can run an Amazon ECS task in either the default VPC or a Copilot VPC.
-type Task struct {
+type Runner struct {
 	count     int
 	groupName string
 
@@ -51,7 +51,7 @@ type Task struct {
 }
 
 // NewTaskConfig contains fields required to initialize a task struct.
-type NewTaskConfig struct {
+type NewRunnerConfig struct {
 	// Count is the count of the tasks to be run
 	Count int
 	// GroupName is the name of the task group
@@ -59,13 +59,13 @@ type NewTaskConfig struct {
 }
 
 // NewTask initializes a new task struct.
-func NewTask(config NewTaskConfig) (*Task, error) {
+func NewRunner(config NewRunnerConfig) (*Runner, error) {
 	sess, err := session.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("get session: %w", err)
 	}
 
-	return &Task{
+	return &Runner{
 		count:     config.Count,
 		groupName: config.GroupName,
 
@@ -77,7 +77,7 @@ func NewTask(config NewTaskConfig) (*Task, error) {
 }
 
 // RunInDefaultVPC runs tasks in default cluster and default subnets, and returns the task ARNs.
-func (t *Task) RunInDefaultVPC() ([]string, error) {
+func (t *Runner) RunInDefaultVPC() ([]string, error) {
 	// get the default cluster
 	cluster, err := t.clusterGetter.DefaultCluster()
 	if err != nil {
