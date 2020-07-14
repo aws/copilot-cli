@@ -10,6 +10,44 @@ import (
 	reflect "reflect"
 )
 
+// MockdeployedSvcGetter is a mock of deployedSvcGetter interface
+type MockdeployedSvcGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockdeployedSvcGetterMockRecorder
+}
+
+// MockdeployedSvcGetterMockRecorder is the mock recorder for MockdeployedSvcGetter
+type MockdeployedSvcGetterMockRecorder struct {
+	mock *MockdeployedSvcGetter
+}
+
+// NewMockdeployedSvcGetter creates a new mock instance
+func NewMockdeployedSvcGetter(ctrl *gomock.Controller) *MockdeployedSvcGetter {
+	mock := &MockdeployedSvcGetter{ctrl: ctrl}
+	mock.recorder = &MockdeployedSvcGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdeployedSvcGetter) EXPECT() *MockdeployedSvcGetterMockRecorder {
+	return m.recorder
+}
+
+// ListDeployedServices mocks base method
+func (m *MockdeployedSvcGetter) ListDeployedServices(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedServices indicates an expected call of ListDeployedServices
+func (mr *MockdeployedSvcGetterMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockdeployedSvcGetter)(nil).ListDeployedServices), appName, envName)
+}
+
 // MockresourceGroupsClient is a mock of resourceGroupsClient interface
 type MockresourceGroupsClient struct {
 	ctrl     *gomock.Controller

@@ -57,7 +57,7 @@ type NewServiceStatusConfig struct {
 	App         string
 	Env         string
 	Svc         string
-	ConfigStore configStoreSvc
+	ConfigStore ConfigStoreSvc
 }
 
 // NewServiceStatus instantiates a new ServiceStatus struct.

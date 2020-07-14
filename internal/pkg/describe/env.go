@@ -8,12 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
@@ -24,6 +21,10 @@ import (
 const (
 	cloudformationResourceType = "cloudformation:stack"
 )
+
+type deployedSvcGetter interface {
+	ListDeployedServices(appName string, envName string) ([]string, error)
+}
 
 type resourceGroupsClient interface {
 	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
@@ -39,60 +40,44 @@ type EnvDescription struct {
 
 // EnvDescriber retrieves information about an environment.
 type EnvDescriber struct {
-	app             *config.Application
+	app             string
 	env             *config.Environment
-	svcs            []*config.Service
 	enableResources bool
 
-	store          configStoreSvc
-	rgClient       resourceGroupsClient
+	configStore    ConfigStoreSvc
+	deployStore    DeployStoreSvc
 	stackDescriber stackAndResourcesDescriber
 }
 
-// NewEnvDescriber instantiates an environment describer.
-func NewEnvDescriber(appName, envName string) (*EnvDescriber, error) {
-	store, err := config.NewStore()
+// NewEnvDescriberConfig contains fields that initiates EnvDescriber struct.
+type NewEnvDescriberConfig struct {
+	App             string
+	Env             string
+	EnableResources bool
+	ConfigStore     ConfigStoreSvc
+	DeployStore     DeployStoreSvc
+}
 
-	if err != nil {
-		return nil, fmt.Errorf("connect to store: %w", err)
-	}
-	env, err := store.GetEnvironment(appName, envName)
+// NewEnvDescriber instantiates an environment describer.
+func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
+	env, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	app, err := store.GetApplication(appName)
-	if err != nil {
-		return nil, fmt.Errorf("get application %s: %w", appName, err)
-	}
-	svcs, err := store.ListServices(appName)
-	if err != nil {
-		return nil, err
-	}
 	sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
-		return nil, fmt.Errorf("assuming role for environment %s: %w", env.ManagerRoleARN, err)
+		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}
 	d := newStackDescriber(sess)
 	return &EnvDescriber{
-		app:             app,
+		app:             opt.App,
 		env:             env,
-		svcs:            svcs,
-		enableResources: false,
+		enableResources: opt.EnableResources,
 
-		store:          store,
-		rgClient:       rg.New(sess),
+		configStore:    opt.ConfigStore,
+		deployStore:    opt.DeployStore,
 		stackDescriber: stackAndResourcesDescriber(d),
 	}, nil
-}
-
-// NewEnvDescriberWithResources instantiates an environment describer with stack resources.
-func NewEnvDescriberWithResources(appName, envName string) (*EnvDescriber, error) {
-	d, err := NewEnvDescriber(appName, envName)
-	if err != nil {
-		return nil, err
-	}
-	d.enableResources = true
-	return d, nil
 }
 
 // Describe returns info about an application's environment.
@@ -102,20 +87,16 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 		return nil, err
 	}
 
-	tags := make(map[string]string)
-	envStack, err := e.stackDescriber.Stack(stack.NameForEnv(e.app.Name, e.env.Name))
+	tags, err := e.stackTags()
 	if err != nil {
-		return nil, err
-	}
-	for _, tag := range envStack.Tags {
-		tags[*tag.Key] = *tag.Value
+		return nil, fmt.Errorf("retrieve environment tags: %w", err)
 	}
 
 	var stackResources []*CfnResource
 	if e.enableResources {
 		stackResources, err = e.envOutputs()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("retrieve environment resources: %w", err)
 		}
 	}
 
@@ -127,49 +108,42 @@ func (e *EnvDescriber) Describe() (*EnvDescription, error) {
 	}, nil
 }
 
-func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
-	tags := map[string]string{
-		deploy.EnvTagKey: e.env.Name,
-	}
-	resources, err := e.rgClient.GetResourcesByTags(cloudformationResourceType, tags)
+func (e *EnvDescriber) stackTags() (map[string]string, error) {
+	tags := make(map[string]string)
+	envStack, err := e.stackDescriber.Stack(stack.NameForEnv(e.app, e.env.Name))
 	if err != nil {
-		return nil, fmt.Errorf("get %s resources for env %s: %w", cloudformationResourceType, e.env.Name, err)
+		return nil, err
 	}
-
-	stacksOfEnvironment := make(map[string]bool)
-	for _, resource := range resources {
-		stack, err := e.getStackName(resource.ARN)
-		if err != nil {
-			return nil, err
-		}
-		stacksOfEnvironment[stack] = true
+	for _, tag := range envStack.Tags {
+		tags[*tag.Key] = *tag.Value
 	}
-	var svcs []*config.Service
-	for _, svc := range e.svcs {
-		stackName := stack.NameForService(e.app.Name, e.env.Name, svc.Name)
-		if stacksOfEnvironment[stackName] {
-			svcs = append(svcs, svc)
-		}
-	}
-	return svcs, nil
+	return tags, nil
 }
 
-func (e *EnvDescriber) getStackName(resourceArn string) (string, error) {
-	parsedArn, err := arn.Parse(resourceArn)
+func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
+	allSvcs, err := e.configStore.ListServices(e.app)
 	if err != nil {
-		return "", fmt.Errorf("parse ARN %s: %w", resourceArn, err)
+		return nil, fmt.Errorf("list services for app %s: %w", e.app, err)
 	}
-	stack := strings.Split(parsedArn.Resource, "/")
-	if len(stack) < 2 {
-		return "", fmt.Errorf("invalid ARN resource format %s. Ex: arn:partition:service:region:account-id:resource-type/resource-id", parsedArn.Resource)
+	svcs := make(map[string]*config.Service)
+	for _, svc := range allSvcs {
+		svcs[svc.Name] = svc
 	}
-	return stack[1], nil
+	deployedSvcNames, err := e.deployStore.ListDeployedServices(e.app, e.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("list deployed services in env %s: %w", e.env.Name, err)
+	}
+	var deployedSvcs []*config.Service
+	for _, deployedSvcName := range deployedSvcNames {
+		deployedSvcs = append(deployedSvcs, svcs[deployedSvcName])
+	}
+	return deployedSvcs, nil
 }
 
 func (e *EnvDescriber) envOutputs() ([]*CfnResource, error) {
-	envStack, err := e.stackDescriber.StackResources(stack.NameForEnv(e.app.Name, e.env.Name))
+	envStack, err := e.stackDescriber.StackResources(stack.NameForEnv(e.app, e.env.Name))
 	if err != nil {
-		return nil, fmt.Errorf("retrieve environment resources: %w", err)
+		return nil, err
 	}
 	outputs := flattenResources(envStack)
 	return outputs, nil

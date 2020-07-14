@@ -33,13 +33,17 @@ type ecsClient interface {
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 }
 
-type configStoreSvc interface {
+// ConfigStoreSvc wraps methods of config store.
+type ConfigStoreSvc interface {
 	GetEnvironment(appName string, environmentName string) (*config.Environment, error)
 	ListEnvironments(appName string) ([]*config.Environment, error)
+	ListServices(appName string) ([]*config.Service, error)
 }
 
-type deployStoreSvc interface {
+// DeployStoreSvc wraps methods of deploy store.
+type DeployStoreSvc interface {
 	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
+	ListDeployedServices(appName string, envName string) ([]string, error)
 }
 
 // ServiceConfig contains serialized configuration parameters for a service.
@@ -75,7 +79,7 @@ type NewServiceConfig struct {
 	App         string
 	Env         string
 	Svc         string
-	ConfigStore configStoreSvc
+	ConfigStore ConfigStoreSvc
 }
 
 // NewServiceDescriber instantiates a new service.
@@ -109,21 +113,6 @@ func (d *ServiceDescriber) EnvVars() (map[string]string, error) {
 	envVars := taskDefinition.EnvironmentVariables()
 
 	return envVars, nil
-}
-
-// GetServiceArn returns the ECS service ARN of the service in an environment.
-func (d *ServiceDescriber) GetServiceArn() (*ecs.ServiceArn, error) {
-	svcResources, err := d.stackDescriber.StackResources(stack.NameForService(d.app, d.env, d.service))
-	if err != nil {
-		return nil, err
-	}
-	for _, svcResource := range svcResources {
-		if aws.StringValue(svcResource.LogicalResourceId) == serviceLogicalID {
-			serviceArn := ecs.ServiceArn(aws.StringValue(svcResource.PhysicalResourceId))
-			return &serviceArn, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find service arn in service stack resource")
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
@@ -172,16 +161,4 @@ func (d *ServiceDescriber) Params() (map[string]string, error) {
 		params[*param.ParameterKey] = *param.ParameterValue
 	}
 	return params, nil
-}
-
-func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
-	var envVarList []*EnvVars
-	for k, v := range m {
-		envVarList = append(envVarList, &EnvVars{
-			Environment: envName,
-			Name:        k,
-			Value:       v,
-		})
-	}
-	return envVarList
 }
