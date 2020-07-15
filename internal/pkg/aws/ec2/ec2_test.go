@@ -17,7 +17,8 @@ import (
 var (
 	inAppEnvFilters = []Filter{
 		Filter{
-			Name: TagFilterNameForApp, Values: []string{"my-app"},
+			Name: TagFilterNameForApp,
+			Values: []string{"my-app"},
 		},
 		Filter{
 			Name:   TagFilterNameForEnv,
@@ -46,7 +47,7 @@ func TestEC2_PublicSubnetIDs(t *testing.T) {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedARNs []string
+		wantedARNs  []string
 	}{
 		"fail to get public subnets": {
 			inFilter: inAppEnvFilters,
@@ -102,7 +103,7 @@ func TestEC2_SubnetIDs(t *testing.T) {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedARNs []string
+		wantedARNs  []string
 	}{
 		"failed to get subnets": {
 			inFilter: inAppEnvFilters,
@@ -151,13 +152,13 @@ func TestEC2_SubnetIDs(t *testing.T) {
 }
 
 func TestEC2_SecurityGroups(t *testing.T) {
-	testCases := map[string]struct{
+	testCases := map[string]struct {
 		inFilter []Filter
 
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedARNs []string
+		wantedARNs  []string
 	}{
 		"failed to get security groups": {
 			inFilter: inAppEnvFilters,

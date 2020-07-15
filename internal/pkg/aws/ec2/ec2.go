@@ -25,7 +25,7 @@ var (
 
 var (
 	// FilterForDefaultVPCSubnets is a pre-defined filter for the default subnets at the availability zone.
-	FilterForDefaultVPCSubnets = Filter {
+	FilterForDefaultVPCSubnets = Filter{
 		Name:   defaultForAZFilterName,
 		Values: []string{"true"},
 	}
@@ -124,7 +124,7 @@ func toEC2Filter(filters []Filter) []*ec2.Filter {
 	var ec2Filter []*ec2.Filter
 	for _, filter := range filters {
 		ec2Filter = append(ec2Filter, &ec2.Filter{
-			Name: aws.String(filter.Name),
+			Name:   aws.String(filter.Name),
 			Values: aws.StringSlice(filter.Values),
 		})
 	}
