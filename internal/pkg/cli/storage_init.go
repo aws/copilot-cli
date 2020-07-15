@@ -569,6 +569,10 @@ func BuildStorageInitCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Creates a new storage config file in a service's addons directory.",
+		Long: `Creates a new storage config file in a service's addons directory.
+Storage resources are deployed to your service's environments when you run
+'copilot svc deploy'. Resource names are injected into your service containers as
+environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -s frontend
