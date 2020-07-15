@@ -96,7 +96,7 @@ func (c *EC2) SecurityGroups(filters ...Filter) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get security groups: %w", err)
+		return nil, fmt.Errorf("describe security groups: %w", err)
 	}
 
 	securityGroups := make([]string, len(response.SecurityGroups))
