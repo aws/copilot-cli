@@ -5,10 +5,11 @@ package describe
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/dustin/go-humanize"
-	"io"
 )
 
 const (
@@ -48,6 +49,19 @@ func flattenResources(stackResources []*cloudformation.StackResource) []*CfnReso
 	return resources
 }
 
+func flattenEnvVars(envName string, m map[string]string) []*EnvVars {
+	var envVarList []*EnvVars
+	for k, v := range m {
+		envVarList = append(envVarList, &EnvVars{
+			Environment: envName,
+			Name:        k,
+			Value:       v,
+		})
+	}
+	return envVarList
+}
+
+// HumanString returns the stringified CfnResource struct with human readable format.
 func (c CfnResource) HumanString() string {
 	return fmt.Sprintf("    %s\t%s\n", c.Type, c.PhysicalID)
 }

@@ -18,18 +18,18 @@ type pipelineStateGetter interface {
 	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
 }
 
-// PipelineStatus retrieves status of a pipeline.
+// PipelineStatusDescriber retrieves status of a pipeline.
 type PipelineStatusDescriber struct {
 	pipelineName string
 	pipelineSvc  pipelineStateGetter
 }
 
-//PipelineStatus contains the status for a pipeline.
+// PipelineStatus contains the status for a pipeline.
 type PipelineStatus struct {
 	codepipeline.PipelineState
 }
 
-// NewPipelineStatus instantiates a new PipelineStatus struct.
+// NewPipelineStatusDescriber instantiates a new PipelineStatus struct.
 func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, error) {
 	sess, err := session.NewProvider().Default()
 	if err != nil {
@@ -53,6 +53,7 @@ func (d *PipelineStatusDescriber) Describe() (HumanJSONStringer, error) {
 	return pipelineStatus, nil
 }
 
+// JSONString returns stringified PipelineStatus struct with json format.
 func (p PipelineStatus) JSONString() (string, error) {
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -61,6 +62,7 @@ func (p PipelineStatus) JSONString() (string, error) {
 	return fmt.Sprintf("%s\n", b), nil
 }
 
+// HumanString returns stringified PipelineStatus struct with human readable format.
 func (p PipelineStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
