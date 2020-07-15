@@ -567,13 +567,16 @@ func BuildStorageInitCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, //TODO remove when ready for production
-		Use:    "init",
-		Short:  "Creates a new storage table in an environment.",
+		Use:   "init",
+		Short: "Creates a new storage config file in a service's addons directory.",
+		Long: `Creates a new storage config file in a service's addons directory.
+Storage resources are deployed to your service's environments when you run
+'copilot svc deploy'. Resource names are injected into your service containers as
+environment variables for easy access.`,
 		Example: `
   Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -s frontend
-  Create a basic DynamoDB table named "my-table" attached to the "frontend" service.
+  Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,

@@ -4,20 +4,21 @@
 package task
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/pkg/errors"
 )
 
 // NetworkConfigRunner runs an Amazon ECS task in the specified network configuration and the default cluster.
 type NetworkConfigRunner struct {
 	// Count of the tasks to be launched.
-	Count     int
+	Count int
 	// Group Name of the tasks that use the same task definition.
 	GroupName string
 
 	// Network configuration
-	Subnets []string
+	Subnets        []string
 	SecurityGroups []string
 
 	// Interfaces to interact with dependencies. Must not be nil.
@@ -27,7 +28,7 @@ type NetworkConfigRunner struct {
 
 // Run runs tasks in the subnets and the security groups, and returns the task ARNs.
 func (r *NetworkConfigRunner) Run() ([]string, error) {
-	if err:= r.validateDependencies(); err != nil {
+	if err := r.validateDependencies(); err != nil {
 		return nil, err
 	}
 
