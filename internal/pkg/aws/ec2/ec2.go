@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-
 const (
 	defaultForAZFilterName = "default-for-az"
 )
@@ -26,7 +25,7 @@ var (
 
 var (
 	// FilterForDefaultVPCSubnets is a pre-defined filter for the default subnets at the availability zone.
-	FilterForDefaultVPCSubnets = Filter {
+	FilterForDefaultVPCSubnets = Filter{
 		Name:   defaultForAZFilterName,
 		Values: []string{"true"},
 	}
@@ -39,9 +38,10 @@ type api interface {
 
 // Filter contains the name and values of a filter.
 type Filter struct {
-	// Name is the name of a filter that will be applied to subnets, for available filter names see: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSubnets.html
+	// Name of a filter that will be applied to subnets,
+	// for available filter names see: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSubnets.html.
 	Name string
-	// Value is the value of the filter
+	// Value of the filter.
 	Values []string
 }
 
@@ -57,27 +57,38 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// GetSubnetIDs finds the subnet IDs with optional filters.
-func (c *EC2) GetSubnetIDs(filters ...Filter) ([]string, error) {
-	inputFilters := toEC2Filter(filters)
-
-	response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		Filters: inputFilters,
-	})
-
+// SubnetIDs finds the subnet IDs with optional filters.
+func (c *EC2) SubnetIDs(filters ...Filter) ([]string, error) {
+	subnets, err := c.subnets(filters...)
 	if err != nil {
-		return nil, fmt.Errorf("get subnets: %w", err)
+		return nil, err
 	}
 
-	subnetIDs := make([]string, len(response.Subnets))
-	for idx, subnet := range response.Subnets {
+	subnetIDs := make([]string, len(subnets))
+	for idx, subnet := range subnets {
 		subnetIDs[idx] = aws.StringValue(subnet.SubnetId)
 	}
 	return subnetIDs, nil
 }
 
-// GetSecurityGroups finds the security group IDs with optional filters.
-func (c *EC2) GetSecurityGroups(filters ...Filter) ([]string, error) {
+// PublicSubnetIDs finds the public subnet IDs with optional filters.
+func (c *EC2) PublicSubnetIDs(filters ...Filter) ([]string, error) {
+	subnets, err := c.subnets(filters...)
+	if err != nil {
+		return nil, err
+	}
+
+	var subnetIDs []string
+	for _, subnet := range subnets {
+		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
+			subnetIDs = append(subnetIDs, aws.StringValue(subnet.SubnetId))
+		}
+	}
+	return subnetIDs, nil
+}
+
+// SecurityGroups finds the security group IDs with optional filters.
+func (c *EC2) SecurityGroups(filters ...Filter) ([]string, error) {
 	inputFilters := toEC2Filter(filters)
 
 	response, err := c.client.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
@@ -85,7 +96,7 @@ func (c *EC2) GetSecurityGroups(filters ...Filter) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get security groups: %w", err)
+		return nil, fmt.Errorf("describe security groups: %w", err)
 	}
 
 	securityGroups := make([]string, len(response.SecurityGroups))
@@ -95,11 +106,25 @@ func (c *EC2) GetSecurityGroups(filters ...Filter) ([]string, error) {
 	return securityGroups, nil
 }
 
+func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
+	inputFilters := toEC2Filter(filters)
+
+	response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		Filters: inputFilters,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("describe subnets: %w", err)
+	}
+
+	return response.Subnets, nil
+}
+
 func toEC2Filter(filters []Filter) []*ec2.Filter {
 	var ec2Filter []*ec2.Filter
 	for _, filter := range filters {
 		ec2Filter = append(ec2Filter, &ec2.Filter{
-			Name: aws.String(filter.Name),
+			Name:   aws.String(filter.Name),
 			Values: aws.StringSlice(filter.Values),
 		})
 	}
