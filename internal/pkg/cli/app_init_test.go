@@ -223,6 +223,21 @@ func TestInitAppOpts_Validate(t *testing.T) {
 
 			wantedError: "some error",
 		},
+		"domain name does not contain a dot": {
+			inDomainName:   "hello_website",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore:      func(m *mocks.Mockstore) {},
+
+			wantedError: fmt.Errorf("domain name %s is invalid: %w", "hello_website", errDomainInvalid).Error(),
+		},
+		"domain name contains multiple dots": {
+			inDomainName: "hello.dog.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
+				m.EXPECT().DomainExists("hello.dog.com").Return(true, nil)
+			},
+			mockStore:   func(m *mocks.Mockstore) {},
+			wantedError: "",
+		},
 	}
 
 	for name, tc := range testCases {

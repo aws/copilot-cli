@@ -32,6 +32,7 @@ var (
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
 	errLSIAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
+	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
@@ -63,7 +64,11 @@ var (
 	ipAddressRegexp = regexp.MustCompile(
 		`^(?:\d{1,3}\.){3}\d{1,3}$`, // match any 1-3 digits in xxx.xxx.xxx.xxx format.
 	)
+
+	domainNameRegexp = regexp.MustCompile(`\.`) //check for at least one dot in domain name
 )
+
+const regexpFindAllMatches = -1
 
 func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
@@ -99,6 +104,18 @@ func validateSvcType(val interface{}) error {
 	}
 
 	return fmt.Errorf("invalid service type %s: must be one of %s", svcType, prettify(manifest.ServiceTypes))
+}
+
+func validateDomainName(val interface{}) error {
+	domainName, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	dots := domainNameRegexp.FindAllString(domainName, regexpFindAllMatches)
+	if dots == nil {
+		return errDomainInvalid
+	}
+	return nil
 }
 
 func validateStorageType(val interface{}) error {
