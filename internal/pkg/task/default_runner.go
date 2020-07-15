@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package task
 
 import (
@@ -7,13 +10,14 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
-// DefaultRunner can run an Amazon ECS task in the default VPC and the default cluster.
+// DefaultVPCRunner can run an Amazon ECS task in the default VPC and the default cluster.
 type DefaultVPCRunner struct {
 	// Count of the tasks to be launched.
 	Count     int
 	// Group Name fo the tasks that use the same task definition.
 	GroupName string
 
+	// Interfaces to interact with dependencies. Must not be nil.
 	VPCGetter     VPCGetter
 	ClusterGetter DefaultClusterGetter
 	Starter       TaskRunner
