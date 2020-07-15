@@ -38,10 +38,10 @@ type api interface {
 
 // Filter contains the name and values of a filter.
 type Filter struct {
-	// Name is the name of a filter that will be applied to subnets,
+	// Name of a filter that will be applied to subnets,
 	// for available filter names see: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSubnets.html.
 	Name string
-	// Value is the value of the filter.
+	// Value of the filter.
 	Values []string
 }
 
@@ -114,7 +114,7 @@ func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("get subnets: %w", err)
+		return nil, fmt.Errorf("describe subnets: %w", err)
 	}
 
 	return response.Subnets, nil
