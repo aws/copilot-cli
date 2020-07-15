@@ -18,7 +18,7 @@ import (
 
 type envDescriberMocks struct {
 	configStoreSvc *mocks.MockConfigStoreSvc
-	deployStoreSvc *mocks.MockDeployStoreSvc
+	deployStoreSvc *mocks.MockDeployedEnvServicesLister
 	stackDescriber *mocks.MockstackAndResourcesDescriber
 }
 
@@ -193,11 +193,11 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockConfigStoreSvc := mocks.NewMockConfigStoreSvc(ctrl)
-			mockDeployStoreSvc := mocks.NewMockDeployStoreSvc(ctrl)
+			mockDeployedEnvServicesLister := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockStackDescriber := mocks.NewMockstackAndResourcesDescriber(ctrl)
 			mocks := envDescriberMocks{
 				configStoreSvc: mockConfigStoreSvc,
-				deployStoreSvc: mockDeployStoreSvc,
+				deployStoreSvc: mockDeployedEnvServicesLister,
 				stackDescriber: mockStackDescriber,
 			}
 
@@ -209,7 +209,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 				enableResources: tc.shouldOutputResources,
 
 				configStore:    mockConfigStoreSvc,
-				deployStore:    mockDeployStoreSvc,
+				deployStore:    mockDeployedEnvServicesLister,
 				stackDescriber: mockStackDescriber,
 			}
 

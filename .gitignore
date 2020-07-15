@@ -7,9 +7,3 @@ node_modules/
 .DS_Store
 site/node_modules/
 site/themes/docsy
-alb-rule-priority-generator.js
-dns-cert-validator.js
-dns-delegation.js
-enable-long-arns.js
-templates/packrd/
-templates/templates-packr.go

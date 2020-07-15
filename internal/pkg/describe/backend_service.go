@@ -21,7 +21,7 @@ type BackendServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store                DeployStoreSvc
+	store                DeployedEnvServicesLister
 	svcDescriber         map[string]svcDescriber
 	initServiceDescriber func(string) error
 }
@@ -30,7 +30,7 @@ type BackendServiceDescriber struct {
 type NewBackendServiceConfig struct {
 	NewServiceConfig
 	EnableResources bool
-	DeployStore     DeployStoreSvc
+	DeployStore     DeployedEnvServicesLister
 }
 
 // NewBackendServiceDescriber instantiates a backend service describer.

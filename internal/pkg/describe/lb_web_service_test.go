@@ -56,7 +56,7 @@ func TestWebServiceURI_String(t *testing.T) {
 }
 
 type webSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployStoreSvc
+	storeSvc     *mocks.MockDeployedEnvServicesLister
 	svcDescriber *mocks.MocksvcDescriber
 }
 
@@ -364,7 +364,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockDeployStoreSvc(ctrl)
+			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := webSvcDescriberMocks{
 				storeSvc:     mockStore,

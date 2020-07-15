@@ -68,7 +68,7 @@ type WebServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store                DeployStoreSvc
+	store                DeployedEnvServicesLister
 	svcDescriber         map[string]svcDescriber
 	initServiceDescriber func(string) error
 
@@ -80,7 +80,7 @@ type WebServiceDescriber struct {
 type NewWebServiceConfig struct {
 	NewServiceConfig
 	EnableResources bool
-	DeployStore     DeployStoreSvc
+	DeployStore     DeployedEnvServicesLister
 }
 
 // NewWebServiceDescriber instantiates a load balanced service describer.

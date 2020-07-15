@@ -171,31 +171,31 @@ func (mr *MockConfigStoreSvcMockRecorder) ListServices(appName interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListServices), appName)
 }
 
-// MockDeployStoreSvc is a mock of DeployStoreSvc interface
-type MockDeployStoreSvc struct {
+// MockDeployedEnvServicesLister is a mock of DeployedEnvServicesLister interface
+type MockDeployedEnvServicesLister struct {
 	ctrl     *gomock.Controller
-	recorder *MockDeployStoreSvcMockRecorder
+	recorder *MockDeployedEnvServicesListerMockRecorder
 }
 
-// MockDeployStoreSvcMockRecorder is the mock recorder for MockDeployStoreSvc
-type MockDeployStoreSvcMockRecorder struct {
-	mock *MockDeployStoreSvc
+// MockDeployedEnvServicesListerMockRecorder is the mock recorder for MockDeployedEnvServicesLister
+type MockDeployedEnvServicesListerMockRecorder struct {
+	mock *MockDeployedEnvServicesLister
 }
 
-// NewMockDeployStoreSvc creates a new mock instance
-func NewMockDeployStoreSvc(ctrl *gomock.Controller) *MockDeployStoreSvc {
-	mock := &MockDeployStoreSvc{ctrl: ctrl}
-	mock.recorder = &MockDeployStoreSvcMockRecorder{mock}
+// NewMockDeployedEnvServicesLister creates a new mock instance
+func NewMockDeployedEnvServicesLister(ctrl *gomock.Controller) *MockDeployedEnvServicesLister {
+	mock := &MockDeployedEnvServicesLister{ctrl: ctrl}
+	mock.recorder = &MockDeployedEnvServicesListerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockDeployStoreSvc) EXPECT() *MockDeployStoreSvcMockRecorder {
+func (m *MockDeployedEnvServicesLister) EXPECT() *MockDeployedEnvServicesListerMockRecorder {
 	return m.recorder
 }
 
 // ListEnvironmentsDeployedTo mocks base method
-func (m *MockDeployStoreSvc) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
+func (m *MockDeployedEnvServicesLister) ListEnvironmentsDeployedTo(appName, svcName string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEnvironmentsDeployedTo", appName, svcName)
 	ret0, _ := ret[0].([]string)
@@ -204,13 +204,13 @@ func (m *MockDeployStoreSvc) ListEnvironmentsDeployedTo(appName, svcName string)
 }
 
 // ListEnvironmentsDeployedTo indicates an expected call of ListEnvironmentsDeployedTo
-func (mr *MockDeployStoreSvcMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListEnvironmentsDeployedTo(appName, svcName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockDeployStoreSvc)(nil).ListEnvironmentsDeployedTo), appName, svcName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironmentsDeployedTo", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListEnvironmentsDeployedTo), appName, svcName)
 }
 
 // ListDeployedServices mocks base method
-func (m *MockDeployStoreSvc) ListDeployedServices(appName, envName string) ([]string, error) {
+func (m *MockDeployedEnvServicesLister) ListDeployedServices(appName, envName string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDeployedServices", appName, envName)
 	ret0, _ := ret[0].([]string)
@@ -219,7 +219,7 @@ func (m *MockDeployStoreSvc) ListDeployedServices(appName, envName string) ([]st
 }
 
 // ListDeployedServices indicates an expected call of ListDeployedServices
-func (mr *MockDeployStoreSvcMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedServices(appName, envName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployStoreSvc)(nil).ListDeployedServices), appName, envName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedServices", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedServices), appName, envName)
 }

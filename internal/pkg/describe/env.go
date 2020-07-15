@@ -14,21 +14,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 )
 
 const (
 	cloudformationResourceType = "cloudformation:stack"
 )
-
-type deployedSvcGetter interface {
-	ListDeployedServices(appName string, envName string) ([]string, error)
-}
-
-type resourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]*rg.Resource, error)
-}
 
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
@@ -45,7 +36,7 @@ type EnvDescriber struct {
 	enableResources bool
 
 	configStore    ConfigStoreSvc
-	deployStore    DeployStoreSvc
+	deployStore    DeployedEnvServicesLister
 	stackDescriber stackAndResourcesDescriber
 }
 
@@ -55,7 +46,7 @@ type NewEnvDescriberConfig struct {
 	Env             string
 	EnableResources bool
 	ConfigStore     ConfigStoreSvc
-	DeployStore     DeployStoreSvc
+	DeployStore     DeployedEnvServicesLister
 }
 
 // NewEnvDescriber instantiates an environment describer.
@@ -82,7 +73,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 
 // Describe returns info about an application's environment.
 func (e *EnvDescriber) Describe() (*EnvDescription, error) {
-	svcs, err := e.filterSvcsForEnv()
+	svcs, err := e.filterDeployedSvcs()
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +111,7 @@ func (e *EnvDescriber) stackTags() (map[string]string, error) {
 	return tags, nil
 }
 
-func (e *EnvDescriber) filterSvcsForEnv() ([]*config.Service, error) {
+func (e *EnvDescriber) filterDeployedSvcs() ([]*config.Service, error) {
 	allSvcs, err := e.configStore.ListServices(e.app)
 	if err != nil {
 		return nil, fmt.Errorf("list services for app %s: %w", e.app, err)

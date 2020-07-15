@@ -17,7 +17,7 @@ import (
 )
 
 type backendSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployStoreSvc
+	storeSvc     *mocks.MockDeployedEnvServicesLister
 	svcDescriber *mocks.MocksvcDescriber
 }
 
@@ -174,7 +174,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockDeployStoreSvc(ctrl)
+			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := backendSvcDescriberMocks{
 				storeSvc:     mockStore,

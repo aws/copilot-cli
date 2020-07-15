@@ -40,8 +40,8 @@ type ConfigStoreSvc interface {
 	ListServices(appName string) ([]*config.Service, error)
 }
 
-// DeployStoreSvc wraps methods of deploy store.
-type DeployStoreSvc interface {
+// DeployedEnvServicesLister wraps methods of deploy store.
+type DeployedEnvServicesLister interface {
 	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 	ListDeployedServices(appName string, envName string) ([]string, error)
 }
