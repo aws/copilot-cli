@@ -16,6 +16,12 @@ const (
 	fmtErrNoClusterFound = "no cluster found in env %s"
 )
 
+// Names for tag filters
+var (
+	TagFilterNameForApp = fmt.Sprintf(ec2.TagFilterName, deploy.AppTagKey)
+	TagFilterNameForEnv = fmt.Sprintf(ec2.TagFilterName, deploy.EnvTagKey)
+)
+
 // EnvRunner can run an Amazon ECS task in the VPC and the cluster of an environment.
 type EnvRunner struct {
 	// Count of the tasks to be launched.
@@ -94,11 +100,11 @@ func (r *EnvRunner) cluster(app, env string) (string, error) {
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 	return []ec2.Filter{
 		ec2.Filter{
-			Name:   ec2.TagFilterNameForEnv,
+			Name:   TagFilterNameForEnv,
 			Values: []string{r.Env},
 		},
 		ec2.Filter{
-			Name:   ec2.TagFilterNameForApp,
+			Name:   TagFilterNameForApp,
 			Values: []string{r.App},
 		},
 	}

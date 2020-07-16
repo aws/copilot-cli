@@ -26,11 +26,11 @@ func TestEnvRunner_Run(t *testing.T) {
 	}
 	filtersForVPCFromAppEnv := []ec2.Filter{
 		ec2.Filter{
-			Name:   ec2.TagFilterNameForEnv,
+			Name:   TagFilterNameForEnv,
 			Values: []string{inEnv},
 		},
 		ec2.Filter{
-			Name:   ec2.TagFilterNameForApp,
+			Name:   TagFilterNameForApp,
 			Values: []string{inApp},
 		},
 	}

@@ -6,8 +6,6 @@ package ec2
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -15,12 +13,9 @@ import (
 
 const (
 	defaultForAZFilterName = "default-for-az"
-)
 
-// Names for tag filters
-var (
-	TagFilterNameForApp = fmt.Sprintf("tag:%s", deploy.AppTagKey)
-	TagFilterNameForEnv = fmt.Sprintf("tag:%s", deploy.EnvTagKey)
+	// TagFilterName is the filter name format for tag filters
+	TagFilterName = "tag:%s"
 )
 
 var (
