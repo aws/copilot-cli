@@ -14,8 +14,9 @@ import (
 
 // VpcGetter gets subnets and security groups.
 type VPCGetter interface {
-	GetSubnetIDs(filters ...ec2.Filter) ([]string, error)
-	GetSecurityGroups(filters ...ec2.Filter) ([]string, error)
+	SubnetIDs(filters ...ec2.Filter) ([]string, error)
+	SecurityGroups(filters ...ec2.Filter) ([]string, error)
+	PublicSubnetIDs(filters ...ec2.Filter) ([]string, error)
 }
 
 // ResourceGetter gets resources by tags.
@@ -34,14 +35,14 @@ type TaskRunner interface {
 }
 
 const (
-	startedBy           = "copilot-task"
+	startedBy = "copilot-task"
 )
 
 var (
-	errNoSubnetFound     = errors.New("no subnets found")
-	fmtTaskFamilyName    = "copilot-%s"
+	errNoSubnetFound  = errors.New("no subnets found")
+	fmtTaskFamilyName = "copilot-%s"
 )
 
-func taskFamilyName(groupName string) string{
+func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
 }

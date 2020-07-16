@@ -18,34 +18,34 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 		count     int
 		groupName string
 
-		mockVPCGetter     func(m *mocks.MockvpcGetter)
-		mockClusterGetter func(m *mocks.MockdefaultClusterGetter)
-		mockStarter       func(m *mocks.MocktaskRunner)
+		mockVPCGetter     func(m *mocks.MockVPCGetter)
+		mockClusterGetter func(m *mocks.MockDefaultClusterGetter)
+		mockStarter       func(m *mocks.MockTaskRunner)
 
 		wantedError error
 		wantedARNs  []string
 	}{
 		"failed to get default cluster": {
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("", errors.New("error getting cluster"))
 			},
-			mockVPCGetter: func(m *mocks.MockvpcGetter) {
-				m.EXPECT().GetSubnetIDs().AnyTimes()
-				m.EXPECT().GetSecurityGroups().AnyTimes()
+			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs().AnyTimes()
+				m.EXPECT().SecurityGroups().AnyTimes()
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf("get default cluster: error getting cluster"),
 		},
 		"failed to get subnet": {
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockVPCGetter: func(m *mocks.MockvpcGetter) {
-				m.EXPECT().GetSubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return(nil, errors.New("error getting subnets"))
+			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return(nil, errors.New("error getting subnets"))
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
 			wantedError: errors.New("get default subnet IDs: error getting subnets"),
@@ -53,13 +53,13 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 		"failed to kick off task": {
 			count:     1,
 			groupName: "my-task",
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockVPCGetter: func(m *mocks.MockvpcGetter) {
-				m.EXPECT().GetSubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return([]string{"subnet-1"}, nil)
+			mockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).Return([]string{"subnet-1"}, nil)
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
 			wantedError: errors.New("run task my-task: error running task"),
@@ -71,9 +71,9 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockVpcGetter := mocks.NewMockvpcGetter(ctrl)
-			mockClusterGetter := mocks.NewMockdefaultClusterGetter(ctrl)
-			mockStarter := mocks.NewMocktaskRunner(ctrl)
+			mockVpcGetter := mocks.NewMockVPCGetter(ctrl)
+			mockClusterGetter := mocks.NewMockDefaultClusterGetter(ctrl)
+			mockStarter := mocks.NewMockTaskRunner(ctrl)
 
 			tc.mockVPCGetter(mockVpcGetter)
 			tc.mockClusterGetter(mockClusterGetter)
