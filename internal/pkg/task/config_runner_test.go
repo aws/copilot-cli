@@ -47,14 +47,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
 			mockStarter: func(m *mocks.MockTaskRunner) {
-				m.EXPECT().RunTask(ecs.RunTaskInput{
-					Cluster:        "cluster-1",
-					Count:          1,
-					Subnets:        []string{"subnet-1", "subnet-2"},
-					SecurityGroups: []string{"sg-1", "sg-2"},
-					TaskFamilyName: taskFamilyName("my-task"),
-					StartedBy:      startedBy,
-				}).Return(nil, errors.New("error running task"))
+				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
 
 			wantedError: fmt.Errorf("run task my-task: error running task"),
