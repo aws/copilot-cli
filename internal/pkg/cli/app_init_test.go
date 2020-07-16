@@ -188,6 +188,17 @@ func TestInitAppOpts_Validate(t *testing.T) {
 
 			wantedError: "application named metrics already exists with a different domain name domain.com",
 		},
+		"skip checking if domain name is not set": {
+			inAppName:      "metrics",
+			inDomainName:   "",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("metrics").Return(&config.Application{
+					Name:   "metrics",
+					Domain: "mockDomain.com",
+				}, nil)
+			},
+		},
 		"errors if failed to get application": {
 			inAppName:      "metrics",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
@@ -222,6 +233,21 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			mockStore: func(m *mocks.Mockstore) {},
 
 			wantedError: "some error",
+		},
+		"domain name does not contain a dot": {
+			inDomainName:   "hello_website",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore:      func(m *mocks.Mockstore) {},
+
+			wantedError: fmt.Errorf("domain name %s is invalid: %w", "hello_website", errDomainInvalid).Error(),
+		},
+		"domain name contains multiple dots": {
+			inDomainName: "hello.dog.com",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {
+				m.EXPECT().DomainExists("hello.dog.com").Return(true, nil)
+			},
+			mockStore:   func(m *mocks.Mockstore) {},
+			wantedError: "",
 		},
 	}
 

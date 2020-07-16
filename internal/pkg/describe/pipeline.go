@@ -24,7 +24,7 @@ type pipelineGetter interface {
 	GetPipeline(pipelineName string) (*codepipeline.Pipeline, error)
 }
 
-// Project contains serialized parameters for a pipeline.
+// Pipeline contains serialized parameters for a pipeline.
 type Pipeline struct {
 	codepipeline.Pipeline
 
@@ -58,6 +58,7 @@ func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDes
 	}, nil
 }
 
+// Describe returns description of a pipeline.
 func (d *PipelineDescriber) Describe() (HumanJSONStringer, error) {
 	cp, err := d.pipelineSvc.GetPipeline(d.pipelineName)
 	if err != nil {

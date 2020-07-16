@@ -84,6 +84,9 @@ func (o *initAppOpts) Validate() error {
 		}
 	}
 	if o.DomainName != "" {
+		if err := validateDomainName(o.DomainName); err != nil {
+			return fmt.Errorf("domain name %s is invalid: %w", o.DomainName, err)
+		}
 		if err := o.validateDomain(o.DomainName); err != nil {
 			return err
 		}
@@ -181,7 +184,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 		}
 		return fmt.Errorf("get application %s: %w", name, err)
 	}
-	if app.Domain != o.DomainName {
+	if o.DomainName != "" && app.Domain != o.DomainName {
 		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
 	}
 	return nil

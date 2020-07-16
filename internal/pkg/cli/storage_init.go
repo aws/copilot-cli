@@ -6,16 +6,14 @@ package cli
 import (
 	"encoding"
 	"fmt"
-	"regexp"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -187,6 +185,13 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
+	if err := o.validateDDB(); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (o *initStorageOpts) validateDDB() error {
 	if o.partitionKey != "" {
 		if err := validateKey(o.partitionKey); err != nil {
 			return err
@@ -211,7 +216,6 @@ func (o *initStorageOpts) Validate() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -388,6 +392,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 	// If --no-sort has been specified, there is no need to ask for local secondary indices.
 	if o.noSort {
+		o.noLSI = true
 		return nil
 	}
 	lsiTypePrompt := fmt.Sprintf(fmtStorageInitDDBKeyTypePrompt, color.Emphasize("alternate sort key"))
@@ -436,7 +441,6 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 			return fmt.Errorf("confirm add alternate sort key: %w", err)
 		}
 	}
-	return nil
 }
 
 func (o *initStorageOpts) validateServiceName() error {
@@ -455,20 +459,6 @@ func (o *initStorageOpts) validateServiceName() error {
 func (o *initStorageOpts) Execute() error {
 
 	return o.createAddon()
-}
-
-var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
-
-// getAttFromKey parses the DDB type and name out of keys specified in the form "Email:S"
-func getAttrFromKey(input string) (attribute, error) {
-	attrs := regexpMatchAttribute.FindStringSubmatch(input)
-	if len(attrs) == 0 {
-		return attribute{}, fmt.Errorf("parse attribute from key: %s", input)
-	}
-	return attribute{
-		name:     attrs[1],
-		dataType: strings.ToUpper(attrs[2]),
-	}, nil
 }
 
 func (o *initStorageOpts) createAddon() error {
@@ -524,76 +514,29 @@ func (o *initStorageOpts) newAddon() (encoding.BinaryMarshaler, error) {
 	}
 }
 
-func newDDBAttribute(input string) (*addon.DDBAttribute, error) {
-	attr, err := getAttrFromKey(input)
-	if err != nil {
-		return nil, err
-	}
-	return &addon.DDBAttribute{
-		Name:     &attr.name,
-		DataType: &attr.dataType,
-	}, nil
-}
-
-func newLSI(partitionKey string, lsis []string) ([]addon.DDBLocalSecondaryIndex, error) {
-	var output []addon.DDBLocalSecondaryIndex
-	for _, lsi := range lsis {
-		lsiAttr, err := getAttrFromKey(lsi)
-		if err != nil {
-			return nil, err
-		}
-		output = append(output, addon.DDBLocalSecondaryIndex{
-			PartitionKey: &partitionKey,
-			SortKey:      &lsiAttr.name,
-			Name:         &lsiAttr.name,
-		})
-	}
-	return output, nil
-}
-
 func (o *initStorageOpts) newDynamoDBAddon() (*addon.DynamoDB, error) {
-	props := addon.DynamoDBProps{}
+	props := addon.DynamoDBProps{
+		StorageProps: &addon.StorageProps{
+			Name: o.storageName,
+		},
+	}
 
-	var attributes []addon.DDBAttribute
-	partKey, err := newDDBAttribute(o.partitionKey)
+	if err := props.BuildPartitionKey(o.partitionKey); err != nil {
+		return nil, err
+	}
+
+	hasSortKey, err := props.BuildSortKey(o.noSort, o.sortKey)
 	if err != nil {
 		return nil, err
 	}
-	props.PartitionKey = partKey.Name
-	attributes = append(attributes, *partKey)
-	if !o.noSort {
-		sortKey, err := newDDBAttribute(o.sortKey)
+
+	if hasSortKey {
+		_, err := props.BuildLocalSecondaryIndex(o.noLSI, o.lsiSorts)
 		if err != nil {
 			return nil, err
 		}
-		attributes = append(attributes, *sortKey)
-		props.SortKey = sortKey.Name
-	}
-	for _, att := range o.lsiSorts {
-		currAtt, err := newDDBAttribute(att)
-		if err != nil {
-			return nil, err
-		}
-		attributes = append(attributes, *currAtt)
-	}
-	props.Attributes = attributes
-	// only configure LSI if we haven't specified the --no-lsi flag.
-	props.HasLSI = false
-	if !o.noLSI {
-		props.HasLSI = true
-		lsiConfig, err := newLSI(
-			*partKey.Name,
-			o.lsiSorts,
-		)
-		if err != nil {
-			return nil, err
-		}
-		props.LSIs = lsiConfig
 	}
 
-	props.StorageProps = &addon.StorageProps{
-		Name: o.storageName,
-	}
 	return addon.NewDynamoDB(&props), nil
 }
 
@@ -624,13 +567,16 @@ func BuildStorageInitCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, //TODO remove when ready for production
-		Use:    "init",
-		Short:  "Creates a new storage table in an environment.",
+		Use:   "init",
+		Short: "Creates a new storage config file in a service's addons directory.",
+		Long: `Creates a new storage config file in a service's addons directory.
+Storage resources are deployed to your service's environments when you run
+'copilot svc deploy'. Resource names are injected into your service containers as
+environment variables for easy access.`,
 		Example: `
-  Create a "my-bucket" S3 bucket bucket attached to the "frontend" service.
+  Create an S3 bucket named "my-bucket" attached to the "frontend" service.
   /code $ copilot storage init -n my-bucket -t S3 -s frontend
-  Create a basic DynamoDB table named "my-table" attached to the "frontend" service.
+  Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -s frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N`,

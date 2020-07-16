@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
 
@@ -34,43 +34,31 @@ type svcStatusOpts struct {
 
 	w                   io.Writer
 	store               store
-	svcDescriber        serviceArnGetter
 	statusDescriber     statusDescriber
-	sel                 configSelector
-	initSvcDescriber    func(*svcStatusOpts, string, string) error
+	sel                 deploySelector
 	initStatusDescriber func(*svcStatusOpts) error
 }
 
 func newSvcStatusOpts(vars svcStatusVars) (*svcStatusOpts, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to environment datastore: %w", err)
 	}
-
+	deployStore, err := deploy.NewStore(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to deploy store: %w", err)
+	}
 	return &svcStatusOpts{
 		svcStatusVars: vars,
-		store:         store,
+		store:         configStore,
 		w:             log.OutputWriter,
-		sel:           selector.NewConfigSelect(vars.prompt, store),
-		initSvcDescriber: func(o *svcStatusOpts, envName, svcName string) error {
-			d, err := describe.NewServiceDescriber(describe.NewServiceConfig{
-				App:         o.AppName(),
-				Svc:         svcName,
-				Env:         envName,
-				ConfigStore: store,
-			})
-			if err != nil {
-				return fmt.Errorf("creating service describer for application %s, environment %s, and service %s: %w", o.AppName(), envName, svcName, err)
-			}
-			o.svcDescriber = d
-			return nil
-		},
+		sel:           selector.NewDeploySelect(vars.prompt, configStore, deployStore),
 		initStatusDescriber: func(o *svcStatusOpts) error {
 			d, err := describe.NewServiceStatus(&describe.NewServiceStatusConfig{
 				App:         o.AppName(),
 				Env:         o.envName,
 				Svc:         o.svcName,
-				ConfigStore: store,
+				ConfigStore: configStore,
 			})
 			if err != nil {
 				return fmt.Errorf("creating status describer for service %s in application %s: %w", o.svcName, o.AppName(), err)
@@ -144,104 +132,14 @@ func (o *svcStatusOpts) askApp() error {
 	return nil
 }
 
-// TODO: Move the logic to select pkg.
 func (o *svcStatusOpts) askSvcEnvName() error {
-	var err error
-	svcNames := []string{o.svcName}
-	if o.svcName == "" {
-		svcNames, err = o.retrieveSvcNames()
-		if err != nil {
-			return err
-		}
-		if len(svcNames) == 0 {
-			return fmt.Errorf("no services found in application %s", color.HighlightUserInput(o.AppName()))
-		}
-	}
-
-	envNames := []string{o.envName}
-	if o.envName == "" {
-		envNames, err = o.retrieveEnvNames()
-		if err != nil {
-			return err
-		}
-		if len(envNames) == 0 {
-			return fmt.Errorf("no environments found in application %s", color.HighlightUserInput(o.AppName()))
-		}
-	}
-
-	svcEnvs := make(map[string]svcEnv)
-	var svcEnvNames []string
-	for _, svcName := range svcNames {
-		for _, envName := range envNames {
-			if err := o.initSvcDescriber(o, envName, svcName); err != nil {
-				return err
-			}
-			_, err := o.svcDescriber.GetServiceArn()
-			if err != nil {
-				if describe.IsStackNotExistsErr(err) {
-					continue
-				}
-				return fmt.Errorf("check if service %s is deployed in env %s: %w", svcName, envName, err)
-			}
-			svcEnv := svcEnv{
-				svcName: svcName,
-				envName: envName,
-			}
-			svcEnvName := svcEnv.String()
-			svcEnvs[svcEnvName] = svcEnv
-			svcEnvNames = append(svcEnvNames, svcEnvName)
-		}
-	}
-	if len(svcEnvNames) == 0 {
-		return fmt.Errorf("no deployed services found in application %s", color.HighlightUserInput(o.AppName()))
-	}
-
-	// return if only one deployed service found
-	if len(svcEnvNames) == 1 {
-		o.svcName = svcEnvs[svcEnvNames[0]].svcName
-		o.envName = svcEnvs[svcEnvNames[0]].envName
-		log.Infof("Showing status of service %s deployed in environment %s\n", color.HighlightUserInput(o.svcName), color.HighlightUserInput(o.envName))
-		return nil
-	}
-
-	svcEnvName, err := o.prompt.SelectOne(
-		svcLogNamePrompt,
-		svcLogNameHelpPrompt,
-		svcEnvNames,
-	)
+	deployedService, err := o.sel.DeployedService(svcStatusNamePrompt, svcStatusNameHelpPrompt, o.AppName(), selector.WithEnv(o.envName), selector.WithSvc(o.svcName))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.AppName(), err)
 	}
-	o.svcName = svcEnvs[svcEnvName].svcName
-	o.envName = svcEnvs[svcEnvName].envName
-
+	o.svcName = deployedService.Svc
+	o.envName = deployedService.Env
 	return nil
-}
-
-func (o *svcStatusOpts) retrieveSvcNames() ([]string, error) {
-	svcs, err := o.store.ListServices(o.AppName())
-	if err != nil {
-		return nil, fmt.Errorf("list services for application %s: %w", o.AppName(), err)
-	}
-	svcNames := make([]string, len(svcs))
-	for ind, svc := range svcs {
-		svcNames[ind] = svc.Name
-	}
-
-	return svcNames, nil
-}
-
-func (o *svcStatusOpts) retrieveEnvNames() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.AppName())
-	if err != nil {
-		return nil, fmt.Errorf("list environments for application %s: %w", o.AppName(), err)
-	}
-	envNames := make([]string, len(envs))
-	for ind, env := range envs {
-		envNames[ind] = env.Name
-	}
-
-	return envNames, nil
 }
 
 // BuildSvcStatusCmd builds the command for showing the status of a deployed service.

@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
 )
 
@@ -40,24 +41,29 @@ type showEnvOpts struct {
 }
 
 func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
-	store, err := config.NewStore()
+	configStore, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("connect to copilot config store: %w", err)
+	}
+	deployStore, err := deploy.NewStore(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("connect to copilot deploy store: %w", err)
 	}
 
 	opts := &showEnvOpts{
 		showEnvVars: vars,
-		store:       store,
+		store:       configStore,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(vars.prompt, store),
+		sel:         selector.NewConfigSelect(vars.prompt, configStore),
 	}
 	opts.initEnvDescriber = func() error {
-		var d envDescriber
-		if !vars.shouldOutputResources {
-			d, err = describe.NewEnvDescriber(opts.AppName(), opts.envName)
-		} else {
-			d, err = describe.NewEnvDescriberWithResources(opts.AppName(), opts.envName)
-		}
+		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:             opts.AppName(),
+			Env:             opts.envName,
+			ConfigStore:     configStore,
+			DeployStore:     deployStore,
+			EnableResources: opts.shouldOutputResources,
+		})
 		if err != nil {
 			return fmt.Errorf("creating describer for environment %s in application %s: %w", opts.envName, opts.AppName(), err)
 		}

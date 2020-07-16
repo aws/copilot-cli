@@ -13,12 +13,12 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/cli/selector"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -102,10 +102,11 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
-			}
-			serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
-			if err != nil {
-				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
+			} else {
+				serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
+				if err != nil {
+					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
+				}
 			}
 		case *manifest.BackendService:
 			serializer, err = stack.NewBackendService(v, env.Name, app.Name, rc)
