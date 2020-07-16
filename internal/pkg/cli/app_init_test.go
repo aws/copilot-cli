@@ -188,6 +188,17 @@ func TestInitAppOpts_Validate(t *testing.T) {
 
 			wantedError: "application named metrics already exists with a different domain name domain.com",
 		},
+		"skip checking if domain name is not set": {
+			inAppName:      "metrics",
+			inDomainName:   "",
+			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().GetApplication("metrics").Return(&config.Application{
+					Name:   "metrics",
+					Domain: "mockDomain.com",
+				}, nil)
+			},
+		},
 		"errors if failed to get application": {
 			inAppName:      "metrics",
 			mockRoute53Svc: func(m *mocks.MockdomainValidator) {},
