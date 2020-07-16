@@ -43,6 +43,7 @@ func (r Runner) Build(uri, path, imageTag string, additionalTags ...string) erro
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
+
 	return nil
 }
 

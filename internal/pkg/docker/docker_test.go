@@ -13,6 +13,8 @@ import (
 )
 
 func TestBuild(t *testing.T) {
+	mockError := errors.New("mockError")
+
 	mockURI := "mockURI"
 	mockPath := "mockPath/to/mockDockerfile"
 
@@ -23,7 +25,6 @@ func TestBuild(t *testing.T) {
 	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
-		tags       []string
 		path       string
 		setupMocks func(controller *gomock.Controller)
 
@@ -37,9 +38,9 @@ func TestBuild(t *testing.T) {
 					"-t", imageName(mockURI, mockTag2),
 					"-t", imageName(mockURI, mockTag3),
 					"-t", imageName(mockURI, mockTag1),
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(errors.New("error"))
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
 			},
-			wantedError: fmt.Errorf("building image: error"),
+			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
 		"success with additional tags": {
 			path: mockPath,
@@ -122,6 +123,7 @@ func TestLogin(t *testing.T) {
 
 func TestPush(t *testing.T) {
 	mockError := errors.New("mockError")
+
 	mockURI := "mockURI"
 
 	mockTag1 := "tag1"
