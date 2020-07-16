@@ -54,7 +54,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 
 	subnets, err := r.VPCGetter.PublicSubnetIDs(filters...)
 	if err != nil {
-		return nil, fmt.Errorf("get subnet IDs from %s: %w", r.Env, err)
+		return nil, fmt.Errorf("get public subnet IDs from environment %s: %w", r.Env, err)
 	}
 	if len(subnets) == 0 {
 		return nil, errNoSubnetFound
@@ -62,7 +62,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 
 	securityGroups, err := r.VPCGetter.SecurityGroups(filters...)
 	if err != nil {
-		return nil, fmt.Errorf("get security groups from %s: %w", r.Env, err)
+		return nil, fmt.Errorf("get security groups from environment %s: %w", r.Env, err)
 	}
 
 	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
