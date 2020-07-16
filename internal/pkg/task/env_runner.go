@@ -12,7 +12,12 @@ import (
 
 const (
 	clusterResourceType  = "ecs:cluster"
-	fmtErrNoClusterFound = "no cluster found in env %s"
+
+	fmtErrClusterFromEnv        = "get cluster by env %s: %w"
+	fmtErrNoClusterFoundFromEnv = "no cluster found in env %s"
+	fmtErrMoreThanOneClusterFromEnv = "more than one cluster is found in environment %s"
+	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
+	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
 )
 
 // Names for tag filters
@@ -53,7 +58,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 
 	subnets, err := r.VPCGetter.PublicSubnetIDs(filters...)
 	if err != nil {
-		return nil, fmt.Errorf("get public subnet IDs from environment %s: %w", r.Env, err)
+		return nil, fmt.Errorf(fmtErrPublicSubnetsFromEnv, r.Env, err)
 	}
 	if len(subnets) == 0 {
 		return nil, errNoSubnetFound
@@ -61,7 +66,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 
 	securityGroups, err := r.VPCGetter.SecurityGroups(filters...)
 	if err != nil {
-		return nil, fmt.Errorf("get security groups from environment %s: %w", r.Env, err)
+		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
 	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
@@ -73,7 +78,10 @@ func (r *EnvRunner) Run() ([]string, error) {
 		StartedBy:      startedBy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("run task %s: %w", r.GroupName, err)
+		return nil, &errRunTask{
+			groupName: r.GroupName,
+			parentErr: err,
+		}
 	}
 	return arns, nil
 }
@@ -85,14 +93,17 @@ func (r *EnvRunner) cluster(app, env string) (string, error) {
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("get cluster by env %s: %w", env, err)
+		return "", fmt.Errorf(fmtErrClusterFromEnv, env, err)
 	}
 
 	if len(clusters) == 0 {
-		return "", fmt.Errorf(fmtErrNoClusterFound, env)
+		return "", fmt.Errorf(fmtErrNoClusterFoundFromEnv, env)
 	}
 
 	// NOTE: only one cluster is associated with an application and an environment
+	if len(clusters) > 1 {
+		return "", fmt.Errorf(fmtErrMoreThanOneClusterFromEnv, r.Env)
+	}
 	return clusters[0].ARN, nil
 }
 

@@ -34,7 +34,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: fmt.Errorf("get default cluster: error getting default cluster"),
+			wantedError: fmt.Errorf(fmtErrDefaultCluster, errors.New("error getting default cluster")),
 		},
 		"failed to kick off task": {
 			count:     1,
@@ -50,7 +50,10 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
 
-			wantedError: fmt.Errorf("run task my-task: error running task"),
+			wantedError: &errRunTask{
+				groupName: "my-task",
+				parentErr: errors.New("error running task"),
+			},
 		},
 		"successfully kick off task with both input subnets and security groups": {
 			count:     1,

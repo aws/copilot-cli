@@ -66,7 +66,7 @@ func TestEnvRunner_Run(t *testing.T) {
 			},
 			mockVPCGetter: mockVPCGetterAny,
 			mockStarter:   mockStarterNotRun,
-			wantedError:   fmt.Errorf("get cluster by env %s: error getting resources", inEnv),
+			wantedError:   fmt.Errorf(fmtErrClusterFromEnv, inEnv, errors.New("error getting resources")),
 		},
 		"no cluster found": {
 			mockResourceGetter: func(m *mocks.MockResourceGetter) {
@@ -77,6 +77,22 @@ func TestEnvRunner_Run(t *testing.T) {
 			mockStarter:   mockStarterNotRun,
 			wantedError:   fmt.Errorf("no cluster found in env %s", inEnv),
 		},
+		"more than one cluster is found": {
+			mockResourceGetter: func(m *mocks.MockResourceGetter) {
+				m.EXPECT().GetResourcesByTags(clusterResourceType, resourceTagFiltersForCluster).
+					Return([]*resourcegroups.Resource{
+						&resourcegroups.Resource{
+							ARN: "cluster-1",
+						},
+						&resourcegroups.Resource{
+							ARN: "cluster-2",
+						},
+				}, nil)
+			},
+			mockVPCGetter: mockVPCGetterAny,
+			mockStarter:   mockStarterNotRun,
+			wantedError:   fmt.Errorf(fmtErrMoreThanOneClusterFromEnv, inEnv),
+		},
 		"failed to get subnets": {
 			mockResourceGetter: mockResourceGetterWithCluster,
 			mockVPCGetter: func(m *mocks.MockVPCGetter) {
@@ -85,7 +101,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
-			wantedError: fmt.Errorf("get public subnet IDs from environment %s: error getting subnets", inEnv),
+			wantedError: fmt.Errorf(fmtErrPublicSubnetsFromEnv, inEnv, errors.New("error getting subnets")),
 		},
 		"no subnet is found": {
 			mockResourceGetter: mockResourceGetterWithCluster,
@@ -105,7 +121,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					Return(nil, errors.New("error getting security groups"))
 			},
 			mockStarter: mockStarterNotRun,
-			wantedError: fmt.Errorf("get security groups from environment %s: error getting security groups", inEnv),
+			wantedError: fmt.Errorf(fmtErrSecurityGroupsFromEnv, inEnv, errors.New("error getting security groups")),
 		},
 		"failed to kick off task": {
 			count:     1,
@@ -127,7 +143,10 @@ func TestEnvRunner_Run(t *testing.T) {
 				}).Return(nil, errors.New("error running task"))
 			},
 
-			wantedError: fmt.Errorf("run task %s: error running task", "my-task"),
+			wantedError: &errRunTask{
+				groupName: "my-task",
+				parentErr: errors.New("error running task"),
+			},
 		},
 		"run in env success": {
 			count:     1,

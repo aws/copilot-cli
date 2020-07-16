@@ -33,7 +33,7 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, fmt.Errorf("get default cluster: %w", err)
+		return nil, fmt.Errorf(fmtErrDefaultCluster, err)
 	}
 
 	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
@@ -45,7 +45,10 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 		StartedBy:      startedBy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("run task %s: %w", r.GroupName, err)
+		return nil, &errRunTask{
+			groupName: r.GroupName,
+			parentErr: err,
+		}
 	}
 
 	return arns, nil

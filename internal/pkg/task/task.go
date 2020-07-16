@@ -45,6 +45,8 @@ var (
 	errClusterGetterNil = errors.New("cluster getter is not set")
 	errStarterNil = errors.New("starter is not set")
 
+	fmtErrDefaultCluster = "get default cluster: %w"
+
 	fmtTaskFamilyName = "copilot-%s"
 )
 
