@@ -5,7 +5,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -39,7 +38,6 @@ const (
 )
 
 var (
-	errNoSubnetFound  = errors.New("no subnets found")
 	fmtTaskFamilyName = "copilot-%s"
 )
 

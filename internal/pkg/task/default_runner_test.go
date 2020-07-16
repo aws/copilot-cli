@@ -36,7 +36,9 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: fmt.Errorf("get default cluster: error getting cluster"),
+			wantedError: &errGetDefaultCluster{
+				parentErr: errors.New("error getting cluster"),
+			},
 		},
 		"failed to get subnet": {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
@@ -48,7 +50,7 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: errors.New("get default subnet IDs: error getting subnets"),
+			wantedError: fmt.Errorf(fmtErrDefaultSubnets, errors.New("error getting subnets")),
 		},
 		"failed to kick off task": {
 			count:     1,
@@ -62,7 +64,10 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
-			wantedError: errors.New("run task my-task: error running task"),
+			wantedError: &errRunTask{
+				groupName: "my-task",
+				parentErr: errors.New("error running task"),
+			},
 		},
 	}
 

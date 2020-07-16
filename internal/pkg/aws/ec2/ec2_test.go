@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -17,11 +18,11 @@ import (
 var (
 	inAppEnvFilters = []Filter{
 		Filter{
-			Name: TagFilterNameForApp,
+			Name: fmt.Sprintf(TagFilterName, deploy.AppTagKey),
 			Values: []string{"my-app"},
 		},
 		Filter{
-			Name:   TagFilterNameForEnv,
+			Name:   fmt.Sprintf(TagFilterName, deploy.EnvTagKey),
 			Values: []string{"my-env"},
 		},
 	}

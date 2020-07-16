@@ -4,10 +4,13 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+)
+
+const (
+	fmtErrDefaultSubnets = "get default subnet IDs: %w"
 )
 
 // DefaultVPCRunner can run an Amazon ECS task in the default VPC and the default cluster.
@@ -31,12 +34,14 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, fmt.Errorf("get default cluster: %w", err)
+		return nil, &errGetDefaultCluster {
+			parentErr: err,
+		}
 	}
 
 	subnets, err := r.VPCGetter.SubnetIDs(ec2.FilterForDefaultVPCSubnets)
 	if err != nil {
-		return nil, fmt.Errorf("get default subnet IDs: %w", err)
+		return nil, fmt.Errorf(fmtErrDefaultSubnets, err)
 	}
 	if len(subnets) == 0 {
 		return nil, errNoSubnetFound
@@ -50,7 +55,10 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 		StartedBy:      startedBy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("run task %s: %w", r.GroupName, err)
+		return nil, &errRunTask{
+			groupName: r.GroupName,
+			parentErr: err,
+		}
 	}
 
 	return arns, nil
@@ -58,15 +66,15 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 
 func (r *DefaultVPCRunner) validateDependencies() error {
 	if r.VPCGetter == nil {
-		return errors.New("vpc getter is not set")
+		return errVPCGetterNil
 	}
 
 	if r.ClusterGetter == nil {
-		return errors.New("cluster getter is not set")
+		return errClusterGetterNil
 	}
 
 	if r.Starter == nil {
-		return errors.New("starter is not set")
+		return errStarterNil
 	}
 
 	return nil

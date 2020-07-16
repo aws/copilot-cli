@@ -5,7 +5,6 @@ package task
 
 import (
 	"errors"
-	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
@@ -34,7 +33,9 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: fmt.Errorf("get default cluster: error getting default cluster"),
+			wantedError: &errGetDefaultCluster{
+				parentErr: errors.New("error getting default cluster"),
+			},
 		},
 		"failed to kick off task": {
 			count:     1,
@@ -47,17 +48,13 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
 			mockStarter: func(m *mocks.MockTaskRunner) {
-				m.EXPECT().RunTask(ecs.RunTaskInput{
-					Cluster:        "cluster-1",
-					Count:          1,
-					Subnets:        []string{"subnet-1", "subnet-2"},
-					SecurityGroups: []string{"sg-1", "sg-2"},
-					TaskFamilyName: taskFamilyName("my-task"),
-					StartedBy:      startedBy,
-				}).Return(nil, errors.New("error running task"))
+				m.EXPECT().RunTask(gomock.Any()).Return(nil, errors.New("error running task"))
 			},
 
-			wantedError: fmt.Errorf("run task my-task: error running task"),
+			wantedError: &errRunTask{
+				groupName: "my-task",
+				parentErr: errors.New("error running task"),
+			},
 		},
 		"successfully kick off task with both input subnets and security groups": {
 			count:     1,

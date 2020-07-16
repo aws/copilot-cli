@@ -4,9 +4,6 @@
 package task
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
@@ -34,7 +31,9 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, fmt.Errorf("get default cluster: %w", err)
+		return nil, &errGetDefaultCluster {
+			parentErr: err,
+		}
 	}
 
 	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
@@ -46,7 +45,10 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 		StartedBy:      startedBy,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("run task %s: %w", r.GroupName, err)
+		return nil, &errRunTask{
+			groupName: r.GroupName,
+			parentErr: err,
+		}
 	}
 
 	return arns, nil
@@ -54,11 +56,11 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 
 func (r *NetworkConfigRunner) validateDependencies() error {
 	if r.ClusterGetter == nil {
-		return errors.New("cluster getter is not set")
+		return errClusterGetterNil
 	}
 
 	if r.Starter == nil {
-		return errors.New("starter is not set")
+		return errStarterNil
 	}
 
 	return nil
