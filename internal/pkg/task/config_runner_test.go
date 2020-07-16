@@ -21,17 +21,17 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 		subnets        []string
 		securityGroups []string
 
-		mockClusterGetter func(m *mocks.MockdefaultClusterGetter)
-		mockStarter       func(m *mocks.MocktaskRunner)
+		mockClusterGetter func(m *mocks.MockDefaultClusterGetter)
+		mockStarter       func(m *mocks.MockTaskRunner)
 
 		wantedError error
 		wantedARNs  []string
 	}{
 		"failed to get clusters": {
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("", errors.New("error getting default cluster"))
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
 			wantedError: fmt.Errorf("get default cluster: error getting default cluster"),
@@ -43,10 +43,10 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			subnets:        []string{"subnet-1", "subnet-2"},
 			securityGroups: []string{"sg-1", "sg-2"},
 
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -66,10 +66,10 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			subnets:        []string{"subnet-1", "subnet-2"},
 			securityGroups: []string{"sg-1", "sg-2"},
 
-			mockClusterGetter: func(m *mocks.MockdefaultClusterGetter) {
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
 				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
 			},
-			mockStarter: func(m *mocks.MocktaskRunner) {
+			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(ecs.RunTaskInput{
 					Cluster:        "cluster-1",
 					Count:          1,
@@ -89,8 +89,8 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClusterGetter := mocks.NewMockdefaultClusterGetter(ctrl)
-			mockStarter := mocks.NewMocktaskRunner(ctrl)
+			mockClusterGetter := mocks.NewMockDefaultClusterGetter(ctrl)
+			mockStarter := mocks.NewMockTaskRunner(ctrl)
 
 			tc.mockClusterGetter(mockClusterGetter)
 			tc.mockStarter(mockStarter)
@@ -99,7 +99,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				Count:     tc.count,
 				GroupName: tc.groupName,
 
-				Subnets: tc.subnets,
+				Subnets:        tc.subnets,
 				SecurityGroups: tc.securityGroups,
 
 				ClusterGetter: mockClusterGetter,

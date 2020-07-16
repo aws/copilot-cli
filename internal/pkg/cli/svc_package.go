@@ -102,10 +102,11 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 				if err != nil {
 					return nil, fmt.Errorf("init https load balanced web service stack serializer: %w", err)
 				}
-			}
-			serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
-			if err != nil {
-				return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
+			} else {
+				serializer, err = stack.NewLoadBalancedWebService(v, env.Name, app.Name, rc)
+				if err != nil {
+					return nil, fmt.Errorf("init load balanced web service stack serializer: %w", err)
+				}
 			}
 		case *manifest.BackendService:
 			serializer, err = stack.NewBackendService(v, env.Name, app.Name, rc)
