@@ -34,7 +34,9 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, fmt.Errorf(fmtErrDefaultCluster, err)
+		return nil, &errGetDefaultCluster {
+			parentErr: err,
+		}
 	}
 
 	subnets, err := r.VPCGetter.SubnetIDs(ec2.FilterForDefaultVPCSubnets)

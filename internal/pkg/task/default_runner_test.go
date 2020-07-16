@@ -36,7 +36,9 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: fmt.Errorf(fmtErrDefaultCluster, errors.New("error getting cluster")),
+			wantedError: &errGetDefaultCluster{
+				parentErr: errors.New("error getting cluster"),
+			},
 		},
 		"failed to get subnet": {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {

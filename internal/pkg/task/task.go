@@ -5,7 +5,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -39,14 +38,6 @@ const (
 )
 
 var (
-	errNoSubnetFound  = errors.New("no subnets found")
-
-	errVPCGetterNil = errors.New("vpc getter is not set")
-	errClusterGetterNil = errors.New("cluster getter is not set")
-	errStarterNil = errors.New("starter is not set")
-
-	fmtErrDefaultCluster = "get default cluster: %w"
-
 	fmtTaskFamilyName = "copilot-%s"
 )
 

@@ -5,7 +5,6 @@ package task
 
 import (
 	"errors"
-	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
@@ -34,7 +33,9 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			mockStarter: func(m *mocks.MockTaskRunner) {
 				m.EXPECT().RunTask(gomock.Any()).Times(0)
 			},
-			wantedError: fmt.Errorf(fmtErrDefaultCluster, errors.New("error getting default cluster")),
+			wantedError: &errGetDefaultCluster{
+				parentErr: errors.New("error getting default cluster"),
+			},
 		},
 		"failed to kick off task": {
 			count:     1,

@@ -4,8 +4,6 @@
 package task
 
 import (
-	"fmt"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
@@ -33,7 +31,9 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, fmt.Errorf(fmtErrDefaultCluster, err)
+		return nil, &errGetDefaultCluster {
+			parentErr: err,
+		}
 	}
 
 	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
