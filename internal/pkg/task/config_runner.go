@@ -4,7 +4,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -54,11 +53,11 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 
 func (r *NetworkConfigRunner) validateDependencies() error {
 	if r.ClusterGetter == nil {
-		return errors.New("cluster getter is not set")
+		return errClusterGetterNil
 	}
 
 	if r.Starter == nil {
-		return errors.New("starter is not set")
+		return errStarterNil
 	}
 
 	return nil

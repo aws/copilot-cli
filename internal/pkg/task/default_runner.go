@@ -4,7 +4,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -58,15 +57,15 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 
 func (r *DefaultVPCRunner) validateDependencies() error {
 	if r.VPCGetter == nil {
-		return errors.New("vpc getter is not set")
+		return errVPCGetterNil
 	}
 
 	if r.ClusterGetter == nil {
-		return errors.New("cluster getter is not set")
+		return errClusterGetterNil
 	}
 
 	if r.Starter == nil {
-		return errors.New("starter is not set")
+		return errStarterNil
 	}
 
 	return nil

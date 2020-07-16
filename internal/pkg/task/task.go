@@ -40,6 +40,11 @@ const (
 
 var (
 	errNoSubnetFound  = errors.New("no subnets found")
+
+	errVPCGetterNil = errors.New("vpc getter is not set")
+	errClusterGetterNil = errors.New("cluster getter is not set")
+	errStarterNil = errors.New("starter is not set")
+
 	fmtTaskFamilyName = "copilot-%s"
 )
 

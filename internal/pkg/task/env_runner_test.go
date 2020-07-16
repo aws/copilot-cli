@@ -26,11 +26,11 @@ func TestEnvRunner_Run(t *testing.T) {
 	}
 	filtersForVPCFromAppEnv := []ec2.Filter{
 		ec2.Filter{
-			Name:   TagFilterNameForEnv,
+			Name:   tagFilterNameForEnv,
 			Values: []string{inEnv},
 		},
 		ec2.Filter{
-			Name:   TagFilterNameForApp,
+			Name:   tagFilterNameForApp,
 			Values: []string{inApp},
 		},
 	}
@@ -85,7 +85,7 @@ func TestEnvRunner_Run(t *testing.T) {
 				m.EXPECT().SecurityGroups(gomock.Any()).AnyTimes()
 			},
 			mockStarter: mockStarterNotRun,
-			wantedError: fmt.Errorf("get subnet IDs from %s: error getting subnets", inEnv),
+			wantedError: fmt.Errorf("get public subnet IDs from environment %s: error getting subnets", inEnv),
 		},
 		"no subnet is found": {
 			mockResourceGetter: mockResourceGetterWithCluster,
@@ -105,7 +105,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					Return(nil, errors.New("error getting security groups"))
 			},
 			mockStarter: mockStarterNotRun,
-			wantedError: fmt.Errorf("get security groups from %s: error getting security groups", inEnv),
+			wantedError: fmt.Errorf("get security groups from environment %s: error getting security groups", inEnv),
 		},
 		"failed to kick off task": {
 			count:     1,

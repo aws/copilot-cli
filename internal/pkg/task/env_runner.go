@@ -4,7 +4,6 @@
 package task
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -18,8 +17,8 @@ const (
 
 // Names for tag filters
 var (
-	TagFilterNameForApp = fmt.Sprintf(ec2.TagFilterName, deploy.AppTagKey)
-	TagFilterNameForEnv = fmt.Sprintf(ec2.TagFilterName, deploy.EnvTagKey)
+	tagFilterNameForApp = fmt.Sprintf(ec2.TagFilterName, deploy.AppTagKey)
+	tagFilterNameForEnv = fmt.Sprintf(ec2.TagFilterName, deploy.EnvTagKey)
 )
 
 // EnvRunner can run an Amazon ECS task in the VPC and the cluster of an environment.
@@ -100,11 +99,11 @@ func (r *EnvRunner) cluster(app, env string) (string, error) {
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 	return []ec2.Filter{
 		ec2.Filter{
-			Name:   TagFilterNameForEnv,
+			Name:   tagFilterNameForEnv,
 			Values: []string{r.Env},
 		},
 		ec2.Filter{
-			Name:   TagFilterNameForApp,
+			Name:   tagFilterNameForApp,
 			Values: []string{r.App},
 		},
 	}
@@ -112,15 +111,15 @@ func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 
 func (r *EnvRunner) validateDependencies() error {
 	if r.VPCGetter == nil {
-		return errors.New("vpc getter is not set")
+		return errVPCGetterNil
 	}
 
 	if r.ClusterGetter == nil {
-		return errors.New("cluster getter is not set")
+		return errClusterGetterNil
 	}
 
 	if r.Starter == nil {
-		return errors.New("starter is not set")
+		return errStarterNil
 	}
 
 	return nil
