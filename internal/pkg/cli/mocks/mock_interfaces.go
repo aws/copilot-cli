@@ -1414,17 +1414,22 @@ func (m *MockdockerService) EXPECT() *MockdockerServiceMockRecorder {
 }
 
 // Build mocks base method
-func (m *MockdockerService) Build(uri, tag, path string) error {
+func (m *MockdockerService) Build(uri, path, imageTag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Build", uri, tag, path)
+	varargs := []interface{}{uri, path, imageTag}
+	for _, a := range additionalTags {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Build", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Build indicates an expected call of Build
-func (mr *MockdockerServiceMockRecorder) Build(uri, tag, path interface{}) *gomock.Call {
+func (mr *MockdockerServiceMockRecorder) Build(uri, path, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockdockerService)(nil).Build), uri, tag, path)
+	varargs := append([]interface{}{uri, path, imageTag}, additionalTags...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockdockerService)(nil).Build), varargs...)
 }
 
 // Login mocks base method
@@ -1442,17 +1447,22 @@ func (mr *MockdockerServiceMockRecorder) Login(uri, username, password interface
 }
 
 // Push mocks base method
-func (m *MockdockerService) Push(uri, tag string) error {
+func (m *MockdockerService) Push(uri, imageTag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Push", uri, tag)
+	varargs := []interface{}{uri, imageTag}
+	for _, a := range additionalTags {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Push", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Push indicates an expected call of Push
-func (mr *MockdockerServiceMockRecorder) Push(uri, tag interface{}) *gomock.Call {
+func (mr *MockdockerServiceMockRecorder) Push(uri, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockdockerService)(nil).Push), uri, tag)
+	varargs := append([]interface{}{uri, imageTag}, additionalTags...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockdockerService)(nil).Push), varargs...)
 }
 
 // Mockrunner is a mock of runner interface

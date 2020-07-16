@@ -155,9 +155,9 @@ type stackSerializer interface {
 }
 
 type dockerService interface {
-	Build(uri, tag, path string) error
+	Build(uri, path, imageTag string, additionalTags ...string) error
 	Login(uri, username, password string) error
-	Push(uri, tag string) error
+	Push(uri, imageTag string, additionalTags ...string) error
 }
 
 type runner interface {
