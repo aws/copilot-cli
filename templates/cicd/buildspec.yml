@@ -54,18 +54,33 @@ phases:
       #     - Login and push the image.
       - >
         for svc in $svcs; do
-          for df_rel_path in $(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build' | sed 's/"//g'); do
-          df_path=$CODEBUILD_SRC_DIR/$df_rel_path
+          base_dockerfile=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build')
+          build_dockerfile=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.dockerfile?' | sed 's/"//g')
+          build_context=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.context?' | sed 's/"//g')
+          build_args=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.args? | to_entries')
+          df_rel_path=$base_dockerfile
+          if [ -n "$build_dockerfile" ]; then 
+            df_rel_path=$build_dockerfile
+          fi
+          df_path=$df_rel_path
           df_dir_path=$(dirname "$df_path")
-          docker build -t $svc:$tag -f $df_path $df_dir_path;
+          if [ -n "$build_context" ]; then
+            df_dir_path=$build_context
+          fi
+          ARGS=
+          if [ -n "$build_args" ]; then
+            for art in $(echo $build_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
+              ARGS="$ARGS --build-arg $art"
+            done
+          fi
+          docker build -t $svc:$tag $ARGS -f $df_path $df_dir_path;
           image_id=$(docker images -q $svc:$tag);
-            for env in $envs; do
+          for env in $envs; do
             repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$svc-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
             region=$(echo $repo | cut -d'.' -f4);
             $(aws ecr get-login --no-include-email --region $region);
             docker tag $image_id $repo;
             docker push $repo;
-            done;
           done;
         done;
 artifacts:
