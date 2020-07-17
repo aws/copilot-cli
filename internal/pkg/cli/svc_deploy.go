@@ -296,8 +296,11 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return err
 	}
 
-	if err := o.docker.Build(uri, dfInfo.Path, dfInfo.Context, o.ImageTag); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", dfInfo.Path, o.ImageTag, err)
+	dockerBuildInput := dfInfo.toDockerBuildArguments()
+	dockerBuildInput.URI = uri
+	dockerBuildInput.ImageTag = o.ImageTag
+	if err := o.docker.Build(dockerBuildInput); err != nil {
+		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", dockerBuildInput.Dockerfile, o.ImageTag, err)
 	}
 
 	auth, err := o.ecr.GetECRAuth()
@@ -311,15 +314,26 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 	return o.docker.Push(uri, o.ImageTag)
 }
 
-type dfPathContext struct {
-	path    string
-	context string
+type dockerParams struct {
+	context    string
+	dockerfile string
+	args       map[string]string
 }
 
-func (o *deploySvcOpts) getDockerfile() (*dfPathContext, error) {
+// toDockerBuildArguments fills in the fields contained in the image/build tag in the manifest.
+func (d *dockerParams) toDockerBuildArguments() docker.BuildArguments {
+	return docker.BuildArguments{
+		Context:    d.context,
+		Dockerfile: d.dockerfile,
+		Args:       d.args,
+	}
+}
+
+func (o *deploySvcOpts) getDockerfile() (*dockerParams, error) {
 	type dfContext interface {
 		DockerfileContext() string
 		DockerfilePath() string
+		DockerArgs() map[string]string
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
@@ -332,7 +346,7 @@ func (o *deploySvcOpts) getDockerfile() (*dfPathContext, error) {
 	}
 	mf, ok := svc.(dfContext)
 	if !ok {
-		return nil, fmt.Errorf("service %s does not have both context and type", o.Name)
+		return nil, fmt.Errorf("service %s does not have required methods DockerArgs, DockerfilePath, and DockerfileContext", o.Name)
 	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
@@ -342,20 +356,24 @@ func (o *deploySvcOpts) getDockerfile() (*dfPathContext, error) {
 
 	dfPath := filepath.Join(wsRoot, mf.DockerfilePath())
 
+	dfArgs := mf.DockerArgs()
+
 	ctx := mf.DockerfileContext()
 	// Nonempty context field means we should join with the ws root and return that
 	if ctx != "" {
-		return &dfPathContext{
-			path:    dfPath,
-			context: filepath.Join(wsRoot, mf.DockerfileContext()),
+		return &dockerParams{
+			dockerfile: dfPath,
+			context:    filepath.Join(wsRoot, mf.DockerfileContext()),
+			args:       dfArgs,
 		}, nil
 	}
 	// Default to directory of dockerfile.
 
 	dfDir := filepath.Dir(dfPath)
-	return &dfPathContext{
-		path:    dfPath,
-		context: dfDir,
+	return &dockerParams{
+		dockerfile: dfPath,
+		context:    dfDir,
+		args:       dfArgs,
 	}, nil
 }
 

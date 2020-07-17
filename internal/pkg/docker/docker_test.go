@@ -26,9 +26,11 @@ func TestBuild(t *testing.T) {
 	var mockRunner *mocks.Mockrunner
 
 	tests := map[string]struct {
-		path       string
-		context    string
-		setupMocks func(controller *gomock.Controller)
+		path           string
+		context        string
+		additionalTags []string
+		args           map[string]string
+		setupMocks     func(controller *gomock.Controller)
 
 		wantedError error
 	}{
@@ -38,8 +40,6 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
-					"-t", imageName(mockURI, mockTag2),
-					"-t", imageName(mockURI, mockTag3),
 					"-t", imageName(mockURI, mockTag1),
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
 			},
@@ -51,7 +51,7 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"context differs from path": {
@@ -60,7 +60,7 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"behaves the same if context is DF dir": {
@@ -69,18 +69,32 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 
 		"success with additional tags": {
-			path: mockPath,
+			path:           mockPath,
+			additionalTags: []string{mockTag2, mockTag3},
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", imageName(mockURI, mockTag2),
 					"-t", imageName(mockURI, mockTag3),
 					"-t", imageName(mockURI, mockTag1),
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+		"success with build args": {
+			path: mockPath,
+			args: map[string]string{
+				"key": "value",
+			},
+			setupMocks: func(c *gomock.Controller) {
+				mockRunner = mocks.NewMockrunner(c)
+				mockRunner.EXPECT().Run("docker", []string{"build",
+					"-t", imageName(mockURI, mockTag1),
+					"--build-arg", "key=value",
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
@@ -93,8 +107,15 @@ func TestBuild(t *testing.T) {
 			s := Runner{
 				runner: mockRunner,
 			}
-
-			got := s.Build(mockURI, tc.path, tc.context, mockTag1, mockTag2, mockTag3)
+			buildInput := BuildArguments{
+				Context:        tc.context,
+				Dockerfile:     tc.path,
+				URI:            mockURI,
+				ImageTag:       mockTag1,
+				AdditionalTags: tc.additionalTags,
+				Args:           tc.args,
+			}
+			got := s.Build(buildInput)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, got.Error())

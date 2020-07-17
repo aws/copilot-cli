@@ -128,6 +128,11 @@ func (s *LoadBalancedWebService) DockerfileContext() string {
 	return s.Image.Context()
 }
 
+// DockerArgs returns the build arg overrides
+func (s *LoadBalancedWebService) DockerArgs() string {
+	return s.Image.Args()
+}
+
 // ApplyEnv returns the service manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
 func (s LoadBalancedWebService) ApplyEnv(envName string) (*LoadBalancedWebService, error) {

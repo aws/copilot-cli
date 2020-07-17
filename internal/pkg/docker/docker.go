@@ -28,27 +28,38 @@ func New() Runner {
 	}
 }
 
+// BuildArguments holds the arguments we can pass in as flags from the manifest.
 type BuildArguments struct {
-	Dockerfile string
-	Context    string
-	Args       map[string]string
+	URI            string
+	ImageTag       string
+	AdditionalTags []string
+	Dockerfile     string
+	Context        string
+	Args           map[string]string
 }
 
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
-func (r Runner) Build(uri, imageTag, path, context string, additionalTags ...string) error {
-	imageName := imageName(uri, imageTag)
+func (r Runner) Build(buildInput BuildArguments) error {
 	var dfDir string
-	if context == "" {
-		dfDir = filepath.Dir(path)
+	if buildInput.Context == "" {
+		dfDir = filepath.Dir(buildInput.Dockerfile)
 	} else {
-		dfDir = context
+		dfDir = buildInput.Context
 	}
 
 	args := []string{"build"}
-	for _, tag := range append(additionalTags, imageTag) {
-		args = append(args, "-t", imageName(uri, tag))
+
+	// Add additional image tags to the docker build call.
+	for _, tag := range append(buildInput.AdditionalTags, buildInput.ImageTag) {
+		args = append(args, "-t", imageName(buildInput.URI, tag))
 	}
-	args = append(args, dfDir, "-f", path)
+
+	// Add the "args:" override section from manifest to the docker build call
+	for k, v := range buildInput.Args {
+		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
+	}
+
+	args = append(args, dfDir, "-f", buildInput.Dockerfile)
 
 	err := r.Run("docker", args)
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -1414,22 +1415,17 @@ func (m *MockdockerService) EXPECT() *MockdockerServiceMockRecorder {
 }
 
 // Build mocks base method
-func (m *MockdockerService) Build(uri, path, imageTag string, additionalTags ...string) error {
+func (m *MockdockerService) Build(buildInput docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{uri, path, imageTag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Build", varargs...)
+	ret := m.ctrl.Call(m, "Build", buildInput)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Build indicates an expected call of Build
-func (mr *MockdockerServiceMockRecorder) Build(uri, path, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockdockerServiceMockRecorder) Build(buildInput interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{uri, path, imageTag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockdockerService)(nil).Build), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockdockerService)(nil).Build), buildInput)
 }
 
 // Login mocks base method

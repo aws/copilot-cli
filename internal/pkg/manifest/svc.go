@@ -71,6 +71,12 @@ func (s *ServiceImage) Context() string {
 	return aws.StringValue(s.Build.BuildArgs.Context)
 }
 
+// Args returns the args section, if it exists, to override args in the dockerfile.
+// Otherwise it returns an empty map.
+func (s *ServiceImage) Args() map[string]string {
+	return s.Build.BuildArgs.Args
+}
+
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type DockerBuildArgs.
 type BuildArgsOrString struct {

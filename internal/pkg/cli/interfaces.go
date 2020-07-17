@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -155,7 +156,7 @@ type stackSerializer interface {
 }
 
 type dockerService interface {
-	Build(uri, path, imageTag string, additionalTags ...string) error
+	Build(buildInput docker.BuildArguments) error
 	Login(uri, username, password string) error
 	Push(uri, imageTag string, additionalTags ...string) error
 }
