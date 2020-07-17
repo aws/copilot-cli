@@ -99,12 +99,12 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 
 // DockerfilePath returns the path to the dockerfile from workspace root.
 func (s *BackendService) DockerfilePath() string {
-	return aws.StringValue(s.Image.Build)
+	return s.Image.Dockerfile()
 }
 
 // DockerfileContext returns the build context directory.
 func (s *BackendService) DockerfileContext() string {
-	return aws.StringValue(s.Image.Context)
+	return s.Image.Context()
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

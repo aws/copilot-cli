@@ -6,6 +6,7 @@ package manifest
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -41,6 +42,34 @@ type Service struct {
 type ServiceImage struct {
 	Build   *string `yaml:"build"`   // Path to the Dockerfile.
 	Context *string `yaml:"context"` // Optional path to the build context
+}
+
+// Dockerfile returns the path to the service's Dockerfile, defaulting to
+// the filename Dockerfile if not otherwise specified.
+func (s *ServiceImage) Dockerfile() string {
+	// Prefer to use the "dockerfile" string in BuildArgs. Otherwise,
+	// use "Context/Dockerfile", then "BuildString", then "Dockerfile"
+	if s.Build.BuildArgs.Dockerfile != nil {
+		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
+	}
+
+	var dfPath string
+	if s.Build.BuildString != nil {
+		dfPath = aws.StringValue(s.Build.BuildString)
+	} else if s.Build.BuildArgs.Context != nil {
+		// This is a degraded experience, should only seldom happen when Dockerfile isn't explicit.
+		dfPath = aws.StringValue(s.Build.BuildArgs.Context)
+		dfPath = filepath.Join(dfPath, "Dockerfile")
+	} else {
+		dfPath = "./Dockerfile"
+	}
+
+	return dfPath
+}
+
+// Context returns the build context directory if it exists, otherwise an empty string.
+func (s *ServiceImage) Context() string {
+	return aws.StringValue(s.Build.BuildArgs.Context)
 }
 
 // ServiceImageWithPort represents a container image with an exposed port.

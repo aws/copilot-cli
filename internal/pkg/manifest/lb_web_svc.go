@@ -116,12 +116,12 @@ func tplDirName(s string) string {
 
 // DockerfilePath returns the image build path.
 func (s *LoadBalancedWebService) DockerfilePath() string {
-	return aws.StringValue(s.Image.Build)
+	return s.Image.Dockerfile()
 }
 
 // DockerfileContext returns the image build context directory
 func (s *LoadBalancedWebService) DockerfileContext() string {
-	return aws.StringValue(s.Image.Context)
+	return s.Image.Context()
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
