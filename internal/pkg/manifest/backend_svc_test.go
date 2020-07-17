@@ -37,7 +37,11 @@ func TestNewBackendSvc(t *testing.T) {
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							ServiceImage: ServiceImage{
-								Build: aws.String("./subscribers/Dockerfile"),
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
 							},
 							Port: aws.Uint16(8080),
 						},
@@ -70,7 +74,11 @@ func TestNewBackendSvc(t *testing.T) {
 					Image: imageWithPortAndHealthcheck{
 						ServiceImageWithPort: ServiceImageWithPort{
 							ServiceImage: ServiceImage{
-								Build: aws.String("./subscribers/Dockerfile"),
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./subscribers/Dockerfile"),
+									},
+								},
 							},
 							Port: aws.Uint16(8080),
 						},
@@ -183,7 +191,11 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 			Image: imageWithPortAndHealthcheck{
 				ServiceImageWithPort: ServiceImageWithPort{
 					ServiceImage: ServiceImage{
-						Build: aws.String("./Dockerfile"),
+						Build: BuildArgsOrString{
+							BuildArgs: DockerBuildArgs{
+								Dockerfile: aws.String("./Dockerfile"),
+							},
+						},
 					},
 					Port: aws.Uint16(8080),
 				},

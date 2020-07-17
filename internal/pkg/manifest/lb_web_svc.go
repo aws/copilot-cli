@@ -71,7 +71,11 @@ func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	defaultLbManifest.Image = ServiceImageWithPort{
 		ServiceImage: ServiceImage{
-			Build: aws.String(input.Dockerfile),
+			Build: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String(input.Dockerfile),
+				},
+			},
 		},
 		Port: aws.Uint16(input.Port),
 	}

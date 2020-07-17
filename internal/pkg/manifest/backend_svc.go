@@ -76,7 +76,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	}
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
-	svc.BackendServiceConfig.Image.Build = aws.String(props.Dockerfile)
+	svc.BackendServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
 	svc.BackendServiceConfig.Image.Port = aws.Uint16(props.Port)
 	svc.BackendServiceConfig.Image.HealthCheck = healthCheck
 	svc.parser = template.New()

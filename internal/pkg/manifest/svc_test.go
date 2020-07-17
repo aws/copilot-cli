@@ -60,7 +60,9 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: aws.String("frontend/Dockerfile")}, Port: aws.Uint16(80)},
+						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: BuildArgsOrString{
+							BuildString: aws.String("frontend/Dockerfile"),
+						}}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							HealthCheckPath: aws.String("/"),
@@ -135,7 +137,9 @@ secrets:
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
 								ServiceImage: ServiceImage{
-									Build: aws.String("./subscribers/Dockerfile"),
+									Build: BuildArgsOrString{
+										BuildString: aws.String("./subscribers/Dockerfile"),
+									},
 								},
 								Port: aws.Uint16(8080),
 							},

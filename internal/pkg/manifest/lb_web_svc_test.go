@@ -77,7 +77,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: aws.String("./Dockerfile"),
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
@@ -102,7 +106,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: aws.String("./Dockerfile"),
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
@@ -127,7 +135,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: aws.String("./Dockerfile"),
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./Dockerfile"),
+								},
+							},
 						},
 						Port: aws.Uint16(80),
 					},
@@ -165,7 +177,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						Image: ServiceImageWithPort{
 							ServiceImage: ServiceImage{
-								Build: aws.String("./RealDockerfile"),
+								Build: BuildArgsOrString{
+									BuildArgs: DockerBuildArgs{
+										Dockerfile: aws.String("./RealDockerfile"),
+									},
+								},
 							},
 							Port: aws.Uint16(5000),
 						},
@@ -204,7 +220,11 @@ func TestLoadBalancedWebSvc_ApplyEnv(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Image: ServiceImageWithPort{
 						ServiceImage: ServiceImage{
-							Build: aws.String("./RealDockerfile"),
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./RealDockerfile"),
+								},
+							},
 						},
 						Port: aws.Uint16(5000),
 					},
