@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 // Runner represents a command that can be run.
@@ -67,11 +66,6 @@ func (r Runner) Push(uri, imageTag string, additionalTags ...string) error {
 
 		err := r.Run("docker", []string{"push", path})
 		if err != nil {
-			// TODO: improve the error handling here.
-			// if you try to push an *existing* image that has Digest A and tag T then no error (also no image push).
-			// if you try to push an *existing* image that has Digest B and tag T (that belongs to another image Digest A) then docker spits out an unclear error.
-			log.Warningf("the image with tag %s may already exist.\n", imageTag)
-
 			return fmt.Errorf("docker push %s: %w", path, err)
 		}
 	}
