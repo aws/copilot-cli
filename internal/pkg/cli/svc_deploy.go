@@ -294,7 +294,7 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return err
 	}
 
-	if err := o.docker.Build(uri, o.ImageTag, path); err != nil {
+	if err := o.docker.Build(uri, path, o.ImageTag); err != nil {
 		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", path, o.ImageTag, err)
 	}
 

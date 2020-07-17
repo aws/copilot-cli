@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 // Runner represents a command that can be run.
@@ -29,13 +28,17 @@ func New() Runner {
 	}
 }
 
-// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
-func (r Runner) Build(uri, imageTag, path string) error {
-	imageName := imageName(uri, imageTag)
+// Build will run a `docker build` command with the input uri, Dockerfile path, and tags.
+func (r Runner) Build(uri, path, imageTag string, additionalTags ...string) error {
 	dfDir := filepath.Dir(path)
 
-	err := r.Run("docker", []string{"build", "-t", imageName, dfDir, "-f", path})
+	args := []string{"build"}
+	for _, tag := range append(additionalTags, imageTag) {
+		args = append(args, "-t", imageName(uri, tag))
+	}
+	args = append(args, dfDir, "-f", path)
 
+	err := r.Run("docker", args)
 	if err != nil {
 		return fmt.Errorf("building image: %w", err)
 	}
@@ -56,19 +59,15 @@ func (r Runner) Login(uri, username, password string) error {
 	return nil
 }
 
-// Push will run `docker push` command against the Service repository URI with the input uri and image tag.
-func (r Runner) Push(uri, imageTag string) error {
-	path := imageName(uri, imageTag)
+// Push will run `docker push` command against the repository URI with the input uri and image tags.
+func (r Runner) Push(uri, imageTag string, additionalTags ...string) error {
+	for _, imageTag := range append(additionalTags, imageTag) {
+		path := imageName(uri, imageTag)
 
-	err := r.Run("docker", []string{"push", path})
-
-	if err != nil {
-		// TODO: improve the error handling here.
-		// if you try to push an *existing* image that has Digest A and tag T then no error (also no image push).
-		// if you try to push an *existing* image that has Digest B and tag T (that belongs to another image Digest A) then docker spits out an unclear error.
-		log.Warningf("the image with tag %s may already exist.\n", imageTag)
-
-		return fmt.Errorf("docker push: %w", err)
+		err := r.Run("docker", []string{"push", path})
+		if err != nil {
+			return fmt.Errorf("docker push %s: %w", path, err)
+		}
 	}
 
 	return nil

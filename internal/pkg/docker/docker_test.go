@@ -16,8 +16,11 @@ func TestBuild(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
-	mockImageTag := "mockImageTag"
 	mockPath := "mockPath/to/mockDockerfile"
+
+	mockTag1 := "tag1"
+	mockTag2 := "tag2"
+	mockTag3 := "tag3"
 
 	var mockRunner *mocks.Mockrunner
 
@@ -25,38 +28,48 @@ func TestBuild(t *testing.T) {
 		path       string
 		setupMocks func(controller *gomock.Controller)
 
-		want error
+		wantedError error
 	}{
-		"wrap error returned from Run()": {
+		"failed to run": {
 			path: mockPath,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
-
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"build",
+					"-t", imageName(mockURI, mockTag2),
+					"-t", imageName(mockURI, mockTag3),
+					"-t", imageName(mockURI, mockTag1),
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
 			},
-			want: fmt.Errorf("building image: %w", mockError),
+			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
-		"happy path": {
+		"success with additional tags": {
 			path: mockPath,
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
-
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockImageTag), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build",
+					"-t", imageName(mockURI, mockTag2),
+					"-t", imageName(mockURI, mockTag3),
+					"-t", imageName(mockURI, mockTag1),
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 	}
 
-	for name, test := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			controller := gomock.NewController(t)
-			test.setupMocks(controller)
+			tc.setupMocks(controller)
 			s := Runner{
 				runner: mockRunner,
 			}
 
-			got := s.Build(mockURI, mockImageTag, test.path)
+			got := s.Build(mockURI, tc.path, mockTag1, mockTag2, mockTag3)
 
-			require.Equal(t, test.want, got)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, got.Error())
+			} else {
+				require.Nil(t, got)
+			}
 		})
 	}
 }
@@ -112,7 +125,9 @@ func TestPush(t *testing.T) {
 	mockError := errors.New("mockError")
 
 	mockURI := "mockURI"
-	mockImageTag := "mockImageTag"
+
+	mockTag1 := "tag1"
+	mockTag2 := "tag2"
 
 	var mockRunner *mocks.Mockrunner
 
@@ -121,19 +136,21 @@ func TestPush(t *testing.T) {
 
 		want error
 	}{
-		"wrap error returned from Run()": {
+		"error running push": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(mockError)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(mockError).Times(1)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Times(0)
 			},
-			want: fmt.Errorf("docker push: %w", mockError),
+			want: fmt.Errorf("docker push %s: %w", imageName(mockURI, mockTag1), mockError),
 		},
-		"happy path": {
+		"success": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockImageTag)}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Return(nil)
 			},
 			want: nil,
 		},
@@ -147,7 +164,7 @@ func TestPush(t *testing.T) {
 				runner: mockRunner,
 			}
 
-			got := s.Push(mockURI, mockImageTag)
+			got := s.Push(mockURI, mockTag2, mockTag1)
 
 			require.Equal(t, test.want, got)
 		})
