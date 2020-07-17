@@ -199,14 +199,20 @@ func TestSvcDeployOpts_getDockerfile(t *testing.T) {
 	mockManifest := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
-  build: path/to/Dockerfile
-  context: path
+  build:
+    dockerfile: path/to/Dockerfile
+    context: path
 `)
-	mockMftNoContext := []byte(`name: serviceA
+	mockMftBuildString := []byte(`name: serviceA
 type: 'Load Balanced Web Service'
 image:
   build: path/to/Dockerfile
 `)
+	mockMftNoContext := []byte(`name: serviceA
+type: 'Load Balanced Web Service'
+image:
+  build:
+    dockerfile: path/to/Dockerfile`)
 
 	tests := map[string]struct {
 		inputSvc      string
@@ -257,7 +263,19 @@ image:
 				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockManifest, nil)
 			},
 		},
-		"no context field (backwards compatible)": {
+		"using simple buildstring (backwards compatible)": {
+			inputSvc: "serviceA",
+			wantData: &dfPathContext{
+				path:    filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+				context: filepath.Join("/ws", "root", "path", "to"),
+			},
+			wantErr: nil,
+			mockWs: func(m *mocks.MockwsSvcDirReader) {
+				m.EXPECT().ReadServiceManifest("serviceA").Times(1).Return(mockMftBuildString, nil)
+				m.EXPECT().CopilotDirPath().Return("/ws/root/copilot", nil)
+			},
+		},
+		"without context field in overrides": {
 			inputSvc: "serviceA",
 			wantData: &dfPathContext{
 				path:    filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
