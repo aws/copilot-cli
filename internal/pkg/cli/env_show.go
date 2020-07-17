@@ -151,7 +151,6 @@ func BuildEnvShowCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Hidden: true, //TODO remove when ready for production!
 		Use:    "show",
 		Short:  "Shows info about a deployed environment.",
 		Long:   "Shows info about a deployed environment, including region, account ID, and services.",
