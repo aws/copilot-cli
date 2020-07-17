@@ -28,6 +28,12 @@ func New() Runner {
 	}
 }
 
+type BuildArguments struct {
+	Dockerfile string
+	Context    string
+	Args       map[string]string
+}
+
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
 func (r Runner) Build(uri, imageTag, path, context string, additionalTags ...string) error {
 	imageName := imageName(uri, imageTag)
