@@ -27,31 +27,28 @@ type ECRRepository struct {
     repositoryName string
 
     repositoryGetter ECRRepositoryGetter
-    docker           DockerService
+    docker           ContainerManager
 
     uri string
 }
 
 // NewECRRepository instantiates a new ECRRepository.
-func NewECRRepository(name string, repositoryGetter ECRRepositoryGetter, docker DockerService) (*ECRRepository, error){
-    repo := ECRRepository{
-        repositoryName:   name,
-
-        repositoryGetter: repositoryGetter,
-        docker:           docker,
-    }
-
+func NewECRRepository(name string, repositoryGetter ECRRepositoryGetter, docker ContainerManager) (*ECRRepository, error){
     uri, err := repositoryGetter.GetRepository(name)
     if err != nil {
         return nil, fmt.Errorf("get ECR repository URI: %w", err)
     }
 
-    repo.uri = uri
-    return &repo, nil
+    return &ECRRepository{
+        repositoryName:   name,
+        uri: uri,
+        repositoryGetter: repositoryGetter,
+        docker:           docker,
+    }, nil
 }
 
 // BuildAndPushToRepo builds the image from Dockerfile and pushes it to the ECR repository with tags.
-func (r *ECRRepository) BuildAndPushToRepo(dockerfilePath string, tag string, additionalTags ...string) error {
+func (r *ECRRepository) BuildAndPush(dockerfilePath string, tag string, additionalTags ...string) error {
     if err := r.docker.Build(r.uri, dockerfilePath, tag, additionalTags...); err != nil {
         return fmt.Errorf("build Dockerfile at %s: %w", dockerfilePath, err)
     }

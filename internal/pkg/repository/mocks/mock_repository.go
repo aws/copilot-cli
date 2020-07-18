@@ -10,31 +10,31 @@ import (
 	reflect "reflect"
 )
 
-// MockDockerService is a mock of DockerService interface
-type MockDockerService struct {
+// MockContainerManager is a mock of ContainerManager interface
+type MockContainerManager struct {
 	ctrl     *gomock.Controller
-	recorder *MockDockerServiceMockRecorder
+	recorder *MockContainerManagerMockRecorder
 }
 
-// MockDockerServiceMockRecorder is the mock recorder for MockDockerService
-type MockDockerServiceMockRecorder struct {
-	mock *MockDockerService
+// MockContainerManagerMockRecorder is the mock recorder for MockContainerManager
+type MockContainerManagerMockRecorder struct {
+	mock *MockContainerManager
 }
 
-// NewMockDockerService creates a new mock instance
-func NewMockDockerService(ctrl *gomock.Controller) *MockDockerService {
-	mock := &MockDockerService{ctrl: ctrl}
-	mock.recorder = &MockDockerServiceMockRecorder{mock}
+// NewMockContainerManager creates a new mock instance
+func NewMockContainerManager(ctrl *gomock.Controller) *MockContainerManager {
+	mock := &MockContainerManager{ctrl: ctrl}
+	mock.recorder = &MockContainerManagerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockDockerService) EXPECT() *MockDockerServiceMockRecorder {
+func (m *MockContainerManager) EXPECT() *MockContainerManagerMockRecorder {
 	return m.recorder
 }
 
 // Build mocks base method
-func (m *MockDockerService) Build(uri, path, imageTag string, additionalTags ...string) error {
+func (m *MockContainerManager) Build(uri, path, imageTag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{uri, path, imageTag}
 	for _, a := range additionalTags {
@@ -46,14 +46,14 @@ func (m *MockDockerService) Build(uri, path, imageTag string, additionalTags ...
 }
 
 // Build indicates an expected call of Build
-func (mr *MockDockerServiceMockRecorder) Build(uri, path, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockContainerManagerMockRecorder) Build(uri, path, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{uri, path, imageTag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockDockerService)(nil).Build), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerManager)(nil).Build), varargs...)
 }
 
 // Login mocks base method
-func (m *MockDockerService) Login(uri, username, password string) error {
+func (m *MockContainerManager) Login(uri, username, password string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", uri, username, password)
 	ret0, _ := ret[0].(error)
@@ -61,13 +61,13 @@ func (m *MockDockerService) Login(uri, username, password string) error {
 }
 
 // Login indicates an expected call of Login
-func (mr *MockDockerServiceMockRecorder) Login(uri, username, password interface{}) *gomock.Call {
+func (mr *MockContainerManagerMockRecorder) Login(uri, username, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockDockerService)(nil).Login), uri, username, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockContainerManager)(nil).Login), uri, username, password)
 }
 
 // Push mocks base method
-func (m *MockDockerService) Push(uri, imageTag string, additionalTags ...string) error {
+func (m *MockContainerManager) Push(uri, imageTag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{uri, imageTag}
 	for _, a := range additionalTags {
@@ -79,10 +79,10 @@ func (m *MockDockerService) Push(uri, imageTag string, additionalTags ...string)
 }
 
 // Push indicates an expected call of Push
-func (mr *MockDockerServiceMockRecorder) Push(uri, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockContainerManagerMockRecorder) Push(uri, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{uri, imageTag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockDockerService)(nil).Push), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Push", reflect.TypeOf((*MockContainerManager)(nil).Push), varargs...)
 }
 
 // MockECRRepositoryGetter is a mock of ECRRepositoryGetter interface

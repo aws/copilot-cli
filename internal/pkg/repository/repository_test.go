@@ -25,7 +25,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 		inDockerfilePath string
 
 		mockRepoGetter func(m *mocks.MockECRRepositoryGetter)
-		mockDocker func(m *mocks.MockDockerService)
+		mockDocker func(m *mocks.MockContainerManager)
 
 		wantedError error
 		wantedURI string
@@ -34,7 +34,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 			mockRepoGetter: func(m *mocks.MockECRRepositoryGetter) {
 				m.EXPECT().GetECRAuth().Return(ecr.Auth{}, errors.New("error getting auth"))
 			},
-			mockDocker: func(m *mocks.MockDockerService) {
+			mockDocker: func(m *mocks.MockContainerManager) {
 				m.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -45,7 +45,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 			mockRepoGetter: func(m *mocks.MockECRRepositoryGetter) {
 				m.EXPECT().GetECRAuth().Return(ecr.Auth{}, nil).AnyTimes()
 			},
-			mockDocker: func(m *mocks.MockDockerService) {
+			mockDocker: func(m *mocks.MockContainerManager) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Return(errors.New("error building image"))
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -59,7 +59,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 					Password: "my-pwd",
 				}, nil)
 			},
-			mockDocker: func(m *mocks.MockDockerService) {
+			mockDocker: func(m *mocks.MockContainerManager) {
 				m.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(errors.New("error logging in"))
 				m.EXPECT().Push(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
@@ -70,7 +70,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 			mockRepoGetter: func(m *mocks.MockECRRepositoryGetter) {
 				m.EXPECT().GetECRAuth().Times(1)
 			},
-			mockDocker: func(m *mocks.MockDockerService) {
+			mockDocker: func(m *mocks.MockContainerManager) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Times(1)
 				m.EXPECT().Login(gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return(errors.New("error pushing image"))
@@ -84,7 +84,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 					Password: "my-pwd",
 				}, nil).Times(1)
 			},
-			mockDocker: func(m *mocks.MockDockerService) {
+			mockDocker: func(m *mocks.MockContainerManager) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Return(nil).Times(1)
 				m.EXPECT().Login(mockRepoURI, "my-name", "my-pwd").Return(nil).Times(1)
 				m.EXPECT().Push(mockRepoURI, mockTag1, mockTag2, mockTag3).Return(nil)
@@ -98,7 +98,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockRepoGetter := mocks.NewMockECRRepositoryGetter(ctrl)
-			mockDocker := mocks.NewMockDockerService(ctrl)
+			mockDocker := mocks.NewMockContainerManager(ctrl)
 
 			if tc.mockRepoGetter != nil {
 				tc.mockRepoGetter(mockRepoGetter)
@@ -115,7 +115,7 @@ func TestECRRepository_BuildAndPushToRepo(t *testing.T) {
 				uri: mockRepoURI,
 			}
 
-			err := repo.BuildAndPushToRepo(inDockerfilePath, mockTag1, []string{mockTag2, mockTag3}...)
+			err := repo.BuildAndPush(inDockerfilePath, mockTag1, []string{mockTag2, mockTag3}...)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
