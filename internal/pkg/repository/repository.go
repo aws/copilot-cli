@@ -1,7 +1,7 @@
 // Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// package repository provides support for building and pushing images to a repository.
+// Package repository provides support for building and pushing images to a repository.
 package repository
 
 import (
