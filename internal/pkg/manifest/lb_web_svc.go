@@ -129,7 +129,7 @@ func (s *LoadBalancedWebService) DockerfileContext() string {
 }
 
 // DockerArgs returns the build arg overrides
-func (s *LoadBalancedWebService) DockerArgs() string {
+func (s *LoadBalancedWebService) DockerArgs() map[string]string {
 	return s.Image.Args()
 }
 
