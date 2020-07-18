@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing to the AWS Copilot CLI! 💖
 
-This document describes how to set up a development environment and submit your contributions.  
+This document describes how to set up a development environment and submit your contributions.
 Please read it over and let us know if it's not up-to-date (or, even better, submit a PR with your corrections 😉).
 
 - [Development setup](#development-setup)
@@ -20,7 +20,7 @@ Please read it over and let us know if it's not up-to-date (or, even better, sub
 
 ### Environment
 
-- Make sure you are using Go 1.13 (`go version`).
+- Make sure you are using Go 1.14 (`go version`).
 - Fork the repository.
 - Clone your forked repository locally.
 - We use Go Modules to manage dependencies, so you can develop outside of your $GOPATH.
@@ -37,17 +37,17 @@ From the repository root run:
 
 There are three different types of testing done on the AWS Copilot CLI.
 
-**Unit tests** makes up the majority of the testing and new code should include unit tests. 
-Ideally, these unit tests will be in the same package as the file they're testing and have full coverage (or as much is practical within a unit test). 
+**Unit tests** makes up the majority of the testing and new code should include unit tests.
+Ideally, these unit tests will be in the same package as the file they're testing and have full coverage (or as much is practical within a unit test).
 Unit tests shouldn't make any network calls.
 
-**Integration tests** are rarer and test the CLI's integration with remote services, such as the file system, CloudFormation, or SSM. 
+**Integration tests** are rarer and test the CLI's integration with remote services, such as the file system, CloudFormation, or SSM.
 Our integration tests ensure that we can call these remote services and get the results we expect.
 
-**End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs). 
-These tests are the most comprehensive and run on both Windows and Linux build fleets. 
-Feel free to run these tests - but they require two AWS accounts to run in, so be mindful that resources will be created and destroyed. 
-You'll need three [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `e2etestenv` and `e2eprodenv`. 
+**End to End tests** run the CLI in a container and test the actual commands - including spinning and tearing down remote resources (like ECS clusters and VPCs).
+These tests are the most comprehensive and run on both Windows and Linux build fleets.
+Feel free to run these tests - but they require two AWS accounts to run in, so be mindful that resources will be created and destroyed.
+You'll need three [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html): `default`, `e2etestenv` and `e2eprodenv`.
 Each e2e profile needs to be configured for a different AWS account and a different region than the other e2e profiles.
 
 Below are the different commands which can be run in the root of the project directory.
@@ -65,17 +65,17 @@ Often times, it's helpful to generate mocks to make unit-testing easier and more
 
 ## Adding new dependencies
 
-In general, we discourage adding new dependencies to the AWS Copilot CLI. If there's a module you think the CLI could benefit from, first open a PR with your proposal. 
+In general, we discourage adding new dependencies to the AWS Copilot CLI. If there's a module you think the CLI could benefit from, first open a PR with your proposal.
 We'll evaluate the dependency and the use case and decide on the next steps. To evaluate if we need to add the dependency please take a look at [https://research.swtch.com/deps](https://research.swtch.com/deps).
 
 ## Where should I start?
 
-We're so excited you want to contribute to the CLI! We welcome all PRs and will try to get to them as soon as possible. 
+We're so excited you want to contribute to the CLI! We welcome all PRs and will try to get to them as soon as possible.
 The best place to start, though, is with filing an issue first. Filing an issue gives us some time to chat about the code you're keen on writing, and make sure that it's not already being worked on, or has already been discussed.
 
 You can also check out our [issues queue](https://github.com/aws/copilot-cli/issues) to see all the known issues - this is a really great place to start.
 
-If you want to get your feet wet, check out issues tagged with [good first issue](https://github.com/aws/copilot-cli/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). 
+If you want to get your feet wet, check out issues tagged with [good first issue](https://github.com/aws/copilot-cli/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 These issues are great for folks who are looking to get started, but not sure where to start 😁.
 
 ## Contributing code
