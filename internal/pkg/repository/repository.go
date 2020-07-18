@@ -10,7 +10,7 @@ import (
 )
 
 // DockerService provides support for logging in to repositories, building images and pushing images to repositories.
-type DockerService interface {
+type ContainerManager interface {
     Build(uri, path, imageTag string, additionalTags ...string) error
     Login(uri, username, password string) error
     Push(uri, imageTag string, additionalTags ...string) error
