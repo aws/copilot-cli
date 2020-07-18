@@ -220,7 +220,7 @@ image:
 		mockWs        func(m *mocks.MockwsSvcDirReader)
 		mockUnmarshal func(in []byte) (interface{}, error)
 
-		wantData *dfPathContext
+		wantData *dockerParams
 		wantErr  error
 	}{
 		"should return error if ws ReadFile returns error": {
@@ -253,9 +253,9 @@ image:
 		},
 		"success": {
 			inputSvc: "serviceA",
-			wantData: &dfPathContext{
-				path:    filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-				context: filepath.Join("/ws", "root", "path"),
+			wantData: &dockerParams{
+				dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+				context:    filepath.Join("/ws", "root", "path"),
 			},
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
@@ -265,9 +265,9 @@ image:
 		},
 		"using simple buildstring (backwards compatible)": {
 			inputSvc: "serviceA",
-			wantData: &dfPathContext{
-				path:    filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-				context: filepath.Join("/ws", "root", "path", "to"),
+			wantData: &dockerParams{
+				dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+				context:    filepath.Join("/ws", "root", "path", "to"),
 			},
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
@@ -277,9 +277,9 @@ image:
 		},
 		"without context field in overrides": {
 			inputSvc: "serviceA",
-			wantData: &dfPathContext{
-				path:    filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
-				context: filepath.Join("/ws", "root", "path", "to"),
+			wantData: &dockerParams{
+				dockerfile: filepath.Join("/ws", "root", "path", "to", "Dockerfile"),
+				context:    filepath.Join("/ws", "root", "path", "to"),
 			},
 			wantErr: nil,
 			mockWs: func(m *mocks.MockwsSvcDirReader) {
@@ -314,7 +314,7 @@ image:
 				require.Nil(t, got)
 				require.EqualError(t, gotErr, test.wantErr.Error())
 			} else {
-				require.Equal(t, test.wantData.path, got.path)
+				require.Equal(t, test.wantData.dockerfile, got.dockerfile)
 				require.Equal(t, test.wantData.context, got.context)
 				require.Nil(t, gotErr)
 			}
