@@ -220,7 +220,7 @@ func TestEnvDescriber_Describe(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedEnv, actual)
 			}
 		})

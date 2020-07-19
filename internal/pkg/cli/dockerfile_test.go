@@ -43,7 +43,7 @@ func TestValidateDockerfiles(t *testing.T) {
 			if tc.err != nil {
 				require.EqualError(t, err, tc.err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, wantedDockerfiles, got)
 			}
 		})

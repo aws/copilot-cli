@@ -293,7 +293,7 @@ func TestStore_CreateApplication(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

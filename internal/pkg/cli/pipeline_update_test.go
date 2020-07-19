@@ -138,7 +138,7 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 			if tc.expectedError != nil {
 				require.Equal(t, tc.expectedError, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.ElementsMatch(t, tc.expectedStages, actualStages)
 			}
 		})
@@ -191,7 +191,7 @@ func TestUpdatePipelineOpts_getArtifactBuckets(t *testing.T) {
 			if tc.expectedError != nil {
 				require.Equal(t, tc.expectedError, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.ElementsMatch(t, tc.expectedOut, actual)
 			}
 		})
@@ -586,7 +586,7 @@ stages:
 			if tc.expectedError != nil {
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

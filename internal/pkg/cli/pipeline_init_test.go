@@ -246,7 +246,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.expectedGitHubOwner, opts.GitHubOwner)
 				require.Equal(t, tc.expectedGitHubRepo, opts.GitHubRepo)
 				require.Equal(t, tc.expectedGitHubAccessToken, opts.GitHubAccessToken)
@@ -287,7 +287,7 @@ func TestInitPipelineOpts_Validate(t *testing.T) {
 			if tc.expectedError != nil {
 				require.Equal(t, tc.expectedError, err)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -601,7 +601,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

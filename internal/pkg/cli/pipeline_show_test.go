@@ -112,7 +112,7 @@ func TestPipelineShow_Validate(t *testing.T) {
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -293,7 +293,7 @@ stages:
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.expectedApp, opts.AppName(), "expected application names to match")
 				require.Equal(t, tc.expectedPipeline, opts.pipelineName, "expected pipeline name to match")
 			}
@@ -376,7 +376,7 @@ func TestPipelineShow_Execute(t *testing.T) {
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.expectedContent, b.String(), "expected output content match")
 			}
 		})

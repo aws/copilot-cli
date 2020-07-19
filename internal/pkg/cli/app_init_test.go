@@ -136,7 +136,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedAppName, opts.AppName)
 			}
 		})
@@ -276,7 +276,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			if tc.wantedError != "" {
 				require.EqualError(t, err, tc.wantedError)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

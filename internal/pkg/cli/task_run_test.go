@@ -273,7 +273,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -396,7 +396,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			err := opts.Ask()
 
 			if tc.wantedError == nil {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				if tc.wantedEnv != "" {
 					require.Equal(t, tc.wantedEnv, opts.env)
 				}
