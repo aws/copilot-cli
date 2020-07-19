@@ -9,66 +9,63 @@ import (
     "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 )
 
-// DockerService provides support for logging in to repositories, building images and pushing images to repositories.
-type ContainerManager interface {
+// ContainerLoginBuildPusher provides support for logging in to repositories, building images and pushing images to repositories.
+type ContainerLoginBuildPusher interface {
     Build(uri, path, imageTag string, additionalTags ...string) error
     Login(uri, username, password string) error
     Push(uri, imageTag string, additionalTags ...string) error
 }
 
-// RepositoryGetter gets information of ECR repositories.
-type ECRRepositoryGetter interface {
+// Registry gets information of repositories.
+type Registry interface {
     GetRepository(name string) (string, error)
     GetECRAuth() (ecr.Auth, error)
 }
 
-// ECRRepository builds and pushes images to an ECR repository.
-type ECRRepository struct {
+// Repository builds and pushes images to an ECR repository.
+type Repository struct {
     repositoryName string
-
-    repositoryGetter ECRRepositoryGetter
-    docker           ContainerManager
+    registry Registry
 
     uri string
 }
 
-// NewECRRepository instantiates a new ECRRepository.
-func NewECRRepository(name string, repositoryGetter ECRRepositoryGetter, docker ContainerManager) (*ECRRepository, error){
-    uri, err := repositoryGetter.GetRepository(name)
+// New instantiates a new Repository.
+func New(name string, registry Registry) (*Repository, error){
+    uri, err := registry.GetRepository(name)
     if err != nil {
-        return nil, fmt.Errorf("get ECR repository URI: %w", err)
+        return nil, fmt.Errorf("get repository URI: %w", err)
     }
 
-    return &ECRRepository{
-        repositoryName:   name,
-        uri: uri,
-        repositoryGetter: repositoryGetter,
-        docker:           docker,
+    return &Repository{
+        repositoryName: name,
+        uri:            uri,
+        registry:       registry,
     }, nil
 }
 
-// BuildAndPushToRepo builds the image from Dockerfile and pushes it to the ECR repository with tags.
-func (r *ECRRepository) BuildAndPush(dockerfilePath string, tag string, additionalTags ...string) error {
-    if err := r.docker.Build(r.uri, dockerfilePath, tag, additionalTags...); err != nil {
+// BuildAndPush builds the image from Dockerfile and pushes it to the repository with tags.
+func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error {
+    if err := docker.Build(r.uri, dockerfilePath, tag, additionalTags...); err != nil {
         return fmt.Errorf("build Dockerfile at %s: %w", dockerfilePath, err)
     }
 
-    auth, err := r.repositoryGetter.GetECRAuth()
+    auth, err := r.registry.GetECRAuth()
     if err != nil {
-        return fmt.Errorf("get ECR auth: %w", err)
+        return fmt.Errorf("get auth: %w", err)
     }
 
-    if err := r.docker.Login(r.uri, auth.Username, auth.Password); err != nil {
+    if err := docker.Login(r.uri, auth.Username, auth.Password); err != nil {
         return fmt.Errorf("login to repo %s: %w", r.repositoryName, err)
     }
 
-    if err := r.docker.Push(r.uri, tag, additionalTags...); err != nil {
+    if err := docker.Push(r.uri, tag, additionalTags...); err != nil {
         return  fmt.Errorf("push to repo %s: %w", r.repositoryName, err)
     }
     return  nil
 }
 
 // URI returns the uri of the repository.
-func (r *ECRRepository) URI() string{
+func (r *Repository) URI() string{
     return r.uri
 }
