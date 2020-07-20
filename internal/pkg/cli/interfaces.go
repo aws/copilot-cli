@@ -344,9 +344,9 @@ type appEnvSelector interface {
 	Environment(prompt, help, app string) (string, error)
 }
 
-type appEnvWithNoneSelector interface {
+type appEnvWithAdditionalOptsSelector interface {
 	appSelector
-	EnvironmentWithNone(prompt, help, app string) (string, error)
+	EnvironmentWithAdditionalOptions(prompt, help, app string, additionalOpt string, moreAdditionalOpts ...string) (string, error)
 }
 
 type configSelector interface {

@@ -288,24 +288,38 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inEnv   string
 		appName string
 
-		mockSel    func(m *mocks.MockappEnvWithNoneSelector)
+		mockSel    func(m *mocks.MockappEnvWithAdditionalOptsSelector)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedError error
 		wantedEnv   string
 		wantedName  string
 	}{
-		"prompt for env": {
+		"selected an existing environment": {
 			basicOpts: defaultOpts,
 
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), "my-app").Return("test", nil)
+			mockSel: func(m *mocks.MockappEnvWithAdditionalOptsSelector) {
+				m.EXPECT().EnvironmentWithAdditionalOptions(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return("test", nil)
 			},
 
 			wantedEnv: "test",
+		},
+		"selected None env": {
+			basicOpts: defaultOpts,
+
+			inName:  "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvWithAdditionalOptsSelector) {
+				m.EXPECT().EnvironmentWithAdditionalOptions(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return("None", nil)
+			},
+
+			wantedEnv: "",
 		},
 		"don't prompt if env is provided": {
 			basicOpts: defaultOpts,
@@ -314,8 +328,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inEnv:   "test",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvWithAdditionalOptsSelector) {
+				m.EXPECT().EnvironmentWithAdditionalOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedEnv: "test",
@@ -325,11 +339,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			inName: "my-task",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvWithAdditionalOptsSelector) {
+				m.EXPECT().EnvironmentWithAdditionalOptions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedEnv: config.EnvNameNone,
+			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			basicOpts: defaultOpts,
@@ -352,12 +366,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any()).Return(config.EnvNameNone, fmt.Errorf("error selecting environment"))
+			mockSel: func(m *mocks.MockappEnvWithAdditionalOptsSelector) {
+				m.EXPECT().EnvironmentWithAdditionalOptions(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), envOptionNone).
+					Return("", fmt.Errorf("error selecting environment"))
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
-			wantedEnv:   config.EnvNameNone,
 		},
 	}
 
@@ -366,7 +380,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSel := mocks.NewMockappEnvWithNoneSelector(ctrl)
+			mockSel := mocks.NewMockappEnvWithAdditionalOptsSelector(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			if tc.mockSel != nil {
@@ -397,9 +411,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				if tc.wantedEnv != "" {
-					require.Equal(t, tc.wantedEnv, opts.env)
-				}
+				require.Equal(t, tc.wantedEnv, opts.env)
 				if tc.wantedName != "" {
 					require.Equal(t, tc.wantedName, opts.groupName)
 				}

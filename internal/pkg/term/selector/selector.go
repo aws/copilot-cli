@@ -265,20 +265,17 @@ func (s *Select) Environment(prompt, help, app string) (string, error) {
 	return selectedEnvName, nil
 }
 
-// EnvironmentWithNone fetches all the environments in an app and prompts the user to select one of the environments or None.
-func (s *Select) EnvironmentWithNone(prompt, help, app string) (string, error) {
+// EnvironmentWithAdditionalOptions fetches all the environments in an app and prompts the user to select one of the environments or additional options.
+// NOTE: `additionalOpt` shouldn't be an empty string.
+func (s *Select) EnvironmentWithAdditionalOptions(prompt, help, app string, additionalOpt string, moreAdditionalOpts ...string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", err
 	}
 
-	if len(envs) == 0 {
-		log.Infof("No environment found associated with app %s, defaulting to %s (task will run in your default VPC)\n",
-			color.HighlightUserInput(app), color.Emphasize(config.EnvNameNone))
-		return config.EnvNameNone, nil
+	for _, opt := range append(moreAdditionalOpts, additionalOpt) {
+		envs = append(envs, opt)
 	}
-
-	envs = append(envs, config.EnvNameNone)
 
 	selectedEnvName, err := s.prompt.SelectOne(prompt, help, envs)
 	if err != nil {

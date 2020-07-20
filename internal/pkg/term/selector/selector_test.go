@@ -713,15 +713,18 @@ type envwithnoneMocks struct {
 	prompt    *mocks.MockPrompter
 }
 
-func TestSelect_EnvironmentWithNone(t *testing.T) {
+func TestSelect_EnvironmentWithAdditionalOptions(t *testing.T) {
 	appName := "myapp"
+	inAdditionalOpt := "None"
 
 	testCases := map[string]struct {
+		inMoreAdditionalOpts []string
+
 		setupMocks func(m envwithnoneMocks)
 		wantErr    error
 		want       string
 	}{
-		"with no environments": {
+		"with no environments but with an additional option": {
 			setupMocks: func(m envwithnoneMocks) {
 				m.envLister.
 					EXPECT().
@@ -730,13 +733,32 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
-					Times(0)
+					SelectOne(gomock.Any(), gomock.Any(), []string{"None"}).
+					Return("None", nil).
+					Times(1)
 
 			},
-			want: config.EnvNameNone,
+			want: "None",
 		},
-		"with multiple environments": {
+		"with no environments but with multiple additional options": {
+			inMoreAdditionalOpts: []string{"None(private)", "None(public)"},
+
+			setupMocks: func(m envwithnoneMocks) {
+				m.envLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), []string{"None(private)", "None(public)", "None"}).
+					Return("None", nil).
+					Times(1)
+
+			},
+			want: "None",
+		},
+		"with multiple environments and an additional option": {
 			setupMocks: func(m envwithnoneMocks) {
 				m.envLister.
 					EXPECT().
@@ -757,7 +779,7 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 					SelectOne(
 						gomock.Eq("Select an environment"),
 						gomock.Eq("Help text"),
-						gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
+						gomock.Eq([]string{"env1", "env2", "None"})).
 					Return("env1", nil).
 					Times(1)
 			},
@@ -781,7 +803,7 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 					Times(1)
 				m.prompt.
 					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", "None"})).
 					Return("", fmt.Errorf("error selecting")).
 					Times(1)
 			},
@@ -817,10 +839,12 @@ func TestSelect_EnvironmentWithNone(t *testing.T) {
 				lister: mockenvLister,
 			}
 
-			got, err := sel.EnvironmentWithNone("Select an environment", "Help text", appName)
+			got, err := sel.EnvironmentWithAdditionalOptions("Select an environment", "Help text",
+				appName, inAdditionalOpt, tc.inMoreAdditionalOpts...)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
+				require.NoError(t, err)
 				require.Equal(t, tc.want, got)
 			}
 		})
