@@ -23,7 +23,7 @@ type Registry interface {
 
 // Repository builds and pushes images to a repository.
 type Repository struct {
-    repositoryName string
+    name     string
     registry Registry
 
     uri string
@@ -37,9 +37,9 @@ func New(name string, registry Registry) (*Repository, error){
     }
 
     return &Repository{
-        repositoryName: name,
-        uri:            uri,
-        registry:       registry,
+        name:     name,
+        uri:      uri,
+        registry: registry,
     }, nil
 }
 
@@ -55,11 +55,11 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, dockerfilePa
     }
 
     if err := docker.Login(r.uri, username, password); err != nil {
-        return fmt.Errorf("login to repo %s: %w", r.repositoryName, err)
+        return fmt.Errorf("login to repo %s: %w", r.name, err)
     }
 
     if err := docker.Push(r.uri, tag, additionalTags...); err != nil {
-        return  fmt.Errorf("push to repo %s: %w", r.repositoryName, err)
+        return  fmt.Errorf("push to repo %s: %w", r.name, err)
     }
     return  nil
 }

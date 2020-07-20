@@ -101,8 +101,8 @@ func TestRepository_BuildAndPush(t *testing.T) {
 			}
 
 			repo := &Repository{
-				repositoryName: inRepoName,
-				registry:       mockRepoGetter,
+				name:     inRepoName,
+				registry: mockRepoGetter,
 
 				uri: mockRepoURI,
 			}
