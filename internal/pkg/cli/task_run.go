@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	envOptionNone = "None"
+	envOptionNone = "None (run in default VPC)"
 )
 
 var (
@@ -60,7 +60,7 @@ type runTaskOpts struct {
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
 	store  store
-	sel    appEnvWithAdditionalOptsSelector
+	sel    appEnvSelector
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -190,7 +190,7 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	env, err := o.sel.EnvironmentWithAdditionalOptions(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
+	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
