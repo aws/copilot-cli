@@ -30,23 +30,24 @@ var (
 
 type runTaskVars struct {
 	*GlobalOpts
-	count  int8
-	cpu    int16
-	memory int16
+	count  int
+	cpu    int
+	memory int
 
 	groupName string
 
 	image          string
 	dockerfilePath string
+	imageTag       string
 
 	taskRole string
 
-	subnet         string
+	subnets        []string
 	securityGroups []string
 	env            string
 
 	envVars  map[string]string
-	commands []string
+	command  string
 }
 
 type runTaskOpts struct {
@@ -55,7 +56,6 @@ type runTaskOpts struct {
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
 	store  store
-	parser dockerfileParser
 	sel    appEnvWithNoneSelector
 }
 
@@ -104,7 +104,7 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if o.env != "" && (o.subnet != "" || o.securityGroups != nil) {
+	if o.env != "" && (o.subnets != nil || o.securityGroups != nil) {
 		return errors.New("neither subnet nor security groups should be specified if environment is specified")
 	}
 
@@ -131,6 +131,10 @@ func (o *runTaskOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (o *runTaskOpts) Execute() error {
 	return nil
 }
 
@@ -221,28 +225,33 @@ Run a task with environment variables.
 			if err := opts.Ask(); err != nil {
 				return err
 			}
+
+			if err := opts.Execute(); err != nil {
+				return err
+			}
 			return nil
 		}),
 	}
 
-	cmd.Flags().Int8Var(&vars.count, countFlag, 1, countFlagDescription)
-	cmd.Flags().Int16Var(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
-	cmd.Flags().Int16Var(&vars.memory, memoryFlag, 512, memoryFlagDescription)
+	cmd.Flags().IntVar(&vars.count, countFlag, 1, countFlagDescription)
+	cmd.Flags().IntVar(&vars.cpu, cpuFlag, 256, cpuFlagDescription)
+	cmd.Flags().IntVar(&vars.memory, memoryFlag, 512, memoryFlagDescription)
 
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", appFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.subnet, subnetFlag, "", subnetFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.commands, commandsFlag, nil, commandsFlagDescription)
+	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
 
 	return cmd
 }
