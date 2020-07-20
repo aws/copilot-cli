@@ -99,7 +99,7 @@ const (
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	dockerFileFlagDescription   = "Path to the Dockerfile."
-	imageTagFlagDescription     = `Optional. The image's' tag.`
+	imageTagFlagDescription     = `Optional. The image's tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
