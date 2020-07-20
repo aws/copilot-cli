@@ -1,6 +1,6 @@
 # We specify the base image we need for our
 # go application
-FROM golang:1.13 AS builder
+FROM golang:1.14 AS builder
 # We create an /app directory within our
 # image that will hold our application source
 # files
@@ -30,4 +30,3 @@ RUN chmod +x ./e2e-service
 ENTRYPOINT ["./e2e-service"]
 # The service runs on port 80
 EXPOSE 80
-

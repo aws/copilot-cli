@@ -94,7 +94,7 @@ func TestStackDescriber_Stack(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedStack, actual)
 			}
 		})
@@ -166,7 +166,7 @@ func TestStackDescriber_StackResources(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedStackResources, actual)
 			}
 		})

@@ -62,7 +62,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -592,7 +592,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -711,7 +711,7 @@ func TestInitEnvOpts_delegateDNSFromApp(t *testing.T) {
 			if tc.wantedErr != "" {
 				require.EqualError(t, err, tc.wantedErr)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

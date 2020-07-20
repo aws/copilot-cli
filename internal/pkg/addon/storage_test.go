@@ -138,7 +138,7 @@ func TestDDBAttributeFromKey(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantName, *got.Name)
 				require.Equal(t, tc.wantType, *got.DataType)
 			}
@@ -179,7 +179,7 @@ func TestNewLSI(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedLSI, got)
 			}
 		})
@@ -218,7 +218,7 @@ func TestBuildPartitionKey(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantPartitionKey, *props.PartitionKey)
 				require.Equal(t, tc.wantAttributes, props.Attributes)
 			}
@@ -274,7 +274,7 @@ func TestBuildSortKey(t *testing.T) {
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantAttributes, props.Attributes)
 				require.Equal(t, tc.wantHasSortKey, got)
 				if tc.wantSortKey == "" {
@@ -357,7 +357,7 @@ func TestBuildLocalSecondaryIndex(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedHasLSI, props.HasLSI)
 				require.Equal(t, tc.wantedHasLSI, got)
 				for idx, att := range props.Attributes {
