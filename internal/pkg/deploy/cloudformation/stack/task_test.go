@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"testing"
 
@@ -165,7 +164,7 @@ func TestTaskStackConfig_Tags(t *testing.T) {
 			input: deploy.CreateTaskResourcesInput{
 				Name:   "my-task",
 
-				Env: config.EnvNameNone,
+				Env: "",
 			},
 
 			expectedTags: []*cloudformation.Tag{
