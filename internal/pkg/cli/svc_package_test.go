@@ -105,7 +105,7 @@ func TestPackageSvcOpts_Validate(t *testing.T) {
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS, "error %v does not match '%s'", err, tc.wantedErrorS)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -236,7 +236,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 			if tc.wantedErrorS != "" {
 				require.EqualError(t, err, tc.wantedErrorS)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

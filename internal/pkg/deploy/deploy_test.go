@@ -130,7 +130,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.ElementsMatch(t, svcs, tc.wantedSvcs)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -241,7 +241,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.ElementsMatch(t, envs, tc.wantedEnvs)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -339,7 +339,7 @@ func TestStore_IsDeployed(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.Equal(t, deployed, tc.wantedDeployed)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

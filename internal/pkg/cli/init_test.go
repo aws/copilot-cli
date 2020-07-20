@@ -159,7 +159,7 @@ func TestInitOpts_Run(t *testing.T) {
 			if tc.wantedError != "" {
 				require.EqualError(t, err, tc.wantedError)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

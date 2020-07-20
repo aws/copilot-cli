@@ -156,7 +156,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedURI, actual)
 			}
 		})
@@ -392,7 +392,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedWebSvc, websvc, "expected output content match")
 			}
 		})

@@ -148,7 +148,7 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -705,7 +705,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 			if tc.wantedVars != nil {
 				tc.wantedVars.prompt = opts.prompt
@@ -838,7 +838,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

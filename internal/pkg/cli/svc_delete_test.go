@@ -99,7 +99,7 @@ func TestDeleteSvcOpts_Validate(t *testing.T) {
 			if test.want != nil {
 				require.EqualError(t, err, test.want.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -446,7 +446,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			if test.wantedError != nil {
 				require.EqualError(t, err, test.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

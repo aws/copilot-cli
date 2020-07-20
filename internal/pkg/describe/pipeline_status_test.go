@@ -125,7 +125,7 @@ func TestPipelineStatusDescriber_Describe(t *testing.T) {
 			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.expectedOutput, pipelineStatus, "expected output content match")
 			}
 		})
