@@ -3,12 +3,11 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      golang: 1.13
+      golang: 1.14
   build:
     commands:
       - echo "Git commit hash for this revision:"
       - echo `git rev-parse HEAD` # Do not delete; for pipeline logging purposes
 artifacts:
-  files:      
-    - "**/*"            
-
+  files:
+    - "**/*"
