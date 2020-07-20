@@ -204,14 +204,18 @@ func BuildTaskRunCmd() *cobra.Command {
 		Short: "Run a one-off task",
 		Long:  `Run a one-off task with configurations such as cpu-units, memory, image, etc.`,
 		Example: `
-Run a task with default setting.
+Run a task with default setting. You will be prompted to specify a task group name and an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
-Starts 4 tasks with 2GB memory, Runs a particular image.
-/code $ copilot task run --num 4 --memory 2048 --task-role frontend-exec-role
+Starts 4 tasks with 2GB memory, run a particular image, and run with a particular task role.
+/code $ copilot task run --num 4 --memory 2048 --image=python --task-role migrate-exec-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
+Run a task with subnets and security groups.
+/code $ copilot task run --subnets subnet-123,subnet-456 --subnets subnet-789 --security-groups sg-123,sg-456
+Run a task with a command.
+/code $ copilot task run --command "python migrate-script.py" 
 `,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
@@ -241,7 +245,7 @@ Run a task with environment variables.
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
 	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
-	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
 
