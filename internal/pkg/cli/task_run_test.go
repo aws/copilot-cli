@@ -16,9 +16,9 @@ import (
 )
 
 type basicOpts struct {
-	inCount  int8
-	inCPU    int16
-	inMemory int16
+	inCount  int
+	inCPU    int
+	inMemory int
 }
 
 var defaultOpts = basicOpts{
@@ -39,11 +39,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inTaskRole string
 
 		inEnv            string
-		inSubnet         string
+		inSubnets        []string
 		inSecurityGroups []string
 
 		inEnvVars  map[string]string
-		inCommands []string
+		inCommand  string
 
 		appName string
 
@@ -70,7 +70,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"NAME": "my-app",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
@@ -94,14 +94,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDockerfilePath: "hello/world/Dockerfile",
 			inTaskRole:       "exec-role",
 
-			inSubnet:         "subnet-10d938jds",
+			inSubnets:        []string{"subnet-10d938jds"},
 			inSecurityGroups: []string{"sg-0d9sjdk", "sg-d33kds99"},
 
 			inEnvVars: map[string]string{
 				"NAME": "pj",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello/world", 0755)
@@ -217,8 +217,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both environment and subnet id specified": {
 			basicOpts: defaultOpts,
 
-			inEnv:    "test",
-			inSubnet: "subnet id",
+			inEnv:     "test",
+			inSubnets: []string{"subnet id"},
 
 			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
 		},
@@ -251,11 +251,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
-					subnet:         tc.inSubnet,
+					subnets:        tc.inSubnets,
 					securityGroups: tc.inSecurityGroups,
 					dockerfilePath: tc.inDockerfilePath,
 					envVars:        tc.inEnvVars,
-					commands:       tc.inCommands,
+					command:       tc.inCommand,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
