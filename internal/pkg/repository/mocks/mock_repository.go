@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	ecr "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -108,32 +107,33 @@ func (m *MockRegistry) EXPECT() *MockRegistryMockRecorder {
 	return m.recorder
 }
 
-// GetRepository mocks base method
-func (m *MockRegistry) GetRepository(name string) (string, error) {
+// RepositoryURI mocks base method
+func (m *MockRegistry) RepositoryURI(name string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRepository", name)
+	ret := m.ctrl.Call(m, "RepositoryURI", name)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetRepository indicates an expected call of GetRepository
-func (mr *MockRegistryMockRecorder) GetRepository(name interface{}) *gomock.Call {
+// RepositoryURI indicates an expected call of RepositoryURI
+func (mr *MockRegistryMockRecorder) RepositoryURI(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepository", reflect.TypeOf((*MockRegistry)(nil).GetRepository), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RepositoryURI", reflect.TypeOf((*MockRegistry)(nil).RepositoryURI), name)
 }
 
-// GetECRAuth mocks base method
-func (m *MockRegistry) GetECRAuth() (ecr.Auth, error) {
+// Auth mocks base method
+func (m *MockRegistry) Auth() (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetECRAuth")
-	ret0, _ := ret[0].(ecr.Auth)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Auth")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
-// GetECRAuth indicates an expected call of GetECRAuth
-func (mr *MockRegistryMockRecorder) GetECRAuth() *gomock.Call {
+// Auth indicates an expected call of Auth
+func (mr *MockRegistryMockRecorder) Auth() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetECRAuth", reflect.TypeOf((*MockRegistry)(nil).GetECRAuth))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Auth", reflect.TypeOf((*MockRegistry)(nil).Auth))
 }

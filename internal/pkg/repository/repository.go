@@ -6,7 +6,6 @@ package repository
 
 import (
     "fmt"
-    "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 )
 
 // ContainerLoginBuildPusher provides support for logging in to repositories, building images and pushing images to repositories.
@@ -18,11 +17,11 @@ type ContainerLoginBuildPusher interface {
 
 // Registry gets information of repositories.
 type Registry interface {
-    GetRepository(name string) (string, error)
-    GetECRAuth() (ecr.Auth, error)
+    RepositoryURI(name string) (string, error)
+    Auth() (string, string, error)
 }
 
-// Repository builds and pushes images to an ECR repository.
+// Repository builds and pushes images to a repository.
 type Repository struct {
     repositoryName string
     registry Registry
@@ -32,7 +31,7 @@ type Repository struct {
 
 // New instantiates a new Repository.
 func New(name string, registry Registry) (*Repository, error){
-    uri, err := registry.GetRepository(name)
+    uri, err := registry.RepositoryURI(name)
     if err != nil {
         return nil, fmt.Errorf("get repository URI: %w", err)
     }
@@ -50,12 +49,12 @@ func (r *Repository) BuildAndPush(docker ContainerLoginBuildPusher, dockerfilePa
         return fmt.Errorf("build Dockerfile at %s: %w", dockerfilePath, err)
     }
 
-    auth, err := r.registry.GetECRAuth()
+    username, password, err := r.registry.Auth()
     if err != nil {
         return fmt.Errorf("get auth: %w", err)
     }
 
-    if err := docker.Login(r.uri, auth.Username, auth.Password); err != nil {
+    if err := docker.Login(r.uri, username, password); err != nil {
         return fmt.Errorf("login to repo %s: %w", r.repositoryName, err)
     }
 

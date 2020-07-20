@@ -6,7 +6,6 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/repository/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -30,9 +29,9 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		wantedError error
 		wantedURI string
 	}{
-		"failed to get ECR auth": {
+		"failed to get auth": {
 			mockRegistry: func(m *mocks.MockRegistry) {
-				m.EXPECT().GetECRAuth().Return(ecr.Auth{}, errors.New("error getting auth"))
+				m.EXPECT().Auth().Return("", "", errors.New("error getting auth"))
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -43,7 +42,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		},
 		"failed to build image": {
 			mockRegistry: func(m *mocks.MockRegistry) {
-				m.EXPECT().GetECRAuth().Return(ecr.Auth{}, nil).AnyTimes()
+				m.EXPECT().Auth().Return("", "", nil).AnyTimes()
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Return(errors.New("error building image"))
@@ -54,10 +53,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		},
 		"failed to login": {
 			mockRegistry: func(m *mocks.MockRegistry) {
-				m.EXPECT().GetECRAuth().Return(ecr.Auth{
-					Username: "my-name",
-					Password: "my-pwd",
-				}, nil)
+				m.EXPECT().Auth().Return("my-name", "my-pwd", nil)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -68,7 +64,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		},
 		"failed to push": {
 			mockRegistry: func(m *mocks.MockRegistry) {
-				m.EXPECT().GetECRAuth().Times(1)
+				m.EXPECT().Auth().Times(1)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Times(1)
@@ -79,10 +75,7 @@ func TestRepository_BuildAndPush(t *testing.T) {
 		},
 		"success": {
 			mockRegistry: func(m *mocks.MockRegistry) {
-				m.EXPECT().GetECRAuth().Return(ecr.Auth{
-					Username: "my-name",
-					Password: "my-pwd",
-				}, nil).Times(1)
+				m.EXPECT().Auth().Return("my-name", "my-pwd", nil).Times(1)
 			},
 			inMockDocker: func(m *mocks.MockContainerLoginBuildPusher) {
 				m.EXPECT().Build(mockRepoURI, inDockerfilePath, mockTag1, mockTag2, mockTag3).Return(nil).Times(1)
