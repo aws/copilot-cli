@@ -207,7 +207,7 @@ func TestDeleteEnvOpts_Ask(t *testing.T) {
 			if tc.wantedError == nil {
 				require.Equal(t, tc.wantedEnvName, opts.EnvName)
 				require.Equal(t, tc.wantedEnvProfile, opts.EnvProfile)
-				require.Nil(t, err)
+				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
@@ -355,7 +355,7 @@ func TestDeleteEnvOpts_Execute(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
