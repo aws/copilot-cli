@@ -99,7 +99,7 @@ const (
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	dockerFileFlagDescription   = "Path to the Dockerfile."
-	imageTagFlagDescription     = `Optional. The service's image tag.`
+	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
@@ -147,5 +147,5 @@ Must be of the format '<keyName>:<dataType>'.`
 	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
 	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
 	taskGroupFlagDescription      = "The group name of the task. Tasks with the same group name share the same set of resources."
-	taskImageTagFlagDescription   = `Optional. The task's image tag in addition to "latest".`
+	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
 )
