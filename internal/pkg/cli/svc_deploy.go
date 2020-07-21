@@ -291,15 +291,14 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return fmt.Errorf("get ECR repository URI: %w", err)
 	}
 
-	dfInfo, err := o.getDockerfile()
+	dockerBuildInput, err := o.getDockerfile()
 	if err != nil {
 		return err
 	}
 
-	dockerBuildInput := dfInfo.toDockerBuildArguments()
 	dockerBuildInput.URI = uri
 	dockerBuildInput.ImageTag = o.ImageTag
-	if err := o.docker.Build(dockerBuildInput); err != nil {
+	if err := o.docker.Build(*dockerBuildInput); err != nil {
 		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", dockerBuildInput.Dockerfile, o.ImageTag, err)
 	}
 
@@ -314,22 +313,7 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 	return o.docker.Push(uri, o.ImageTag)
 }
 
-type dockerParams struct {
-	context    string
-	dockerfile string
-	args       map[string]string
-}
-
-// toDockerBuildArguments fills in the fields contained in the image/build tag in the manifest.
-func (d *dockerParams) toDockerBuildArguments() docker.BuildArguments {
-	return docker.BuildArguments{
-		Context:    d.context,
-		Dockerfile: d.dockerfile,
-		Args:       d.args,
-	}
-}
-
-func (o *deploySvcOpts) getDockerfile() (*dockerParams, error) {
+func (o *deploySvcOpts) getDockerfile() (*docker.BuildArguments, error) {
 	type dfContext interface {
 		DockerfileContext() string
 		DockerfilePath() string
@@ -361,19 +345,19 @@ func (o *deploySvcOpts) getDockerfile() (*dockerParams, error) {
 	ctx := mf.DockerfileContext()
 	// Nonempty context field means we should join with the ws root and return that
 	if ctx != "" {
-		return &dockerParams{
-			dockerfile: dfPath,
-			context:    filepath.Join(wsRoot, mf.DockerfileContext()),
-			args:       dfArgs,
+		return &docker.BuildArguments{
+			Context:    filepath.Join(wsRoot, mf.DockerfileContext()),
+			Dockerfile: dfPath,
+			Args:       dfArgs,
 		}, nil
 	}
 	// Default to directory of dockerfile.
 
 	dfDir := filepath.Dir(dfPath)
-	return &dockerParams{
-		dockerfile: dfPath,
-		context:    dfDir,
-		args:       dfArgs,
+	return &docker.BuildArguments{
+		Context:    dfDir,
+		Dockerfile: dfPath,
+		Args:       dfArgs,
 	}, nil
 }
 
