@@ -184,28 +184,26 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			inputSvc: "mockSvc",
 
 			setupMocks: func(m storeMock) {
-				gomock.InOrder(
-					m.configStore.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-						{
-							App:  "mockApp",
-							Name: "mockEnv1",
-						},
-						{
-							App:  "mockApp",
-							Name: "mockEnv2",
-						},
-					}, nil),
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
-						AppTagKey:     "mockApp",
-						EnvTagKey:     "mockEnv1",
-						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil),
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
-						AppTagKey:     "mockApp",
-						EnvTagKey:     "mockEnv2",
-						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{}, nil),
-				)
+				m.configStore.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
+					{
+						App:  "mockApp",
+						Name: "mockEnv1",
+					},
+					{
+						App:  "mockApp",
+						Name: "mockEnv2",
+					},
+				}, nil)
+				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					AppTagKey:     "mockApp",
+					EnvTagKey:     "mockEnv1",
+					ServiceTagKey: "mockSvc",
+				}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil)
+				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					AppTagKey:     "mockApp",
+					EnvTagKey:     "mockEnv2",
+					ServiceTagKey: "mockSvc",
+				}).Return([]*rg.Resource{}, nil)
 			},
 
 			wantedEnvs: []string{"mockEnv1"},

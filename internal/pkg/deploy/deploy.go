@@ -121,25 +121,47 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 	if err != nil {
 		return nil, fmt.Errorf("list environment for app %s: %w", appName, err)
 	}
-	var envsWithDeployment []string
+	type result struct {
+		name string
+		err  error
+	}
+	deployedEnv := make(chan result, len(envs))
 	for _, env := range envs {
-		err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
-		if err != nil {
-			return nil, err
+		go func(env *config.Environment) {
+			err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
+			if err != nil {
+				deployedEnv <- result{err: err}
+				return
+			}
+			resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+				AppTagKey:     appName,
+				EnvTagKey:     env.Name,
+				ServiceTagKey: svcName,
+			})
+			if err != nil {
+				deployedEnv <- result{err: fmt.Errorf("get resources by Copilot tags: %w", err)}
+				return
+			}
+			// If no resources found, the resp length is 0.
+			if len(resources) != 0 {
+				deployedEnv <- result{name: env.Name}
+			} else {
+				deployedEnv <- result{}
+			}
+			return
+		}(env)
+	}
+	var envsWithDeployment []string
+	for i := 0; i < len(envs); i++ {
+		env := <-deployedEnv
+		if env.err != nil {
+			return nil, env.err
 		}
-		resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
-			AppTagKey:     appName,
-			EnvTagKey:     env.Name,
-			ServiceTagKey: svcName,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("get resources by Copilot tags: %w", err)
-		}
-		// If no resources found, the resp length is 0.
-		if len(resources) != 0 {
-			envsWithDeployment = append(envsWithDeployment, env.Name)
+		if env.name != "" {
+			envsWithDeployment = append(envsWithDeployment, env.name)
 		}
 	}
+	close(deployedEnv)
 	return envsWithDeployment, nil
 }
 
