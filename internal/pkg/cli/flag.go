@@ -59,10 +59,10 @@ const (
 	memoryFlag         = "memory"
 	imageFlag          = "image"
 	taskRoleFlag       = "task-role"
-	subnetFlag         = "subnet"
+	subnetsFlag        = "subnets"
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
-	commandsFlag       = "commands"
+	commandFlag        = "command"
 )
 
 // Short flag names.
@@ -99,7 +99,7 @@ const (
 	jsonFlagDescription     = "Optional. Outputs in JSON format."
 
 	dockerFileFlagDescription   = "Path to the Dockerfile."
-	imageTagFlagDescription     = `Optional. The service's image tag.`
+	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated with commas.
 Allows you to categorize resources.`
 	stackOutputDirFlagDescription = "Optional. Writes the stack template and template configuration to a directory."
@@ -137,14 +137,15 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 
-	countFlagDescription          = "Optional. The number of tasks to set up. Default 1."
-	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task. Default 256 (1/4 vCPU)."
-	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task. Default 512."
+	countFlagDescription          = "Optional. The number of tasks to set up."
+	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task."
+	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task."
 	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
 	taskRoleFlagDescription       = "Optional. The role for the task to use."
-	subnetFlagDescription         = "Optional. The subnet id for the task to use."
-	securityGroupsFlagDescription = "Optional. The security group id(s) for the task to use. Can be specified multiple times."
+	subnetsFlagDescription        = "Optional. The subnet IDs for the task to use. Can be specified multiple times."
+	securityGroupsFlagDescription = "Optional. The security group IDs for the task to use. Can be specified multiple times."
 	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
-	commandsFlagDescription       = "Optional. List of commands that are passed to docker run. Can be specified multiple times."
+	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
 	taskGroupFlagDescription      = "The group name of the task. Tasks with the same group name share the same set of resources."
+	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
 )

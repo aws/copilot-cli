@@ -16,9 +16,9 @@ import (
 )
 
 type basicOpts struct {
-	inCount  int8
-	inCPU    int16
-	inMemory int16
+	inCount  int
+	inCPU    int
+	inMemory int
 }
 
 var defaultOpts = basicOpts{
@@ -39,11 +39,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inTaskRole string
 
 		inEnv            string
-		inSubnet         string
+		inSubnets        []string
 		inSecurityGroups []string
 
 		inEnvVars  map[string]string
-		inCommands []string
+		inCommand  string
 
 		appName string
 
@@ -70,7 +70,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"NAME": "my-app",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
@@ -94,14 +94,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDockerfilePath: "hello/world/Dockerfile",
 			inTaskRole:       "exec-role",
 
-			inSubnet:         "subnet-10d938jds",
+			inSubnets:        []string{"subnet-10d938jds"},
 			inSecurityGroups: []string{"sg-0d9sjdk", "sg-d33kds99"},
 
 			inEnvVars: map[string]string{
 				"NAME": "pj",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello/world", 0755)
@@ -217,8 +217,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both environment and subnet id specified": {
 			basicOpts: defaultOpts,
 
-			inEnv:    "test",
-			inSubnet: "subnet id",
+			inEnv:     "test",
+			inSubnets: []string{"subnet id"},
 
 			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
 		},
@@ -251,11 +251,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
-					subnet:         tc.inSubnet,
+					subnets:        tc.inSubnets,
 					securityGroups: tc.inSecurityGroups,
 					dockerfilePath: tc.inDockerfilePath,
 					envVars:        tc.inEnvVars,
-					commands:       tc.inCommands,
+					command:       tc.inCommand,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -288,24 +288,38 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inEnv   string
 		appName string
 
-		mockSel    func(m *mocks.MockappEnvWithNoneSelector)
+		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedError error
 		wantedEnv   string
 		wantedName  string
 	}{
-		"prompt for env": {
+		"selected an existing environment": {
 			basicOpts: defaultOpts,
 
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), "my-app").Return("test", nil)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return("test", nil)
 			},
 
 			wantedEnv: "test",
+		},
+		"selected None env": {
+			basicOpts: defaultOpts,
+
+			inName:  "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return(envOptionNone, nil)
+			},
+
+			wantedEnv: "",
 		},
 		"don't prompt if env is provided": {
 			basicOpts: defaultOpts,
@@ -314,8 +328,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inEnv:   "test",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedEnv: "test",
@@ -325,11 +339,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			inName: "my-task",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedEnv: config.EnvNameNone,
+			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			basicOpts: defaultOpts,
@@ -352,12 +366,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any()).Return(config.EnvNameNone, fmt.Errorf("error selecting environment"))
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), envOptionNone).
+					Return("", fmt.Errorf("error selecting environment"))
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
-			wantedEnv:   config.EnvNameNone,
 		},
 	}
 
@@ -366,7 +380,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSel := mocks.NewMockappEnvWithNoneSelector(ctrl)
+			mockSel := mocks.NewMockappEnvSelector(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			if tc.mockSel != nil {
@@ -397,9 +411,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				if tc.wantedEnv != "" {
-					require.Equal(t, tc.wantedEnv, opts.env)
-				}
+				require.Equal(t, tc.wantedEnv, opts.env)
 				if tc.wantedName != "" {
 					require.Equal(t, tc.wantedName, opts.groupName)
 				}
