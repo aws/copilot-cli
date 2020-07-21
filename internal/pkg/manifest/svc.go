@@ -46,7 +46,7 @@ type ServiceImage struct {
 // Dockerfile returns the path to the service's Dockerfile, defaulting to
 // the filename Dockerfile if not otherwise specified.
 func (s *ServiceImage) Dockerfile() string {
-	// Prefer to use the "dockerfile" string in BuildArgs. Otherwise,
+	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
 	// use "Context/Dockerfile", then "BuildString", then "Dockerfile"
 	if s.Build.BuildArgs.Dockerfile != nil {
 		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
