@@ -139,6 +139,15 @@ type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error
 }
 
+type repositoryURIGetter interface {
+	URI() string
+}
+
+type repositoryService interface {
+	repositoryURIGetter
+	imageBuilderPusher
+}
+
 type cwlogService interface {
 	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 	LogGroupExists(logGroupName string) (bool, error)
@@ -151,12 +160,6 @@ type templater interface {
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
-}
-
-type dockerService interface {
-	Build(uri, path, imageTag string, additionalTags ...string) error
-	Login(uri, username, password string) error
-	Push(uri, imageTag string, additionalTags ...string) error
 }
 
 type runner interface {
