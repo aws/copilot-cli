@@ -9,13 +9,13 @@ import (
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	ecr "github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -1188,57 +1188,46 @@ func (mr *MocksecretDeleterMockRecorder) DeleteSecret(secretName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MocksecretDeleter)(nil).DeleteSecret), secretName)
 }
 
-// MockecrService is a mock of ecrService interface
-type MockecrService struct {
+// MockimageBuilderPusher is a mock of imageBuilderPusher interface
+type MockimageBuilderPusher struct {
 	ctrl     *gomock.Controller
-	recorder *MockecrServiceMockRecorder
+	recorder *MockimageBuilderPusherMockRecorder
 }
 
-// MockecrServiceMockRecorder is the mock recorder for MockecrService
-type MockecrServiceMockRecorder struct {
-	mock *MockecrService
+// MockimageBuilderPusherMockRecorder is the mock recorder for MockimageBuilderPusher
+type MockimageBuilderPusherMockRecorder struct {
+	mock *MockimageBuilderPusher
 }
 
-// NewMockecrService creates a new mock instance
-func NewMockecrService(ctrl *gomock.Controller) *MockecrService {
-	mock := &MockecrService{ctrl: ctrl}
-	mock.recorder = &MockecrServiceMockRecorder{mock}
+// NewMockimageBuilderPusher creates a new mock instance
+func NewMockimageBuilderPusher(ctrl *gomock.Controller) *MockimageBuilderPusher {
+	mock := &MockimageBuilderPusher{ctrl: ctrl}
+	mock.recorder = &MockimageBuilderPusherMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockecrService) EXPECT() *MockecrServiceMockRecorder {
+func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 	return m.recorder
 }
 
-// GetRepository mocks base method
-func (m *MockecrService) GetRepository(name string) (string, error) {
+// BuildAndPush mocks base method
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath, tag string, additionalTags ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRepository", name)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	varargs := []interface{}{docker, dockerfilePath, tag}
+	for _, a := range additionalTags {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BuildAndPush", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// GetRepository indicates an expected call of GetRepository
-func (mr *MockecrServiceMockRecorder) GetRepository(name interface{}) *gomock.Call {
+// BuildAndPush indicates an expected call of BuildAndPush
+func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, dockerfilePath, tag interface{}, additionalTags ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepository", reflect.TypeOf((*MockecrService)(nil).GetRepository), name)
-}
-
-// GetECRAuth mocks base method
-func (m *MockecrService) GetECRAuth() (ecr.Auth, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetECRAuth")
-	ret0, _ := ret[0].(ecr.Auth)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetECRAuth indicates an expected call of GetECRAuth
-func (mr *MockecrServiceMockRecorder) GetECRAuth() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetECRAuth", reflect.TypeOf((*MockecrService)(nil).GetECRAuth))
+	varargs := append([]interface{}{docker, dockerfilePath, tag}, additionalTags...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), varargs...)
 }
 
 // MockcwlogService is a mock of cwlogService interface
@@ -2767,6 +2756,43 @@ func (m *MockappResourcesGetter) GetRegionalAppResources(app *config.Application
 func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
+}
+
+// MocktaskDeployer is a mock of taskDeployer interface
+type MocktaskDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskDeployerMockRecorder
+}
+
+// MocktaskDeployerMockRecorder is the mock recorder for MocktaskDeployer
+type MocktaskDeployerMockRecorder struct {
+	mock *MocktaskDeployer
+}
+
+// NewMocktaskDeployer creates a new mock instance
+func NewMocktaskDeployer(ctrl *gomock.Controller) *MocktaskDeployer {
+	mock := &MocktaskDeployer{ctrl: ctrl}
+	mock.recorder = &MocktaskDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeployTask mocks base method
+func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployTask", input)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployTask indicates an expected call of DeployTask
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), input)
 }
 
 // Mockdeployer is a mock of deployer interface

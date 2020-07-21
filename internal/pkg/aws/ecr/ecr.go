@@ -43,36 +43,28 @@ func New(s *session.Session) ECR {
 	}
 }
 
-// Auth represent basic authentication credentials.
-type Auth struct {
-	Username string
-	Password string
-}
-
-// GetECRAuth returns the basic authentication credentials needed to push images.
-func (c ECR) GetECRAuth() (Auth, error) {
+// Auth returns the basic authentication credentials needed to push images.
+func (c ECR) Auth() (string, string, error) {
 	response, err := c.client.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 
 	if err != nil {
-		return Auth{}, fmt.Errorf("get ECR auth: %w", err)
+		return "", "", fmt.Errorf("get ECR auth: %w", err)
 	}
 
 	authToken, err := base64.StdEncoding.DecodeString(*response.AuthorizationData[0].AuthorizationToken)
 
 	if err != nil {
-		return Auth{}, fmt.Errorf("decode auth token: %w", err)
+		return "", "", fmt.Errorf("decode auth token: %w", err)
 	}
 
 	tokenStrings := strings.Split(string(authToken), ":")
 
-	return Auth{
-		Username: tokenStrings[0],
-		Password: tokenStrings[1],
-	}, nil
+	username, password := tokenStrings[0], tokenStrings[1]
+	return username, password, nil
 }
 
 // GetRepository returns the ECR repository URI.
-func (c ECR) GetRepository(name string) (string, error) {
+func (c ECR) RepositoryURI(name string) (string, error) {
 	result, err := c.client.DescribeRepositories(&ecr.DescribeRepositoriesInput{
 		RepositoryNames: aws.StringSlice([]string{name}),
 	})
