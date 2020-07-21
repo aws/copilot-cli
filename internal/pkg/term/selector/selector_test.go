@@ -464,8 +464,11 @@ type environmentMocks struct {
 
 func TestSelect_Environment(t *testing.T) {
 	appName := "myapp"
+	additionalOpt1, additionalOpt2 := "opt1", "opt2"
 
 	testCases := map[string]struct {
+		inAdditionalOpts []string
+
 		setupMocks func(m environmentMocks)
 		wantErr    error
 		want       string
@@ -556,6 +559,39 @@ func TestSelect_Environment(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("select environment: error selecting"),
 		},
+		"no environment but with one additional option": {
+			inAdditionalOpts: []string{additionalOpt1},
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+
+			want: additionalOpt1,
+		},
+		"no environment but with multiple additional options": {
+			inAdditionalOpts: []string{additionalOpt1, additionalOpt2},
+			setupMocks: func(m environmentMocks) {
+				m.envLister.
+					EXPECT().
+					ListEnvironments(gomock.Eq(appName)).
+					Return([]*config.Environment{}, nil).
+					Times(1)
+				m.prompt.
+					EXPECT().
+					SelectOne(gomock.Any(), gomock.Any(), []string{additionalOpt1, additionalOpt2}).
+					Times(1).
+					Return(additionalOpt2, nil)
+			},
+
+			want: additionalOpt2,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -576,7 +612,7 @@ func TestSelect_Environment(t *testing.T) {
 				lister: mockenvLister,
 			}
 
-			got, err := sel.Environment("Select an environment", "Help text", appName)
+			got, err := sel.Environment("Select an environment", "Help text", appName, tc.inAdditionalOpts...)
 			if tc.wantErr != nil {
 				require.EqualError(t, tc.wantErr, err.Error())
 			} else {
@@ -711,118 +747,4 @@ func TestSelect_Application(t *testing.T) {
 type envwithnoneMocks struct {
 	envLister *mocks.MockAppEnvLister
 	prompt    *mocks.MockPrompter
-}
-
-func TestSelect_EnvironmentWithNone(t *testing.T) {
-	appName := "myapp"
-
-	testCases := map[string]struct {
-		setupMocks func(m envwithnoneMocks)
-		wantErr    error
-		want       string
-	}{
-		"with no environments": {
-			setupMocks: func(m envwithnoneMocks) {
-				m.envLister.
-					EXPECT().
-					ListEnvironments(gomock.Eq(appName)).
-					Return([]*config.Environment{}, nil).
-					Times(1)
-				m.prompt.
-					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).
-					Times(0)
-
-			},
-			want: config.EnvNameNone,
-		},
-		"with multiple environments": {
-			setupMocks: func(m envwithnoneMocks) {
-				m.envLister.
-					EXPECT().
-					ListEnvironments(gomock.Eq(appName)).
-					Return([]*config.Environment{
-						{
-							App:  appName,
-							Name: "env1",
-						},
-						{
-							App:  appName,
-							Name: "env2",
-						},
-					}, nil).
-					Times(1)
-				m.prompt.
-					EXPECT().
-					SelectOne(
-						gomock.Eq("Select an environment"),
-						gomock.Eq("Help text"),
-						gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
-					Return("env1", nil).
-					Times(1)
-			},
-			want: "env1",
-		},
-		"with error selecting environments": {
-			setupMocks: func(m envwithnoneMocks) {
-				m.envLister.
-					EXPECT().
-					ListEnvironments(gomock.Eq(appName)).
-					Return([]*config.Environment{
-						{
-							App:  appName,
-							Name: "env1",
-						},
-						{
-							App:  appName,
-							Name: "env2",
-						},
-					}, nil).
-					Times(1)
-				m.prompt.
-					EXPECT().
-					SelectOne(gomock.Any(), gomock.Any(), gomock.Eq([]string{"env1", "env2", config.EnvNameNone})).
-					Return("", fmt.Errorf("error selecting")).
-					Times(1)
-			},
-			wantErr: fmt.Errorf("select environment: error selecting"),
-		},
-		"with error listing environments": {
-			setupMocks: func(m envwithnoneMocks) {
-				m.envLister.
-					EXPECT().
-					ListEnvironments(gomock.Eq(appName)).
-					Return(nil, fmt.Errorf("error listing environments")).
-					Times(1)
-			},
-			wantErr: fmt.Errorf("list environments: error listing environments"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockenvLister := mocks.NewMockAppEnvLister(ctrl)
-			mockprompt := mocks.NewMockPrompter(ctrl)
-			mocks := envwithnoneMocks{
-				envLister: mockenvLister,
-				prompt:    mockprompt,
-			}
-			tc.setupMocks(mocks)
-
-			sel := Select{
-				prompt: mockprompt,
-				lister: mockenvLister,
-			}
-
-			got, err := sel.EnvironmentWithNone("Select an environment", "Help text", appName)
-			if tc.wantErr != nil {
-				require.EqualError(t, tc.wantErr, err.Error())
-			} else {
-				require.Equal(t, tc.want, got)
-			}
-		})
-	}
 }

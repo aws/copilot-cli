@@ -15,6 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	envOptionNone = "None (run in default VPC)"
+)
+
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCpuNotPositive = errors.New("CPU units must be positive")
@@ -24,7 +28,7 @@ var (
 	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
 
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. "+
-		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(config.EnvNameNone))
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envOptionNone))
 	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
@@ -56,7 +60,7 @@ type runTaskOpts struct {
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
 	store  store
-	sel    appEnvWithNoneSelector
+	sel    appEnvSelector
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -181,15 +185,20 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	if o.AppName() == "" {
-		o.env = config.EnvNameNone
+	// NOTE: if we are not in any workspace and app flag is not specified, use the "None" environment.
+	if  o.AppName() == "" {
 		return nil
 	}
 
-	env, err := o.sel.EnvironmentWithNone(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName())
+	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
+
+	if env == envOptionNone {
+		return nil
+	}
+
 	o.env = env
 	return nil
 }

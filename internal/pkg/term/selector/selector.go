@@ -243,11 +243,16 @@ func (s *ConfigSelect) Service(prompt, help, app string) (string, error) {
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
-func (s *Select) Environment(prompt, help, app string) (string, error) {
+func (s *Select) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
 	}
+
+	for _, opt := range additionalOpts {
+		envs = append(envs, opt)
+	}
+
 	if len(envs) == 0 {
 		log.Infof("Couldn't find any environments associated with app %s, try initializing one: %s\n",
 			color.HighlightUserInput(app),
@@ -258,27 +263,6 @@ func (s *Select) Environment(prompt, help, app string) (string, error) {
 		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(envs[0]))
 		return envs[0], nil
 	}
-	selectedEnvName, err := s.prompt.SelectOne(prompt, help, envs)
-	if err != nil {
-		return "", fmt.Errorf("select environment: %w", err)
-	}
-	return selectedEnvName, nil
-}
-
-// EnvironmentWithNone fetches all the environments in an app and prompts the user to select one of the environments or None.
-func (s *Select) EnvironmentWithNone(prompt, help, app string) (string, error) {
-	envs, err := s.retrieveEnvironments(app)
-	if err != nil {
-		return "", err
-	}
-
-	if len(envs) == 0 {
-		log.Infof("No environment found associated with app %s, defaulting to %s (task will run in your default VPC)\n",
-			color.HighlightUserInput(app), color.Emphasize(config.EnvNameNone))
-		return config.EnvNameNone, nil
-	}
-
-	envs = append(envs, config.EnvNameNone)
 
 	selectedEnvName, err := s.prompt.SelectOne(prompt, help, envs)
 	if err != nil {
