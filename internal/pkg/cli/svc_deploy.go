@@ -49,15 +49,15 @@ type deploySvcVars struct {
 type deploySvcOpts struct {
 	deploySvcVars
 
-	store        store
-	ws           wsSvcReader
+	store              store
+	ws                 wsSvcReader
 	imageBuilderPusher imageBuilderPusher
-	s3           artifactUploader
-	cmd          runner
-	addons       templater
-	appCFN       appResourcesGetter
-	svcCFN       cloudformation.CloudFormation
-	sessProvider sessionProvider
+	s3                 artifactUploader
+	cmd                runner
+	addons             templater
+	appCFN             appResourcesGetter
+	svcCFN             cloudformation.CloudFormation
+	sessProvider       sessionProvider
 
 	spinner progress
 	sel     wsSelector
@@ -261,6 +261,9 @@ func (o *deploySvcOpts) configureClients() error {
 	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
 	registry := ecr.New(defaultSessEnvRegion)
 	o.imageBuilderPusher, err = repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate image builder pusher: %w", err)
+	}
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 

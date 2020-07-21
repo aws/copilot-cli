@@ -44,7 +44,7 @@ func New(s *session.Session) ECR {
 }
 
 // Auth returns the basic authentication credentials needed to push images.
-func (c ECR) Auth() (string, string, error) {
+func (c ECR) Auth() (username string, password string, err error) {
 	response, err := c.client.GetAuthorizationToken(&ecr.GetAuthorizationTokenInput{})
 
 	if err != nil {
@@ -58,9 +58,7 @@ func (c ECR) Auth() (string, string, error) {
 	}
 
 	tokenStrings := strings.Split(string(authToken), ":")
-
-	username, password := tokenStrings[0], tokenStrings[1]
-	return username, password, nil
+	return tokenStrings[0], tokenStrings[1], nil
 }
 
 // RepositoryURI returns the ECR repository URI.
