@@ -63,7 +63,7 @@ func (c ECR) Auth() (string, string, error) {
 	return username, password, nil
 }
 
-// GetRepository returns the ECR repository URI.
+// RepositoryURI returns the ECR repository URI.
 func (c ECR) RepositoryURI(name string) (string, error) {
 	result, err := c.client.DescribeRepositories(&ecr.DescribeRepositoriesInput{
 		RepositoryNames: aws.StringSlice([]string{name}),
