@@ -112,15 +112,33 @@ func (s *Store) ListDeployedServices(appName string, envName string) ([]string, 
 	return svcs, nil
 }
 
+type result struct {
+	name string
+	err  error
+}
+
+func (s *Store) deployedServices(rgClient resourceGetter, app, env, svc string) result {
+	resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+		AppTagKey:     app,
+		EnvTagKey:     env,
+		ServiceTagKey: svc,
+	})
+	if err != nil {
+		return result{err: fmt.Errorf("get resources by Copilot tags: %w", err)}
+	}
+	// If no resources found, the resp length is 0.
+	var res result
+	if len(resources) != 0 {
+		res.name = env
+	}
+	return res
+}
+
 // ListEnvironmentsDeployedTo returns all the environment that a service is deployed in.
 func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error) {
 	envs, err := s.configStore.ListEnvironments(appName)
 	if err != nil {
 		return nil, fmt.Errorf("list environment for app %s: %w", appName, err)
-	}
-	type result struct {
-		name string
-		err  error
 	}
 	deployedEnv := make(chan result, len(envs))
 	defer close(deployedEnv)
@@ -131,21 +149,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 				deployedEnv <- result{err: err}
 				return
 			}
-			resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
-				AppTagKey:     appName,
-				EnvTagKey:     env.Name,
-				ServiceTagKey: svcName,
-			})
-			if err != nil {
-				deployedEnv <- result{err: fmt.Errorf("get resources by Copilot tags: %w", err)}
-				return
-			}
-			// If no resources found, the resp length is 0.
-			var res result
-			if len(resources) != 0 {
-				res.name = env.Name
-			}
-			deployedEnv <- res
+			deployedEnv <- s.deployedServices(rgClient, appName, env.Name, svcName)
 		}(env)
 	}
 	var envsWithDeployment []string
