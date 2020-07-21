@@ -156,7 +156,7 @@ type stackSerializer interface {
 }
 
 type dockerService interface {
-	Build(buildInput docker.BuildArguments) error
+	Build(in docker.BuildArguments) error
 	Login(uri, username, password string) error
 	Push(uri, imageTag string, additionalTags ...string) error
 }
