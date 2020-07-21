@@ -126,6 +126,7 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 		err  error
 	}
 	deployedEnv := make(chan result, len(envs))
+	defer close(deployedEnv)
 	for _, env := range envs {
 		go func(env *config.Environment) {
 			err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
@@ -143,12 +144,11 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 				return
 			}
 			// If no resources found, the resp length is 0.
+			var res result
 			if len(resources) != 0 {
-				deployedEnv <- result{name: env.Name}
-			} else {
-				deployedEnv <- result{}
+				res.name = env.Name
 			}
-			return
+			deployedEnv <- res
 		}(env)
 	}
 	var envsWithDeployment []string
@@ -161,7 +161,6 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 			envsWithDeployment = append(envsWithDeployment, env.name)
 		}
 	}
-	close(deployedEnv)
 	return envsWithDeployment, nil
 }
 
