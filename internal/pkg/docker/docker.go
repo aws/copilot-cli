@@ -30,12 +30,12 @@ func New() Runner {
 
 // BuildArguments holds the arguments we can pass in as flags from the manifest.
 type BuildArguments struct {
-	URI            string
-	ImageTag       string
-	AdditionalTags []string
-	Dockerfile     string
-	Context        string
-	Args           map[string]string
+	URI            string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	ImageTag       string            // Required. Tag to pass to `docker build` via -t flag. Usually Git commit short ID.
+	Dockerfile     string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	Context        string            // Optional. Build context directory to pass to `docker build`
+	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
 }
 
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
