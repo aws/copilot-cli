@@ -34,7 +34,7 @@ func TestBuild(t *testing.T) {
 
 		wantedError error
 	}{
-		"wrap error returned from Run()": {
+		"should error if the docker build command fails": {
 			path:    mockPath,
 			context: "",
 			setupMocks: func(controller *gomock.Controller) {
@@ -45,13 +45,13 @@ func TestBuild(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
-		"happy path": {
+		"should succeed in simple case with no context": {
 			path:    mockPath,
 			context: "",
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", "mockURI:tag1", "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"context differs from path": {
@@ -88,13 +88,15 @@ func TestBuild(t *testing.T) {
 		"success with build args": {
 			path: mockPath,
 			args: map[string]string{
-				"key": "value",
+				"key":  "value",
+				"key2": "value2",
 			},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(c)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", imageName(mockURI, mockTag1),
 					"--build-arg", "key=value",
+					"--build-arg", "key2=value2",
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},

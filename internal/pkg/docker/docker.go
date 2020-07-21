@@ -43,21 +43,21 @@ func (r Runner) Build(in BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)
-	} 
+	}
 
 	args := []string{"build"}
 
 	// Add additional image tags to the docker build call.
-	for _, tag := range append(buildInput.AdditionalTags, buildInput.ImageTag) {
-		args = append(args, "-t", imageName(buildInput.URI, tag))
+	for _, tag := range append(in.AdditionalTags, in.ImageTag) {
+		args = append(args, "-t", imageName(in.URI, tag))
 	}
 
 	// Add the "args:" override section from manifest to the docker build call
-	for k, v := range buildInput.Args {
+	for k, v := range in.Args {
 		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	args = append(args, dfDir, "-f", buildInput.Dockerfile)
+	args = append(args, dfDir, "-f", in.Dockerfile)
 
 	err := r.Run("docker", args)
 	if err != nil {
