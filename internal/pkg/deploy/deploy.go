@@ -53,10 +53,9 @@ type ConfigStoreClient interface {
 
 // Store fetches information on deployed services.
 type Store struct {
-	rgClient            resourceGetter
 	configStore         ConfigStoreClient
-	newRgClientFromIDs  func(string, string) error
-	newRgClientFromRole func(string, string) error
+	newRgClientFromIDs  func(string, string) (resourceGetter, error)
+	newRgClientFromRole func(string, string) (resourceGetter, error)
 }
 
 // NewStore returns a new store.
@@ -64,36 +63,34 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 	s := &Store{
 		configStore: store,
 	}
-	s.newRgClientFromIDs = func(appName, envName string) error {
+	s.newRgClientFromIDs = func(appName, envName string) (resourceGetter, error) {
 		env, err := s.configStore.GetEnvironment(appName, envName)
 		if err != nil {
-			return fmt.Errorf("get environment config %s: %w", envName, err)
+			return nil, fmt.Errorf("get environment config %s: %w", envName, err)
 		}
 		sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
-			return fmt.Errorf("create new session from env role: %w", err)
+			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}
-		s.rgClient = rg.New(sess)
-		return nil
+		return rg.New(sess), nil
 	}
-	s.newRgClientFromRole = func(roleARN, region string) error {
+	s.newRgClientFromRole = func(roleARN, region string) (resourceGetter, error) {
 		sess, err := session.NewProvider().FromRole(roleARN, region)
 		if err != nil {
-			return fmt.Errorf("create new session from env role: %w", err)
+			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}
-		s.rgClient = rg.New(sess)
-		return nil
+		return rg.New(sess), nil
 	}
 	return s, nil
 }
 
 // ListDeployedServices returns the names of deployed services in an environment part of an application.
 func (s *Store) ListDeployedServices(appName string, envName string) ([]string, error) {
-	err := s.newRgClientFromIDs(appName, envName)
+	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
 		AppTagKey: appName,
 		EnvTagKey: envName,
 	})
@@ -129,12 +126,12 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 	defer close(deployedEnv)
 	for _, env := range envs {
 		go func(env *config.Environment) {
-			err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
+			rgClient, err := s.newRgClientFromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				deployedEnv <- result{err: err}
 				return
 			}
-			resources, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+			resources, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
 				AppTagKey:     appName,
 				EnvTagKey:     env.Name,
 				ServiceTagKey: svcName,
@@ -166,11 +163,11 @@ func (s *Store) ListEnvironmentsDeployedTo(appName string, svcName string) ([]st
 
 // IsServiceDeployed returns whether a service is deployed in an environment or not.
 func (s *Store) IsServiceDeployed(appName string, envName string, svcName string) (bool, error) {
-	err := s.newRgClientFromIDs(appName, envName)
+	rgClient, err := s.newRgClientFromIDs(appName, envName)
 	if err != nil {
 		return false, err
 	}
-	svcARNs, err := s.rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
+	svcARNs, err := rgClient.GetResourcesByTags(ecsServiceResourceType, map[string]string{
 		AppTagKey:     appName,
 		EnvTagKey:     envName,
 		ServiceTagKey: svcName,

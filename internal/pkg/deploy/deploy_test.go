@@ -117,9 +117,8 @@ func TestStore_ListDeployedServices(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:           mockRgGetter,
 				configStore:        mockConfigStore,
-				newRgClientFromIDs: func(string, string) error { return nil },
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
@@ -226,9 +225,8 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:            mockRgGetter,
 				configStore:         mockConfigStore,
-				newRgClientFromRole: func(string, string) error { return nil },
+				newRgClientFromRole: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
@@ -324,9 +322,8 @@ func TestStore_IsDeployed(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:           mockRgGetter,
 				configStore:        mockConfigStore,
-				newRgClientFromIDs: func(string, string) error { return nil },
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
