@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -48,7 +49,7 @@ type ServiceImage struct {
 func (s *ServiceImage) Dockerfile() string {
 	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
 	// use "Context/Dockerfile", then "BuildString", then "Dockerfile"
-	if s.Build.BuildArgs.Dockerfile != nil {
+	if s.Build.BuildArgs != nil && s.Build.BuildArgs.Dockerfile != nil {
 		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
 	}
 
@@ -68,12 +69,18 @@ func (s *ServiceImage) Dockerfile() string {
 
 // Context returns the build context directory if it exists, otherwise an empty string.
 func (s *ServiceImage) Context() string {
+	if s.Build.BuildArgs == nil {
+		return ""
+	}
 	return aws.StringValue(s.Build.BuildArgs.Context)
 }
 
 // Args returns the args section, if it exists, to override args in the dockerfile.
 // Otherwise it returns an empty map.
 func (s *ServiceImage) Args() map[string]string {
+	if s.Build.BuildArgs == nil {
+		return nil
+	}
 	return s.Build.BuildArgs.Args
 }
 
@@ -81,40 +88,33 @@ func (s *ServiceImage) Args() map[string]string {
 // can either be of type string or type DockerBuildArgs.
 type BuildArgsOrString struct {
 	BuildString *string
-	BuildArgs   DockerBuildArgs
+	BuildArgs   *DockerBuildArgs
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
 // struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
 func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Try unmarshaling to DockerBuildArgs first, then try string.
-	var tmpBuildArgs DockerBuildArgs
-	err := unmarshal(&tmpBuildArgs)
-	if err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
+	if err := unmarshal(b.BuildArgs); err != nil {
+		if !errors.Is(err, yaml.TypeError) {
+			return fmt.Errorf("unmarshal service manifest: %w", err)
 		}
-	} else { // Return early if we can safely unmarshal to BuildArgs
-		b.BuildArgs = tmpBuildArgs
+	}
+	if b.BuildArgs != nil {
 		return nil
 	}
 
-	var tmpString string
-	if err = unmarshal(&tmpString); err == nil {
-		b.BuildString = &tmpString
-		fmt.Println(tmpString)
-		return nil
+	if err := unmarshal(b.BuildString); err != nil {
+		return fmt.Errorf("unmarshal service manifest: %w", err)
 	}
-	return err
+	return nil
 }
+
+// Marshal
 
 // DockerBuildArgs represents the options specifiable under the "build" field
 // of Docker Compose services. For more information, see:
 // https://docs.docker.com/compose/compose-file/#build
-// TODO: Implement the rest of the fields (cache_from, labels, network, shm_size, target)
 type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
