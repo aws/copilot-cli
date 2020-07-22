@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetECRAuth(t *testing.T) {
+func TestAuth(t *testing.T) {
 	mockError := errors.New("error")
 
 	mockUsername := "mockUsername"
@@ -28,7 +28,8 @@ func TestGetECRAuth(t *testing.T) {
 	testCases := map[string]struct {
 		mockECRClient func(m *mocks.Mockapi)
 
-		wantAuth Auth
+		wantedUsername string
+		wantedPassword string
 		wantErr  error
 	}{
 		"should return wrapped error given error returned from GetAuthorizationToken": {
@@ -47,10 +48,8 @@ func TestGetECRAuth(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantAuth: Auth{
-				Username: mockUsername,
-				Password: mockPassword,
-			},
+			wantedUsername: mockUsername,
+			wantedPassword: mockPassword,
 		},
 	}
 
@@ -67,16 +66,17 @@ func TestGetECRAuth(t *testing.T) {
 				mockECRAPI,
 			}
 
-			gotAuth, gotErr := client.GetECRAuth()
+			gotUsername, gotPassword, gotErr := client.Auth()
 
-			require.Equal(t, tc.wantAuth, gotAuth)
+			require.Equal(t, tc.wantedUsername, gotUsername)
+			require.Equal(t, tc.wantedPassword, gotPassword)
 			require.Equal(t, tc.wantErr, gotErr)
 		})
 
 	}
 }
 
-func TestGetRepository(t *testing.T) {
+func TestRepositoryURI(t *testing.T) {
 	mockError := errors.New("error")
 
 	mockRepoName := "mockRepoName"
@@ -133,7 +133,7 @@ func TestGetRepository(t *testing.T) {
 				mockECRAPI,
 			}
 
-			gotURI, gotErr := client.GetRepository(mockRepoName)
+			gotURI, gotErr := client.RepositoryURI(mockRepoName)
 
 			require.Equal(t, tc.wantURI, gotURI)
 			require.Equal(t, tc.wantErr, gotErr)

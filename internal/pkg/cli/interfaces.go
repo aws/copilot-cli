@@ -5,12 +5,12 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -135,9 +135,17 @@ type secretDeleter interface {
 	DeleteSecret(secretName string) error
 }
 
-type ecrService interface {
-	GetRepository(name string) (string, error)
-	GetECRAuth() (ecr.Auth, error)
+type imageBuilderPusher interface {
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error
+}
+
+type repositoryURIGetter interface {
+	URI() string
+}
+
+type repositoryService interface {
+	repositoryURIGetter
+	imageBuilderPusher
 }
 
 type cwlogService interface {
@@ -152,12 +160,6 @@ type templater interface {
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
-}
-
-type dockerService interface {
-	Build(uri, path, imageTag string, additionalTags ...string) error
-	Login(uri, username, password string) error
-	Push(uri, imageTag string, additionalTags ...string) error
 }
 
 type runner interface {
@@ -284,6 +286,11 @@ type appDeployer interface {
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
+}
+
+
+type taskDeployer interface {
+	DeployTask(input *deploy.CreateTaskResourcesInput) error
 }
 
 type deployer interface {
