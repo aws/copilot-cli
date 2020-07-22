@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	envOptionNone = "None (run in default VPC)"
+	envOptionNone         = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
-	imageTagLatest = "latest"
+	imageTagLatest        = "latest"
 )
 
 const (
@@ -78,9 +78,9 @@ type runTaskOpts struct {
 	runTaskVars
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	store  store
-	sel    appEnvSelector
+	fs      afero.Fs
+	store   store
+	sel     appEnvSelector
 	spinner progress
 
 	deployer taskDeployer
@@ -111,6 +111,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		deployer: cloudformation.New(sess),
 	}
+
 	opts.configureRuntimeOpts = func() error {
 		if err := opts.configureRepository(provider); err != nil {
 			return err
@@ -343,7 +344,7 @@ func (o *runTaskOpts) askEnvName() error {
 	}
 
 	// NOTE: if we are not in any workspace and app flag is not specified, use the "None" environment.
-	if  o.AppName() == "" || o.subnets != nil {
+	if o.AppName() == "" || o.subnets != nil {
 		return nil
 	}
 
