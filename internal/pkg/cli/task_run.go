@@ -89,7 +89,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		sel:     selector.NewSelect(vars.prompt, store),
 		spinner: termprogress.NewSpinner(),
 
-		resourceDeployer: cloudformation.New(sess),
+		deployer: cloudformation.New(sess),
 	}
 	return &opts, nil
 }
@@ -177,7 +177,7 @@ func (o *runTaskOpts) deployTaskResources() error {
 	o.spinner.Start(fmt.Sprintf("Deploying resources for task %s", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
 		o.spinner.Stop(log.Serrorln("Failed to deploy task resources."))
-		return fmt.Errorf("failed to deploy resources for task %s: %w", o.groupName, err)
+		return fmt.Errorf("deploy resources for task %s: %w", o.groupName, err)
 	}
 	o.spinner.Stop(log.Ssuccessln("Successfully deployed task resources."))
 	return nil
@@ -187,14 +187,14 @@ func (o *runTaskOpts) updateTaskResources() error {
 	o.spinner.Start(fmt.Sprintf("Updating image to task %s", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
 		o.spinner.Stop(log.Serrorln("Failed to update task resources."))
-		return fmt.Errorf("failed to update resources for task %s: %w", o.groupName, err)
+		return fmt.Errorf("update resources for task %s: %w", o.groupName, err)
 	}
 	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
 	return nil
 }
 
 func (o *runTaskOpts) deploy() error {
-	return o.resourceDeployer.DeployTask(&deploy.CreateTaskResourcesInput{
+	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
 		Name:     o.groupName,
 		CPU:      o.cpu,
 		Memory:   o.memory,

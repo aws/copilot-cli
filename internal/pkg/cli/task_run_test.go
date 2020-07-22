@@ -462,8 +462,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				runTaskVars: runTaskVars{
 					image: tc.inImage,
 				},
-				spinner: &mockSpinner{},
-				resourceDeployer: mockDeployer,
+				spinner:  &mockSpinner{},
+				deployer: mockDeployer,
 			}
 
 			err := opts.Execute()
@@ -475,3 +475,4 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		})
 	}
 }
+
