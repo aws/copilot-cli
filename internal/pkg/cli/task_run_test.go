@@ -432,6 +432,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 func TestTaskRunOpts_Execute(t *testing.T) {
 	var mockDeployer *mocks.MocktaskDeployer
+	const inGroupName = "my-task"
+
 	testCases := map[string]struct {
 		inImage          string
 
@@ -439,14 +441,42 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
+		"error deploying resources": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Return(errors.New("error deploying"))
+			},
+			wantedError: fmt.Errorf("deploy resources for task %s: %w", inGroupName, errors.New("error deploying")),
+		},
+		"error updating resources": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Return(nil)
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					// TODO: use image.URI() from mockRepository
+				}).Times(1).Return(errors.New("error updating"))
+			},
+			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
+		},
 		"update image to task resource if image is not provided": {
 			setupMocks: func(ctrl *gomock.Controller) {
 				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
 				// TODO: mock repository
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
 					// TODO: use image.URI() from mockRepository
 				}).Times(1).Return(nil)
 			},
@@ -461,6 +491,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
 					image: tc.inImage,
+					groupName: inGroupName,
 				},
 				spinner:  &mockSpinner{},
 				deployer: mockDeployer,
