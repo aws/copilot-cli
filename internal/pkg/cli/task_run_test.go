@@ -450,7 +450,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Image: "",
 				}).Return(errors.New("error deploying"))
 			},
-			wantedError: fmt.Errorf("deploy resources for task %s: %w", inGroupName, errors.New("error deploying")),
+			wantedError: fmt.Errorf("provision resources for task %s: %w", inGroupName, errors.New("error deploying")),
 		},
 		"error updating resources": {
 			setupMocks: func(ctrl *gomock.Controller) {
