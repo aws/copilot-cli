@@ -79,6 +79,73 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	return s.String(), nil
 }
 
+type backendSvcStackInfo struct {
+	config           *ServiceConfig
+	serviceDiscovery serviceDiscovery
+	envVars          map[string]string
+	err              error
+}
+
+func (d *BackendServiceDescriber) describeStackInfo(env string) backendSvcStackInfo {
+	svcParams, err := d.svcDescriber[env].Params()
+	if err != nil {
+		return backendSvcStackInfo{err: fmt.Errorf("retrieve service deployment configuration: %w", err)}
+	}
+	config := &ServiceConfig{
+		Environment: env,
+		Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
+		Tasks:       svcParams[stack.ServiceTaskCountParamKey],
+		CPU:         svcParams[stack.ServiceTaskCPUParamKey],
+		Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
+	}
+	sd := serviceDiscovery{
+		Service: d.svc,
+		Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
+		App:     d.app,
+		Env:     env,
+	}
+	backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+	if err != nil {
+		return backendSvcStackInfo{err: fmt.Errorf("retrieve environment variables: %w", err)}
+	}
+	return backendSvcStackInfo{
+		config:           config,
+		envVars:          backendSvcEnvVars,
+		serviceDiscovery: sd,
+	}
+}
+
+func (d *BackendServiceDescriber) svcStackResources(envs []string) (map[string][]*CfnResource, error) {
+	resources := make(map[string][]*CfnResource)
+	if d.enableResources {
+		resourceCh := make(chan svcStackResources, len(envs))
+		defer close(resourceCh)
+		for _, env := range envs {
+			go func(env string) {
+				err := d.initServiceDescriber(env)
+				if err != nil {
+					resourceCh <- svcStackResources{err: err}
+					return
+				}
+				stackResources, err := d.svcDescriber[env].ServiceStackResources()
+				if err != nil {
+					resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
+					return
+				}
+				resourceCh <- svcStackResources{resource: stackResources}
+			}(env)
+		}
+		for _, env := range envs {
+			res := <-resourceCh
+			if res.err != nil {
+				return nil, res.err
+			}
+			resources[env] = flattenResources(res.resource)
+		}
+	}
+	return resources, nil
+}
+
 // Describe returns info of a backend service.
 func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)
@@ -86,52 +153,36 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
+	infoCh := make(chan backendSvcStackInfo, len(environments))
+	defer close(infoCh)
+	for _, env := range environments {
+		go func(env string) {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				infoCh <- backendSvcStackInfo{err: err}
+				return
+			}
+			infoCh <- d.describeStackInfo(env)
+		}(env)
+	}
 	var configs []*ServiceConfig
-	var services []*ServiceDiscovery
+	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initServiceDescriber(env)
-		if err != nil {
-			return nil, err
+		info := <-infoCh
+		if info.err != nil {
+			return nil, info.err
 		}
-		svcParams, err := d.svcDescriber[env].Params()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve service deployment configuration: %w", err)
-		}
-		services = appendServiceDiscovery(services, serviceDiscovery{
-			Service: d.svc,
-			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-			App:     d.app,
-		}, env)
-		configs = append(configs, &ServiceConfig{
-			Environment: env,
-			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
-			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
-			Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
-		})
-		backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve environment variables: %w", err)
-		}
-		envVars = append(envVars, flattenEnvVars(env, backendSvcEnvVars)...)
+		configs = append(configs, info.config)
+		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, env)
+		envVars = append(envVars, flattenEnvVars(env, info.envVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
-	resources := make(map[string][]*CfnResource)
-	if d.enableResources {
-		for _, env := range environments {
-			err := d.initServiceDescriber(env)
-			if err != nil {
-				return nil, err
-			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve service resources: %w", err)
-			}
-			resources[env] = flattenResources(stackResources)
-		}
+	resources, err := d.svcStackResources(environments)
+	if err != nil {
+		return nil, err
 	}
 
 	return &backendSvcDesc{
@@ -139,7 +190,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Type:             manifest.BackendServiceType,
 		App:              d.app,
 		Configurations:   configs,
-		ServiceDiscovery: services,
+		ServiceDiscovery: serviceDiscoveries,
 		Variables:        envVars,
 		Resources:        resources,
 	}, nil

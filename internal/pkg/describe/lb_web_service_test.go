@@ -147,6 +147,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 					"test": mockSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
+				svcParams:            make(map[string]map[string]string),
 			}
 
 			// WHEN
@@ -246,52 +247,50 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 		"success": {
 			shouldOutputResources: true,
 			setupMocks: func(m webSvcDescriberMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
+				m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil)
 
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey:      testSvcPath,
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "1",
-						stack.ServiceTaskCPUParamKey:            "256",
-						stack.ServiceTaskMemoryParamKey:         "512",
-					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": testEnv,
-						}, nil),
+				m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+				}, nil)
+				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					stack.LBWebServiceRulePathParamKey:      testSvcPath,
+					stack.LBWebServiceContainerPortParamKey: "5000",
+					stack.ServiceTaskCountParamKey:          "1",
+					stack.ServiceTaskCPUParamKey:            "256",
+					stack.ServiceTaskMemoryParamKey:         "512",
+				}, nil)
+				m.svcDescriber.EXPECT().EnvVars().Return(
+					map[string]string{
+						"COPILOT_ENVIRONMENT_NAME": testEnv,
+					}, nil)
 
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
-						stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
-					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey:      prodSvcPath,
-						stack.LBWebServiceContainerPortParamKey: "5000",
-						stack.ServiceTaskCountParamKey:          "2",
-						stack.ServiceTaskCPUParamKey:            "512",
-						stack.ServiceTaskMemoryParamKey:         "1024",
-					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
-						map[string]string{
-							"COPILOT_ENVIRONMENT_NAME": prodEnv,
-						}, nil),
+				m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
+				}, nil)
+				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					stack.LBWebServiceRulePathParamKey:      prodSvcPath,
+					stack.LBWebServiceContainerPortParamKey: "5000",
+					stack.ServiceTaskCountParamKey:          "2",
+					stack.ServiceTaskCPUParamKey:            "512",
+					stack.ServiceTaskMemoryParamKey:         "1024",
+				}, nil)
+				m.svcDescriber.EXPECT().EnvVars().Return(
+					map[string]string{
+						"COPILOT_ENVIRONMENT_NAME": prodEnv,
+					}, nil)
 
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
-						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
-							PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
-						},
-					}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
-						{
-							ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
-							PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
-						},
-					}, nil),
-				)
+				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					{
+						ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
+						PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
+					},
+				}, nil)
+				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+					{
+						ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
+						PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
+					},
+				}, nil)
 			},
 			wantedWebSvc: &webSvcDesc{
 				Service: testSvc,
@@ -383,6 +382,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 					"prod": mockSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
+				svcParams:            make(map[string]map[string]string),
 			}
 
 			// WHEN

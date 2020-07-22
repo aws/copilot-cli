@@ -47,6 +47,7 @@ func (uri *WebServiceURI) String() string {
 
 type serviceDiscovery struct {
 	Service string
+	Env     string
 	App     string
 	Port    string
 }
@@ -72,8 +73,8 @@ type WebServiceDescriber struct {
 	svcDescriber         map[string]svcDescriber
 	initServiceDescriber func(string) error
 
-	// cache only last svc paramerters
-	svcParams map[string]string
+	// cache svc paramerters
+	svcParams map[string]map[string]string
 }
 
 // NewWebServiceConfig contains fields that initiates WebServiceDescriber struct.
@@ -91,6 +92,7 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
 		svcDescriber:    make(map[string]svcDescriber),
+		svcParams:       make(map[string]map[string]string),
 	}
 	describer.initServiceDescriber = func(env string) error {
 		if _, ok := describer.svcDescriber[env]; ok {
@@ -111,6 +113,84 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 	return describer, nil
 }
 
+type lbSvcStackInfo struct {
+	route            *WebServiceRoute
+	config           *ServiceConfig
+	serviceDiscovery serviceDiscovery
+	envVars          map[string]string
+	err              error
+}
+
+type svcStackResources struct {
+	resource []*cloudformation.StackResource
+	err      error
+}
+
+func (d *WebServiceDescriber) describeStackInfo(env string) lbSvcStackInfo {
+	webServiceURI, err := d.URI(env)
+	if err != nil {
+		return lbSvcStackInfo{err: fmt.Errorf("retrieve service URI: %w", err)}
+	}
+	route := &WebServiceRoute{
+		Environment: env,
+		URL:         webServiceURI,
+	}
+	config := &ServiceConfig{
+		Environment: env,
+		Port:        d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
+		Tasks:       d.svcParams[env][stack.ServiceTaskCountParamKey],
+		CPU:         d.svcParams[env][stack.ServiceTaskCPUParamKey],
+		Memory:      d.svcParams[env][stack.ServiceTaskMemoryParamKey],
+	}
+	sd := serviceDiscovery{
+		Service: d.svc,
+		Port:    d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
+		App:     d.app,
+		Env:     env,
+	}
+	webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+	if err != nil {
+		return lbSvcStackInfo{err: fmt.Errorf("retrieve environment variables: %w", err)}
+	}
+	return lbSvcStackInfo{
+		route:            route,
+		config:           config,
+		envVars:          webSvcEnvVars,
+		serviceDiscovery: sd,
+	}
+}
+
+func (d *WebServiceDescriber) svcStackResources(envs []string) (map[string][]*CfnResource, error) {
+	resources := make(map[string][]*CfnResource)
+	if d.enableResources {
+		resourceCh := make(chan svcStackResources, len(envs))
+		defer close(resourceCh)
+		for _, env := range envs {
+			go func(env string) {
+				err := d.initServiceDescriber(env)
+				if err != nil {
+					resourceCh <- svcStackResources{err: err}
+					return
+				}
+				stackResources, err := d.svcDescriber[env].ServiceStackResources()
+				if err != nil {
+					resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
+					return
+				}
+				resourceCh <- svcStackResources{resource: stackResources}
+			}(env)
+		}
+		for _, env := range envs {
+			res := <-resourceCh
+			if res.err != nil {
+				return nil, res.err
+			}
+			resources[env] = flattenResources(res.resource)
+		}
+	}
+	return resources, nil
+}
+
 // Describe returns info of a web service.
 func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	environments, err := d.store.ListEnvironmentsDeployedTo(d.app, d.svc)
@@ -118,57 +198,38 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
+	infoCh := make(chan lbSvcStackInfo, len(environments))
+	defer close(infoCh)
+	for _, env := range environments {
+		go func(env string) {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				infoCh <- lbSvcStackInfo{err: err}
+				return
+			}
+			infoCh <- d.describeStackInfo(env)
+		}(env)
+	}
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
 	for _, env := range environments {
-		err := d.initServiceDescriber(env)
-		if err != nil {
-			return nil, err
+		info := <-infoCh
+		if info.err != nil {
+			return nil, info.err
 		}
-		webServiceURI, err := d.URI(env)
-		if err != nil {
-			return nil, fmt.Errorf("retrieve service URI: %w", err)
-		}
-		routes = append(routes, &WebServiceRoute{
-			Environment: env,
-			URL:         webServiceURI,
-		})
-		configs = append(configs, &ServiceConfig{
-			Environment: env,
-			Port:        d.svcParams[stack.LBWebServiceContainerPortParamKey],
-			Tasks:       d.svcParams[stack.ServiceTaskCountParamKey],
-			CPU:         d.svcParams[stack.ServiceTaskCPUParamKey],
-			Memory:      d.svcParams[stack.ServiceTaskMemoryParamKey],
-		})
-		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
-			Service: d.svc,
-			Port:    d.svcParams[stack.LBWebServiceContainerPortParamKey],
-			App:     d.app,
-		}, env)
-		webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve environment variables: %w", err)
-		}
-		envVars = append(envVars, flattenEnvVars(env, webSvcEnvVars)...)
+		routes = append(routes, info.route)
+		configs = append(configs, info.config)
+		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, env)
+		envVars = append(envVars, flattenEnvVars(env, info.envVars)...)
 	}
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
-	resources := make(map[string][]*CfnResource)
-	if d.enableResources {
-		for _, env := range environments {
-			err := d.initServiceDescriber(env)
-			if err != nil {
-				return nil, err
-			}
-			stackResources, err := d.svcDescriber[env].ServiceStackResources()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve service resources: %w", err)
-			}
-			resources[env] = flattenResources(stackResources)
-		}
+	resources, err := d.svcStackResources(environments)
+	if err != nil {
+		return nil, err
 	}
 
 	return &webSvcDesc{
@@ -198,7 +259,7 @@ func (d *WebServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get parameters for service %s: %w", d.svc, err)
 	}
-	d.svcParams = svcParams
+	d.svcParams[envName] = svcParams
 
 	uri := &WebServiceURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
