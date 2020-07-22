@@ -449,6 +449,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error deploying resources": {
 			setupMocks: func(ctrl *gomock.Controller) {
 				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+				mockRepo = mocks.NewMockrepositoryService(ctrl)
 
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
@@ -460,14 +461,17 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error updating resources": {
 			setupMocks: func(ctrl *gomock.Controller) {
 				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+				mockRepo = mocks.NewMockrepositoryService(ctrl)
 
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
 				}).Return(nil)
+				mockRepo.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				mockRepo.EXPECT().URI().Return(mockRepoURI)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					// TODO: use image.URI() from mockRepository
+					Image: mockRepoURI,
 				}).Times(1).Return(errors.New("error updating"))
 			},
 			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
