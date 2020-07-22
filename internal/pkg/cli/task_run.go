@@ -70,7 +70,7 @@ type runTaskOpts struct {
 	sel    appEnvSelector
 	spinner progress
 
-	resourceDeployer taskDeployer
+	deployer taskDeployer
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
