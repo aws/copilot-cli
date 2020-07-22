@@ -432,10 +432,15 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 func TestTaskRunOpts_Execute(t *testing.T) {
 	var mockDeployer *mocks.MocktaskDeployer
+	var mockRepo *mocks.MockrepositoryService
+
 	const inGroupName = "my-task"
+	mockRepoURI := "uri/repo"
+	tag := "tag"
 
 	testCases := map[string]struct {
-		inImage          string
+		inImage string
+		inTag   string
 
 		setupMocks func(ctrl *gomock.Controller)
 
@@ -457,7 +462,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
 
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+					Name:  inGroupName,
 					Image: "",
 				}).Return(nil)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
@@ -467,17 +472,41 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
 		},
+		"use default dockerfile path if not provided": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+				mockRepo = mocks.NewMockrepositoryService(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				mockRepo.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, gomock.Any())
+				mockRepo.EXPECT().URI().AnyTimes()
+			},
+		},
+		"append 'latest' to image tag": {
+			inTag: tag,
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+				mockRepo = mocks.NewMockrepositoryService(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				mockRepo.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
+				mockRepo.EXPECT().URI().AnyTimes()
+			},
+		},
 		"update image to task resource if image is not provided": {
 			setupMocks: func(ctrl *gomock.Controller) {
 				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
-				// TODO: mock repository
+				mockRepo = mocks.NewMockrepositoryService(ctrl)
+
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
+				mockRepo.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, imageTagLatest)
+				mockRepo.EXPECT().URI().Return(mockRepoURI)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					// TODO: use image.URI() from mockRepository
+					Image: mockRepoURI,
 				}).Times(1).Return(nil)
 			},
 		},
@@ -490,11 +519,16 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
-					image: tc.inImage,
 					groupName: inGroupName,
+					image: tc.inImage,
+					imageTag: tc.inTag,
 				},
 				spinner:  &mockSpinner{},
 				deployer: mockDeployer,
+			}
+			opts.configureRuntimeOpts = func() error {
+				opts.runtimeOpts.repository = mockRepo
+				return nil
 			}
 
 			err := opts.Execute()
