@@ -3563,71 +3563,23 @@ func (mr *MockappEnvSelectorMockRecorder) Application(prompt, help interface{}) 
 }
 
 // Environment mocks base method
-func (m *MockappEnvSelector) Environment(prompt, help, app string) (string, error) {
+func (m *MockappEnvSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Environment", prompt, help, app)
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Environment", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Environment indicates an expected call of Environment
-func (mr *MockappEnvSelectorMockRecorder) Environment(prompt, help, app interface{}) *gomock.Call {
+func (mr *MockappEnvSelectorMockRecorder) Environment(prompt, help, app interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockappEnvSelector)(nil).Environment), prompt, help, app)
-}
-
-// MockappEnvWithNoneSelector is a mock of appEnvWithNoneSelector interface
-type MockappEnvWithNoneSelector struct {
-	ctrl     *gomock.Controller
-	recorder *MockappEnvWithNoneSelectorMockRecorder
-}
-
-// MockappEnvWithNoneSelectorMockRecorder is the mock recorder for MockappEnvWithNoneSelector
-type MockappEnvWithNoneSelectorMockRecorder struct {
-	mock *MockappEnvWithNoneSelector
-}
-
-// NewMockappEnvWithNoneSelector creates a new mock instance
-func NewMockappEnvWithNoneSelector(ctrl *gomock.Controller) *MockappEnvWithNoneSelector {
-	mock := &MockappEnvWithNoneSelector{ctrl: ctrl}
-	mock.recorder = &MockappEnvWithNoneSelectorMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockappEnvWithNoneSelector) EXPECT() *MockappEnvWithNoneSelectorMockRecorder {
-	return m.recorder
-}
-
-// Application mocks base method
-func (m *MockappEnvWithNoneSelector) Application(prompt, help string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Application indicates an expected call of Application
-func (mr *MockappEnvWithNoneSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).Application), prompt, help)
-}
-
-// EnvironmentWithNone mocks base method
-func (m *MockappEnvWithNoneSelector) EnvironmentWithNone(prompt, help, app string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentWithNone", prompt, help, app)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentWithNone indicates an expected call of EnvironmentWithNone
-func (mr *MockappEnvWithNoneSelectorMockRecorder) EnvironmentWithNone(prompt, help, app interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentWithNone", reflect.TypeOf((*MockappEnvWithNoneSelector)(nil).EnvironmentWithNone), prompt, help, app)
+	varargs := append([]interface{}{prompt, help, app}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockappEnvSelector)(nil).Environment), varargs...)
 }
 
 // MockconfigSelector is a mock of configSelector interface
@@ -3669,18 +3621,23 @@ func (mr *MockconfigSelectorMockRecorder) Application(prompt, help interface{}) 
 }
 
 // Environment mocks base method
-func (m *MockconfigSelector) Environment(prompt, help, app string) (string, error) {
+func (m *MockconfigSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Environment", prompt, help, app)
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Environment", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Environment indicates an expected call of Environment
-func (mr *MockconfigSelectorMockRecorder) Environment(prompt, help, app interface{}) *gomock.Call {
+func (mr *MockconfigSelectorMockRecorder) Environment(prompt, help, app interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockconfigSelector)(nil).Environment), prompt, help, app)
+	varargs := append([]interface{}{prompt, help, app}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockconfigSelector)(nil).Environment), varargs...)
 }
 
 // Service mocks base method
@@ -3795,18 +3752,23 @@ func (mr *MockwsSelectorMockRecorder) Application(prompt, help interface{}) *gom
 }
 
 // Environment mocks base method
-func (m *MockwsSelector) Environment(prompt, help, app string) (string, error) {
+func (m *MockwsSelector) Environment(prompt, help, app string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Environment", prompt, help, app)
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Environment", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Environment indicates an expected call of Environment
-func (mr *MockwsSelectorMockRecorder) Environment(prompt, help, app interface{}) *gomock.Call {
+func (mr *MockwsSelectorMockRecorder) Environment(prompt, help, app interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockwsSelector)(nil).Environment), prompt, help, app)
+	varargs := append([]interface{}{prompt, help, app}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockwsSelector)(nil).Environment), varargs...)
 }
 
 // Service mocks base method

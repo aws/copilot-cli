@@ -1,7 +1,7 @@
-## AWS Copilot CLI (preview)
-###### _Develop, Release and Operate Container Apps on AWS._
+## AWS Copilot CLI (preview) ![latest version](https://img.shields.io/github/v/release/aws/copilot-cli) [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/amazon-ecs-cli-v2?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+###### _Develop, Release and Operate Container Apps on AWS._ 
 
-[![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 
 * **Documentation**: [https://aws.github.io/copilot-cli/](https://aws.github.io/copilot-cli/)
 
@@ -40,8 +40,8 @@ We're distributing binaries from our GitHub releases. Instructions for installin
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.1.0/copilot-darwin-v0.1.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.1.0/copilot-linux-v0.1.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-darwin-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-linux-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
 
 </details>
 
