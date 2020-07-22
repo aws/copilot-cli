@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -26,6 +28,12 @@ var defaultOpts = basicOpts{
 	inCPU:    256,
 	inMemory: 512,
 }
+
+// NOTE: mock spinner so that it doesn't create log output when testing Execute
+type mockSpinner struct{}
+func (s *mockSpinner) Start(label string) {}
+func (s *mockSpinner) Stop(label string) {}
+func (s *mockSpinner) Events([]termprogress.TabRow) {}
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -421,3 +429,81 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskRunOpts_Execute(t *testing.T) {
+	var mockDeployer *mocks.MocktaskDeployer
+	const inGroupName = "my-task"
+
+	testCases := map[string]struct {
+		inImage          string
+
+		setupMocks func(ctrl *gomock.Controller)
+
+		wantedError error
+	}{
+		"error deploying resources": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Return(errors.New("error deploying"))
+			},
+			wantedError: fmt.Errorf("provision resources for task %s: %w", inGroupName, errors.New("error deploying")),
+		},
+		"error updating resources": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Return(nil)
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					// TODO: use image.URI() from mockRepository
+				}).Times(1).Return(errors.New("error updating"))
+			},
+			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
+		},
+		"update image to task resource if image is not provided": {
+			setupMocks: func(ctrl *gomock.Controller) {
+				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
+				// TODO: mock repository
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Times(1).Return(nil)
+				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					// TODO: use image.URI() from mockRepository
+				}).Times(1).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			tc.setupMocks(ctrl)
+
+			opts := &runTaskOpts{
+				runTaskVars: runTaskVars{
+					image: tc.inImage,
+					groupName: inGroupName,
+				},
+				spinner:  &mockSpinner{},
+				deployer: mockDeployer,
+			}
+
+			err := opts.Execute()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
