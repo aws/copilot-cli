@@ -225,7 +225,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	// NOTE: repository has to be configured after task resources are deployed
+	// NOTE: repository has to be configured only after task resources are deployed
 	if err := o.configureRuntimeOpts(); err != nil {
 		return err
 	}
