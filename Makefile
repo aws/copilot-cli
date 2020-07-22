@@ -39,16 +39,16 @@ release-docker:
 	@echo "Built binaries under ./local/"
 
 compile-local:
-	go build -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
+	go build -race -ldflags "${LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 compile-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/copilot
+	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -race -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}.exe ./cmd/copilot
 
 compile-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-amd64 ./cmd/copilot
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -race -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION}-amd64 ./cmd/copilot
 
 compile-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -race -ldflags "${LINKER_FLAGS} ${RELEASE_BUILD_LINKER_FLAGS}" -o ${DESTINATION} ./cmd/copilot
 
 packr-build: tools package-custom-resources
 	@echo "Packaging static files" &&\
@@ -101,7 +101,7 @@ run-integ-test:
 	# Also adding count=1 so the test results aren't cached.
 	# This command also targets files with the build integration tag
 	# and runs tests which end in Integration.
-	go test -count=1 -timeout 60m -tags=integration ${PACKAGES}
+	go test -race -count=1 -timeout 60m -tags=integration ${PACKAGES}
 
 .PHONY: e2e
 e2e: build-e2e
