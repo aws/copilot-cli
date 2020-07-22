@@ -6,20 +6,24 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -85,6 +89,7 @@ type runTaskOpts struct {
 
 	// Fields below are configured at runtime.
 	repository repositoryService
+	runner taskRunner
 	configureRuntimeOpts func() error
 }
 
@@ -115,8 +120,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		if err := opts.configureRepository(provider); err != nil {
 			return err
 		}
-		// TODO: configure runner
-		return nil
+		return opts.configureRunner(provider)
 	}
 
 	return &opts, nil
@@ -151,6 +155,52 @@ func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
 	}
 
 	o.repository = repository
+	return nil
+}
+
+func (o *runTaskOpts) configureRunner(provider sessionProvider) error {
+	sess, err := provider.Default()
+	if err != nil {
+		return fmt.Errorf("get default session: %w", err)
+	}
+
+	vpcGetter := ec2.New(sess)
+	ecsService := ecs.New(sess)
+
+	if o.env != "" {
+		o.runner = &task.EnvRunner{
+			Count: o.count,
+			GroupName: o.groupName,
+
+			App: o.AppName(),
+			Env: o.env,
+
+			VPCGetter: vpcGetter,
+			ClusterGetter: resourcegroups.New(sess),
+			Starter: ecsService,
+		}
+	} else if o.subnets != nil {
+		o.runner = &task.NetworkConfigRunner{
+			Count: o.count,
+			GroupName: o.groupName,
+
+			Subnets: o.subnets,
+			SecurityGroups: o.securityGroups,
+
+			ClusterGetter: ecsService,
+			Starter: ecsService,
+		}
+	} else {
+		o.runner = &task.DefaultVPCRunner{
+			Count: o.count,
+			GroupName: o.groupName,
+
+			VPCGetter: vpcGetter,
+			ClusterGetter: ecsService,
+			Starter: ecsService,
+		}
+	}
+
 	return nil
 }
 
@@ -256,8 +306,14 @@ func (o *runTaskOpts) Execute() error {
 }
 
 func (o *runTaskOpts) runTask() ([]string, error) {
-	// TODO: run tasks
-	return nil, nil
+	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running.", o.groupName))
+	taskARNs, err := o.runner.Run()
+	if err != nil {
+		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
+		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
+	}
+	o.spinner.Stop(log.Ssuccessf("Task(s) %s is running.\n", o.groupName))
+	return taskARNs, nil
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {

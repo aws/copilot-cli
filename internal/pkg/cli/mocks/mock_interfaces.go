@@ -2813,6 +2813,44 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), input)
 }
 
+// MocktaskRunner is a mock of taskRunner interface
+type MocktaskRunner struct {
+	ctrl     *gomock.Controller
+	recorder *MocktaskRunnerMockRecorder
+}
+
+// MocktaskRunnerMockRecorder is the mock recorder for MocktaskRunner
+type MocktaskRunnerMockRecorder struct {
+	mock *MocktaskRunner
+}
+
+// NewMocktaskRunner creates a new mock instance
+func NewMocktaskRunner(ctrl *gomock.Controller) *MocktaskRunner {
+	mock := &MocktaskRunner{ctrl: ctrl}
+	mock.recorder = &MocktaskRunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocktaskRunner) EXPECT() *MocktaskRunnerMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method
+func (m *MocktaskRunner) Run() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Run indicates an expected call of Run
+func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
+}
+
 // Mockdeployer is a mock of deployer interface
 type Mockdeployer struct {
 	ctrl     *gomock.Controller
