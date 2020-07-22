@@ -115,6 +115,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		if err := opts.configureRepository(provider); err != nil {
 			return err
 		}
+		// TODO: configure runner
 		return nil
 	}
 
@@ -122,19 +123,34 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 }
 
 func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
-	sess, err := provider.Default()
-	if err != nil {
-		return fmt.Errorf("get default session: %w", err)
+	var registry ecr.ECR
+	if o.env != "" {
+		env, err := o.targetEnv()
+		if err != nil {
+			return err
+		}
+
+		sess, err := provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return fmt.Errorf("get session from role: %w", err)
+		}
+
+		registry = ecr.New(sess)
+	} else {
+		sess, err := provider.Default()
+		if err != nil {
+			return fmt.Errorf("get default session: %w", err)
+		}
+		registry = ecr.New(sess)
 	}
 
 	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-	registry := ecr.New(sess)
-
-	o.runtimeOpts.repository, err = repository.New(repoName, registry)
+	repository, err := repository.New(repoName, registry)
 	if err != nil {
 		return fmt.Errorf("initiate repository: %w", err)
 	}
 
+	o.runtimeOpts.repository = repository
 	return nil
 }
 
@@ -292,8 +308,8 @@ func (o *runTaskOpts) validateAppName() error {
 
 func (o *runTaskOpts) validateEnvName() error {
 	if o.AppName() != "" {
-		if _, err := o.store.GetEnvironment(o.AppName(), o.env); err != nil {
-			return fmt.Errorf("get environment: %w", err)
+		if _, err := o.targetEnv(); err != nil {
+			return err
 		}
 	} else {
 		return errNoAppInWorkspace
@@ -342,6 +358,14 @@ func (o *runTaskOpts) askEnvName() error {
 
 	o.env = env
 	return nil
+}
+
+func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(o.AppName(), o.env)
+	if err != nil {
+		return nil, fmt.Errorf("get environment: %w", err)
+	}
+	return env, nil
 }
 
 // BuildTaskRunCmd build the command for running a new task
