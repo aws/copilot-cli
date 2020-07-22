@@ -174,7 +174,7 @@ func (o *runTaskOpts) Execute() error {
 }
 
 func (o *runTaskOpts) deployTaskResources() error {
-	o.spinner.Start(fmt.Sprintf("Provisioning a ECR repository, a CloudWatch log group and necessary permissions for task %s.", color.HighlightUserInput(o.groupName)))
+	o.spinner.Start(fmt.Sprintf("Provisioning an ECR repository, a CloudWatch log group and necessary permissions for task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
 		o.spinner.Stop(log.Serrorln("Failed to provision task resources."))
 		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
