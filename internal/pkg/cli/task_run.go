@@ -343,7 +343,7 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	// NOTE: if we are not in any workspace and app flag is not specified, use the "None" environment.
+	// NOTE: if the subnets are not provided, we are not in any workspace and app flag is not specified, use the "None" environment.
 	if o.AppName() == "" || o.subnets != nil {
 		return nil
 	}
