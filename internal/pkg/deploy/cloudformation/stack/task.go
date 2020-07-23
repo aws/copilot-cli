@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -100,7 +99,7 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 func (t *taskStackConfig) Tags() []*cloudformation.Tag {
 	appEnvTags := make(map[string]string)
 
-	if t.Env != config.EnvNameNone {
+	if t.Env != "" {
 		appEnvTags[deploy.AppTagKey] = t.App
 		appEnvTags[deploy.EnvTagKey] = t.Env
 	}

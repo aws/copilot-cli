@@ -233,6 +233,24 @@ func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
 	return taskARNs, nil
 }
 
+// DescribeTasks returns the tasks with the taskARNs in the cluster.
+func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) {
+	resp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
+		Cluster: aws.String(cluster),
+		Tasks: aws.StringSlice(taskARNs),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe tasks: %w", err)
+	}
+
+	tasks := make([]*Task, len(resp.Tasks))
+	for idx, task := range resp.Tasks {
+		t := Task(*task)
+		tasks[idx] = &t
+	}
+	return tasks, nil
+}
+
 // TaskStatus returns the status of the running task.
 func (t *Task) TaskStatus() (*TaskStatus, error) {
 	taskID, err := t.taskID(aws.StringValue(t.TaskArn))

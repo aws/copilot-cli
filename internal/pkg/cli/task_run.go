@@ -6,8 +6,13 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -15,16 +20,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	envOptionNone = "None (run in default VPC)"
+)
+
 var (
 	errNumNotPositive = errors.New("number of tasks must be positive")
 	errCpuNotPositive = errors.New("CPU units must be positive")
 	errMemNotPositive = errors.New("memory must be positive")
+)
 
+var (
 	fmtTaskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
 
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. "+
-		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(config.EnvNameNone))
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envOptionNone))
 	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
@@ -46,8 +57,8 @@ type runTaskVars struct {
 	securityGroups []string
 	env            string
 
-	envVars  map[string]string
-	command  string
+	envVars map[string]string
+	command string
 }
 
 type runTaskOpts struct {
@@ -56,7 +67,10 @@ type runTaskOpts struct {
 	// Interfaces to interact with dependencies.
 	fs     afero.Fs
 	store  store
-	sel    appEnvWithNoneSelector
+	sel    appEnvSelector
+	spinner progress
+
+	deployer taskDeployer
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -65,13 +79,19 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	return &runTaskOpts{
+	sess, err := session.NewProvider().Default()
+
+	opts := runTaskOpts{
 		runTaskVars: vars,
 
-		fs:    &afero.Afero{Fs: afero.NewOsFs()},
-		store: store,
-		sel:   selector.NewSelect(vars.prompt, store),
-	}, nil
+		fs:      &afero.Afero{Fs: afero.NewOsFs()},
+		store:   store,
+		sel:     selector.NewSelect(vars.prompt, store),
+		spinner: termprogress.NewSpinner(),
+
+		deployer: cloudformation.New(sess),
+	}
+	return &opts, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -134,7 +154,59 @@ func (o *runTaskOpts) Ask() error {
 	return nil
 }
 
+// Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if err := o.deployTaskResources(); err != nil {
+		return err
+	}
+	// NOTE: if image is not provided, then we build the image and push to ECR repo
+	if o.image == "" {
+		if err := o.buildAndPushImage(); err != nil {
+			return err
+		}
+
+		if err := o.updateTaskResources(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *runTaskOpts) deployTaskResources() error {
+	o.spinner.Start(fmt.Sprintf("Provisioning an ECR repository, a CloudWatch log group and necessary permissions for task %s.", color.HighlightUserInput(o.groupName)))
+	if err := o.deploy(); err != nil {
+		o.spinner.Stop(log.Serrorln("Failed to provision task resources."))
+		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
+	}
+	o.spinner.Stop(log.Ssuccessln("Successfully provisioned task resources."))
+	return nil
+}
+
+func (o *runTaskOpts) updateTaskResources() error {
+	o.spinner.Start(fmt.Sprintf("Updating image to task %s.", color.HighlightUserInput(o.groupName)))
+	if err := o.deploy(); err != nil {
+		o.spinner.Stop(log.Serrorln("Failed to update task resources."))
+		return fmt.Errorf("update resources for task %s: %w", o.groupName, err)
+	}
+	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
+	return nil
+}
+
+func (o *runTaskOpts) deploy() error {
+	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
+		Name:     o.groupName,
+		CPU:      o.cpu,
+		Memory:   o.memory,
+		Image:    o.image,
+		TaskRole: o.taskRole,
+		Command:  o.command,
+		EnvVars:  o.envVars,
+	})
+}
+
+func (o *runTaskOpts) buildAndPushImage() error {
+	// TODO: build and push the image
 	return nil
 }
 
@@ -181,15 +253,20 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	if o.AppName() == "" {
-		o.env = config.EnvNameNone
+	// NOTE: if we are not in any workspace and app flag is not specified, use the "None" environment.
+	if  o.AppName() == "" {
 		return nil
 	}
 
-	env, err := o.sel.EnvironmentWithNone(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName())
+	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
+
+	if env == envOptionNone {
+		return nil
+	}
+
 	o.env = env
 	return nil
 }
