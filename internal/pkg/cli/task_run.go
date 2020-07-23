@@ -31,6 +31,7 @@ const (
 
 const (
 	fmtRepoName = "copilot-%s"
+	fmtImageURI = "%s:%s"
 )
 
 var (
@@ -70,10 +71,6 @@ type runTaskVars struct {
 	command string
 }
 
-type runtimeOpts struct {
-	repository repositoryService
-}
-
 type runTaskOpts struct {
 	runTaskVars
 
@@ -85,7 +82,8 @@ type runTaskOpts struct {
 
 	deployer taskDeployer
 
-	runtimeOpts
+	// Fields below are configured at runtime.
+	repository repositoryService
 	configureRuntimeOpts func() error
 }
 
@@ -124,7 +122,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 }
 
 func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
-	var registry ecr.ECR
+	var registry repository.Registry
 	if o.env != "" {
 		env, err := o.targetEnv()
 		if err != nil {
@@ -133,7 +131,7 @@ func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
 
 		sess, err := provider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
-			return fmt.Errorf("get session from role: %w", err)
+			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 
 		registry = ecr.New(sess)
@@ -148,10 +146,10 @@ func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
 	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
 	repository, err := repository.New(repoName, registry)
 	if err != nil {
-		return fmt.Errorf("initiate repository: %w", err)
+		return fmt.Errorf("initiate repository %s: %w", repoName, err)
 	}
 
-	o.runtimeOpts.repository = repository
+	o.repository = repository
 	return nil
 }
 
@@ -236,7 +234,12 @@ func (o *runTaskOpts) Execute() error {
 			return err
 		}
 
-		o.image = o.repository.URI()
+		tag := imageTagLatest
+		if o.imageTag != "" {
+			tag = o.imageTag
+		}
+		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
+
 
 		if err := o.updateTaskResources(); err != nil {
 			return err
@@ -257,9 +260,9 @@ func (o *runTaskOpts) runTask() ([]string, error) {
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {
-	var additionalTags []string = nil
+	var additionalTags []string
 	if o.imageTag != "" {
-		additionalTags = []string{o.imageTag}
+		additionalTags = append(additionalTags, o.imageTag)
 	}
 
 	if err := o.repository.BuildAndPush(docker.New(), o.dockerfilePath, imageTagLatest, additionalTags...); err != nil {
@@ -364,7 +367,7 @@ func (o *runTaskOpts) askEnvName() error {
 func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
 	env, err := o.store.GetEnvironment(o.AppName(), o.env)
 	if err != nil {
-		return nil, fmt.Errorf("get environment: %w", err)
+		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
 	}
 	return env, nil
 }

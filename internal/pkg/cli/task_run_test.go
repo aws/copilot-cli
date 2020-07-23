@@ -471,7 +471,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				mockRepo.EXPECT().URI().Return(mockRepoURI)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					Image: mockRepoURI,
+					Image: fmt.Sprintf(fmtImageURI, mockRepoURI, imageTagLatest),
 				}).Times(1).Return(errors.New("error updating"))
 			},
 			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
@@ -510,7 +510,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				mockRepo.EXPECT().URI().Return(mockRepoURI)
 				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					Image: mockRepoURI,
+					Image: fmt.Sprintf(fmtImageURI, mockRepoURI, imageTagLatest),
 				}).Times(1).Return(nil)
 			},
 		},
@@ -531,7 +531,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				deployer: mockDeployer,
 			}
 			opts.configureRuntimeOpts = func() error {
-				opts.runtimeOpts.repository = mockRepo
+				opts.repository = mockRepo
 				return nil
 			}
 
