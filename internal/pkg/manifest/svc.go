@@ -5,6 +5,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -25,6 +26,8 @@ const (
 	defaultSidecarPort    = "80"
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 )
+
+var errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
 
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
@@ -101,7 +104,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	if err := unmarshal(&b.BuildString); err != nil {
-		return err
+		return errUnmarshalBuildOpts
 	}
 	return nil
 }

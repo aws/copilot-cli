@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -232,8 +231,9 @@ func TestBuildArgsUnmarshalYAML(t *testing.T) {
 		},
 		"Error if unmarshalable": {
 			inContent: []byte(`build:
-  badfield: OH NOES`),
-			wantedError: fmt.Errorf("some error"),
+  badfield: OH NOES
+  otherbadfield: DOUBLE BAD`),
+			wantedError: errUnmarshalBuildOpts,
 		},
 	}
 	for name, tc := range testCases {
