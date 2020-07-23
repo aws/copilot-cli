@@ -9,6 +9,10 @@
     "postcss-cli": "^7.1.1"
   },
   "devDependencies": {},
-  "author": "",
-  "license": "ISC"
+  "author": {
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com",
+    "organization": true
+  },
+  "license": "Apache-2.0"
 }
