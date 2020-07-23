@@ -291,11 +291,12 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return fmt.Errorf("get ECR repository URI: %w", err)
 	}
 
-	dockerBuildInput, err := o.getDockerfile()
+	dockerBuildInput, err := o.getBuildArgs()
 	if err != nil {
 		return err
 	}
 
+	// Assemble other parameters for build input.
 	dockerBuildInput.URI = uri
 	dockerBuildInput.ImageTag = o.ImageTag
 	if err := o.docker.Build(*dockerBuildInput); err != nil {
@@ -313,11 +314,9 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 	return o.docker.Push(uri, o.ImageTag)
 }
 
-func (o *deploySvcOpts) getDockerfile() (*docker.BuildArguments, error) {
-	type dfContext interface {
-		DockerfileContext() string
-		DockerfilePath() string
-		DockerArgs() map[string]string
+func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
+	type dfArgs interface {
+		Build(rootDirectory string) *docker.BuildArguments
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
@@ -328,9 +327,9 @@ func (o *deploySvcOpts) getDockerfile() (*docker.BuildArguments, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
 	}
-	mf, ok := svc.(dfContext)
+	mf, ok := svc.(dfArgs)
 	if !ok {
-		return nil, fmt.Errorf("service %s does not have required methods DockerArgs, DockerfilePath, and DockerfileContext", o.Name)
+		return nil, fmt.Errorf("service %s does not have required method Build()", o.Name)
 	}
 	copilotDir, err := o.ws.CopilotDirPath()
 	if err != nil {
@@ -338,27 +337,7 @@ func (o *deploySvcOpts) getDockerfile() (*docker.BuildArguments, error) {
 	}
 	wsRoot := filepath.Dir(copilotDir)
 
-	dfPath := filepath.Join(wsRoot, mf.DockerfilePath())
-
-	dfArgs := mf.DockerArgs()
-
-	ctx := mf.DockerfileContext()
-	// Nonempty context field means we should join with the ws root and return that
-	if ctx != "" {
-		return &docker.BuildArguments{
-			Context:    filepath.Join(wsRoot, mf.DockerfileContext()),
-			Dockerfile: dfPath,
-			Args:       dfArgs,
-		}, nil
-	}
-	// Default to directory of dockerfile.
-
-	dfDir := filepath.Dir(dfPath)
-	return &docker.BuildArguments{
-		Context:    dfDir,
-		Dockerfile: dfPath,
-		Args:       dfArgs,
-	}, nil
+	return mf.Build(wsRoot), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

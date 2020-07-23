@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 )
@@ -27,7 +28,10 @@ const (
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 )
 
-var errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
+var (
+	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
+	errNoDockerfile       = errors.New("must specify a Dockerfile path")
+)
 
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
@@ -46,9 +50,27 @@ type ServiceImage struct {
 	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
 }
 
-// Dockerfile returns the path to the service's Dockerfile, defaulting to
-// the filename Dockerfile if not otherwise specified.
-func (s *ServiceImage) Dockerfile() string {
+// BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
+func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments {
+	df := filepath.Join(rootDirectory, s.dockerfile())
+	ctx := s.context()
+
+	// Nonempty context field means we should join with the ws root. Otherwise, we use the directory of the dockerfile.
+	if ctx != "" {
+		ctx = filepath.Join(rootDirectory, ctx)
+	} else {
+		ctx = filepath.Dir(df)
+	}
+	return &docker.BuildArguments{
+		Dockerfile: df,
+		Context:    ctx,
+		Args:       s.args(),
+	}
+}
+
+// dockerfile returns the path to the service's Dockerfile. If no dockerfile is specified,
+// returns "".
+func (s *ServiceImage) dockerfile() string {
 	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
 	// use "Context/Dockerfile", then "BuildString", then "Dockerfile"
 	if s.Build.BuildArgs.Dockerfile != nil {
@@ -58,25 +80,21 @@ func (s *ServiceImage) Dockerfile() string {
 	var dfPath string
 	if s.Build.BuildString != nil {
 		dfPath = aws.StringValue(s.Build.BuildString)
-	} else if s.Build.BuildArgs.Context != nil {
-		// This is a degraded experience, should only seldom happen when Dockerfile isn't explicit.
-		dfPath = aws.StringValue(s.Build.BuildArgs.Context)
-		dfPath = filepath.Join(dfPath, "Dockerfile")
 	} else {
-		dfPath = "./Dockerfile"
+		dfPath = ""
 	}
 
 	return dfPath
 }
 
-// Context returns the build context directory if it exists, otherwise an empty string.
-func (s *ServiceImage) Context() string {
+// context returns the build context directory if it exists, otherwise an empty string.
+func (s *ServiceImage) context() string {
 	return aws.StringValue(s.Build.BuildArgs.Context)
 }
 
-// Args returns the args section, if it exists, to override args in the dockerfile.
+// args returns the args section, if it exists, to override args in the dockerfile.
 // Otherwise it returns an empty map.
-func (s *ServiceImage) Args() map[string]string {
+func (s *ServiceImage) args() map[string]string {
 	return s.Build.BuildArgs.Args
 }
 
@@ -99,8 +117,9 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 			return err
 		}
 	}
+
 	if !b.BuildArgs.isEmpty() {
-		return nil
+		return b.BuildArgs.checkValid()
 	}
 
 	if err := unmarshal(&b.BuildString); err != nil {
@@ -116,6 +135,13 @@ type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
+}
+
+func (b *DockerBuildArgs) checkValid() error {
+	if b.Dockerfile == nil {
+		return errNoDockerfile
+	}
+	return nil
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {

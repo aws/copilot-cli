@@ -168,19 +168,6 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 	}
 }
 
-func TestBackendSvc_DockerfilePath(t *testing.T) {
-	// GIVEN
-	manifest := NewBackendService(BackendServiceProps{
-		ServiceProps: ServiceProps{
-			Name:       "subscribers",
-			Dockerfile: "./subscribers/Dockerfile",
-		},
-		Port: 8080,
-	})
-
-	require.Equal(t, "./subscribers/Dockerfile", manifest.DockerfilePath())
-}
-
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	mockBackendServiceWithNoOverride := BackendService{
 		Service: Service{

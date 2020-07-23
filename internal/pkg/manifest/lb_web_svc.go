@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -118,19 +119,9 @@ func tplDirName(s string) string {
 	return filepath.Dir(s)
 }
 
-// DockerfilePath returns the image build path.
-func (s *LoadBalancedWebService) DockerfilePath() string {
-	return s.Image.Dockerfile()
-}
-
-// DockerfileContext returns the image build context directory
-func (s *LoadBalancedWebService) DockerfileContext() string {
-	return s.Image.Context()
-}
-
-// DockerArgs returns the build arg overrides
-func (s *LoadBalancedWebService) DockerArgs() map[string]string {
-	return s.Image.Args()
+//Build returns a docker.BuildArguments object given a ws root directory.
+func (s *LoadBalancedWebService) Build(wsRoot string) *docker.BuildArguments {
+	return s.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

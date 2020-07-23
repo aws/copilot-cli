@@ -4,10 +4,12 @@
 package manifest
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -235,6 +237,11 @@ func TestBuildArgsUnmarshalYAML(t *testing.T) {
   otherbadfield: DOUBLE BAD`),
 			wantedError: errUnmarshalBuildOpts,
 		},
+		"error if no dockerfile specified": {
+			inContent: []byte(`build:
+  context: path/to/code`),
+			wantedError: errNoDockerfile,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -250,6 +257,65 @@ func TestBuildArgsUnmarshalYAML(t *testing.T) {
 				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Dockerfile), aws.StringValue(b.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
 			}
+		})
+	}
+}
+
+func TestBuildConfig(t *testing.T) {
+	mockWsRoot := "/root/dir"
+	testCases := map[string]struct {
+		inBuild     BuildArgsOrString
+		wantedBuild docker.BuildArguments
+	}{
+		"simple case: BuildString path to dockerfile": {
+			inBuild: BuildArgsOrString{
+				BuildString: aws.String("my/Dockerfile"),
+			},
+			wantedBuild: docker.BuildArguments{
+				Dockerfile: filepath.Join(mockWsRoot, "my/Dockerfile"),
+				Context:    filepath.Join(mockWsRoot, "my"),
+			},
+		},
+		"Different context than dockerfile": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("build/dockerfile"),
+					Context:    aws.String("cmd/main"),
+				},
+			},
+			wantedBuild: docker.BuildArguments{
+				Dockerfile: filepath.Join(mockWsRoot, "build/dockerfile"),
+				Context:    filepath.Join(mockWsRoot, "cmd/main"),
+			},
+		},
+		"including args": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("my/Dockerfile"),
+					Args: map[string]string{
+						"goodDog":  "bowie",
+						"badGoose": "HONK",
+					},
+				},
+			},
+			wantedBuild: docker.BuildArguments{
+				Dockerfile: filepath.Join(mockWsRoot, "my/Dockerfile"),
+				Context:    filepath.Join(mockWsRoot, "my"),
+				Args: map[string]string{
+					"goodDog":  "bowie",
+					"badGoose": "HONK",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			s := ServiceImage{
+				Build: tc.inBuild,
+			}
+			got := s.BuildConfig(mockWsRoot)
+
+			require.Equal(t, tc.wantedBuild, *got)
 		})
 	}
 }

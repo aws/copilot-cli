@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -97,19 +98,9 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// DockerfilePath returns the path to the dockerfile from workspace root.
-func (s *BackendService) DockerfilePath() string {
-	return s.Image.Dockerfile()
-}
-
-// DockerfileContext returns the build context directory.
-func (s *BackendService) DockerfileContext() string {
-	return s.Image.Context()
-}
-
-// DockerArgs returns the build arg overrides
-func (s *BackendService) DockerArgs() map[string]string {
-	return s.Image.Args()
+// Build returns a docker.BuildArguments object for the service given a workspace root directory
+func (s *BackendService) Build(wsRoot string) *docker.BuildArguments {
+	return s.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

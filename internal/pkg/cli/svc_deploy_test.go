@@ -309,7 +309,7 @@ image:
 				unmarshal: unmarshaler,
 			}
 
-			got, gotErr := opts.getDockerfile()
+			got, gotErr := opts.getBuildArgs()
 
 			if test.wantErr != nil {
 				require.Nil(t, got)
