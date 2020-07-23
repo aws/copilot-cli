@@ -237,11 +237,6 @@ func TestBuildArgsUnmarshalYAML(t *testing.T) {
   otherbadfield: DOUBLE BAD`),
 			wantedError: errUnmarshalBuildOpts,
 		},
-		"error if no dockerfile specified": {
-			inContent: []byte(`build:
-  context: path/to/code`),
-			wantedError: errNoDockerfile,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -286,6 +281,33 @@ func TestBuildConfig(t *testing.T) {
 			wantedBuild: docker.BuildArguments{
 				Dockerfile: filepath.Join(mockWsRoot, "build/dockerfile"),
 				Context:    filepath.Join(mockWsRoot, "cmd/main"),
+			},
+		},
+		"no dockerfile specified": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Context: aws.String("cmd/main"),
+				},
+			},
+			wantedBuild: docker.BuildArguments{
+				Dockerfile: filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile"),
+				Context:    filepath.Join(mockWsRoot, "cmd", "main"),
+			},
+		},
+		"no dockerfile or context specified": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Args: map[string]string{
+						"goodDog": "bowie",
+					},
+				},
+			},
+			wantedBuild: docker.BuildArguments{
+				Dockerfile: filepath.Join(mockWsRoot, "Dockerfile"),
+				Context:    mockWsRoot,
+				Args: map[string]string{
+					"goodDog": "bowie",
+				},
 			},
 		},
 		"including args": {

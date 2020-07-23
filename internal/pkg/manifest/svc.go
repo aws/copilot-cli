@@ -33,6 +33,8 @@ var (
 	errNoDockerfile       = errors.New("must specify a Dockerfile path")
 )
 
+var dockerfileDefaultName = "Dockerfile"
+
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
 	LoadBalancedWebServiceType,
@@ -51,15 +53,26 @@ type ServiceImage struct {
 }
 
 // BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
+// Prefer the following hierarchy:
+// 1. Specific dockerfile, specific context
+// 2. Specific dockerfile, context = dockerfile dir
+// 3. "Dockerfile" located in context dir
+// 4. "Dockerfile" located in ws root.
 func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments {
-	df := filepath.Join(rootDirectory, s.dockerfile())
+	df := s.dockerfile()
 	ctx := s.context()
-
-	// Nonempty context field means we should join with the ws root. Otherwise, we use the directory of the dockerfile.
-	if ctx != "" {
+	if df != "" && ctx != "" {
+		df = filepath.Join(rootDirectory, df)
 		ctx = filepath.Join(rootDirectory, ctx)
-	} else {
+	} else if df != "" && ctx == "" {
+		df = filepath.Join(rootDirectory, df)
 		ctx = filepath.Dir(df)
+	} else if df == "" && ctx != "" {
+		ctx = filepath.Join(rootDirectory, ctx)
+		df = filepath.Join(ctx, dockerfileDefaultName)
+	} else {
+		ctx = rootDirectory
+		df = filepath.Join(rootDirectory, dockerfileDefaultName)
 	}
 	return &docker.BuildArguments{
 		Dockerfile: df,
@@ -72,7 +85,7 @@ func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments 
 // returns "".
 func (s *ServiceImage) dockerfile() string {
 	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
-	// use "Context/Dockerfile", then "BuildString", then "Dockerfile"
+	// "BuildString". If no dockerfile specified, return "".
 	if s.Build.BuildArgs.Dockerfile != nil {
 		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
 	}
@@ -119,7 +132,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	if !b.BuildArgs.isEmpty() {
-		return b.BuildArgs.checkValid()
+		return nil
 	}
 
 	if err := unmarshal(&b.BuildString); err != nil {
@@ -135,13 +148,6 @@ type DockerBuildArgs struct {
 	Context    *string           `yaml:"context,omitempty"`
 	Dockerfile *string           `yaml:"dockerfile,omitempty"`
 	Args       map[string]string `yaml:"args,omitempty"`
-}
-
-func (b *DockerBuildArgs) checkValid() error {
-	if b.Dockerfile == nil {
-		return errNoDockerfile
-	}
-	return nil
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
