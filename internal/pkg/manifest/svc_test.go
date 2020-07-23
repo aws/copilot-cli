@@ -4,11 +4,13 @@
 package manifest
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestUnmarshalSvc(t *testing.T) {
@@ -181,6 +183,72 @@ type: 'OH NO'
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				tc.requireCorrectValues(t, m)
+			}
+		})
+	}
+}
+
+func TestBuildArgsUnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct BuildArgsOrString
+		wantedError  error
+	}{
+		"legacy case: simple build string": {
+			inContent: []byte(`build: ./Dockerfile`),
+
+			wantedStruct: BuildArgsOrString{
+				BuildString: aws.String("./Dockerfile"),
+			},
+		},
+		"Dockerfile specified in build opts": {
+			inContent: []byte(`build:
+  dockerfile: path/to/Dockerfile
+`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("path/to/Dockerfile"),
+				},
+			},
+		},
+		"Dockerfile context, and args specified in build opts": {
+			inContent: []byte(`build:
+  dockerfile: path/to/Dockerfile
+  args:
+    arg1: value1
+    bestdog: bowie
+  context: path/to/source`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("path/to/Dockerfile"),
+					Context:    aws.String("path/to/source"),
+					Args: map[string]string{
+						"arg1":    "value1",
+						"bestdog": "bowie",
+					},
+				},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`build:
+  badfield: OH NOES`),
+			wantedError: fmt.Errorf("some error"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var b ServiceImage
+			err := yaml.Unmarshal(tc.inContent, &b)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildString), aws.StringValue(b.Build.BuildString))
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Context), aws.StringValue(b.Build.BuildArgs.Context))
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Dockerfile), aws.StringValue(b.Build.BuildArgs.Dockerfile))
+				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
 			}
 		})
 	}
