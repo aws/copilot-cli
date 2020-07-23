@@ -214,7 +214,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					Name: "my-app",
 				}, nil)
 			},
-			wantedError: errors.New("get environment: couldn't find environment dev in the application my-app"),
+			wantedError: fmt.Errorf("get environment %s config: couldn't find environment dev in the application my-app", "dev"),
 		},
 		"no workspace": {
 			basicOpts: defaultOpts,
