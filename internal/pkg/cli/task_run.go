@@ -124,18 +124,19 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
 	var sess *awssession.Session
+	var err error
 	if o.env != "" {
 		env, err := o.targetEnv()
 		if err != nil {
 			return err
 		}
 
-		sess, err := provider.FromRole(env.ManagerRoleARN, env.Region)
+		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 	} else {
-		sess, err := provider.Default()
+		sess, err = provider.Default()
 		if err != nil {
 			return fmt.Errorf("get default session: %w", err)
 		}
