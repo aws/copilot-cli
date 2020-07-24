@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/dustin/go-humanize/english"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -115,6 +116,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		deployer: cloudformation.New(sess),
 	}
+
 
 	opts.configureRuntimeOpts = func() error {
 		if err := opts.configureRepository(provider); err != nil {
@@ -306,13 +308,13 @@ func (o *runTaskOpts) Execute() error {
 }
 
 func (o *runTaskOpts) runTask() ([]string, error) {
-	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running.", o.groupName))
+	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
 	taskARNs, err := o.runner.Run()
 	if err != nil {
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessf("Task(s) %s is running.\n", o.groupName))
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.Plural(o.count, "is", "are")))
 	return taskARNs, nil
 }
 
