@@ -5,7 +5,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
@@ -34,6 +33,11 @@ type mockSpinner struct{}
 func (s *mockSpinner) Start(label string) {}
 func (s *mockSpinner) Stop(label string) {}
 func (s *mockSpinner) Events([]termprogress.TabRow) {}
+
+type runTaskMocks struct {
+	deployer *mocks.MocktaskDeployer
+	repository *mocks.MockrepositoryService
+}
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -178,7 +182,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					Region:          "us-east-1",
 				})
 			},
-			wantedError: fmt.Errorf("get application: couldn't find an application named my-app in account 115 and region us-east-1"),
+			wantedError: errors.New("get application: couldn't find an application named my-app in account 115 and region us-east-1"),
 		},
 		"env exists in app": {
 			basicOpts: defaultOpts,
@@ -214,7 +218,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					Name: "my-app",
 				}, nil)
 			},
-			wantedError: errors.New("get environment: couldn't find environment dev in the application my-app"),
+			wantedError: errors.New("get environment dev config: couldn't find environment dev in the application my-app"),
 		},
 		"no workspace": {
 			basicOpts: defaultOpts,
@@ -376,7 +380,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), envOptionNone).
-					Return("", fmt.Errorf("error selecting environment"))
+					Return("", errors.New("error selecting environment"))
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
@@ -431,53 +435,68 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
-	var mockDeployer *mocks.MocktaskDeployer
 	const inGroupName = "my-task"
+	mockRepoURI := "uri/repo"
+	tag := "tag"
 
 	testCases := map[string]struct {
-		inImage          string
+		inImage string
+		inTag   string
 
-		setupMocks func(ctrl *gomock.Controller)
+		setupMocks func(m runTaskMocks)
 
 		wantedError error
 	}{
 		"error deploying resources": {
-			setupMocks: func(ctrl *gomock.Controller) {
-				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
-
-				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
 					Image: "",
 				}).Return(errors.New("error deploying"))
 			},
-			wantedError: fmt.Errorf("provision resources for task %s: %w", inGroupName, errors.New("error deploying")),
+			wantedError: errors.New("provision resources for task my-task: error deploying"),
 		},
 		"error updating resources": {
-			setupMocks: func(ctrl *gomock.Controller) {
-				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
-
-				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name:  inGroupName,
 					Image: "",
 				}).Return(nil)
-				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					// TODO: use image.URI() from mockRepository
+					Image: "uri/repo:latest",
 				}).Times(1).Return(errors.New("error updating"))
 			},
-			wantedError: fmt.Errorf("update resources for task %s: %w", inGroupName, errors.New("error updating")),
+			wantedError: errors.New("update resources for task my-task: error updating"),
+		},
+		"use default dockerfile path if not provided": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, gomock.Any())
+				m.repository.EXPECT().URI().AnyTimes()
+			},
+		},
+		"append 'latest' to image tag": {
+			inTag: tag,
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
+				m.repository.EXPECT().URI().AnyTimes()
+			},
 		},
 		"update image to task resource if image is not provided": {
-			setupMocks: func(ctrl *gomock.Controller) {
-				mockDeployer = mocks.NewMocktaskDeployer(ctrl)
-				// TODO: mock repository
-				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
-				mockDeployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name: inGroupName,
-					// TODO: use image.URI() from mockRepository
+					Image: "uri/repo:latest",
 				}).Times(1).Return(nil)
 			},
 		},
@@ -486,15 +505,29 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			tc.setupMocks(ctrl)
+			defer ctrl.Finish()
+
+			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
+			mockRepo := mocks.NewMockrepositoryService(ctrl)
+
+			mocks := runTaskMocks{
+				deployer: mockDeployer,
+				repository: mockRepo,
+			}
+			tc.setupMocks(mocks)
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
-					image: tc.inImage,
 					groupName: inGroupName,
+					image: tc.inImage,
+					imageTag: tc.inTag,
 				},
 				spinner:  &mockSpinner{},
 				deployer: mockDeployer,
+			}
+			opts.configureRuntimeOpts = func() error {
+				opts.repository = mockRepo
+				return nil
 			}
 
 			err := opts.Execute()

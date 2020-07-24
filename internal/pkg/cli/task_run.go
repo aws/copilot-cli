@@ -6,8 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
@@ -16,12 +19,20 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
 const (
-	envOptionNone = "None (run in default VPC)"
+	envOptionNone         = "None (run in default VPC)"
+	defaultDockerfilePath = "Dockerfile"
+	imageTagLatest        = "latest"
+)
+
+const (
+	fmtRepoName = "copilot-%s"
+	fmtImageURI = "%s:%s"
 )
 
 var (
@@ -65,12 +76,16 @@ type runTaskOpts struct {
 	runTaskVars
 
 	// Interfaces to interact with dependencies.
-	fs     afero.Fs
-	store  store
-	sel    appEnvSelector
+	fs      afero.Fs
+	store   store
+	sel     appEnvSelector
 	spinner progress
 
 	deployer taskDeployer
+
+	// Fields below are configured at runtime.
+	repository repositoryService
+	configureRuntimeOpts func() error
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -79,7 +94,11 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	sess, err := session.NewProvider().Default()
+	provider := session.NewProvider()
+	sess, err := provider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("get default session: %w", err)
+	}
 
 	opts := runTaskOpts{
 		runTaskVars: vars,
@@ -91,7 +110,48 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		deployer: cloudformation.New(sess),
 	}
+
+	opts.configureRuntimeOpts = func() error {
+		if err := opts.configureRepository(provider); err != nil {
+			return err
+		}
+		// TODO: configure runner
+		return nil
+	}
+
 	return &opts, nil
+}
+
+func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
+	var sess *awssession.Session
+	var err error
+	if o.env != "" {
+		env, err := o.targetEnv()
+		if err != nil {
+			return err
+		}
+
+		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+		}
+	} else {
+		sess, err = provider.Default()
+		if err != nil {
+			return fmt.Errorf("get default session: %w", err)
+		}
+
+	}
+
+	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
+	registry := ecr.New(sess)
+	repository, err := repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate repository %s: %w", repoName, err)
+	}
+
+	o.repository = repository
+	return nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -156,20 +216,59 @@ func (o *runTaskOpts) Ask() error {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if o.dockerfilePath == "" {
+		o.dockerfilePath = defaultDockerfilePath
+	}
+
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
+
+	// NOTE: repository has to be configured only after task resources are deployed
+	if err := o.configureRuntimeOpts(); err != nil {
+		return err
+	}
+
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
 			return err
 		}
 
+		tag := imageTagLatest
+		if o.imageTag != "" {
+			tag = o.imageTag
+		}
+		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
+
+
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
 	}
 
+	_, err := o.runTask()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *runTaskOpts) runTask() ([]string, error) {
+	// TODO: run tasks
+	return nil, nil
+}
+
+func (o *runTaskOpts) buildAndPushImage() error {
+	var additionalTags []string
+	if o.imageTag != "" {
+		additionalTags = append(additionalTags, o.imageTag)
+	}
+
+	if err := o.repository.BuildAndPush(docker.New(), o.dockerfilePath, imageTagLatest, additionalTags...); err != nil {
+		return fmt.Errorf("build and push image: %w", err)
+	}
 	return nil
 }
 
@@ -205,11 +304,6 @@ func (o *runTaskOpts) deploy() error {
 	})
 }
 
-func (o *runTaskOpts) buildAndPushImage() error {
-	// TODO: build and push the image
-	return nil
-}
-
 func (o *runTaskOpts) validateAppName() error {
 	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("get application: %w", err)
@@ -219,8 +313,8 @@ func (o *runTaskOpts) validateAppName() error {
 
 func (o *runTaskOpts) validateEnvName() error {
 	if o.AppName() != "" {
-		if _, err := o.store.GetEnvironment(o.AppName(), o.env); err != nil {
-			return fmt.Errorf("get environment: %w", err)
+		if _, err := o.targetEnv(); err != nil {
+			return err
 		}
 	} else {
 		return errNoAppInWorkspace
@@ -253,8 +347,8 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	// NOTE: if we are not in any workspace and app flag is not specified, use the "None" environment.
-	if  o.AppName() == "" {
+	// NOTE: if the subnets are not provided, we are not in any workspace and app flag is not specified, use the "None" environment.
+	if o.AppName() == "" || o.subnets != nil {
 		return nil
 	}
 
@@ -269,6 +363,14 @@ func (o *runTaskOpts) askEnvName() error {
 
 	o.env = env
 	return nil
+}
+
+func (o *runTaskOpts) targetEnv() (*config.Environment, error) {
+	env, err := o.store.GetEnvironment(o.AppName(), o.env)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s config: %w", o.env, err)
+	}
+	return env, nil
 }
 
 // BuildTaskRunCmd build the command for running a new task
