@@ -119,58 +119,57 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 
 	opts.configureRuntimeOpts = func() error {
-		if err := opts.configureRepository(provider); err != nil {
+		var sess *awssession.Session
+		if opts.env != "" {
+			env, err := opts.targetEnv()
+			if err != nil {
+				return err
+			}
+
+			sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+			if err != nil {
+				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+			}
+		} else {
+			sess, err = provider.Default()
+			if err != nil {
+				return fmt.Errorf("get default session: %w", err)
+			}
+		}
+
+		opts.repository, err = opts.configureRepository(sess)
+		if err != nil {
 			return err
 		}
-		return opts.configureRunner(provider)
+
+		opts.runner, err = opts.configureRunner(sess)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
-	var sess *awssession.Session
-	var err error
-	if o.env != "" {
-		env, err := o.targetEnv()
-		if err != nil {
-			return err
-		}
-
-		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
-		if err != nil {
-			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-		}
-	} else {
-		sess, err = provider.Default()
-		if err != nil {
-			return fmt.Errorf("get default session: %w", err)
-		}
-
-	}
-
+func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryService, error) {
 	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
 	registry := ecr.New(sess)
 	repository, err := repository.New(repoName, registry)
 	if err != nil {
-		return fmt.Errorf("initiate repository %s: %w", repoName, err)
+		return nil, fmt.Errorf("initiate repository %s: %w", repoName, err)
 	}
-
-	o.repository = repository
-	return nil
+	return repository, nil
 }
 
-func (o *runTaskOpts) configureRunner(provider sessionProvider) error {
-	sess, err := provider.Default()
-	if err != nil {
-		return fmt.Errorf("get default session: %w", err)
-	}
+func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, error) {
+	var runner taskRunner
 
 	vpcGetter := ec2.New(sess)
 	ecsService := ecs.New(sess)
 
 	if o.env != "" {
-		o.runner = &task.EnvRunner{
+		runner = &task.EnvRunner{
 			Count: o.count,
 			GroupName: o.groupName,
 
@@ -182,7 +181,7 @@ func (o *runTaskOpts) configureRunner(provider sessionProvider) error {
 			Starter: ecsService,
 		}
 	} else if o.subnets != nil {
-		o.runner = &task.NetworkConfigRunner{
+		runner = &task.NetworkConfigRunner{
 			Count: o.count,
 			GroupName: o.groupName,
 
@@ -193,7 +192,7 @@ func (o *runTaskOpts) configureRunner(provider sessionProvider) error {
 			Starter: ecsService,
 		}
 	} else {
-		o.runner = &task.DefaultVPCRunner{
+		runner = &task.DefaultVPCRunner{
 			Count: o.count,
 			GroupName: o.groupName,
 
@@ -203,7 +202,7 @@ func (o *runTaskOpts) configureRunner(provider sessionProvider) error {
 		}
 	}
 
-	return nil
+	return runner, nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
