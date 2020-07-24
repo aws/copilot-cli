@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -122,7 +123,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 }
 
 func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
-	var registry repository.Registry
+	var sess *awssession.Session
 	if o.env != "" {
 		env, err := o.targetEnv()
 		if err != nil {
@@ -133,17 +134,16 @@ func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
 		if err != nil {
 			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
-
-		registry = ecr.New(sess)
 	} else {
 		sess, err := provider.Default()
 		if err != nil {
 			return fmt.Errorf("get default session: %w", err)
 		}
-		registry = ecr.New(sess)
+
 	}
 
 	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
+	registry := ecr.New(sess)
 	repository, err := repository.New(repoName, registry)
 	if err != nil {
 		return fmt.Errorf("initiate repository %s: %w", repoName, err)
