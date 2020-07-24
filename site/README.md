@@ -11,7 +11,7 @@ Copilot's website is built with [hugo](https://gohugo.io/) and the [docsy](https
 3. Install the [CSS processing libraries](https://www.docsy.dev/docs/getting-started/#install-postcss) required by docsy:
    ```bash
    $ cd site/
-   $ npm run install
+   $ npm install
    ```
 
 ### Releasing the latest docs to GitHub pages

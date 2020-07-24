@@ -506,6 +506,79 @@ func TestECS_RunTask(t *testing.T) {
 	}
 }
 
+func TestECS_DescribeTasks(t *testing.T) {
+	inCluster := "my-cluster"
+	inTaskARNs := []string{"task-1","task-2","task-3"}
+	testCases := map[string]struct{
+		mockAPI     func(m *mocks.Mockapi)
+		wantedError error
+		wantedTasks []*Task
+	}{
+		"error describing tasks": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String(inCluster),
+					Tasks: aws.StringSlice(inTaskARNs),
+				}).Return(nil, errors.New("error describing tasks"))
+			},
+			wantedError: fmt.Errorf("describe tasks: %w", errors.New("error describing tasks")),
+		},
+		"successfully described tasks": {
+			mockAPI: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String(inCluster),
+					Tasks: aws.StringSlice(inTaskARNs),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						&ecs.Task{
+							TaskArn: aws.String("task-1"),
+						},
+						&ecs.Task{
+							TaskArn: aws.String("task-2"),
+						},
+						&ecs.Task{
+							TaskArn: aws.String("task-3"),
+						},
+					},
+				}, nil)
+			},
+			wantedTasks: []*Task{
+				&Task{
+					TaskArn: aws.String("task-1"),
+				},
+				&Task{
+					TaskArn: aws.String("task-2"),
+				},
+				&Task{
+					TaskArn: aws.String("task-3"),
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockAPI(mockAPI)
+
+			ecs := ECS{
+				client: mockAPI,
+			}
+
+			tasks, err := ecs.DescribeTasks(inCluster, inTaskARNs)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTasks, tasks)
+			}
+		})
+	}
+}
+
 func TestTaskDefinition_EnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inContainers []*ecs.ContainerDefinition
