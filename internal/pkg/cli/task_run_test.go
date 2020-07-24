@@ -478,7 +478,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
 				m.repository.EXPECT().URI().Return(mockRepoURI)
-				m.runner.EXPECT().Run().Return(errors.New("error running"))
+				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
