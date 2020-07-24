@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
@@ -316,7 +317,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
-					"my-app", envOptionNone).Return("test", nil)
+					"my-app", appEnvOptionNone).Return("test", nil)
 			},
 
 			wantedEnv: "test",
@@ -329,7 +330,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
-					"my-app", envOptionNone).Return(envOptionNone, nil)
+					"my-app", appEnvOptionNone).Return(appEnvOptionNone, nil)
 			},
 
 			wantedEnv: "",
@@ -380,8 +381,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			appName: "my-app",
 
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), envOptionNone).
-					Return("", errors.New("error selecting environment"))
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).
+					Return("", fmt.Errorf("error selecting environment"))
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),

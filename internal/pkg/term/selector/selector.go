@@ -272,11 +272,16 @@ func (s *Select) Environment(prompt, help, app string, additionalOpts ...string)
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.
-func (s *Select) Application(prompt, help string) (string, error) {
+func (s *Select) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()
 	if err != nil {
 		return "", err
 	}
+
+	for _, opt := range additionalOpts {
+		appNames = append(appNames, opt)
+	}
+
 	if len(appNames) == 0 {
 		log.Infof("Couldn't find any applications in this region and account. Try initializing one with %s\n",
 			color.HighlightCode("copilot app init"))

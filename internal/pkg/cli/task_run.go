@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	envOptionNone         = "None (run in default VPC)"
+	appEnvOptionNone = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
 )
@@ -48,11 +48,14 @@ var (
 )
 
 var (
+	fmtTaskRunAppPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
 	fmtTaskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
 
+	taskRunAppPromptHelp = fmt.Sprintf("Task will be deployed to the selected application. " +
+		"Select %s to run the task in your default VPC instead of any existing application.", color.Emphasize(appEnvOptionNone))
 	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. "+
-		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envOptionNone))
+		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(appEnvOptionNone))
 	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
 )
 
@@ -259,6 +262,9 @@ func (o *runTaskOpts) Ask() error {
 	if err := o.askTaskGroupName(); err != nil {
 		return err
 	}
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -399,6 +405,25 @@ func (o *runTaskOpts) askTaskGroupName() error {
 	return nil
 }
 
+func (o *runTaskOpts) askAppName() error {
+	if o.AppName() != "" {
+		return nil
+	}
+
+	// NOTE: if we are not in a workspace and app flag is not specified, prompt the user to select an application or "None"
+	app, err := o.sel.Application(fmtTaskRunAppPrompt, taskRunAppPromptHelp, appEnvOptionNone)
+	if err != nil {
+		return fmt.Errorf("ask for application: %w", err)
+	}
+
+	if app == appEnvOptionNone {
+		return nil
+	}
+
+	o.appName = app
+	return nil
+}
+
 func (o *runTaskOpts) askEnvName() error {
 	if o.env != "" {
 		return nil
@@ -409,12 +434,12 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
+	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
 
-	if env == envOptionNone {
+	if env == appEnvOptionNone {
 		return nil
 	}
 
