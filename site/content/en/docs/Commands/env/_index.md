@@ -1,7 +1,7 @@
 ---
 title: "env"
 linkTitle: "env"
-weight: 4
+weight: 3
 expand: true
 ---
 Commands for environments.  
