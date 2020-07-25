@@ -9,7 +9,7 @@ $ copilot env show [flags]
 ```
 
 ### What does it do?
-`copilot env ls` shows info about a deployed environment, including region, account ID, and services.
+`copilot env show` shows info about a deployed environment, including region, account ID, and services.
 
 ### What are the flags?
 ```bash
