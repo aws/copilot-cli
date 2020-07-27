@@ -23,8 +23,8 @@ Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
     !Not [!Equals [!Ref ContainerImage, ""]]
-  UseDefaultTaskRole:
-    !Equals [!Ref TaskRole, ""]
+  HasTaskRole:
+    !Not [!Equals [!Ref TaskRole, ""]]
   HasExecutionRole:
     !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
@@ -57,17 +57,7 @@ Resources:
       Memory: !Ref TaskMemory
       ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref "AWS::NoValue"]
       TaskRoleArn:
-        !If [UseDefaultTaskRole, !Ref DefaultTaskRole, !Ref TaskRole]
-  DefaultTaskRole:
-    Condition: UseDefaultTaskRole
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
+        !If [HasTaskRole, !Ref TaskRole, !Ref "AWS::NoValue"]
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
