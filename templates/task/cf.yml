@@ -55,10 +55,10 @@ Resources:
       NetworkMode: awsvpc
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref "AWS::NoValue"]
+      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref DefaultExecutionRole]
       TaskRoleArn:
         !If [HasTaskRole, !Ref TaskRole, !Ref "AWS::NoValue"]
-  ExecutionRole:
+  DefaultExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
