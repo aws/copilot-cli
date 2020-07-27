@@ -37,6 +37,7 @@ func (s *mockSpinner) Events([]termprogress.TabRow) {}
 type runTaskMocks struct {
 	deployer *mocks.MocktaskDeployer
 	repository *mocks.MockrepositoryService
+	runner *mocks.MocktaskRunner
 }
 
 func TestTaskRunOpts_Validate(t *testing.T) {
@@ -437,6 +438,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
+
 	tag := "tag"
 
 	testCases := map[string]struct {
@@ -471,11 +473,21 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("update resources for task my-task: error updating"),
 		},
+		"error running tasks": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
+			},
+			wantedError: errors.New("run task my-task: error running"),
+		},
 		"use default dockerfile path if not provided": {
 			setupMocks: func(m runTaskMocks) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, gomock.Any())
 				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
 		"append 'latest' to image tag": {
@@ -484,6 +496,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
 				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
 		"update image to task resource if image is not provided": {
@@ -498,6 +511,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Name: inGroupName,
 					Image: "uri/repo:latest",
 				}).Times(1).Return(nil)
+				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
 	}
@@ -509,10 +523,12 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
 			mockRepo := mocks.NewMockrepositoryService(ctrl)
+			mockRunner := mocks.NewMocktaskRunner(ctrl)
 
 			mocks := runTaskMocks{
 				deployer: mockDeployer,
 				repository: mockRepo,
+				runner: mockRunner,
 			}
 			tc.setupMocks(mocks)
 
@@ -527,6 +543,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			}
 			opts.configureRuntimeOpts = func() error {
 				opts.repository = mockRepo
+				opts.runner = mockRunner
 				return nil
 			}
 
