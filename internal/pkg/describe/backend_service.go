@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -23,6 +24,7 @@ type BackendServiceDescriber struct {
 
 	store                DeployedEnvServicesLister
 	svcDescriber         map[string]svcDescriber
+	sdMux                sync.RWMutex
 	initServiceDescriber func(string) error
 }
 
@@ -40,12 +42,16 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
+		sdMux:           sync.RWMutex{},
 		svcDescriber:    make(map[string]svcDescriber),
 	}
 	describer.initServiceDescriber = func(env string) error {
+		describer.sdMux.RLock()
 		if _, ok := describer.svcDescriber[env]; ok {
+			describer.sdMux.RUnlock()
 			return nil
 		}
+		describer.sdMux.RUnlock()
 		d, err := NewServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
@@ -55,7 +61,9 @@ func NewBackendServiceDescriber(opt NewBackendServiceConfig) (*BackendServiceDes
 		if err != nil {
 			return err
 		}
+		describer.sdMux.Lock()
 		describer.svcDescriber[env] = d
+		describer.sdMux.Unlock()
 		return nil
 	}
 	return describer, nil
@@ -67,7 +75,9 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err := d.initServiceDescriber(envName); err != nil {
 		return "", err
 	}
+	d.sdMux.RLock()
 	svcParams, err := d.svcDescriber[envName].Params()
+	d.sdMux.RUnlock()
 	if err != nil {
 		return "", fmt.Errorf("retrieve service deployment configuration: %w", err)
 	}
@@ -79,69 +89,77 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	return s.String(), nil
 }
 
-type backendSvcStackInfo struct {
+// envSvcDesc is the service's description for a particular environment.
+type envSvcDesc struct {
+	env              string
 	config           *ServiceConfig
 	serviceDiscovery serviceDiscovery
 	envVars          map[string]string
 	err              error
 }
 
-func (d *BackendServiceDescriber) describeStackInfo(env string) backendSvcStackInfo {
+func (d *BackendServiceDescriber) description(env string) envSvcDesc {
+	d.sdMux.RLock()
 	svcParams, err := d.svcDescriber[env].Params()
+	d.sdMux.RUnlock()
 	if err != nil {
-		return backendSvcStackInfo{err: fmt.Errorf("retrieve service deployment configuration: %w", err)}
+		return envSvcDesc{err: fmt.Errorf("retrieve service deployment configuration: %w", err)}
 	}
-	config := &ServiceConfig{
-		Environment: env,
-		Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
-		Tasks:       svcParams[stack.ServiceTaskCountParamKey],
-		CPU:         svcParams[stack.ServiceTaskCPUParamKey],
-		Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
-	}
-	sd := serviceDiscovery{
-		Service: d.svc,
-		Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
-		App:     d.app,
-		Env:     env,
-	}
+	d.sdMux.RLock()
 	backendSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+	d.sdMux.RUnlock()
 	if err != nil {
-		return backendSvcStackInfo{err: fmt.Errorf("retrieve environment variables: %w", err)}
+		return envSvcDesc{err: fmt.Errorf("retrieve environment variables: %w", err)}
 	}
-	return backendSvcStackInfo{
-		config:           config,
-		envVars:          backendSvcEnvVars,
-		serviceDiscovery: sd,
+	return envSvcDesc{
+		env: env,
+		config: &ServiceConfig{
+			Environment: env,
+			Port:        svcParams[stack.LBWebServiceContainerPortParamKey],
+			Tasks:       svcParams[stack.ServiceTaskCountParamKey],
+			CPU:         svcParams[stack.ServiceTaskCPUParamKey],
+			Memory:      svcParams[stack.ServiceTaskMemoryParamKey],
+		},
+		envVars: backendSvcEnvVars,
+		serviceDiscovery: serviceDiscovery{
+			Service: d.svc,
+			Port:    svcParams[stack.LBWebServiceContainerPortParamKey],
+			App:     d.app,
+			Env:     env,
+		},
 	}
 }
 
 func (d *BackendServiceDescriber) svcStackResources(envs []string) (map[string][]*CfnResource, error) {
 	resources := make(map[string][]*CfnResource)
-	if d.enableResources {
-		resourceCh := make(chan svcStackResources, len(envs))
-		defer close(resourceCh)
-		for _, env := range envs {
-			go func(env string) {
-				err := d.initServiceDescriber(env)
-				if err != nil {
-					resourceCh <- svcStackResources{err: err}
-					return
-				}
-				stackResources, err := d.svcDescriber[env].ServiceStackResources()
-				if err != nil {
-					resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
-					return
-				}
-				resourceCh <- svcStackResources{resource: stackResources}
-			}(env)
-		}
-		for _, env := range envs {
-			res := <-resourceCh
-			if res.err != nil {
-				return nil, res.err
+	if !d.enableResources {
+		return resources, nil
+	}
+	resourceCh := make(chan svcStackResources, len(envs))
+	defer close(resourceCh)
+	for _, env := range envs {
+		go func(env string) {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				resourceCh <- svcStackResources{err: err}
+				return
 			}
-			resources[env] = flattenResources(res.resource)
+			d.sdMux.RLock()
+			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			d.sdMux.RUnlock()
+			if err != nil {
+				resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
+				return
+			}
+			resourceCh <- svcStackResources{env: env, resource: stackResources}
+		}(env)
+	}
+	for range envs {
+		res := <-resourceCh
+		if res.err != nil {
+			return nil, res.err
 		}
+		resources[res.env] = flattenResources(res.resource)
 	}
 	return resources, nil
 }
@@ -153,30 +171,35 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
-	infoCh := make(chan backendSvcStackInfo, len(environments))
+	infoCh := make(chan envSvcDesc, len(environments))
 	defer close(infoCh)
 	for _, env := range environments {
 		go func(env string) {
 			err := d.initServiceDescriber(env)
 			if err != nil {
-				infoCh <- backendSvcStackInfo{err: err}
+				infoCh <- envSvcDesc{err: err}
 				return
 			}
-			infoCh <- d.describeStackInfo(env)
+			infoCh <- d.description(env)
 		}(env)
 	}
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
-	for _, env := range environments {
+	for range environments {
 		info := <-infoCh
 		if info.err != nil {
 			return nil, info.err
 		}
 		configs = append(configs, info.config)
-		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, env)
-		envVars = append(envVars, flattenEnvVars(env, info.envVars)...)
+		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, info.env)
+		envVars = append(envVars, flattenEnvVars(info.env, info.envVars)...)
 	}
+	sort.SliceStable(configs, func(i, j int) bool { return configs[i].Environment < configs[j].Environment })
+	for _, sd := range serviceDiscoveries {
+		sort.SliceStable(sd.Environment, func(i, j int) bool { return sd.Environment[i] < sd.Environment[j] })
+	}
+	sort.SliceStable(serviceDiscoveries, func(i, j int) bool { return serviceDiscoveries[i].Namespace < serviceDiscoveries[j].Namespace })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 

@@ -17,8 +17,9 @@ import (
 )
 
 type backendSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MocksvcDescriber
+	storeSvc         *mocks.MockDeployedEnvServicesLister
+	testSvcDescriber *mocks.MocksvcDescriber
+	prodSvcDescriber *mocks.MocksvcDescriber
 }
 
 func TestBackendServiceDescriber_Describe(t *testing.T) {
@@ -51,7 +52,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service deployment configuration: some error"),
@@ -60,13 +61,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
@@ -76,35 +77,35 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m backendSvcDescriberMocks) {
 				m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil)
 
-				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+				m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 					stack.LBWebServiceContainerPortParamKey: "5000",
 					stack.ServiceTaskCountParamKey:          "1",
 					stack.ServiceTaskCPUParamKey:            "256",
 					stack.ServiceTaskMemoryParamKey:         "512",
 				}, nil)
-				m.svcDescriber.EXPECT().EnvVars().Return(
+				m.testSvcDescriber.EXPECT().EnvVars().Return(
 					map[string]string{
 						"COPILOT_ENVIRONMENT_NAME": testEnv,
 					}, nil)
 
-				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+				m.prodSvcDescriber.EXPECT().Params().Return(map[string]string{
 					stack.LBWebServiceContainerPortParamKey: "5000",
 					stack.ServiceTaskCountParamKey:          "2",
 					stack.ServiceTaskCPUParamKey:            "512",
 					stack.ServiceTaskMemoryParamKey:         "1024",
 				}, nil)
-				m.svcDescriber.EXPECT().EnvVars().Return(
+				m.prodSvcDescriber.EXPECT().EnvVars().Return(
 					map[string]string{
 						"COPILOT_ENVIRONMENT_NAME": prodEnv,
 					}, nil)
 
-				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+				m.testSvcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
 						PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
 					},
 				}, nil)
-				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+				m.prodSvcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 						PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -117,23 +118,23 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				App:     testApp,
 				Configurations: []*ServiceConfig{
 					{
-						CPU:         "256",
-						Environment: "test",
-						Memory:      "512",
-						Port:        "5000",
-						Tasks:       "1",
-					},
-					{
 						CPU:         "512",
 						Environment: "prod",
 						Memory:      "1024",
 						Port:        "5000",
 						Tasks:       "2",
 					},
+					{
+						CPU:         "256",
+						Environment: "test",
+						Memory:      "512",
+						Port:        "5000",
+						Tasks:       "1",
+					},
 				},
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
-						Environment: []string{"test", "prod"},
+						Environment: []string{"prod", "test"},
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
@@ -173,10 +174,12 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
+			mockTestSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
+			mockProdSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := backendSvcDescriberMocks{
-				storeSvc:     mockStore,
-				svcDescriber: mockSvcDescriber,
+				storeSvc:         mockStore,
+				testSvcDescriber: mockTestSvcDescriber,
+				prodSvcDescriber: mockProdSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -187,8 +190,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
 				svcDescriber: map[string]svcDescriber{
-					"test": mockSvcDescriber,
-					"prod": mockSvcDescriber,
+					"test": mockTestSvcDescriber,
+					"prod": mockProdSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
 			}

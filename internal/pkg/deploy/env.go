@@ -14,7 +14,7 @@ type CreateEnvironmentInput struct {
 	Prod                     bool              // Whether or not this environment is a production environment.
 	PublicLoadBalancer       bool              // Whether or not this environment should contain a shared public load balancer between applications.
 	ToolsAccountPrincipalARN string            // The Principal ARN of the tools account.
-	AppDNSName               string            // The DNS name of this application, if it exists
+	AppDNSName               string            // The DNS name of this application, if it exists.
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
 }
 

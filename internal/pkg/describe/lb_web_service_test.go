@@ -56,8 +56,9 @@ func TestWebServiceURI_String(t *testing.T) {
 }
 
 type webSvcDescriberMocks struct {
-	storeSvc     *mocks.MockDeployedEnvServicesLister
-	svcDescriber *mocks.MocksvcDescriber
+	storeSvc         *mocks.MockDeployedEnvServicesLister
+	testSvcDescriber *mocks.MocksvcDescriber
+	prodSvcDescriber *mocks.MocksvcDescriber
 }
 
 func TestWebServiceDescriber_URI(t *testing.T) {
@@ -79,7 +80,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 		"fail to get output of environment stack": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get output for environment test: some error"),
@@ -87,11 +88,11 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 		"fail to get parameters of service stack": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get parameters for service jobs: some error"),
@@ -99,11 +100,11 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 		"https web service": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						stack.EnvOutputSubdomain:                 testEnvSubdomain,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
 					}, nil),
 				)
@@ -114,10 +115,10 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 		"http web service": {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey: testSvcPath,
 					}, nil),
 				)
@@ -135,7 +136,7 @@ func TestWebServiceDescriber_URI(t *testing.T) {
 
 			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := webSvcDescriberMocks{
-				svcDescriber: mockSvcDescriber,
+				testSvcDescriber: mockSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -196,7 +197,7 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service URI: get output for environment test: some error"),
@@ -205,17 +206,17 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().EnvVars().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
@@ -225,21 +226,21 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 						stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
-					m.svcDescriber.EXPECT().Params().Return(map[string]string{
+					m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 						stack.LBWebServiceRulePathParamKey:      testSvcPath,
 						stack.LBWebServiceContainerPortParamKey: "80",
 						stack.ServiceTaskCountParamKey:          "1",
 						stack.ServiceTaskCPUParamKey:            "256",
 						stack.ServiceTaskMemoryParamKey:         "512",
 					}, nil),
-					m.svcDescriber.EXPECT().EnvVars().Return(
+					m.testSvcDescriber.EXPECT().EnvVars().Return(
 						map[string]string{
 							"COPILOT_ENVIRONMENT_NAME": testEnv,
 						}, nil),
-					m.svcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
+					m.testSvcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service resources: some error"),
@@ -249,43 +250,43 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m webSvcDescriberMocks) {
 				m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil)
 
-				m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+				m.testSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 					stack.EnvOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 				}, nil)
-				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+				m.testSvcDescriber.EXPECT().Params().Return(map[string]string{
 					stack.LBWebServiceRulePathParamKey:      testSvcPath,
 					stack.LBWebServiceContainerPortParamKey: "5000",
 					stack.ServiceTaskCountParamKey:          "1",
 					stack.ServiceTaskCPUParamKey:            "256",
 					stack.ServiceTaskMemoryParamKey:         "512",
 				}, nil)
-				m.svcDescriber.EXPECT().EnvVars().Return(
+				m.testSvcDescriber.EXPECT().EnvVars().Return(
 					map[string]string{
 						"COPILOT_ENVIRONMENT_NAME": testEnv,
 					}, nil)
 
-				m.svcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
+				m.prodSvcDescriber.EXPECT().EnvOutputs().Return(map[string]string{
 					stack.EnvOutputPublicLoadBalancerDNSName: prodEnvLBDNSName,
 				}, nil)
-				m.svcDescriber.EXPECT().Params().Return(map[string]string{
+				m.prodSvcDescriber.EXPECT().Params().Return(map[string]string{
 					stack.LBWebServiceRulePathParamKey:      prodSvcPath,
 					stack.LBWebServiceContainerPortParamKey: "5000",
 					stack.ServiceTaskCountParamKey:          "2",
 					stack.ServiceTaskCPUParamKey:            "512",
 					stack.ServiceTaskMemoryParamKey:         "1024",
 				}, nil)
-				m.svcDescriber.EXPECT().EnvVars().Return(
+				m.prodSvcDescriber.EXPECT().EnvVars().Return(
 					map[string]string{
 						"COPILOT_ENVIRONMENT_NAME": prodEnv,
 					}, nil)
 
-				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+				m.testSvcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::EC2::SecurityGroupIngress"),
 						PhysicalResourceId: aws.String("ContainerSecurityGroupIngressFromPublicALB"),
 					},
 				}, nil)
-				m.svcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
+				m.prodSvcDescriber.EXPECT().ServiceStackResources().Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::EC2::SecurityGroup"),
 						PhysicalResourceId: aws.String("sg-0758ed6b233743530"),
@@ -298,33 +299,33 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				App:     testApp,
 				Configurations: []*ServiceConfig{
 					{
-						CPU:         "256",
-						Environment: "test",
-						Memory:      "512",
-						Port:        "5000",
-						Tasks:       "1",
-					},
-					{
 						CPU:         "512",
 						Environment: "prod",
 						Memory:      "1024",
 						Port:        "5000",
 						Tasks:       "2",
 					},
+					{
+						CPU:         "256",
+						Environment: "test",
+						Memory:      "512",
+						Port:        "5000",
+						Tasks:       "1",
+					},
 				},
 				Routes: []*WebServiceRoute{
 					{
-						Environment: "test",
+						Environment: "prod",
 						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
 					},
 					{
-						Environment: "prod",
+						Environment: "test",
 						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
 					},
 				},
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
-						Environment: []string{"test", "prod"},
+						Environment: []string{"prod", "test"},
 						Namespace:   "jobs.phonetool.local:5000",
 					},
 				},
@@ -364,10 +365,12 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
+			mockTestSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
+			mockProdSvcDescriber := mocks.NewMocksvcDescriber(ctrl)
 			mocks := webSvcDescriberMocks{
-				storeSvc:     mockStore,
-				svcDescriber: mockSvcDescriber,
+				storeSvc:         mockStore,
+				testSvcDescriber: mockTestSvcDescriber,
+				prodSvcDescriber: mockProdSvcDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -378,8 +381,8 @@ func TestWebServiceDescriber_Describe(t *testing.T) {
 				enableResources: tc.shouldOutputResources,
 				store:           mockStore,
 				svcDescriber: map[string]svcDescriber{
-					"test": mockSvcDescriber,
-					"prod": mockSvcDescriber,
+					"test": mockTestSvcDescriber,
+					"prod": mockProdSvcDescriber,
 				},
 				initServiceDescriber: func(string) error { return nil },
 				svcParams:            make(map[string]map[string]string),

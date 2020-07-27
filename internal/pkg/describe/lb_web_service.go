@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"text/tabwriter"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -71,10 +72,12 @@ type WebServiceDescriber struct {
 
 	store                DeployedEnvServicesLister
 	svcDescriber         map[string]svcDescriber
+	sdMux                sync.RWMutex
 	initServiceDescriber func(string) error
 
 	// cache svc paramerters
-	svcParams map[string]map[string]string
+	svcParams    map[string]map[string]string
+	svcParamsMux sync.RWMutex
 }
 
 // NewWebServiceConfig contains fields that initiates WebServiceDescriber struct.
@@ -91,13 +94,19 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 		svc:             opt.Svc,
 		enableResources: opt.EnableResources,
 		store:           opt.DeployStore,
+		svcParamsMux:    sync.RWMutex{},
+		sdMux:           sync.RWMutex{},
 		svcDescriber:    make(map[string]svcDescriber),
 		svcParams:       make(map[string]map[string]string),
 	}
 	describer.initServiceDescriber = func(env string) error {
+		describer.sdMux.RLock()
 		if _, ok := describer.svcDescriber[env]; ok {
+			describer.sdMux.RUnlock()
 			return nil
 		}
+		describer.sdMux.RUnlock()
+
 		d, err := NewServiceDescriber(NewServiceConfig{
 			App:         opt.App,
 			Env:         env,
@@ -107,86 +116,93 @@ func NewWebServiceDescriber(opt NewWebServiceConfig) (*WebServiceDescriber, erro
 		if err != nil {
 			return err
 		}
+		describer.sdMux.Lock()
 		describer.svcDescriber[env] = d
+		describer.sdMux.Unlock()
 		return nil
 	}
 	return describer, nil
 }
 
 type lbSvcStackInfo struct {
-	route            *WebServiceRoute
-	config           *ServiceConfig
-	serviceDiscovery serviceDiscovery
-	envVars          map[string]string
-	err              error
+	route *WebServiceRoute
+	envSvcDesc
 }
 
 type svcStackResources struct {
+	env      string
 	resource []*cloudformation.StackResource
 	err      error
 }
 
-func (d *WebServiceDescriber) describeStackInfo(env string) lbSvcStackInfo {
+func (d *WebServiceDescriber) description(env string) lbSvcStackInfo {
 	webServiceURI, err := d.URI(env)
 	if err != nil {
-		return lbSvcStackInfo{err: fmt.Errorf("retrieve service URI: %w", err)}
+		return lbSvcStackInfo{envSvcDesc: envSvcDesc{err: fmt.Errorf("retrieve service URI: %w", err)}}
 	}
-	route := &WebServiceRoute{
-		Environment: env,
-		URL:         webServiceURI,
-	}
-	config := &ServiceConfig{
-		Environment: env,
-		Port:        d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
-		Tasks:       d.svcParams[env][stack.ServiceTaskCountParamKey],
-		CPU:         d.svcParams[env][stack.ServiceTaskCPUParamKey],
-		Memory:      d.svcParams[env][stack.ServiceTaskMemoryParamKey],
-	}
-	sd := serviceDiscovery{
-		Service: d.svc,
-		Port:    d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
-		App:     d.app,
-		Env:     env,
-	}
+	d.sdMux.RLock()
 	webSvcEnvVars, err := d.svcDescriber[env].EnvVars()
+	d.sdMux.RUnlock()
 	if err != nil {
-		return lbSvcStackInfo{err: fmt.Errorf("retrieve environment variables: %w", err)}
+		return lbSvcStackInfo{envSvcDesc: envSvcDesc{err: fmt.Errorf("retrieve environment variables: %w", err)}}
 	}
+	d.svcParamsMux.RLock()
+	defer d.svcParamsMux.RUnlock()
 	return lbSvcStackInfo{
-		route:            route,
-		config:           config,
-		envVars:          webSvcEnvVars,
-		serviceDiscovery: sd,
+		route: &WebServiceRoute{
+			Environment: env,
+			URL:         webServiceURI,
+		},
+		envSvcDesc: envSvcDesc{
+			env: env,
+			config: &ServiceConfig{
+				Environment: env,
+				Port:        d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
+				Tasks:       d.svcParams[env][stack.ServiceTaskCountParamKey],
+				CPU:         d.svcParams[env][stack.ServiceTaskCPUParamKey],
+				Memory:      d.svcParams[env][stack.ServiceTaskMemoryParamKey],
+			},
+			envVars: webSvcEnvVars,
+			serviceDiscovery: serviceDiscovery{
+				Service: d.svc,
+				Port:    d.svcParams[env][stack.LBWebServiceContainerPortParamKey],
+				App:     d.app,
+				Env:     env,
+			},
+		},
 	}
 }
 
 func (d *WebServiceDescriber) svcStackResources(envs []string) (map[string][]*CfnResource, error) {
 	resources := make(map[string][]*CfnResource)
-	if d.enableResources {
-		resourceCh := make(chan svcStackResources, len(envs))
-		defer close(resourceCh)
-		for _, env := range envs {
-			go func(env string) {
-				err := d.initServiceDescriber(env)
-				if err != nil {
-					resourceCh <- svcStackResources{err: err}
-					return
-				}
-				stackResources, err := d.svcDescriber[env].ServiceStackResources()
-				if err != nil {
-					resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
-					return
-				}
-				resourceCh <- svcStackResources{resource: stackResources}
-			}(env)
-		}
-		for _, env := range envs {
-			res := <-resourceCh
-			if res.err != nil {
-				return nil, res.err
+	if !d.enableResources {
+		return resources, nil
+	}
+	resourceCh := make(chan svcStackResources, len(envs))
+	defer close(resourceCh)
+	for _, env := range envs {
+		go func(env string) {
+			err := d.initServiceDescriber(env)
+			if err != nil {
+				resourceCh <- svcStackResources{err: err}
+				return
 			}
-			resources[env] = flattenResources(res.resource)
+			d.sdMux.RLock()
+			stackResources, err := d.svcDescriber[env].ServiceStackResources()
+			d.sdMux.RUnlock()
+			if err != nil {
+				resourceCh <- svcStackResources{err: fmt.Errorf("retrieve service resources: %w", err)}
+				return
+			}
+			resourceCh <- svcStackResources{resource: stackResources, env: env}
+		}(env)
+	}
+	for range envs {
+		res := <-resourceCh
+		if res.err != nil {
+			return nil, res.err
 		}
+		resources[res.env] = flattenResources(res.resource)
 	}
 	return resources, nil
 }
@@ -204,26 +220,32 @@ func (d *WebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		go func(env string) {
 			err := d.initServiceDescriber(env)
 			if err != nil {
-				infoCh <- lbSvcStackInfo{err: err}
+				infoCh <- lbSvcStackInfo{envSvcDesc: envSvcDesc{err: err}}
 				return
 			}
-			infoCh <- d.describeStackInfo(env)
+			infoCh <- d.description(env)
 		}(env)
 	}
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var serviceDiscoveries []*ServiceDiscovery
 	var envVars []*EnvVars
-	for _, env := range environments {
+	for range environments {
 		info := <-infoCh
 		if info.err != nil {
 			return nil, info.err
 		}
 		routes = append(routes, info.route)
 		configs = append(configs, info.config)
-		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, env)
-		envVars = append(envVars, flattenEnvVars(env, info.envVars)...)
+		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, info.serviceDiscovery, info.env)
+		envVars = append(envVars, flattenEnvVars(info.env, info.envVars)...)
 	}
+	sort.SliceStable(routes, func(i, j int) bool { return routes[i].Environment < routes[j].Environment })
+	sort.SliceStable(configs, func(i, j int) bool { return configs[i].Environment < configs[j].Environment })
+	for _, sd := range serviceDiscoveries {
+		sort.SliceStable(sd.Environment, func(i, j int) bool { return sd.Environment[i] < sd.Environment[j] })
+	}
+	sort.SliceStable(serviceDiscoveries, func(i, j int) bool { return serviceDiscoveries[i].Namespace < serviceDiscoveries[j].Namespace })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Environment < envVars[j].Environment })
 	sort.SliceStable(envVars, func(i, j int) bool { return envVars[i].Name < envVars[j].Name })
 
@@ -250,16 +272,21 @@ func (d *WebServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	d.sdMux.RLock()
 	envOutputs, err := d.svcDescriber[envName].EnvOutputs()
+	d.sdMux.RUnlock()
 	if err != nil {
 		return "", fmt.Errorf("get output for environment %s: %w", envName, err)
 	}
+	d.sdMux.RLock()
 	svcParams, err := d.svcDescriber[envName].Params()
+	d.sdMux.RUnlock()
 	if err != nil {
 		return "", fmt.Errorf("get parameters for service %s: %w", d.svc, err)
 	}
+	d.svcParamsMux.Lock()
 	d.svcParams[envName] = svcParams
+	d.svcParamsMux.Unlock()
 
 	uri := &WebServiceURI{
 		DNSName: envOutputs[stack.EnvOutputPublicLoadBalancerDNSName],
