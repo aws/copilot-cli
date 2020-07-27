@@ -142,7 +142,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 			return err
 		}
 
-		opts.runner, err = opts.configureRunner(sess)
+		opts.runner = opts.configureRunner(sess)
 		if err != nil {
 			return err
 		}
@@ -162,7 +162,7 @@ func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryS
 	return repository, nil
 }
 
-func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, error) {
+func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 	vpcGetter := ec2.New(sess)
 	ecsService := ecs.New(sess)
 
@@ -177,7 +177,7 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, err
 			VPCGetter: vpcGetter,
 			ClusterGetter: resourcegroups.New(sess),
 			Starter: ecsService,
-		}, nil
+		}
 	}
 
 	if o.subnets != nil {
@@ -190,7 +190,7 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, err
 
 			ClusterGetter: ecsService,
 			Starter: ecsService,
-		}, nil
+		}
 	}
 
 	return &task.DefaultVPCRunner{
@@ -200,7 +200,7 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, err
 		VPCGetter: vpcGetter,
 		ClusterGetter: ecsService,
 		Starter: ecsService,
-	}, nil
+	}
 
 }
 
