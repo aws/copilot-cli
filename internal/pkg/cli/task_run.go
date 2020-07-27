@@ -163,13 +163,11 @@ func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryS
 }
 
 func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, error) {
-	var runner taskRunner
-
 	vpcGetter := ec2.New(sess)
 	ecsService := ecs.New(sess)
 
 	if o.env != "" {
-		runner = &task.EnvRunner{
+		return &task.EnvRunner{
 			Count: o.count,
 			GroupName: o.groupName,
 
@@ -179,9 +177,11 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, err
 			VPCGetter: vpcGetter,
 			ClusterGetter: resourcegroups.New(sess),
 			Starter: ecsService,
-		}
-	} else if o.subnets != nil {
-		runner = &task.NetworkConfigRunner{
+		}, nil
+	}
+
+	if o.subnets != nil {
+		return &task.NetworkConfigRunner{
 			Count: o.count,
 			GroupName: o.groupName,
 
@@ -190,19 +190,18 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) (taskRunner, err
 
 			ClusterGetter: ecsService,
 			Starter: ecsService,
-		}
-	} else {
-		runner = &task.DefaultVPCRunner{
-			Count: o.count,
-			GroupName: o.groupName,
-
-			VPCGetter: vpcGetter,
-			ClusterGetter: ecsService,
-			Starter: ecsService,
-		}
+		}, nil
 	}
 
-	return runner, nil
+	return &task.DefaultVPCRunner{
+		Count: o.count,
+		GroupName: o.groupName,
+
+		VPCGetter: vpcGetter,
+		ClusterGetter: ecsService,
+		Starter: ecsService,
+	}, nil
+
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
