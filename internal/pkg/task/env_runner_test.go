@@ -6,6 +6,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -57,7 +58,7 @@ func TestEnvRunner_Run(t *testing.T) {
 		mockStarter        func(m *mocks.MockTaskRunner)
 
 		wantedError error
-		wantedARNs  []string
+		wantedTasks []*Task
 	}{
 		"failed to get cluster": {
 			mockResourceGetter: func(m *mocks.MockResourceGetter) {
@@ -165,9 +166,17 @@ func TestEnvRunner_Run(t *testing.T) {
 					SecurityGroups: []string{"sg-1", "sg-2"},
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
-				}).Return([]string{"task-1"}, nil)
+				}).Return([]*ecs.Task{
+					{
+						TaskArn: aws.String("task-1"),
+					},
+				}, nil)
 			},
-			wantedARNs: []string{"task-1"},
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -195,12 +204,12 @@ func TestEnvRunner_Run(t *testing.T) {
 				Starter:       mockStarter,
 			}
 
-			arns, err := task.Run()
+			tasks, err := task.Run()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedARNs, arns)
+				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})
 	}

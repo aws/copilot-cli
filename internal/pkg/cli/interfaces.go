@@ -6,6 +6,7 @@ package cli
 import (
 	"encoding"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -294,7 +295,7 @@ type taskDeployer interface {
 }
 
 type taskRunner interface {
-	Run() ([]string, error)
+	Run() ([]*task.Task, error)
 }
 
 type deployer interface {

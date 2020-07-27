@@ -6,9 +6,11 @@ package task
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"time"
 )
 
 // VpcGetter gets subnets and security groups.
@@ -30,7 +32,13 @@ type DefaultClusterGetter interface {
 
 // TaskRunner runs the tasks and wait for it to start.
 type TaskRunner interface {
-	RunTask(input ecs.RunTaskInput) ([]string, error)
+	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
+}
+
+type Task struct {
+	TaskARN string
+	ClusterARN string
+	StartedAt time.Time
 }
 
 const (
@@ -43,4 +51,16 @@ var (
 
 func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
+}
+
+func tasks(ecsTasks []*ecs.Task) []*Task {
+	tasks := make([]*Task, len(ecsTasks))
+	for idx, task := range ecsTasks {
+		tasks[idx] = &Task{
+			TaskARN: aws.StringValue(task.TaskArn),
+			ClusterARN: aws.StringValue(task.ClusterArn),
+			StartedAt: aws.TimeValue(task.StartedAt),
+		}
+	}
+	return tasks
 }

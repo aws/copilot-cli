@@ -411,7 +411,7 @@ func TestECS_RunTask(t *testing.T) {
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedArns  []string
+		wantedTasks []*Task
 	}{
 		"run task success": {
 			input: runTaskInput,
@@ -449,7 +449,17 @@ func TestECS_RunTask(t *testing.T) {
 				}).Times(1)
 			},
 
-			wantedArns: []string{"task-1", "task-2", "task-3"},
+			wantedTasks: []*Task{
+				{
+					TaskArn: aws.String("task-1"),
+				},
+				{
+					TaskArn: aws.String("task-2"),
+				},
+				{
+					TaskArn: aws.String("task-3"),
+				},
+			},
 		},
 		"run task failed": {
 			input: runTaskInput,
@@ -488,7 +498,7 @@ func TestECS_RunTask(t *testing.T) {
 				client: mockECSClient,
 			}
 
-			arns, err := ecs.RunTask(RunTaskInput{
+			tasks, err := ecs.RunTask(RunTaskInput{
 				Count:          tc.count,
 				Cluster:        tc.cluster,
 				TaskFamilyName: tc.taskFamilyName,
@@ -500,7 +510,7 @@ func TestECS_RunTask(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Equal(t, tc.wantedArns, arns)
+				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})
 	}

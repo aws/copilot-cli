@@ -26,8 +26,8 @@ type DefaultVPCRunner struct {
 	Starter       TaskRunner
 }
 
-// Run runs tasks in default cluster and default subnets, and returns the task ARNs.
-func (r *DefaultVPCRunner) Run() ([]string, error) {
+// Run runs tasks in default cluster and default subnets, and returns the tasks.
+func (r *DefaultVPCRunner) Run() ([]*Task, error) {
 	if err := r.validateDependencies(); err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 		return nil, errNoSubnetFound
 	}
 
-	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
+	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:        cluster,
 		Count:          r.Count,
 		Subnets:        subnets,
@@ -61,7 +61,7 @@ func (r *DefaultVPCRunner) Run() ([]string, error) {
 		}
 	}
 
-	return arns, nil
+	return tasks(ecsTasks), nil
 }
 
 func (r *DefaultVPCRunner) validateDependencies() error {

@@ -23,20 +23,20 @@ type NetworkConfigRunner struct {
 	Starter       TaskRunner
 }
 
-// Run runs tasks in the subnets and the security groups, and returns the task ARNs.
-func (r *NetworkConfigRunner) Run() ([]string, error) {
+// Run runs tasks in the subnets and the security groups, and returns the tasks.
+func (r *NetworkConfigRunner) Run() ([]*Task, error) {
 	if err := r.validateDependencies(); err != nil {
 		return nil, err
 	}
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, &errGetDefaultCluster {
+		return nil, &errGetDefaultCluster{
 			parentErr: err,
 		}
 	}
 
-	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
+	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:        cluster,
 		Count:          r.Count,
 		Subnets:        r.Subnets,
@@ -51,7 +51,7 @@ func (r *NetworkConfigRunner) Run() ([]string, error) {
 		}
 	}
 
-	return arns, nil
+	return tasks(ecsTasks), nil
 }
 
 func (r *NetworkConfigRunner) validateDependencies() error {

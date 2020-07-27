@@ -199,7 +199,7 @@ func (e *ECS) DefaultCluster() (string, error) {
 
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
 // the task(s) is running or fails to run, along with task ARNs if possible.
-func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
+func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 	resp, err := e.client.RunTask(&ecs.RunTaskInput{
 		Cluster:        aws.String(input.Cluster),
 		Count:          aws.Int64(int64(input.Count)),
@@ -219,18 +219,22 @@ func (e *ECS) RunTask(input RunTaskInput) ([]string, error) {
 	}
 
 	taskARNs := make([]string, len(resp.Tasks))
+	tasks := make([]*Task, len(resp.Tasks))
 	for idx, task := range resp.Tasks {
 		taskARNs[idx] = aws.StringValue(task.TaskArn)
+
+		t := Task(*task)
+		tasks[idx] = &t
 	}
 
 	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
 	}); err != nil {
-		return taskARNs, fmt.Errorf("wait for tasks to be running: %w", err)
+		return tasks, fmt.Errorf("wait for tasks to be running: %w", err)
 	}
 
-	return taskARNs, nil
+	return tasks, nil
 }
 
 // DescribeTasks returns the tasks with the taskARNs in the cluster.

@@ -43,8 +43,8 @@ type EnvRunner struct {
 	Starter       TaskRunner
 }
 
-// Run runs tasks in the environment of the application, and returns the task ARNs.
-func (r *EnvRunner) Run() ([]string, error) {
+// Run runs tasks in the environment of the application, and returns the tasks.
+func (r *EnvRunner) Run() ([]*Task, error) {
 	if err := r.validateDependencies(); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
-	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
+	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:        cluster,
 		Count:          r.Count,
 		Subnets:        subnets,
@@ -83,7 +83,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 			parentErr: err,
 		}
 	}
-	return arns, nil
+	return tasks(ecsTasks), nil
 }
 
 func (r *EnvRunner) cluster(app, env string) (string, error) {
