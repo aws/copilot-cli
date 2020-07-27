@@ -293,6 +293,10 @@ type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput) error
 }
 
+type taskRunner interface {
+	Run() ([]string, error)
+}
+
 type deployer interface {
 	environmentDeployer
 	appDeployer

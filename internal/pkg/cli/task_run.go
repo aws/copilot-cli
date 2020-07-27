@@ -6,20 +6,25 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/dustin/go-humanize/english"
 
+	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
@@ -85,6 +90,7 @@ type runTaskOpts struct {
 
 	// Fields below are configured at runtime.
 	repository repositoryService
+	runner taskRunner
 	configureRuntimeOpts func() error
 }
 
@@ -111,47 +117,91 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		deployer: cloudformation.New(sess),
 	}
 
+
 	opts.configureRuntimeOpts = func() error {
-		if err := opts.configureRepository(provider); err != nil {
+		var sess *awssession.Session
+		if opts.env != "" {
+			env, err := opts.targetEnv()
+			if err != nil {
+				return err
+			}
+
+			sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+			if err != nil {
+				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+			}
+		} else {
+			sess, err = provider.Default()
+			if err != nil {
+				return fmt.Errorf("get default session: %w", err)
+			}
+		}
+
+		opts.repository, err = opts.configureRepository(sess)
+		if err != nil {
 			return err
 		}
-		// TODO: configure runner
+
+		opts.runner = opts.configureRunner(sess)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRepository(provider sessionProvider) error {
-	var sess *awssession.Session
-	var err error
-	if o.env != "" {
-		env, err := o.targetEnv()
-		if err != nil {
-			return err
-		}
-
-		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
-		if err != nil {
-			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-		}
-	} else {
-		sess, err = provider.Default()
-		if err != nil {
-			return fmt.Errorf("get default session: %w", err)
-		}
-
-	}
-
+func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryService, error) {
 	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
 	registry := ecr.New(sess)
 	repository, err := repository.New(repoName, registry)
 	if err != nil {
-		return fmt.Errorf("initiate repository %s: %w", repoName, err)
+		return nil, fmt.Errorf("initiate repository %s: %w", repoName, err)
+	}
+	return repository, nil
+}
+
+func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
+	vpcGetter := ec2.New(sess)
+	ecsService := ecs.New(sess)
+
+	if o.env != "" {
+		return &task.EnvRunner{
+			Count: o.count,
+			GroupName: o.groupName,
+
+			App: o.AppName(),
+			Env: o.env,
+
+			VPCGetter: vpcGetter,
+			ClusterGetter: resourcegroups.New(sess),
+			Starter: ecsService,
+		}
 	}
 
-	o.repository = repository
-	return nil
+	if o.subnets != nil {
+		return &task.NetworkConfigRunner{
+			Count: o.count,
+			GroupName: o.groupName,
+
+			Subnets: o.subnets,
+			SecurityGroups: o.securityGroups,
+
+			ClusterGetter: ecsService,
+			Starter: ecsService,
+		}
+	}
+
+	return &task.DefaultVPCRunner{
+		Count: o.count,
+		GroupName: o.groupName,
+
+		VPCGetter: vpcGetter,
+		ClusterGetter: ecsService,
+		Starter: ecsService,
+	}
+
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -256,8 +306,14 @@ func (o *runTaskOpts) Execute() error {
 }
 
 func (o *runTaskOpts) runTask() ([]string, error) {
-	// TODO: run tasks
-	return nil, nil
+	o.spinner.Start(fmt.Sprintf("Waiting for %s to be running for %s.", english.Plural(o.count, "task", ""), o.groupName))
+	taskARNs, err := o.runner.Run()
+	if err != nil {
+		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
+		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
+	}
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.Plural(o.count, "is", "are")))
+	return taskARNs, nil
 }
 
 func (o *runTaskOpts) buildAndPushImage() error {
