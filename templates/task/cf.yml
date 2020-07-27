@@ -15,6 +15,8 @@ Parameters:
     Type: String
   TaskRole:
     Type: String
+  ExecutionRole:
+    Type: String
   Command:
     Type: String
 Conditions:
@@ -23,6 +25,8 @@ Conditions:
     !Not [!Equals [!Ref ContainerImage, ""]]
   UseDefaultTaskRole:
     !Equals [!Ref TaskRole, ""]
+  HasExecutionRole:
+    !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
     !Not [!Equals [!Ref Command, ""]]
 Resources:
@@ -51,7 +55,7 @@ Resources:
       NetworkMode: awsvpc
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
+      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref "AWS::NoValue"]
       TaskRoleArn:
         !If [UseDefaultTaskRole, !Ref DefaultTaskRole, !Ref TaskRole]
   DefaultTaskRole:
