@@ -8,26 +8,6 @@ Parameters:
   EnvironmentName:
     Type: String
 
-  VpcCIDR:
-    Type: String
-    Default: 10.0.0.0/16
-
-  PublicSubnet1CIDR:
-    Type: String
-    Default: 10.0.0.0/24
-
-  PublicSubnet2CIDR:
-    Type: String
-    Default: 10.0.1.0/24
-
-  PrivateSubnet1CIDR:
-    Type: String
-    Default: 10.0.2.0/24
-
-  PrivateSubnet2CIDR:
-    Type: String
-    Default: 10.0.3.0/24
-
   IncludePublicLoadBalancer:
     Type: String
     Default: true
@@ -53,75 +33,17 @@ Conditions:
     - !Condition DelegateDNS
     - !Condition CreatePublicLoadBalancer
 
-Resources:
+Resources:{{if not .ImportVpc}}
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: !Ref VpcCIDR
+      CidrBlock: {{.VpcConfig.VpcCIDR}}
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PublicSubnet1CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub0'
-
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PublicSubnet2CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub1'
-
-  PrivateSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PrivateSubnet1CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv0'
-
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PrivateSubnet2CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv1'
-
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -138,25 +60,54 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  PublicSubnet1RouteTableAssociation:
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}
+  PublicSubnet{{inc $ind}}:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: {{$cidr}}
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ {{$ind}}, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub{{$ind}}'
+{{end}}{{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}
+  PrivateSubnet{{inc $ind}}:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: {{$cidr}}
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ {{$ind}}, !GetAZs '' ]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv{{$ind}}'
+{{end}}{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}
+  PublicSubnet{{inc $ind}}RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
-
+      SubnetId: !Ref PublicSubnet{{inc $ind}}
+{{end}}{{end}}
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
         Name: !Sub ${AppName}.local
-        Vpc: !Ref VPC
+        Vpc: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -179,7 +130,7 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-      VpcId: !Ref VPC
+      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
@@ -189,7 +140,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-      VpcId: !Ref VPC
+      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
@@ -216,7 +167,7 @@ Resources:
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-      Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
+      Subnets: [ {{if .ImportVpc}}{{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}]
       Type: application
 
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -234,7 +185,7 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
-      VpcId: !Ref VPC
+      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
 
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -261,8 +212,8 @@ Resources:
       Protocol: HTTPS
 
   CloudformationExecutionRole:
-    Type: AWS::IAM::Role
-    DependsOn: VPC
+    Type: AWS::IAM::Role{{if not .ImportVpc}}
+    DependsOn: VPC{{end}}
     Properties:
       RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
       AssumeRolePolicyDocument:
@@ -632,17 +583,17 @@ Resources:
       - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
 Outputs:
   VpcId:
-    Value: !Ref VPC
+    Value: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
 
   PublicSubnets:
-    Value: !Join [ ',', [ !Ref PublicSubnet1, !Ref PublicSubnet2 ] ]
+    Value: !Join [ ',', [ {{if .ImportVpc}}{{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 
   PrivateSubnets:
-    Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
+    Value: !Join [ ',', [ {{if .ImportVpc}}{{range $id := .ImportVpc.PrivateSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 

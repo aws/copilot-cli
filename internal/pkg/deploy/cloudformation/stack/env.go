@@ -3,6 +3,7 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -25,24 +26,25 @@ const (
 	acmValidationTemplatePath  = "custom-resources/dns-cert-validator.js"
 	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
 	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
-)
 
-// Parameter keys.
-const (
+	// Parameter keys.
 	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
 	envParamAppNameKey               = "AppName"
 	envParamEnvNameKey               = "EnvironmentName"
 	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
 	envParamAppDNSKey                = "AppDNSName"
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
-)
 
-// Output keys.
-const (
+	// Output keys.
 	EnvOutputCFNExecutionRoleARN       = "CFNExecutionRoleARN"
 	EnvOutputManagerRoleKey            = "EnvironmentManagerRoleARN"
 	EnvOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	EnvOutputSubdomain                 = "EnvironmentSubdomain"
+
+	// Default parameter values
+	defaultVPCCIDR            = "10.0.0.0/16"
+	defaultPublicSubnetCIDRS  = "10.0.0.0/24,10.0.1.0/24"
+	defaultPrivateSubnetCIDRS = "10.0.2.0/24,10.0.3.0/24"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -69,15 +71,33 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 
+	if e.AdjustVpcConfig.VpcCIDR == nil {
+		e.AdjustVpcConfig.VpcCIDR = aws.String(defaultVPCCIDR)
+	}
+	if e.AdjustVpcConfig.PublicSubnetCIDRs == nil {
+		e.AdjustVpcConfig.PublicSubnetCIDRs = aws.StringSlice(strings.Split(defaultPublicSubnetCIDRS, ","))
+	}
+	if e.AdjustVpcConfig.PrivateSubnetCIDRs == nil {
+		e.AdjustVpcConfig.PrivateSubnetCIDRs = aws.StringSlice(strings.Split(defaultPrivateSubnetCIDRS, ","))
+	}
+
 	content, err := e.parser.Parse(EnvTemplatePath, struct {
 		DNSDelegationLambda       string
 		ACMValidationLambda       string
 		EnableLongARNFormatLambda string
+		ImportVpc                 *deploy.ImportVpcConfig
+		VpcConfig                 deploy.AdjustVpcConfig
 	}{
 		dnsLambda.String(),
 		acmLambda.String(),
 		enableLongARNsLambda.String(),
-	})
+		e.ImportVpcConfig,
+		e.AdjustVpcConfig,
+	}, template.WithFuncs(map[string]interface{}{
+		"inc": func(i int) int {
+			return i + 1
+		},
+	}))
 	if err != nil {
 		return "", err
 	}

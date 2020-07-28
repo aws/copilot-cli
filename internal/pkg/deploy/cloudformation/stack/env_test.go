@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -44,11 +45,19 @@ func TestEnvTemplate(t *testing.T) {
 					DNSDelegationLambda       string
 					ACMValidationLambda       string
 					EnableLongARNFormatLambda string
+					ImportVpc                 *deploy.ImportVpcConfig
+					VpcConfig                 deploy.AdjustVpcConfig
 				}{
 					"customresources",
 					"customresources",
 					"customresources",
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
+					nil,
+					deploy.AdjustVpcConfig{
+						VpcCIDR:            aws.String(defaultVPCCIDR),
+						PrivateSubnetCIDRs: aws.StringSlice(strings.Split(defaultPrivateSubnetCIDRS, ",")),
+						PublicSubnetCIDRs:  aws.StringSlice(strings.Split(defaultPublicSubnetCIDRS, ",")),
+					},
+				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
 			},
 			expectedOutput: mockTemplate,
