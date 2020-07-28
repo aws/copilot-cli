@@ -313,8 +313,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(fmtTaskRunAppPrompt, gomock.Any(), appEnvOptionNone).Return("app", nil)
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), appEnvOptionNone).Return("app", nil)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantedApp: "app",
 		},
@@ -323,7 +323,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(fmtTaskRunAppPrompt, gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
 			},
 			wantedApp: "",
 		},
@@ -333,8 +333,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(fmtTaskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(1)
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(1)
 			},
 			wantedApp: "my-app",
 		},
@@ -345,7 +345,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(),
 					"my-app", appEnvOptionNone).Return("test", nil)
 			},
 
@@ -359,7 +359,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(),
 					"my-app", appEnvOptionNone).Return(appEnvOptionNone, nil)
 			},
 
@@ -393,7 +393,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		},
 		"prompt for task family name": {
 			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(fmtTaskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
+				m.EXPECT().Get(taskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Application(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -419,7 +419,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).
 					Return("", fmt.Errorf("error selecting environment"))
 			},
 
