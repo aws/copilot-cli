@@ -54,11 +54,12 @@ phases:
       #     - Login and push the image.
       - >
         for svc in $svcs; do
-          base_dockerfile=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build')
-          build_dockerfile=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.dockerfile?' | sed 's/"//g')
-          build_context=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.context?' | sed 's/"//g')
-          dockerfile_args=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))' | jq '.image.build?.args? | to_entries')
-          df_rel_path=$base_dockerfile
+          manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$svc/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+          base_dockerfile=$(echo $manifest | jq '.image.build')
+          build_dockerfile=$(echo $manifest| jq 'if .image.build?.dockerfile? then .image.build.dockerfile else "" end' | sed 's/"//g')
+          build_context=$(echo $manifest| jq 'if .image.build?.context? then .image.build.context else "" end' | sed 's/"//g')
+          dockerfile_args=$(echo $manifest | jq 'if .image.build?.args? then .image.build.args else "" end | to_entries?')
+          df_rel_path=$( echo $base_dockerfile | sed 's/"//g')
           if [ -n "$build_dockerfile" ]; then 
             df_rel_path=$build_dockerfile
           fi
@@ -70,10 +71,15 @@ phases:
           build_args=
           if [ -n "$dockerfile_args" ]; then
             for art in $(echo $dockerfile_args | jq -r '.[] | "\(.key)=\(.value)"'); do 
-              build_args="$build_args --build-arg $art"
+              build_args="$build_args --build-arg $art "
             done
           fi
-          docker build -t $svc:$tag $build_args -f $df_path $df_dir_path;
+          echo "Service: $svc"
+          echo "Relative Dockerfile path: $df_rel_path"
+          echo "Docker build context: $df_dir_path"
+          echo "Docker build args: $build_args"
+          echo "Running command: docker build -t $svc:$tag $build_args-f $df_path $df_dir_path";
+          docker build -t $svc:$tag $build_args-f $df_path $df_dir_path;
           image_id=$(docker images -q $svc:$tag);
           for env in $envs; do
             repo=$(cat $CODEBUILD_SRC_DIR/infrastructure/$svc-$env.params.json | jq '.Parameters.ContainerImage' | sed 's/"//g');
