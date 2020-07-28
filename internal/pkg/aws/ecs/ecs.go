@@ -219,19 +219,20 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 	}
 
 	taskARNs := make([]string, len(resp.Tasks))
-	tasks := make([]*Task, len(resp.Tasks))
 	for idx, task := range resp.Tasks {
 		taskARNs[idx] = aws.StringValue(task.TaskArn)
-
-		t := Task(*task)
-		tasks[idx] = &t
 	}
 
 	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
 	}); err != nil {
-		return tasks, fmt.Errorf("wait for tasks to be running: %w", err)
+		return nil, fmt.Errorf("wait for tasks to be running: %w", err)
+	}
+
+	tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
+	if err != nil {
+		return nil, err
 	}
 
 	return tasks, nil
