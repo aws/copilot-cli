@@ -68,6 +68,7 @@ type runTaskVars struct {
 	imageTag       string
 
 	taskRole string
+	executionRole string
 
 	subnets        []string
 	securityGroups []string
@@ -355,6 +356,7 @@ func (o *runTaskOpts) deploy() error {
 		Memory:   o.memory,
 		Image:    o.image,
 		TaskRole: o.taskRole,
+		ExecutionRole: o.executionRole,
 		Command:  o.command,
 		EnvVars:  o.envVars,
 	})
@@ -483,6 +485,7 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
+	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
 
 	cmd.Flags().StringVar(&vars.appName, appFlag, "", appFlagDescription)
 	cmd.Flags().StringVar(&vars.env, envFlag, "", envFlagDescription)

@@ -24,6 +24,7 @@ const (
 
 	taskContainerImageParamKey = "ContainerImage"
 	taskTaskRoleParamKey       = "TaskRole"
+	taskExecutionRoleParamKey  = "ExecutionRole"
 	taskCommandParamKey        = "Command"
 
 	taskLogRetentionInDays = "1"
@@ -87,6 +88,10 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(taskTaskRoleParamKey),
 			ParameterValue: aws.String(t.TaskRole),
+		},
+		{
+			ParameterKey: aws.String(taskExecutionRoleParamKey),
+			ParameterValue: aws.String(t.ExecutionRole),
 		},
 		{
 			ParameterKey:   aws.String(taskCommandParamKey),
