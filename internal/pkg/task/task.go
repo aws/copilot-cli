@@ -38,7 +38,7 @@ type TaskRunner interface {
 type Task struct {
 	TaskARN string
 	ClusterARN string
-	StartedAt time.Time
+	StartedAt *time.Time
 }
 
 const (
@@ -59,7 +59,7 @@ func tasks(ecsTasks []*ecs.Task) []*Task {
 		tasks[idx] = &Task{
 			TaskARN: aws.StringValue(task.TaskArn),
 			ClusterARN: aws.StringValue(task.ClusterArn),
-			StartedAt: aws.TimeValue(task.StartedAt),
+			StartedAt: task.StartedAt,
 		}
 	}
 	return tasks
