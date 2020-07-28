@@ -412,7 +412,7 @@ func (o *runTaskOpts) askAppName() error {
 		return nil
 	}
 
-	// NOTE: if we are not in a workspace and app flag is not specified, prompt the user to select an application or "None"
+	// If the application is empty then the user wants to run in the default VPC. Do not prompt for an environment name.
 	app, err := o.sel.Application(taskRunAppPrompt, taskRunAppPromptHelp, appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for application: %w", err)
