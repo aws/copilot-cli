@@ -431,7 +431,7 @@ func (o *runTaskOpts) askEnvName() error {
 		return nil
 	}
 
-	// NOTE: if the subnets are not provided, we are not in any workspace and app flag is not specified, use the "None" environment.
+	// If the application is empty then the user wants to run in the default VPC. Do not prompt for an environment name.
 	if o.AppName() == "" || o.subnets != nil {
 		return nil
 	}
