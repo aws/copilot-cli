@@ -460,22 +460,21 @@ func BuildTaskRunCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Run a one-off task",
-		Long:  `Run a one-off task with configurations such as cpu-units, memory, image, etc.`,
+		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task with default setting. You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task with default settings. 
+You will be prompted to specify a task group name and an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
-Starts 4 tasks with 2GB memory, run a particular image, and run with a particular task role.
-/code $ copilot task run --num 4 --memory 2048 --image=python --task-role migrate-exec-role
+Run 4 tasks with 2GB memory, an existing image, and a custom task role.
+/code $ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
 Run a task with subnets and security groups.
-/code $ copilot task run --subnets subnet-123,subnet-456 --subnets subnet-789 --security-groups sg-123,sg-456
+/code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
 Run a task with a command.
-/code $ copilot task run --command "python migrate-script.py" 
-`,
+/code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
 			if err != nil {

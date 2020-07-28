@@ -14,16 +14,16 @@ func BuildTaskCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "task",
 		Short: `Commands for tasks.
-Tasks are one-off Amazon ECS tasks.`,
-		Long: `Commands for tasks
-Tasks are one-off container images that run once in a given environment, then terminate.`,
+One-off Amazon ECS tasks that terminate once their work is done.`,
+		Long: `Commands for tasks.
+One-off Amazon ECS tasks that terminate once their work is done.`,
 	}
 
 	cmd.AddCommand(BuildTaskRunCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
-		"group": group.Operational,
+		"group": group.Develop,
 	}
 	return cmd
 }
