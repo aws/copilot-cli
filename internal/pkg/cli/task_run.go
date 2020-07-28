@@ -403,7 +403,7 @@ func (o *runTaskOpts) allStopped(tasks []*task.Task) (allStopped bool, tasksNext
 
 	allStopped = true
 	for _, t := range tasksResp {
-		if *t.LastStatus != "STOPPED" { // TODO: make it a constant
+		if *t.LastStatus != ecs.DesiredStatusStopped {
 			allStopped = false
 			tasksNext = append(tasksNext, &task.Task{
 				TaskARN: *t.TaskArn,

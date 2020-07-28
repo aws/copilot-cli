@@ -20,6 +20,9 @@ const (
 	shortTaskIDLength      = 8
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
+
+	// DesiredStatusStopped wraps the ecs constant DesiredStatusStopped.
+	DesiredStatusStopped = ecs.DesiredStatusStopped
 )
 
 type api interface {
