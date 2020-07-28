@@ -54,17 +54,18 @@ func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
 }
 
-func (t *Task) fromECS(ecsTask *ecs.Task) {
-	t.TaskARN = aws.StringValue(ecsTask.TaskArn)
-	t.ClusterARN = aws.StringValue(ecsTask.ClusterArn)
-	t.StartedAt = ecsTask.StartedAt
+func newTaskFromECS(ecsTask *ecs.Task) *Task {
+	return &Task{
+		TaskARN: aws.StringValue(ecsTask.TaskArn),
+		ClusterARN: aws.StringValue(ecsTask.ClusterArn),
+		StartedAt: ecsTask.StartedAt,
+	}
 }
 
 func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	tasks := make([]*Task, len(ecsTasks))
 	for idx, ecsTask := range ecsTasks {
-		tasks[idx] = &Task{}
-		tasks[idx].fromECS(ecsTask)
+		tasks[idx] = newTaskFromECS(ecsTask)
 	}
 	return tasks
 }
