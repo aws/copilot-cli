@@ -13,6 +13,7 @@ type CreateTaskResourcesInput struct {
 
 	Image    string
 	TaskRole string
+	ExecutionRole string
 	Command  string
 	EnvVars  map[string]string
 

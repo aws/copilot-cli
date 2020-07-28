@@ -1,7 +1,7 @@
 ---
 title: "env delete"
 linkTitle: "env delete"
-weight: 3
+weight: 4
 ---
 
 ```bash
