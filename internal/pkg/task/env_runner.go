@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	clusterResourceType  = "ecs:cluster"
+	clusterResourceType = "ecs:cluster"
 
-	fmtErrClusterFromEnv        = "get cluster by env %s: %w"
-	fmtErrNoClusterFoundFromEnv = "no cluster found in env %s"
+	fmtErrClusterFromEnv            = "get cluster by env %s: %w"
+	fmtErrNoClusterFoundFromEnv     = "no cluster found in env %s"
 	fmtErrMoreThanOneClusterFromEnv = "more than one cluster is found in environment %s"
-	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
-	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
+	fmtErrPublicSubnetsFromEnv      = "get public subnet IDs from environment %s: %w"
+	fmtErrSecurityGroupsFromEnv     = "get security groups from environment %s: %w"
 )
 
 // Names for tag filters
@@ -83,7 +83,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 			parentErr: err,
 		}
 	}
-	return tasks(ecsTasks), nil
+	return convertECSTasks(ecsTasks), nil
 }
 
 func (r *EnvRunner) cluster(app, env string) (string, error) {

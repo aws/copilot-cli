@@ -289,7 +289,6 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
-
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput) error
 }

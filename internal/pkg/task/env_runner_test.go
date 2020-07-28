@@ -88,7 +88,7 @@ func TestEnvRunner_Run(t *testing.T) {
 						&resourcegroups.Resource{
 							ARN: "cluster-2",
 						},
-				}, nil)
+					}, nil)
 			},
 			mockVPCGetter: mockVPCGetterAny,
 			mockStarter:   mockStarterNotRun,

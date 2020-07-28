@@ -242,7 +242,7 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 func (e *ECS) DescribeTasks(cluster string, taskARNs []string) ([]*Task, error) {
 	resp, err := e.client.DescribeTasks(&ecs.DescribeTasksInput{
 		Cluster: aws.String(cluster),
-		Tasks: aws.StringSlice(taskARNs),
+		Tasks:   aws.StringSlice(taskARNs),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("describe tasks: %w", err)

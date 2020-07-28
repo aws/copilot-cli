@@ -35,10 +35,11 @@ type TaskRunner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
 }
 
+// Task represents a one-off workload that runs until completed or an error occurs.
 type Task struct {
-	TaskARN string
+	TaskARN    string
 	ClusterARN string
-	StartedAt *time.Time
+	StartedAt  *time.Time
 }
 
 const (
@@ -53,14 +54,17 @@ func taskFamilyName(groupName string) string {
 	return fmt.Sprintf(fmtTaskFamilyName, groupName)
 }
 
-func tasks(ecsTasks []*ecs.Task) []*Task {
+func (t *Task) fromECS(ecsTask *ecs.Task) {
+	t.TaskARN = aws.StringValue(ecsTask.TaskArn)
+	t.ClusterARN = aws.StringValue(ecsTask.ClusterArn)
+	t.StartedAt = ecsTask.StartedAt
+}
+
+func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	tasks := make([]*Task, len(ecsTasks))
-	for idx, task := range ecsTasks {
-		tasks[idx] = &Task{
-			TaskARN: aws.StringValue(task.TaskArn),
-			ClusterARN: aws.StringValue(task.ClusterArn),
-			StartedAt: task.StartedAt,
-		}
+	for idx, ecsTask := range ecsTasks {
+		tasks[idx] = &Task{}
+		tasks[idx].fromECS(ecsTask)
 	}
 	return tasks
 }

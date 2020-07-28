@@ -90,8 +90,8 @@ type runTaskOpts struct {
 	deployer taskDeployer
 
 	// Fields below are configured at runtime.
-	repository repositoryService
-	runner taskRunner
+	repository           repositoryService
+	runner               taskRunner
 	configureRuntimeOpts func() error
 }
 
@@ -117,7 +117,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		deployer: cloudformation.New(sess),
 	}
-
 
 	opts.configureRuntimeOpts = func() error {
 		var sess *awssession.Session
@@ -169,38 +168,38 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 
 	if o.env != "" {
 		return &task.EnvRunner{
-			Count: o.count,
+			Count:     o.count,
 			GroupName: o.groupName,
 
 			App: o.AppName(),
 			Env: o.env,
 
-			VPCGetter: vpcGetter,
+			VPCGetter:     vpcGetter,
 			ClusterGetter: resourcegroups.New(sess),
-			Starter: ecsService,
+			Starter:       ecsService,
 		}
 	}
 
 	if o.subnets != nil {
 		return &task.NetworkConfigRunner{
-			Count: o.count,
+			Count:     o.count,
 			GroupName: o.groupName,
 
-			Subnets: o.subnets,
+			Subnets:        o.subnets,
 			SecurityGroups: o.securityGroups,
 
 			ClusterGetter: ecsService,
-			Starter: ecsService,
+			Starter:       ecsService,
 		}
 	}
 
 	return &task.DefaultVPCRunner{
-		Count: o.count,
+		Count:     o.count,
 		GroupName: o.groupName,
 
-		VPCGetter: vpcGetter,
+		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
-		Starter: ecsService,
+		Starter:       ecsService,
 	}
 
 }
@@ -291,7 +290,6 @@ func (o *runTaskOpts) Execute() error {
 			tag = o.imageTag
 		}
 		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
-
 
 		if err := o.updateTaskResources(); err != nil {
 			return err

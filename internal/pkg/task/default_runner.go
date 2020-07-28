@@ -34,7 +34,7 @@ func (r *DefaultVPCRunner) Run() ([]*Task, error) {
 
 	cluster, err := r.ClusterGetter.DefaultCluster()
 	if err != nil {
-		return nil, &errGetDefaultCluster {
+		return nil, &errGetDefaultCluster{
 			parentErr: err,
 		}
 	}
@@ -61,7 +61,7 @@ func (r *DefaultVPCRunner) Run() ([]*Task, error) {
 		}
 	}
 
-	return tasks(ecsTasks), nil
+	return convertECSTasks(ecsTasks), nil
 }
 
 func (r *DefaultVPCRunner) validateDependencies() error {
