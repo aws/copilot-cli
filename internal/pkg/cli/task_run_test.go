@@ -31,14 +31,15 @@ var defaultOpts = basicOpts{
 
 // NOTE: mock spinner so that it doesn't create log output when testing Execute
 type mockSpinner struct{}
-func (s *mockSpinner) Start(label string) {}
-func (s *mockSpinner) Stop(label string) {}
+
+func (s *mockSpinner) Start(label string)           {}
+func (s *mockSpinner) Stop(label string)            {}
 func (s *mockSpinner) Events([]termprogress.TabRow) {}
 
 type runTaskMocks struct {
-	deployer *mocks.MocktaskDeployer
+	deployer   *mocks.MocktaskDeployer
 	repository *mocks.MockrepositoryService
-	runner *mocks.MocktaskRunner
+	runner     *mocks.MocktaskRunner
 }
 
 func TestTaskRunOpts_Validate(t *testing.T) {
@@ -56,8 +57,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inSubnets        []string
 		inSecurityGroups []string
 
-		inEnvVars  map[string]string
-		inCommand  string
+		inEnvVars map[string]string
+		inCommand string
 
 		appName string
 
@@ -269,7 +270,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					securityGroups: tc.inSecurityGroups,
 					dockerfilePath: tc.inDockerfilePath,
 					envVars:        tc.inEnvVars,
-					command:       tc.inCommand,
+					command:        tc.inCommand,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -488,7 +489,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+					Name:  inGroupName,
 					Image: "",
 				}).Return(errors.New("error deploying"))
 			},
@@ -503,7 +504,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+					Name:  inGroupName,
 					Image: "uri/repo:latest",
 				}).Times(1).Return(errors.New("error updating"))
 			},
@@ -518,14 +519,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
-		"use default dockerfile path if not provided": {
-			setupMocks: func(m runTaskMocks) {
-				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, gomock.Any())
-				m.repository.EXPECT().URI().AnyTimes()
-				m.runner.EXPECT().Run().AnyTimes()
-			},
-		},
 		"append 'latest' to image tag": {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
@@ -538,13 +531,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"update image to task resource if image is not provided": {
 			setupMocks: func(m runTaskMocks) {
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+					Name:  inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
-					Name: inGroupName,
+					Name:  inGroupName,
 					Image: "uri/repo:latest",
 				}).Times(1).Return(nil)
 				m.runner.EXPECT().Run().AnyTimes()
@@ -562,17 +555,17 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			mockRunner := mocks.NewMocktaskRunner(ctrl)
 
 			mocks := runTaskMocks{
-				deployer: mockDeployer,
+				deployer:   mockDeployer,
 				repository: mockRepo,
-				runner: mockRunner,
+				runner:     mockRunner,
 			}
 			tc.setupMocks(mocks)
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
 					groupName: inGroupName,
-					image: tc.inImage,
-					imageTag: tc.inTag,
+					image:     tc.inImage,
+					imageTag:  tc.inTag,
 				},
 				spinner:  &mockSpinner{},
 				deployer: mockDeployer,
@@ -592,4 +585,3 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		})
 	}
 }
-

@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	appEnvOptionNone = "None (run in default VPC)"
+	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
 )
@@ -73,7 +73,7 @@ type runTaskVars struct {
 	dockerfilePath string
 	imageTag       string
 
-	taskRole string
+	taskRole      string
 	executionRole string
 
 	subnets        []string
@@ -275,10 +275,6 @@ func (o *runTaskOpts) Ask() error {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
-	if o.dockerfilePath == "" {
-		o.dockerfilePath = defaultDockerfilePath
-	}
-
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
@@ -358,14 +354,14 @@ func (o *runTaskOpts) updateTaskResources() error {
 
 func (o *runTaskOpts) deploy() error {
 	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
-		Name:     o.groupName,
-		CPU:      o.cpu,
-		Memory:   o.memory,
-		Image:    o.image,
-		TaskRole: o.taskRole,
+		Name:          o.groupName,
+		CPU:           o.cpu,
+		Memory:        o.memory,
+		Image:         o.image,
+		TaskRole:      o.taskRole,
 		ExecutionRole: o.executionRole,
-		Command:  o.command,
-		EnvVars:  o.envVars,
+		Command:       o.command,
+		EnvVars:       o.envVars,
 	})
 }
 
@@ -485,7 +481,7 @@ Run a task with a command.
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
+			if err := opts.Validate(); err != nil {
 				return err
 			}
 
@@ -507,7 +503,7 @@ Run a task with a command.
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
-	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
