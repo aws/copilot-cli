@@ -15,8 +15,6 @@ func BuildTaskCmd() *cobra.Command {
 		Use: "task",
 		Short: `Commands for tasks.
 One-off Amazon ECS tasks that terminate once their work is done.`,
-		Long: `Commands for tasks.
-One-off Amazon ECS tasks that terminate once their work is done.`,
 	}
 
 	cmd.AddCommand(BuildTaskRunCmd())

@@ -462,7 +462,7 @@ func BuildTaskRunCmd() *cobra.Command {
 		Use:   "run",
 		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task with default settings. 
+Run a task using your local Dockerfile and minimal container sizes. 
 You will be prompted to specify a task group name and an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
@@ -471,7 +471,7 @@ Run 4 tasks with 2GB memory, an existing image, and a custom task role.
 /code $ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
-Run a task with subnets and security groups.
+Run a task using the current workspace with specific subnets and security groups.
 /code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
 Run a task with a command.
 /code $ copilot task run --command "python migrate-script.py"`,
