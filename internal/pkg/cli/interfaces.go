@@ -6,6 +6,7 @@ package cli
 import (
 	"encoding"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -288,13 +289,12 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
-
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput) error
 }
 
 type taskRunner interface {
-	Run() ([]string, error)
+	Run() ([]*task.Task, error)
 }
 
 type deployer interface {

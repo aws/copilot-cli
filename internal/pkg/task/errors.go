@@ -9,12 +9,11 @@ import (
 )
 
 var (
-	errNoSubnetFound  = errors.New("no subnets found")
+	errNoSubnetFound = errors.New("no subnets found")
 
-	errVPCGetterNil = errors.New("vpc getter is not set")
+	errVPCGetterNil     = errors.New("vpc getter is not set")
 	errClusterGetterNil = errors.New("cluster getter is not set")
-	errStarterNil = errors.New("starter is not set")
-
+	errStarterNil       = errors.New("starter is not set")
 )
 
 type errRunTask struct {

@@ -23,7 +23,7 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 		mockStarter       func(m *mocks.MockTaskRunner)
 
 		wantedError error
-		wantedARNs  []string
+		wantedTasks []*Task
 	}{
 		"failed to get default cluster": {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
@@ -93,12 +93,12 @@ func TestDefaultVPCRunner_Run(t *testing.T) {
 				Starter:       mockStarter,
 			}
 
-			arns, err := runner.Run()
+			tasks, err := runner.Run()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedARNs, arns)
+				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})
 	}

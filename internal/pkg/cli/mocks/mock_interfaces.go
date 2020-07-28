@@ -16,6 +16,7 @@ import (
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
+	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -2837,10 +2838,10 @@ func (m *MocktaskRunner) EXPECT() *MocktaskRunnerMockRecorder {
 }
 
 // Run mocks base method
-func (m *MocktaskRunner) Run() ([]string, error) {
+func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run")
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]*task.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

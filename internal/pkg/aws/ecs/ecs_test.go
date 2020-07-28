@@ -411,7 +411,7 @@ func TestECS_RunTask(t *testing.T) {
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedArns  []string
+		wantedTasks []*Task
 	}{
 		"run task success": {
 			input: runTaskInput,
@@ -442,14 +442,40 @@ func TestECS_RunTask(t *testing.T) {
 								TaskArn: aws.String("task-3"),
 							},
 						},
-				}, nil)
+					}, nil)
 				m.EXPECT().WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 					Cluster: aws.String("my-cluster"),
-					Tasks: aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
+					Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
 				}).Times(1)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("my-cluster"),
+					Tasks:   aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("task-1"),
+						},
+						{
+							TaskArn: aws.String("task-2"),
+						},
+						{
+							TaskArn: aws.String("task-3"),
+						},
+					},
+				}, nil).Times(1)
 			},
 
-			wantedArns: []string{"task-1", "task-2", "task-3"},
+			wantedTasks: []*Task{
+				{
+					TaskArn: aws.String("task-1"),
+				},
+				{
+					TaskArn: aws.String("task-2"),
+				},
+				{
+					TaskArn: aws.String("task-3"),
+				},
+			},
 		},
 		"run task failed": {
 			input: runTaskInput,
@@ -488,7 +514,7 @@ func TestECS_RunTask(t *testing.T) {
 				client: mockECSClient,
 			}
 
-			arns, err := ecs.RunTask(RunTaskInput{
+			tasks, err := ecs.RunTask(RunTaskInput{
 				Count:          tc.count,
 				Cluster:        tc.cluster,
 				TaskFamilyName: tc.taskFamilyName,
@@ -500,7 +526,7 @@ func TestECS_RunTask(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Equal(t, tc.wantedArns, arns)
+				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})
 	}
@@ -508,8 +534,8 @@ func TestECS_RunTask(t *testing.T) {
 
 func TestECS_DescribeTasks(t *testing.T) {
 	inCluster := "my-cluster"
-	inTaskARNs := []string{"task-1","task-2","task-3"}
-	testCases := map[string]struct{
+	inTaskARNs := []string{"task-1", "task-2", "task-3"}
+	testCases := map[string]struct {
 		mockAPI     func(m *mocks.Mockapi)
 		wantedError error
 		wantedTasks []*Task
@@ -518,7 +544,7 @@ func TestECS_DescribeTasks(t *testing.T) {
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String(inCluster),
-					Tasks: aws.StringSlice(inTaskARNs),
+					Tasks:   aws.StringSlice(inTaskARNs),
 				}).Return(nil, errors.New("error describing tasks"))
 			},
 			wantedError: fmt.Errorf("describe tasks: %w", errors.New("error describing tasks")),
@@ -527,7 +553,7 @@ func TestECS_DescribeTasks(t *testing.T) {
 			mockAPI: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
 					Cluster: aws.String(inCluster),
-					Tasks: aws.StringSlice(inTaskARNs),
+					Tasks:   aws.StringSlice(inTaskARNs),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
 						&ecs.Task{

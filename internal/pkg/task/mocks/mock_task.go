@@ -192,10 +192,10 @@ func (m *MockTaskRunner) EXPECT() *MockTaskRunnerMockRecorder {
 }
 
 // RunTask mocks base method
-func (m *MockTaskRunner) RunTask(input ecs.RunTaskInput) ([]string, error) {
+func (m *MockTaskRunner) RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunTask", input)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]*ecs.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
