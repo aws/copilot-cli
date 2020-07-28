@@ -447,6 +447,22 @@ func TestECS_RunTask(t *testing.T) {
 					Cluster: aws.String("my-cluster"),
 					Tasks: aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
 				}).Times(1)
+				m.EXPECT().DescribeTasks(&ecs.DescribeTasksInput{
+					Cluster: aws.String("my-cluster"),
+					Tasks: aws.StringSlice([]string{"task-1", "task-2", "task-3"}),
+				}).Return(&ecs.DescribeTasksOutput{
+					Tasks: []*ecs.Task{
+						{
+							TaskArn: aws.String("task-1"),
+						},
+						{
+							TaskArn: aws.String("task-2"),
+						},
+						{
+							TaskArn: aws.String("task-3"),
+						},
+					},
+				}, nil).Times(1)
 			},
 
 			wantedTasks: []*Task{
