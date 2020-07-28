@@ -117,9 +117,8 @@ func TestStore_ListDeployedServices(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:           mockRgGetter,
 				configStore:        mockConfigStore,
-				newRgClientFromIDs: func(string, string) error { return nil },
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
@@ -130,7 +129,7 @@ func TestStore_ListDeployedServices(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.ElementsMatch(t, svcs, tc.wantedSvcs)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -184,28 +183,26 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			inputSvc: "mockSvc",
 
 			setupMocks: func(m storeMock) {
-				gomock.InOrder(
-					m.configStore.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
-						{
-							App:  "mockApp",
-							Name: "mockEnv1",
-						},
-						{
-							App:  "mockApp",
-							Name: "mockEnv2",
-						},
-					}, nil),
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
-						AppTagKey:     "mockApp",
-						EnvTagKey:     "mockEnv1",
-						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil),
-					m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
-						AppTagKey:     "mockApp",
-						EnvTagKey:     "mockEnv2",
-						ServiceTagKey: "mockSvc",
-					}).Return([]*rg.Resource{}, nil),
-				)
+				m.configStore.EXPECT().ListEnvironments("mockApp").Return([]*config.Environment{
+					{
+						App:  "mockApp",
+						Name: "mockEnv1",
+					},
+					{
+						App:  "mockApp",
+						Name: "mockEnv2",
+					},
+				}, nil)
+				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					AppTagKey:     "mockApp",
+					EnvTagKey:     "mockEnv1",
+					ServiceTagKey: "mockSvc",
+				}).Return([]*rg.Resource{{ARN: "mockSvcARN"}}, nil)
+				m.rgGetter.EXPECT().GetResourcesByTags(ecsServiceResourceType, map[string]string{
+					AppTagKey:     "mockApp",
+					EnvTagKey:     "mockEnv2",
+					ServiceTagKey: "mockSvc",
+				}).Return([]*rg.Resource{}, nil)
 			},
 
 			wantedEnvs: []string{"mockEnv1"},
@@ -228,9 +225,8 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:            mockRgGetter,
 				configStore:         mockConfigStore,
-				newRgClientFromRole: func(string, string) error { return nil },
+				newRgClientFromRole: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
@@ -241,7 +237,7 @@ func TestStore_ListEnvironmentsDeployedTo(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.ElementsMatch(t, envs, tc.wantedEnvs)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -326,9 +322,8 @@ func TestStore_IsDeployed(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			store := &Store{
-				rgClient:           mockRgGetter,
 				configStore:        mockConfigStore,
-				newRgClientFromIDs: func(string, string) error { return nil },
+				newRgClientFromIDs: func(string, string) (resourceGetter, error) { return mockRgGetter, nil },
 			}
 
 			// WHEN
@@ -339,7 +334,7 @@ func TestStore_IsDeployed(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 				require.Equal(t, deployed, tc.wantedDeployed)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

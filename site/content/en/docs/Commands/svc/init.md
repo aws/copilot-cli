@@ -39,7 +39,7 @@ Backend Service Flags
 Each service type has its own optional and required flags besides the common required flags.
 To create a "frontend" load balanced web service you could run:  
 
-`$ copilot svc init --name frontend --app-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
+`$ copilot svc init --name frontend --svc-type "Load Balanced Web Service" --dockerfile ./frontend/Dockerfile`
 
 ### What does it look like?
 <img class="img-fluid" src="https://raw.githubusercontent.com/kohidave/copilot-demos/master/svc-init.svg?sanitize=true" style="margin-bottom: 20px;">

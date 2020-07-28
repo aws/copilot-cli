@@ -111,7 +111,7 @@ func TestSvcDeployOpts_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -184,7 +184,7 @@ func TestSvcDeployOpts_Ask(t *testing.T) {
 
 			// THEN
 			if tc.wantedError == nil {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedSvcName, opts.Name)
 				require.Equal(t, tc.wantedEnvName, opts.EnvName)
 				require.Equal(t, tc.wantedImageTag, opts.ImageTag)

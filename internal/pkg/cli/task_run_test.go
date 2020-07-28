@@ -5,7 +5,8 @@ package cli
 
 import (
 	"errors"
-	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -16,15 +17,27 @@ import (
 )
 
 type basicOpts struct {
-	inCount  int8
-	inCPU    int16
-	inMemory int16
+	inCount  int
+	inCPU    int
+	inMemory int
 }
 
 var defaultOpts = basicOpts{
 	inCount:  1,
 	inCPU:    256,
 	inMemory: 512,
+}
+
+// NOTE: mock spinner so that it doesn't create log output when testing Execute
+type mockSpinner struct{}
+func (s *mockSpinner) Start(label string) {}
+func (s *mockSpinner) Stop(label string) {}
+func (s *mockSpinner) Events([]termprogress.TabRow) {}
+
+type runTaskMocks struct {
+	deployer *mocks.MocktaskDeployer
+	repository *mocks.MockrepositoryService
+	runner *mocks.MocktaskRunner
 }
 
 func TestTaskRunOpts_Validate(t *testing.T) {
@@ -39,11 +52,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inTaskRole string
 
 		inEnv            string
-		inSubnet         string
+		inSubnets        []string
 		inSecurityGroups []string
 
 		inEnvVars  map[string]string
-		inCommands []string
+		inCommand  string
 
 		appName string
 
@@ -70,7 +83,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				"NAME": "my-app",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			appName: "my-app",
 			mockStore: func(m *mocks.Mockstore) {
@@ -94,14 +107,14 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDockerfilePath: "hello/world/Dockerfile",
 			inTaskRole:       "exec-role",
 
-			inSubnet:         "subnet-10d938jds",
+			inSubnets:        []string{"subnet-10d938jds"},
 			inSecurityGroups: []string{"sg-0d9sjdk", "sg-d33kds99"},
 
 			inEnvVars: map[string]string{
 				"NAME": "pj",
 				"ENV":  "dev",
 			},
-			inCommands: []string{"echo hello world"},
+			inCommand: "echo hello world",
 
 			mockFileSystem: func(mockFS afero.Fs) {
 				mockFS.MkdirAll("hello/world", 0755)
@@ -170,7 +183,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					Region:          "us-east-1",
 				})
 			},
-			wantedError: fmt.Errorf("get application: couldn't find an application named my-app in account 115 and region us-east-1"),
+			wantedError: errors.New("get application: couldn't find an application named my-app in account 115 and region us-east-1"),
 		},
 		"env exists in app": {
 			basicOpts: defaultOpts,
@@ -206,7 +219,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					Name: "my-app",
 				}, nil)
 			},
-			wantedError: errors.New("get environment: couldn't find environment dev in the application my-app"),
+			wantedError: errors.New("get environment dev config: couldn't find environment dev in the application my-app"),
 		},
 		"no workspace": {
 			basicOpts: defaultOpts,
@@ -217,8 +230,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both environment and subnet id specified": {
 			basicOpts: defaultOpts,
 
-			inEnv:    "test",
-			inSubnet: "subnet id",
+			inEnv:     "test",
+			inSubnets: []string{"subnet id"},
 
 			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
 		},
@@ -251,11 +264,11 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					image:          tc.inImage,
 					env:            tc.inEnv,
 					taskRole:       tc.inTaskRole,
-					subnet:         tc.inSubnet,
+					subnets:        tc.inSubnets,
 					securityGroups: tc.inSecurityGroups,
 					dockerfilePath: tc.inDockerfilePath,
 					envVars:        tc.inEnvVars,
-					commands:       tc.inCommands,
+					command:       tc.inCommand,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -273,7 +286,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -288,24 +301,38 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		inEnv   string
 		appName string
 
-		mockSel    func(m *mocks.MockappEnvWithNoneSelector)
+		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
 
 		wantedError error
 		wantedEnv   string
 		wantedName  string
 	}{
-		"prompt for env": {
+		"selected an existing environment": {
 			basicOpts: defaultOpts,
 
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), "my-app").Return("test", nil)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return("test", nil)
 			},
 
 			wantedEnv: "test",
+		},
+		"selected None env": {
+			basicOpts: defaultOpts,
+
+			inName:  "my-task",
+			appName: "my-app",
+
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(),
+					"my-app", envOptionNone).Return(envOptionNone, nil)
+			},
+
+			wantedEnv: "",
 		},
 		"don't prompt if env is provided": {
 			basicOpts: defaultOpts,
@@ -314,8 +341,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inEnv:   "test",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
 			wantedEnv: "test",
@@ -325,11 +352,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			inName: "my-task",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 
-			wantedEnv: config.EnvNameNone,
+			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			basicOpts: defaultOpts,
@@ -352,12 +379,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			inName:  "my-task",
 			appName: "my-app",
 
-			mockSel: func(m *mocks.MockappEnvWithNoneSelector) {
-				m.EXPECT().EnvironmentWithNone(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any()).Return(config.EnvNameNone, fmt.Errorf("error selecting environment"))
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(fmtTaskRunEnvPrompt, gomock.Any(), gomock.Any(), envOptionNone).
+					Return("", errors.New("error selecting environment"))
 			},
 
 			wantedError: errors.New("ask for environment: error selecting environment"),
-			wantedEnv:   config.EnvNameNone,
 		},
 	}
 
@@ -366,7 +393,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockSel := mocks.NewMockappEnvWithNoneSelector(ctrl)
+			mockSel := mocks.NewMockappEnvSelector(ctrl)
 			mockPrompter := mocks.NewMockprompter(ctrl)
 
 			if tc.mockSel != nil {
@@ -396,10 +423,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			err := opts.Ask()
 
 			if tc.wantedError == nil {
-				require.Nil(t, err)
-				if tc.wantedEnv != "" {
-					require.Equal(t, tc.wantedEnv, opts.env)
-				}
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedEnv, opts.env)
 				if tc.wantedName != "" {
 					require.Equal(t, tc.wantedName, opts.groupName)
 				}
@@ -409,3 +434,126 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskRunOpts_Execute(t *testing.T) {
+	const inGroupName = "my-task"
+	mockRepoURI := "uri/repo"
+
+	tag := "tag"
+
+	testCases := map[string]struct {
+		inImage string
+		inTag   string
+
+		setupMocks func(m runTaskMocks)
+
+		wantedError error
+	}{
+		"error deploying resources": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Return(errors.New("error deploying"))
+			},
+			wantedError: errors.New("provision resources for task my-task: error deploying"),
+		},
+		"error updating resources": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name:  inGroupName,
+					Image: "",
+				}).Return(nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "uri/repo:latest",
+				}).Times(1).Return(errors.New("error updating"))
+			},
+			wantedError: errors.New("update resources for task my-task: error updating"),
+		},
+		"error running tasks": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
+			},
+			wantedError: errors.New("run task my-task: error running"),
+		},
+		"use default dockerfile path if not provided": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, gomock.Any())
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"append 'latest' to image tag": {
+			inTag: tag,
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"update image to task resource if image is not provided": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "",
+				}).Times(1).Return(nil)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), defaultDockerfilePath, imageTagLatest)
+				m.repository.EXPECT().URI().Return(mockRepoURI)
+				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
+					Name: inGroupName,
+					Image: "uri/repo:latest",
+				}).Times(1).Return(nil)
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
+			mockRepo := mocks.NewMockrepositoryService(ctrl)
+			mockRunner := mocks.NewMocktaskRunner(ctrl)
+
+			mocks := runTaskMocks{
+				deployer: mockDeployer,
+				repository: mockRepo,
+				runner: mockRunner,
+			}
+			tc.setupMocks(mocks)
+
+			opts := &runTaskOpts{
+				runTaskVars: runTaskVars{
+					groupName: inGroupName,
+					image: tc.inImage,
+					imageTag: tc.inTag,
+				},
+				spinner:  &mockSpinner{},
+				deployer: mockDeployer,
+			}
+			opts.configureRuntimeOpts = func() error {
+				opts.repository = mockRepo
+				opts.runner = mockRunner
+				return nil
+			}
+
+			err := opts.Execute()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+

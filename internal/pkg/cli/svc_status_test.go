@@ -106,7 +106,7 @@ func TestSvcStatus_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -180,7 +180,7 @@ func TestSvcStatus_Ask(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -244,7 +244,7 @@ func TestSvcStatus_Execute(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.NotEmpty(t, b.String(), "expected output content to not be empty")
 			}
 		})

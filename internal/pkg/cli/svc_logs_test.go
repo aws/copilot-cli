@@ -149,7 +149,7 @@ func TestSvcLogs_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -255,7 +255,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -416,7 +416,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
 			}
 		})

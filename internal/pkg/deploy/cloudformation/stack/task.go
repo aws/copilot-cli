@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"strconv"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -25,6 +24,7 @@ const (
 
 	taskContainerImageParamKey = "ContainerImage"
 	taskTaskRoleParamKey       = "TaskRole"
+	taskExecutionRoleParamKey  = "ExecutionRole"
 	taskCommandParamKey        = "Command"
 
 	taskLogRetentionInDays = "1"
@@ -90,6 +90,10 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(t.TaskRole),
 		},
 		{
+			ParameterKey: aws.String(taskExecutionRoleParamKey),
+			ParameterValue: aws.String(t.ExecutionRole),
+		},
+		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String(t.Command),
 		},
@@ -100,7 +104,7 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 func (t *taskStackConfig) Tags() []*cloudformation.Tag {
 	appEnvTags := make(map[string]string)
 
-	if t.Env != config.EnvNameNone {
+	if t.Env != "" {
 		appEnvTags[deploy.AppTagKey] = t.App
 		appEnvTags[deploy.EnvTagKey] = t.Env
 	}

@@ -7,16 +7,16 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/repository"
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -136,9 +136,17 @@ type secretDeleter interface {
 	DeleteSecret(secretName string) error
 }
 
-type ecrService interface {
-	GetRepository(name string) (string, error)
-	GetECRAuth() (ecr.Auth, error)
+type imageBuilderPusher interface {
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error
+}
+
+type repositoryURIGetter interface {
+	URI() string
+}
+
+type repositoryService interface {
+	repositoryURIGetter
+	imageBuilderPusher
 }
 
 type cwlogService interface {
@@ -153,12 +161,6 @@ type templater interface {
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
-}
-
-type dockerService interface {
-	Build(in docker.BuildArguments) error
-	Login(uri, username, password string) error
-	Push(uri, imageTag string, additionalTags ...string) error
 }
 
 type runner interface {
@@ -292,6 +294,14 @@ type appResourcesGetter interface {
 	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
+type taskDeployer interface {
+	DeployTask(input *deploy.CreateTaskResourcesInput) error
+}
+
+type taskRunner interface {
+	Run() ([]string, error)
+}
+
 type deployer interface {
 	environmentDeployer
 	appDeployer
@@ -347,12 +357,7 @@ type appSelector interface {
 
 type appEnvSelector interface {
 	appSelector
-	Environment(prompt, help, app string) (string, error)
-}
-
-type appEnvWithNoneSelector interface {
-	appSelector
-	EnvironmentWithNone(prompt, help, app string) (string, error)
+	Environment(prompt, help, app string, additionalOpts ...string) (string, error)
 }
 
 type configSelector interface {

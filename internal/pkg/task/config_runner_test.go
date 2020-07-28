@@ -107,7 +107,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
 			}
 		})

@@ -90,7 +90,7 @@ func TestEC2_PublicSubnetIDs(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
 			}
 		})
@@ -145,7 +145,7 @@ func TestEC2_SubnetIDs(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
 			}
 		})
@@ -206,7 +206,7 @@ func TestEC2_SecurityGroups(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedARNs, arns)
 			}
 		})

@@ -15,14 +15,18 @@ Parameters:
     Type: String
   TaskRole:
     Type: String
+  ExecutionRole:
+    Type: String
   Command:
     Type: String
 Conditions:
   # NOTE: Image cannot be pushed until the ECR repo is created, at which time ContainerImage would be "".
   HasImage:
     !Not [!Equals [!Ref ContainerImage, ""]]
-  UseDefaultTaskRole:
-    !Equals [!Ref TaskRole, ""]
+  HasTaskRole:
+    !Not [!Equals [!Ref TaskRole, ""]]
+  HasExecutionRole:
+    !Not [!Equals [!Ref ExecutionRole, ""]]
   HasCommand:
     !Not [!Equals [!Ref Command, ""]]
 Resources:
@@ -51,20 +55,10 @@ Resources:
       NetworkMode: awsvpc
       Cpu: !Ref TaskCPU
       Memory: !Ref TaskMemory
-      ExecutionRoleArn: !Ref ExecutionRole
+      ExecutionRoleArn: !If [HasExecutionRole, !Ref ExecutionRole, !Ref DefaultExecutionRole]
       TaskRoleArn:
-        !If [UseDefaultTaskRole, !Ref DefaultTaskRole, !Ref TaskRole]
-  DefaultTaskRole:
-    Condition: UseDefaultTaskRole
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ecs-tasks.amazonaws.com
-            Action: 'sts:AssumeRole'
-  ExecutionRole:
+        !If [HasTaskRole, !Ref TaskRole, !Ref "AWS::NoValue"]
+  DefaultExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

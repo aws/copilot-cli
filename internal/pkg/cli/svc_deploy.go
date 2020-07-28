@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/repository"
+
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -49,17 +51,16 @@ type deploySvcVars struct {
 type deploySvcOpts struct {
 	deploySvcVars
 
-	store        store
-	ws           wsSvcDirReader
-	ecr          ecrService
-	docker       dockerService
-	unmarshal    func(in []byte) (interface{}, error)
-	s3           artifactUploader
-	cmd          runner
-	addons       templater
-	appCFN       appResourcesGetter
-	svcCFN       cloudformation.CloudFormation
-	sessProvider sessionProvider
+	store              store
+	ws                 wsSvcDirReader
+	imageBuilderPusher imageBuilderPusher
+	unmarshal          func(in []byte) (interface{}, error)
+	s3                 artifactUploader
+	cmd                runner
+	addons             templater
+	appCFN             appResourcesGetter
+	svcCFN             cloudformation.CloudFormation
+	sessProvider       sessionProvider
 
 	spinner progress
 	sel     wsSelector
@@ -88,7 +89,6 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 		unmarshal:    manifest.UnmarshalService,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
-		docker:       docker.New(),
 		cmd:          command.New(),
 		sessProvider: session.NewProvider(),
 	}, nil
@@ -261,7 +261,12 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 
 	// ECR client against tools account profile AND target environment region
-	o.ecr = ecr.New(defaultSessEnvRegion)
+	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
+	registry := ecr.New(defaultSessEnvRegion)
+	o.imageBuilderPusher, err = repository.New(repoName, registry)
+	if err != nil {
+		return fmt.Errorf("initiate image builder pusher: %w", err)
+	}
 
 	o.s3 = s3.New(defaultSessEnvRegion)
 
@@ -284,34 +289,16 @@ func (o *deploySvcOpts) configureClients() error {
 }
 
 func (o *deploySvcOpts) pushToECRRepo() error {
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.Name)
-
-	uri, err := o.ecr.GetRepository(repoName)
-	if err != nil {
-		return fmt.Errorf("get ECR repository URI: %w", err)
-	}
-
 	dockerBuildInput, err := o.getBuildArgs()
 	if err != nil {
 		return err
 	}
 
-	// Assemble other parameters for build input.
-	dockerBuildInput.URI = uri
-	dockerBuildInput.ImageTag = o.ImageTag
-	if err := o.docker.Build(*dockerBuildInput); err != nil {
-		return fmt.Errorf("build Dockerfile at %s with tag %s: %w", dockerBuildInput.Dockerfile, o.ImageTag, err)
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), path, o.ImageTag); err != nil {
+		return fmt.Errorf("build and push image: %w", err)
 	}
 
-	auth, err := o.ecr.GetECRAuth()
-
-	if err != nil {
-		return fmt.Errorf("get ECR auth data: %w", err)
-	}
-
-	o.docker.Login(uri, auth.Username, auth.Password)
-
-	return o.docker.Push(uri, o.ImageTag)
+	return nil
 }
 
 func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {

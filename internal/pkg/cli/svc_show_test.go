@@ -118,7 +118,7 @@ func TestSvcShow_Validate(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -222,7 +222,7 @@ func TestSvcShow_Ask(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedApp, showSvcs.AppName(), "expected app name to match")
 				require.Equal(t, tc.wantedSvc, showSvcs.svcName, "expected service name to match")
 			}
@@ -320,7 +320,7 @@ func TestSvcShow_Execute(t *testing.T) {
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.wantedContent, b.String(), "expected output content match")
 			}
 		})

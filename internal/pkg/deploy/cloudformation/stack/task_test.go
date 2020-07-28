@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"testing"
 
@@ -98,6 +97,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterValue: aws.String("task-role"),
 		},
 		{
+			ParameterKey:   aws.String(taskExecutionRoleParamKey),
+			ParameterValue: aws.String("execution-role"),
+		},
+		{
 			ParameterKey:   aws.String(taskCommandParamKey),
 			ParameterValue: aws.String("echo hooray"),
 		},
@@ -110,6 +113,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 
 		Image: "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
 		TaskRole: "task-role",
+		ExecutionRole: "execution-role",
 		Command:  "echo hooray",
 	}
 
@@ -165,7 +169,7 @@ func TestTaskStackConfig_Tags(t *testing.T) {
 			input: deploy.CreateTaskResourcesInput{
 				Name:   "my-task",
 
-				Env: config.EnvNameNone,
+				Env: "",
 			},
 
 			expectedTags: []*cloudformation.Tag{

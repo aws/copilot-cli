@@ -1,6 +1,6 @@
 module github.com/aws/copilot-cli
 
-go 1.13
+go 1.14
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.0.8

@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -149,7 +148,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		ws:           ws,
 		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
 		spinner:      spin,
-		docker:       docker.New(),
 		cmd:          command.New(),
 		sessProvider: sessProvider,
 	}

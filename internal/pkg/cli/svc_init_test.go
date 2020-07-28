@@ -86,7 +86,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -337,7 +337,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, wantedSvcType, opts.ServiceType)
 				require.Equal(t, wantedSvcName, opts.Name)
 				require.Equal(t, wantedDockerfilePath, opts.DockerfilePath)
@@ -661,7 +661,7 @@ func TestAppInitOpts_Execute(t *testing.T) {
 
 			// THEN
 			if tc.wantedErr == nil {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
@@ -765,7 +765,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 
 			// THEN
 			if tc.wantedErr == nil {
-				require.Nil(t, err)
+				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Service.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
 				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.Build.BuildArgs.Dockerfile))
