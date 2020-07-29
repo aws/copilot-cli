@@ -19,6 +19,9 @@ var _ = Describe("Multiple Env App", func() {
 		BeforeAll(func() {
 			_, initErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
+				Tags: map[string]string{
+					"e2e-test": "multi-env",
+				},
 			})
 		})
 
@@ -220,9 +223,10 @@ var _ = Describe("Multiple Env App", func() {
 				Expect(envShowOutput.Services[0].Name).To(Equal(svcName))
 				Expect(envShowOutput.Services[0].Type).To(Equal("Load Balanced Web Service"))
 
-				Expect(len(envShowOutput.Tags)).To(Equal(2))
+				Expect(len(envShowOutput.Tags)).To(Equal(3))
 				Expect(envShowOutput.Tags["copilot-application"]).To(Equal(appName))
 				Expect(envShowOutput.Tags["copilot-environment"]).To(Equal(envName))
+				Expect(envShowOutput.Tags["e2e-test"]).To(Equal("multi-env"))
 
 				envs[envShowOutput.Environment.Name] = envShowOutput.Environment
 			}
