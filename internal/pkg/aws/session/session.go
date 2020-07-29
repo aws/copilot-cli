@@ -55,10 +55,10 @@ func (p *Provider) Default() (*session.Session, error) {
 
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
 func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
-	sess, err := session.NewSession(
-		newConfig().
-			WithRegion(region),
-	)
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: *newConfig().WithRegion(region),
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		return nil, err
 	}
