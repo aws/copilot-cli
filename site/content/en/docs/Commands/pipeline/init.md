@@ -25,6 +25,5 @@ Create a pipeline for the services in your workspace.
 $ copilot pipeline init \
 --github-url https://github.com/gitHubUserName/myFrontendApp.git \
 --github-access-token file://myGitHubToken \
---environments "test,prod" \
---deploy
+--environments "test,prod"
 ```
