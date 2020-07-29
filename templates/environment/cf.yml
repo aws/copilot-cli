@@ -33,11 +33,12 @@ Conditions:
     - !Condition DelegateDNS
     - !Condition CreatePublicLoadBalancer
 
-Resources:{{if not .ImportVpc}}
+Resources:
+{{- if not .ImportVpc}}
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: {{.VpcConfig.VpcCIDR}}
+      CidrBlock: {{.VpcConfig.CIDR}}
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
@@ -100,14 +101,19 @@ Resources:{{if not .ImportVpc}}
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet{{inc $ind}}
-{{end}}{{end}}
+{{end}}
+{{- end}}
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
   ServiceDiscoveryNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
         Name: !Sub ${AppName}.local
-        Vpc: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
+{{- if .ImportVpc}}
+        Vpc: {{.ImportVpc.ID}}
+{{- else}}
+        Vpc: !Ref VPC
+{{- end}}
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -130,7 +136,11 @@ Resources:{{if not .ImportVpc}}
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
@@ -140,7 +150,11 @@ Resources:{{if not .ImportVpc}}
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
@@ -167,7 +181,11 @@ Resources:{{if not .ImportVpc}}
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-      Subnets: [ {{if .ImportVpc}}{{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}]
+{{- if .ImportVpc}}
+      Subnets: [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}} ]
+{{- else}}
+      Subnets: [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
+{{- end}}
       Type: application
 
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -185,7 +203,11 @@ Resources:{{if not .ImportVpc}}
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
-      VpcId: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
 
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -212,8 +234,10 @@ Resources:{{if not .ImportVpc}}
       Protocol: HTTPS
 
   CloudformationExecutionRole:
-    Type: AWS::IAM::Role{{if not .ImportVpc}}
-    DependsOn: VPC{{end}}
+    Type: AWS::IAM::Role
+{{- if not .ImportVpc}}
+    DependsOn: VPC
+{{- end}}
     Properties:
       RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
       AssumeRolePolicyDocument:
@@ -583,17 +607,29 @@ Resources:{{if not .ImportVpc}}
       - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
 Outputs:
   VpcId:
-    Value: {{if .ImportVpc}}{{.ImportVpc.VpcID}}{{else}}!Ref VPC{{end}}
+{{- if .ImportVpc}}
+    Value: {{.ImportVpc.ID}}
+{{- else}}
+    Value: !Ref VPC
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
 
   PublicSubnets:
-    Value: !Join [ ',', [ {{if .ImportVpc}}{{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}] ]
+{{- if .ImportVpc}}
+    Value: !Join [ ',', [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+{{- else}}
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 
   PrivateSubnets:
-    Value: !Join [ ',', [ {{if .ImportVpc}}{{range $id := .ImportVpc.PrivateSubnetIDs}}{{$id}}, {{end}}{{else}}{{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}{{end}}] ]
+{{- if .ImportVpc}}
+    Value: !Join [ ',', [ {{range $id := .ImportVpc.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+{{- else}}
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 

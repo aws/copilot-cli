@@ -17,21 +17,21 @@ type CreateEnvironmentInput struct {
 	AppDNSName               string            // The DNS name of this application, if it exists
 	AdditionalTags           map[string]string // AdditionalTags are labels applied to resources under the application.
 	ImportVpcConfig          *ImportVpcConfig
-	AdjustVpcConfig          AdjustVpcConfig
+	AdjustVpcConfig          *AdjustVpcConfig
 }
 
 // ImportVpcConfig holds the fields to import VPC resources.
 type ImportVpcConfig struct {
-	VpcID            *string
-	PublicSubnetIDs  []*string
-	PrivateSubnetIDs []*string
+	ID               string // ID for the VPC.
+	PublicSubnetIDs  []string
+	PrivateSubnetIDs []string
 }
 
 // AdjustVpcConfig holds the fields to adjust default VPC resources.
 type AdjustVpcConfig struct {
-	VpcCIDR            *string
-	PublicSubnetCIDRs  []*string
-	PrivateSubnetCIDRs []*string
+	CIDR               string // CIDR range for the VPC.
+	PublicSubnetCIDRs  []string
+	PrivateSubnetCIDRs []string
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.

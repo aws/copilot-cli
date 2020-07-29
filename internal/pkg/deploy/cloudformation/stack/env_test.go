@@ -46,16 +46,16 @@ func TestEnvTemplate(t *testing.T) {
 					ACMValidationLambda       string
 					EnableLongARNFormatLambda string
 					ImportVpc                 *deploy.ImportVpcConfig
-					VpcConfig                 deploy.AdjustVpcConfig
+					VpcConfig                 *deploy.AdjustVpcConfig
 				}{
 					"customresources",
 					"customresources",
 					"customresources",
 					nil,
-					deploy.AdjustVpcConfig{
-						VpcCIDR:            aws.String(defaultVPCCIDR),
-						PrivateSubnetCIDRs: aws.StringSlice(strings.Split(defaultPrivateSubnetCIDRS, ",")),
-						PublicSubnetCIDRs:  aws.StringSlice(strings.Split(defaultPublicSubnetCIDRS, ",")),
+					&deploy.AdjustVpcConfig{
+						CIDR:               defaultVPCCIDR,
+						PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
+						PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
 					},
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
