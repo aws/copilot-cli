@@ -347,7 +347,7 @@ type askExecutor interface {
 }
 
 type appSelector interface {
-	Application(prompt, help string) (string, error)
+	Application(prompt, help string, additionalOpts ...string) (string, error)
 }
 
 type appEnvSelector interface {

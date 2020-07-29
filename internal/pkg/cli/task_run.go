@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	envOptionNone         = "None (run in default VPC)"
+	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
 )
@@ -48,12 +48,17 @@ var (
 )
 
 var (
-	fmtTaskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
-	fmtTaskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
+	taskRunAppPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
+	taskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
+	taskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
 
-	taskRunEnvPromptHelp = fmt.Sprintf("Task will be deployed to the selected environment. "+
-		"Select %s to run the task in your default VPC instead of any existing environment.", color.Emphasize(envOptionNone))
-	taskRunGroupNamePromptHelp = "The group name of the task. Tasks with the same group name share the same set of resources, including CloudFormation stack, CloudWatch log group, task definition and ECR repository."
+	taskRunAppPromptHelp = fmt.Sprintf(`Task will be deployed to the selected application. 
+Select %s to run the task in your default VPC instead of any existing application.`, color.Emphasize(appEnvOptionNone))
+	taskRunEnvPromptHelp = fmt.Sprintf(`Task will be deployed to the selected environment.
+Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
+	taskRunGroupNamePromptHelp = `The group name of the task. Tasks with the same group name share the same 
+set of resources, including CloudFormation stack, CloudWatch log group, 
+task definition and ECR repository.`
 )
 
 type runTaskVars struct {
@@ -68,7 +73,7 @@ type runTaskVars struct {
 	dockerfilePath string
 	imageTag       string
 
-	taskRole string
+	taskRole      string
 	executionRole string
 
 	subnets        []string
@@ -259,6 +264,9 @@ func (o *runTaskOpts) Ask() error {
 	if err := o.askTaskGroupName(); err != nil {
 		return err
 	}
+	if err := o.askAppName(); err != nil {
+		return err
+	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -267,10 +275,6 @@ func (o *runTaskOpts) Ask() error {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
-	if o.dockerfilePath == "" {
-		o.dockerfilePath = defaultDockerfilePath
-	}
-
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
@@ -350,14 +354,14 @@ func (o *runTaskOpts) updateTaskResources() error {
 
 func (o *runTaskOpts) deploy() error {
 	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
-		Name:     o.groupName,
-		CPU:      o.cpu,
-		Memory:   o.memory,
-		Image:    o.image,
-		TaskRole: o.taskRole,
+		Name:          o.groupName,
+		CPU:           o.cpu,
+		Memory:        o.memory,
+		Image:         o.image,
+		TaskRole:      o.taskRole,
 		ExecutionRole: o.executionRole,
-		Command:  o.command,
-		EnvVars:  o.envVars,
+		Command:       o.command,
+		EnvVars:       o.envVars,
 	})
 }
 
@@ -388,7 +392,7 @@ func (o *runTaskOpts) askTaskGroupName() error {
 	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
 
 	groupName, err := o.prompt.Get(
-		fmtTaskRunGroupNamePrompt,
+		taskRunGroupNamePrompt,
 		taskRunGroupNamePromptHelp,
 		basicNameValidation,
 		prompt.WithFinalMessage("Task group name:"))
@@ -399,22 +403,41 @@ func (o *runTaskOpts) askTaskGroupName() error {
 	return nil
 }
 
+func (o *runTaskOpts) askAppName() error {
+	if o.AppName() != "" {
+		return nil
+	}
+
+	// If the application is empty then the user wants to run in the default VPC. Do not prompt for an environment name.
+	app, err := o.sel.Application(taskRunAppPrompt, taskRunAppPromptHelp, appEnvOptionNone)
+	if err != nil {
+		return fmt.Errorf("ask for application: %w", err)
+	}
+
+	if app == appEnvOptionNone {
+		return nil
+	}
+
+	o.appName = app
+	return nil
+}
+
 func (o *runTaskOpts) askEnvName() error {
 	if o.env != "" {
 		return nil
 	}
 
-	// NOTE: if the subnets are not provided, we are not in any workspace and app flag is not specified, use the "None" environment.
+	// If the application is empty then the user wants to run in the default VPC. Do not prompt for an environment name.
 	if o.AppName() == "" || o.subnets != nil {
 		return nil
 	}
 
-	env, err := o.sel.Environment(fmtTaskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), envOptionNone)
+	env, err := o.sel.Environment(taskRunEnvPrompt, taskRunEnvPromptHelp, o.AppName(), appEnvOptionNone)
 	if err != nil {
 		return fmt.Errorf("ask for environment: %w", err)
 	}
 
-	if env == envOptionNone {
+	if env == appEnvOptionNone {
 		return nil
 	}
 
@@ -458,7 +481,7 @@ Run a task with a command.
 			if err != nil {
 				return err
 			}
-			if err := opts.Validate(); err != nil { // validate flags
+			if err := opts.Validate(); err != nil {
 				return err
 			}
 
@@ -480,7 +503,7 @@ Run a task with a command.
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
-	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
