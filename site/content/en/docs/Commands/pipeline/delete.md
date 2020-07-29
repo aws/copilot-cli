@@ -1,24 +1,24 @@
 ---
 title: "pipeline delete"
 linkTitle: "pipeline delete"
-weight: 3
+weight: 5
 ---
 
 ```bash
 $ copilot pipeline delete [flags]
 ```
 
-## What does it do?
+### What does it do?
 `copilot pipeline delete` deletes the pipeline associated with your workspace.
 
-## What are the flags?
+### What are the flags?
 ```bash
     --delete-secret   Deletes AWS Secrets Manager secret associated with a pipeline source repository.
 -h, --help            help for delete
     --yes             Skips confirmation prompt.
 ```
 
-## Examples
+### Examples
 Delete the pipeline associated with your workspace.
 ```bash
 $ copilot pipeline delete

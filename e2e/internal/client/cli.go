@@ -20,6 +20,7 @@ type CLI struct {
 type AppInitRequest struct {
 	AppName string
 	Domain  string
+	Tags    map[string]string
 }
 
 // InitRequest contains the parameters for calling copilot init
@@ -312,12 +313,23 @@ func (cli *CLI) EnvList(appName string) (*EnvListOutput, error) {
 /*AppInit runs:
 copilot app init $a
 	--domain $d (optionally)
+	--resource-tags $k1=$v1,$k2=$k2 (optionally)
 */
 func (cli *CLI) AppInit(opts *AppInitRequest) (string, error) {
 	commands := []string{"app", "init", opts.AppName}
 	if opts.Domain != "" {
 		commands = append(commands, "--domain", opts.Domain)
 	}
+
+	if len(opts.Tags) > 0 {
+		commands = append(commands, "--resource-tags")
+		tags := []string{}
+		for key, val := range opts.Tags {
+			tags = append(tags, fmt.Sprintf("%s=%s", key, val))
+		}
+		commands = append(commands, strings.Join(tags, ","))
+	}
+
 	return cli.exec(exec.Command(cli.path, commands...))
 }
 

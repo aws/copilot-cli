@@ -316,6 +316,7 @@ func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resour
 	//  * We update the StackSet with Version 2, the update completes.
 	//  * Someone else tries to update the StackSet with their stale version 2.
 	//  * "2" has already been used as an operation ID, and the stale write fails.
+
 	return cf.appStackSet.UpdateAndWait(appConfig.StackSetName(), newTemplateToDeploy,
 		stackset.WithOperationID(fmt.Sprintf("%d", resources.Version)),
 		stackset.WithDescription(appConfig.StackSetDescription()),
@@ -350,7 +351,7 @@ func (cf CloudFormation) addNewAppStackInstances(appConfig *stack.AppStackConfig
 }
 
 func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfig) (*stack.AppResourcesConfig, error) {
-	// Check the existing deploy stack template. From that template, we'll parse out the list of apps and accounts that
+	// Check the existing deploy stack template. From that template, we'll parse out the list of services and accounts that
 	// are deployed in the stack.
 	descr, err := cf.appStackSet.Describe(appConfig.StackSetName())
 	if err != nil {
