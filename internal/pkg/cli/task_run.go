@@ -352,8 +352,14 @@ func (o *runTaskOpts) displayLogStream(tasks []*task.Task) error {
 	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
 		LastEventTime: make(map[string]int64),
 	}
+
+	var (
+		stopped bool
+		err     error
+	)
+
 	for {
-		for i := 1; i < numCWLogsCallsPerRound; i++ {
+		for i := 0; i < numCWLogsCallsPerRound; i++ {
 			logEventsOutput, err := o.cwLogsGetter.TaskLogEvents(
 				logGroupName,
 				logEventsOutput.LastEventTime,
@@ -370,10 +376,6 @@ func (o *runTaskOpts) displayLogStream(tasks []*task.Task) error {
 			time.Sleep(cloudwatchlogs.SleepDuration)
 		}
 
-		var (
-			stopped bool
-			err     error
-		)
 		stopped, tasks, err = o.allStopped(tasks)
 		if err != nil {
 			return err
@@ -411,7 +413,7 @@ func (o *runTaskOpts) allStopped(tasks []*task.Task) (allStopped bool, tasksNext
 		}
 	}
 
-	return allStopped, tasksNext, nil
+	return
 }
 
 func (o *runTaskOpts) runTask() ([]*task.Task, error) {
