@@ -7,6 +7,7 @@ package docker
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -53,8 +54,15 @@ func (r Runner) Build(in *BuildArguments) error {
 	}
 
 	// Add the "args:" override section from manifest to the docker build call
-	for k, v := range in.Args {
-		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
+
+	// Collect the keys in a slice to sort for test stability
+	var keys []string
+	for k := range in.Args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
 	}
 
 	args = append(args, dfDir, "-f", in.Dockerfile)

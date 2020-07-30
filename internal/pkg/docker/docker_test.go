@@ -90,12 +90,14 @@ func TestBuild(t *testing.T) {
 			args: map[string]string{
 				"GOPROXY": "direct",
 				"key":     "value",
+				"abc":     "def",
 			},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(c)
 				mockRunner.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI + ":" + mockTag1,
 					"--build-arg", "GOPROXY=direct",
+					"--build-arg", "abc=def",
 					"--build-arg", "key=value",
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
