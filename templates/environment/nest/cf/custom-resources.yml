@@ -1,0 +1,37 @@
+EnableLongARNFormatAction:
+  Type: Custom::EnableLongARNFormatFunction
+  DependsOn:
+    - EnableLongARNFormatFunction
+  Properties:
+    ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
+
+# Adds records for this environment's hostedzone
+# into the application's hostedzone. This lets this
+# environment own the DNS of the it's subdomain.
+DelegateDNSAction:
+  Condition: DelegateDNS
+  Type: Custom::DNSDelegationFunction
+  DependsOn:
+  - DNSDelegationFunction
+  - EnvironmentHostedZone
+  Properties:
+    ServiceToken: !GetAtt DNSDelegationFunction.Arn
+    DomainName: !Sub ${AppName}.${AppDNSName}
+    SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
+    NameServers: !GetAtt EnvironmentHostedZone.NameServers
+    RootDNSRole: !Ref AppDNSDelegationRole
+
+HTTPSCert:
+  Condition: DelegateDNS
+  Type: Custom::CertificateValidationFunction
+  DependsOn:
+  - CertificateValidationFunction
+  - EnvironmentHostedZone
+  - DelegateDNSAction
+  Properties:
+    ServiceToken: !GetAtt CertificateValidationFunction.Arn
+    DomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
+    HostedZoneId: !Ref EnvironmentHostedZone
+    Region: !Ref AWS::Region
+    SubjectAlternativeNames:
+    - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"

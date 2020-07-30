@@ -1,0 +1,37 @@
+CustomResourceRole:
+  Type: AWS::IAM::Role
+  Condition: DelegateDNS
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        -
+          Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: "DNSandACMAccess"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - "acm:ListCertificates"
+                - "acm:RequestCertificate"
+                - "acm:DescribeCertificate"
+                - "acm:GetCertificate"
+                - "acm:DeleteCertificate"
+                - "acm:AddTagsToCertificate"
+                - "route53:ListHostedZonesByName"
+                - "sts:AssumeRole"
+                - "logs:*"
+                - "route53:ChangeResourceRecordSets"
+                - "route53:ListResourceRecordSets"
+                - "route53:Get*"
+                - "route53:Describe*"
+              Resource:
+                - "*"

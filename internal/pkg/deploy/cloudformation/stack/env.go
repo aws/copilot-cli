@@ -13,16 +13,19 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+type envReadParser interface {
+	template.ReadParser
+	ParseEnv(data interface{}, options ...template.ParseOption) (*template.Content, error)
+}
+
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
 	*deploy.CreateEnvironmentInput
-	parser template.ReadParser
+	parser envReadParser
 }
 
 const (
-	// EnvTemplatePath is the path where the cloudformation for the environment is written.
-	EnvTemplatePath            = "environment/cf.yml"
 	acmValidationTemplatePath  = "custom-resources/dns-cert-validator.js"
 	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
 	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
@@ -70,28 +73,22 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defaultVPCConf := &deploy.AdjustVpcConfig{
+	defaultVPCConf := &template.AdjustVpcOpts{
 		CIDR:               defaultVPCCIDR,
 		PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
 		PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
 	}
 
-	if e.AdjustVpcConfig != nil {
-		defaultVPCConf = e.AdjustVpcConfig
+	if e.AdjustVpcOpts() != nil {
+		defaultVPCConf = e.AdjustVpcOpts()
 	}
 
-	content, err := e.parser.Parse(EnvTemplatePath, struct {
-		DNSDelegationLambda       string
-		ACMValidationLambda       string
-		EnableLongARNFormatLambda string
-		ImportVpc                 *deploy.ImportVpcConfig
-		VpcConfig                 *deploy.AdjustVpcConfig
-	}{
-		dnsLambda.String(),
-		acmLambda.String(),
-		enableLongARNsLambda.String(),
-		e.ImportVpcConfig,
-		defaultVPCConf,
+	content, err := e.parser.ParseEnv(template.EnvOpts{
+		ACMValidationLambda:       acmLambda.String(),
+		DNSDelegationLambda:       dnsLambda.String(),
+		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
+		ImportVpc:                 e.ImportVpcOpts(),
+		VpcConfig:                 defaultVPCConf,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
