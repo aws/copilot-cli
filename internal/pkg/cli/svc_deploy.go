@@ -294,7 +294,7 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 		return err
 	}
 
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), path, o.ImageTag); err != nil {
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), dockerBuildInput); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 
