@@ -21,7 +21,7 @@ const (
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
 
-	// DesiredStatusStopped is the ecs constant DesiredStatusStopped.
+	// DesiredStatusStopped represents the desired status "STOPPED" for a task.
 	DesiredStatusStopped = ecs.DesiredStatusStopped
 )
 
