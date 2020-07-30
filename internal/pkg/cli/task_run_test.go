@@ -563,16 +563,22 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
+					GlobalOpts: &GlobalOpts{},
 					groupName: inGroupName,
 					image:     tc.inImage,
 					imageTag:  tc.inTag,
 				},
 				spinner:  &mockSpinner{},
-				deployer: mockDeployer,
 			}
 			opts.configureRuntimeOpts = func() error {
-				opts.repository = mockRepo
+
 				opts.runner = mockRunner
+				opts.deployer = mockDeployer
+				opts.deploy = opts.configureDeploy()
+				opts.configureRepository = func() error {
+					opts.repository = mockRepo
+					return nil
+				}
 				return nil
 			}
 

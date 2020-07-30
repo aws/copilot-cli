@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -93,24 +94,20 @@ type runTaskOpts struct {
 	sel     appEnvSelector
 	spinner progress
 
-	deployer taskDeployer
 
 	// Fields below are configured at runtime.
+	deployer             taskDeployer
 	repository           repositoryService
 	runner               taskRunner
+	deploy               func() error
 	configureRuntimeOpts func() error
+	configureRepository  func() error
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := session.NewProvider()
-	sess, err := provider.Default()
-	if err != nil {
-		return nil, fmt.Errorf("get default session: %w", err)
 	}
 
 	opts := runTaskOpts{
@@ -121,11 +118,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		sel:     selector.NewSelect(vars.prompt, store),
 		spinner: termprogress.NewSpinner(),
 
-		deployer: cloudformation.New(sess),
 	}
+
+	provider := session.NewProvider()
 
 	opts.configureRuntimeOpts = func() error {
 		var sess *awssession.Session
+		var cfnOpts []awscloudformation.StackOption
+
 		if opts.env != "" {
 			env, err := opts.targetEnv()
 			if err != nil {
@@ -136,6 +136,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 			if err != nil {
 				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 			}
+
+			cfnOpts = append(cfnOpts, awscloudformation.WithRoleARN(env.ExecutionRoleARN))
+
 		} else {
 			sess, err = provider.Default()
 			if err != nil {
@@ -143,29 +146,27 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 			}
 		}
 
-		opts.repository, err = opts.configureRepository(sess)
-		if err != nil {
-			return err
-		}
-
 		opts.runner = opts.configureRunner(sess)
-		if err != nil {
-			return err
-		}
+		opts.deployer = cloudformation.New(sess)
+		opts.deploy = opts.configureDeploy(cfnOpts...)
+		opts.configureRepository = opts.repositoryConfigurer(sess)
 		return nil
 	}
 
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryService, error) {
-	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-	registry := ecr.New(sess)
-	repository, err := repository.New(repoName, registry)
-	if err != nil {
-		return nil, fmt.Errorf("initiate repository %s: %w", repoName, err)
+func (o *runTaskOpts) repositoryConfigurer(sess *awssession.Session) func() error {
+	return func() error {
+		repoName := fmt.Sprintf(fmtRepoName, o.groupName)
+		registry := ecr.New(sess)
+		repository, err := repository.New(repoName, registry)
+		if err != nil {
+			return fmt.Errorf("initiate repository %s: %w", repoName, err)
+		}
+		o.repository = repository
+		return nil
 	}
-	return repository, nil
 }
 
 func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
@@ -208,6 +209,24 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 		Starter:       ecsService,
 	}
 
+}
+
+func (o *runTaskOpts) configureDeploy(opts ...awscloudformation.StackOption) func() error {
+	return func() error {
+		input := &deploy.CreateTaskResourcesInput{
+			Name:          o.groupName,
+			CPU:           o.cpu,
+			Memory:        o.memory,
+			Image:         o.image,
+			TaskRole:      o.taskRole,
+			ExecutionRole: o.executionRole,
+			Command:       o.command,
+			EnvVars:       o.envVars,
+			App:           o.AppName(),
+			Env:           o.env,
+		}
+		return o.deployer.DeployTask(input, opts...)
+	}
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -273,14 +292,19 @@ func (o *runTaskOpts) Ask() error {
 	return nil
 }
 
+
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if err := o.configureRuntimeOpts(); err != nil {
+		return err
+	}
+
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
 
 	// NOTE: repository has to be configured only after task resources are deployed
-	if err := o.configureRuntimeOpts(); err != nil {
+	if err := o.configureRepository(); err != nil {
 		return err
 	}
 
@@ -350,19 +374,6 @@ func (o *runTaskOpts) updateTaskResources() error {
 	}
 	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
 	return nil
-}
-
-func (o *runTaskOpts) deploy() error {
-	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
-		Name:          o.groupName,
-		CPU:           o.cpu,
-		Memory:        o.memory,
-		Image:         o.image,
-		TaskRole:      o.taskRole,
-		ExecutionRole: o.executionRole,
-		Command:       o.command,
-		EnvVars:       o.envVars,
-	})
 }
 
 func (o *runTaskOpts) validateAppName() error {
