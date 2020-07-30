@@ -146,29 +146,25 @@ func (o *svcLogsOpts) Ask() error {
 // Execute outputs logs of the service.
 func (o *svcLogsOpts) Execute() error {
 	logGroupName := fmt.Sprintf(logGroupNamePattern, o.AppName(), o.envName, o.svcName)
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
-	}
 	if err := o.initCwLogsSvc(o, o.envName); err != nil {
 		return err
 	}
-	var err error
+	ch := make(chan *cloudwatchlogs.LogEventsOutput)
+	defer close(ch)
+	go func() {
+		o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, o.follow, ch, o.generateGetLogEventOpts()...)
+	}()
 	for {
-		logEventsOutput, err = o.cwlogsSvc[o.envName].TaskLogEvents(logGroupName, logEventsOutput.LastEventTime, o.generateGetLogEventOpts()...)
-		if err != nil {
-			return err
+		logEventsOutput := <-ch
+		if logEventsOutput.Err != nil {
+			if _, ok := logEventsOutput.Err.(*cloudwatchlogs.NoMoreLogEvents); ok {
+				return nil
+			}
+			return logEventsOutput.Err
 		}
 		if err := o.outputLogs(logEventsOutput.Events); err != nil {
 			return err
 		}
-		if !o.follow {
-			return nil
-		}
-		// for unit test.
-		if logEventsOutput.LastEventTime == nil {
-			return nil
-		}
-		time.Sleep(cloudwatchlogs.SleepDuration)
 	}
 }
 

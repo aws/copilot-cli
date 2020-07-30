@@ -41,8 +41,14 @@ type CloudWatchLogs struct {
 // GetLogEventsOpts sets up optional parameters for LogEvents function.
 type GetLogEventsOpts func(*cloudwatchlogs.GetLogEventsInput)
 
-// WithLimit sets up limit for GetLogEventsInput
+// WithLimit sets up limit for GetLogEventsInput. If limit is 0, show as many
+// log events as can fit in a response.
 func WithLimit(limit int) GetLogEventsOpts {
+	if limit == 0 {
+		return func(in *cloudwatchlogs.GetLogEventsInput) {
+			in.Limit = nil
+		}
+	}
 	return func(in *cloudwatchlogs.GetLogEventsInput) {
 		in.Limit = aws.Int64(int64(limit))
 	}
@@ -66,8 +72,10 @@ func WithEndTime(endTime int64) GetLogEventsOpts {
 type LogEventsOutput struct {
 	// Retrieved log events.
 	Events []*Event
-	// Timestamp for the last event
+	// Timestamp for the last event.
 	LastEventTime map[string]int64
+	// Error if fail to get log events.
+	Err error
 }
 
 // New returns a CloudWatchLogs configured against the input session.
@@ -98,12 +106,35 @@ func (c *CloudWatchLogs) logStreams(logGroupName string) ([]*string, error) {
 }
 
 // TaskLogEvents returns an array of Cloudwatch Logs events.
-func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
+func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, follow bool, ch chan *LogEventsOutput, opts ...GetLogEventsOpts) {
+	logEventsOutput := &LogEventsOutput{
+		LastEventTime: make(map[string]int64),
+	}
+	if !follow {
+		ch <- c.taskLogEvents(logGroupName, logEventsOutput.LastEventTime, opts...)
+		ch <- &LogEventsOutput{Err: &NoMoreLogEvents{LogGroupName: logGroupName}}
+		return
+	}
+	// if follow is false, ignore limit config and show as many logs as possible.
+	opts = append(opts, WithLimit(0))
+	for {
+		logEventsOutput = c.taskLogEvents(logGroupName, logEventsOutput.LastEventTime, opts...)
+		ch <- logEventsOutput
+		// for unit test.
+		if logEventsOutput.LastEventTime == nil {
+			ch <- &LogEventsOutput{Err: &NoMoreLogEvents{LogGroupName: logGroupName}}
+			return
+		}
+		time.Sleep(SleepDuration)
+	}
+}
+
+func (c *CloudWatchLogs) taskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) *LogEventsOutput {
 	var events []*Event
 	var in *cloudwatchlogs.GetLogEventsInput
 	logStreamNames, err := c.logStreams(logGroupName)
 	if err != nil {
-		return nil, err
+		return &LogEventsOutput{Err: err}
 	}
 	for _, logStreamName := range logStreamNames {
 		in = &cloudwatchlogs.GetLogEventsInput{
@@ -122,7 +153,7 @@ func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime 
 		// TODO: https://github.com/aws/copilot-cli/pull/628#discussion_r374291068 and https://github.com/aws/copilot-cli/pull/628#discussion_r374294362
 		resp, err := c.client.GetLogEvents(in)
 		if err != nil {
-			return nil, fmt.Errorf("get log events of %s/%s: %w", logGroupName, *logStreamName, err)
+			return &LogEventsOutput{Err: fmt.Errorf("get log events of %s/%s: %w", logGroupName, *logStreamName, err)}
 		}
 
 		for _, event := range resp.Events {
@@ -140,15 +171,16 @@ func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime 
 	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].Timestamp < events[j].Timestamp })
 	var truncatedEvents []*Event
-	if len(events) >= int(*in.Limit) {
-		truncatedEvents = events[len(events)-int(*in.Limit):]
+	limit := int(aws.Int64Value(in.Limit))
+	if limit != 0 && len(events) >= limit {
+		truncatedEvents = events[len(events)-limit:]
 	} else {
 		truncatedEvents = events
 	}
 	return &LogEventsOutput{
 		Events:        truncatedEvents,
 		LastEventTime: streamLastEventTime,
-	}, nil
+	}
 }
 
 // LogGroupExists returns if a log group exists.

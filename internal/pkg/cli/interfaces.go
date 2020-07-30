@@ -5,9 +5,10 @@ package cli
 
 import (
 	"encoding"
+	"io"
+
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
@@ -150,7 +151,7 @@ type repositoryService interface {
 }
 
 type cwlogService interface {
-	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	TaskLogEvents(logGroupName string, follow bool, ch chan *cloudwatchlogs.LogEventsOutput, opts ...cloudwatchlogs.GetLogEventsOpts)
 	LogGroupExists(logGroupName string) (bool, error)
 }
 
