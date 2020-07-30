@@ -62,17 +62,30 @@ func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments 
 	df := s.dockerfile()
 	ctx := s.context()
 	if df != "" && ctx != "" {
-		df = filepath.Join(rootDirectory, df)
-		ctx = filepath.Join(rootDirectory, ctx)
-	} else if df != "" && ctx == "" {
-		df = filepath.Join(rootDirectory, df)
-		ctx = filepath.Dir(df)
-	} else if df == "" && ctx != "" {
-		ctx = filepath.Join(rootDirectory, ctx)
-		df = filepath.Join(ctx, dockerfileDefaultName)
-	} else {
-		ctx = rootDirectory
-		df = filepath.Join(rootDirectory, dockerfileDefaultName)
+		return &docker.BuildArguments {
+			Dockerfile: filepath.Join(rootDirectory, df),
+			Context:    filepath.Join(rootDirectory, ctx),
+			Args: s.args(),
+		}
+	} 
+	if df != "" && ctx == "" {
+		return &docker.BuildArguments {
+			Dockerfile: filepath.Join(rootDirectory, df),
+			Context:    filepath.Dir(df),
+			Args: s.args(),
+		}
+	} 
+	if df == "" && ctx != "" {
+		return &docker.BuildArguments {
+			Dockerfile: filepath.Join(ctx, dockerfileDefaultName),
+			Context:    filepath.Join(rootDirectory, ctx),
+			Args: s.args(),
+		}
+	} 
+	return &docker.BuildArguments {
+		Dockerfile: filepath.Join(rootDirectory, dockerfileDefaultName),
+		Context:    rootDirectory,
+		Args: s.args(),
 	}
 	return &docker.BuildArguments{
 		Dockerfile: df,
