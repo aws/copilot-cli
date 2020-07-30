@@ -200,7 +200,8 @@ func TestEC2_SubnetIDs(t *testing.T) {
 					NextToken: mockNextToken,
 				}, nil)
 				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
-					Filters: toEC2Filter(inAppEnvFilters),
+					Filters:   toEC2Filter(inAppEnvFilters),
+					NextToken: mockNextToken,
 				}).Return(&ec2.DescribeSubnetsOutput{
 					Subnets: []*ec2.Subnet{
 						subnet3,

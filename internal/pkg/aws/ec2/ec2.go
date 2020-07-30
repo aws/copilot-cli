@@ -131,17 +131,23 @@ func (c *EC2) SecurityGroups(filters ...Filter) ([]string, error) {
 func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 	inputFilters := toEC2Filter(filters)
 	var subnets []*ec2.Subnet
-	nextToken := aws.String("")
+	response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		Filters: inputFilters,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("describe subnets: %w", err)
+	}
+	subnets = append(subnets, response.Subnets...)
 
-	for nextToken != nil {
-		response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
-			Filters: inputFilters,
+	for response.NextToken != nil {
+		response, err = c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
+			Filters:   inputFilters,
+			NextToken: response.NextToken,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("describe subnets: %w", err)
 		}
 		subnets = append(subnets, response.Subnets...)
-		nextToken = response.NextToken
 	}
 
 	return subnets, nil
