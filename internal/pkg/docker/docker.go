@@ -39,7 +39,7 @@ type BuildArguments struct {
 }
 
 // Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
-func (r Runner) Build(in BuildArguments) error {
+func (r Runner) Build(in *BuildArguments) error {
 	dfDir := in.Context
 	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
 		dfDir = filepath.Dir(in.Dockerfile)

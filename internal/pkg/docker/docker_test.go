@@ -40,7 +40,7 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
-					"-t", imageName(mockURI, mockTag1),
+					"-t", mockURI + ":" + mockTag1,
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
 			},
 			wantedError: fmt.Errorf("building image: %w", mockError),
@@ -60,7 +60,7 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", mockURI + ":" + mockTag1, "mockPath", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"behaves the same if context is DF dir": {
@@ -69,7 +69,7 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"build", "-t", imageName(mockURI, mockTag1), "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"build", "-t", mockURI + ":" + mockTag1, "mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 
@@ -79,24 +79,24 @@ func TestBuild(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 				mockRunner.EXPECT().Run("docker", []string{"build",
-					"-t", imageName(mockURI, mockTag2),
-					"-t", imageName(mockURI, mockTag3),
-					"-t", imageName(mockURI, mockTag1),
+					"-t", mockURI + ":" + mockTag2,
+					"-t", mockURI + ":" + mockTag3,
+					"-t", mockURI + ":" + mockTag1,
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"success with build args": {
 			path: mockPath,
 			args: map[string]string{
-				"key":  "value",
-				"key2": "value2",
+				"GOPROXY": "direct",
+				"key":     "value",
 			},
 			setupMocks: func(c *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(c)
 				mockRunner.EXPECT().Run("docker", []string{"build",
-					"-t", imageName(mockURI, mockTag1),
+					"-t", mockURI + ":" + mockTag1,
+					"--build-arg", "GOPROXY=direct",
 					"--build-arg", "key=value",
-					"--build-arg", "key2=value2",
 					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
@@ -117,7 +117,7 @@ func TestBuild(t *testing.T) {
 				AdditionalTags: tc.additionalTags,
 				Args:           tc.args,
 			}
-			got := s.Build(buildInput)
+			got := s.Build(&buildInput)
 
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, got.Error())
@@ -194,17 +194,17 @@ func TestPush(t *testing.T) {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(mockError).Times(1)
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Times(0)
+				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag1}).Return(mockError).Times(1)
+				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag2}).Times(0)
 			},
-			want: fmt.Errorf("docker push %s: %w", imageName(mockURI, mockTag1), mockError),
+			want: fmt.Errorf("docker push %s: %w", mockURI+":"+mockTag1, mockError),
 		},
 		"success": {
 			setupMocks: func(controller *gomock.Controller) {
 				mockRunner = mocks.NewMockrunner(controller)
 
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag1)}).Return(nil)
-				mockRunner.EXPECT().Run("docker", []string{"push", imageName(mockURI, mockTag2)}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag1}).Return(nil)
+				mockRunner.EXPECT().Run("docker", []string{"push", mockURI + ":" + mockTag2}).Return(nil)
 			},
 			want: nil,
 		},
