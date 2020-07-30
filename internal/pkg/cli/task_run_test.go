@@ -482,9 +482,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	tag := "tag"
 
 	defaultBuildArguments := docker.BuildArguments{
-		Dockerfile: defaultDockerfilePath,
-		Context:    filepath.Dir(defaultDockerfilePath),
-		ImageTag:   imageTagLatest,
+		Context:  filepath.Dir(defaultDockerfilePath),
+		ImageTag: imageTagLatest,
 	}
 
 	testCases := map[string]struct {
@@ -528,21 +527,12 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
-		"use default dockerfile path if not provided": {
-			setupMocks: func(m runTaskMocks) {
-				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().AnyTimes()
-				m.runner.EXPECT().Run().AnyTimes()
-			},
-		},
 		"append 'latest' to image tag": {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
 					&docker.BuildArguments{
-						Dockerfile:     defaultDockerfilePath,
 						Context:        filepath.Dir(defaultDockerfilePath),
 						ImageTag:       imageTagLatest,
 						AdditionalTags: []string{tag},
