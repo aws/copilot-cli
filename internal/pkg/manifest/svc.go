@@ -145,6 +145,7 @@ func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	if !b.BuildArgs.isEmpty() {
+		// Unmarshaled successfully to b.BuildArgs, return.
 		return nil
 	}
 
