@@ -98,8 +98,8 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// Build returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *BackendService) Build(wsRoot string) *docker.BuildArguments {
+// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
+func (s *BackendService) BuildArgs(wsRoot string) *docker.BuildArguments {
 	return s.Image.BuildConfig(wsRoot)
 }
 

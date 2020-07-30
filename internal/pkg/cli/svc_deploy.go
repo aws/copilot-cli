@@ -289,6 +289,7 @@ func (o *deploySvcOpts) configureClients() error {
 }
 
 func (o *deploySvcOpts) pushToECRRepo() error {
+
 	dockerBuildInput, err := o.getBuildArgs()
 	if err != nil {
 		return err
@@ -303,7 +304,7 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 
 func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	type dfArgs interface {
-		Build(rootDirectory string) *docker.BuildArguments
+		BuildArgs(rootDirectory string) *docker.BuildArguments
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
@@ -324,7 +325,7 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	}
 	wsRoot := filepath.Dir(copilotDir)
 
-	return mf.Build(wsRoot), nil
+	return mf.BuildArgs(wsRoot), nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

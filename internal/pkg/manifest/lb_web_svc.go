@@ -119,8 +119,8 @@ func tplDirName(s string) string {
 	return filepath.Dir(s)
 }
 
-//Build returns a docker.BuildArguments object given a ws root directory.
-func (s *LoadBalancedWebService) Build(wsRoot string) *docker.BuildArguments {
+//BuildArgs returns a docker.BuildArguments object given a ws root directory.
+func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *docker.BuildArguments {
 	return s.Image.BuildConfig(wsRoot)
 }
 
