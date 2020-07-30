@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"io"
 
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -137,7 +138,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error
 }
 
 type repositoryURIGetter interface {

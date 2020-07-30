@@ -1213,22 +1213,17 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath, tag string, additionalTags ...string) error {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{docker, dockerfilePath, tag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "BuildAndPush", varargs...)
+	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, dockerfilePath, tag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{docker, dockerfilePath, tag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
 }
 
 // MockrepositoryURIGetter is a mock of repositoryURIGetter interface
@@ -1306,22 +1301,17 @@ func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
 }
 
 // BuildAndPush mocks base method
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath, tag string, additionalTags ...string) error {
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{docker, dockerfilePath, tag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "BuildAndPush", varargs...)
+	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, dockerfilePath, tag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{docker, dockerfilePath, tag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
 }
 
 // MockcwlogService is a mock of cwlogService interface
