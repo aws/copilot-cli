@@ -71,13 +71,13 @@ func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments 
 	if df != "" && ctx == "" {
 		return &docker.BuildArguments{
 			Dockerfile: filepath.Join(rootDirectory, df),
-			Context:    filepath.Dir(df),
+			Context:    filepath.Join(rootDirectory, filepath.Dir(df)),
 			Args:       s.args(),
 		}
 	}
 	if df == "" && ctx != "" {
 		return &docker.BuildArguments{
-			Dockerfile: filepath.Join(ctx, dockerfileDefaultName),
+			Dockerfile: filepath.Join(rootDirectory, ctx, dockerfileDefaultName),
 			Context:    filepath.Join(rootDirectory, ctx),
 			Args:       s.args(),
 		}
