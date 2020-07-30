@@ -510,8 +510,7 @@ func BuildPipelineInitCmd() *cobra.Command {
   /code $ copilot pipeline init \
   /code  --github-url https://github.com/gitHubUserName/myFrontendApp.git \
   /code  --github-access-token file://myGitHubToken \
-  /code  --environments "stage,prod" \
-  /code  --deploy`,
+  /code  --environments "stage,prod"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitPipelineOpts(vars)
 			if err != nil {

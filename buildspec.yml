@@ -19,10 +19,10 @@ phases:
     finally:
       - echo "Built artifacts:"
       - ls -lah ./bin/local
-      - ./bin/local/copilot-amd64 --version
+      - ./bin/local/copilot-linux-amd64 --version
   post_build:
     commands:
-      - VERSION=`./bin/local/copilot-amd64 --version`
+      - VERSION=`./bin/local/copilot-linux-amd64 --version`
       - VERSION=`echo $VERSION | grep -oE "[^ ]+$"`
       - COMMIT_VERSION=`git rev-parse --short HEAD`
       - echo "Creating version-tagged artifacts..."
@@ -30,13 +30,17 @@ phases:
       - mkdir -p $ARTIFACT_DIRECTORY
       - mv ./bin/local/copilot.exe $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe
       - mv ./bin/local/copilot $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION
-      - mv ./bin/local/copilot-amd64 $ARTIFACT_DIRECTORY/copilot-linux-$VERSION
+      - cp ./bin/local/copilot-linux-amd64 $ARTIFACT_DIRECTORY/copilot-linux-$VERSION
+      - mv ./bin/local/copilot-linux-amd64 $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION
+      - mv ./bin/local/copilot-linux-arm64 $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION
       - echo "Creating manifest file..."
       - COMMIT_ID=`git rev-parse HEAD`
       - MANIFESTFILE="$COMMIT_ID.manifest"
       - echo $ARTIFACT_DIRECTORY/copilot-windows-$VERSION.exe >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-darwin-$VERSION >> $MANIFESTFILE
       - echo $ARTIFACT_DIRECTORY/copilot-linux-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/copilot-linux-amd64-$VERSION >> $MANIFESTFILE
+      - echo $ARTIFACT_DIRECTORY/copilot-linux-arm64-$VERSION >> $MANIFESTFILE
     finally:
       - echo "Built artifacts:"
       - ls -lah $ARTIFACT_DIRECTORY

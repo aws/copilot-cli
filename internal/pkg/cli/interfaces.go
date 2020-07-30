@@ -7,9 +7,6 @@ import (
 	"encoding"
 	"io"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -18,7 +15,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -300,7 +300,7 @@ type taskDeployer interface {
 }
 
 type taskRunner interface {
-	Run() ([]string, error)
+	Run() ([]*task.Task, error)
 }
 
 type deployer interface {
@@ -353,7 +353,7 @@ type askExecutor interface {
 }
 
 type appSelector interface {
-	Application(prompt, help string) (string, error)
+	Application(prompt, help string, additionalOpts ...string) (string, error)
 }
 
 type appEnvSelector interface {

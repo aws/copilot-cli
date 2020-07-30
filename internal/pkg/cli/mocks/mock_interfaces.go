@@ -17,6 +17,7 @@ import (
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
+	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -2896,10 +2897,10 @@ func (m *MocktaskRunner) EXPECT() *MocktaskRunnerMockRecorder {
 }
 
 // Run mocks base method
-func (m *MocktaskRunner) Run() ([]string, error) {
+func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run")
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]*task.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -3607,18 +3608,23 @@ func (m *MockappSelector) EXPECT() *MockappSelectorMockRecorder {
 }
 
 // Application mocks base method
-func (m *MockappSelector) Application(prompt, help string) (string, error) {
+func (m *MockappSelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
+	varargs := []interface{}{prompt, help}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Application", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Application indicates an expected call of Application
-func (mr *MockappSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+func (mr *MockappSelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappSelector)(nil).Application), prompt, help)
+	varargs := append([]interface{}{prompt, help}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappSelector)(nil).Application), varargs...)
 }
 
 // MockappEnvSelector is a mock of appEnvSelector interface
@@ -3645,18 +3651,23 @@ func (m *MockappEnvSelector) EXPECT() *MockappEnvSelectorMockRecorder {
 }
 
 // Application mocks base method
-func (m *MockappEnvSelector) Application(prompt, help string) (string, error) {
+func (m *MockappEnvSelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
+	varargs := []interface{}{prompt, help}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Application", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Application indicates an expected call of Application
-func (mr *MockappEnvSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+func (mr *MockappEnvSelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappEnvSelector)(nil).Application), prompt, help)
+	varargs := append([]interface{}{prompt, help}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockappEnvSelector)(nil).Application), varargs...)
 }
 
 // Environment mocks base method
@@ -3703,18 +3714,23 @@ func (m *MockconfigSelector) EXPECT() *MockconfigSelectorMockRecorder {
 }
 
 // Application mocks base method
-func (m *MockconfigSelector) Application(prompt, help string) (string, error) {
+func (m *MockconfigSelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
+	varargs := []interface{}{prompt, help}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Application", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Application indicates an expected call of Application
-func (mr *MockconfigSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+func (mr *MockconfigSelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockconfigSelector)(nil).Application), prompt, help)
+	varargs := append([]interface{}{prompt, help}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockconfigSelector)(nil).Application), varargs...)
 }
 
 // Environment mocks base method
@@ -3776,18 +3792,23 @@ func (m *MockdeploySelector) EXPECT() *MockdeploySelectorMockRecorder {
 }
 
 // Application mocks base method
-func (m *MockdeploySelector) Application(prompt, help string) (string, error) {
+func (m *MockdeploySelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
+	varargs := []interface{}{prompt, help}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Application", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Application indicates an expected call of Application
-func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), prompt, help)
+	varargs := append([]interface{}{prompt, help}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), varargs...)
 }
 
 // DeployedService mocks base method
@@ -3834,18 +3855,23 @@ func (m *MockwsSelector) EXPECT() *MockwsSelectorMockRecorder {
 }
 
 // Application mocks base method
-func (m *MockwsSelector) Application(prompt, help string) (string, error) {
+func (m *MockwsSelector) Application(prompt, help string, additionalOpts ...string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Application", prompt, help)
+	varargs := []interface{}{prompt, help}
+	for _, a := range additionalOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Application", varargs...)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Application indicates an expected call of Application
-func (mr *MockwsSelectorMockRecorder) Application(prompt, help interface{}) *gomock.Call {
+func (mr *MockwsSelectorMockRecorder) Application(prompt, help interface{}, additionalOpts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockwsSelector)(nil).Application), prompt, help)
+	varargs := append([]interface{}{prompt, help}, additionalOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockwsSelector)(nil).Application), varargs...)
 }
 
 // Environment mocks base method

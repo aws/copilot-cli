@@ -11,13 +11,13 @@ import (
 )
 
 const (
-	clusterResourceType  = "ecs:cluster"
+	clusterResourceType = "ecs:cluster"
 
-	fmtErrClusterFromEnv        = "get cluster by env %s: %w"
-	fmtErrNoClusterFoundFromEnv = "no cluster found in env %s"
+	fmtErrClusterFromEnv            = "get cluster by env %s: %w"
+	fmtErrNoClusterFoundFromEnv     = "no cluster found in env %s"
 	fmtErrMoreThanOneClusterFromEnv = "more than one cluster is found in environment %s"
-	fmtErrPublicSubnetsFromEnv  = "get public subnet IDs from environment %s: %w"
-	fmtErrSecurityGroupsFromEnv = "get security groups from environment %s: %w"
+	fmtErrPublicSubnetsFromEnv      = "get public subnet IDs from environment %s: %w"
+	fmtErrSecurityGroupsFromEnv     = "get security groups from environment %s: %w"
 )
 
 // Names for tag filters
@@ -43,8 +43,8 @@ type EnvRunner struct {
 	Starter       TaskRunner
 }
 
-// Run runs tasks in the environment of the application, and returns the task ARNs.
-func (r *EnvRunner) Run() ([]string, error) {
+// Run runs tasks in the environment of the application, and returns the tasks.
+func (r *EnvRunner) Run() ([]*Task, error) {
 	if err := r.validateDependencies(); err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 		return nil, fmt.Errorf(fmtErrSecurityGroupsFromEnv, r.Env, err)
 	}
 
-	arns, err := r.Starter.RunTask(ecs.RunTaskInput{
+	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
 		Cluster:        cluster,
 		Count:          r.Count,
 		Subnets:        subnets,
@@ -83,7 +83,7 @@ func (r *EnvRunner) Run() ([]string, error) {
 			parentErr: err,
 		}
 	}
-	return arns, nil
+	return convertECSTasks(ecsTasks), nil
 }
 
 func (r *EnvRunner) cluster(app, env string) (string, error) {

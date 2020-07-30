@@ -5,6 +5,7 @@ package task
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
@@ -24,7 +25,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 		mockStarter       func(m *mocks.MockTaskRunner)
 
 		wantedError error
-		wantedARNs  []string
+		wantedTasks []*Task
 	}{
 		"failed to get clusters": {
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
@@ -74,10 +75,18 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					SecurityGroups: []string{"sg-1", "sg-2"},
 					TaskFamilyName: taskFamilyName("my-task"),
 					StartedBy:      startedBy,
-				}).Return([]string{"task-1"}, nil)
+				}).Return([]*ecs.Task{
+					{
+						TaskArn: aws.String("task-1"),
+					},
+				}, nil)
 			},
 
-			wantedARNs: []string{"task-1"},
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+				},
+			},
 		},
 	}
 
@@ -103,12 +112,12 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				Starter:       mockStarter,
 			}
 
-			arns, err := task.Run()
+			tasks, err := task.Run()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedARNs, arns)
+				require.Equal(t, tc.wantedTasks, tasks)
 			}
 		})
 	}
