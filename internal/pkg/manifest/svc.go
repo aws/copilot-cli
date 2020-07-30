@@ -106,8 +106,6 @@ func (s *ServiceImage) dockerfile() string {
 	var dfPath string
 	if s.Build.BuildString != nil {
 		dfPath = aws.StringValue(s.Build.BuildString)
-	} else {
-		dfPath = ""
 	}
 
 	return dfPath
