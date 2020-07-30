@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -67,7 +69,7 @@ type runTaskVars struct {
 	dockerfilePath string
 	imageTag       string
 
-	taskRole string
+	taskRole      string
 	executionRole string
 
 	subnets        []string
@@ -90,8 +92,8 @@ type runTaskOpts struct {
 	deployer taskDeployer
 
 	// Fields below are configured at runtime.
-	repository repositoryService
-	runner taskRunner
+	repository           repositoryService
+	runner               taskRunner
 	configureRuntimeOpts func() error
 }
 
@@ -117,7 +119,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		deployer: cloudformation.New(sess),
 	}
-
 
 	opts.configureRuntimeOpts = func() error {
 		var sess *awssession.Session
@@ -169,38 +170,38 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 
 	if o.env != "" {
 		return &task.EnvRunner{
-			Count: o.count,
+			Count:     o.count,
 			GroupName: o.groupName,
 
 			App: o.AppName(),
 			Env: o.env,
 
-			VPCGetter: vpcGetter,
+			VPCGetter:     vpcGetter,
 			ClusterGetter: resourcegroups.New(sess),
-			Starter: ecsService,
+			Starter:       ecsService,
 		}
 	}
 
 	if o.subnets != nil {
 		return &task.NetworkConfigRunner{
-			Count: o.count,
+			Count:     o.count,
 			GroupName: o.groupName,
 
-			Subnets: o.subnets,
+			Subnets:        o.subnets,
 			SecurityGroups: o.securityGroups,
 
 			ClusterGetter: ecsService,
-			Starter: ecsService,
+			Starter:       ecsService,
 		}
 	}
 
 	return &task.DefaultVPCRunner{
-		Count: o.count,
+		Count:     o.count,
 		GroupName: o.groupName,
 
-		VPCGetter: vpcGetter,
+		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
-		Starter: ecsService,
+		Starter:       ecsService,
 	}
 
 }
@@ -292,7 +293,6 @@ func (o *runTaskOpts) Execute() error {
 		}
 		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
 
-
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
@@ -323,7 +323,12 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(docker.New(), o.dockerfilePath, imageTagLatest, additionalTags...); err != nil {
+	if err := o.repository.BuildAndPush(docker.New(), &docker.BuildArguments{
+		Dockerfile:     o.dockerfilePath,
+		Context:        filepath.Dir(o.dockerfilePath),
+		ImageTag:       imageTagLatest,
+		AdditionalTags: additionalTags,
+	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil
@@ -351,14 +356,14 @@ func (o *runTaskOpts) updateTaskResources() error {
 
 func (o *runTaskOpts) deploy() error {
 	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
-		Name:     o.groupName,
-		CPU:      o.cpu,
-		Memory:   o.memory,
-		Image:    o.image,
-		TaskRole: o.taskRole,
+		Name:          o.groupName,
+		CPU:           o.cpu,
+		Memory:        o.memory,
+		Image:         o.image,
+		TaskRole:      o.taskRole,
 		ExecutionRole: o.executionRole,
-		Command:  o.command,
-		EnvVars:  o.envVars,
+		Command:       o.command,
+		EnvVars:       o.envVars,
 	})
 }
 
