@@ -182,7 +182,7 @@ Resources:
         Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${AppName}.${AppDNSName}"
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 
-{{include "lambda" . | indent 2}}
+{{include "lambdas" . | indent 2}}
 
 {{include "custom-resources" . | indent 2}}
 Outputs:

@@ -12,17 +12,17 @@ import (
 const (
 	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
 	EnvCFTemplatePath     = "environment/cf.yml"
-	envNestCFTemplatePath = "environment/nest/cf/%s.yml"
+	envNestCFTemplatePath = "environment/cf/%s.yml"
 )
 
 var (
-	// Template names under "environment/nest/cf/".
+	// Template names under "environment/cf/".
 	nestEnvCFTemplateNames = []string{
 		"cfn-execution-role",
 		"custom-resources",
 		"custom-resources-role",
 		"environment-manager-role",
-		"lambda",
+		"lambdas",
 		"vpc-resources",
 	}
 )

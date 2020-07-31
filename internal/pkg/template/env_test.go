@@ -25,12 +25,12 @@ func TestTemplate_ParseEnv(t *testing.T) {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
 				mockBox.AddString("environment/cf.yml", baseContent)
-				mockBox.AddString("environment/nest/cf/cfn-execution-role.yml", "cfn-execution-role")
-				mockBox.AddString("environment/nest/cf/custom-resources.yml", "custom-resources")
-				mockBox.AddString("environment/nest/cf/custom-resources-role.yml", "custom-resources-role")
-				mockBox.AddString("environment/nest/cf/environment-manager-role.yml", "environment-manager-role")
-				mockBox.AddString("environment/nest/cf/lambda.yml", "lambda")
-				mockBox.AddString("environment/nest/cf/vpc-resources.yml", "vpc-resources")
+				mockBox.AddString("environment/cf/cfn-execution-role.yml", "cfn-execution-role")
+				mockBox.AddString("environment/cf/custom-resources.yml", "custom-resources")
+				mockBox.AddString("environment/cf/custom-resources-role.yml", "custom-resources-role")
+				mockBox.AddString("environment/cf/environment-manager-role.yml", "environment-manager-role")
+				mockBox.AddString("environment/cf/lambdas.yml", "lambdas")
+				mockBox.AddString("environment/cf/vpc-resources.yml", "vpc-resources")
 
 				t.box = mockBox
 			},
@@ -38,7 +38,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
   custom-resources
   custom-resources-role
   environment-manager-role
-  lambda
+  lambdas
   vpc-resources
 `,
 		},
