@@ -168,6 +168,10 @@ type runner interface {
 	Run(name string, args []string, options ...command.Option) error
 }
 
+type eventsWriter interface {
+	WriteEventsUntilStopped() error
+}
+
 type defaultSessionProvider interface {
 	Default() (*session.Session, error)
 }

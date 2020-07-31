@@ -33,6 +33,10 @@ type EventsWriter struct {
 	GroupName string
 	Tasks     []*Task
 
+	Writer io.Writer
+	EventsLogger TaskEventsLogger
+	Describer TasksDescriber
+
 	// Fields that are private that get modified each time
 	lastEventTimestampByLogGroup map[string]int64
 	runningTasks []*Task
@@ -40,19 +44,19 @@ type EventsWriter struct {
 
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
-func (ew *EventsWriter) WriteEventsUntilStopped(w io.Writer, cwLogsGetter CWLogService, describer TaskDescriber) error {
-	startTime := EarliestStartTime(ew.Tasks)
+func (ew *EventsWriter) WriteEventsUntilStopped() error {
+	startTime := earliestStartTime(ew.Tasks)
 	ew.runningTasks = ew.Tasks
 	ew.lastEventTimestampByLogGroup = make(map[string]int64)
 
 	for {
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			if err := ew.writeEvents(w, cwLogsGetter, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime))); err != nil {
+			if err := ew.writeEvents(cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime))); err != nil {
 				return err
 			}
 			time.Sleep(cloudwatchlogs.SleepDuration)
 		}
-		stopped, err := ew.stopped(describer)
+		stopped, err := ew.areTasksStopped()
 		if err != nil {
 			return err
 		}
@@ -63,20 +67,21 @@ func (ew *EventsWriter) WriteEventsUntilStopped(w io.Writer, cwLogsGetter CWLogS
 }
 
 // TODO: move this to a different package because this is not a task-specific method
-func (ew *EventsWriter) writeEvents(w io.Writer, cwLogsGetter CWLogService, opts ...cloudwatchlogs.GetLogEventsOpts) error {
-	logEventsOutput, err := cwLogsGetter.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
+func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) error {
+	logEventsOutput, err := ew.EventsLogger.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
 	if err != nil {
 		return fmt.Errorf("get task log events: %w", err)
 	}
 	for _, event := range logEventsOutput.Events {
-		if _, err := fmt.Fprintf(w, event.HumanString()); err != nil {
+		if _, err := fmt.Fprintf(ew.Writer, event.HumanString()); err != nil {
 			return fmt.Errorf("write log event: %w", err)
 		}
 	}
 	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
 	return nil
 }
-func (ew *EventsWriter) areTasksStopped(describer TaskDescriber) (bool, error){
+
+func (ew *EventsWriter) areTasksStopped() (bool, error){
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
 		taskARNs[idx] = task.TaskARN
@@ -85,7 +90,7 @@ func (ew *EventsWriter) areTasksStopped(describer TaskDescriber) (bool, error){
 	// NOTE: all tasks are deployed to the same cluster and there are at least one tasks being deployed
 	cluster := ew.runningTasks[0].ClusterARN
 
-	tasksResp, err := describer.DescribeTasks(cluster, taskARNs)
+	tasksResp, err := ew.Describer.DescribeTasks(cluster, taskARNs)
 	if err != nil {
 		return false, fmt.Errorf("describe tasks: %w", err)
 	}
@@ -101,4 +106,15 @@ func (ew *EventsWriter) areTasksStopped(describer TaskDescriber) (bool, error){
 		}
 	}
 	return stopped, nil
+}
+
+// The `StartedAt` field for the tasks shouldn't be nil.
+func earliestStartTime(tasks []*Task) time.Time {
+	earliest := *tasks[0].StartedAt
+	for _, task := range tasks {
+		if task.StartedAt.Before(earliest) {
+			earliest = *task.StartedAt
+		}
+	}
+	return earliest
 }

@@ -70,14 +70,3 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	return tasks
 }
 
-// EarliestStartTime finds the earliest start time from a list of tasks.
-// The `StartedAt` field for the tasks shouldn't be nil.
-func EarliestStartTime(tasks []*Task) time.Time {
-	earliest := *tasks[0].StartedAt
-	for _, task := range tasks {
-		if task.StartedAt.Before(earliest) {
-			earliest = *task.StartedAt
-		}
-	}
-	return earliest
-}

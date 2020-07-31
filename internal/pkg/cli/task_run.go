@@ -105,11 +105,12 @@ type runTaskOpts struct {
 	runner            taskRunner
 	sess              *awssession.Session
 	targetEnvironment *config.Environment
+	eventsWriter         eventsWriter
 
-	configureSession     func() error
-
+	// Configurer methods.
 	configureRuntimeOpts func() error
 	configureRepository  func() error
+	configureEventsWriter func(tasks []*task.Task)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -133,6 +134,18 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		opts.configureRepository = opts.repositoryConfigurer()
 		return nil
+	}
+
+	opts.configureEventsWriter = func(tasks []*task.Task) {
+		logGroupName := fmt.Sprintf(fmtTaskLogGroupName, opts.groupName)
+		opts.eventsWriter = &task.EventsWriter{
+			GroupName: logGroupName,
+			Tasks: tasks,
+
+			Describer: ecs.New(opts.sess),
+			EventsLogger: cloudwatchlogs.New(opts.sess),
+			Writer: log.OutputWriter,
+		}
 	}
 
 	return &opts, nil
@@ -328,24 +341,15 @@ func (o *runTaskOpts) Execute() error {
 	}
 
 	if o.follow {
-		if err := o.displayLogStream(tasks); err != nil {
+		o.configureEventsWriter(tasks)
+		if err := o.displayLogStream(); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (o *runTaskOpts) displayLogStream(tasks []*task.Task) error {
-	taskDescriber := ecs.New(o.sess)
-	cwLogsGetter := cloudwatchlogs.New(o.sess)
-	logWriter := log.OutputWriter
-
-	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, o.groupName)
-	ew := task.EventsWriter{
-		GroupName: logGroupName,
-		Tasks: tasks,
-	}
-
-	if err := ew.WriteEventsUntilStopped(logWriter, cwLogsGetter, taskDescriber); err != nil {
+func (o *runTaskOpts) displayLogStream() error {
+	if err := o.eventsWriter.WriteEventsUntilStopped(); err != nil {
 		return fmt.Errorf("write events: %w", err)
 	}
 

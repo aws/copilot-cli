@@ -16,8 +16,8 @@ import (
 )
 
 type writeEventMocks struct {
-	cwLogsGetter *mocks.MockCWLogService
-	describer    *mocks.MockTaskDescriber
+	eventsLogger *mocks.MockTaskEventsLogger
+	describer    *mocks.MockTasksDescriber
 }
 
 type mockWriter struct {}
@@ -32,14 +32,14 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 	}{
 		"error getting log events": {
 			setUpMocks: func(m writeEventMocks) {
-				m.cwLogsGetter.EXPECT().TaskLogEvents(groupName, gomock.Any(), gomock.Any()).
+				m.eventsLogger.EXPECT().TaskLogEvents(groupName, gomock.Any(), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{}, errors.New("error getting log events"))
 			},
 			wantedError: errors.New("get task log events: error getting log events"),
 		},
 		"error describing tasks": {
 			setUpMocks: func(m writeEventMocks) {
-				m.cwLogsGetter.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.eventsLogger.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{
 						Events: []*cloudwatchlogs.Event{},
 					}, nil).AnyTimes()
@@ -50,7 +50,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 		},
 		"success": {
 			setUpMocks: func(m writeEventMocks) {
-				m.cwLogsGetter.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.eventsLogger.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: []*cloudwatchlogs.Event{},
 						}, nil).AnyTimes()
@@ -100,18 +100,22 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 				},
 			}
 
+			mocks := writeEventMocks{
+				eventsLogger: mocks.NewMockTaskEventsLogger(ctrl),
+				describer:    mocks.NewMockTasksDescriber(ctrl),
+			}
+			tc.setUpMocks(mocks)
+
 			ew := &EventsWriter{
 				GroupName: groupName,
 				Tasks: tasks,
+
+				Writer: mockWriter{},
+				EventsLogger: mocks.eventsLogger,
+				Describer: mocks.describer,
 			}
 
-			mocks := writeEventMocks{
-				cwLogsGetter: mocks.NewMockCWLogService(ctrl),
-				describer: mocks.NewMockTaskDescriber(ctrl),
-			}
-
-			tc.setUpMocks(mocks)
-			err := ew.WriteEventsUntilStopped(mockWriter{}, mocks.cwLogsGetter, mocks.describer)
+			err := ew.WriteEventsUntilStopped()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {

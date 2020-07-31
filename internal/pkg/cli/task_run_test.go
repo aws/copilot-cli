@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
 
@@ -472,7 +473,9 @@ type runTaskMocks struct {
 	repository *mocks.MockrepositoryService
 	runner     *mocks.MocktaskRunner
 	store      *mocks.Mockstore
+	eventsWriter *mocks.MockeventsWriter
 }
+
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
@@ -480,8 +483,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	tag := "tag"
 
 	testCases := map[string]struct {
-		inImage string
-		inTag   string
+		inImage  string
+		inTag    string
+		inFollow bool
 
 		inEnv string
 
@@ -573,6 +577,27 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
+		"fail to write events": {
+			inFollow: true,
+			inImage: "image",
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.runner.EXPECT().Run().Return([]*task.Task{
+					{
+						TaskARN: "task-1",
+					},
+					{
+						TaskARN: "task-2",
+					},
+					{
+						TaskARN: "task-3",
+					},
+				}, nil)
+				m.eventsWriter.EXPECT().WriteEventsUntilStopped().Times(1).
+					Return(errors.New("error writing events"))
+			},
+			wantedError: errors.New("write events: error writing events"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -585,6 +610,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				repository: mocks.NewMockrepositoryService(ctrl),
 				runner:     mocks.NewMocktaskRunner(ctrl),
 				store:      mocks.NewMockstore(ctrl),
+				eventsWriter: mocks.NewMockeventsWriter(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -592,9 +618,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				runTaskVars: runTaskVars{
 					GlobalOpts: &GlobalOpts{},
 					groupName: inGroupName,
+
 					image:     tc.inImage,
 					imageTag:  tc.inTag,
 					env:       tc.inEnv,
+					follow: tc.inFollow,
 				},
 				spinner:  &mockSpinner{},
 				store: mocks.store,
@@ -607,6 +635,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					return nil
 				}
 				return nil
+			}
+			opts.configureEventsWriter = func(tasks []*task.Task) {
+				opts.eventsWriter = mocks.eventsWriter
 			}
 
 			err := opts.Execute()

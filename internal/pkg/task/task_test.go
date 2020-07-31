@@ -29,6 +29,6 @@ func TestEarliestStartTime(t *testing.T) {
 		},
 	}
 
-	got := EarliestStartTime(inTasks)
+	got := earliestStartTime(inTasks)
 	require.Equal(t, now.Unix(), got.Unix())
 }
