@@ -6,9 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
-	"github.com/aws/aws-sdk-go/aws"
+	awssession "github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -26,10 +28,6 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"io"
-	"time"
-
-	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -39,7 +37,6 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath  = "Dockerfile"
 	imageTagLatest         = "latest"
-	numCWLogsCallsPerRound = 10
 )
 
 const (
@@ -109,11 +106,8 @@ type runTaskOpts struct {
 	sess              *awssession.Session
 	targetEnvironment *config.Environment
 
-	taskDescriber taskDescriber
-	cwLogsGetter  cwlogService
-	logWriter     io.Writer
-
 	configureSession     func() error
+
 	configureRuntimeOpts func() error
 	configureRepository  func() error
 }
@@ -136,10 +130,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner = opts.configureRunner()
 		opts.deployer = cloudformation.New(opts.sess)
-
-		opts.taskDescriber = ecs.New(opts.sess)
-		opts.cwLogsGetter = cloudwatchlogs.New(opts.sess)
-		opts.logWriter = log.OutputWriter
 
 		opts.configureRepository = opts.repositoryConfigurer()
 		return nil
@@ -344,76 +334,25 @@ func (o *runTaskOpts) Execute() error {
 	}
 	return nil
 }
-
 func (o *runTaskOpts) displayLogStream(tasks []*task.Task) error {
-	startTime := task.EarliestStartTime(tasks)
+	taskDescriber := ecs.New(o.sess)
+	cwLogsGetter := cloudwatchlogs.New(o.sess)
+	logWriter := log.OutputWriter
 
 	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, o.groupName)
-	logEventsOutput := &cloudwatchlogs.LogEventsOutput{
-		LastEventTime: make(map[string]int64),
+	ew := task.EventsWriter{
+		GroupName: logGroupName,
+		Tasks: tasks,
 	}
 
-	var (
-		stopped bool
-		err     error
-	)
-
-	for {
-		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			logEventsOutput, err := o.cwLogsGetter.TaskLogEvents(
-				logGroupName,
-				logEventsOutput.LastEventTime,
-				cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
-			if err != nil {
-				return fmt.Errorf("display log stream: %w", err)
-			}
-
-			for _, event := range logEventsOutput.Events {
-				if _, err := fmt.Fprintf(o.logWriter, event.HumanString()); err != nil {
-					return fmt.Errorf("write log event: %w", err)
-				}
-			}
-			time.Sleep(cloudwatchlogs.SleepDuration)
-		}
-
-		stopped, tasks, err = o.allStopped(tasks)
-		if err != nil {
-			return err
-		}
-		if stopped {
-			log.Infof("%s %s stopped.\n",
-				english.PluralWord(o.count, "task", ""),
-				english.PluralWord(o.count, "has", "have"))
-			return nil
-		}
-	}
-}
-
-func (o *runTaskOpts) allStopped(tasks []*task.Task) (allStopped bool, tasksNext []*task.Task, err error) {
-	taskARNs := make([]string, len(tasks))
-	for idx, task := range tasks {
-		taskARNs[idx] = task.TaskARN
+	if err := ew.WriteEventsUntilStopped(logWriter, cwLogsGetter, taskDescriber); err != nil {
+		return fmt.Errorf("write events: %w", err)
 	}
 
-	// NOTE: all tasks are deployed to the same cluster and there are at least one tasks being deployed
-	cluster := tasks[0].ClusterARN
-
-	tasksResp, err := o.taskDescriber.DescribeTasks(cluster, taskARNs)
-	if err != nil {
-		return false, nil, fmt.Errorf("describe tasks: %w", err)
-	}
-
-	allStopped = true
-	for _, t := range tasksResp {
-		if *t.LastStatus != ecs.DesiredStatusStopped {
-			allStopped = false
-			tasksNext = append(tasksNext, &task.Task{
-				TaskARN: *t.TaskArn,
-			})
-		}
-	}
-
-	return
+	log.Infof("%s %s stopped.\n",
+		english.PluralWord(o.count, "task", ""),
+		english.PluralWord(o.count, "has", "have"))
+	return nil
 }
 
 func (o *runTaskOpts) runTask() ([]*task.Task, error) {

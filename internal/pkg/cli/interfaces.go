@@ -298,10 +298,6 @@ type taskRunner interface {
 	Run() ([]*task.Task, error)
 }
 
-type taskDescriber interface {
-	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
-}
-
 type deployer interface {
 	environmentDeployer
 	appDeployer
