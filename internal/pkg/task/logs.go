@@ -16,8 +16,8 @@ const (
 	numCWLogsCallsPerRound = 10
 )
 
-// TaskDescriber describes ECS tasks.
-type TaskDescriber interface {
+// TasksDescriber describes ECS tasks.
+type TasksDescriber interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
