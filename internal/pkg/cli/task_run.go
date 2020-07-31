@@ -302,7 +302,7 @@ func (o *runTaskOpts) Ask() error {
 		return err
 	}
 
-	if !o.defaultEnv || o.subnets == nil {
+	if !o.defaultEnv && o.subnets == nil {
 		if err := o.askAppName(); err != nil {
 			return err
 		}
