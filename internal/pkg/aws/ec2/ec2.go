@@ -6,6 +6,7 @@ package ec2
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -40,6 +41,12 @@ type Filter struct {
 	Values []string
 }
 
+// Subnets contains subnets in a VPC.
+type Subnets struct {
+	PublicSubnets  []string
+	PrivateSubnets []string
+}
+
 // EC2 wraps an AWS EC2 client.
 type EC2 struct {
 	client api
@@ -50,6 +57,26 @@ func New(s *session.Session) *EC2 {
 	return &EC2{
 		client: ec2.New(s),
 	}
+}
+
+// ListVpcSubnets lists all subnets given a VPC ID.
+func (c *EC2) ListVpcSubnets(vpcID string) (*Subnets, error) {
+	respSubnets, err := c.subnets(Filter{
+		Name:   "vpc-id",
+		Values: []string{vpcID},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var subnets Subnets
+	for _, subnet := range respSubnets {
+		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
+			subnets.PublicSubnets = append(subnets.PublicSubnets, aws.StringValue(subnet.SubnetId))
+		} else {
+			subnets.PrivateSubnets = append(subnets.PrivateSubnets, aws.StringValue(subnet.SubnetId))
+		}
+	}
+	return &subnets, nil
 }
 
 // SubnetIDs finds the subnet IDs with optional filters.
@@ -103,16 +130,27 @@ func (c *EC2) SecurityGroups(filters ...Filter) ([]string, error) {
 
 func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 	inputFilters := toEC2Filter(filters)
-
+	var subnets []*ec2.Subnet
 	response, err := c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
 		Filters: inputFilters,
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("describe subnets: %w", err)
 	}
+	subnets = append(subnets, response.Subnets...)
 
-	return response.Subnets, nil
+	for response.NextToken != nil {
+		response, err = c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
+			Filters:   inputFilters,
+			NextToken: response.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe subnets: %w", err)
+		}
+		subnets = append(subnets, response.Subnets...)
+	}
+
+	return subnets, nil
 }
 
 func toEC2Filter(filters []Filter) []*ec2.Filter {
