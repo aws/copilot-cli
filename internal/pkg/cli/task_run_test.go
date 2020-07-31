@@ -237,7 +237,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:     "test",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("specified subnets with environment"),
+			wantedError: errors.New("cannot specify both subnets and environment"),
 		},
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
@@ -245,7 +245,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:            "test",
 			inSecurityGroups: []string{"security group id1", "securty group id2"},
 
-			wantedError: errors.New("specified security groups with environment"),
+			wantedError: errors.New("cannot specify both security groups and environment"),
 		},
 		"both application and subnets specified": {
 			basicOpts: defaultOpts,
@@ -253,7 +253,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			appName:     "my-app",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("specified subnets with application"),
+			wantedError: errors.New("cannot specify both subnets and application"),
 		},
 		"both application and security groups specified": {
 			basicOpts: defaultOpts,
@@ -261,7 +261,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			appName: "my-app",
 			inSecurityGroups: []string{"security group id1", "security group id2"},
 
-			wantedError: errors.New("specified security groups with application"),
+			wantedError: errors.New("cannot specify both security groups and application"),
 		},
 		"both default and subnets specified": {
 			basicOpts: defaultOpts,
@@ -269,7 +269,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDefault: true,
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("specified subnets with default"),
+			wantedError: errors.New("cannot specify both subnets and default"),
 		},
 	}
 

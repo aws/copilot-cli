@@ -264,33 +264,33 @@ func (o *runTaskOpts) Validate() error {
 func (o *runTaskOpts) validateRunnerTypeOptions() error {
 	// Subnets cannot be specified with default.
 	if o.defaultEnv && o.subnets != nil {
-		return fmt.Errorf("specified subnets with default")
+		return fmt.Errorf("cannot specify both subnets and default")
 	}
 
 	// Application and environment cannot be specified with default.
 	if o.appName != "" && o.defaultEnv {
-		return fmt.Errorf("specified application with default")
+		return fmt.Errorf("cannot specify both application and default")
 	}
 
 	if o.env != "" && o.defaultEnv {
-		return fmt.Errorf("specified environment with default")
+		return fmt.Errorf("cannot specify both environment and default")
 	}
 
 	// Application and environment cannot be specified with subnets or security groups.
 	if o.appName != "" && o.subnets != nil {
-		return fmt.Errorf("specified subnets with application")
+		return fmt.Errorf("cannot specify both subnets and application")
 	}
 
 	if o.appName != "" && o.securityGroups != nil {
-		return fmt.Errorf("specified security groups with application")
+		return fmt.Errorf("cannot specify both security groups and application")
 	}
 
 	if o.env != "" && o.subnets != nil {
-		return fmt.Errorf("specified subnets with environment")
+		return fmt.Errorf("cannot specify both subnets and environment")
 	}
 
 	if o.env != "" && o.securityGroups != nil {
-		return fmt.Errorf("specified security groups with environment")
+		return fmt.Errorf("cannot specify both security groups and environment")
 	}
 
 	return nil
