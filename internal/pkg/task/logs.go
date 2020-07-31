@@ -21,7 +21,7 @@ type TasksDescriber interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
-// CWLogService gets a log group's log events.
+// TaskEventsLogger gets a log group's log events.
 type TaskEventsLogger interface {
 	TaskLogEvents(logGroupName string,
 			streamLastEventTime map[string]int64,
