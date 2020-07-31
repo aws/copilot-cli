@@ -64,6 +64,7 @@ const (
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
 	commandFlag        = "command"
+	defaultFlag        = "default"
 )
 
 // Short flag names.
@@ -88,6 +89,17 @@ var (
 %s`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes), ", "))
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
+
+	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
+Cannot be specified with '%s' or '%s'.`, envFlag, defaultFlag)
+	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
+Cannot be specified with '%s'.`, envFlag)
+	defaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
+Cannot be specified with '%s', '%s' or '%s'.`, envFlag, subnetsFlag)
+	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
+Cannot be specified with '%s', '%s' or '%s'`, defaultFlag, subnetsFlag, securityGroupsFlag)
+	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
+Cannot be specified with '%s', '%s' or '%s'`, defaultFlag, subnetsFlag, securityGroupsFlag)
 )
 
 const (
@@ -144,8 +156,6 @@ Must be of the format '<keyName>:<dataType>'.`
 	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
 	taskRoleFlagDescription       = "Optional. The role for the task to use."
 	executionRoleFlagDescription  = "Optional. The role that grants the container agent permission to make AWS API calls."
-	subnetsFlagDescription        = "Optional. The subnet IDs for the task to use. Can be specified multiple times."
-	securityGroupsFlagDescription = "Optional. The security group IDs for the task to use. Can be specified multiple times."
 	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
 	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
 	taskGroupFlagDescription      = "The group name of the task. Tasks with the same group name share the same set of resources."

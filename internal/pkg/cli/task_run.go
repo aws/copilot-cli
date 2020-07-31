@@ -82,6 +82,8 @@ type runTaskVars struct {
 
 	envVars map[string]string
 	command string
+
+	defaultEnv bool
 }
 
 type runTaskOpts struct {
@@ -231,7 +233,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.image != "" && o.dockerfilePath != "" {
-		return errors.New("cannot specify both image and Dockerfile path")
+		return errors.New("specified both image and Dockerfile path")
 	}
 
 	if o.dockerfilePath != "" {
@@ -240,8 +242,8 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if o.env != "" && (o.subnets != nil || o.securityGroups != nil) {
-		return errors.New("neither subnet nor security groups should be specified if environment is specified")
+	if err := o.validateRunnerTypeOptions(); err != nil {
+		return err
 	}
 
 	if o.appName != "" {
@@ -259,16 +261,54 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
+func (o *runTaskOpts) validateRunnerTypeOptions() error {
+	// Subnets cannot be specified with default.
+	if o.defaultEnv && o.subnets != nil {
+		return fmt.Errorf("specified subnets with default")
+	}
+
+	// Application and environment cannot be specified with default.
+	if o.appName != "" && o.defaultEnv {
+		return fmt.Errorf("specified application with default")
+	}
+
+	if o.env != "" && o.defaultEnv {
+		return fmt.Errorf("specified environment with default")
+	}
+
+	// Application and environment cannot be specified with subnets or security groups.
+	if o.appName != "" && o.subnets != nil {
+		return fmt.Errorf("specified subnets with application")
+	}
+
+	if o.appName != "" && o.securityGroups != nil {
+		return fmt.Errorf("specified security groups with application")
+	}
+
+	if o.env != "" && o.subnets != nil {
+		return fmt.Errorf("specified subnets with environment")
+	}
+
+	if o.env != "" && o.securityGroups != nil {
+		return fmt.Errorf("specified security groups with environment")
+	}
+
+	return nil
+}
+
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
 	if err := o.askTaskGroupName(); err != nil {
 		return err
 	}
-	if err := o.askAppName(); err != nil {
-		return err
-	}
-	if err := o.askEnvName(); err != nil {
-		return err
+
+	if !o.defaultEnv || o.subnets == nil {
+		if err := o.askAppName(); err != nil {
+			return err
+		}
+		if err := o.askEnvName(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -509,10 +549,11 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
 	cmd.Flags().StringVar(&vars.executionRole, executionRoleFlag, "", executionRoleFlagDescription)
 
-	cmd.Flags().StringVar(&vars.appName, appFlag, "", appFlagDescription)
-	cmd.Flags().StringVar(&vars.env, envFlag, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.appName, appFlag, "", taskAppFlagDescription)
+	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
+	cmd.Flags().BoolVar(&vars.defaultEnv, defaultFlag, false, defaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
