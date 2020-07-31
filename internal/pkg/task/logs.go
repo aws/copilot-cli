@@ -76,7 +76,7 @@ func (ew *EventsWriter) writeEvents(w io.Writer, cwLogsGetter CWLogService, opts
 	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
 	return nil
 }
-func (ew *EventsWriter) stopped(describer TaskDescriber) (bool, error){
+func (ew *EventsWriter) areTasksStopped(describer TaskDescriber) (bool, error){
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
 		taskARNs[idx] = task.TaskARN
