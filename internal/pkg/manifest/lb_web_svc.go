@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -120,7 +119,7 @@ func tplDirName(s string) string {
 }
 
 //BuildArgs returns a docker.BuildArguments object given a ws root directory.
-func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *docker.BuildArguments {
+func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.Image.BuildConfig(wsRoot)
 }
 

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -260,15 +259,15 @@ func TestBuildConfig(t *testing.T) {
 	mockWsRoot := "/root/dir"
 	testCases := map[string]struct {
 		inBuild     BuildArgsOrString
-		wantedBuild docker.BuildArguments
+		wantedBuild DockerBuildArgs
 	}{
 		"simple case: BuildString path to dockerfile": {
 			inBuild: BuildArgsOrString{
 				BuildString: aws.String("my/Dockerfile"),
 			},
-			wantedBuild: docker.BuildArguments{
-				Dockerfile: filepath.Join(mockWsRoot, "my/Dockerfile"),
-				Context:    filepath.Join(mockWsRoot, "my"),
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
 			},
 		},
 		"Different context than dockerfile": {
@@ -278,9 +277,9 @@ func TestBuildConfig(t *testing.T) {
 					Context:    aws.String("cmd/main"),
 				},
 			},
-			wantedBuild: docker.BuildArguments{
-				Dockerfile: filepath.Join(mockWsRoot, "build/dockerfile"),
-				Context:    filepath.Join(mockWsRoot, "cmd/main"),
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "build/dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "cmd/main")),
 			},
 		},
 		"no dockerfile specified": {
@@ -289,9 +288,9 @@ func TestBuildConfig(t *testing.T) {
 					Context: aws.String("cmd/main"),
 				},
 			},
-			wantedBuild: docker.BuildArguments{
-				Dockerfile: filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile"),
-				Context:    filepath.Join(mockWsRoot, "cmd", "main"),
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "cmd", "main")),
 			},
 		},
 		"no dockerfile or context specified": {
@@ -302,9 +301,9 @@ func TestBuildConfig(t *testing.T) {
 					},
 				},
 			},
-			wantedBuild: docker.BuildArguments{
-				Dockerfile: filepath.Join(mockWsRoot, "Dockerfile"),
-				Context:    mockWsRoot,
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
 				Args: map[string]string{
 					"goodDog": "bowie",
 				},
@@ -320,9 +319,9 @@ func TestBuildConfig(t *testing.T) {
 					},
 				},
 			},
-			wantedBuild: docker.BuildArguments{
-				Dockerfile: filepath.Join(mockWsRoot, "my/Dockerfile"),
-				Context:    filepath.Join(mockWsRoot, "my"),
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
 				Args: map[string]string{
 					"goodDog":  "bowie",
 					"badGoose": "HONK",

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -304,7 +305,7 @@ func (o *deploySvcOpts) pushToECRRepo() error {
 
 func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	type dfArgs interface {
-		BuildArgs(rootDirectory string) *docker.BuildArguments
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
@@ -325,7 +326,13 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 	}
 	wsRoot := filepath.Dir(copilotDir)
 
-	return mf.BuildArgs(wsRoot), nil
+	args := mf.BuildArgs(wsRoot)
+	return &docker.BuildArguments{
+		Dockerfile: aws.StringValue(args.Dockerfile),
+		Context:    aws.StringValue(args.Context),
+		Args:       args.Args,
+		ImageTag:   o.ImageTag,
+	}, nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.

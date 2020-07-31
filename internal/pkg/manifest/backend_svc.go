@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
 )
@@ -99,7 +98,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 }
 
 // BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
-func (s *BackendService) BuildArgs(wsRoot string) *docker.BuildArguments {
+func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.Image.BuildConfig(wsRoot)
 }
 

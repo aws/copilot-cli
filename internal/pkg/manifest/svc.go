@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 )
@@ -58,33 +57,33 @@ type ServiceImage struct {
 // 2. Specific dockerfile, context = dockerfile dir
 // 3. "Dockerfile" located in context dir
 // 4. "Dockerfile" located in ws root.
-func (s *ServiceImage) BuildConfig(rootDirectory string) *docker.BuildArguments {
+func (s *ServiceImage) BuildConfig(rootDirectory string) *DockerBuildArgs {
 	df := s.dockerfile()
 	ctx := s.context()
 	if df != "" && ctx != "" {
-		return &docker.BuildArguments{
-			Dockerfile: filepath.Join(rootDirectory, df),
-			Context:    filepath.Join(rootDirectory, ctx),
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
+			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
 			Args:       s.args(),
 		}
 	}
 	if df != "" && ctx == "" {
-		return &docker.BuildArguments{
-			Dockerfile: filepath.Join(rootDirectory, df),
-			Context:    filepath.Join(rootDirectory, filepath.Dir(df)),
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
+			Context:    aws.String(filepath.Join(rootDirectory, filepath.Dir(df))),
 			Args:       s.args(),
 		}
 	}
 	if df == "" && ctx != "" {
-		return &docker.BuildArguments{
-			Dockerfile: filepath.Join(rootDirectory, ctx, dockerfileDefaultName),
-			Context:    filepath.Join(rootDirectory, ctx),
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName)),
+			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
 			Args:       s.args(),
 		}
 	}
-	return &docker.BuildArguments{
-		Dockerfile: filepath.Join(rootDirectory, dockerfileDefaultName),
-		Context:    rootDirectory,
+	return &DockerBuildArgs{
+		Dockerfile: aws.String(filepath.Join(rootDirectory, dockerfileDefaultName)),
+		Context:    aws.String(rootDirectory),
 		Args:       s.args(),
 	}
 }
