@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package task
 
 import (
@@ -13,16 +16,19 @@ const (
 	numCWLogsCallsPerRound = 10
 )
 
+// TaskDescriber describes ECS tasks.
 type TaskDescriber interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
+// CWLogService gets a log group's log events.
 type CWLogService interface {
 	TaskLogEvents(logGroupName string,
 			streamLastEventTime map[string]int64,
 			opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
+// EventsWriter represents a writer that writes tasks' log events to a writer.
 type EventsWriter struct {
 	GroupName string
 	Tasks     []*Task
@@ -32,21 +38,8 @@ type EventsWriter struct {
 	runningTasks []*Task
 }
 
-// TODO: move this to a different package because this is not a task-specific method
-func (ew *EventsWriter) writeEvents(w io.Writer, cwLogsGetter CWLogService, opts ...cloudwatchlogs.GetLogEventsOpts) error {
-	logEventsOutput, err := cwLogsGetter.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
-	if err != nil {
-		return fmt.Errorf("get task log events: %w", err)
-	}
-	for _, event := range logEventsOutput.Events {
-		if _, err := fmt.Fprintf(w, event.HumanString()); err != nil {
-			return fmt.Errorf("write log event: %w", err)
-		}
-	}
-	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
-	return nil
-}
 
+// WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
 func (ew *EventsWriter) WriteEventsUntilStopped(w io.Writer, cwLogsGetter CWLogService, describer TaskDescriber) error {
 	startTime := EarliestStartTime(ew.Tasks)
 	ew.runningTasks = ew.Tasks
@@ -69,6 +62,20 @@ func (ew *EventsWriter) WriteEventsUntilStopped(w io.Writer, cwLogsGetter CWLogS
 	}
 }
 
+// TODO: move this to a different package because this is not a task-specific method
+func (ew *EventsWriter) writeEvents(w io.Writer, cwLogsGetter CWLogService, opts ...cloudwatchlogs.GetLogEventsOpts) error {
+	logEventsOutput, err := cwLogsGetter.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
+	if err != nil {
+		return fmt.Errorf("get task log events: %w", err)
+	}
+	for _, event := range logEventsOutput.Events {
+		if _, err := fmt.Fprintf(w, event.HumanString()); err != nil {
+			return fmt.Errorf("write log event: %w", err)
+		}
+	}
+	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
+	return nil
+}
 func (ew *EventsWriter) stopped(describer TaskDescriber) (bool, error){
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
