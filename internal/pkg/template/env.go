@@ -11,13 +11,13 @@ import (
 // Paths of service cloudformation templates under templates/services/.
 const (
 	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
-	EnvCFTemplatePath     = "environment/cf.yml"
-	envNestCFTemplatePath = "environment/cf/%s.yml"
+	EnvCFTemplatePath       = "environment/cf.yml"
+	fmtEnvCFSubTemplatePath = "environment/cf/%s.yml"
 )
 
 var (
 	// Template names under "environment/cf/".
-	nestEnvCFTemplateNames = []string{
+	envCFSubTemplateNames = []string{
 		"cfn-execution-role",
 		"custom-resources",
 		"custom-resources-role",
@@ -56,8 +56,8 @@ func (t *Template) ParseEnv(data interface{}, options ...ParseOption) (*Content,
 	if err != nil {
 		return nil, err
 	}
-	for _, templateName := range nestEnvCFTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(envNestCFTemplatePath, templateName), options...)
+	for _, templateName := range envCFSubTemplateNames {
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
 		}

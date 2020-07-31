@@ -21,7 +21,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 			mockDependencies: func(t *Template) {
 				mockBox := packd.NewMemoryBox()
 				var baseContent string
-				for _, name := range nestEnvCFTemplateNames {
+				for _, name := range envCFSubTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
 				mockBox.AddString("environment/cf.yml", baseContent)
