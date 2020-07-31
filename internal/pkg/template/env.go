@@ -8,7 +8,6 @@ import (
 	"fmt"
 )
 
-// Paths of service cloudformation templates under templates/services/.
 const (
 	// EnvCFTemplatePath is the path where the cloudformation for the environment is written.
 	EnvCFTemplatePath       = "environment/cf.yml"

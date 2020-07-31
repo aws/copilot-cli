@@ -8,6 +8,7 @@ VPC:
     Tags:
       - Key: Name
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
+
 PublicRouteTable:
   Type: AWS::EC2::RouteTable
   Properties:
