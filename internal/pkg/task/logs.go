@@ -22,7 +22,7 @@ type TasksDescriber interface {
 }
 
 // CWLogService gets a log group's log events.
-type CWLogService interface {
+type TaskEventsLogger interface {
 	TaskLogEvents(logGroupName string,
 			streamLastEventTime map[string]int64,
 			opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
