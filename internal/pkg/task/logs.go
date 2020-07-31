@@ -95,16 +95,17 @@ func (ew *EventsWriter) areTasksStopped() (bool, error){
 		return false, fmt.Errorf("describe tasks: %w", err)
 	}
 
-	ew.runningTasks = nil
 	stopped := true
+	var runningTasks []*Task
 	for _, t := range tasksResp {
 		if *t.LastStatus != ecs.DesiredStatusStopped {
 			stopped = false
-			ew.runningTasks = append(ew.runningTasks, &Task{
+			runningTasks = append(runningTasks, &Task{
 				TaskARN: *t.TaskArn,
 			})
 		}
 	}
+	ew.runningTasks = runningTasks
 	return stopped, nil
 }
 
