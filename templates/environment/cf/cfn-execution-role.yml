@@ -1,0 +1,37 @@
+CloudformationExecutionRole:
+  Type: AWS::IAM::Role
+{{- if not .ImportVpc}}
+  DependsOn: VPC
+{{- end}}
+  Properties:
+    RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+      - Effect: Allow
+        Principal:
+          Service:
+          - 'cloudformation.amazonaws.com'
+          - 'lambda.amazonaws.com'
+        Action: sts:AssumeRole
+    Path: /
+    Policies:
+      - PolicyName: executeCfn
+        # This policy is more permissive than the managed PowerUserAccess
+        # since it allows arbitrary role creation, which is needed for the
+        # ECS task role specified by the customers.
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          -
+            Effect: Allow
+            NotAction:
+              - 'organizations:*'
+              - 'account:*'
+            Resource: '*'
+          -
+            Effect: Allow
+            Action:
+              - 'organizations:DescribeOrganization'
+              - 'account:ListRegions'
+            Resource: '*'

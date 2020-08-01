@@ -8,26 +8,6 @@ Parameters:
   EnvironmentName:
     Type: String
 
-  VpcCIDR:
-    Type: String
-    Default: 10.0.0.0/16
-
-  PublicSubnet1CIDR:
-    Type: String
-    Default: 10.0.0.0/24
-
-  PublicSubnet2CIDR:
-    Type: String
-    Default: 10.0.1.0/24
-
-  PrivateSubnet1CIDR:
-    Type: String
-    Default: 10.0.2.0/24
-
-  PrivateSubnet2CIDR:
-    Type: String
-    Default: 10.0.3.0/24
-
   IncludePublicLoadBalancer:
     Type: String
     Default: true
@@ -54,101 +34,9 @@ Conditions:
     - !Condition CreatePublicLoadBalancer
 
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: !Ref VpcCIDR
-      EnableDnsHostnames: true
-      EnableDnsSupport: true
-      InstanceTenancy: default
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
-
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Properties:
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
-
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
-
-  PublicSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PublicSubnet1CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub0'
-
-  PublicSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PublicSubnet2CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: true
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-pub1'
-
-  PrivateSubnet1:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PrivateSubnet1CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv0'
-
-  PrivateSubnet2:
-    Type: AWS::EC2::Subnet
-    Properties:
-      CidrBlock: !Ref PrivateSubnet2CIDR
-      VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 1, !GetAZs '' ]
-      MapPublicIpOnLaunch: false
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-priv1'
-
-  PublicRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
-
-  DefaultPublicRoute:
-    Type: AWS::EC2::Route
-    DependsOn: InternetGatewayAttachment
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      GatewayId: !Ref InternetGateway
-
-  PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet1
-
-  PublicSubnet2RouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      RouteTableId: !Ref PublicRouteTable
-      SubnetId: !Ref PublicSubnet2
+{{- if not .ImportVpc}}
+{{include "vpc-resources" .VpcConfig | indent 2}}
+{{- end}}
 
   # Creates a service discovery namespace with the form:
   # {svc}.{appname}.local
@@ -156,7 +44,11 @@ Resources:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
         Name: !Sub ${AppName}.local
+{{- if .ImportVpc}}
+        Vpc: {{.ImportVpc.ID}}
+{{- else}}
         Vpc: !Ref VPC
+{{- end}}
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -179,7 +71,11 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
       VpcId: !Ref VPC
+{{- end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
@@ -189,7 +85,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
       VpcId: !Ref VPC
+{{- end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
@@ -216,7 +116,11 @@ Resources:
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-      Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2 ]
+{{- if .ImportVpc}}
+      Subnets: [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}} ]
+{{- else}}
+      Subnets: [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
+{{- end}}
       Type: application
 
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -234,7 +138,11 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
+{{- if .ImportVpc}}
+      VpcId: {{.ImportVpc.ID}}
+{{- else}}
       VpcId: !Ref VPC
+{{- end}}
 
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -260,279 +168,11 @@ Resources:
       Port: 443
       Protocol: HTTPS
 
-  CloudformationExecutionRole:
-    Type: AWS::IAM::Role
-    DependsOn: VPC
-    Properties:
-      RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Service:
-            - 'cloudformation.amazonaws.com'
-            - 'lambda.amazonaws.com'
-          Action: sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: executeCfn
-          # This policy is more permissive than the managed PowerUserAccess
-          # since it allows arbitrary role creation, which is needed for the
-          # ECS task role specified by the customers.
-          # TODO: #335 Scope down the permissions given the CFN execution
-          # role.
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            -
-              Effect: Allow
-              NotAction:
-                - 'organizations:*'
-                - 'account:*'
-              Resource: '*'
-            -
-              Effect: Allow
-              Action:
-                - 'organizations:DescribeOrganization'
-                - 'account:ListRegions'
-              Resource: '*'
+{{include "cfn-execution-role" . | indent 2}}
 
-  EnvironmentManagerRole:
-    Type: AWS::IAM::Role
-    DependsOn: CloudformationExecutionRole
-    Properties:
-      RoleName: !Sub ${AWS::StackName}-EnvManagerRole
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            AWS: !Sub ${ToolsAccountPrincipalARN}
-          Action: sts:AssumeRole
-      Path: /
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Sid: CloudwatchLogs
-            Effect: Allow
-            Action: [
-              "logs:GetLogRecord",
-              "logs:GetQueryResults",
-              "logs:StartQuery",
-              "logs:GetLogEvents",
-              "logs:DescribeLogStreams",
-              "logs:StopQuery",
-              "logs:TestMetricFilter",
-              "logs:FilterLogEvents",
-              "logs:GetLogGroupFields",
-              "logs:GetLogDelivery"
-            ]
-            Resource: "*"
-          - Sid: Cloudwatch
-            Effect: Allow
-            Action: [
-              "cloudwatch:DescribeAlarms"
-            ]
-            Resource: "*"
-            Condition: 
-              StringEquals:
-                'aws:ResourceTag/copilot-application': !Sub '${AppName}'
-                'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
-          - Sid: ECS
-            Effect: Allow
-            Action: [
-              "ecs:ListAttributes",
-              "ecs:ListTasks",
-              "ecs:DescribeServices",
-              "ecs:DescribeTaskSets",
-              "ecs:ListContainerInstances",
-              "ecs:DescribeContainerInstances",
-              "ecs:DescribeTasks",
-              "ecs:DescribeClusters",
-              "ecs:UpdateService",
-              "ecs:PutAttributes",
-              "ecs:StartTelemetrySession",
-              "ecs:StartTask",
-              "ecs:StopTask",
-              "ecs:ListServices",
-              "ecs:ListTaskDefinitionFamilies",
-              "ecs:DescribeTaskDefinition",
-              "ecs:ListTaskDefinitions",
-              "ecs:ListClusters"
-            ]
-            Resource: "*"
-          - Sid: CloudFormation
-            Effect: Allow
-            Action: [
-              "cloudformation:CancelUpdateStack",
-              "cloudformation:CreateChangeSet",
-              "cloudformation:CreateStack",
-              "cloudformation:DeleteChangeSet",
-              "cloudformation:DeleteStack",
-              "cloudformation:Describe*",
-              "cloudformation:DetectStackDrift",
-              "cloudformation:DetectStackResourceDrift",
-              "cloudformation:ExecuteChangeSet",
-              "cloudformation:GetTemplate",
-              "cloudformation:GetTemplateSummary",
-              "cloudformation:UpdateStack",
-              "cloudformation:UpdateTerminationProtection"
-            ]
-            Resource: "*"
-          - Sid: PipelineExecution
-            Effect: Allow
-            Action: [
-              "iam:GetRole",
-              "iam:PassRole"
-            ]
-            Resource: !GetAtt CloudformationExecutionRole.Arn
-          - Sid: ECR
-            Effect: Allow
-            Action: [
-              "ecr:BatchGetImage",
-              "ecr:CompleteLayerUpload",
-              "ecr:DescribeImages",
-              "ecr:DescribeRepositories",
-              "ecr:GetDownloadUrlForLayer",
-              "ecr:InitiateLayerUpload",
-              "ecr:ListImages",
-              "ecr:ListTagsForResource",
-              "ecr:PutImage",
-              "ecr:UploadLayerPart"
-            ]
-            Resource: "*"
-          - Sid: ResourceGroups
-            Effect: Allow
-            Action: [
-              "resource-groups:GetGroup",
-              "resource-groups:GetGroupQuery",
-              "resource-groups:GetTags",
-              "resource-groups:ListGroupResources",
-              "resource-groups:ListGroups",
-              "resource-groups:SearchResources"
-            ]
-            Resource: "*"
-          - Sid: SSM
-            Effect: Allow
-            Action: [
-              "ssm:DeleteParameter",
-              "ssm:DeleteParameters",
-              "ssm:GetParameter",
-              "ssm:GetParameters",
-              "ssm:GetParametersByPath"
-            ]
-            Resource: "*"
-          - Sid: ELBv2
-            Effect: Allow
-            Action: [
-              "elasticloadbalancing:DescribeLoadBalancerAttributes",
-              "elasticloadbalancing:DescribeSSLPolicies",
-              "elasticloadbalancing:DescribeLoadBalancers",
-              "elasticloadbalancing:DescribeTargetGroupAttributes",
-              "elasticloadbalancing:DescribeListeners",
-              "elasticloadbalancing:DescribeTags",
-              "elasticloadbalancing:DescribeTargetHealth",
-              "elasticloadbalancing:DescribeTargetGroups",
-              "elasticloadbalancing:DescribeRules"
-            ]
-            Resource: "*"
-          - Sid: BuiltArtifactAccess
-            Effect: Allow
-            Action: [
-              "s3:ListBucketByTags",
-              "s3:GetLifecycleConfiguration",
-              "s3:GetBucketTagging",
-              "s3:GetInventoryConfiguration",
-              "s3:GetObjectVersionTagging",
-              "s3:ListBucketVersions",
-              "s3:GetBucketLogging",
-              "s3:ListBucket",
-              "s3:GetAccelerateConfiguration",
-              "s3:GetBucketPolicy",
-              "s3:GetObjectVersionTorrent",
-              "s3:GetObjectAcl",
-              "s3:GetEncryptionConfiguration",
-              "s3:GetBucketRequestPayment",
-              "s3:GetObjectVersionAcl",
-              "s3:GetObjectTagging",
-              "s3:GetMetricsConfiguration",
-              "s3:HeadBucket",
-              "s3:GetBucketPublicAccessBlock",
-              "s3:GetBucketPolicyStatus",
-              "s3:ListBucketMultipartUploads",
-              "s3:GetBucketWebsite",
-              "s3:ListJobs",
-              "s3:GetBucketVersioning",
-              "s3:GetBucketAcl",
-              "s3:GetBucketNotification",
-              "s3:GetReplicationConfiguration",
-              "s3:ListMultipartUploadParts",
-              "s3:GetObject",
-              "s3:GetObjectTorrent",
-              "s3:GetAccountPublicAccessBlock",
-              "s3:ListAllMyBuckets",
-              "s3:DescribeJob",
-              "s3:GetBucketCORS",
-              "s3:GetAnalyticsConfiguration",
-              "s3:GetObjectVersionForReplication",
-              "s3:GetBucketLocation",
-              "s3:GetObjectVersion",
-              "kms:Decrypt"
-            ]
-            Resource: "*"
-          - Sid: Tags
-            Effect: Allow
-            Action: [
-              "tag:GetResources"
-            ]
-            Resource: "*"
-          - Sid: DeleteRoles
-            Effect: Allow
-            Action: [
-              "iam:DeleteRole",
-              "iam:ListRolePolicies",
-              "iam:DeleteRolePolicy"
-            ]
-            Resource:
-              - !GetAtt CloudformationExecutionRole.Arn
-              - !Sub "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-EnvManagerRole"
-          - Sid: DeleteEnvStack
-            Effect: Allow
-            Action:
-              - 'cloudformation:DescribeStacks'
-              - 'cloudformation:DeleteStack'
-            Resource:
-              - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+{{include "environment-manager-role" . | indent 2}}
 
-  # DNS Delegation Resources
-  CertificateValidationFunction:
-    Type: AWS::Lambda::Function
-    Condition: DelegateDNS
-    Properties:
-      Code:
-        ZipFile: |
-          {{.ACMValidationLambda}}
-      Handler: "index.certificateRequestHandler"
-      Timeout: 600
-      MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
-
-  DNSDelegationFunction:
-    Type: AWS::Lambda::Function
-    Condition: DelegateDNS
-    Properties:
-      Code:
-        ZipFile: |
-          {{.DNSDelegationLambda}}
-      Handler: "index.domainDelegationHandler"
-      Timeout: 600
-      MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs10.x
+{{include "custom-resources-role" . | indent 2}}
 
   EnvironmentHostedZone:
     Type: "AWS::Route53::HostedZone"
@@ -542,107 +182,34 @@ Resources:
         Comment: !Sub "HostedZone for environment ${EnvironmentName} - ${EnvironmentName}.${AppName}.${AppDNSName}"
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 
-  CustomResourceRole:
-    Type: AWS::IAM::Role
-    Condition: DelegateDNS
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: "DNSandACMAccess"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - "acm:ListCertificates"
-                  - "acm:RequestCertificate"
-                  - "acm:DescribeCertificate"
-                  - "acm:GetCertificate"
-                  - "acm:DeleteCertificate"
-                  - "acm:AddTagsToCertificate"
-                  - "route53:ListHostedZonesByName"
-                  - "sts:AssumeRole"
-                  - "logs:*"
-                  - "route53:ChangeResourceRecordSets"
-                  - "route53:ListResourceRecordSets"
-                  - "route53:Get*"
-                  - "route53:Describe*"
-                Resource:
-                  - "*"
+{{include "lambdas" . | indent 2}}
 
-  # Resources to enable long ARN formats for the CF execution role.
-  EnableLongARNFormatFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        ZipFile: |
-          {{.EnableLongARNFormatLambda}}
-      Handler: "index.handler"
-      Timeout: 600
-      MemorySize: 512
-      Role: !GetAtt 'CloudformationExecutionRole.Arn'
-      Runtime: nodejs10.x
-
-  EnableLongARNFormatAction:
-    Type: Custom::EnableLongARNFormatFunction
-    DependsOn:
-      - EnableLongARNFormatFunction
-    Properties:
-      ServiceToken: !GetAtt EnableLongARNFormatFunction.Arn
-
-  # Adds records for this environment's hostedzone
-  # into the application's hostedzone. This lets this
-  # environment own the DNS of the it's subdomain.
-  DelegateDNSAction:
-    Condition: DelegateDNS
-    Type: Custom::DNSDelegationFunction
-    DependsOn:
-    - DNSDelegationFunction
-    - EnvironmentHostedZone
-    Properties:
-      ServiceToken: !GetAtt DNSDelegationFunction.Arn
-      DomainName: !Sub ${AppName}.${AppDNSName}
-      SubdomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
-      NameServers: !GetAtt EnvironmentHostedZone.NameServers
-      RootDNSRole: !Ref AppDNSDelegationRole
-
-  HTTPSCert:
-    Condition: DelegateDNS
-    Type: Custom::CertificateValidationFunction
-    DependsOn:
-    - CertificateValidationFunction
-    - EnvironmentHostedZone
-    - DelegateDNSAction
-    Properties:
-      ServiceToken: !GetAtt CertificateValidationFunction.Arn
-      DomainName: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
-      HostedZoneId: !Ref EnvironmentHostedZone
-      Region: !Ref AWS::Region
-      SubjectAlternativeNames:
-      - !Sub "*.${EnvironmentName}.${AppName}.${AppDNSName}"
+{{include "custom-resources" . | indent 2}}
 Outputs:
   VpcId:
+{{- if .ImportVpc}}
+    Value: {{.ImportVpc.ID}}
+{{- else}}
     Value: !Ref VPC
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
 
   PublicSubnets:
-    Value: !Join [ ',', [ !Ref PublicSubnet1, !Ref PublicSubnet2 ] ]
+{{- if .ImportVpc}}
+    Value: !Join [ ',', [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+{{- else}}
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 
   PrivateSubnets:
-    Value: !Join [ ',', [ !Ref PrivateSubnet1, !Ref PrivateSubnet2 ] ]
+{{- if .ImportVpc}}
+    Value: !Join [ ',', [ {{range $id := .ImportVpc.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+{{- else}}
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+{{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 
