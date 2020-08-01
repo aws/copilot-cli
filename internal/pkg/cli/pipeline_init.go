@@ -441,8 +441,7 @@ func (o *initPipelineOpts) selectGitHubURL() error {
 func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
 	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
 	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
-	regexPattern = regexp.MustCompile(`\.git`)
-	parsedURL = strings.TrimSuffix(parsedURL, regexPattern.FindString(url))
+	parsedURL = strings.TrimSuffix(parsedURL, ".git")
 	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
 	if len(ownerRepo) != 2 {
 		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`", url)
