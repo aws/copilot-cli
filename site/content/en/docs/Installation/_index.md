@@ -9,7 +9,7 @@ You can install AWS Copilot through [Homebrew](https://brew.sh/) or by downloadi
 ## Homebrew 🍻
 
 ```sh
-brew install aws/tap/copilot-cli
+brew install copilot-cli
 ```
 
 ## Manually
