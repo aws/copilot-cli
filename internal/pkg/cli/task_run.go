@@ -301,8 +301,8 @@ func (o *runTaskOpts) Ask() error {
 		return err
 	}
 
-	// NOTE: if security groups are specified but subnets are not, then we use the default cluster and default subnets
-	// with the specified security groups.
+	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
+	// specified security groups.
 	useDefault := o.defaultEnv || (o.securityGroups != nil && o.subnets == nil)
 	useConfig := o.subnets != nil
 
