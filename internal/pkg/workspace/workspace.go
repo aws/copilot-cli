@@ -230,6 +230,17 @@ func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name stri
 	return ws.write(data, svc, addonsDirName, fname)
 }
 
+// FileStat wraps the os.Stat function.
+type FileStat interface {
+	Stat(name string) (os.FileInfo, error)
+}
+
+// IsInGitRepository returns true if the current working directory is a git repository.
+func IsInGitRepository(fs FileStat) bool {
+	_, err := fs.Stat(".git")
+	return !os.IsNotExist(err)
+}
+
 func (ws *Workspace) writeSummary(appName string) error {
 	summaryPath, err := ws.summaryPath()
 	if err != nil {
