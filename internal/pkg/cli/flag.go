@@ -64,7 +64,7 @@ const (
 	securityGroupsFlag = "security-groups"
 	envVarsFlag        = "env-vars"
 	commandFlag        = "command"
-	defaultFlag        = "default"
+	taskDefaultFlag    = "default"
 )
 
 // Short flag names.
@@ -91,15 +91,15 @@ var (
 %s`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
 
 	subnetsFlagDescription = fmt.Sprintf(`Optional. The subnet IDs for the task to use. Can be specified multiple times.
-Cannot be specified with '%s' or '%s'.`, envFlag, defaultFlag)
+Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, taskDefaultFlag)
 	securityGroupsFlagDescription = fmt.Sprintf(`Optional. The security group IDs for the task to use. Can be specified multiple times.
-Cannot be specified with '%s'.`, envFlag)
-	defaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
-Cannot be specified with '%s' or '%s'.`, envFlag, subnetsFlag)
+Cannot be specified with '%s' or '%s'.`, appFlag, envFlag)
+	taskDefaultFlagDescription = fmt.Sprintf(`Optional. Run tasks in default cluster and default subnets. 
+Cannot be specified with '%s', '%s' or '%s'.`, appFlag, envFlag, subnetsFlag)
 	taskEnvFlagDescription = fmt.Sprintf(`Optional. Name of the environment.
-Cannot be specified with '%s', '%s' or '%s'`, defaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 	taskAppFlagDescription = fmt.Sprintf(`Optional. Name of the application.
-Cannot be specified with '%s', '%s' or '%s'`, defaultFlag, subnetsFlag, securityGroupsFlag)
+Cannot be specified with '%s', '%s' or '%s'`, taskDefaultFlag, subnetsFlag, securityGroupsFlag)
 )
 
 const (
