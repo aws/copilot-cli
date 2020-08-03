@@ -110,6 +110,7 @@ type runTaskOpts struct {
 	// Configurer methods.
 	configureRuntimeOpts func() error
 	configureRepository  func() error
+	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
 	configureEventsWriter func(tasks []*task.Task)
 }
 
@@ -348,6 +349,7 @@ func (o *runTaskOpts) Execute() error {
 	}
 	return nil
 }
+
 func (o *runTaskOpts) displayLogStream() error {
 	if err := o.eventsWriter.WriteEventsUntilStopped(); err != nil {
 		return fmt.Errorf("write events: %w", err)
