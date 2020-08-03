@@ -366,7 +366,7 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.Plural(o.count, "is", "are")))
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
 }
 
