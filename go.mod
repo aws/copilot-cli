@@ -20,7 +20,7 @@ require (
 	github.com/karrick/godirwalk v1.15.6 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
-	github.com/moby/buildkit v0.7.1
+	github.com/moby/buildkit v0.7.2
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/pelletier/go-toml v1.8.0 // indirect
