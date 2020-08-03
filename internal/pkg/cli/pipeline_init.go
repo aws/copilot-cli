@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -136,7 +136,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	opts.repoURLs = urls
 	opts.buffer.Reset()
 
-	p := session.NewProvider()
+	p := sessions.NewProvider()
 	defaultSession, err := p.Default()
 	if err != nil {
 		return nil, err

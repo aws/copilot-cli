@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
 
@@ -68,14 +68,14 @@ func NewStore(store ConfigStoreClient) (*Store, error) {
 		if err != nil {
 			return nil, fmt.Errorf("get environment config %s: %w", envName, err)
 		}
-		sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}
 		return rg.New(sess), nil
 	}
 	s.newRgClientFromRole = func(roleARN, region string) (resourceGetter, error) {
-		sess, err := session.NewProvider().FromRole(roleARN, region)
+		sess, err := sessions.NewProvider().FromRole(roleARN, region)
 		if err != nil {
 			return nil, fmt.Errorf("create new session from env role: %w", err)
 		}

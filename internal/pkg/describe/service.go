@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
@@ -88,7 +88,7 @@ func NewServiceDescriber(opt NewServiceConfig) (*ServiceDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
 	}
-	sess, err := session.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
+	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
 	if err != nil {
 		return nil, err
 	}
