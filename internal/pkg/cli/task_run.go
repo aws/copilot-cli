@@ -233,7 +233,7 @@ func (o *runTaskOpts) Validate() error {
 	}
 
 	if o.image != "" && o.dockerfilePath != "" {
-		return errors.New("specified both image and Dockerfile path")
+		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
 	if o.dockerfilePath != "" {
@@ -264,33 +264,33 @@ func (o *runTaskOpts) Validate() error {
 func (o *runTaskOpts) validateRunnerTypeOptions() error {
 	// Subnets cannot be specified with default.
 	if o.defaultEnv && o.subnets != nil {
-		return fmt.Errorf("cannot specify both subnets and default")
+		return fmt.Errorf("cannot specify both `--subnets` and `--default`")
 	}
 
 	// Application and environment cannot be specified with default.
 	if o.appName != "" && o.defaultEnv {
-		return fmt.Errorf("cannot specify both application and default")
+		return fmt.Errorf("cannot specify both `--app` and `--default`")
 	}
 
 	if o.env != "" && o.defaultEnv {
-		return fmt.Errorf("cannot specify both environment and default")
+		return fmt.Errorf("cannot specify both `--env` and `--default`")
 	}
 
 	// Application and environment cannot be specified with subnets or security groups.
 	if o.appName != "" && o.subnets != nil {
-		return fmt.Errorf("cannot specify both subnets and application")
+		return fmt.Errorf("cannot specify both `--subnets` and `--app`")
 	}
 
 	if o.appName != "" && o.securityGroups != nil {
-		return fmt.Errorf("cannot specify both security groups and application")
+		return fmt.Errorf("cannot specify both `--security-groups` and `-app`")
 	}
 
 	if o.env != "" && o.subnets != nil {
-		return fmt.Errorf("cannot specify both subnets and environment")
+		return fmt.Errorf("cannot specify both `--subnets` and `--env`")
 	}
 
 	if o.env != "" && o.securityGroups != nil {
-		return fmt.Errorf("cannot specify both security groups and environment")
+		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
 	}
 
 	return nil
@@ -553,7 +553,7 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
-	cmd.Flags().BoolVar(&vars.defaultEnv, defaultFlag, false, defaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.defaultEnv, taskDefaultFlag, false, taskDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
