@@ -76,7 +76,7 @@ Want to learn more about what's happening? Check out our documentation [https://
 
 The AWS Copilot CLI is in beta, meaning that you can expect our command names to be stable as well as the shape of our 
 infrastructure patterns. However, we want to know what works, what doesn't work, and what you want! 
-Have any feedback at all? Drop us an [issue](https://github.com/aws/copilot-cli/issues/new) or join us on [gitter](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge).
+Have any feedback at all? Drop us an [issue](https://github.com/aws/copilot-cli/issues/new) or join us on [gitter](https://gitter.im/aws/amazon-ecs-cli-v2).
 
 We're happy to hear feedback or answer questions, so reach out, anytime!
 

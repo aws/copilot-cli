@@ -4,7 +4,7 @@
 package cloudformation
 
 import (
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/gobuffalo/packd"
 )
 
@@ -15,7 +15,7 @@ const (
 func boxWithTemplateFile() packd.Box {
 	box := packd.NewMemoryBox()
 
-	box.AddString(stack.EnvTemplatePath, mockTemplate)
+	box.AddString(template.EnvCFTemplatePath, mockTemplate)
 
 	return box
 }

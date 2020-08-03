@@ -11,6 +11,28 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
+// Paths of service cloudformation templates under templates/services/.
+const (
+	fmtSvcCFTemplatePath       = "services/%s/cf.yml"
+	fmtSvcCommonCFTemplatePath = "services/common/cf/%s.yml"
+)
+
+var (
+	// Template names under "services/common/cf/".
+	commonServiceCFTemplateNames = []string{
+		"loggroup",
+		"envvars",
+		"executionrole",
+		"taskrole",
+		"fargate-taskdef-base-properties",
+		"service-base-properties",
+		"servicediscovery",
+		"addons",
+		"sidecars",
+		"logconfig",
+	}
+)
+
 // Names of service templates.
 const (
 	lbWebSvcTplName   = "lb-web"
