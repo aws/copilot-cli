@@ -684,3 +684,53 @@ koke	git://github.com/koke/grit.git (push)`,
 		})
 	}
 }
+
+func TestInitPipelineOpts_parseOwnerRepoName(t *testing.T) {
+	testCases := map[string]struct {
+		inGitHubURL string
+		
+		expectedOwner string
+		expectedRepo string
+		expectedError error
+	}{
+		"matches repo name without .git suffix": {
+			inGitHubURL: "https://github.com/badgoose/cli",
+
+			expectedOwner: "badgoose",
+			expectedRepo: "cli",
+			expectedError: nil,
+		},
+		"matches repo name with .git suffix": {
+			inGitHubURL: "https://github.com/koke/grit.git",
+
+			expectedOwner: "koke",
+			expectedRepo: "grit",
+			expectedError: nil,
+		},
+		"returns an error if it is not a github URL": {
+			inGitHubURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
+
+			expectedOwner: "",
+			expectedRepo: "",
+			expectedError: fmt.Errorf("unable to parse the GitHub repository owner and name from https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`"),
+		},
+	}
+	
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &initPipelineOpts{}
+
+			// WHEN
+			owner, repo, err := opts.parseOwnerRepoName(tc.inGitHubURL)
+
+			// THEN
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
+			} else {
+				require.Equal(t, tc.expectedOwner, owner)
+				require.Equal(t, tc.expectedRepo, repo)
+			}
+		})
+	}
+}
