@@ -172,7 +172,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 // Run executes "app init", "env init", "svc init" and "svc deploy".
 func (o *initOpts) Run() error {
-	log.Warningln("It's best to run this command in the root of your Git repository.")
+	if !workspace.IsInGitRepository(afero.NewOsFs()) {
+		log.Warningln("It's best to run this command in the root of your Git repository.")
+	}
 	log.Infoln(color.Help(`Welcome to the Copilot CLI! We're going to walk you through some questions
 to help you get set up with an application on ECS. An application is a collection of
 containerized services that operate together.`))
