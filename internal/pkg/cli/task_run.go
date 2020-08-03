@@ -79,11 +79,10 @@ type runTaskVars struct {
 	subnets        []string
 	securityGroups []string
 	env            string
+	defaultEnv     bool
 
 	envVars map[string]string
 	command string
-
-	defaultEnv bool
 }
 
 type runTaskOpts struct {
@@ -302,7 +301,12 @@ func (o *runTaskOpts) Ask() error {
 		return err
 	}
 
-	if !o.defaultEnv && o.subnets == nil {
+	// NOTE: if security groups are specified but subnets are not, then we use the default cluster and default subnets
+	// with the specified security groups.
+	useDefault := o.defaultEnv || (o.securityGroups != nil && o.subnets == nil)
+	useConfig := o.subnets != nil
+
+	if !useDefault && !useConfig {
 		if err := o.askAppName(); err != nil {
 			return err
 		}

@@ -325,6 +325,9 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
+		inSubnets []string
+		inSecurityGroups []string
+
 		inDefault bool
 		inEnv     string
 		appName   string
@@ -356,7 +359,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			},
 			wantedApp: "",
 		},
-		"don't prompt for app when under a workspace, app flag is specified": {
+		"don't prompt for app when under a workspace or app flag is specified": {
 			appName: "my-app",
 			inDefault: true,
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -368,6 +371,31 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			},
 			wantedApp: "my-app",
 		},
+		"don't prompt for env if env is provided": {
+			inEnv:   "test",
+			appName: "my-app",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "test",
+			wantedApp: "my-app",
+		},
+		"don't prompt for env if no workspace and selected None app": {
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
 		"don't prompt for app if using default": {
 			inDefault: true,
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -378,6 +406,58 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
 			},
 			wantedApp: "",
+		},
+		"don't prompt for env if using default": {
+			inDefault: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
+		"don't prompt for app if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
+		"don't prompt for app if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
 		},
 		"selected an existing environment": {
 			appName: "my-app",
@@ -406,43 +486,6 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: "",
 			wantedApp: "my-app",
-		},
-		"don't prompt for env if env is provided": {
-			inEnv:   "test",
-			appName: "my-app",
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "test",
-			wantedApp: "my-app",
-		},
-		"don't prompt for env if no workspace and selected None app": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "",
-		},
-		"don't prompt for env if using default": {
-			inDefault: true,
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -505,6 +548,8 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 					groupName:  tc.inName,
 					env:        tc.inEnv,
 					defaultEnv: tc.inDefault,
+					subnets: tc.inSubnets,
+					securityGroups: tc.inSecurityGroups,
 				},
 				sel: mockSel,
 			}
