@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
@@ -482,6 +483,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		inImage string
 		inTag   string
 
+		inEnv string
+
 		setupMocks func(m runTaskMocks)
 
 		wantedError error
@@ -518,6 +521,23 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 			},
 			wantedError: errors.New("run task my-task: error running"),
+		},
+		"deploy with execution role option if env is not empty": {
+			inEnv: "test",
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"deploy without execution role option if env is empty": {
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
 		},
 		"append 'latest' to image tag": {
 			inTag: tag,
@@ -567,17 +587,20 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					groupName: inGroupName,
 					image:     tc.inImage,
 					imageTag:  tc.inTag,
+					env:       tc.inEnv,
 				},
 				spinner:  &mockSpinner{},
 			}
 			opts.configureRuntimeOpts = func() error {
-
 				opts.runner = mockRunner
 				opts.deployer = mockDeployer
-				opts.deploy = opts.configureDeploy()
 				opts.configureRepository = func() error {
 					opts.repository = mockRepo
 					return nil
+				}
+
+				if opts.env != "" {
+					opts.deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN("execution role")}
 				}
 				return nil
 			}

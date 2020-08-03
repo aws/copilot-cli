@@ -97,9 +97,10 @@ type runTaskOpts struct {
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
+	deployOpts           []awscloudformation.StackOption
 	repository           repositoryService
 	runner               taskRunner
-	deploy               func() error
+
 	configureRuntimeOpts func() error
 	configureRepository  func() error
 }
@@ -124,7 +125,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	opts.configureRuntimeOpts = func() error {
 		var sess *awssession.Session
-		var cfnOpts []awscloudformation.StackOption
+		var deployOpts []awscloudformation.StackOption
 
 		if opts.env != "" {
 			env, err := opts.targetEnv()
@@ -137,8 +138,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 			}
 
-			cfnOpts = append(cfnOpts, awscloudformation.WithRoleARN(env.ExecutionRoleARN))
-
+			deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(env.ExecutionRoleARN)}
 		} else {
 			sess, err = provider.Default()
 			if err != nil {
@@ -148,7 +148,8 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 		opts.runner = opts.configureRunner(sess)
 		opts.deployer = cloudformation.New(sess)
-		opts.deploy = opts.configureDeploy(cfnOpts...)
+		opts.deployOpts = deployOpts
+
 		opts.configureRepository = opts.repositoryConfigurer(sess)
 		return nil
 	}
@@ -211,23 +212,6 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 
 }
 
-func (o *runTaskOpts) configureDeploy(opts ...awscloudformation.StackOption) func() error {
-	return func() error {
-		input := &deploy.CreateTaskResourcesInput{
-			Name:          o.groupName,
-			CPU:           o.cpu,
-			Memory:        o.memory,
-			Image:         o.image,
-			TaskRole:      o.taskRole,
-			ExecutionRole: o.executionRole,
-			Command:       o.command,
-			EnvVars:       o.envVars,
-			App:           o.AppName(),
-			Env:           o.env,
-		}
-		return o.deployer.DeployTask(input, opts...)
-	}
-}
 
 // Validate returns an error if the flag values passed by the user are invalid.
 func (o *runTaskOpts) Validate() error {
@@ -374,6 +358,22 @@ func (o *runTaskOpts) updateTaskResources() error {
 	}
 	o.spinner.Stop(log.Ssuccessln("Successfully updated image to task."))
 	return nil
+}
+
+func (o *runTaskOpts) deploy() error {
+	input := &deploy.CreateTaskResourcesInput{
+		Name:          o.groupName,
+		CPU:           o.cpu,
+		Memory:        o.memory,
+		Image:         o.image,
+		TaskRole:      o.taskRole,
+		ExecutionRole: o.executionRole,
+		Command:       o.command,
+		EnvVars:       o.envVars,
+		App:           o.AppName(),
+		Env:           o.env,
+	}
+	return o.deployer.DeployTask(input, o.deployOpts...)
 }
 
 func (o *runTaskOpts) validateAppName() error {
