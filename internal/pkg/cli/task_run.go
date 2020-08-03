@@ -162,7 +162,7 @@ func (o *runTaskOpts) repositoryConfigurer(sess *awssession.Session) func() erro
 		registry := ecr.New(sess)
 		repository, err := repository.New(repoName, registry)
 		if err != nil {
-			return fmt.Errorf("initiate repository %s: %w", repoName, err)
+			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
 		o.repository = repository
 		return nil
