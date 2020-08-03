@@ -56,7 +56,7 @@ func (ew *EventsWriter) WriteEventsUntilStopped() error {
 			}
 			time.Sleep(cloudwatchlogs.SleepDuration)
 		}
-		stopped, err := ew.areTasksStopped()
+		stopped, err := ew.allTasksStopped()
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) err
 	return nil
 }
 
-func (ew *EventsWriter) areTasksStopped() (bool, error){
+func (ew *EventsWriter) allTasksStopped() (bool, error){
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
 		taskARNs[idx] = task.TaskARN
