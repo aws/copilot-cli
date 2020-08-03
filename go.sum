@@ -42,6 +42,8 @@ github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj
 github.com/aws/aws-sdk-go v1.15.11/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZoCYDt7FT0=
 github.com/aws/aws-sdk-go v1.33.5 h1:p2fr1ryvNTU6avUWLI+/H7FGv0TBIjzVM5WDgXBBv4U=
 github.com/aws/aws-sdk-go v1.33.5/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
+github.com/aws/aws-sdk-go v1.33.17 h1:vngPRchZs603qLtJH7lh2pBCDqiFxA9+9nDWJ5WYJ5A=
+github.com/aws/aws-sdk-go v1.33.17/go.mod h1:5zCpMtNQVjRREroY7sYe8lOMRSxkhG6MZveU8YkpAk0=
 github.com/awslabs/goformation/v4 v4.11.0 h1:dTRaASciMTkaoQrR8CGSDt7e9WfvvsOJXfDbqfiOjkU=
 github.com/awslabs/goformation/v4 v4.11.0/go.mod h1:GcJULxCJfloT+3pbqCluXftdEK2AD/UqpS3hkaaBntg=
 github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
