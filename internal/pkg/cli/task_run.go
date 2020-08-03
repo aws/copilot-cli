@@ -148,7 +148,6 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 			Writer: log.OutputWriter,
 		}
 	}
-
 	return &opts, nil
 }
 
@@ -313,12 +312,10 @@ func (o *runTaskOpts) Execute() error {
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
-
 	// NOTE: repository has to be configured only after task resources are deployed
 	if err := o.configureRepository(); err != nil {
 		return err
 	}
-
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
