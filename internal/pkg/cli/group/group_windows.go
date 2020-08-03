@@ -9,7 +9,6 @@ const (
 	GettingStarted = "Getting Started"
 	Develop        = "Develop"
 	Settings       = "Settings"
-	Operational    = "Operations"
 	Release        = "Release"
 	Addons         = "Addons"
 )
