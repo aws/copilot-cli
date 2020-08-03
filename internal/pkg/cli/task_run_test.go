@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"testing"
@@ -36,12 +35,6 @@ type mockSpinner struct{}
 func (s *mockSpinner) Start(label string)           {}
 func (s *mockSpinner) Stop(label string)            {}
 func (s *mockSpinner) Events([]termprogress.TabRow) {}
-
-type runTaskMocks struct {
-	deployer   *mocks.MocktaskDeployer
-	repository *mocks.MockrepositoryService
-	runner     *mocks.MocktaskRunner
-}
 
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
@@ -473,6 +466,13 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	}
 }
 
+
+type runTaskMocks struct {
+	deployer   *mocks.MocktaskDeployer
+	repository *mocks.MockrepositoryService
+	runner     *mocks.MocktaskRunner
+	store      *mocks.Mockstore
+}
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
@@ -491,6 +491,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}{
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -500,6 +501,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -515,6 +517,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error running tasks": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
 				m.repository.EXPECT().URI().Return(mockRepoURI)
@@ -525,6 +528,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"deploy with execution role option if env is not empty": {
 			inEnv: "test",
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), "test").
+					Return(&config.Environment{
+						ExecutionRoleARN: "env execution role",
+				}, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().AnyTimes()
@@ -533,6 +540,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"deploy without execution role option if env is empty": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().AnyTimes()
@@ -542,6 +550,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		"append 'latest' to image tag": {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
 				m.repository.EXPECT().URI().AnyTimes()
@@ -550,6 +559,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"update image to task resource if image is not provided": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -570,14 +580,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
-			mockRepo := mocks.NewMockrepositoryService(ctrl)
-			mockRunner := mocks.NewMocktaskRunner(ctrl)
-
 			mocks := runTaskMocks{
-				deployer:   mockDeployer,
-				repository: mockRepo,
-				runner:     mockRunner,
+				deployer:   mocks.NewMocktaskDeployer(ctrl),
+				repository: mocks.NewMockrepositoryService(ctrl),
+				runner:     mocks.NewMocktaskRunner(ctrl),
+				store:      mocks.NewMockstore(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -590,17 +597,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					env:       tc.inEnv,
 				},
 				spinner:  &mockSpinner{},
+				store: mocks.store,
 			}
 			opts.configureRuntimeOpts = func() error {
-				opts.runner = mockRunner
-				opts.deployer = mockDeployer
+				opts.runner = mocks.runner
+				opts.deployer = mocks.deployer
 				opts.configureRepository = func() error {
-					opts.repository = mockRepo
+					opts.repository = mocks.repository
 					return nil
-				}
-
-				if opts.env != "" {
-					opts.deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN("execution role")}
 				}
 				return nil
 			}
