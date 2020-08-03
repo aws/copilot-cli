@@ -43,8 +43,8 @@ type Filter struct {
 
 // Subnets contains subnets in a VPC.
 type Subnets struct {
-	PublicSubnets  []string
-	PrivateSubnets []string
+	Public  []string
+	Private []string
 }
 
 // EC2 wraps an AWS EC2 client.
@@ -71,9 +71,9 @@ func (c *EC2) ListVpcSubnets(vpcID string) (*Subnets, error) {
 	var subnets Subnets
 	for _, subnet := range respSubnets {
 		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-			subnets.PublicSubnets = append(subnets.PublicSubnets, aws.StringValue(subnet.SubnetId))
+			subnets.Public = append(subnets.Public, aws.StringValue(subnet.SubnetId))
 		} else {
-			subnets.PrivateSubnets = append(subnets.PrivateSubnets, aws.StringValue(subnet.SubnetId))
+			subnets.Private = append(subnets.Private, aws.StringValue(subnet.SubnetId))
 		}
 	}
 	return &subnets, nil
