@@ -9,7 +9,7 @@ import (
 	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
@@ -58,7 +58,7 @@ func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error)
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	session, err := session.NewProvider().Default()
+	session, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("session: %w", err)
 	}

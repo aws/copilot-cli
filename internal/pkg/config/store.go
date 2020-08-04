@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 )
 
 // Parameter name formats for resources in an application. Applications are laid out in SSM
@@ -52,7 +52,7 @@ type Store struct {
 
 // NewStore returns a new store, allowing you to query or create Applications, Environments, and Services.
 func NewStore() (*Store, error) {
-	p := session.NewProvider()
+	p := sessions.NewProvider()
 	sess, err := p.Default()
 
 	if err != nil {

@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package session provides functions that return AWS sessions to use in the AWS SDK.
-package session
+// Package sessions provides functions that return AWS sessions to use in the AWS SDK.
+package sessions
 
 import (
 	"fmt"

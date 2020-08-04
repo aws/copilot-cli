@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -67,7 +67,7 @@ func newUpdatePipelineOpts(vars updatePipelineVars) (*updatePipelineOpts, error)
 		return nil, fmt.Errorf("get application %s: %w", vars.AppName(), err)
 	}
 
-	defaultSession, err := session.NewProvider().Default()
+	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
