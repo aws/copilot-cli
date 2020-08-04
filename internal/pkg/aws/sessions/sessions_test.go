@@ -42,7 +42,7 @@ func TestAreCredsFromEnvVars(t *testing.T) {
 				Config: &aws.Config{
 					Credentials: credentials.NewCredentials(mockProvider{
 						value: credentials.Value{
-							ProviderName: credentials.EnvProviderName,
+							ProviderName: session.EnvProviderName,
 						},
 						err:   nil,
 					}),

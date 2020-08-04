@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -120,7 +119,7 @@ func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("get credentials of session: %w", err)
 	}
-	return v.ProviderName == credentials.EnvProviderName, nil
+	return v.ProviderName == session.EnvProviderName, nil
 }
 
 // newConfig returns a config with an end-to-end request timeout and verbose credentials errors.
