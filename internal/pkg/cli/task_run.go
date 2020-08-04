@@ -8,14 +8,12 @@ import (
 	"fmt"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -27,6 +25,9 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+
+	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -102,7 +103,7 @@ type runTaskOpts struct {
 	deployer          taskDeployer
 	repository        repositoryService
 	runner            taskRunner
-	sess              *awssession.Session
+	sess              *session.Session
 	targetEnvironment *config.Environment
 	eventsWriter      eventsWriter
 
@@ -177,22 +178,12 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 		}
 	}
 
-	if o.subnets != nil {
-		return &task.NetworkConfigRunner{
-			Count:     o.count,
-			GroupName: o.groupName,
-
-			Subnets:        o.subnets,
-			SecurityGroups: o.securityGroups,
-
-			ClusterGetter: ecsService,
-			Starter:       ecsService,
-		}
-	}
-
-	return &task.DefaultVPCRunner{
+	return &task.NetworkConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
+
+		Subnets:        o.subnets,
+		SecurityGroups: o.securityGroups,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
@@ -202,10 +193,10 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 }
 
 func (o *runTaskOpts) configureSessAndEnv() error {
-	var sess *awssession.Session
+	var sess *session.Session
 	var env *config.Environment
 
-	provider := session.NewProvider()
+	provider := sessions.NewProvider()
 	if o.env != "" {
 		var err error
 		env, err = o.targetEnv()

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -63,7 +63,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		return nil, fmt.Errorf("new secrets manager client: %w", err)
 	}
 
-	defaultSess, err := session.NewProvider().Default()
+	defaultSess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -90,7 +90,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := session.NewProvider()
+	p := sessions.NewProvider()
 	sess, err := p.Default()
 	if err != nil {
 		return nil, err

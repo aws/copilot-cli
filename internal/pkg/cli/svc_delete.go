@@ -10,7 +10,7 @@ import (
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -68,7 +68,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		return nil, fmt.Errorf("new config store: %w", err)
 	}
 
-	provider := session.NewProvider()
+	provider := sessions.NewProvider()
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, err
