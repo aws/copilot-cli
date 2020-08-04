@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
 	"io"
@@ -290,7 +291,7 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(input *deploy.CreateTaskResourcesInput) error
+	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
 }
 
 type taskRunner interface {

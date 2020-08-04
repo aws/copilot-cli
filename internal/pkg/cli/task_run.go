@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -93,24 +94,22 @@ type runTaskOpts struct {
 	sel     appEnvSelector
 	spinner progress
 
-	deployer taskDeployer
-
 	// Fields below are configured at runtime.
-	repository           repositoryService
-	runner               taskRunner
+	deployer          taskDeployer
+	repository        repositoryService
+	runner            taskRunner
+	sess              *awssession.Session
+	targetEnvironment *config.Environment
+
+	configureSession     func() error
 	configureRuntimeOpts func() error
+	configureRepository  func() error
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := session.NewProvider()
-	sess, err := provider.Default()
-	if err != nil {
-		return nil, fmt.Errorf("get default session: %w", err)
 	}
 
 	opts := runTaskOpts{
@@ -120,57 +119,35 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		store:   store,
 		sel:     selector.NewSelect(vars.prompt, store),
 		spinner: termprogress.NewSpinner(),
-
-		deployer: cloudformation.New(sess),
 	}
 
 	opts.configureRuntimeOpts = func() error {
-		var sess *awssession.Session
-		if opts.env != "" {
-			env, err := opts.targetEnv()
-			if err != nil {
-				return err
-			}
+		opts.runner = opts.configureRunner()
+		opts.deployer = cloudformation.New(opts.sess)
 
-			sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-		} else {
-			sess, err = provider.Default()
-			if err != nil {
-				return fmt.Errorf("get default session: %w", err)
-			}
-		}
-
-		opts.repository, err = opts.configureRepository(sess)
-		if err != nil {
-			return err
-		}
-
-		opts.runner = opts.configureRunner(sess)
-		if err != nil {
-			return err
-		}
+		opts.configureRepository = opts.repositoryConfigurer()
 		return nil
 	}
 
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryService, error) {
-	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-	registry := ecr.New(sess)
-	repository, err := repository.New(repoName, registry)
-	if err != nil {
-		return nil, fmt.Errorf("initiate repository %s: %w", repoName, err)
+func (o *runTaskOpts) repositoryConfigurer() func() error {
+	return func() error {
+		repoName := fmt.Sprintf(fmtRepoName, o.groupName)
+		registry := ecr.New(o.sess)
+		repository, err := repository.New(repoName, registry)
+		if err != nil {
+			return fmt.Errorf("initialize repository %s: %w", repoName, err)
+		}
+		o.repository = repository
+		return nil
 	}
-	return repository, nil
 }
 
-func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
-	vpcGetter := ec2.New(sess)
-	ecsService := ecs.New(sess)
+func (o *runTaskOpts) configureRunner() taskRunner {
+	vpcGetter := ec2.New(o.sess)
+	ecsService := ecs.New(o.sess)
 
 	if o.env != "" {
 		return &task.EnvRunner{
@@ -181,7 +158,7 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 			Env: o.env,
 
 			VPCGetter:     vpcGetter,
-			ClusterGetter: resourcegroups.New(sess),
+			ClusterGetter: resourcegroups.New(o.sess),
 			Starter:       ecsService,
 		}
 	}
@@ -208,6 +185,35 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 		Starter:       ecsService,
 	}
 
+}
+
+func (o *runTaskOpts) configureSessAndEnv() error {
+	var sess *awssession.Session
+	var env *config.Environment
+
+	provider := session.NewProvider()
+	if o.env != "" {
+		var err error
+		env, err = o.targetEnv()
+		if err != nil {
+			return err
+		}
+
+		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+		}
+	} else {
+		var err error
+		sess, err = provider.Default()
+		if err != nil {
+			return fmt.Errorf("get default session: %w", err)
+		}
+	}
+
+	o.targetEnvironment = env
+	o.sess = sess
+	return nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -275,12 +281,21 @@ func (o *runTaskOpts) Ask() error {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	// NOTE: all runtime options must be configured only after session is configured
+	if err := o.configureSessAndEnv(); err != nil {
+		return err
+	}
+
+	if err := o.configureRuntimeOpts(); err != nil {
+		return err
+	}
+
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
 
 	// NOTE: repository has to be configured only after task resources are deployed
-	if err := o.configureRuntimeOpts(); err != nil {
+	if err := o.configureRepository(); err != nil {
 		return err
 	}
 
@@ -353,7 +368,11 @@ func (o *runTaskOpts) updateTaskResources() error {
 }
 
 func (o *runTaskOpts) deploy() error {
-	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
+	var deployOpts []awscloudformation.StackOption
+	if o.env != "" {
+		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
+	}
+	input := &deploy.CreateTaskResourcesInput{
 		Name:          o.groupName,
 		CPU:           o.cpu,
 		Memory:        o.memory,
@@ -362,7 +381,10 @@ func (o *runTaskOpts) deploy() error {
 		ExecutionRole: o.executionRole,
 		Command:       o.command,
 		EnvVars:       o.envVars,
-	})
+		App:           o.AppName(),
+		Env:           o.env,
+	}
+	return o.deployer.DeployTask(input, deployOpts...)
 }
 
 func (o *runTaskOpts) validateAppName() error {

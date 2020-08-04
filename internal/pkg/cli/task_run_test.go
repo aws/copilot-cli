@@ -36,12 +36,6 @@ func (s *mockSpinner) Start(label string)           {}
 func (s *mockSpinner) Stop(label string)            {}
 func (s *mockSpinner) Events([]termprogress.TabRow) {}
 
-type runTaskMocks struct {
-	deployer   *mocks.MocktaskDeployer
-	repository *mocks.MockrepositoryService
-	runner     *mocks.MocktaskRunner
-}
-
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
@@ -472,6 +466,13 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	}
 }
 
+
+type runTaskMocks struct {
+	deployer   *mocks.MocktaskDeployer
+	repository *mocks.MockrepositoryService
+	runner     *mocks.MocktaskRunner
+	store      *mocks.Mockstore
+}
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
@@ -482,12 +483,15 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		inImage string
 		inTag   string
 
+		inEnv string
+
 		setupMocks func(m runTaskMocks)
 
 		wantedError error
 	}{
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -497,6 +501,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -512,6 +517,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error running tasks": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
 				m.repository.EXPECT().URI().Return(mockRepoURI)
@@ -519,9 +525,32 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
+		"deploy with execution role option if env is not empty": {
+			inEnv: "test",
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), "test").
+					Return(&config.Environment{
+						ExecutionRoleARN: "env execution role",
+				}, nil)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"deploy without execution role option if env is empty": {
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
 		"append 'latest' to image tag": {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
 				m.repository.EXPECT().URI().AnyTimes()
@@ -530,6 +559,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"update image to task resource if image is not provided": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -550,29 +580,32 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
-			mockRepo := mocks.NewMockrepositoryService(ctrl)
-			mockRunner := mocks.NewMocktaskRunner(ctrl)
-
 			mocks := runTaskMocks{
-				deployer:   mockDeployer,
-				repository: mockRepo,
-				runner:     mockRunner,
+				deployer:   mocks.NewMocktaskDeployer(ctrl),
+				repository: mocks.NewMockrepositoryService(ctrl),
+				runner:     mocks.NewMocktaskRunner(ctrl),
+				store:      mocks.NewMockstore(ctrl),
 			}
 			tc.setupMocks(mocks)
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
+					GlobalOpts: &GlobalOpts{},
 					groupName: inGroupName,
 					image:     tc.inImage,
 					imageTag:  tc.inTag,
+					env:       tc.inEnv,
 				},
 				spinner:  &mockSpinner{},
-				deployer: mockDeployer,
+				store: mocks.store,
 			}
 			opts.configureRuntimeOpts = func() error {
-				opts.repository = mockRepo
-				opts.runner = mockRunner
+				opts.runner = mocks.runner
+				opts.deployer = mocks.deployer
+				opts.configureRepository = func() error {
+					opts.repository = mocks.repository
+					return nil
+				}
 				return nil
 			}
 
