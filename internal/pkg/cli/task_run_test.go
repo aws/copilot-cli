@@ -630,10 +630,10 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts.configureRuntimeOpts = func() error {
 				opts.runner = mocks.runner
 				opts.deployer = mocks.deployer
-				opts.configureRepository = func() error {
-					opts.repository = mocks.repository
-					return nil
-				}
+				return nil
+			}
+			opts.configureRepository = func() error {
+				opts.repository = mocks.repository
 				return nil
 			}
 			opts.configureEventsWriter = func(tasks []*task.Task) {
