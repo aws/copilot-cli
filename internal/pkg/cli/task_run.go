@@ -76,10 +76,10 @@ type runTaskVars struct {
 	taskRole      string
 	executionRole string
 
-	subnets        []string
-	securityGroups []string
-	env            string
-	defaultEnv     bool
+	subnets           []string
+	securityGroups    []string
+	env               string
+	useDefaultSubnets bool
 
 	envVars map[string]string
 	command string
@@ -269,7 +269,7 @@ func (o *runTaskOpts) Validate() error {
 }
 
 func (o *runTaskOpts) validateFlagsWithDefaultCluster() error {
-	if !o.defaultEnv  {
+	if !o.useDefaultSubnets {
 		return nil
 	}
 
@@ -293,7 +293,7 @@ func (o *runTaskOpts) validateFlagsWithSubnets() error {
 		return nil
 	}
 
-	if o.defaultEnv {
+	if o.useDefaultSubnets {
 		fmt.Errorf("cannot specify both `--subnets` and `--default`")
 	}
 
@@ -329,12 +329,7 @@ func (o *runTaskOpts) Ask() error {
 		return err
 	}
 
-	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
-	// specified security groups.
-	useDefault := o.defaultEnv || (o.securityGroups != nil && o.subnets == nil)
-	useConfig := o.subnets != nil
-
-	if !useDefault && !useConfig {
+	if o.shouldPromptForAppEnv() {
 		if err := o.askAppName(); err != nil {
 			return err
 		}
@@ -343,6 +338,17 @@ func (o *runTaskOpts) Ask() error {
 		}
 	}
 	return nil
+}
+
+func (o *runTaskOpts) shouldPromptForAppEnv() bool {
+	// NOTE: if security groups are specified but subnets are not, then we use the default subnets with the
+	// specified security groups.
+	useDefault := o.useDefaultSubnets || (o.securityGroups != nil && o.subnets == nil)
+	useConfig := o.subnets != nil
+
+	// if user hasn't specified that they want to use the default subnets, and that they didn't provide specific subnets
+	// that they want to use, then we prompt.
+	return !useDefault && !useConfig
 }
 
 // Execute deploys and runs the task.
@@ -585,7 +591,7 @@ Run a task with a command.
 	cmd.Flags().StringVar(&vars.env, envFlag, "", taskEnvFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.subnets, subnetsFlag, nil, subnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.securityGroups, securityGroupsFlag, nil, securityGroupsFlagDescription)
-	cmd.Flags().BoolVar(&vars.defaultEnv, taskDefaultFlag, false, taskDefaultFlagDescription)
+	cmd.Flags().BoolVar(&vars.useDefaultSubnets, taskDefaultFlag, false, taskDefaultFlagDescription)
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
