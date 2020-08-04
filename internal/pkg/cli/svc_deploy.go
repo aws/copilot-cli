@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 
 	addon "github.com/aws/copilot-cli/internal/pkg/addon"
@@ -328,8 +327,8 @@ func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
 
 	args := mf.BuildArgs(wsRoot)
 	return &docker.BuildArguments{
-		Dockerfile: aws.StringValue(args.Dockerfile),
-		Context:    aws.StringValue(args.Context),
+		Dockerfile: *args.Dockerfile,
+		Context:    *args.Context,
 		Args:       args.Args,
 		ImageTag:   o.ImageTag,
 	}, nil
