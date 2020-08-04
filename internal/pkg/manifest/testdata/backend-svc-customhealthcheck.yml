@@ -9,7 +9,7 @@ name: subscribers
 type: Backend Service
 
 image:
-  # Docker build arguments. You can specify Docker Compose-style overrides here. Supported: dockerfile, context, args
+  # Docker build arguments. You can specify additional overrides here. Supported: dockerfile, context, args
   build: ./subscribers/Dockerfile
   # Port exposed through your container to route traffic to it.
   port: 8080
