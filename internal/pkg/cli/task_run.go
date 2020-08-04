@@ -241,7 +241,15 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if err := o.validateRunnerTypeOptions(); err != nil {
+	if err := o.validateFlagsWithDefaultCluster(); err != nil {
+		return err
+	}
+
+	if err := o.validateFlagsWithSubnets(); err != nil {
+		return err
+	}
+
+	if err := o.validateFlagsWithSecurityGroups(); err != nil {
 		return err
 	}
 
@@ -260,38 +268,58 @@ func (o *runTaskOpts) Validate() error {
 	return nil
 }
 
-func (o *runTaskOpts) validateRunnerTypeOptions() error {
-	// Subnets cannot be specified with default.
-	if o.defaultEnv && o.subnets != nil {
+func (o *runTaskOpts) validateFlagsWithDefaultCluster() error {
+	if !o.defaultEnv  {
+		return nil
+	}
+
+	if o.subnets != nil {
 		return fmt.Errorf("cannot specify both `--subnets` and `--default`")
 	}
 
-	// Application and environment cannot be specified with default.
-	if o.appName != "" && o.defaultEnv {
+	if o.appName != "" {
 		return fmt.Errorf("cannot specify both `--app` and `--default`")
 	}
 
-	if o.env != "" && o.defaultEnv {
+	if o.env != "" {
 		return fmt.Errorf("cannot specify both `--env` and `--default`")
 	}
 
-	// Application and environment cannot be specified with subnets or security groups.
-	if o.appName != "" && o.subnets != nil {
+	return nil
+}
+
+func (o *runTaskOpts) validateFlagsWithSubnets() error {
+	if o.subnets == nil {
+		return nil
+	}
+
+	if o.defaultEnv {
+		fmt.Errorf("cannot specify both `--subnets` and `--default`")
+	}
+
+	if o.appName != "" {
 		return fmt.Errorf("cannot specify both `--subnets` and `--app`")
 	}
 
-	if o.appName != "" && o.securityGroups != nil {
-		return fmt.Errorf("cannot specify both `--security-groups` and `-app`")
-	}
-
-	if o.env != "" && o.subnets != nil {
+	if o.env != "" {
 		return fmt.Errorf("cannot specify both `--subnets` and `--env`")
 	}
 
-	if o.env != "" && o.securityGroups != nil {
-		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
+	return nil
+}
+
+func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
+	if o.securityGroups == nil {
+		return nil
 	}
 
+	if o.appName != "" {
+		return fmt.Errorf("cannot specify both `--security-groups` and `--app`")
+	}
+
+	if o.env != "" {
+		return fmt.Errorf("cannot specify both `--security-groups` and `--env`")
+	}
 	return nil
 }
 

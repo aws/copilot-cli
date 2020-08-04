@@ -156,7 +156,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inDockerfilePath: "hello/world/Dockerfile",
 
-			wantedError: errors.New("specified both image and Dockerfile path"),
+			wantedError: errors.New("cannot specify both `--image` and `--dockerfile`"),
 		},
 		"invalid dockerfile path": {
 			basicOpts: defaultOpts,
@@ -237,7 +237,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:     "test",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("cannot specify both subnets and environment"),
+			wantedError: errors.New("cannot specify both `--subnets` and `--env`"),
 		},
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
@@ -245,7 +245,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:            "test",
 			inSecurityGroups: []string{"security group id1", "securty group id2"},
 
-			wantedError: errors.New("cannot specify both security groups and environment"),
+			wantedError: errors.New("cannot specify both `--security-groups` and `--env`"),
 		},
 		"both application and subnets specified": {
 			basicOpts: defaultOpts,
@@ -253,7 +253,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			appName:     "my-app",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("cannot specify both subnets and application"),
+			wantedError: errors.New("cannot specify both `--subnets` and `--app`"),
 		},
 		"both application and security groups specified": {
 			basicOpts: defaultOpts,
@@ -261,7 +261,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			appName: "my-app",
 			inSecurityGroups: []string{"security group id1", "security group id2"},
 
-			wantedError: errors.New("cannot specify both security groups and application"),
+			wantedError: errors.New("cannot specify both `--security-groups` and `--app`"),
 		},
 		"both default and subnets specified": {
 			basicOpts: defaultOpts,
@@ -269,7 +269,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inDefault: true,
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("cannot specify both subnets and default"),
+			wantedError: errors.New("cannot specify both `--subnets` and `--default`"),
 		},
 	}
 
@@ -313,7 +313,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
