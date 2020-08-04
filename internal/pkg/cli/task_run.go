@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
@@ -35,8 +34,8 @@ import (
 
 const (
 	appEnvOptionNone      = "None (run in default VPC)"
-	defaultDockerfilePath  = "Dockerfile"
-	imageTagLatest         = "latest"
+	defaultDockerfilePath = "Dockerfile"
+	imageTagLatest        = "latest"
 )
 
 const (
@@ -105,7 +104,7 @@ type runTaskOpts struct {
 	runner            taskRunner
 	sess              *awssession.Session
 	targetEnvironment *config.Environment
-	eventsWriter         eventsWriter
+	eventsWriter      eventsWriter
 
 	// Configurer methods.
 	configureRuntimeOpts func() error
@@ -132,8 +131,17 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner = opts.configureRunner()
 		opts.deployer = cloudformation.New(opts.sess)
+		return nil
+	}
 
-		opts.configureRepository = opts.repositoryConfigurer()
+	opts.configureRepository = func() error {
+		repoName := fmt.Sprintf(fmtRepoName, opts.groupName)
+		registry := ecr.New(opts.sess)
+		repository, err := repository.New(repoName, registry)
+		if err != nil {
+			return fmt.Errorf("initialize repository %s: %w", repoName, err)
+		}
+		opts.repository = repository
 		return nil
 	}
 
@@ -141,27 +149,14 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		logGroupName := fmt.Sprintf(fmtTaskLogGroupName, opts.groupName)
 		opts.eventsWriter = &task.EventsWriter{
 			GroupName: logGroupName,
-			Tasks: tasks,
+			Tasks:     tasks,
 
-			Describer: ecs.New(opts.sess),
+			Describer:    ecs.New(opts.sess),
 			EventsLogger: cloudwatchlogs.New(opts.sess),
-			Writer: log.OutputWriter,
+			Writer:       log.OutputWriter,
 		}
 	}
 	return &opts, nil
-}
-
-func (o *runTaskOpts) repositoryConfigurer() func() error {
-	return func() error {
-		repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-		registry := ecr.New(o.sess)
-		repository, err := repository.New(repoName, registry)
-		if err != nil {
-			return fmt.Errorf("initialize repository %s: %w", repoName, err)
-		}
-		o.repository = repository
-		return nil
-	}
 }
 
 func (o *runTaskOpts) configureRunner() taskRunner {
