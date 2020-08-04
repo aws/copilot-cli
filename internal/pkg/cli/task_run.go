@@ -190,10 +190,10 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 func (o *runTaskOpts) configureSessAndEnv() error {
 	var sess *awssession.Session
 	var env *config.Environment
-	var err error
 
 	provider := session.NewProvider()
 	if o.env != "" {
+		var err error
 		env, err = o.targetEnv()
 		if err != nil {
 			return err
@@ -204,6 +204,7 @@ func (o *runTaskOpts) configureSessAndEnv() error {
 			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
 	} else {
+		var err error
 		sess, err = provider.Default()
 		if err != nil {
 			return fmt.Errorf("get default session: %w", err)
