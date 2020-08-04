@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -76,7 +76,7 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 			if err != nil {
 				return fmt.Errorf("get environment: %w", err)
 			}
-			sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+			sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 			if err != nil {
 				return err
 			}

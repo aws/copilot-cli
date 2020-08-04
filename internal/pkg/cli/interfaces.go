@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -296,7 +297,7 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(input *deploy.CreateTaskResourcesInput) error
+	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error
 }
 
 type taskRunner interface {

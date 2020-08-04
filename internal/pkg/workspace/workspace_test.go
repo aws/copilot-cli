@@ -299,6 +299,39 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 	}
 }
 
+func TestIsInGitRepository(t *testing.T) {
+	testCases := map[string]struct {
+		given func() FileStat
+		wanted bool
+	} {
+		"return false if directory does not contain a .git directory": {
+			given: func() FileStat {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wanted: false,
+		},
+		"return true if directory has a .git directory": {
+			given: func() FileStat {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll(".git", 0755)
+				return fs
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			fs := tc.given()
+
+			actual := IsInGitRepository(fs)
+
+			require.Equal(t, tc.wanted, actual)
+		})
+	}
+}
+
 func TestWorkspace_read(t *testing.T) {
 	testCases := map[string]struct {
 		elems []string

@@ -7,6 +7,7 @@ package mocks
 import (
 	encoding "encoding"
 	session "github.com/aws/aws-sdk-go/aws/session"
+	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -2860,17 +2861,22 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method
-func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployTask", input)
+	varargs := []interface{}{input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployTask", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeployTask indicates an expected call of DeployTask
-func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), input)
+	varargs := append([]interface{}{input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
 // MocktaskRunner is a mock of taskRunner interface

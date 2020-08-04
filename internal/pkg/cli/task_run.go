@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"path/filepath"
 
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -25,7 +27,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -94,24 +96,22 @@ type runTaskOpts struct {
 	sel     appEnvSelector
 	spinner progress
 
-	deployer taskDeployer
-
 	// Fields below are configured at runtime.
-	repository           repositoryService
-	runner               taskRunner
+	deployer          taskDeployer
+	repository        repositoryService
+	runner            taskRunner
+	sess              *session.Session
+	targetEnvironment *config.Environment
+
+	configureSession     func() error
 	configureRuntimeOpts func() error
+	configureRepository  func() error
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
 		return nil, fmt.Errorf("new config store: %w", err)
-	}
-
-	provider := session.NewProvider()
-	sess, err := provider.Default()
-	if err != nil {
-		return nil, fmt.Errorf("get default session: %w", err)
 	}
 
 	opts := runTaskOpts{
@@ -121,57 +121,35 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		store:   store,
 		sel:     selector.NewSelect(vars.prompt, store),
 		spinner: termprogress.NewSpinner(),
-
-		deployer: cloudformation.New(sess),
 	}
 
 	opts.configureRuntimeOpts = func() error {
-		var sess *awssession.Session
-		if opts.env != "" {
-			env, err := opts.targetEnv()
-			if err != nil {
-				return err
-			}
+		opts.runner = opts.configureRunner()
+		opts.deployer = cloudformation.New(opts.sess)
 
-			sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
-			if err != nil {
-				return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
-			}
-		} else {
-			sess, err = provider.Default()
-			if err != nil {
-				return fmt.Errorf("get default session: %w", err)
-			}
-		}
-
-		opts.repository, err = opts.configureRepository(sess)
-		if err != nil {
-			return err
-		}
-
-		opts.runner = opts.configureRunner(sess)
-		if err != nil {
-			return err
-		}
+		opts.configureRepository = opts.repositoryConfigurer()
 		return nil
 	}
 
 	return &opts, nil
 }
 
-func (o *runTaskOpts) configureRepository(sess *awssession.Session) (repositoryService, error) {
-	repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-	registry := ecr.New(sess)
-	repository, err := repository.New(repoName, registry)
-	if err != nil {
-		return nil, fmt.Errorf("initiate repository %s: %w", repoName, err)
+func (o *runTaskOpts) repositoryConfigurer() func() error {
+	return func() error {
+		repoName := fmt.Sprintf(fmtRepoName, o.groupName)
+		registry := ecr.New(o.sess)
+		repository, err := repository.New(repoName, registry)
+		if err != nil {
+			return fmt.Errorf("initialize repository %s: %w", repoName, err)
+		}
+		o.repository = repository
+		return nil
 	}
-	return repository, nil
 }
 
-func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
-	vpcGetter := ec2.New(sess)
-	ecsService := ecs.New(sess)
+func (o *runTaskOpts) configureRunner() taskRunner {
+	vpcGetter := ec2.New(o.sess)
+	ecsService := ecs.New(o.sess)
 
 	if o.env != "" {
 		return &task.EnvRunner{
@@ -182,33 +160,52 @@ func (o *runTaskOpts) configureRunner(sess *awssession.Session) taskRunner {
 			Env: o.env,
 
 			VPCGetter:     vpcGetter,
-			ClusterGetter: resourcegroups.New(sess),
+			ClusterGetter: resourcegroups.New(o.sess),
 			Starter:       ecsService,
 		}
 	}
 
-	if o.subnets != nil {
-		return &task.NetworkConfigRunner{
-			Count:     o.count,
-			GroupName: o.groupName,
-
-			Subnets:        o.subnets,
-			SecurityGroups: o.securityGroups,
-
-			ClusterGetter: ecsService,
-			Starter:       ecsService,
-		}
-	}
-
-	return &task.DefaultVPCRunner{
+	return &task.NetworkConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
+
+		Subnets:        o.subnets,
+		SecurityGroups: o.securityGroups,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
 		Starter:       ecsService,
 	}
 
+}
+
+func (o *runTaskOpts) configureSessAndEnv() error {
+	var sess *session.Session
+	var env *config.Environment
+
+	provider := sessions.NewProvider()
+	if o.env != "" {
+		var err error
+		env, err = o.targetEnv()
+		if err != nil {
+			return err
+		}
+
+		sess, err = provider.FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return fmt.Errorf("get session from role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
+		}
+	} else {
+		var err error
+		sess, err = provider.Default()
+		if err != nil {
+			return fmt.Errorf("get default session: %w", err)
+		}
+	}
+
+	o.targetEnvironment = env
+	o.sess = sess
+	return nil
 }
 
 // Validate returns an error if the flag values passed by the user are invalid.
@@ -276,12 +273,21 @@ func (o *runTaskOpts) Ask() error {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	// NOTE: all runtime options must be configured only after session is configured
+	if err := o.configureSessAndEnv(); err != nil {
+		return err
+	}
+
+	if err := o.configureRuntimeOpts(); err != nil {
+		return err
+	}
+
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
 
 	// NOTE: repository has to be configured only after task resources are deployed
-	if err := o.configureRuntimeOpts(); err != nil {
+	if err := o.configureRepository(); err != nil {
 		return err
 	}
 
@@ -359,7 +365,11 @@ func (o *runTaskOpts) updateTaskResources() error {
 }
 
 func (o *runTaskOpts) deploy() error {
-	return o.deployer.DeployTask(&deploy.CreateTaskResourcesInput{
+	var deployOpts []awscloudformation.StackOption
+	if o.env != "" {
+		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
+	}
+	input := &deploy.CreateTaskResourcesInput{
 		Name:          o.groupName,
 		CPU:           o.cpu,
 		Memory:        o.memory,
@@ -368,7 +378,10 @@ func (o *runTaskOpts) deploy() error {
 		ExecutionRole: o.executionRole,
 		Command:       o.command,
 		EnvVars:       o.envVars,
-	})
+		App:           o.AppName(),
+		Env:           o.env,
+	}
+	return o.deployer.DeployTask(input, deployOpts...)
 }
 
 func (o *runTaskOpts) validateAppName() error {
@@ -466,22 +479,21 @@ func BuildTaskRunCmd() *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Run a one-off task",
-		Long:  `Run a one-off task with configurations such as cpu-units, memory, image, etc.`,
+		Short: "Run a one-off task on Amazon ECS.",
 		Example: `
-Run a task with default setting. You will be prompted to specify a task group name and an environment for the tasks to run in.
+Run a task using your local Dockerfile. 
+You will be prompted to specify a task group name and an environment for the tasks to run in.
 /code $ copilot task run
 Run a task named "db-migrate" in the "test" environment under the current workspace.
 /code $ copilot task run -n db-migrate --env test
-Starts 4 tasks with 2GB memory, run a particular image, and run with a particular task role.
-/code $ copilot task run --num 4 --memory 2048 --image=python --task-role migrate-exec-role
+Run 4 tasks with 2GB memory, an existing image, and a custom task role.
+/code $ copilot task run --num 4 --memory 2048 --image=rds-migrate --task-role migrate-role
 Run a task with environment variables.
 /code $ copilot task run --env-vars name=myName,user=myUser
-Run a task with subnets and security groups.
-/code $ copilot task run --subnets subnet-123,subnet-456 --subnets subnet-789 --security-groups sg-123,sg-456
+Run a task using the current workspace with specific subnets and security groups.
+/code $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
 Run a task with a command.
-/code $ copilot task run --command "python migrate-script.py" 
-`,
+/code $ copilot task run --command "python migrate-script.py"`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newTaskRunOpts(vars)
 			if err != nil {
