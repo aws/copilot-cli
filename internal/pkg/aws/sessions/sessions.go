@@ -5,11 +5,13 @@
 package sessions
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,7 +23,8 @@ import (
 const (
 	userAgentHeader = "User-Agent"
 
-	defaultTimeout = 30 * time.Second
+	credsTimeout = 10 * time.Second
+	clientTimeout = 30 * time.Second
 )
 
 // Provider provides methods to create sessions.
@@ -100,10 +103,22 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 	return sess, nil
 }
 
+// IsEnvVarProvider returns true if the session's credentials provider is environment variables, false otherwise.
+func IsEnvVarProvider(sess *session.Session) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
+	defer cancel()
+
+	v, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("get credentials of session: %w", err)
+	}
+	return v.ProviderName == credentials.EnvProviderName, nil
+}
+
 // newConfig returns a config with an end-to-end request timeout and verbose credentials errors.
 func newConfig() *aws.Config {
 	c := &http.Client{
-		Timeout: defaultTimeout,
+		Timeout: clientTimeout,
 	}
 	return aws.NewConfig().
 		WithHTTPClient(c).
