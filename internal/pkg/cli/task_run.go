@@ -163,22 +163,12 @@ func (o *runTaskOpts) configureRunner() taskRunner {
 		}
 	}
 
-	if o.subnets != nil {
-		return &task.NetworkConfigRunner{
-			Count:     o.count,
-			GroupName: o.groupName,
-
-			Subnets:        o.subnets,
-			SecurityGroups: o.securityGroups,
-
-			ClusterGetter: ecsService,
-			Starter:       ecsService,
-		}
-	}
-
-	return &task.DefaultVPCRunner{
+	return &task.NetworkConfigRunner{
 		Count:     o.count,
 		GroupName: o.groupName,
+
+		Subnets:        o.subnets,
+		SecurityGroups: o.securityGroups,
 
 		VPCGetter:     vpcGetter,
 		ClusterGetter: ecsService,
