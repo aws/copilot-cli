@@ -14,28 +14,6 @@ import (
 	"github.com/gobuffalo/packd"
 )
 
-// Paths of service cloudformation templates under templates/services/.
-const (
-	fmtSvcCFTemplatePath       = "services/%s/cf.yml"
-	fmtSvcCommonCFTemplatePath = "services/common/cf/%s.yml"
-)
-
-var (
-	// Template names under "services/common/cf/".
-	commonServiceCFTemplateNames = []string{
-		"loggroup",
-		"envvars",
-		"executionrole",
-		"taskrole",
-		"fargate-taskdef-base-properties",
-		"service-base-properties",
-		"servicediscovery",
-		"addons",
-		"sidecars",
-		"logconfig",
-	}
-)
-
 var box = templates.Box()
 
 // Parser is the interface that wraps the Parse method.

@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.0.8
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.33.5
+	github.com/aws/aws-sdk-go v1.33.17
 	github.com/awslabs/goformation/v4 v4.11.0
 	github.com/briandowns/spinner v1.11.1
 	github.com/dustin/go-humanize v1.0.0
@@ -20,17 +20,17 @@ require (
 	github.com/karrick/godirwalk v1.15.6 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
-	github.com/moby/buildkit v0.7.1
+	github.com/moby/buildkit v0.7.2
 	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
-	github.com/spf13/afero v1.3.1
+	github.com/spf13/afero v1.3.3
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect

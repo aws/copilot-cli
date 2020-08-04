@@ -3,6 +3,7 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -12,37 +13,41 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
+type envReadParser interface {
+	template.ReadParser
+	ParseEnv(data interface{}, options ...template.ParseOption) (*template.Content, error)
+}
+
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
 	*deploy.CreateEnvironmentInput
-	parser template.ReadParser
+	parser envReadParser
 }
 
 const (
-	// EnvTemplatePath is the path where the cloudformation for the environment is written.
-	EnvTemplatePath            = "environment/cf.yml"
 	acmValidationTemplatePath  = "custom-resources/dns-cert-validator.js"
 	dnsDelegationTemplatePath  = "custom-resources/dns-delegation.js"
 	enableLongARNsTemplatePath = "custom-resources/enable-long-arns.js"
-)
 
-// Parameter keys.
-const (
+	// Parameter keys.
 	envParamIncludeLBKey             = "IncludePublicLoadBalancer"
 	envParamAppNameKey               = "AppName"
 	envParamEnvNameKey               = "EnvironmentName"
 	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
 	envParamAppDNSKey                = "AppDNSName"
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
-)
 
-// Output keys.
-const (
+	// Output keys.
 	EnvOutputCFNExecutionRoleARN       = "CFNExecutionRoleARN"
 	EnvOutputManagerRoleKey            = "EnvironmentManagerRoleARN"
 	EnvOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
 	EnvOutputSubdomain                 = "EnvironmentSubdomain"
+
+	// Default parameter values
+	defaultVPCCIDR            = "10.0.0.0/16"
+	defaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
+	defaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -68,16 +73,25 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	vpcConf := &template.AdjustVpcOpts{
+		CIDR:               defaultVPCCIDR,
+		PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
+		PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
+	}
 
-	content, err := e.parser.Parse(EnvTemplatePath, struct {
-		DNSDelegationLambda       string
-		ACMValidationLambda       string
-		EnableLongARNFormatLambda string
-	}{
-		dnsLambda.String(),
-		acmLambda.String(),
-		enableLongARNsLambda.String(),
-	})
+	if e.AdjustVpcOpts() != nil {
+		vpcConf = e.AdjustVpcOpts()
+	}
+
+	content, err := e.parser.ParseEnv(template.EnvOpts{
+		ACMValidationLambda:       acmLambda.String(),
+		DNSDelegationLambda:       dnsLambda.String(),
+		EnableLongARNFormatLambda: enableLongARNsLambda.String(),
+		ImportVpc:                 e.ImportVpcOpts(),
+		VpcConfig:                 vpcConf,
+	}, template.WithFuncs(map[string]interface{}{
+		"inc": template.IncFunc,
+	}))
 	if err != nil {
 		return "", err
 	}

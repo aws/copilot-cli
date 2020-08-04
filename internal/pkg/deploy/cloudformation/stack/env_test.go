@@ -8,14 +8,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -28,7 +29,7 @@ func TestEnvTemplate(t *testing.T) {
 	}{
 		"should return error given template not found": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().Read(dnsDelegationTemplatePath).Return(nil, errors.New("some error"))
 				e.parser = m
 			},
@@ -36,19 +37,21 @@ func TestEnvTemplate(t *testing.T) {
 		},
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
-				m := mocks.NewMockReadParser(ctrl)
+				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().Read(dnsDelegationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(acmValidationTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
 				m.EXPECT().Read(enableLongARNsTemplatePath).Return(&template.Content{Buffer: bytes.NewBufferString("customresources")}, nil)
-				m.EXPECT().Parse(EnvTemplatePath, struct {
-					DNSDelegationLambda       string
-					ACMValidationLambda       string
-					EnableLongARNFormatLambda string
-				}{
-					"customresources",
-					"customresources",
-					"customresources",
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
+				m.EXPECT().ParseEnv(template.EnvOpts{
+					ACMValidationLambda:       "customresources",
+					DNSDelegationLambda:       "customresources",
+					EnableLongARNFormatLambda: "customresources",
+					ImportVpc:                 nil,
+					VpcConfig: &template.AdjustVpcOpts{
+						CIDR:               defaultVPCCIDR,
+						PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
+						PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
+					},
+				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
 			},
 			expectedOutput: mockTemplate,

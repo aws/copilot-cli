@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +44,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			sess, err := session.NewProvider().Default()
+			sess, err := sessions.NewProvider().Default()
 			require.NoError(t, err)
 			cfn := cloudformation.New(sess)
 			tpl := template.New()
