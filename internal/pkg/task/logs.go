@@ -48,7 +48,6 @@ func (ew *EventsWriter) WriteEventsUntilStopped() error {
 	startTime := earliestStartTime(ew.Tasks)
 	ew.runningTasks = ew.Tasks
 	ew.lastEventTimestampByLogGroup = make(map[string]int64)
-
 	for {
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
 			if err := ew.writeEvents(cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime))); err != nil {
@@ -101,6 +100,7 @@ func (ew *EventsWriter) allTasksStopped() (bool, error){
 		if *t.LastStatus != ecs.DesiredStatusStopped {
 			stopped = false
 			runningTasks = append(runningTasks, &Task{
+				ClusterARN: *t.ClusterArn,
 				TaskARN: *t.TaskArn,
 			})
 		}
