@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// mockProvider implements the AWS SDK's credentials.Provider interface.
 type mockProvider struct {
 	value credentials.Value
 	err error
@@ -29,7 +30,7 @@ func (m mockProvider) IsExpired() bool {
 	return false
 }
 
-func TestIsEnvVarProvider(t *testing.T) {
+func TestAreCredsFromEnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inSess *session.Session
 
@@ -77,7 +78,7 @@ func TestIsEnvVarProvider(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ok, err := IsEnvVarProvider(tc.inSess)
+			ok, err := AreCredsFromEnvVars(tc.inSess)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, tc.wantedErr, err.Error())
