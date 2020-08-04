@@ -103,7 +103,7 @@ func (o *initAppOpts) Ask() error {
 	if ok, _ := sessions.AreCredsFromEnvVars(sess); ok { // Ignore the error, we do not want to crash for a warning.
 		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
 Copilot will store your application metadata in this account.
-We recommend using long lived profiles. To learn more:
+We recommend using credentials from named profiles. To learn more:
 https://github.com/aws/copilot-cli/wiki/credentials`)
 		log.Infoln()
 	}
