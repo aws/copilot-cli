@@ -6,9 +6,12 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"path/filepath"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -36,12 +39,6 @@ func (s *mockSpinner) Start(label string)           {}
 func (s *mockSpinner) Stop(label string)            {}
 func (s *mockSpinner) Events([]termprogress.TabRow) {}
 
-type runTaskMocks struct {
-	deployer   *mocks.MocktaskDeployer
-	repository *mocks.MockrepositoryService
-	runner     *mocks.MocktaskRunner
-}
-
 func TestTaskRunOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		basicOpts
@@ -59,6 +56,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		inEnvVars map[string]string
 		inCommand string
+
+		inDefault bool
 
 		appName string
 
@@ -154,7 +153,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inDockerfilePath: "hello/world/Dockerfile",
 
-			wantedError: errors.New("cannot specify both image and Dockerfile path"),
+			wantedError: errors.New("cannot specify both `--image` and `--dockerfile`"),
 		},
 		"invalid dockerfile path": {
 			basicOpts: defaultOpts,
@@ -229,13 +228,13 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:       "test",
 			wantedError: errNoAppInWorkspace,
 		},
-		"both environment and subnet id specified": {
+		"both environment and subnets specified": {
 			basicOpts: defaultOpts,
 
 			inEnv:     "test",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
+			wantedError: errors.New("cannot specify both `--subnets` and `--env`"),
 		},
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
@@ -243,7 +242,31 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:            "test",
 			inSecurityGroups: []string{"security group id1", "securty group id2"},
 
-			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
+			wantedError: errors.New("cannot specify both `--security-groups` and `--env`"),
+		},
+		"both application and subnets specified": {
+			basicOpts: defaultOpts,
+
+			appName:     "my-app",
+			inSubnets: []string{"subnet id"},
+
+			wantedError: errors.New("cannot specify both `--subnets` and `--app`"),
+		},
+		"both application and security groups specified": {
+			basicOpts: defaultOpts,
+
+			appName: "my-app",
+			inSecurityGroups: []string{"security group id1", "security group id2"},
+
+			wantedError: errors.New("cannot specify both `--security-groups` and `--app`"),
+		},
+		"both default and subnets specified": {
+			basicOpts: defaultOpts,
+
+			inDefault: true,
+			inSubnets: []string{"subnet id"},
+
+			wantedError: errors.New("cannot specify both `--subnets` and `--default`"),
 		},
 	}
 
@@ -261,16 +284,17 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					},
 					count:          tc.inCount,
 					cpu:            tc.inCPU,
-					memory:         tc.inMemory,
-					groupName:      tc.inName,
-					image:          tc.inImage,
-					env:            tc.inEnv,
-					taskRole:       tc.inTaskRole,
-					subnets:        tc.inSubnets,
-					securityGroups: tc.inSecurityGroups,
-					dockerfilePath: tc.inDockerfilePath,
-					envVars:        tc.inEnvVars,
-					command:        tc.inCommand,
+					memory:            tc.inMemory,
+					groupName:         tc.inName,
+					image:             tc.inImage,
+					env:               tc.inEnv,
+					taskRole:          tc.inTaskRole,
+					subnets:           tc.inSubnets,
+					securityGroups:    tc.inSecurityGroups,
+					dockerfilePath:    tc.inDockerfilePath,
+					envVars:           tc.inEnvVars,
+					command:           tc.inCommand,
+					useDefaultSubnets: tc.inDefault,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -286,7 +310,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -298,8 +322,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
-		inEnv   string
-		appName string
+		inSubnets []string
+		inSecurityGroups []string
+
+		inDefault bool
+		inEnv     string
+		appName   string
 
 		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -330,14 +358,103 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		},
 		"don't prompt for app when under a workspace or app flag is specified": {
 			appName: "my-app",
+			inDefault: true,
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(1)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
 			},
 			wantedApp: "my-app",
+		},
+		"don't prompt for env if env is provided": {
+			inEnv:   "test",
+			appName: "my-app",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "test",
+			wantedApp: "my-app",
+		},
+		"don't prompt for env if no workspace and selected None app": {
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
+		"don't prompt for app if using default": {
+			inDefault: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+			wantedApp: "",
+		},
+		"don't prompt for env if using default": {
+			inDefault: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
+		"don't prompt for app if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
+		"don't prompt for app if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
 		},
 		"selected an existing environment": {
 			appName: "my-app",
@@ -366,31 +483,6 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: "",
 			wantedApp: "my-app",
-		},
-		"don't prompt if env is provided": {
-			inEnv:   "test",
-			appName: "my-app",
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "test",
-			wantedApp: "my-app",
-		},
-		"don't prompt if no workspace or selected None app": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -450,8 +542,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 						appName: tc.appName,
 						prompt:  mockPrompter,
 					},
-					groupName: tc.inName,
-					env:       tc.inEnv,
+					groupName:         tc.inName,
+					env:               tc.inEnv,
+					useDefaultSubnets: tc.inDefault,
+					subnets:           tc.inSubnets,
+					securityGroups:    tc.inSecurityGroups,
 				},
 				sel: mockSel,
 			}
@@ -472,15 +567,29 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	}
 }
 
+type runTaskMocks struct {
+	deployer   *mocks.MocktaskDeployer
+	repository *mocks.MockrepositoryService
+	runner     *mocks.MocktaskRunner
+	store      *mocks.Mockstore
+}
+
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
 
 	tag := "tag"
 
+	defaultBuildArguments := docker.BuildArguments{
+		Context:  filepath.Dir(defaultDockerfilePath),
+		ImageTag: imageTagLatest,
+	}
+
 	testCases := map[string]struct {
 		inImage string
 		inTag   string
+
+		inEnv string
 
 		setupMocks func(m runTaskMocks)
 
@@ -488,6 +597,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}{
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
@@ -497,11 +607,12 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error updating resources": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
@@ -512,29 +623,60 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"error running tasks": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
+		"deploy with execution role option if env is not empty": {
+			inEnv: "test",
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), "test").
+					Return(&config.Environment{
+						ExecutionRoleARN: "env execution role",
+					}, nil)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"deploy without execution role option if env is empty": {
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().URI().AnyTimes()
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
 		"append 'latest' to image tag": {
 			inTag: tag,
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
+					&docker.BuildArguments{
+						Context:        filepath.Dir(defaultDockerfilePath),
+						ImageTag:       imageTagLatest,
+						AdditionalTags: []string{tag},
+					}),
+				)
 				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
 		"update image to task resource if image is not provided": {
 			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
@@ -550,29 +692,32 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockDeployer := mocks.NewMocktaskDeployer(ctrl)
-			mockRepo := mocks.NewMockrepositoryService(ctrl)
-			mockRunner := mocks.NewMocktaskRunner(ctrl)
-
 			mocks := runTaskMocks{
-				deployer:   mockDeployer,
-				repository: mockRepo,
-				runner:     mockRunner,
+				deployer:   mocks.NewMocktaskDeployer(ctrl),
+				repository: mocks.NewMockrepositoryService(ctrl),
+				runner:     mocks.NewMocktaskRunner(ctrl),
+				store:      mocks.NewMockstore(ctrl),
 			}
 			tc.setupMocks(mocks)
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
-					groupName: inGroupName,
-					image:     tc.inImage,
-					imageTag:  tc.inTag,
+					GlobalOpts: &GlobalOpts{},
+					groupName:  inGroupName,
+					image:      tc.inImage,
+					imageTag:   tc.inTag,
+					env:        tc.inEnv,
 				},
-				spinner:  &mockSpinner{},
-				deployer: mockDeployer,
+				spinner: &mockSpinner{},
+				store:   mocks.store,
 			}
 			opts.configureRuntimeOpts = func() error {
-				opts.repository = mockRepo
-				opts.runner = mockRunner
+				opts.runner = mocks.runner
+				opts.deployer = mocks.deployer
+				opts.configureRepository = func() error {
+					opts.repository = mocks.repository
+					return nil
+				}
 				return nil
 			}
 

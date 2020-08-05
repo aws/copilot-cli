@@ -10,11 +10,10 @@ import (
 	"sort"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
 )
 
 const (
@@ -55,7 +54,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	sess, err := session.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}

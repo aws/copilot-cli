@@ -6,14 +6,14 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"path/filepath"
 	"strings"
 
-	addon "github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -21,6 +21,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -50,8 +51,9 @@ type deploySvcOpts struct {
 	deploySvcVars
 
 	store              store
-	ws                 wsSvcReader
+	ws                 wsSvcDirReader
 	imageBuilderPusher imageBuilderPusher
+	unmarshal          func(in []byte) (interface{}, error)
 	s3                 artifactUploader
 	cmd                runner
 	addons             templater
@@ -78,16 +80,16 @@ func newSvcDeployOpts(vars deploySvcVars) (*deploySvcOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-
 	return &deploySvcOpts{
 		deploySvcVars: vars,
 
 		store:        store,
 		ws:           ws,
+		unmarshal:    manifest.UnmarshalService,
 		spinner:      termprogress.NewSpinner(),
 		sel:          selector.NewWorkspaceSelect(vars.prompt, store, ws),
 		cmd:          command.New(),
-		sessProvider: session.NewProvider(),
+		sessProvider: sessions.NewProvider(),
 	}, nil
 }
 
@@ -286,38 +288,49 @@ func (o *deploySvcOpts) configureClients() error {
 }
 
 func (o *deploySvcOpts) pushToECRRepo() error {
-	path, err := o.getDockerfilePath()
+
+	dockerBuildInput, err := o.getBuildArgs()
 	if err != nil {
 		return err
 	}
 
-	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), path, o.ImageTag); err != nil {
+	if err := o.imageBuilderPusher.BuildAndPush(docker.New(), dockerBuildInput); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 
 	return nil
 }
 
-func (o *deploySvcOpts) getDockerfilePath() (string, error) {
-	type dfPath interface {
-		DockerfilePath() string
+func (o *deploySvcOpts) getBuildArgs() (*docker.BuildArguments, error) {
+	type dfArgs interface {
+		BuildArgs(rootDirectory string) *manifest.DockerBuildArgs
 	}
 
 	manifestBytes, err := o.ws.ReadServiceManifest(o.Name)
 	if err != nil {
-		return "", fmt.Errorf("read manifest file %s: %w", o.Name, err)
+		return nil, fmt.Errorf("read manifest file %s: %w", o.Name, err)
 	}
-
-	svc, err := manifest.UnmarshalService(manifestBytes)
+	svc, err := o.unmarshal(manifestBytes)
 	if err != nil {
-		return "", fmt.Errorf("unmarshal svc manifest: %w", err)
+		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
 	}
-
-	mf, ok := svc.(dfPath)
+	mf, ok := svc.(dfArgs)
 	if !ok {
-		return "", fmt.Errorf("service %s does not have a dockerfile path", o.Name)
+		return nil, fmt.Errorf("service %s does not have required method Build()", o.Name)
 	}
-	return mf.DockerfilePath(), nil
+	copilotDir, err := o.ws.CopilotDirPath()
+	if err != nil {
+		return nil, fmt.Errorf("get copilot directory: %w", err)
+	}
+	wsRoot := filepath.Dir(copilotDir)
+
+	args := mf.BuildArgs(wsRoot)
+	return &docker.BuildArguments{
+		Dockerfile: *args.Dockerfile,
+		Context:    *args.Context,
+		Args:       args.Args,
+		ImageTag:   o.ImageTag,
+	}, nil
 }
 
 // pushAddonsTemplateToS3Bucket generates the addons template for the service and pushes it to S3.
@@ -351,7 +364,7 @@ func (o *deploySvcOpts) manifest() (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read service %s manifest from workspace: %w", o.Name, err)
 	}
-	mft, err := manifest.UnmarshalService(raw)
+	mft, err := o.unmarshal(raw)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal service %s manifest: %w", o.Name, err)
 	}

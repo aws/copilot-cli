@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 )
 
 type api interface {
@@ -27,7 +27,7 @@ type SecretsManager struct {
 
 // New returns a SecretsManager configured with the default session.
 func New() (*SecretsManager, error) {
-	p := session.NewProvider()
+	p := sessions.NewProvider()
 	sess, err := p.Default()
 
 	if err != nil {
