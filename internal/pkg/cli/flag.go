@@ -74,7 +74,7 @@ const (
 	publicSubnetCIDRsFlag  = "override-public-cidrs"
 	privateSubnetCIDRsFlag = "override-private-cidrs"
 
-	defaultEnvironmentFlag = "use-default"
+	noCustomResourcesFlag = "no-custom-resources"
 )
 
 // Short flag names.
@@ -179,5 +179,5 @@ Must be of the format '<keyName>:<dataType>'.`
 	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
 	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
 
-	defaultEnvironmentFlagDescription = "Optional. Skip prompting and use default environment configuration."
+	noCustomResourcesFlagDescription = "Optional. Skip prompting and use default environment configuration."
 )

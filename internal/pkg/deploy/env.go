@@ -59,29 +59,11 @@ type ImportVPCConfig struct {
 	PrivateSubnetIDs []string
 }
 
-// IsEmpty returns true if ImportVPCConfig is empty.
-func (c ImportVPCConfig) IsEmpty() bool {
-	if (c.ID == "") && (len(c.PublicSubnetIDs) == 0) &&
-		(len(c.PrivateSubnetIDs) == 0) {
-		return true
-	}
-	return false
-}
-
 // AdjustVPCConfig holds the fields to adjust default VPC resources.
 type AdjustVPCConfig struct {
 	CIDR               string // CIDR range for the VPC.
 	PublicSubnetCIDRs  []string
 	PrivateSubnetCIDRs []string
-}
-
-// IsEmpty returns true if AdjustVPCConfig is empty.
-func (c AdjustVPCConfig) IsEmpty() bool {
-	if (c.CIDR == EmptyIPNetString) && (len(c.PublicSubnetCIDRs) == 0) &&
-		(len(c.PrivateSubnetCIDRs) == 0) {
-		return true
-	}
-	return false
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.

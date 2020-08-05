@@ -23,13 +23,13 @@ import (
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName     string
-		inAppName     string
-		inDefault     bool
-		inVPCID       string
-		inPublicIDs   []string
-		inVPCCIDR     net.IPNet
-		inPublicCIDRs []string
+		inEnvName           string
+		inAppName           string
+		inNoCustomResources bool
+		inVPCID             string
+		inPublicIDs         []string
+		inVPCCIDR           net.IPNet
+		inPublicCIDRs       []string
 
 		wantedErrMsg string
 	}{
@@ -59,15 +59,15 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			},
 			inVPCID: "mockID",
 
-			wantedErrMsg: "couldn't specify both vpc importing flags and vpc configuring flags",
+			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
 		},
 		"cannot import or configure resources if use default flag is set": {
-			inEnvName: "test-pdx",
-			inAppName: "phonetool",
-			inDefault: true,
-			inVPCID:   "mockID",
+			inEnvName:           "test-pdx",
+			inAppName:           "phonetool",
+			inNoCustomResources: true,
+			inVPCID:             "mockID",
 
-			wantedErrMsg: "couldn't import or configure resources if use default flag is set",
+			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag),
 		},
 	}
 
@@ -76,21 +76,13 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:       tc.inEnvName,
-					UseDefault: tc.inDefault,
-					AdjustVPC: struct {
-						CIDR               net.IPNet
-						PublicSubnetCIDRs  []string
-						PrivateSubnetCIDRs []string
-					}{
+					Name:              tc.inEnvName,
+					NoCustomResources: tc.inNoCustomResources,
+					AdjustVPC: adjustVPCVars{
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
 						CIDR:              tc.inVPCCIDR,
 					},
-					ImportVPC: struct {
-						ID               string
-						PublicSubnetIDs  []string
-						PrivateSubnetIDs []string
-					}{
+					ImportVPC: importVPCVars{
 						PublicSubnetIDs: tc.inPublicIDs,
 						ID:              tc.inVPCID,
 					},
