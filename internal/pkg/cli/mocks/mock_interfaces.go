@@ -1507,6 +1507,43 @@ func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
 }
 
+// MockeventsWriter is a mock of eventsWriter interface
+type MockeventsWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockeventsWriterMockRecorder
+}
+
+// MockeventsWriterMockRecorder is the mock recorder for MockeventsWriter
+type MockeventsWriterMockRecorder struct {
+	mock *MockeventsWriter
+}
+
+// NewMockeventsWriter creates a new mock instance
+func NewMockeventsWriter(ctrl *gomock.Controller) *MockeventsWriter {
+	mock := &MockeventsWriter{ctrl: ctrl}
+	mock.recorder = &MockeventsWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockeventsWriter) EXPECT() *MockeventsWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteEventsUntilStopped mocks base method
+func (m *MockeventsWriter) WriteEventsUntilStopped() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteEventsUntilStopped")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteEventsUntilStopped indicates an expected call of WriteEventsUntilStopped
+func (mr *MockeventsWriterMockRecorder) WriteEventsUntilStopped() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteEventsUntilStopped", reflect.TypeOf((*MockeventsWriter)(nil).WriteEventsUntilStopped))
+}
+
 // MockdefaultSessionProvider is a mock of defaultSessionProvider interface
 type MockdefaultSessionProvider struct {
 	ctrl     *gomock.Controller

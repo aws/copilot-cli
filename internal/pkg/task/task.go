@@ -56,9 +56,9 @@ func taskFamilyName(groupName string) string {
 
 func newTaskFromECS(ecsTask *ecs.Task) *Task {
 	return &Task{
-		TaskARN: aws.StringValue(ecsTask.TaskArn),
+		TaskARN:    aws.StringValue(ecsTask.TaskArn),
 		ClusterARN: aws.StringValue(ecsTask.ClusterArn),
-		StartedAt: ecsTask.StartedAt,
+		StartedAt:  ecsTask.StartedAt,
 	}
 }
 
@@ -69,3 +69,4 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	}
 	return tasks
 }
+

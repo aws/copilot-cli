@@ -10,6 +10,7 @@ import (
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -28,6 +29,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+
 	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -40,8 +42,9 @@ const (
 )
 
 const (
-	fmtRepoName = "copilot-%s"
-	fmtImageURI = "%s:%s"
+	fmtRepoName         = "copilot-%s"
+	fmtImageURI         = "%s:%s"
+	fmtTaskLogGroupName = "/copilot/%s"
 )
 
 var (
@@ -86,10 +89,13 @@ type runTaskVars struct {
 
 	envVars map[string]string
 	command string
+
+	follow bool
 }
 
 type runTaskOpts struct {
 	runTaskVars
+	isDockerfileSet bool
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -103,10 +109,13 @@ type runTaskOpts struct {
 	runner            taskRunner
 	sess              *session.Session
 	targetEnvironment *config.Environment
+	eventsWriter      eventsWriter
 
-	configureSession     func() error
+	// Configurer methods.
 	configureRuntimeOpts func() error
 	configureRepository  func() error
+	// NOTE: configureEventsWriter is only called when tailing logs (i.e. --follow is specified)
+	configureEventsWriter func(tasks []*task.Task)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -127,25 +136,32 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner = opts.configureRunner()
 		opts.deployer = cloudformation.New(opts.sess)
-
-		opts.configureRepository = opts.repositoryConfigurer()
 		return nil
 	}
 
-	return &opts, nil
-}
-
-func (o *runTaskOpts) repositoryConfigurer() func() error {
-	return func() error {
-		repoName := fmt.Sprintf(fmtRepoName, o.groupName)
-		registry := ecr.New(o.sess)
+	opts.configureRepository = func() error {
+		repoName := fmt.Sprintf(fmtRepoName, opts.groupName)
+		registry := ecr.New(opts.sess)
 		repository, err := repository.New(repoName, registry)
 		if err != nil {
 			return fmt.Errorf("initialize repository %s: %w", repoName, err)
 		}
-		o.repository = repository
+		opts.repository = repository
 		return nil
 	}
+
+	opts.configureEventsWriter = func(tasks []*task.Task) {
+		logGroupName := fmt.Sprintf(fmtTaskLogGroupName, opts.groupName)
+		opts.eventsWriter = &task.EventsWriter{
+			GroupName: logGroupName,
+			Tasks:     tasks,
+
+			Describer:    ecs.New(opts.sess),
+			EventsLogger: cloudwatchlogs.New(opts.sess),
+			Writer:       log.OutputWriter,
+		}
+	}
+	return &opts, nil
 }
 
 func (o *runTaskOpts) configureRunner() taskRunner {
@@ -229,11 +245,11 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if o.image != "" && o.dockerfilePath != "" {
+	if o.image != "" && o.isDockerfileSet {
 		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
-	if o.dockerfilePath != "" {
+	if o.isDockerfileSet {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
@@ -363,12 +379,10 @@ func (o *runTaskOpts) Execute() error {
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
-
 	// NOTE: repository has to be configured only after task resources are deployed
 	if err := o.configureRepository(); err != nil {
 		return err
 	}
-
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
@@ -386,11 +400,28 @@ func (o *runTaskOpts) Execute() error {
 		}
 	}
 
-	_, err := o.runTask()
+	tasks, err := o.runTask()
 	if err != nil {
 		return err
 	}
 
+	if o.follow {
+		o.configureEventsWriter(tasks)
+		if err := o.displayLogStream(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *runTaskOpts) displayLogStream() error {
+	if err := o.eventsWriter.WriteEventsUntilStopped(); err != nil {
+		return fmt.Errorf("write events: %w", err)
+	}
+
+	log.Infof("%s %s stopped.\n",
+		english.PluralWord(o.count, "Task", ""),
+		english.PluralWord(o.count, "has", "have"))
 	return nil
 }
 
@@ -401,7 +432,7 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.Plural(o.count, "is", "are")))
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
 }
 
@@ -423,7 +454,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 }
 
 func (o *runTaskOpts) deployTaskResources() error {
-	o.spinner.Start(fmt.Sprintf("Provisioning an ECR repository, a CloudWatch log group and necessary permissions for task %s.", color.HighlightUserInput(o.groupName)))
+	o.spinner.Start(fmt.Sprintf("Provisioning resources and permissions for task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
 		o.spinner.Stop(log.Serrorln("Failed to provision task resources."))
 		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
@@ -577,6 +608,11 @@ Run a task with a command.
 			if err != nil {
 				return err
 			}
+
+			if cmd.Flags().Changed(dockerFileFlag) {
+				opts.isDockerfileSet = true
+			}
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -614,5 +650,6 @@ Run a task with a command.
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
 
+	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	return cmd
 }

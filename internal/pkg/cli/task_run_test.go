@@ -6,14 +6,16 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"path/filepath"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
+	"github.com/aws/copilot-cli/internal/pkg/task"
+
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
@@ -60,6 +62,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inDefault bool
 
 		appName string
+		isDockerfileSet bool
 
 		mockStore      func(m *mocks.Mockstore)
 		mockFileSystem func(mockFS afero.Fs)
@@ -150,8 +153,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
 
-			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
-			inDockerfilePath: "hello/world/Dockerfile",
+			inImage:         "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			isDockerfileSet: true,
 
 			wantedError: errors.New("cannot specify both `--image` and `--dockerfile`"),
 		},
@@ -159,6 +162,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			inDockerfilePath: "world/hello/Dockerfile",
+			isDockerfileSet: true,
+
 			wantedError:      errors.New("open world/hello/Dockerfile: file does not exist"),
 		},
 		"specified app exists": {
@@ -296,6 +301,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					command:           tc.inCommand,
 					useDefaultSubnets: tc.inDefault,
 				},
+				isDockerfileSet: tc.isDockerfileSet,
+
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
 			}
@@ -572,6 +579,7 @@ type runTaskMocks struct {
 	repository *mocks.MockrepositoryService
 	runner     *mocks.MocktaskRunner
 	store      *mocks.Mockstore
+	eventsWriter *mocks.MockeventsWriter
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
@@ -586,8 +594,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inImage string
-		inTag   string
+		inImage  string
+		inTag    string
+		inFollow bool
 
 		inEnv string
 
@@ -685,6 +694,27 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.runner.EXPECT().Run().AnyTimes()
 			},
 		},
+		"fail to write events": {
+			inFollow: true,
+			inImage: "image",
+			setupMocks: func(m runTaskMocks) {
+				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
+				m.runner.EXPECT().Run().Return([]*task.Task{
+					{
+						TaskARN: "task-1",
+					},
+					{
+						TaskARN: "task-2",
+					},
+					{
+						TaskARN: "task-3",
+					},
+				}, nil)
+				m.eventsWriter.EXPECT().WriteEventsUntilStopped().Times(1).
+					Return(errors.New("error writing events"))
+			},
+			wantedError: errors.New("write events: error writing events"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -697,16 +727,19 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				repository: mocks.NewMockrepositoryService(ctrl),
 				runner:     mocks.NewMocktaskRunner(ctrl),
 				store:      mocks.NewMockstore(ctrl),
+				eventsWriter: mocks.NewMockeventsWriter(ctrl),
 			}
 			tc.setupMocks(mocks)
 
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
 					GlobalOpts: &GlobalOpts{},
-					groupName:  inGroupName,
-					image:      tc.inImage,
-					imageTag:   tc.inTag,
-					env:        tc.inEnv,
+					groupName: inGroupName,
+
+					image:     tc.inImage,
+					imageTag:  tc.inTag,
+					env:       tc.inEnv,
+					follow:    tc.inFollow,
 				},
 				spinner: &mockSpinner{},
 				store:   mocks.store,
@@ -714,11 +747,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts.configureRuntimeOpts = func() error {
 				opts.runner = mocks.runner
 				opts.deployer = mocks.deployer
-				opts.configureRepository = func() error {
-					opts.repository = mocks.repository
-					return nil
-				}
 				return nil
+			}
+			opts.configureRepository = func() error {
+				opts.repository = mocks.repository
+				return nil
+			}
+			opts.configureEventsWriter = func(tasks []*task.Task) {
+				opts.eventsWriter = mocks.eventsWriter
 			}
 
 			err := opts.Execute()

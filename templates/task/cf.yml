@@ -48,7 +48,7 @@ Resources:
           Name: !Ref TaskName{{if .EnvVars}}
           Environment:{{range $name, $value := .EnvVars}}
           - Name: {{$name}}
-          Value: {{$value}}{{end}}{{end}}
+            Value: {{$value}}{{end}}{{end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
       RequiresCompatibilities:
         - "FARGATE"

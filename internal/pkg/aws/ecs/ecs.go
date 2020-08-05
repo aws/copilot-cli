@@ -20,6 +20,9 @@ const (
 	shortTaskIDLength      = 8
 	shortImageDigestLength = 8
 	imageDigestPrefix      = "sha256:"
+
+	// DesiredStatusStopped represents the desired status "STOPPED" for a task.
+	DesiredStatusStopped = ecs.DesiredStatusStopped
 )
 
 type api interface {
