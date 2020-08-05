@@ -5,9 +5,11 @@
 package sessions
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/version"
@@ -21,7 +23,8 @@ import (
 const (
 	userAgentHeader = "User-Agent"
 
-	defaultTimeout = 30 * time.Second
+	credsTimeout = 10 * time.Second
+	clientTimeout = 30 * time.Second
 )
 
 // Provider provides methods to create sessions.
@@ -30,9 +33,15 @@ type Provider struct {
 	defaultSess *session.Session
 }
 
-// NewProvider initializes a new session Provider with empty caches.
+var instance *Provider
+var once sync.Once
+
+// NewProvider returns a session Provider singleton.
 func NewProvider() *Provider {
-	return &Provider{}
+	once.Do(func() {
+		instance = &Provider{}
+	})
+	return instance
 }
 
 // Default returns a session configured against the "default" AWS profile.
@@ -100,10 +109,23 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 	return sess, nil
 }
 
+// AreCredsFromEnvVars returns true if the session's credentials provider is environment variables, false otherwise.
+// An error is returned if the credentials are invalid or the request times out.
+func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
+	defer cancel()
+
+	v, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("get credentials of session: %w", err)
+	}
+	return v.ProviderName == session.EnvProviderName, nil
+}
+
 // newConfig returns a config with an end-to-end request timeout and verbose credentials errors.
 func newConfig() *aws.Config {
 	c := &http.Client{
-		Timeout: defaultTimeout,
+		Timeout: clientTimeout,
 	}
 	return aws.NewConfig().
 		WithHTTPClient(c).

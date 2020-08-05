@@ -96,6 +96,18 @@ func (o *initAppOpts) Validate() error {
 
 // Ask prompts the user for any required arguments that they didn't provide.
 func (o *initAppOpts) Ask() error {
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return fmt.Errorf("get default session: %w", err)
+	}
+	if ok, _ := sessions.AreCredsFromEnvVars(sess); ok { // Ignore the error, we do not want to crash for a warning.
+		log.Warningln(`Looks like you're creating an application using credentials set by environment variables.
+Copilot will store your application metadata in this account.
+We recommend using credentials from named profiles. To learn more:
+https://github.com/aws/copilot-cli/wiki/credentials`)
+		log.Infoln()
+	}
+
 	// When there's a local application.
 	summary, err := o.ws.Summary()
 	if err == nil {
