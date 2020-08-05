@@ -372,7 +372,7 @@ func (o *runTaskOpts) buildAndPushImage() error {
 }
 
 func (o *runTaskOpts) deployTaskResources() error {
-	o.spinner.Start(fmt.Sprintf("Provisioning resources and necessary permissions for task %s.", color.HighlightUserInput(o.groupName)))
+	o.spinner.Start(fmt.Sprintf("Provisioning resources and permissions for task %s.", color.HighlightUserInput(o.groupName)))
 	if err := o.deploy(); err != nil {
 		o.spinner.Stop(log.Serrorln("Failed to provision task resources."))
 		return fmt.Errorf("provision resources for task %s: %w", o.groupName, err)
