@@ -9,16 +9,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestImportVpcConfig_IsEmpty(t *testing.T) {
+func TestImportVPCConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		inVpcID     string
+		inVPCID     string
 		inPublicID  []string
 		inPrivateID []string
 
 		wantedEmpty bool
 	}{
 		"non empty if has vpc id": {
-			inVpcID: "mockID",
+			inVPCID: "mockID",
 
 			wantedEmpty: false,
 		},
@@ -35,7 +35,7 @@ func TestImportVpcConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			inPrivateID: []string{},
 			inPublicID:  []string{},
-			inVpcID:     "",
+			inVPCID:     "",
 
 			wantedEmpty: true,
 		},
@@ -44,8 +44,8 @@ func TestImportVpcConfig_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 
-			config := ImportVpcConfig{
-				ID:               tc.inVpcID,
+			config := ImportVPCConfig{
+				ID:               tc.inVPCID,
 				PrivateSubnetIDs: tc.inPrivateID,
 				PublicSubnetIDs:  tc.inPublicID,
 			}
@@ -59,16 +59,16 @@ func TestImportVpcConfig_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestAdjustVpcConfig_IsEmpty(t *testing.T) {
+func TestAdjustVPCConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		inVpcCIDR     string
+		inVPCCIDR     string
 		inPublicCIDR  []string
 		inPrivateCIDR []string
 
 		wantedEmpty bool
 	}{
 		"non empty if has vpc cidr": {
-			inVpcCIDR: "mockCIDR",
+			inVPCCIDR: "mockCIDR",
 
 			wantedEmpty: false,
 		},
@@ -85,7 +85,7 @@ func TestAdjustVpcConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			inPrivateCIDR: []string{},
 			inPublicCIDR:  []string{},
-			inVpcCIDR:     EmptyIPNetString,
+			inVPCCIDR:     EmptyIPNetString,
 
 			wantedEmpty: true,
 		},
@@ -94,8 +94,8 @@ func TestAdjustVpcConfig_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 
-			config := AdjustVpcConfig{
-				CIDR:               tc.inVpcCIDR,
+			config := AdjustVPCConfig{
+				CIDR:               tc.inVPCCIDR,
 				PublicSubnetCIDRs:  tc.inPublicCIDR,
 				PrivateSubnetCIDRs: tc.inPrivateCIDR,
 			}

@@ -26,9 +26,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inEnvName     string
 		inAppName     string
 		inDefault     bool
-		inVpcID       string
+		inVPCID       string
 		inPublicIDs   []string
-		inVpcCIDR     net.IPNet
+		inVPCCIDR     net.IPNet
 		inPublicCIDRs []string
 
 		wantedErrMsg string
@@ -54,10 +54,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inAppName:     "phonetool",
 			inPublicCIDRs: []string{"mockCIDR"},
 			inPublicIDs:   []string{"mockID"},
-			inVpcCIDR: net.IPNet{
+			inVPCCIDR: net.IPNet{
 				IP: net.IP([]byte("mockIP")),
 			},
-			inVpcID: "mockID",
+			inVPCID: "mockID",
 
 			wantedErrMsg: "couldn't specify both vpc importing flags and vpc configuring flags",
 		},
@@ -65,7 +65,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
 			inDefault: true,
-			inVpcID:   "mockID",
+			inVPCID:   "mockID",
 
 			wantedErrMsg: "couldn't import or configure resources if use default flag is set",
 		},
@@ -76,13 +76,25 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:              tc.inEnvName,
-					useDefault:        tc.inDefault,
-					PublicSubnetCIDRs: tc.inPublicCIDRs,
-					PublicSubnetIDs:   tc.inPublicIDs,
-					VpcCIDR:           tc.inVpcCIDR,
-					VpcID:             tc.inVpcID,
-					GlobalOpts:        &GlobalOpts{appName: tc.inAppName},
+					Name:       tc.inEnvName,
+					UseDefault: tc.inDefault,
+					AdjustVPC: struct {
+						CIDR               net.IPNet
+						PublicSubnetCIDRs  []string
+						PrivateSubnetCIDRs []string
+					}{
+						PublicSubnetCIDRs: tc.inPublicCIDRs,
+						CIDR:              tc.inVPCCIDR,
+					},
+					ImportVPC: struct {
+						ID               string
+						PublicSubnetIDs  []string
+						PrivateSubnetIDs []string
+					}{
+						PublicSubnetIDs: tc.inPublicIDs,
+						ID:              tc.inVPCID,
+					},
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 			}
 

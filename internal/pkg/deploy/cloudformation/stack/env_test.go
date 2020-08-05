@@ -45,8 +45,8 @@ func TestEnvTemplate(t *testing.T) {
 					ACMValidationLambda:       "customresources",
 					DNSDelegationLambda:       "customresources",
 					EnableLongARNFormatLambda: "customresources",
-					ImportVpc:                 nil,
-					VpcConfig: &template.AdjustVpcOpts{
+					ImportVPC:                 nil,
+					VPCConfig: &template.AdjustVPCOpts{
 						CIDR:               defaultVPCCIDR,
 						PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
 						PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),

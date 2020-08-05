@@ -59,8 +59,8 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// ListVpcSubnets lists all subnets given a VPC ID.
-func (c *EC2) ListVpcSubnets(vpcID string) (*Subnets, error) {
+// ListVPCSubnets lists all subnets given a VPC ID.
+func (c *EC2) ListVPCSubnets(vpcID string) (*Subnets, error) {
 	respSubnets, err := c.subnets(Filter{
 		Name:   "vpc-id",
 		Values: []string{vpcID},

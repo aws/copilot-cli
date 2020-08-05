@@ -55,15 +55,18 @@ type initEnvVars struct {
 	Name         string
 	Profile      string
 	IsProduction bool
-	useDefault   bool
+	UseDefault   bool
 
-	VpcID            string
-	PublicSubnetIDs  []string
-	PrivateSubnetIDs []string
-
-	VpcCIDR            net.IPNet
-	PublicSubnetCIDRs  []string
-	PrivateSubnetCIDRs []string
+	ImportVPC struct {
+		ID               string
+		PublicSubnetIDs  []string
+		PrivateSubnetIDs []string
+	}
+	AdjustVPC struct {
+		CIDR               net.IPNet
+		PublicSubnetCIDRs  []string
+		PrivateSubnetCIDRs []string
+	}
 }
 
 type initEnvOpts struct {
@@ -188,16 +191,16 @@ func (o *initEnvOpts) Execute() error {
 
 func (o *initEnvOpts) validateCustomizedResources() error {
 	var vpcImport, vpcConfig bool
-	if (o.VpcID != "") || (o.PublicSubnetIDs != nil) || (o.PrivateSubnetIDs != nil) {
+	if (o.ImportVPC.ID != "") || (o.ImportVPC.PublicSubnetIDs != nil) || (o.ImportVPC.PrivateSubnetIDs != nil) {
 		vpcImport = true
 	}
-	if (o.VpcCIDR.String() != deploy.EmptyIPNetString) || (o.PublicSubnetCIDRs != nil) || (o.PrivateSubnetCIDRs != nil) {
+	if (o.AdjustVPC.CIDR.String() != deploy.EmptyIPNetString) || (o.AdjustVPC.PublicSubnetCIDRs != nil) || (o.AdjustVPC.PrivateSubnetCIDRs != nil) {
 		vpcConfig = true
 	}
 	if vpcImport && vpcConfig {
 		return errors.New("couldn't specify both vpc importing flags and vpc configuring flags")
 	}
-	if (vpcImport || vpcConfig) && o.useDefault {
+	if (vpcImport || vpcConfig) && o.UseDefault {
 		return errors.New("couldn't import or configure resources if use default flag is set")
 	}
 	return nil
@@ -239,20 +242,20 @@ func (o *initEnvOpts) askEnvProfile() error {
 }
 
 func (o *initEnvOpts) askCustomizedResources() error {
-	if o.useDefault {
+	if o.UseDefault {
 		return nil
 	}
 	return nil
 }
 
-func (o *initEnvOpts) importVpcConfig() *deploy.ImportVpcConfig {
-	if o.useDefault {
+func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
+	if o.UseDefault {
 		return nil
 	}
-	config := &deploy.ImportVpcConfig{
-		ID:               o.VpcID,
-		PrivateSubnetIDs: o.PrivateSubnetIDs,
-		PublicSubnetIDs:  o.PublicSubnetIDs,
+	config := &deploy.ImportVPCConfig{
+		ID:               o.ImportVPC.ID,
+		PrivateSubnetIDs: o.ImportVPC.PrivateSubnetIDs,
+		PublicSubnetIDs:  o.ImportVPC.PublicSubnetIDs,
 	}
 	if config.IsEmpty() {
 		return nil
@@ -260,14 +263,14 @@ func (o *initEnvOpts) importVpcConfig() *deploy.ImportVpcConfig {
 	return config
 }
 
-func (o *initEnvOpts) adjustVpcConfig() *deploy.AdjustVpcConfig {
-	if o.useDefault {
+func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
+	if o.UseDefault {
 		return nil
 	}
-	config := &deploy.AdjustVpcConfig{
-		CIDR:               o.VpcCIDR.String(),
-		PrivateSubnetCIDRs: o.PrivateSubnetCIDRs,
-		PublicSubnetCIDRs:  o.PublicSubnetCIDRs,
+	config := &deploy.AdjustVPCConfig{
+		CIDR:               o.AdjustVPC.CIDR.String(),
+		PrivateSubnetCIDRs: o.AdjustVPC.PrivateSubnetCIDRs,
+		PublicSubnetCIDRs:  o.AdjustVPC.PublicSubnetCIDRs,
 	}
 	if config.IsEmpty() {
 		return nil
@@ -288,8 +291,8 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		AppDNSName:               app.Domain,
 		AdditionalTags:           app.Tags,
-		AdjustVpcConfig:          o.adjustVpcConfig(),
-		ImportVpcConfig:          o.importVpcConfig(),
+		AdjustVPCConfig:          o.adjustVPCConfig(),
+		ImportVPCConfig:          o.importVPCConfig(),
 	}
 
 	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.Name)))
@@ -439,14 +442,14 @@ func BuildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.Profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
-	cmd.Flags().StringVar(&vars.VpcID, vpcIDFlag, "", vpcIDFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
-	cmd.Flags().IPNetVar(&vars.VpcCIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
+	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
-	cmd.Flags().StringSliceVar(&vars.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
-	cmd.Flags().BoolVar(&vars.useDefault, defaultEnvironmentFlag, false, defaultEnvironmentFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	cmd.Flags().BoolVar(&vars.UseDefault, defaultEnvironmentFlag, false, defaultEnvironmentFlagDescription)
 
 	requiredFlags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
 	requiredFlags.AddFlag(cmd.Flags().Lookup(nameFlag))
