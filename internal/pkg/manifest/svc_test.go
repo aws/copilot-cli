@@ -4,11 +4,13 @@
 package manifest
 
 import (
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestUnmarshalSvc(t *testing.T) {
@@ -60,7 +62,9 @@ environments:
 				wantedManifest := &LoadBalancedWebService{
 					Service: Service{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
 					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: aws.String("frontend/Dockerfile")}, Port: aws.Uint16(80)},
+						Image: ServiceImageWithPort{ServiceImage: ServiceImage{Build: BuildArgsOrString{
+							BuildString: aws.String("frontend/Dockerfile"),
+						}}, Port: aws.Uint16(80)},
 						RoutingRule: RoutingRule{
 							Path:            aws.String("svc"),
 							HealthCheckPath: aws.String("/"),
@@ -135,7 +139,9 @@ secrets:
 						Image: imageWithPortAndHealthcheck{
 							ServiceImageWithPort: ServiceImageWithPort{
 								ServiceImage: ServiceImage{
-									Build: aws.String("./subscribers/Dockerfile"),
+									Build: BuildArgsOrString{
+										BuildString: aws.String("./subscribers/Dockerfile"),
+									},
 								},
 								Port: aws.Uint16(8080),
 							},
@@ -178,6 +184,159 @@ type: 'OH NO'
 			} else {
 				tc.requireCorrectValues(t, m)
 			}
+		})
+	}
+}
+
+func TestBuildArgsUnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct BuildArgsOrString
+		wantedError  error
+	}{
+		"legacy case: simple build string": {
+			inContent: []byte(`build: ./Dockerfile`),
+
+			wantedStruct: BuildArgsOrString{
+				BuildString: aws.String("./Dockerfile"),
+			},
+		},
+		"Dockerfile specified in build opts": {
+			inContent: []byte(`build:
+  dockerfile: path/to/Dockerfile
+`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("path/to/Dockerfile"),
+				},
+			},
+		},
+		"Dockerfile context, and args specified in build opts": {
+			inContent: []byte(`build:
+  dockerfile: path/to/Dockerfile
+  args:
+    arg1: value1
+    bestdog: bowie
+  context: path/to/source`),
+			wantedStruct: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("path/to/Dockerfile"),
+					Context:    aws.String("path/to/source"),
+					Args: map[string]string{
+						"arg1":    "value1",
+						"bestdog": "bowie",
+					},
+				},
+			},
+		},
+		"Error if unmarshalable": {
+			inContent: []byte(`build:
+  badfield: OH NOES
+  otherbadfield: DOUBLE BAD`),
+			wantedError: errUnmarshalBuildOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var b ServiceImage
+			err := yaml.Unmarshal(tc.inContent, &b)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				// check memberwise dereferenced pointer equality
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildString), aws.StringValue(b.Build.BuildString))
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Context), aws.StringValue(b.Build.BuildArgs.Context))
+				require.Equal(t, aws.StringValue(tc.wantedStruct.BuildArgs.Dockerfile), aws.StringValue(b.Build.BuildArgs.Dockerfile))
+				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
+			}
+		})
+	}
+}
+
+func TestBuildConfig(t *testing.T) {
+	mockWsRoot := "/root/dir"
+	testCases := map[string]struct {
+		inBuild     BuildArgsOrString
+		wantedBuild DockerBuildArgs
+	}{
+		"simple case: BuildString path to dockerfile": {
+			inBuild: BuildArgsOrString{
+				BuildString: aws.String("my/Dockerfile"),
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
+			},
+		},
+		"Different context than dockerfile": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("build/dockerfile"),
+					Context:    aws.String("cmd/main"),
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "build/dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "cmd/main")),
+			},
+		},
+		"no dockerfile specified": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Context: aws.String("cmd/main"),
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "cmd", "main", "Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "cmd", "main")),
+			},
+		},
+		"no dockerfile or context specified": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Args: map[string]string{
+						"goodDog": "bowie",
+					},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "Dockerfile")),
+				Context:    aws.String(mockWsRoot),
+				Args: map[string]string{
+					"goodDog": "bowie",
+				},
+			},
+		},
+		"including args": {
+			inBuild: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String("my/Dockerfile"),
+					Args: map[string]string{
+						"goodDog":  "bowie",
+						"badGoose": "HONK",
+					},
+				},
+			},
+			wantedBuild: DockerBuildArgs{
+				Dockerfile: aws.String(filepath.Join(mockWsRoot, "my/Dockerfile")),
+				Context:    aws.String(filepath.Join(mockWsRoot, "my")),
+				Args: map[string]string{
+					"goodDog":  "bowie",
+					"badGoose": "HONK",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			s := ServiceImage{
+				Build: tc.inBuild,
+			}
+			got := s.BuildConfig(mockWsRoot)
+
+			require.Equal(t, tc.wantedBuild, *got)
 		})
 	}
 }

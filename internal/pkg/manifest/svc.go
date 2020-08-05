@@ -5,7 +5,9 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +27,13 @@ const (
 	defaultFluentbitImage = "amazon/aws-for-fluent-bit:latest"
 )
 
+var (
+	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
+	errNoDockerfile       = errors.New("must specify a Dockerfile path")
+)
+
+var dockerfileDefaultName = "Dockerfile"
+
 // ServiceTypes are the supported service manifest types.
 var ServiceTypes = []string{
 	LoadBalancedWebServiceType,
@@ -39,7 +48,119 @@ type Service struct {
 
 // ServiceImage represents the service's container image.
 type ServiceImage struct {
-	Build *string `yaml:"build"` // Path to the Dockerfile.
+	Build BuildArgsOrString `yaml:"build"` // Path to the Dockerfile.
+}
+
+// BuildConfig populates a docker.BuildArguments struct from the fields available in the manifest.
+// Prefer the following hierarchy:
+// 1. Specific dockerfile, specific context
+// 2. Specific dockerfile, context = dockerfile dir
+// 3. "Dockerfile" located in context dir
+// 4. "Dockerfile" located in ws root.
+func (s *ServiceImage) BuildConfig(rootDirectory string) *DockerBuildArgs {
+	df := s.dockerfile()
+	ctx := s.context()
+	if df != "" && ctx != "" {
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
+			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
+			Args:       s.args(),
+		}
+	}
+	if df != "" && ctx == "" {
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, df)),
+			Context:    aws.String(filepath.Join(rootDirectory, filepath.Dir(df))),
+			Args:       s.args(),
+		}
+	}
+	if df == "" && ctx != "" {
+		return &DockerBuildArgs{
+			Dockerfile: aws.String(filepath.Join(rootDirectory, ctx, dockerfileDefaultName)),
+			Context:    aws.String(filepath.Join(rootDirectory, ctx)),
+			Args:       s.args(),
+		}
+	}
+	return &DockerBuildArgs{
+		Dockerfile: aws.String(filepath.Join(rootDirectory, dockerfileDefaultName)),
+		Context:    aws.String(rootDirectory),
+		Args:       s.args(),
+	}
+}
+
+// dockerfile returns the path to the service's Dockerfile. If no dockerfile is specified,
+// returns "".
+func (s *ServiceImage) dockerfile() string {
+	// Prefer to use the "Dockerfile" string in BuildArgs. Otherwise,
+	// "BuildString". If no dockerfile specified, return "".
+	if s.Build.BuildArgs.Dockerfile != nil {
+		return aws.StringValue(s.Build.BuildArgs.Dockerfile)
+	}
+
+	var dfPath string
+	if s.Build.BuildString != nil {
+		dfPath = aws.StringValue(s.Build.BuildString)
+	}
+
+	return dfPath
+}
+
+// context returns the build context directory if it exists, otherwise an empty string.
+func (s *ServiceImage) context() string {
+	return aws.StringValue(s.Build.BuildArgs.Context)
+}
+
+// args returns the args section, if it exists, to override args in the dockerfile.
+// Otherwise it returns an empty map.
+func (s *ServiceImage) args() map[string]string {
+	return s.Build.BuildArgs.Args
+}
+
+// BuildArgsOrString is a custom type which supports unmarshaling yaml which
+// can either be of type string or type DockerBuildArgs.
+type BuildArgsOrString struct {
+	BuildString *string
+	BuildArgs   DockerBuildArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the BuildArgsOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (b *BuildArgsOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal(&b.BuildArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !b.BuildArgs.isEmpty() {
+		// Unmarshaled successfully to b.BuildArgs, return.
+		return nil
+	}
+
+	if err := unmarshal(&b.BuildString); err != nil {
+		return errUnmarshalBuildOpts
+	}
+	return nil
+}
+
+// DockerBuildArgs represents the options specifiable under the "build" field
+// of Docker Compose services. For more information, see:
+// https://docs.docker.com/compose/compose-file/#build
+type DockerBuildArgs struct {
+	Context    *string           `yaml:"context,omitempty"`
+	Dockerfile *string           `yaml:"dockerfile,omitempty"`
+	Args       map[string]string `yaml:"args,omitempty"`
+}
+
+func (b *DockerBuildArgs) isEmpty() bool {
+	if b.Context == nil && b.Dockerfile == nil && b.Args == nil {
+		return true
+	}
+	return false
 }
 
 // ServiceImageWithPort represents a container image with an exposed port.

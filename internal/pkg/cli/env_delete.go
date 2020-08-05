@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -83,7 +83,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 		prog:          termprogress.NewSpinner(),
 		sel:           selector.NewConfigSelect(vars.prompt, store),
 		initProfileClients: func(o *deleteEnvOpts) error {
-			profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+			profileSess, err := sessions.NewProvider().FromProfile(o.EnvProfile)
 			if err != nil {
 				return fmt.Errorf("cannot create session from profile %s: %w", o.EnvProfile, err)
 			}

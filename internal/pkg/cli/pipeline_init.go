@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -136,7 +136,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	opts.repoURLs = urls
 	opts.buffer.Reset()
 
-	p := session.NewProvider()
+	p := sessions.NewProvider()
 	defaultSession, err := p.Default()
 	if err != nil {
 		return nil, err
@@ -441,6 +441,7 @@ func (o *initPipelineOpts) selectGitHubURL() error {
 func (o *initPipelineOpts) parseOwnerRepoName(url string) (string, string, error) {
 	regexPattern := regexp.MustCompile(`.*(github.com)(:|\/)`)
 	parsedURL := strings.TrimPrefix(url, regexPattern.FindString(url))
+	parsedURL = strings.TrimSuffix(parsedURL, ".git")
 	ownerRepo := strings.Split(parsedURL, string(os.PathSeparator))
 	if len(ownerRepo) != 2 {
 		return "", "", fmt.Errorf("unable to parse the GitHub repository owner and name from %s: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`", url)

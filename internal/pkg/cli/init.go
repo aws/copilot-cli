@@ -9,7 +9,7 @@ import (
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -79,7 +79,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := session.NewProvider()
+	sessProvider := sessions.NewProvider()
 	sess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -172,7 +172,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 // Run executes "app init", "env init", "svc init" and "svc deploy".
 func (o *initOpts) Run() error {
-	log.Warningln("It's best to run this command in the root of your Git repository.")
+	if !workspace.IsInGitRepository(afero.NewOsFs()) {
+		log.Warningln("It's best to run this command in the root of your Git repository.")
+	}
 	log.Infoln(color.Help(`Welcome to the Copilot CLI! We're going to walk you through some questions
 to help you get set up with an application on ECS. An application is a collection of
 containerized services that operate together.`))

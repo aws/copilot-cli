@@ -27,7 +27,7 @@ func (m mockBinaryMarshaler) MarshalBinary() (data []byte, err error) {
 	return m.content, nil
 }
 
-func TestWorkspace_copilotDirPath(t *testing.T) {
+func TestWorkspace_CopilotDirPath(t *testing.T) {
 	// turn "test/copilot" into a platform-dependent path
 	var manifestDir = filepath.FromSlash("test/copilot")
 
@@ -99,7 +99,7 @@ func TestWorkspace_copilotDirPath(t *testing.T) {
 				fsUtils:    &afero.Afero{Fs: fs},
 				copilotDir: tc.presetManifestDir,
 			}
-			manifestDirPath, err := ws.copilotDirPath()
+			manifestDirPath, err := ws.CopilotDirPath()
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.expectedManifestDir, manifestDirPath)
@@ -295,6 +295,39 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 			} else {
 				require.ElementsMatch(t, tc.wantedNames, names)
 			}
+		})
+	}
+}
+
+func TestIsInGitRepository(t *testing.T) {
+	testCases := map[string]struct {
+		given func() FileStat
+		wanted bool
+	} {
+		"return false if directory does not contain a .git directory": {
+			given: func() FileStat {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wanted: false,
+		},
+		"return true if directory has a .git directory": {
+			given: func() FileStat {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll(".git", 0755)
+				return fs
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			fs := tc.given()
+
+			actual := IsInGitRepository(fs)
+
+			require.Equal(t, tc.wanted, actual)
 		})
 	}
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/route53"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -51,7 +51,7 @@ type initAppOpts struct {
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
-	sess, err := session.NewProvider().Default()
+	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}

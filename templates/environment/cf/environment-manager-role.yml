@@ -61,7 +61,8 @@ EnvironmentManagerRole:
             "ecs:ListTaskDefinitionFamilies",
             "ecs:DescribeTaskDefinition",
             "ecs:ListTaskDefinitions",
-            "ecs:ListClusters"
+            "ecs:ListClusters",
+            "ecs:RunTask"
           ]
           Resource: "*"
         - Sid: CloudFormation
@@ -82,17 +83,22 @@ EnvironmentManagerRole:
             "cloudformation:UpdateTerminationProtection"
           ]
           Resource: "*"
-        - Sid: PipelineExecution
+        - Sid: GetAndPassCopilotRoles
           Effect: Allow
           Action: [
             "iam:GetRole",
             "iam:PassRole"
           ]
-          Resource: !GetAtt CloudformationExecutionRole.Arn
+          Resource: "*"
+          Condition:
+            StringEquals:
+              'iam:ResourceTag/copilot-application': !Sub '${AppName}'
+              'iam:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
         - Sid: ECR
           Effect: Allow
           Action: [
             "ecr:BatchGetImage",
+            "ecr:BatchCheckLayerAvailability",
             "ecr:CompleteLayerUpload",
             "ecr:DescribeImages",
             "ecr:DescribeRepositories",
@@ -101,7 +107,8 @@ EnvironmentManagerRole:
             "ecr:ListImages",
             "ecr:ListTagsForResource",
             "ecr:PutImage",
-            "ecr:UploadLayerPart"
+            "ecr:UploadLayerPart",
+            "ecr:GetAuthorizationToken"
           ]
           Resource: "*"
         - Sid: ResourceGroups
@@ -181,6 +188,13 @@ EnvironmentManagerRole:
             "s3:GetBucketLocation",
             "s3:GetObjectVersion",
             "kms:Decrypt"
+          ]
+          Resource: "*"
+        - Sid: EC2
+          Effect: Allow
+          Action: [
+            "ec2:DescribeSubnets",
+            "ec2:DescribeSecurityGroups"
           ]
           Resource: "*"
         - Sid: Tags

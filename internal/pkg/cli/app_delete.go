@@ -7,16 +7,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
-	awssession "github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/spf13/cobra"
 )
@@ -56,7 +55,7 @@ type deleteAppOpts struct {
 	ws                   wsFileDeleter
 	sessProvider         sessionProvider
 	cfn                  deployer
-	s3                   func(session *awssession.Session) bucketEmptier
+	s3                   func(session *session.Session) bucketEmptier
 	executor             func(svcName string) (executor, error)
 	askExecutor          func(envName, envProfile string) (askExecutor, error)
 	deletePipelineRunner func() (deletePipelineRunner, error)
@@ -73,7 +72,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	provider := session.NewProvider()
+	provider := sessions.NewProvider()
 	defaultSession, err := provider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
@@ -86,7 +85,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		ws:            ws,
 		sessProvider:  provider,
 		cfn:           cloudformation.New(defaultSession),
-		s3: func(session *awssession.Session) bucketEmptier {
+		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
 		},
 		executor: func(svcName string) (executor, error) {

@@ -7,6 +7,7 @@ package mocks
 import (
 	encoding "encoding"
 	session "github.com/aws/aws-sdk-go/aws/session"
+	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -14,6 +15,7 @@ import (
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
+	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
@@ -1213,22 +1215,17 @@ func (m *MockimageBuilderPusher) EXPECT() *MockimageBuilderPusherMockRecorder {
 }
 
 // BuildAndPush mocks base method
-func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath, tag string, additionalTags ...string) error {
+func (m *MockimageBuilderPusher) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{docker, dockerfilePath, tag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "BuildAndPush", varargs...)
+	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush
-func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, dockerfilePath, tag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockimageBuilderPusherMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{docker, dockerfilePath, tag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockimageBuilderPusher)(nil).BuildAndPush), docker, args)
 }
 
 // MockrepositoryURIGetter is a mock of repositoryURIGetter interface
@@ -1306,22 +1303,17 @@ func (mr *MockrepositoryServiceMockRecorder) URI() *gomock.Call {
 }
 
 // BuildAndPush mocks base method
-func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath, tag string, additionalTags ...string) error {
+func (m *MockrepositoryService) BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{docker, dockerfilePath, tag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "BuildAndPush", varargs...)
+	ret := m.ctrl.Call(m, "BuildAndPush", docker, args)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BuildAndPush indicates an expected call of BuildAndPush
-func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, dockerfilePath, tag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{docker, dockerfilePath, tag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
 }
 
 // MockcwlogService is a mock of cwlogService interface
@@ -2067,6 +2059,74 @@ func (mr *MockwsSvcReaderMockRecorder) ReadServiceManifest(svcName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcReader)(nil).ReadServiceManifest), svcName)
 }
 
+// MockwsSvcDirReader is a mock of wsSvcDirReader interface
+type MockwsSvcDirReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsSvcDirReaderMockRecorder
+}
+
+// MockwsSvcDirReaderMockRecorder is the mock recorder for MockwsSvcDirReader
+type MockwsSvcDirReaderMockRecorder struct {
+	mock *MockwsSvcDirReader
+}
+
+// NewMockwsSvcDirReader creates a new mock instance
+func NewMockwsSvcDirReader(ctrl *gomock.Controller) *MockwsSvcDirReader {
+	mock := &MockwsSvcDirReader{ctrl: ctrl}
+	mock.recorder = &MockwsSvcDirReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockwsSvcDirReader) EXPECT() *MockwsSvcDirReaderMockRecorder {
+	return m.recorder
+}
+
+// ServiceNames mocks base method
+func (m *MockwsSvcDirReader) ServiceNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceNames indicates an expected call of ServiceNames
+func (mr *MockwsSvcDirReaderMockRecorder) ServiceNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceNames", reflect.TypeOf((*MockwsSvcDirReader)(nil).ServiceNames))
+}
+
+// ReadServiceManifest mocks base method
+func (m *MockwsSvcDirReader) ReadServiceManifest(svcName string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadServiceManifest", svcName)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadServiceManifest indicates an expected call of ReadServiceManifest
+func (mr *MockwsSvcDirReaderMockRecorder) ReadServiceManifest(svcName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadServiceManifest", reflect.TypeOf((*MockwsSvcDirReader)(nil).ReadServiceManifest), svcName)
+}
+
+// CopilotDirPath mocks base method
+func (m *MockwsSvcDirReader) CopilotDirPath() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopilotDirPath")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CopilotDirPath indicates an expected call of CopilotDirPath
+func (mr *MockwsSvcDirReaderMockRecorder) CopilotDirPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopilotDirPath", reflect.TypeOf((*MockwsSvcDirReader)(nil).CopilotDirPath))
+}
+
 // MockwsPipelineReader is a mock of wsPipelineReader interface
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller
@@ -2801,17 +2861,22 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method
-func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployTask", input)
+	varargs := []interface{}{input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployTask", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeployTask indicates an expected call of DeployTask
-func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), input)
+	varargs := append([]interface{}{input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
 // MocktaskRunner is a mock of taskRunner interface
