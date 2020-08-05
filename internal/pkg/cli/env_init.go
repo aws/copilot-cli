@@ -23,14 +23,11 @@ import (
 )
 
 const (
-	envInitNamePrompt     = "What is your environment's name?"
-	envInitNameHelpPrompt = "A unique identifier for an environment (e.g. dev, test, prod)."
+	envInitNamePrompt        = "What is your environment's name?"
+	envInitNameHelpPrompt    = "A unique identifier for an environment (e.g. dev, test, prod)."
+	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
 
 	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
-	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
-)
-
-const (
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
 	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n"
 	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n"
@@ -75,7 +72,8 @@ type adjustVPCVars struct {
 }
 
 func (v adjustVPCVars) isSet() bool {
-	if v.CIDR.String() != deploy.EmptyIPNetString {
+	emptyIPNet := net.IPNet{}
+	if v.CIDR.String() != emptyIPNet.String() {
 		return true
 	}
 	if len(v.PublicSubnetCIDRs) != 0 {
@@ -219,17 +217,10 @@ func (o *initEnvOpts) Execute() error {
 }
 
 func (o *initEnvOpts) validateCustomizedResources() error {
-	var vpcImport, vpcConfig bool
-	if o.ImportVPC.isSet() {
-		vpcImport = true
-	}
-	if o.AdjustVPC.isSet() {
-		vpcConfig = true
-	}
-	if vpcImport && vpcConfig {
+	if o.ImportVPC.isSet() && o.AdjustVPC.isSet() {
 		return errors.New("cannot specify both import vpc flags and configure vpc flags")
 	}
-	if (vpcImport || vpcConfig) && o.NoCustomResources {
+	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.NoCustomResources {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag)
 	}
 	return nil

@@ -10,11 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-const (
-	// EmptyIPNetString is the return value of String() for an empty net.IPNet instance.
-	EmptyIPNetString = "<nil>"
-)
-
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	AppName                  string            // Name of the application this environment belongs to.
