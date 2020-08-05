@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"path/filepath"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
@@ -69,7 +71,11 @@ func NewLoadBalancedWebService(input *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	defaultLbManifest.Image = ServiceImageWithPort{
 		ServiceImage: ServiceImage{
-			Build: aws.String(input.Dockerfile),
+			Build: BuildArgsOrString{
+				BuildArgs: DockerBuildArgs{
+					Dockerfile: aws.String(input.Dockerfile),
+				},
+			},
 		},
 		Port: aws.Uint16(input.Port),
 	}
@@ -99,16 +105,22 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
+	content, err := s.parser.Parse(lbWebSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
+		"dirName": tplDirName,
+	}))
 	if err != nil {
 		return nil, err
 	}
 	return content.Bytes(), nil
 }
 
-// DockerfilePath returns the image build path.
-func (s *LoadBalancedWebService) DockerfilePath() string {
-	return aws.StringValue(s.Image.Build)
+func tplDirName(s string) string {
+	return filepath.Dir(s)
+}
+
+//BuildArgs returns a docker.BuildArguments object given a ws root directory.
+func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
+	return s.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

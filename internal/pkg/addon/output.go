@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/awslabs/goformation/v4"
+	"github.com/awslabs/goformation/v4/cloudformation"
 	"github.com/awslabs/goformation/v4/cloudformation/iam"
 	"github.com/awslabs/goformation/v4/cloudformation/secretsmanager"
 	"github.com/awslabs/goformation/v4/intrinsics"
@@ -56,12 +57,8 @@ func Outputs(template string) ([]Output, error) {
 	return outputs, nil
 }
 
-func isSecret(output interface{}, secrets map[string]*secretsmanager.Secret) bool {
-	props, ok := output.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	value, ok := props["Value"].(string)
+func isSecret(output cloudformation.Output, secrets map[string]*secretsmanager.Secret) bool {
+	value, ok := output.Value.(string)
 	if !ok {
 		return false
 	}
@@ -69,12 +66,8 @@ func isSecret(output interface{}, secrets map[string]*secretsmanager.Secret) boo
 	return hasKey
 }
 
-func isManagedPolicy(output interface{}, policies map[string]*iam.ManagedPolicy) bool {
-	props, ok := output.(map[string]interface{})
-	if !ok {
-		return false
-	}
-	value, ok := props["Value"].(string)
+func isManagedPolicy(output cloudformation.Output, policies map[string]*iam.ManagedPolicy) bool {
+	value, ok := output.Value.(string)
 	if !ok {
 		return false
 	}

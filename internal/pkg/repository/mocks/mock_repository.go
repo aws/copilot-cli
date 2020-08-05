@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -33,22 +34,17 @@ func (m *MockContainerLoginBuildPusher) EXPECT() *MockContainerLoginBuildPusherM
 }
 
 // Build mocks base method
-func (m *MockContainerLoginBuildPusher) Build(uri, path, imageTag string, additionalTags ...string) error {
+func (m *MockContainerLoginBuildPusher) Build(args *docker.BuildArguments) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{uri, path, imageTag}
-	for _, a := range additionalTags {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Build", varargs...)
+	ret := m.ctrl.Call(m, "Build", args)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Build indicates an expected call of Build
-func (mr *MockContainerLoginBuildPusherMockRecorder) Build(uri, path, imageTag interface{}, additionalTags ...interface{}) *gomock.Call {
+func (mr *MockContainerLoginBuildPusherMockRecorder) Build(args interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{uri, path, imageTag}, additionalTags...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockContainerLoginBuildPusher)(nil).Build), args)
 }
 
 // Login mocks base method
