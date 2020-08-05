@@ -5,12 +5,10 @@ package cli
 
 import (
 	"encoding"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/repository"
-	"github.com/aws/copilot-cli/internal/pkg/task"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -18,7 +16,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/repository"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -138,7 +139,7 @@ type secretDeleter interface {
 }
 
 type imageBuilderPusher interface {
-	BuildAndPush(docker repository.ContainerLoginBuildPusher, dockerfilePath string, tag string, additionalTags ...string) error
+	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *docker.BuildArguments) error
 }
 
 type repositoryURIGetter interface {
@@ -222,6 +223,11 @@ type wsServiceLister interface {
 type wsSvcReader interface {
 	wsServiceLister
 	svcManifestReader
+}
+
+type wsSvcDirReader interface {
+	wsSvcReader
+	CopilotDirPath() (string, error)
 }
 
 type wsPipelineReader interface {

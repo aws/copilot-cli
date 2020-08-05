@@ -6,9 +6,12 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"path/filepath"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -466,18 +469,23 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	}
 }
 
-
 type runTaskMocks struct {
 	deployer   *mocks.MocktaskDeployer
 	repository *mocks.MockrepositoryService
 	runner     *mocks.MocktaskRunner
 	store      *mocks.Mockstore
 }
+
 func TestTaskRunOpts_Execute(t *testing.T) {
 	const inGroupName = "my-task"
 	mockRepoURI := "uri/repo"
 
 	tag := "tag"
+
+	defaultBuildArguments := docker.BuildArguments{
+		Context:  filepath.Dir(defaultDockerfilePath),
+		ImageTag: imageTagLatest,
+	}
 
 	testCases := map[string]struct {
 		inImage string
@@ -506,7 +514,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Name:  inGroupName,
 					Image: "",
 				}).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
@@ -519,7 +527,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
 			},
@@ -531,9 +539,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), "test").
 					Return(&config.Environment{
 						ExecutionRoleARN: "env execution role",
-				}, nil)
+					}, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -542,7 +550,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
 				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -552,7 +560,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest, tag)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(
+					&docker.BuildArguments{
+						Context:        filepath.Dir(defaultDockerfilePath),
+						ImageTag:       imageTagLatest,
+						AdditionalTags: []string{tag},
+					}),
+				)
 				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
 			},
@@ -564,7 +578,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Name:  inGroupName,
 					Image: "",
 				}).Times(1).Return(nil)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any(), imageTagLatest)
+				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
 				m.repository.EXPECT().URI().Return(mockRepoURI)
 				m.deployer.EXPECT().DeployTask(&deploy.CreateTaskResourcesInput{
 					Name:  inGroupName,
@@ -591,13 +605,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
 					GlobalOpts: &GlobalOpts{},
-					groupName: inGroupName,
-					image:     tc.inImage,
-					imageTag:  tc.inTag,
-					env:       tc.inEnv,
+					groupName:  inGroupName,
+					image:      tc.inImage,
+					imageTag:   tc.inTag,
+					env:        tc.inEnv,
 				},
-				spinner:  &mockSpinner{},
-				store: mocks.store,
+				spinner: &mockSpinner{},
+				store:   mocks.store,
 			}
 			opts.configureRuntimeOpts = func() error {
 				opts.runner = mocks.runner

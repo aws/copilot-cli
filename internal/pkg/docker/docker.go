@@ -7,6 +7,7 @@ package docker
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -28,15 +29,43 @@ func New() Runner {
 	}
 }
 
-// Build will run a `docker build` command with the input uri, Dockerfile path, and tags.
-func (r Runner) Build(uri, path, imageTag string, additionalTags ...string) error {
-	dfDir := filepath.Dir(path)
+// BuildArguments holds the arguments we can pass in as flags from the manifest.
+type BuildArguments struct {
+	URI            string            // Required. Location of ECR Repo. Used to generate image name in conjunction with tag.
+	ImageTag       string            // Required. Tag to pass to `docker build` via -t flag. Usually Git commit short ID.
+	Dockerfile     string            // Required. Dockerfile to pass to `docker build` via --file flag.
+	Context        string            // Optional. Build context directory to pass to `docker build`
+	Args           map[string]string // Optional. Build args to pass via `--build-arg` flags. Equivalent to ARG directives in dockerfile.
+	AdditionalTags []string          // Optional. Additional image tags to pass to docker.
+}
+
+// Build will run a `docker build` command with the input uri, tag, and Dockerfile path.
+func (r Runner) Build(in *BuildArguments) error {
+	dfDir := in.Context
+	if dfDir == "" { // Context wasn't specified use the Dockerfile's directory as context.
+		dfDir = filepath.Dir(in.Dockerfile)
+	}
 
 	args := []string{"build"}
-	for _, tag := range append(additionalTags, imageTag) {
-		args = append(args, "-t", imageName(uri, tag))
+
+	// Add additional image tags to the docker build call.
+	for _, tag := range append(in.AdditionalTags, in.ImageTag) {
+		args = append(args, "-t", imageName(in.URI, tag))
 	}
-	args = append(args, dfDir, "-f", path)
+
+	// Add the "args:" override section from manifest to the docker build call
+
+	// Collect the keys in a slice to sort for test stability
+	var keys []string
+	for k := range in.Args {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, in.Args[k]))
+	}
+
+	args = append(args, dfDir, "-f", in.Dockerfile)
 
 	err := r.Run("docker", args)
 	if err != nil {

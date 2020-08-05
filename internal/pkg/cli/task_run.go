@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -331,7 +333,12 @@ func (o *runTaskOpts) buildAndPushImage() error {
 		additionalTags = append(additionalTags, o.imageTag)
 	}
 
-	if err := o.repository.BuildAndPush(docker.New(), o.dockerfilePath, imageTagLatest, additionalTags...); err != nil {
+	if err := o.repository.BuildAndPush(docker.New(), &docker.BuildArguments{
+		Dockerfile:     o.dockerfilePath,
+		Context:        filepath.Dir(o.dockerfilePath),
+		ImageTag:       imageTagLatest,
+		AdditionalTags: additionalTags,
+	}); err != nil {
 		return fmt.Errorf("build and push image: %w", err)
 	}
 	return nil
