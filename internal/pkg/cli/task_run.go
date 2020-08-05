@@ -95,6 +95,7 @@ type runTaskVars struct {
 
 type runTaskOpts struct {
 	runTaskVars
+	isDockerfileSet bool
 
 	// Interfaces to interact with dependencies.
 	fs      afero.Fs
@@ -244,11 +245,11 @@ func (o *runTaskOpts) Validate() error {
 		}
 	}
 
-	if o.image != "" && o.dockerfilePath != "" {
+	if o.image != "" && o.isDockerfileSet {
 		return errors.New("cannot specify both `--image` and `--dockerfile`")
 	}
 
-	if o.dockerfilePath != "" {
+	if o.isDockerfileSet {
 		if _, err := o.fs.Stat(o.dockerfilePath); err != nil {
 			return err
 		}
@@ -366,10 +367,6 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
-	if o.dockerfilePath == "" {
-		o.dockerfilePath = defaultDockerfilePath
-	}
-
 	// NOTE: all runtime options must be configured only after session is configured
 	if err := o.configureSessAndEnv(); err != nil {
 		return err
@@ -611,6 +608,11 @@ Run a task with a command.
 			if err != nil {
 				return err
 			}
+
+			if cmd.Flags().Changed(dockerFileFlag) {
+				opts.isDockerfileSet = true
+			}
+
 			if err := opts.Validate(); err != nil {
 				return err
 			}
@@ -633,7 +635,7 @@ Run a task with a command.
 	cmd.Flags().StringVarP(&vars.groupName, taskGroupNameFlag, nameFlagShort, "", taskGroupFlagDescription)
 
 	cmd.Flags().StringVar(&vars.image, imageFlag, "", imageFlagDescription)
-	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, "", dockerFileFlagDescription)
+	cmd.Flags().StringVar(&vars.dockerfilePath, dockerFileFlag, defaultDockerfilePath, dockerFileFlagDescription)
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", taskImageTagFlagDescription)
 
 	cmd.Flags().StringVar(&vars.taskRole, taskRoleFlag, "", taskRoleFlagDescription)
