@@ -77,6 +77,26 @@ type SvcDeployInput struct {
 	ImageTag string
 }
 
+// TaskRunInput contains the parameters for calling copilot task run
+type TaskRunInput struct {
+	AppName string
+
+	GroupName string
+
+	Image          string
+	Dockerfile     string
+
+	Subnets        []string
+	SecurityGroups []string
+	Env            string
+
+	Command string
+	EnvVars string
+
+	Default bool
+	Follow  bool
+}
+
 // NewCLI returns a wrapper around CLI
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
@@ -374,6 +394,51 @@ func (cli *CLI) AppDelete(profiles map[string]string) (string, error) {
 	}
 	return cli.exec(
 		exec.Command(cli.path, commands...))
+}
+
+/*AppDelete runs:
+copilot task run
+	-n $t
+	--dockerfile $d
+	--app $a (optionally)
+	--env $e (optionally)
+	--command $c (optionally)
+	--env-vars $e1=$v1,$e2=$v2 (optionally)
+	--default (optionally)
+	--follow (optionally)
+*/
+func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
+	commands := []string{"task", "run", "-n", input.GroupName, "--dockerfile", input.Dockerfile}
+
+	if input.Image != "" {
+		commands = append(commands, "--image", input.Image)
+	}
+
+	if input.AppName != "" {
+		commands = append(commands, "--app", input.AppName)
+	}
+
+	if input.Env != "" {
+		commands = append(commands, "--env", input.Env)
+	}
+
+	if input.Command != "" {
+		commands = append(commands, "--command", input.Command)
+	}
+
+	if input.EnvVars != "" {
+		commands = append(commands, "--env-vars", input.EnvVars)
+	}
+
+	if input.Default != false {
+		commands = append(commands, "--default")
+	}
+
+	if input.Follow != false {
+		commands = append(commands, "--follow")
+	}
+
+	return cli.exec(exec.Command(cli.path, commands...))
 }
 
 func (cli *CLI) exec(command *exec.Cmd) (string, error) {
