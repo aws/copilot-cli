@@ -65,6 +65,16 @@ const (
 	envVarsFlag        = "env-vars"
 	commandFlag        = "command"
 	taskDefaultFlag    = "default"
+
+	vpcIDFlag          = "import-vpc-id"
+	publicSubnetsFlag  = "import-public-subnets"
+	privateSubnetsFlag = "import-private-subnets"
+
+	vpcCIDRFlag            = "override-vpc-cidr"
+	publicSubnetCIDRsFlag  = "override-public-cidrs"
+	privateSubnetCIDRsFlag = "override-private-cidrs"
+
+	defaultEnvironmentFlag = "use-default"
 )
 
 // Short flag names.
@@ -150,14 +160,24 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 
-	countFlagDescription          = "Optional. The number of tasks to set up."
-	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task."
-	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task."
-	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
-	taskRoleFlagDescription       = "Optional. The role for the task to use."
-	executionRoleFlagDescription  = "Optional. The role that grants the container agent permission to make AWS API calls."
-	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
-	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
-	taskGroupFlagDescription      = "The group name of the task. Tasks with the same group name share the same set of resources."
-	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
+	countFlagDescription         = "Optional. The number of tasks to set up."
+	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
+	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
+	imageFlagDescription         = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription      = "Optional. The role for the task to use."
+	executionRoleFlagDescription = "Optional. The role that grants the container agent permission to make AWS API calls."
+	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
+	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
+	taskGroupFlagDescription     = "The group name of the task. Tasks with the same group name share the same set of resources."
+	taskImageTagFlagDescription  = `Optional. The container image tag in addition to "latest".`
+
+	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
+	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
+	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
+
+	vpcCIDRFlagDescription            = "Optional. Global CIDR to use for VPC (default 10.0.0.0/16)."
+	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
+	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
+
+	defaultEnvironmentFlagDescription = "Optional. Skip prompting and use default environment configuration."
 )

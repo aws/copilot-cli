@@ -124,8 +124,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
-			EnvName:      defaultEnvironmentName,
-			EnvProfile:   vars.profile,
+			Name:         defaultEnvironmentName,
+			Profile:      vars.profile,
 			IsProduction: false,
 		},
 		store:         ssm,
