@@ -343,7 +343,7 @@ func (o *runTaskOpts) displayLogStream() error {
 	}
 
 	log.Infof("%s %s stopped.\n",
-		english.PluralWord(o.count, "task", ""),
+		english.PluralWord(o.count, "Task", ""),
 		english.PluralWord(o.count, "has", "have"))
 	return nil
 }
@@ -355,7 +355,7 @@ func (o *runTaskOpts) runTask() ([]*task.Task, error) {
 		o.spinner.Stop(log.Serrorf("Failed to run %s.\n", o.groupName))
 		return nil, fmt.Errorf("run task %s: %w", o.groupName, err)
 	}
-	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
+	o.spinner.Stop(log.Ssuccessf("%s %s %s running.\n", english.PluralWord(o.count, "Task", ""), o.groupName, english.PluralWord(o.count, "is", "are")))
 	return tasks, nil
 }
 
