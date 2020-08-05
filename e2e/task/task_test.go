@@ -80,7 +80,13 @@ var _ = Describe("Task", func() {
 	})
 
 	Context("when running in specific subnets and security groups", func() {
-		Skip("Not implemented yet")
+		It("should succeed", func() {
+			Skip("Not implemented yet")
+		})
+
+		It("task running", func() {
+			Skip("Test is not implemented yet")
+		})
 	})
 
 	Context("when running with command and environment variables", func() {
@@ -94,6 +100,9 @@ var _ = Describe("Task", func() {
 
 				Command: "python main.py",
 				EnvVars: "STATUS=OVERRIDDEN",
+
+				AppName: appName,
+				Env: envName,
 
 				Default: true,
 				Follow: true,
@@ -111,6 +120,12 @@ var _ = Describe("Task", func() {
 	})
 
 	Context("when running with an image", func() {
-		Skip("Not implemented yet")
+		It("should succeed", func() {
+			Skip("Not implemented yet")
+		})
+
+		It("task running", func() {
+			Skip("Test is not implemented yet")
+		})
 	})
 })

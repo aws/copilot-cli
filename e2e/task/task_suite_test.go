@@ -24,14 +24,19 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
+
 	appName = fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 	envName = "test"
+	// NOTE: cfn stack for task isn't deleted automatically, and `task delete` isn't implemented yet
+	// so we deploy all tasks to the same group, so that it doesn't create a lot of stacks.
 	groupName = fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
-	//_, err := cli.AppDelete(map[string]string{"test": "default"})
-	//Expect(err).NotTo(HaveOccurred())
+	_, err := cli.AppDelete(map[string]string{"test": "default"})
+	Expect(err).NotTo(HaveOccurred())
+
+	// TODO: cli.TaskDelete()
 })
 
 func BeforeAll(fn func()) {
