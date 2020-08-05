@@ -57,6 +57,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inEnvVars map[string]string
 		inCommand string
 
+		inDefault bool
+
 		appName string
 
 		mockStore      func(m *mocks.Mockstore)
@@ -151,7 +153,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
 			inDockerfilePath: "hello/world/Dockerfile",
 
-			wantedError: errors.New("cannot specify both image and Dockerfile path"),
+			wantedError: errors.New("cannot specify both `--image` and `--dockerfile`"),
 		},
 		"invalid dockerfile path": {
 			basicOpts: defaultOpts,
@@ -226,13 +228,13 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:       "test",
 			wantedError: errNoAppInWorkspace,
 		},
-		"both environment and subnet id specified": {
+		"both environment and subnets specified": {
 			basicOpts: defaultOpts,
 
 			inEnv:     "test",
 			inSubnets: []string{"subnet id"},
 
-			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
+			wantedError: errors.New("cannot specify both `--subnets` and `--env`"),
 		},
 		"both environment and security groups specified": {
 			basicOpts: defaultOpts,
@@ -240,7 +242,31 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			inEnv:            "test",
 			inSecurityGroups: []string{"security group id1", "securty group id2"},
 
-			wantedError: errors.New("neither subnet nor security groups should be specified if environment is specified"),
+			wantedError: errors.New("cannot specify both `--security-groups` and `--env`"),
+		},
+		"both application and subnets specified": {
+			basicOpts: defaultOpts,
+
+			appName:     "my-app",
+			inSubnets: []string{"subnet id"},
+
+			wantedError: errors.New("cannot specify both `--subnets` and `--app`"),
+		},
+		"both application and security groups specified": {
+			basicOpts: defaultOpts,
+
+			appName: "my-app",
+			inSecurityGroups: []string{"security group id1", "security group id2"},
+
+			wantedError: errors.New("cannot specify both `--security-groups` and `--app`"),
+		},
+		"both default and subnets specified": {
+			basicOpts: defaultOpts,
+
+			inDefault: true,
+			inSubnets: []string{"subnet id"},
+
+			wantedError: errors.New("cannot specify both `--subnets` and `--default`"),
 		},
 	}
 
@@ -258,16 +284,17 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					},
 					count:          tc.inCount,
 					cpu:            tc.inCPU,
-					memory:         tc.inMemory,
-					groupName:      tc.inName,
-					image:          tc.inImage,
-					env:            tc.inEnv,
-					taskRole:       tc.inTaskRole,
-					subnets:        tc.inSubnets,
-					securityGroups: tc.inSecurityGroups,
-					dockerfilePath: tc.inDockerfilePath,
-					envVars:        tc.inEnvVars,
-					command:        tc.inCommand,
+					memory:            tc.inMemory,
+					groupName:         tc.inName,
+					image:             tc.inImage,
+					env:               tc.inEnv,
+					taskRole:          tc.inTaskRole,
+					subnets:           tc.inSubnets,
+					securityGroups:    tc.inSecurityGroups,
+					dockerfilePath:    tc.inDockerfilePath,
+					envVars:           tc.inEnvVars,
+					command:           tc.inCommand,
+					useDefaultSubnets: tc.inDefault,
 				},
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
@@ -283,7 +310,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
+				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -295,8 +322,12 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
-		inEnv   string
-		appName string
+		inSubnets []string
+		inSecurityGroups []string
+
+		inDefault bool
+		inEnv     string
+		appName   string
 
 		mockSel    func(m *mocks.MockappEnvSelector)
 		mockPrompt func(m *mocks.Mockprompter)
@@ -327,14 +358,103 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 		},
 		"don't prompt for app when under a workspace or app flag is specified": {
 			appName: "my-app",
+			inDefault: true,
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
 			mockSel: func(m *mocks.MockappEnvSelector) {
 				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
-				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(1)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
 			},
 			wantedApp: "my-app",
+		},
+		"don't prompt for env if env is provided": {
+			inEnv:   "test",
+			appName: "my-app",
+
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "test",
+			wantedApp: "my-app",
+		},
+		"don't prompt for env if no workspace and selected None app": {
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
+		"don't prompt for app if using default": {
+			inDefault: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+			wantedApp: "",
+		},
+		"don't prompt for env if using default": {
+			inDefault: true,
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+
+			wantedEnv: "",
+		},
+		"don't prompt for app if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if subnets are specified": {
+			inSubnets: []string{"subnet-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
+		},
+		"don't prompt for app if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).AnyTimes()
+			},
+		},
+		"don't prompt for env if security groups are specified": {
+			inSecurityGroups: []string{"sg-1"},
+			mockPrompt: func(m *mocks.Mockprompter) {
+				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			mockSel: func(m *mocks.MockappEnvSelector) {
+				m.EXPECT().Application(taskRunAppPrompt, gomock.Any(), gomock.Any()).AnyTimes()
+				m.EXPECT().Environment(taskRunEnvPrompt, gomock.Any(), gomock.Any(), appEnvOptionNone).Times(0)
+			},
 		},
 		"selected an existing environment": {
 			appName: "my-app",
@@ -363,31 +483,6 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 
 			wantedEnv: "",
 			wantedApp: "my-app",
-		},
-		"don't prompt if env is provided": {
-			inEnv:   "test",
-			appName: "my-app",
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "test",
-			wantedApp: "my-app",
-		},
-		"don't prompt if no workspace or selected None app": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), appEnvOptionNone).Return(appEnvOptionNone, nil)
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-			},
-
-			wantedEnv: "",
 		},
 		"prompt for task family name": {
 			mockPrompt: func(m *mocks.Mockprompter) {
@@ -447,8 +542,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 						appName: tc.appName,
 						prompt:  mockPrompter,
 					},
-					groupName: tc.inName,
-					env:       tc.inEnv,
+					groupName:         tc.inName,
+					env:               tc.inEnv,
+					useDefaultSubnets: tc.inDefault,
+					subnets:           tc.inSubnets,
+					securityGroups:    tc.inSecurityGroups,
 				},
 				sel: mockSel,
 			}
