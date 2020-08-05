@@ -411,7 +411,17 @@ func BuildEnvInitCmd() *cobra.Command {
   /code $ copilot env init --name test --profile default
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ copilot env init --name prod-iad --profile prod-admin --prod`,
+  /code $ copilot env init --name prod-iad --profile prod-admin --prod
+
+  Creates an environment with imported VPC resources.
+  /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47
+  /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a
+  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+
+  Creates an environment with overrided CIDRs.
+  /code $ copilot env init --override-vpc-cidr 10.1.0.0/16
+  /code --override-public-cidrs 10.1.0.0/24,10.1.1.0/24
+  /code --override-private-cidrs 10.1.2.0/24,10.1.3.0/24`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitEnvOpts(vars)
 			if err != nil {
