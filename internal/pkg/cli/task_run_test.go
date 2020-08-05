@@ -62,6 +62,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		inDefault bool
 
 		appName string
+		isDockerfileSet bool
 
 		mockStore      func(m *mocks.Mockstore)
 		mockFileSystem func(mockFS afero.Fs)
@@ -152,8 +153,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both dockerfile and image name specified": {
 			basicOpts: defaultOpts,
 
-			inImage:          "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
-			inDockerfilePath: "hello/world/Dockerfile",
+			inImage:         "113459295.dkr.ecr.ap-northeast-1.amazonaws.com/my-app",
+			isDockerfileSet: true,
 
 			wantedError: errors.New("cannot specify both `--image` and `--dockerfile`"),
 		},
@@ -161,6 +162,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			inDockerfilePath: "world/hello/Dockerfile",
+			isDockerfileSet: true,
+
 			wantedError:      errors.New("open world/hello/Dockerfile: file does not exist"),
 		},
 		"specified app exists": {
@@ -298,6 +301,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					command:           tc.inCommand,
 					useDefaultSubnets: tc.inDefault,
 				},
+				isDockerfileSet: tc.isDockerfileSet,
+
 				fs:    &afero.Afero{Fs: afero.NewMemMapFs()},
 				store: mockStore,
 			}
