@@ -73,8 +73,8 @@ func TestEC2_ListVpcSubnets(t *testing.T) {
 					}}, nil)
 			},
 			wantedSubnets: &Subnets{
-				PublicSubnets:  []string{"subnet-2", "subnet-3"},
-				PrivateSubnets: []string{"subnet-1"},
+				Public:  []string{"subnet-2", "subnet-3"},
+				Private: []string{"subnet-1"},
 			},
 		},
 	}

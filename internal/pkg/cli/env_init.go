@@ -11,7 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -72,7 +72,7 @@ type initEnvOpts struct {
 }
 
 var initEnvProfileClients = func(o *initEnvOpts) error {
-	profileSess, err := session.NewProvider().FromProfile(o.EnvProfile)
+	profileSess, err := sessions.NewProvider().FromProfile(o.EnvProfile)
 	if err != nil {
 		return fmt.Errorf("create session from profile %s: %w", o.EnvProfile, err)
 	}
@@ -86,7 +86,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := session.NewProvider()
+	sessProvider := sessions.NewProvider()
 	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err

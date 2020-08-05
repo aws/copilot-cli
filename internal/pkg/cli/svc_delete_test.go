@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -285,7 +285,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 type deleteSvcMocks struct {
 	store          *mocks.Mockstore
 	secretsmanager *mocks.MocksecretsManager
-	sessProvider   *session.Provider
+	sessProvider   *sessions.Provider
 	appCFN         *mocks.MocksvcRemoverFromApp
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MocksvcDeleter
@@ -399,16 +399,16 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := session.NewProvider()
+			mockSession := sessions.NewProvider()
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
 			mockSvcCFN := mocks.NewMocksvcDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockImageRemover := mocks.NewMockimageRemover(ctrl)
-			mockGetSvcCFN := func(_ *awssession.Session) svcDeleter {
+			mockGetSvcCFN := func(_ *session.Session) svcDeleter {
 				return mockSvcCFN
 			}
 
-			mockGetImageRemover := func(_ *awssession.Session) imageRemover {
+			mockGetImageRemover := func(_ *session.Session) imageRemover {
 				return mockImageRemover
 			}
 			mocks := deleteSvcMocks{

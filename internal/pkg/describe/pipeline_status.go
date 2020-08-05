@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -31,7 +31,7 @@ type PipelineStatus struct {
 
 // NewPipelineStatusDescriber instantiates a new PipelineStatus struct.
 func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, error) {
-	sess, err := session.NewProvider().Default()
+	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}

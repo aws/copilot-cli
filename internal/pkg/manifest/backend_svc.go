@@ -76,7 +76,7 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 	}
 	// Apply overrides.
 	svc.Name = aws.String(props.Name)
-	svc.BackendServiceConfig.Image.Build = aws.String(props.Dockerfile)
+	svc.BackendServiceConfig.Image.Build.BuildArgs.Dockerfile = aws.String(props.Dockerfile)
 	svc.BackendServiceConfig.Image.Port = aws.Uint16(props.Port)
 	svc.BackendServiceConfig.Image.HealthCheck = healthCheck
 	svc.parser = template.New()
@@ -89,6 +89,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
+		"dirName":    tplDirName,
 	}))
 	if err != nil {
 		return nil, err
@@ -96,9 +97,9 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// DockerfilePath returns the image build path.
-func (s *BackendService) DockerfilePath() string {
-	return aws.StringValue(s.BackendServiceConfig.Image.Build)
+// BuildArgs returns a docker.BuildArguments object for the service given a workspace root directory
+func (s *BackendService) BuildArgs(wsRoot string) *DockerBuildArgs {
+	return s.Image.BuildConfig(wsRoot)
 }
 
 // ApplyEnv returns the service manifest with environment overrides.
@@ -126,6 +127,7 @@ func newDefaultBackendService() *BackendService {
 			Type: aws.String(BackendServiceType),
 		},
 		BackendServiceConfig: BackendServiceConfig{
+			Image: imageWithPortAndHealthcheck{},
 			TaskConfig: TaskConfig{
 				CPU:    aws.Int(256),
 				Memory: aws.Int(512),

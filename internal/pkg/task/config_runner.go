@@ -4,10 +4,16 @@
 package task
 
 import (
+	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
 
-// NetworkConfigRunner runs an Amazon ECS task in the specified network configuration and the default cluster.
+const (
+	fmtErrDefaultSubnets = "get default subnet IDs: %w"
+)
+
+// NetworkConfigRunner runs an Amazon ECS task in the subnets, security groups, and the default cluster.
 type NetworkConfigRunner struct {
 	// Count of the tasks to be launched.
 	Count int
@@ -21,9 +27,13 @@ type NetworkConfigRunner struct {
 	// Interfaces to interact with dependencies. Must not be nil.
 	ClusterGetter DefaultClusterGetter
 	Starter       TaskRunner
+
+	// Must not be nil if using default subnets.
+	VPCGetter     VPCGetter
 }
 
 // Run runs tasks in the subnets and the security groups, and returns the tasks.
+// If subnets are not provided, it uses the default subnets.
 func (r *NetworkConfigRunner) Run() ([]*Task, error) {
 	if err := r.validateDependencies(); err != nil {
 		return nil, err
@@ -34,6 +44,18 @@ func (r *NetworkConfigRunner) Run() ([]*Task, error) {
 		return nil, &errGetDefaultCluster{
 			parentErr: err,
 		}
+	}
+
+	if r.Subnets == nil {
+		subnets, err := r.VPCGetter.SubnetIDs(ec2.FilterForDefaultVPCSubnets)
+		if err != nil {
+			return nil, fmt.Errorf(fmtErrDefaultSubnets, err)
+		}
+		if len(subnets) == 0 {
+			return nil, errNoSubnetFound
+		}
+
+		r.Subnets = subnets
 	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{

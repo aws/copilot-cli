@@ -768,7 +768,7 @@ func TestAppInitOpts_createLoadBalancedAppManifest(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.inSvcName, aws.StringValue(manifest.Service.Name))
 				require.Equal(t, tc.inSvcPort, aws.Uint16Value(manifest.Image.Port))
-				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.ServiceImage.Build))
+				require.Equal(t, tc.inDockerfilePath, aws.StringValue(manifest.Image.Build.BuildArgs.Dockerfile))
 				require.Equal(t, tc.wantedPath, aws.StringValue(manifest.Path))
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())

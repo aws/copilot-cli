@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -133,7 +133,7 @@ type deleteAppMocks struct {
 	spinner         *mocks.Mockprogress
 	store           *mocks.Mockstore
 	ws              *mocks.MockwsFileDeleter
-	sessProvider    *session.Provider
+	sessProvider    *sessions.Provider
 	deployer        *mocks.Mockdeployer
 	svcDeleter      *mocks.Mockexecutor
 	envDeleter      *mocks.MockaskExecutor
@@ -261,11 +261,11 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 			mockSpinner := mocks.NewMockprogress(ctrl)
 			mockStore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsFileDeleter(ctrl)
-			mockSession := session.NewProvider()
+			mockSession := sessions.NewProvider()
 			mockDeployer := mocks.NewMockdeployer(ctrl)
 
 			mockBucketEmptier := mocks.NewMockbucketEmptier(ctrl)
-			mockGetBucketEmptier := func(session *awssession.Session) bucketEmptier {
+			mockGetBucketEmptier := func(session *session.Session) bucketEmptier {
 				return mockBucketEmptier
 			}
 

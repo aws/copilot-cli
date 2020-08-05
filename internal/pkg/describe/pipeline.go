@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"text/tabwriter"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 
 	"github.com/aws/aws-sdk-go/service/cloudformation" // TODO refactor this into our own pkg
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
@@ -42,7 +42,7 @@ type PipelineDescriber struct {
 
 // NewPipelineDescriber instantiates a new pipeline describer
 func NewPipelineDescriber(pipelineName string, showResources bool) (*PipelineDescriber, error) {
-	sess, err := session.NewProvider().Default()
+	sess, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}
