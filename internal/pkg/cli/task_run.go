@@ -107,9 +107,11 @@ type runTaskOpts struct {
 	deployer          taskDeployer
 	repository        repositoryService
 	runner            taskRunner
+	eventsWriter      eventsWriter
+	defaultClusterGetter defaultClusterGetter
+
 	sess              *session.Session
 	targetEnvironment *config.Environment
-	eventsWriter      eventsWriter
 
 	// Configurer methods.
 	configureRuntimeOpts func() error
@@ -136,6 +138,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureRuntimeOpts = func() error {
 		opts.runner = opts.configureRunner()
 		opts.deployer = cloudformation.New(opts.sess)
+		opts.defaultClusterGetter = ecs.New(opts.sess)
 		return nil
 	}
 
@@ -376,13 +379,25 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	if o.env == "" {
+		has, err := o.defaultClusterGetter.HasDefaultCluster()
+		if err != nil {
+			return err
+		}
+		if !has {
+			return errors.New("cannot find a default cluster to deploy the task to")
+		}
+	}
+
 	if err := o.deployTaskResources(); err != nil {
 		return err
 	}
+
 	// NOTE: repository has to be configured only after task resources are deployed
 	if err := o.configureRepository(); err != nil {
 		return err
 	}
+
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
@@ -394,7 +409,6 @@ func (o *runTaskOpts) Execute() error {
 			tag = o.imageTag
 		}
 		o.image = fmt.Sprintf(fmtImageURI, o.repository.URI(), tag)
-
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}

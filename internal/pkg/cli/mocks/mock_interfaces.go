@@ -2954,6 +2954,44 @@ func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
 }
 
+// MockdefaultClusterGetter is a mock of defaultClusterGetter interface
+type MockdefaultClusterGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockdefaultClusterGetterMockRecorder
+}
+
+// MockdefaultClusterGetterMockRecorder is the mock recorder for MockdefaultClusterGetter
+type MockdefaultClusterGetterMockRecorder struct {
+	mock *MockdefaultClusterGetter
+}
+
+// NewMockdefaultClusterGetter creates a new mock instance
+func NewMockdefaultClusterGetter(ctrl *gomock.Controller) *MockdefaultClusterGetter {
+	mock := &MockdefaultClusterGetter{ctrl: ctrl}
+	mock.recorder = &MockdefaultClusterGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockdefaultClusterGetter) EXPECT() *MockdefaultClusterGetterMockRecorder {
+	return m.recorder
+}
+
+// HasDefaultCluster mocks base method
+func (m *MockdefaultClusterGetter) HasDefaultCluster() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasDefaultCluster")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasDefaultCluster indicates an expected call of HasDefaultCluster
+func (mr *MockdefaultClusterGetterMockRecorder) HasDefaultCluster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDefaultCluster", reflect.TypeOf((*MockdefaultClusterGetter)(nil).HasDefaultCluster))
+}
+
 // Mockdeployer is a mock of deployer interface
 type Mockdeployer struct {
 	ctrl     *gomock.Controller
