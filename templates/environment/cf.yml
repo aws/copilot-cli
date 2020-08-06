@@ -34,8 +34,8 @@ Conditions:
     - !Condition CreatePublicLoadBalancer
 
 Resources:
-{{- if not .ImportVpc}}
-{{include "vpc-resources" .VpcConfig | indent 2}}
+{{- if not .ImportVPC}}
+{{include "vpc-resources" .VPCConfig | indent 2}}
 {{- end}}
 
   # Creates a service discovery namespace with the form:
@@ -44,8 +44,8 @@ Resources:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
         Name: !Sub ${AppName}.local
-{{- if .ImportVpc}}
-        Vpc: {{.ImportVpc.ID}}
+{{- if .ImportVPC}}
+        Vpc: {{.ImportVPC.ID}}
 {{- else}}
         Vpc: !Ref VPC
 {{- end}}
@@ -71,8 +71,8 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-{{- if .ImportVpc}}
-      VpcId: {{.ImportVpc.ID}}
+{{- if .ImportVPC}}
+      VpcId: {{.ImportVPC.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -85,8 +85,8 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-{{- if .ImportVpc}}
-      VpcId: {{.ImportVpc.ID}}
+{{- if .ImportVPC}}
+      VpcId: {{.ImportVPC.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -116,10 +116,10 @@ Resources:
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-{{- if .ImportVpc}}
-      Subnets: [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}} ]
+{{- if .ImportVPC}}
+      Subnets: [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
-      Subnets: [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
+      Subnets: [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
       Type: application
 
@@ -138,8 +138,8 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
-{{- if .ImportVpc}}
-      VpcId: {{.ImportVpc.ID}}
+{{- if .ImportVPC}}
+      VpcId: {{.ImportVPC.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -187,8 +187,8 @@ Resources:
 {{include "custom-resources" . | indent 2}}
 Outputs:
   VpcId:
-{{- if .ImportVpc}}
-    Value: {{.ImportVpc.ID}}
+{{- if .ImportVPC}}
+    Value: {{.ImportVPC.ID}}
 {{- else}}
     Value: !Ref VPC
 {{- end}}
@@ -196,19 +196,19 @@ Outputs:
       Name: !Sub ${AWS::StackName}-VpcId
 
   PublicSubnets:
-{{- if .ImportVpc}}
-    Value: !Join [ ',', [ {{range $id := .ImportVpc.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+{{- if .ImportVPC}}
+    Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
 {{- else}}
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 
   PrivateSubnets:
-{{- if .ImportVpc}}
-    Value: !Join [ ',', [ {{range $id := .ImportVpc.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+{{- if .ImportVPC}}
+    Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
 {{- else}}
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VpcConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets

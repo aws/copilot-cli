@@ -31,19 +31,19 @@ type EnvOpts struct {
 	DNSDelegationLambda       string
 	ACMValidationLambda       string
 	EnableLongARNFormatLambda string
-	ImportVpc                 *ImportVpcOpts
-	VpcConfig                 *AdjustVpcOpts
+	ImportVPC                 *ImportVPCOpts
+	VPCConfig                 *AdjustVPCOpts
 }
 
-// ImportVpcOpts holds the fields to import VPC resources.
-type ImportVpcOpts struct {
+// ImportVPCOpts holds the fields to import VPC resources.
+type ImportVPCOpts struct {
 	ID               string // ID for the VPC.
 	PublicSubnetIDs  []string
 	PrivateSubnetIDs []string
 }
 
-// AdjustVpcOpts holds the fields to adjust default VPC resources.
-type AdjustVpcOpts struct {
+// AdjustVPCOpts holds the fields to adjust default VPC resources.
+type AdjustVPCOpts struct {
 	CIDR               string // CIDR range for the VPC.
 	PublicSubnetCIDRs  []string
 	PrivateSubnetCIDRs []string

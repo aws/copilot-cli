@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -22,14 +23,11 @@ import (
 )
 
 const (
-	envInitNamePrompt     = "What is your environment's name?"
-	envInitNameHelpPrompt = "A unique identifier for an environment (e.g. dev, test, prod)."
+	envInitNamePrompt        = "What is your environment's name?"
+	envInitNameHelpPrompt    = "A unique identifier for an environment (e.g. dev, test, prod)."
+	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
 
 	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
-	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
-)
-
-const (
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
 	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n"
 	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n"
@@ -48,11 +46,54 @@ var (
 	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
 )
 
+type importVPCVars struct {
+	ID               string
+	PublicSubnetIDs  []string
+	PrivateSubnetIDs []string
+}
+
+func (v importVPCVars) isSet() bool {
+	if v.ID != "" {
+		return true
+	}
+	if len(v.PublicSubnetIDs) != 0 {
+		return true
+	}
+	if len(v.PrivateSubnetIDs) != 0 {
+		return true
+	}
+	return false
+}
+
+type adjustVPCVars struct {
+	CIDR               net.IPNet
+	PublicSubnetCIDRs  []string
+	PrivateSubnetCIDRs []string
+}
+
+func (v adjustVPCVars) isSet() bool {
+	emptyIPNet := net.IPNet{}
+	if v.CIDR.String() != emptyIPNet.String() {
+		return true
+	}
+	if len(v.PublicSubnetCIDRs) != 0 {
+		return true
+	}
+	if len(v.PrivateSubnetCIDRs) != 0 {
+		return true
+	}
+	return false
+}
+
 type initEnvVars struct {
 	*GlobalOpts
-	EnvName      string // Name of the environment.
-	EnvProfile   string // AWS profile used to create an environment.
-	IsProduction bool   // Marks the environment as "production" to create it with additional guardrails.
+	Name              string
+	Profile           string
+	IsProduction      bool
+	NoCustomResources bool
+
+	ImportVPC importVPCVars
+	AdjustVPC adjustVPCVars
 }
 
 type initEnvOpts struct {
@@ -72,9 +113,9 @@ type initEnvOpts struct {
 }
 
 var initEnvProfileClients = func(o *initEnvOpts) error {
-	profileSess, err := sessions.NewProvider().FromProfile(o.EnvProfile)
+	profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
 	if err != nil {
-		return fmt.Errorf("create session from profile %s: %w", o.EnvProfile, err)
+		return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
 	}
 	o.envIdentity = identity.New(profileSess)
 	o.envDeployer = deploycfn.New(profileSess)
@@ -109,15 +150,15 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 // Validate returns an error if the values passed by flags are invalid.
 func (o *initEnvOpts) Validate() error {
-	if o.EnvName != "" {
-		if err := validateEnvironmentName(o.EnvName); err != nil {
+	if o.Name != "" {
+		if err := validateEnvironmentName(o.Name); err != nil {
 			return err
 		}
 	}
 	if o.AppName() == "" {
 		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
-	return nil
+	return o.validateCustomizedResources()
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -125,7 +166,10 @@ func (o *initEnvOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	return o.askEnvProfile()
+	if err := o.askEnvProfile(); err != nil {
+		return err
+	}
+	return o.askCustomizedResources()
 }
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
@@ -152,9 +196,9 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 2. Get the environment
-	env, err := o.envDeployer.GetEnvironment(o.AppName(), o.EnvName)
+	env, err := o.envDeployer.GetEnvironment(o.AppName(), o.Name)
 	if err != nil {
-		return fmt.Errorf("get environment struct for %s: %w", o.EnvName, err)
+		return fmt.Errorf("get environment struct for %s: %w", o.Name, err)
 	}
 	env.Prod = o.IsProduction
 
@@ -172,46 +216,122 @@ func (o *initEnvOpts) Execute() error {
 	return nil
 }
 
+func (o *initEnvOpts) validateCustomizedResources() error {
+	if o.ImportVPC.isSet() && o.AdjustVPC.isSet() {
+		return errors.New("cannot specify both import vpc flags and configure vpc flags")
+	}
+	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.NoCustomResources {
+		return fmt.Errorf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag)
+	}
+	return nil
+}
+
+func (o *initEnvOpts) askEnvName() error {
+	if o.Name != "" {
+		return nil
+	}
+
+	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
+	if err != nil {
+		return fmt.Errorf("prompt to get environment name: %w", err)
+	}
+	o.Name = envName
+	return nil
+}
+
+func (o *initEnvOpts) askEnvProfile() error {
+	// TODO: add this behavior to selector pkg.
+	if o.Profile != "" {
+		return nil
+	}
+
+	names := o.profileConfig.Names()
+	if len(names) == 0 {
+		return errNamedProfilesNotFound
+	}
+
+	profile, err := o.prompt.SelectOne(
+		fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(o.Name)),
+		envInitProfileHelpPrompt,
+		names)
+	if err != nil {
+		return fmt.Errorf("get the profile name: %w", err)
+	}
+	o.Profile = profile
+	return nil
+}
+
+func (o *initEnvOpts) askCustomizedResources() error {
+	if o.NoCustomResources {
+		return nil
+	}
+	return nil
+}
+
+func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
+	if o.NoCustomResources || !o.ImportVPC.isSet() {
+		return nil
+	}
+	return &deploy.ImportVPCConfig{
+		ID:               o.ImportVPC.ID,
+		PrivateSubnetIDs: o.ImportVPC.PrivateSubnetIDs,
+		PublicSubnetIDs:  o.ImportVPC.PublicSubnetIDs,
+	}
+}
+
+func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
+	if o.NoCustomResources || !o.AdjustVPC.isSet() {
+		return nil
+	}
+	return &deploy.AdjustVPCConfig{
+		CIDR:               o.AdjustVPC.CIDR.String(),
+		PrivateSubnetCIDRs: o.AdjustVPC.PrivateSubnetCIDRs,
+		PublicSubnetCIDRs:  o.AdjustVPC.PublicSubnetCIDRs,
+	}
+}
+
 func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
-		Name:                     o.EnvName,
+		Name:                     o.Name,
 		AppName:                  o.AppName(),
 		Prod:                     o.IsProduction,
 		PublicLoadBalancer:       true, // TODO: configure this based on user input or service Type needs?
 		ToolsAccountPrincipalARN: caller.RootUserARN,
 		AppDNSName:               app.Domain,
 		AdditionalTags:           app.Tags,
+		AdjustVPCConfig:          o.adjustVPCConfig(),
+		ImportVPCConfig:          o.importVPCConfig(),
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.EnvName)))
+	o.prog.Start(fmt.Sprintf(fmtDeployEnvStart, color.HighlightUserInput(o.Name)))
 	if err := o.envDeployer.DeployEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
 			o.prog.Stop(log.Ssuccessf(fmtDeployEnvComplete,
-				color.HighlightUserInput(o.EnvName), color.HighlightUserInput(o.AppName())))
+				color.HighlightUserInput(o.Name), color.HighlightUserInput(o.AppName())))
 			return nil
 		}
-		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.EnvName)))
+		o.prog.Stop(log.Serrorf(fmtDeployEnvFailed, color.HighlightUserInput(o.Name)))
 		return err
 	}
 
 	// Display updates while the deployment is happening.
-	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.EnvName)))
+	o.prog.Start(fmt.Sprintf(fmtStreamEnvStart, color.HighlightUserInput(o.Name)))
 	stackEvents, responses := o.envDeployer.StreamEnvironmentCreation(deployEnvInput)
 	for stackEvent := range stackEvents {
 		o.prog.Events(o.humanizeEnvironmentEvents(stackEvent))
 	}
 	resp := <-responses
 	if resp.Err != nil {
-		o.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(o.EnvName)))
+		o.prog.Stop(log.Serrorf(fmtStreamEnvFailed, color.HighlightUserInput(o.Name)))
 		return resp.Err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.EnvName)))
+	o.prog.Stop(log.Ssuccessf(fmtStreamEnvComplete, color.HighlightUserInput(o.Name)))
 
 	return nil
 }
@@ -244,41 +364,6 @@ func (o *initEnvOpts) delegateDNSFromApp(app *config.Application) error {
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDNSDelegationComplete, color.HighlightUserInput(envAccount.Account)))
-	return nil
-}
-
-func (o *initEnvOpts) askEnvName() error {
-	if o.EnvName != "" {
-		return nil
-	}
-
-	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
-	if err != nil {
-		return fmt.Errorf("prompt to get environment name: %w", err)
-	}
-	o.EnvName = envName
-	return nil
-}
-
-func (o *initEnvOpts) askEnvProfile() error {
-	// TODO: add this behavior to selector pkg.
-	if o.EnvProfile != "" {
-		return nil
-	}
-
-	names := o.profileConfig.Names()
-	if len(names) == 0 {
-		return errNamedProfilesNotFound
-	}
-
-	profile, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(o.EnvName)),
-		envInitProfileHelpPrompt,
-		names)
-	if err != nil {
-		return fmt.Errorf("get the profile name: %w", err)
-	}
-	o.EnvProfile = profile
 	return nil
 }
 
@@ -356,8 +441,55 @@ func BuildEnvInitCmd() *cobra.Command {
 			return opts.Execute()
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.EnvName, nameFlag, nameFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.EnvProfile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().StringVar(&vars.Profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
+	// 	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
+	// 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
+	// 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
+	// 	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	// 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
+	// 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
+	// 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	// 	cmd.Flags().BoolVar(&vars.NoCustomResources, noCustomResourcesFlag, false, noCustomResourcesFlagDescription)
+
+	// 	flags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
+	// 	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
+	// 	flags.AddFlag(cmd.Flags().Lookup(profileFlag))
+	// 	flags.AddFlag(cmd.Flags().Lookup(noCustomResourcesFlag))
+	// 	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
+
+	// 	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
+	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
+	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
+	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
+
+	// 	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
+	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(vpcCIDRFlag))
+	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(publicSubnetCIDRsFlag))
+	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(privateSubnetCIDRsFlag))
+
+	// 	cmd.Annotations = map[string]string{
+	// 		// The order of the sections we want to display.
+	// 		"sections":                    "Flags,Import Existing Resources,Configure Default Resources",
+	// 		"Flags":                       flags.FlagUsages(),
+	// 		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
+	// 		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
+	// 	}
+
+	// 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
+	//   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
+
+	// {{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
+	// {{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
+
+	// {{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+	// {{h1 "Global Flags"}}
+	// {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
+
+	// {{h1 "Examples"}}{{code .Example}}{{end}}
+	// `)
+
 	return cmd
 }

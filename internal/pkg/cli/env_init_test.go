@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -22,10 +23,15 @@ import (
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName string
-		inAppName string
+		inEnvName           string
+		inAppName           string
+		inNoCustomResources bool
+		inVPCID             string
+		inPublicIDs         []string
+		inVPCCIDR           net.IPNet
+		inPublicCIDRs       []string
 
-		wantedErr string
+		wantedErrMsg string
 	}{
 		"valid environment creation": {
 			inEnvName: "test-pdx",
@@ -35,13 +41,33 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName: "123env",
 			inAppName: "phonetool",
 
-			wantedErr: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
+			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
 		"new workspace": {
 			inEnvName: "test-pdx",
 			inAppName: "",
 
-			wantedErr: "no application found: run `app init` or `cd` into your workspace please",
+			wantedErrMsg: "no application found: run `app init` or `cd` into your workspace please",
+		},
+		"cannot specify both vpc resources importing flags and configuing flags": {
+			inEnvName:     "test-pdx",
+			inAppName:     "phonetool",
+			inPublicCIDRs: []string{"mockCIDR"},
+			inPublicIDs:   []string{"mockID"},
+			inVPCCIDR: net.IPNet{
+				IP: net.IP([]byte("mockIP")),
+			},
+			inVPCID: "mockID",
+
+			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
+		},
+		"cannot import or configure resources if use default flag is set": {
+			inEnvName:           "test-pdx",
+			inAppName:           "phonetool",
+			inNoCustomResources: true,
+			inVPCID:             "mockID",
+
+			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag),
 		},
 	}
 
@@ -50,7 +76,16 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					EnvName:    tc.inEnvName,
+					Name:              tc.inEnvName,
+					NoCustomResources: tc.inNoCustomResources,
+					AdjustVPC: adjustVPCVars{
+						PublicSubnetCIDRs: tc.inPublicCIDRs,
+						CIDR:              tc.inVPCCIDR,
+					},
+					ImportVPC: importVPCVars{
+						PublicSubnetIDs: tc.inPublicIDs,
+						ID:              tc.inVPCID,
+					},
 					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
 				},
 			}
@@ -59,8 +94,8 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			err := opts.Validate()
 
 			// THEN
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
+			if tc.wantedErrMsg != "" {
+				require.EqualError(t, err, tc.wantedErrMsg)
 			} else {
 				require.NoError(t, err)
 			}
@@ -123,8 +158,8 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					EnvName:    tc.inputEnv,
-					EnvProfile: tc.inputProfile,
+					Name:    tc.inputEnv,
+					Profile: tc.inputProfile,
 					GlobalOpts: &GlobalOpts{
 						prompt:  mockPrompter,
 						appName: tc.inputApp,
@@ -140,7 +175,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// THEN
 			if tc.wantedError == nil {
 				require.NoError(t, err)
-				require.Equal(t, mockEnv, addEnv.EnvName, "expected environment names to match")
+				require.Equal(t, mockEnv, addEnv.Name, "expected environment names to match")
 			} else {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
@@ -570,7 +605,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					EnvName:      tc.inEnvName,
+					Name:         tc.inEnvName,
 					GlobalOpts:   &GlobalOpts{appName: tc.inAppName},
 					IsProduction: tc.inProd,
 				},

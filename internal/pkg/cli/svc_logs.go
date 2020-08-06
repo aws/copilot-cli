@@ -277,6 +277,5 @@ func BuildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 10, limitFlagDescription)
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	return cmd
 }
