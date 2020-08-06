@@ -39,6 +39,7 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
+	taskGroupNameDefault  = "copilot-task"
 )
 
 const (
@@ -537,7 +538,8 @@ func (o *runTaskOpts) askTaskGroupName() error {
 		taskRunGroupNamePrompt,
 		taskRunGroupNamePromptHelp,
 		basicNameValidation,
-		prompt.WithFinalMessage("Task group name:"))
+		prompt.WithFinalMessage("Task group name:"),
+		prompt.WithDefaultInput(taskGroupNameDefault))
 	if err != nil {
 		return fmt.Errorf("prompt get task group name: %w", err)
 	}
