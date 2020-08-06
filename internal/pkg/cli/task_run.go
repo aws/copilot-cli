@@ -88,8 +88,9 @@ type runTaskVars struct {
 	env               string
 	useDefaultSubnets bool
 
-	envVars map[string]string
-	command string
+	envVars      map[string]string
+	command      string
+	resourceTags map[string]string
 
 	follow bool
 }
@@ -494,16 +495,17 @@ func (o *runTaskOpts) deploy() error {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
 	input := &deploy.CreateTaskResourcesInput{
-		Name:          o.groupName,
-		CPU:           o.cpu,
-		Memory:        o.memory,
-		Image:         o.image,
-		TaskRole:      o.taskRole,
-		ExecutionRole: o.executionRole,
-		Command:       o.command,
-		EnvVars:       o.envVars,
-		App:           o.AppName(),
-		Env:           o.env,
+		Name:           o.groupName,
+		CPU:            o.cpu,
+		Memory:         o.memory,
+		Image:          o.image,
+		TaskRole:       o.taskRole,
+		ExecutionRole:  o.executionRole,
+		Command:        o.command,
+		EnvVars:        o.envVars,
+		App:            o.AppName(),
+		Env:            o.env,
+		AdditionalTags: o.resourceTags,
 	}
 	return o.deployer.DeployTask(input, deployOpts...)
 }
@@ -665,6 +667,7 @@ Run a task with a command.
 
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", commandFlagDescription)
+	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	return cmd
