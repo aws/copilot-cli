@@ -85,6 +85,12 @@ func (v adjustVPCVars) isSet() bool {
 	return false
 }
 
+type tempCredsVars struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	SessionToken    string
+}
+
 type initEnvVars struct {
 	*GlobalOpts
 	Name              string
@@ -94,6 +100,9 @@ type initEnvVars struct {
 
 	ImportVPC importVPCVars
 	AdjustVPC adjustVPCVars
+
+	TempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the AWS profile.
+	Region    string        // The region to create the environment in.
 }
 
 type initEnvOpts struct {
@@ -158,7 +167,10 @@ func (o *initEnvOpts) Validate() error {
 	if o.AppName() == "" {
 		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
-	return o.validateCustomizedResources()
+	if err := o.validateCustomizedResources(); err != nil {
+		return err
+	}
+	return o.validateCredentials()
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -213,6 +225,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 	log.Successf("Created environment %s in region %s under application %s.\n",
 		color.HighlightUserInput(env.Name), color.Emphasize(env.Region), color.HighlightUserInput(env.App))
+	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initEnvOpts) RecommendedActions() []string {
 	return nil
 }
 
@@ -407,8 +424,16 @@ func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 	return termprogress.HumanizeResourceEvents(envProgressOrder, resourceEvents, matcher, resourceCounts)
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initEnvOpts) RecommendedActions() []string {
+func (o *initEnvOpts) validateCredentials() error {
+	if o.Profile != "" && o.TempCreds.AccessKeyID != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, accessKeyIDFlag)
+	}
+	if o.Profile != "" && o.TempCreds.SecretAccessKey != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, secretAccessKeyFlag)
+	}
+	if o.Profile != "" && o.TempCreds.SessionToken != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
+	}
 	return nil
 }
 

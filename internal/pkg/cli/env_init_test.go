@@ -31,6 +31,11 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inVPCCIDR           net.IPNet
 		inPublicCIDRs       []string
 
+		inProfileName     string
+		inAccessKeyID     string
+		inSecretAccessKey string
+		inSessionToken    string
+
 		wantedErrMsg string
 	}{
 		"valid environment creation": {
@@ -69,6 +74,30 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 
 			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag),
 		},
+		"should err if both profile and access key id are set": {
+			inAppName:     "phonetool",
+			inEnvName:     "test",
+			inProfileName: "default",
+			inAccessKeyID: "AKIAIOSFODNN7EXAMPLE",
+
+			wantedErrMsg: "cannot specify both --profile and --aws-access-key-id",
+		},
+		"should err if both profile and secret access key are set": {
+			inAppName:         "phonetool",
+			inEnvName:         "test",
+			inProfileName:     "default",
+			inSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+
+			wantedErrMsg: "cannot specify both --profile and --aws-secret-access-key",
+		},
+		"should err if both profile and session token are set": {
+			inAppName:      "phonetool",
+			inEnvName:      "test",
+			inProfileName:  "default",
+			inSessionToken: "verylongtoken",
+
+			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -87,6 +116,12 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 						ID:              tc.inVPCID,
 					},
 					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+					Profile:    tc.inProfileName,
+					TempCreds: tempCredsVars{
+						AccessKeyID:     tc.inAccessKeyID,
+						SecretAccessKey: tc.inSecretAccessKey,
+						SessionToken:    tc.inSessionToken,
+					},
 				},
 			}
 

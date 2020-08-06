@@ -75,6 +75,11 @@ const (
 	privateSubnetCIDRsFlag = "override-private-cidrs"
 
 	noCustomResourcesFlag = "no-custom-resources"
+
+	accessKeyIDFlag     = "aws-access-key-id"
+	secretAccessKeyFlag = "aws-secret-access-key"
+	sessionTokenFlag    = "aws-session-token"
+	regionFlag          = "region"
 )
 
 // Short flag names.
@@ -180,4 +185,9 @@ Must be of the format '<keyName>:<dataType>'.`
 	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
 
 	noCustomResourcesFlagDescription = "Optional. Skip prompting and use default environment configuration."
+
+	accessKeyIDFlagDescription     = "Optional. An AWS access key."
+	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
+	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
+	envRegionTokenFlagDescription  = "Options. An AWS region where the environment will be created."
 )
