@@ -30,13 +30,15 @@ func (e *ErrWaiterResourceNotReadyForTasks) Error() string {
 
 		// TODO: generalize this to be an essential container.
 		container := task.Containers[0] // NOTE: right now we only support one container per task
-		if aws.StringValue(container.LastStatus) == DesiredStatusStopped {
-			taskID, err := task.taskID(aws.StringValue(task.TaskArn))
-			if err != nil {
-				continue
-			}
-			return fmt.Sprintf(fmtErrContainerStopped, taskID[:shortTaskIDLength], aws.StringValue(container.Reason))
+		if aws.StringValue(container.LastStatus) != DesiredStatusStopped {
+			continue
 		}
+
+		taskID, err := task.taskID(aws.StringValue(task.TaskArn))
+		if err != nil {
+			continue
+		}
+		return fmt.Sprintf(fmtErrContainerStopped, taskID[:shortTaskIDLength], aws.StringValue(container.Reason))
 	}
 	return e.awsErrResourceNotReady.Error()
 }
