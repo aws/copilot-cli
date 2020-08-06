@@ -77,7 +77,7 @@ type SvcDeployInput struct {
 	ImageTag string
 }
 
-// TaskRunInput contains the parameters for calling copilot task run
+// TaskRunInput contains the parameters for calling copilot task run.
 type TaskRunInput struct {
 	AppName string
 
