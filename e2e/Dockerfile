@@ -11,7 +11,7 @@ RUN apk add --no-cache --virtual .build-deps bash gcc musl-dev openssl go git aw
 RUN go get github.com/onsi/ginkgo/ginkgo && go get github.com/onsi/gomega/...
 
 # Copy the binary
-ADD bin/local/copilot-amd64 /bin/copilot
+ADD bin/local/copilot-linux-amd64 /bin/copilot
 
 # Add the e2e directory and the project go.mod
 ADD e2e/ github.com/aws/copilot-cli/e2e/
