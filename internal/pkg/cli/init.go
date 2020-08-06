@@ -44,7 +44,6 @@ type initVars struct {
 	svcType        string
 	svcName        string
 	dockerfilePath string
-	profile        string
 	imageTag       string
 	port           uint16
 }
@@ -81,17 +80,22 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 	sessProvider := sessions.NewProvider()
-	sess, err := sessProvider.Default()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	prompt := prompt.New()
 	spin := termprogress.NewSpinner()
-	id := identity.New(sess)
-	deployer := cloudformation.New(sess)
+	id := identity.New(defaultSess)
+	deployer := cloudformation.New(defaultSess)
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, err
+	}
+
+	creds, err := sessions.Credentials(defaultSess)
+	if err != nil {
+		return nil, fmt.Errorf("get default session credentials: %w", err)
 	}
 
 	initAppCmd := &initAppOpts{
@@ -126,8 +130,13 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
 			Name:         defaultEnvironmentName,
-			Profile:      vars.profile,
 			IsProduction: false,
+
+			TempCreds: tempCredsVars{
+				AccessKeyID:     creds.AccessKeyID,
+				SecretAccessKey: creds.SecretAccessKey,
+				SessionToken:    creds.SessionToken,
+			},
 		},
 		store:         ssm,
 		appDeployer:   deployer,
@@ -293,7 +302,6 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)

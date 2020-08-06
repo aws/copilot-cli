@@ -16,7 +16,7 @@ import (
 // mockProvider implements the AWS SDK's credentials.Provider interface.
 type mockProvider struct {
 	value credentials.Value
-	err error
+	err   error
 }
 
 func (m mockProvider) Retrieve() (credentials.Value, error) {
@@ -34,9 +34,9 @@ func TestAreCredsFromEnvVars(t *testing.T) {
 	testCases := map[string]struct {
 		inSess *session.Session
 
-		wantedOk bool
+		wantedOk  bool
 		wantedErr error
-	} {
+	}{
 		"returns true if the credentials come from environment variables": {
 			inSess: &session.Session{
 				Config: &aws.Config{
@@ -44,7 +44,7 @@ func TestAreCredsFromEnvVars(t *testing.T) {
 						value: credentials.Value{
 							ProviderName: session.EnvProviderName,
 						},
-						err:   nil,
+						err: nil,
 					}),
 				},
 			},
@@ -57,7 +57,7 @@ func TestAreCredsFromEnvVars(t *testing.T) {
 						value: credentials.Value{
 							ProviderName: credentials.SharedCredsProviderName,
 						},
-						err:   nil,
+						err: nil,
 					}),
 				},
 			},
@@ -81,9 +81,60 @@ func TestAreCredsFromEnvVars(t *testing.T) {
 			ok, err := AreCredsFromEnvVars(tc.inSess)
 
 			if tc.wantedErr != nil {
-				require.EqualError(t, tc.wantedErr, err.Error())
+				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.Equal(t, tc.wantedOk, ok)
+			}
+
+		})
+	}
+}
+
+func TestCredentials(t *testing.T) {
+	testCases := map[string]struct {
+		inSess *session.Session
+
+		wantedCreds credentials.Value
+		wantedErr   error
+	}{
+		"returns values if provider is valid": {
+			inSess: &session.Session{
+				Config: &aws.Config{
+					Credentials: credentials.NewCredentials(mockProvider{
+						value: credentials.Value{
+							AccessKeyID:     "abc",
+							SecretAccessKey: "def",
+						},
+						err: nil,
+					}),
+				},
+			},
+			wantedCreds: credentials.Value{
+				AccessKeyID:     "abc",
+				SecretAccessKey: "def",
+			},
+		},
+		"returns a wrapped error if fails to fetch credentials": {
+			inSess: &session.Session{
+				Config: &aws.Config{
+					Credentials: credentials.NewCredentials(mockProvider{
+						value: credentials.Value{},
+						err:   errors.New("some error"),
+					}),
+				},
+			},
+			wantedErr: errors.New("get credentials of session: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			creds, err := Credentials(tc.inSess)
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.Equal(t, tc.wantedCreds, creds)
 			}
 
 		})
