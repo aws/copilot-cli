@@ -96,15 +96,15 @@ type tempCredsVars struct {
 
 type initEnvVars struct {
 	*GlobalOpts
-	Name              string
-	Profile           string
-	IsProduction      bool
-	NoCustomResources bool
+	Name              string // Name for the environment.
+	Profile           string // The named profile to use for credential retrieval. Mutually exclusive with TempCreds.
+	IsProduction      bool   // True means retain resources even after deletion.
+	NoCustomResources bool   // True means no importing an existing VPC or adjusting a VPC.
 
-	ImportVPC importVPCVars
-	AdjustVPC adjustVPCVars
+	ImportVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
+	AdjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
 
-	TempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the AWS profile.
+	TempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the Profile.
 	Region    string        // The region to create the environment in.
 }
 
