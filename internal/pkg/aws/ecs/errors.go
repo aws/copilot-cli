@@ -28,6 +28,7 @@ func (e *ErrWaiterResourceNotReadyForTasks) Error() string {
 			continue
 		}
 
+		// TODO: generalize this to be an essential container.
 		container := task.Containers[0] // NOTE: right now we only support one container per task
 		if aws.StringValue(container.LastStatus) == DesiredStatusStopped {
 			taskID, err := task.taskID(aws.StringValue(task.TaskArn))
