@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -146,6 +147,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		store:        ssm,
 		ws:           ws,
+		unmarshal:    manifest.UnmarshalService,
 		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
 		spinner:      spin,
 		cmd:          command.New(),
