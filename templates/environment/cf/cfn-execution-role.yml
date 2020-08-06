@@ -1,6 +1,6 @@
 CloudformationExecutionRole:
   Type: AWS::IAM::Role
-{{- if not .ImportVpc}}
+{{- if not .ImportVPC}}
   DependsOn: VPC
 {{- end}}
   Properties:
