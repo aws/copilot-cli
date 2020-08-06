@@ -244,7 +244,7 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 		if aerr.Code() == request.WaiterResourceNotReadyErrorCode {
 			tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("determining task failure reason: %2", err)
 			}
 
 			return nil, &ErrWaiterResourceNotReadyForTasks{tasks: tasks, awsErrResourceNotReady: aerr}
