@@ -380,11 +380,11 @@ func (o *runTaskOpts) Execute() error {
 	}
 
 	if o.env == "" {
-		has, err := o.defaultClusterGetter.HasDefaultCluster()
+		hasDefaultCluster, err := o.defaultClusterGetter.HasDefaultCluster()
 		if err != nil {
 			return err
 		}
-		if !has {
+		if !hasDefaultCluster {
 			return errors.New("cannot find a default cluster to deploy the task to")
 		}
 	}

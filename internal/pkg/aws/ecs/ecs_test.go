@@ -390,8 +390,8 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 	testCases := map[string] struct{
 		mockECSClient func(m *mocks.Mockapi)
 
-		wantedHas bool
-		wantedErr error
+		wantedHasDefaultCluster bool
+		wantedErr               error
 	}{
 		"no default cluster": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -400,7 +400,7 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 						Clusters: []*ecs.Cluster{},
 					}, nil)
 			},
-			wantedHas: false,
+			wantedHasDefaultCluster: false,
 		},
 		"error getting default cluster": {
 			mockECSClient: func(m *mocks.Mockapi) {
@@ -418,7 +418,7 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantedHas: true,
+			wantedHasDefaultCluster: true,
 		},
 	}
 
@@ -434,14 +434,14 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				client: mockECSClient,
 			}
 
-			has, err := ecs.HasDefaultCluster()
+			hasDefaultCluster, err := ecs.HasDefaultCluster()
 			if tc.wantedErr != nil {
 				require.EqualError(t, tc.wantedErr, err.Error())
 			} else {
 				require.NoError(t, err)
 			}
 
-			require.Equal(t, tc.wantedHas, has)
+			require.Equal(t, tc.wantedHasDefaultCluster, hasDefaultCluster)
 		})
 	}
 }
