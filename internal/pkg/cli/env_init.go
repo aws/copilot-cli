@@ -117,11 +117,11 @@ type initEnvOpts struct {
 	profileConfig profileNames
 	prog          progress
 
-	// initialize profile-specific env clients
-	initProfileClients func(*initEnvOpts) error
+	// Initialize clients after Ask().
+	configureRuntimeClients func(*initEnvOpts) error
 }
 
-var initEnvProfileClients = func(o *initEnvOpts) error {
+func configureInitEnvClients(o *initEnvOpts) error {
 	profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
 	if err != nil {
 		return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
@@ -136,8 +136,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := sessions.NewProvider()
-	defaultSession, err := sessProvider.Default()
+	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}
@@ -147,13 +146,13 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	return &initEnvOpts{
-		initEnvVars:        vars,
-		store:              store,
-		appDeployer:        deploycfn.New(defaultSession),
-		identity:           identity.New(defaultSession),
-		profileConfig:      cfg,
-		prog:               termprogress.NewSpinner(),
-		initProfileClients: initEnvProfileClients,
+		initEnvVars:             vars,
+		store:                   store,
+		appDeployer:             deploycfn.New(defaultSession),
+		identity:                identity.New(defaultSession),
+		profileConfig:           cfg,
+		prog:                    termprogress.NewSpinner(),
+		configureRuntimeClients: configureInitEnvClients,
 	}, nil
 }
 
@@ -192,7 +191,7 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	if err = o.initProfileClients(o); err != nil {
+	if err = o.configureRuntimeClients(o); err != nil {
 		return err
 	}
 
