@@ -9,6 +9,9 @@ import (
 	"net"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
@@ -85,15 +88,24 @@ func (v adjustVPCVars) isSet() bool {
 	return false
 }
 
+type tempCredsVars struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	SessionToken    string
+}
+
 type initEnvVars struct {
 	*GlobalOpts
-	Name              string
-	Profile           string
-	IsProduction      bool
-	NoCustomResources bool
+	Name              string // Name for the environment.
+	Profile           string // The named profile to use for credential retrieval. Mutually exclusive with TempCreds.
+	IsProduction      bool   // True means retain resources even after deletion.
+	NoCustomResources bool   // True means no importing an existing VPC or adjusting a VPC.
 
-	ImportVPC importVPCVars
-	AdjustVPC adjustVPCVars
+	ImportVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
+	AdjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+
+	TempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the Profile.
+	Region    string        // The region to create the environment in.
 }
 
 type initEnvOpts struct {
@@ -108,17 +120,33 @@ type initEnvOpts struct {
 	profileConfig profileNames
 	prog          progress
 
-	// initialize profile-specific env clients
-	initProfileClients func(*initEnvOpts) error
+	// Initialize clients after Ask().
+	configureRuntimeClients func(*initEnvOpts) error
 }
 
-var initEnvProfileClients = func(o *initEnvOpts) error {
-	profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
-	if err != nil {
-		return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+func configureInitEnvClients(o *initEnvOpts) error {
+	var sess *session.Session
+	if o.Profile != "" {
+		profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
+		if err != nil {
+			return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+		}
+		sess = profileSess
+	} else {
+		staticSess, err := session.NewSession(&aws.Config{
+			Credentials: credentials.NewStaticCredentials(o.TempCreds.AccessKeyID, o.TempCreds.SecretAccessKey, o.TempCreds.SessionToken),
+		})
+		if err != nil {
+			return fmt.Errorf("create session from temporary credentials: %w", err)
+		}
+		sess = staticSess
 	}
-	o.envIdentity = identity.New(profileSess)
-	o.envDeployer = deploycfn.New(profileSess)
+	if o.Region != "" {
+		sess.Config.Region = &o.Region
+	}
+
+	o.envIdentity = identity.New(sess)
+	o.envDeployer = deploycfn.New(sess)
 	return nil
 }
 
@@ -127,8 +155,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	sessProvider := sessions.NewProvider()
-	defaultSession, err := sessProvider.Default()
+	defaultSession, err := sessions.NewProvider().Default()
 	if err != nil {
 		return nil, err
 	}
@@ -138,13 +165,13 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	return &initEnvOpts{
-		initEnvVars:        vars,
-		store:              store,
-		appDeployer:        deploycfn.New(defaultSession),
-		identity:           identity.New(defaultSession),
-		profileConfig:      cfg,
-		prog:               termprogress.NewSpinner(),
-		initProfileClients: initEnvProfileClients,
+		initEnvVars:             vars,
+		store:                   store,
+		appDeployer:             deploycfn.New(defaultSession),
+		identity:                identity.New(defaultSession),
+		profileConfig:           cfg,
+		prog:                    termprogress.NewSpinner(),
+		configureRuntimeClients: configureInitEnvClients,
 	}, nil
 }
 
@@ -158,7 +185,10 @@ func (o *initEnvOpts) Validate() error {
 	if o.AppName() == "" {
 		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 	}
-	return o.validateCustomizedResources()
+	if err := o.validateCustomizedResources(); err != nil {
+		return err
+	}
+	return o.validateCredentials()
 }
 
 // Ask asks for fields that are required but not passed in.
@@ -180,7 +210,7 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	if err = o.initProfileClients(o); err != nil {
+	if err = o.configureRuntimeClients(o); err != nil {
 		return err
 	}
 
@@ -213,6 +243,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 	log.Successf("Created environment %s in region %s under application %s.\n",
 		color.HighlightUserInput(env.Name), color.Emphasize(env.Region), color.HighlightUserInput(env.App))
+	return nil
+}
+
+// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
+func (o *initEnvOpts) RecommendedActions() []string {
 	return nil
 }
 
@@ -407,8 +442,16 @@ func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 	return termprogress.HumanizeResourceEvents(envProgressOrder, resourceEvents, matcher, resourceCounts)
 }
 
-// RecommendedActions returns follow-up actions the user can take after successfully executing the command.
-func (o *initEnvOpts) RecommendedActions() []string {
+func (o *initEnvOpts) validateCredentials() error {
+	if o.Profile != "" && o.TempCreds.AccessKeyID != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, accessKeyIDFlag)
+	}
+	if o.Profile != "" && o.TempCreds.SecretAccessKey != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, secretAccessKeyFlag)
+	}
+	if o.Profile != "" && o.TempCreds.SessionToken != "" {
+		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
+	}
 	return nil
 }
 
