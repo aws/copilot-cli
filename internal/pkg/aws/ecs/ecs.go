@@ -228,29 +228,32 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 		taskARNs[idx] = aws.StringValue(task.TaskArn)
 	}
 
-	err = e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+	waitErr := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
 	})
-	if err == nil {
-		tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
-		if err != nil {
-			return nil, err
-		}
-		return tasks, nil
+
+	if waitErr != nil && !isRequestTimeoutErr(waitErr) {
+		return nil, fmt.Errorf("wait for tasks to be running: %w", err)
 	}
 
+	tasks, describeErr := e.DescribeTasks(input.Cluster, taskARNs)
+	if describeErr != nil {
+		return nil, describeErr
+	}
+
+	if waitErr != nil {
+		return nil, &ErrWaiterResourceNotReadyForTasks{tasks: tasks, awsErrResourceNotReady: waitErr}
+	}
+
+	return tasks, nil
+}
+
+func isRequestTimeoutErr(err error) bool {
 	if aerr, ok := err.(awserr.Error); ok {
-		if aerr.Code() == request.WaiterResourceNotReadyErrorCode {
-			tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
-			if err != nil {
-				return nil, fmt.Errorf("determining task failure reason: %w", err)
-			}
-
-			return nil, &ErrWaiterResourceNotReadyForTasks{tasks: tasks, awsErrResourceNotReady: aerr}
-		}
+		return aerr.Code() == request.WaiterResourceNotReadyErrorCode
 	}
-	return nil, fmt.Errorf("wait for tasks to be running: %w", err)
+	return false
 }
 
 // DescribeTasks returns the tasks with the taskARNs in the cluster.
