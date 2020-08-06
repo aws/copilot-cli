@@ -385,7 +385,7 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf(`find "default" cluster to deploy the task to: %v`, err)
 		}
 		if !hasDefaultCluster {
-			return errors.New("cannot find a default cluster to deploy the task to")
+			return errors.New(`cannot find a "default" cluster to deploy the task to`)
 		}
 	}
 
