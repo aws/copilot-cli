@@ -9,6 +9,9 @@ import (
 	"net"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
@@ -122,12 +125,28 @@ type initEnvOpts struct {
 }
 
 func configureInitEnvClients(o *initEnvOpts) error {
-	profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
-	if err != nil {
-		return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+	var sess *session.Session
+	if o.Profile != "" {
+		profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
+		if err != nil {
+			return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+		}
+		sess = profileSess
+	} else {
+		staticSess, err := session.NewSession(&aws.Config{
+			Credentials: credentials.NewStaticCredentials(o.TempCreds.AccessKeyID, o.TempCreds.SecretAccessKey, o.TempCreds.SessionToken),
+		})
+		if err != nil {
+			return fmt.Errorf("create session from temporary credentials: %w", err)
+		}
+		sess = staticSess
 	}
-	o.envIdentity = identity.New(profileSess)
-	o.envDeployer = deploycfn.New(profileSess)
+	if o.Region != "" {
+		sess.Config.Region = &o.Region
+	}
+
+	o.envIdentity = identity.New(sess)
+	o.envDeployer = deploycfn.New(sess)
 	return nil
 }
 
