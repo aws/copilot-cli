@@ -396,7 +396,7 @@ func (cli *CLI) AppDelete(profiles map[string]string) (string, error) {
 		exec.Command(cli.path, commands...))
 }
 
-/*AppDelete runs:
+/*TaskRun runs:
 copilot task run
 	-n $t
 	--dockerfile $d
