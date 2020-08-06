@@ -165,16 +165,16 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
 
-	countFlagDescription         = "Optional. The number of tasks to set up."
-	cpuFlagDescription           = "Optional. The number of CPU units to reserve for each task."
-	memoryFlagDescription        = "Optional. The amount of memory to reserve in MiB for each task."
-	imageFlagDescription         = "Optional. The image to run instead of building a Dockerfile."
-	taskRoleFlagDescription      = "Optional. The role for the task to use."
-	executionRoleFlagDescription = "Optional. The role that grants the container agent permission to make AWS API calls."
-	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated with commas."
-	commandFlagDescription       = `Optional. The command that is passed to "docker run" to override the default command.`
-	taskGroupFlagDescription     = "The group name of the task. Tasks with the same group name share the same set of resources."
-	taskImageTagFlagDescription  = `Optional. The container image tag in addition to "latest".`
+	countFlagDescription          = "Optional. The number of tasks to set up."
+	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task."
+	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task."
+	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
+	taskRoleFlagDescription       = "Optional. The ARN of the role for the task to use."
+	executionRoleFlagDescription  = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
+	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
+	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
+	taskGroupFlagDescription      = "Optional. The group name of the task. Tasks with the same group name share the same set of resources."
+	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
 
 	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
@@ -190,5 +190,4 @@ Must be of the format '<keyName>:<dataType>'.`
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
 	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
 	envRegionTokenFlagDescription  = "Options. An AWS region where the environment will be created."
-
 )
