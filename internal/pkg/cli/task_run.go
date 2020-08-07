@@ -39,7 +39,7 @@ const (
 	appEnvOptionNone      = "None (run in default VPC)"
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
-	taskGroupNameDefault  = "copilot-task"
+	taskGroupNameDefault  = "copilot-task-group"
 )
 
 const (
