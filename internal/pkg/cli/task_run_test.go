@@ -491,27 +491,6 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			wantedEnv: "",
 			wantedApp: "my-app",
 		},
-		"prompt for task family name": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(taskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-
-			wantedName: "my-task",
-		},
-		"error getting task group name": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("error getting task group name"))
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			wantedError: errors.New("prompt get task group name: error getting task group name"),
-		},
 		"error selecting environment": {
 			appName: "my-app",
 

@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -25,7 +26,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -344,10 +344,6 @@ func (o *runTaskOpts) validateFlagsWithSecurityGroups() error {
 
 // Ask prompts the user for any required or important fields that are not provided.
 func (o *runTaskOpts) Ask() error {
-	if err := o.askTaskGroupName(); err != nil {
-		return err
-	}
-
 	if o.shouldPromptForAppEnv() {
 		if err := o.askAppName(); err != nil {
 			return err
@@ -372,6 +368,11 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
+	if o.groupName == "" {
+		dir, _ := os.Getwd()
+		o.groupName = filepath.Base(dir)
+	}
+
 	// NOTE: all runtime options must be configured only after session is configured
 	if err := o.configureSessAndEnv(); err != nil {
 		return err
@@ -526,26 +527,6 @@ func (o *runTaskOpts) validateEnvName() error {
 		return errNoAppInWorkspace
 	}
 
-	return nil
-}
-
-func (o *runTaskOpts) askTaskGroupName() error {
-	if o.groupName != "" {
-		return nil
-	}
-
-	// TODO during Execute: list existing tasks like in ListApplications, ask whether to use existing tasks
-
-	groupName, err := o.prompt.Get(
-		taskRunGroupNamePrompt,
-		taskRunGroupNamePromptHelp,
-		basicNameValidation,
-		prompt.WithFinalMessage("Task group name:"),
-		prompt.WithDefaultInput(taskGroupNameDefault))
-	if err != nil {
-		return fmt.Errorf("prompt get task group name: %w", err)
-	}
-	o.groupName = groupName
 	return nil
 }
 
