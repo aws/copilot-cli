@@ -5,6 +5,7 @@
 package ecs
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -200,6 +201,17 @@ func (e *ECS) DefaultCluster() (string, error) {
 	// NOTE: right now at most 1 default cluster is possible, so cluster[0] must be the default cluster
 	cluster := resp.Clusters[0]
 	return aws.StringValue(cluster.ClusterArn), nil
+}
+
+// HasDefaultCluster tries to find the default cluster and returns true if there is one.
+func (e *ECS) HasDefaultCluster() (bool, error) {
+	if _, err := e.DefaultCluster(); err != nil {
+		if errors.Is(err, ErrNoDefaultCluster) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after

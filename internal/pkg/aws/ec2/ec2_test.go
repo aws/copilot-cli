@@ -42,8 +42,8 @@ var (
 	}
 )
 
-func TestEC2_ListVpcSubnets(t *testing.T) {
-	const mockVpcID = "mockVpcID"
+func TestEC2_ListVPCSubnets(t *testing.T) {
+	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
 
@@ -62,7 +62,7 @@ func TestEC2_ListVpcSubnets(t *testing.T) {
 					Filters: toEC2Filter([]Filter{
 						{
 							Name:   "vpc-id",
-							Values: []string{mockVpcID},
+							Values: []string{mockVPCID},
 						},
 					}),
 				}).Return(&ec2.DescribeSubnetsOutput{
@@ -90,7 +90,7 @@ func TestEC2_ListVpcSubnets(t *testing.T) {
 				client: mockAPI,
 			}
 
-			subnets, err := ec2Client.ListVpcSubnets(mockVpcID)
+			subnets, err := ec2Client.ListVPCSubnets(mockVPCID)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {

@@ -9,6 +9,7 @@ import (
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var errNoAppInWorkspace = errors.New("could not find an application attached to this workspace, please run `app init` first")
@@ -22,6 +23,9 @@ Services are long-running Amazon ECS services.`,
 		Long: `Commands for services.
 Services are long-running Amazon ECS services.`,
 	}
+	// The flags bound by viper are available to all sub-commands through viper.GetString({flagName})
+	cmd.PersistentFlags().StringP(appFlag, appFlagShort, "" /* default */, appFlagDescription)
+	viper.BindPFlag(appFlag, cmd.PersistentFlags().Lookup(appFlag))
 
 	cmd.AddCommand(BuildSvcInitCmd())
 	cmd.AddCommand(BuildSvcListCmd())

@@ -386,6 +386,67 @@ func TestECS_DefaultCluster(t *testing.T) {
 	}
 }
 
+func TestECS_HasDefaultCluster(t *testing.T) {
+	testCases := map[string] struct{
+		mockECSClient func(m *mocks.Mockapi)
+
+		wantedHasDefaultCluster bool
+		wantedErr               error
+	}{
+		"no default cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{},
+					}, nil)
+			},
+			wantedHasDefaultCluster: false,
+		},
+		"error getting default cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(nil, errors.New("other error"))
+			},
+			wantedErr: fmt.Errorf("get default cluster: other error"),
+		},
+		"has default cluster": {
+			mockECSClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
+					Return(&ecs.DescribeClustersOutput{
+						Clusters: []*ecs.Cluster{
+							{ ClusterArn: aws.String("cluster") },
+						},
+					}, nil)
+			},
+			wantedHasDefaultCluster: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockECSClient := mocks.NewMockapi(ctrl)
+			tc.mockECSClient(mockECSClient)
+
+			ecs := ECS{
+				client: mockECSClient,
+			}
+
+			hasDefaultCluster, err := ecs.HasDefaultCluster()
+			if tc.wantedErr != nil {
+				require.EqualError(t, tc.wantedErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.wantedHasDefaultCluster, hasDefaultCluster)
+		})
+	}
+}
+
+
 func TestECS_RunTask(t *testing.T) {
 	type input struct {
 		cluster        string
