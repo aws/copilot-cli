@@ -8,15 +8,22 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
+var (
+	ErrVpcNotFound     = fmt.Errorf("no VPC found, create a new VPC first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+	ErrSubnetsNotFound = fmt.Errorf("no subnets found, create new subnets first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+)
+
 // Prompter wraps the method to select an option from a list of options.
 type Prompter interface {
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
+	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
 }
 
 // AppEnvLister wraps methods to list apps and envs in config store.
@@ -47,6 +54,12 @@ type DeployStoreClient interface {
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
 }
 
+// VPCSubnetLister list VPCs and subnets.
+type VPCSubnetLister interface {
+	ListVPC() ([]string, error)
+	ListVPCSubnets(vpcID string) (*ec2.Subnets, error)
+}
+
 // Select prompts users to select the name of an application or environment.
 type Select struct {
 	prompt Prompter
@@ -71,6 +84,12 @@ type DeploySelect struct {
 	deployStoreSvc DeployStoreClient
 	svc            string
 	env            string
+}
+
+// Ec2Select is a selector for Ec2 resources.
+type Ec2Select struct {
+	prompt Prompter
+	ec2Svc VPCSubnetLister
 }
 
 // NewSelect returns a selector that chooses applications or environments.
@@ -106,6 +125,14 @@ func NewDeploySelect(prompt Prompter, configStore AppEnvLister, deployStore Depl
 	}
 }
 
+// NewEc2Select returns a new selector that chooses Ec2 resources.
+func NewEc2Select(prompt Prompter, ec2Client VPCSubnetLister) *Ec2Select {
+	return &Ec2Select{
+		prompt: prompt,
+		ec2Svc: ec2Client,
+	}
+}
+
 // GetDeployedServiceOpts sets up optional parameters for GetDeployedServiceOpts function.
 type GetDeployedServiceOpts func(*DeploySelect)
 
@@ -131,6 +158,55 @@ type DeployedService struct {
 
 func (s *DeployedService) String() string {
 	return fmt.Sprintf("%s (%s)", s.Svc, s.Env)
+}
+
+// VPC has the user select an available VPC.
+func (s *Ec2Select) VPC(prompt, help string) (string, error) {
+	vpcIDs, err := s.ec2Svc.ListVPC()
+	if err != nil {
+		return "", fmt.Errorf("list VPC ID: %w", err)
+	}
+	if len(vpcIDs) == 0 {
+		return "", ErrVpcNotFound
+	}
+	vpcID, err := s.prompt.SelectOne(
+		prompt, help,
+		vpcIDs)
+	if err != nil {
+		return "", fmt.Errorf("select VPC: %w", err)
+	}
+	return vpcID, nil
+}
+
+// PublicSubnet has the user select public subnets given the VPC ID.
+func (s *Ec2Select) PublicSubnet(prompt, help, vpcID string) ([]string, error) {
+	return s.subnet(prompt, help, vpcID, true)
+}
+
+// PrivateSubnet has the user select private subnets given the VPC ID.
+func (s *Ec2Select) PrivateSubnet(prompt, help, vpcID string) ([]string, error) {
+	return s.subnet(prompt, help, vpcID, false)
+}
+
+func (s *Ec2Select) subnet(prompt, help string, vpcID string, public bool) ([]string, error) {
+	resp, err := s.ec2Svc.ListVPCSubnets(vpcID)
+	if err != nil {
+		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
+	}
+	subnets := resp.Private
+	if public {
+		subnets = resp.Public
+	}
+	if len(subnets) == 0 {
+		return nil, ErrSubnetsNotFound
+	}
+	ans, err := s.prompt.MultiSelect(
+		prompt, help,
+		subnets)
+	if err != nil {
+		return nil, err
+	}
+	return ans, nil
 }
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,

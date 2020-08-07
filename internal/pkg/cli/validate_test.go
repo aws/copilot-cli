@@ -279,6 +279,62 @@ func TestValidateLSIs(t *testing.T) {
 	}
 }
 
+func TestValidateCIDR(t *testing.T) {
+	testCases := map[string]struct {
+		inputCIDR string
+		wantError error
+	}{
+		"good case": {
+			inputCIDR: "10.10.10.10/24",
+			wantError: nil,
+		},
+		"bad case": {
+			inputCIDR: "10.10.10.10",
+			wantError: errValueNotAnIPNet,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateCIDR(tc.inputCIDR)
+			if tc.wantError != nil {
+				require.EqualError(t, got, tc.wantError.Error())
+			} else {
+				require.Nil(t, got)
+			}
+		})
+	}
+}
+
+func TestValidateCIDRSlice(t *testing.T) {
+	testCases := map[string]struct {
+		inputCIDRSlice string
+		wantError      error
+	}{
+		"good case": {
+			inputCIDRSlice: "10.10.10.10/24,10.10.10.10/24",
+			wantError:      nil,
+		},
+		"bad case": {
+			inputCIDRSlice: "mockBadInput",
+			wantError:      errValueNotIPNetSlice,
+		},
+		"bad IPNet case": {
+			inputCIDRSlice: "10.10.10.10,10.10.10.10",
+			wantError:      errValueNotIPNetSlice,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateCIDRSlice(tc.inputCIDRSlice)
+			if tc.wantError != nil {
+				require.EqualError(t, got, tc.wantError.Error())
+			} else {
+				require.Nil(t, got)
+			}
+		})
+	}
+}
+
 func TestIsCorrectFormat(t *testing.T) {
 	testCases := map[string]struct {
 		input   string

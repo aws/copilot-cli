@@ -13,22 +13,53 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+)
+
+type customizedEnvTypeSelection int
+
+func (s customizedEnvTypeSelection) String() string {
+	return envInitCustomizedEnvTypes[s]
+}
+
+const (
+	envInitImportEnvResources customizedEnvTypeSelection = iota
+	envInitAdjustEnvResources
+	envInitUseDefaultEnv
 )
 
 const (
-	envInitNamePrompt        = "What is your environment's name?"
-	envInitNameHelpPrompt    = "A unique identifier for an environment (e.g. dev, test, prod)."
-	envInitProfileHelpPrompt = "The AWS CLI named profile with the permissions to create an environment."
+	envInitNamePrompt              = "What is your environment's name?"
+	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
+	envInitProfileHelpPrompt       = "The AWS CLI named profile with the permissions to create an environment."
+	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
+    - A new VPC with 3 AZs, 2 public subnets and 2 private subnets
+    - A new ECS Cluster
+    - New IAM Roles
+    - Termination Protection for resources
+`
+	envInitConfigImportSelectPrompt   = "Ok no problem - would you like to adjust the environment config or import your own resources?"
+	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
+	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
+	envInitPrivateSubnetsSelectPrompt = "Which private subnets would you like to use?"
+
+	envInitVPCCIDRPrompt     = "What VPC CIDR would you like to use?"
+	envInitPublicCIDRPrompt  = "What CIDR would you like to use for the first public subnet?"
+	envInitPrivateCIDRPrompt = "What CIDR would you like to use for the second public subnet?"
 
 	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
@@ -46,7 +77,15 @@ const (
 )
 
 var (
-	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
+	errNamedProfilesNotFound  = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
+	errVpcNotFound            = fmt.Errorf("no VPC found, create a new VPC first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+	errPublicSubnetsNotFound  = fmt.Errorf("no public subnets found, create new public subnets first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+	errPrivateSubnetsNotFound = fmt.Errorf("no private subnets found, create new private subnets first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+
+	envInitImportEnvResourcesSelectOption        = "Import resources (VPC, subnets)"
+	envInitAdjustEnvResourcesSelectOption        = "Adjust environment configuration (CIDR)"
+	envInitWithNoCustomizedResourcesSelectOption = "Skip and create default"
+	envInitCustomizedEnvTypes                    = []string{envInitImportEnvResourcesSelectOption, envInitAdjustEnvResourcesSelectOption, envInitWithNoCustomizedResourcesSelectOption}
 )
 
 type importVPCVars struct {
@@ -59,13 +98,7 @@ func (v importVPCVars) isSet() bool {
 	if v.ID != "" {
 		return true
 	}
-	if len(v.PublicSubnetIDs) != 0 {
-		return true
-	}
-	if len(v.PrivateSubnetIDs) != 0 {
-		return true
-	}
-	return false
+	return len(v.PublicSubnetIDs) > 0 || len(v.PrivateSubnetIDs) > 0
 }
 
 type adjustVPCVars struct {
@@ -75,17 +108,10 @@ type adjustVPCVars struct {
 }
 
 func (v adjustVPCVars) isSet() bool {
-	emptyIPNet := net.IPNet{}
 	if v.CIDR.String() != emptyIPNet.String() {
 		return true
 	}
-	if len(v.PublicSubnetCIDRs) != 0 {
-		return true
-	}
-	if len(v.PrivateSubnetCIDRs) != 0 {
-		return true
-	}
-	return false
+	return len(v.PublicSubnetCIDRs) != 0 || len(v.PrivateSubnetCIDRs) != 0
 }
 
 type tempCredsVars struct {
@@ -119,6 +145,7 @@ type initEnvOpts struct {
 	envIdentity   identityService
 	profileConfig profileNames
 	prog          progress
+	sel           ec2Selector
 
 	// Initialize clients after Ask().
 	configureRuntimeClients func(*initEnvOpts) error
@@ -147,6 +174,7 @@ func configureInitEnvClients(o *initEnvOpts) error {
 
 	o.envIdentity = identity.New(sess)
 	o.envDeployer = deploycfn.New(sess)
+	o.sel = selector.NewEc2Select(o.prompt, ec2.New(sess))
 	return nil
 }
 
@@ -199,6 +227,9 @@ func (o *initEnvOpts) Ask() error {
 	if err := o.askEnvProfile(); err != nil {
 		return err
 	}
+	if err := o.configureRuntimeClients(o); err != nil {
+		return err
+	}
 	return o.askCustomizedResources()
 }
 
@@ -207,10 +238,6 @@ func (o *initEnvOpts) Execute() error {
 	app, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		// Ensure the app actually exists before we do a deployment.
-		return err
-	}
-
-	if err = o.configureRuntimeClients(o); err != nil {
 		return err
 	}
 
@@ -268,7 +295,7 @@ func (o *initEnvOpts) askEnvName() error {
 
 	envName, err := o.prompt.Get(envInitNamePrompt, envInitNameHelpPrompt, validateEnvironmentName)
 	if err != nil {
-		return fmt.Errorf("prompt to get environment name: %w", err)
+		return fmt.Errorf("get environment name: %w", err)
 	}
 	o.Name = envName
 	return nil
@@ -299,6 +326,85 @@ func (o *initEnvOpts) askEnvProfile() error {
 func (o *initEnvOpts) askCustomizedResources() error {
 	if o.NoCustomResources {
 		return nil
+	}
+	useDefaultEnv, err := o.prompt.Confirm(envInitDefaultEnvConfirmPrompt, "")
+	if err != nil {
+		return fmt.Errorf("confirm to use default environment %s: %w", o.Name, err)
+	}
+	if useDefaultEnv {
+		return nil
+	}
+	adjustOrImport, err := o.prompt.SelectOne(
+		envInitConfigImportSelectPrompt, "",
+		envInitCustomizedEnvTypes)
+	if err != nil {
+		return fmt.Errorf("select adjusting or importing resources: %w", err)
+	}
+	switch adjustOrImport {
+	case envInitImportEnvResources.String():
+		return o.askImportResources()
+	case envInitAdjustEnvResources.String():
+		return o.askAdjustResources()
+	case envInitUseDefaultEnv.String():
+		return nil
+	}
+	return nil
+}
+
+func (o *initEnvOpts) askImportResources() error {
+	// TODO: move selection logic to selector pkg.
+	if o.ImportVPC.ID == "" {
+		vpcID, err := o.sel.VPC(envInitVPCSelectPrompt, "")
+		if err != nil {
+			return fmt.Errorf("select VPC: %w", err)
+		}
+		o.ImportVPC.ID = vpcID
+	}
+	if o.ImportVPC.PublicSubnetIDs == nil {
+		publicSubnets, err := o.sel.PublicSubnet(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		if err != nil {
+			return fmt.Errorf("select public subnets: %w", err)
+		}
+		o.ImportVPC.PublicSubnetIDs = publicSubnets
+	}
+	if o.ImportVPC.PrivateSubnetIDs == nil {
+		privateSubnets, err := o.sel.PrivateSubnet(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		if err != nil {
+			return fmt.Errorf("select private subnets: %w", err)
+		}
+		o.ImportVPC.PrivateSubnetIDs = privateSubnets
+	}
+	return nil
+}
+
+func (o *initEnvOpts) askAdjustResources() error {
+	if o.AdjustVPC.CIDR.String() == emptyIPNet.String() {
+		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, "", validateCIDR,
+			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
+		if err != nil {
+			return fmt.Errorf("get VPC CIDR: %w", err)
+		}
+		_, vpcCIDR, err := net.ParseCIDR(vpcCIDRString)
+		if err != nil {
+			return fmt.Errorf("parse VPC CIDR: %w", err)
+		}
+		o.AdjustVPC.CIDR = *vpcCIDR
+	}
+	if o.AdjustVPC.PublicSubnetCIDRs == nil {
+		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, "", validateCIDRSlice,
+			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
+		if err != nil {
+			return fmt.Errorf("get public subnet CIDRs: %w", err)
+		}
+		o.AdjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
+	}
+	if o.AdjustVPC.PrivateSubnetCIDRs == nil {
+		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, "", validateCIDRSlice,
+			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
+		if err != nil {
+			return fmt.Errorf("get private subnet CIDRs: %w", err)
+		}
+		o.AdjustVPC.PrivateSubnetCIDRs = strings.Split(privateCIDR, ",")
 	}
 	return nil
 }
@@ -430,16 +536,15 @@ func (o *initEnvOpts) humanizeEnvironmentEvents(resourceEvents []deploy.Resource
 				strings.Contains(event.Type, "ElasticLoadBalancingV2")
 		},
 	}
-	resourceCounts := map[termprogress.Text]int{
-		textVPC:             1,
-		textInternetGateway: 2,
-		textPublicSubnets:   2,
-		textPrivateSubnets:  2,
-		textRouteTables:     4,
-		textECSCluster:      1,
-		textALB:             4,
+	return termprogress.HumanizeResourceEvents(o.envProgressOrder(), resourceEvents, matcher, defaultResourceCounts)
+}
+
+func (o *initEnvOpts) envProgressOrder() (order []termprogress.Text) {
+	if !o.ImportVPC.isSet() {
+		order = append(order, []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables}...)
 	}
-	return termprogress.HumanizeResourceEvents(envProgressOrder, resourceEvents, matcher, resourceCounts)
+	order = append(order, []termprogress.Text{textECSCluster, textALB}...)
+	return
 }
 
 func (o *initEnvOpts) validateCredentials() error {
@@ -469,7 +574,17 @@ func BuildEnvInitCmd() *cobra.Command {
   /code $ copilot env init --name test --profile default
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
-  /code $ copilot env init --name prod-iad --profile prod-admin --prod`,
+  /code $ copilot env init --name prod-iad --profile prod-admin --prod
+
+  Creates an environment with imported VPC resources.
+  /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
+  /code --import-public-subnets subnet-013e8b691862966cf,subnet -014661ebb7ab8681a \
+  /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+
+  Creates an environment with overrided CIDRs.
+  /code $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
+  /code --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
+  /code --override-private-cidrs 10.1.2.0/24,10.1.3.0/24`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newInitEnvOpts(vars)
 			if err != nil {
@@ -487,52 +602,52 @@ func BuildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().StringVar(&vars.Profile, profileFlag, "", profileFlagDescription)
 	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
-	// 	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
-	// 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
-	// 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
-	// 	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
-	// 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
-	// 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
-	// 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
-	// 	cmd.Flags().BoolVar(&vars.NoCustomResources, noCustomResourcesFlag, false, noCustomResourcesFlagDescription)
+	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
+	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
+	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
+	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
+	cmd.Flags().BoolVar(&vars.NoCustomResources, noCustomResourcesFlag, false, noCustomResourcesFlagDescription)
 
-	// 	flags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
-	// 	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
-	// 	flags.AddFlag(cmd.Flags().Lookup(profileFlag))
-	// 	flags.AddFlag(cmd.Flags().Lookup(noCustomResourcesFlag))
-	// 	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
+	flags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
+	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
+	flags.AddFlag(cmd.Flags().Lookup(profileFlag))
+	flags.AddFlag(cmd.Flags().Lookup(noCustomResourcesFlag))
+	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
 
-	// 	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
-	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
-	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
-	// 	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
+	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
+	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(vpcIDFlag))
+	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
+	resourcesImportFlag.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 
-	// 	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
-	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(vpcCIDRFlag))
-	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(publicSubnetCIDRsFlag))
-	// 	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(privateSubnetCIDRsFlag))
+	resourcesConfigFlag := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(vpcCIDRFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(publicSubnetCIDRsFlag))
+	resourcesConfigFlag.AddFlag(cmd.Flags().Lookup(privateSubnetCIDRsFlag))
 
-	// 	cmd.Annotations = map[string]string{
-	// 		// The order of the sections we want to display.
-	// 		"sections":                    "Flags,Import Existing Resources,Configure Default Resources",
-	// 		"Flags":                       flags.FlagUsages(),
-	// 		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
-	// 		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
-	// 	}
+	cmd.Annotations = map[string]string{
+		// The order of the sections we want to display.
+		"sections":                    "Flags,Import Existing Resources,Configure Default Resources",
+		"Flags":                       flags.FlagUsages(),
+		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
+		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
+	}
 
-	// 	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
-	//   {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
+	cmd.SetUsageTemplate(`{{h1 "Usage"}}{{if .Runnable}}
+  {{.UseLine}}{{end}}{{$annotations := .Annotations}}{{$sections := split .Annotations.sections ","}}{{if gt (len $sections) 0}}
 
-	// {{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
-	// {{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
+{{range $i, $sectionName := $sections}}{{h1 (print $sectionName " Flags")}}
+{{(index $annotations $sectionName) | trimTrailingWhitespaces}}{{if ne (inc $i) (len $sections)}}
 
-	// {{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
+{{end}}{{end}}{{end}}{{if .HasAvailableInheritedFlags}}
 
-	// {{h1 "Global Flags"}}
-	// {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
+{{h1 "Global Flags"}}
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasExample}}
 
-	// {{h1 "Examples"}}{{code .Example}}{{end}}
-	// `)
+{{h1 "Examples"}}{{code .Example}}{{end}}
+`)
 
 	return cmd
 }

@@ -30,6 +30,7 @@ var (
 type api interface {
 	DescribeSubnets(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
 	DescribeSecurityGroups(*ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
+	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -57,6 +58,32 @@ func New(s *session.Session) *EC2 {
 	return &EC2{
 		client: ec2.New(s),
 	}
+}
+
+// ListVPC returns IDs of all VPCs.
+func (c *EC2) ListVPC() ([]string, error) {
+	var vpcs []*ec2.Vpc
+	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
+	if err != nil {
+		return nil, fmt.Errorf("describe VPCs: %w", err)
+	}
+	vpcs = append(vpcs, response.Vpcs...)
+
+	for response.NextToken != nil {
+		response, err = c.client.DescribeVpcs(&ec2.DescribeVpcsInput{
+			NextToken: response.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe VPCs: %w", err)
+		}
+		vpcs = append(vpcs, response.Vpcs...)
+	}
+	var vpcNames []string
+	for _, vpc := range vpcs {
+		vpcNames = append(vpcNames, aws.StringValue(vpc.VpcId))
+	}
+
+	return vpcNames, nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.

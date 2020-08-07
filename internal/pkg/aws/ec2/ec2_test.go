@@ -42,6 +42,66 @@ var (
 	}
 )
 
+func TestEC2_ListVPC(t *testing.T) {
+	const mockVPCID = "mockVPCID"
+	testCases := map[string]struct {
+		mockEC2Client func(m *mocks.Mockapi)
+
+		wantedError error
+		wantedVPC   []string
+	}{
+		"fail to describe vpcs": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcs(gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("describe VPCs: some error"),
+		},
+		"success": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{}).Return(&ec2.DescribeVpcsOutput{
+					Vpcs: []*ec2.Vpc{
+						{
+							VpcId: aws.String("mockVPCID1"),
+						},
+					},
+					NextToken: aws.String("mockNextToken"),
+				}, nil)
+				m.EXPECT().DescribeVpcs(&ec2.DescribeVpcsInput{
+					NextToken: aws.String("mockNextToken"),
+				}).Return(&ec2.DescribeVpcsOutput{
+					Vpcs: []*ec2.Vpc{
+						{
+							VpcId: aws.String("mockVPCID2"),
+						},
+					},
+				}, nil)
+			},
+			wantedVPC: []string{"mockVPCID1", "mockVPCID2"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockEC2Client(mockAPI)
+
+			ec2Client := EC2{
+				client: mockAPI,
+			}
+
+			vpcs, err := ec2Client.ListVPC()
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedVPC, vpcs)
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPCSubnets(t *testing.T) {
 	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
