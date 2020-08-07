@@ -7,6 +7,8 @@ package ecs
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"strings"
 	"time"
 
@@ -238,19 +240,32 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 		taskARNs[idx] = aws.StringValue(task.TaskArn)
 	}
 
-	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+	waitErr := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
-	}); err != nil {
+	})
+
+	if waitErr != nil && !isRequestTimeoutErr(waitErr) {
 		return nil, fmt.Errorf("wait for tasks to be running: %w", err)
 	}
 
-	tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
-	if err != nil {
-		return nil, err
+	tasks, describeErr := e.DescribeTasks(input.Cluster, taskARNs)
+	if describeErr != nil {
+		return nil, describeErr
+	}
+
+	if waitErr != nil {
+		return nil, &ErrWaiterResourceNotReadyForTasks{tasks: tasks, awsErrResourceNotReady: waitErr}
 	}
 
 	return tasks, nil
+}
+
+func isRequestTimeoutErr(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		return aerr.Code() == request.WaiterResourceNotReadyErrorCode
+	}
+	return false
 }
 
 // DescribeTasks returns the tasks with the taskARNs in the cluster.
