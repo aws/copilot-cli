@@ -104,10 +104,10 @@ type runTaskOpts struct {
 	spinner progress
 
 	// Fields below are configured at runtime.
-	deployer          taskDeployer
-	repository        repositoryService
-	runner            taskRunner
-	eventsWriter      eventsWriter
+	deployer             taskDeployer
+	repository           repositoryService
+	runner               taskRunner
+	eventsWriter         eventsWriter
 	defaultClusterGetter defaultClusterGetter
 
 	sess              *session.Session
@@ -311,7 +311,7 @@ func (o *runTaskOpts) validateFlagsWithSubnets() error {
 	}
 
 	if o.useDefaultSubnets {
-		fmt.Errorf("cannot specify both `--subnets` and `--default`")
+		return fmt.Errorf("cannot specify both `--subnets` and `--default`")
 	}
 
 	if o.appName != "" {
