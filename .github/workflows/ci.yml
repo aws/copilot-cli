@@ -1,4 +1,4 @@
-name: staticcheck
+name: ci
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - '*'
 
 jobs:
-  build:
+  staticcheck:
     runs-on: ubuntu-latest
 
     steps:
