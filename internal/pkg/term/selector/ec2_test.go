@@ -38,7 +38,7 @@ func TestEc2Select_VPC(t *testing.T) {
 				m.ec2Svc.EXPECT().ListVPC().Return([]string{}, nil)
 
 			},
-			wantErr: ErrVpcNotFound,
+			wantErr: ErrVPCNotFound,
 		},
 		"return error if fail to select a VPC": {
 			setupMocks: func(m ec2SelectMocks) {

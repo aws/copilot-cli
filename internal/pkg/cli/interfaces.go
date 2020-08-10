@@ -387,6 +387,6 @@ type wsSelector interface {
 
 type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
-	PublicSubnet(prompt, help, vpcID string) ([]string, error)
-	PrivateSubnet(prompt, help, vpcID string) ([]string, error)
+	PublicSubnets(prompt, help, vpcID string) ([]string, error)
+	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
 }

@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	// ErrVpcNotFound is returned when no existing VPCs are found.
-	ErrVpcNotFound = errors.New("no existing VPCs found")
+	// ErrVPCNotFound is returned when no existing VPCs are found.
+	ErrVPCNotFound = errors.New("no existing VPCs found")
 	// ErrSubnetsNotFound is returned when no existing subnets are found.
 	ErrSubnetsNotFound = errors.New("no existing subnets found")
 )
@@ -45,7 +45,7 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 		return "", fmt.Errorf("list VPC ID: %w", err)
 	}
 	if len(vpcIDs) == 0 {
-		return "", ErrVpcNotFound
+		return "", ErrVPCNotFound
 	}
 	vpcID, err := s.prompt.SelectOne(
 		prompt, help,
@@ -56,13 +56,13 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	return vpcID, nil
 }
 
-// PublicSubnet has the user multiselect public subnets given the VPC ID.
-func (s *EC2Select) PublicSubnet(prompt, help, vpcID string) ([]string, error) {
+// PublicSubnets has the user multiselect public subnets given the VPC ID.
+func (s *EC2Select) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
 	return s.subnet(prompt, help, vpcID, true)
 }
 
-// PrivateSubnet has the user multiselect private subnets given the VPC ID.
-func (s *EC2Select) PrivateSubnet(prompt, help, vpcID string) ([]string, error) {
+// PrivateSubnets has the user multiselect private subnets given the VPC ID.
+func (s *EC2Select) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
 	return s.subnet(prompt, help, vpcID, false)
 }
 

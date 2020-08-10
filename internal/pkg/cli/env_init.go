@@ -347,7 +347,7 @@ func (o *initEnvOpts) askImportResources() error {
 	if o.ImportVPC.ID == "" {
 		vpcID, err := o.sel.VPC(envInitVPCSelectPrompt, "")
 		if err != nil {
-			if err == selector.ErrVpcNotFound {
+			if err == selector.ErrVPCNotFound {
 				log.Errorf(`No existing VPCs were found. You can either:
 - Create a new VPC first and then import it.
 - Use the default Copilot environment configuration.
@@ -358,7 +358,7 @@ func (o *initEnvOpts) askImportResources() error {
 		o.ImportVPC.ID = vpcID
 	}
 	if o.ImportVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.sel.PublicSubnet(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		publicSubnets, err := o.sel.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
@@ -370,7 +370,7 @@ func (o *initEnvOpts) askImportResources() error {
 		o.ImportVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.ImportVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.sel.PrivateSubnet(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		privateSubnets, err := o.sel.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing private subnets were found in VPC %s. You can either:

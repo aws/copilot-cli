@@ -273,7 +273,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 						Return(nil, mockErr),
 				)
 			},
@@ -292,9 +292,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 						Return([]string{"mockPublicSubnet"}, nil),
-					m.sel.EXPECT().PrivateSubnet(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					m.sel.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 						Return(nil, mockErr),
 				)
 			},
@@ -313,9 +313,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
 						Return([]string{"mockPublicSubnet"}, nil),
-					m.sel.EXPECT().PrivateSubnet(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					m.sel.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
 						Return([]string{"mockPrivateSubnet"}, nil),
 				)
 			},
