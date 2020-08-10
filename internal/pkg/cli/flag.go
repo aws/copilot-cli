@@ -65,6 +65,21 @@ const (
 	envVarsFlag        = "env-vars"
 	commandFlag        = "command"
 	taskDefaultFlag    = "default"
+
+	vpcIDFlag          = "import-vpc-id"
+	publicSubnetsFlag  = "import-public-subnets"
+	privateSubnetsFlag = "import-private-subnets"
+
+	vpcCIDRFlag            = "override-vpc-cidr"
+	publicSubnetCIDRsFlag  = "override-public-cidrs"
+	privateSubnetCIDRsFlag = "override-private-cidrs"
+
+	noCustomResourcesFlag = "no-custom-resources"
+
+	accessKeyIDFlag     = "aws-access-key-id"
+	secretAccessKeyFlag = "aws-secret-access-key"
+	sessionTokenFlag    = "aws-session-token"
+	regionFlag          = "region"
 )
 
 // Short flag names.
@@ -154,10 +169,27 @@ Must be of the format '<keyName>:<dataType>'.`
 	cpuFlagDescription            = "Optional. The number of CPU units to reserve for each task."
 	memoryFlagDescription         = "Optional. The amount of memory to reserve in MiB for each task."
 	imageFlagDescription          = "Optional. The image to run instead of building a Dockerfile."
-	taskRoleFlagDescription       = "Optional. The role for the task to use."
-	executionRoleFlagDescription  = "Optional. The role that grants the container agent permission to make AWS API calls."
+	taskRoleFlagDescription       = "Optional. The ARN of the role for the task to use."
+	executionRoleFlagDescription  = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription        = "Optional. Environment variables specified by key=value separated with commas."
 	commandFlagDescription        = `Optional. The command that is passed to "docker run" to override the default command.`
-	taskGroupFlagDescription      = "The group name of the task. Tasks with the same group name share the same set of resources."
+	taskGroupFlagDescription      = `Optional. The group name of the task. 
+Tasks with the same group name share the same set of resources. 
+(default directory name)`
 	taskImageTagFlagDescription   = `Optional. The container image tag in addition to "latest".`
+
+	vpcIDFlagDescription          = "Optional. Use an existing VPC ID."
+	publicSubnetsFlagDescription  = "Optional. Use existing public subnet IDs."
+	privateSubnetsFlagDescription = "Optional. Use existing private subnet IDs."
+
+	vpcCIDRFlagDescription            = "Optional. Global CIDR to use for VPC (default 10.0.0.0/16)."
+	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
+	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
+
+	noCustomResourcesFlagDescription = "Optional. Skip prompting and use default environment configuration."
+
+	accessKeyIDFlagDescription     = "Optional. An AWS access key."
+	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."
+	sessionTokenFlagDescription    = "Optional. An AWS session token for temporary credentials."
+	envRegionTokenFlagDescription  = "Options. An AWS region where the environment will be created."
 )

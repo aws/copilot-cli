@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -43,7 +44,6 @@ type initVars struct {
 	svcType        string
 	svcName        string
 	dockerfilePath string
-	profile        string
 	imageTag       string
 	port           uint16
 }
@@ -80,14 +80,14 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 	sessProvider := sessions.NewProvider()
-	sess, err := sessProvider.Default()
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
 	prompt := prompt.New()
 	spin := termprogress.NewSpinner()
-	id := identity.New(sess)
-	deployer := cloudformation.New(sess)
+	id := identity.New(defaultSess)
+	deployer := cloudformation.New(defaultSess)
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, err
@@ -124,8 +124,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
 			GlobalOpts:   NewGlobalOpts(),
-			EnvName:      defaultEnvironmentName,
-			EnvProfile:   vars.profile,
+			Name:         defaultEnvironmentName,
 			IsProduction: false,
 		},
 		store:         ssm,
@@ -134,7 +133,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:          spin,
 		identity:      id,
 
-		initProfileClients: initEnvProfileClients,
+		configureRuntimeClients: configureInitEnvFromDefaultSess,
 	}
 
 	deploySvcCmd := &deploySvcOpts{
@@ -146,6 +145,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		store:        ssm,
 		ws:           ws,
+		unmarshal:    manifest.UnmarshalService,
 		sel:          selector.NewWorkspaceSelect(prompt, ssm, ws),
 		spinner:      spin,
 		cmd:          command.New(),
@@ -291,7 +291,6 @@ func BuildInitCmd() *cobra.Command {
 			return nil
 		}),
 	}
-	cmd.Flags().StringVar(&vars.profile, profileFlag, defaultEnvironmentProfile, profileFlagDescription)
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcName, svcFlag, svcFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.svcType, svcTypeFlag, svcTypeFlagShort, "", svcTypeFlagDescription)

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -23,7 +24,7 @@ import (
 const (
 	userAgentHeader = "User-Agent"
 
-	credsTimeout = 10 * time.Second
+	credsTimeout  = 10 * time.Second
 	clientTimeout = 30 * time.Second
 )
 
@@ -65,7 +66,7 @@ func (p *Provider) Default() (*session.Session, error) {
 // DefaultWithRegion returns a session configured against the "default" AWS profile and the input region.
 func (p *Provider) DefaultWithRegion(region string) (*session.Session, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
-		Config: *newConfig().WithRegion(region),
+		Config:            *newConfig().WithRegion(region),
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
@@ -112,14 +113,22 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 // AreCredsFromEnvVars returns true if the session's credentials provider is environment variables, false otherwise.
 // An error is returned if the credentials are invalid or the request times out.
 func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
+	v, err := creds(sess)
+	if err != nil {
+		return false, err
+	}
+	return v.ProviderName == session.EnvProviderName, nil
+}
+
+func creds(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
 
 	v, err := sess.Config.Credentials.GetWithContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("get credentials of session: %w", err)
+		return credentials.Value{}, fmt.Errorf("get credentials of session: %w", err)
 	}
-	return v.ProviderName == session.EnvProviderName, nil
+	return v, nil
 }
 
 // newConfig returns a config with an end-to-end request timeout and verbose credentials errors.

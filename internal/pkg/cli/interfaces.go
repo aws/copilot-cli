@@ -308,6 +308,10 @@ type taskRunner interface {
 	Run() ([]*task.Task, error)
 }
 
+type defaultClusterGetter interface {
+	HasDefaultCluster() (bool, error)
+}
+
 type deployer interface {
 	environmentDeployer
 	appDeployer

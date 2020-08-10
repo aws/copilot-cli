@@ -5,7 +5,10 @@
 package ecs
 
 import (
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"strings"
 	"time"
 
@@ -200,6 +203,17 @@ func (e *ECS) DefaultCluster() (string, error) {
 	return aws.StringValue(cluster.ClusterArn), nil
 }
 
+// HasDefaultCluster tries to find the default cluster and returns true if there is one.
+func (e *ECS) HasDefaultCluster() (bool, error) {
+	if _, err := e.DefaultCluster(); err != nil {
+		if errors.Is(err, ErrNoDefaultCluster) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // RunTask runs a number of tasks with the task definition and network configurations in a cluster, and returns after
 // the task(s) is running or fails to run, along with task ARNs if possible.
 func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
@@ -226,19 +240,32 @@ func (e *ECS) RunTask(input RunTaskInput) ([]*Task, error) {
 		taskARNs[idx] = aws.StringValue(task.TaskArn)
 	}
 
-	if err := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
+	waitErr := e.client.WaitUntilTasksRunning(&ecs.DescribeTasksInput{
 		Cluster: aws.String(input.Cluster),
 		Tasks:   aws.StringSlice(taskARNs),
-	}); err != nil {
+	})
+
+	if waitErr != nil && !isRequestTimeoutErr(waitErr) {
 		return nil, fmt.Errorf("wait for tasks to be running: %w", err)
 	}
 
-	tasks, err := e.DescribeTasks(input.Cluster, taskARNs)
-	if err != nil {
-		return nil, err
+	tasks, describeErr := e.DescribeTasks(input.Cluster, taskARNs)
+	if describeErr != nil {
+		return nil, describeErr
+	}
+
+	if waitErr != nil {
+		return nil, &ErrWaiterResourceNotReadyForTasks{tasks: tasks, awsErrResourceNotReady: waitErr}
 	}
 
 	return tasks, nil
+}
+
+func isRequestTimeoutErr(err error) bool {
+	if aerr, ok := err.(awserr.Error); ok {
+		return aerr.Code() == request.WaiterResourceNotReadyErrorCode
+	}
+	return false
 }
 
 // DescribeTasks returns the tasks with the taskARNs in the cluster.

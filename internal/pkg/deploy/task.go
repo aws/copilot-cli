@@ -19,4 +19,6 @@ type CreateTaskResourcesInput struct {
 
 	App      string
 	Env      string
+
+	AdditionalTags map[string]string
 }

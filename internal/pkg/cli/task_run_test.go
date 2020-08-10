@@ -491,27 +491,6 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			wantedEnv: "",
 			wantedApp: "my-app",
 		},
-		"prompt for task family name": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(taskRunGroupNamePrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("my-task", nil)
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-
-			wantedName: "my-task",
-		},
-		"error getting task group name": {
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("error getting task group name"))
-			},
-			mockSel: func(m *mocks.MockappEnvSelector) {
-				m.EXPECT().Application(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-				m.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-			},
-			wantedError: errors.New("prompt get task group name: error getting task group name"),
-		},
 		"error selecting environment": {
 			appName: "my-app",
 
@@ -580,6 +559,16 @@ type runTaskMocks struct {
 	runner     *mocks.MocktaskRunner
 	store      *mocks.Mockstore
 	eventsWriter *mocks.MockeventsWriter
+	defaultClusterGetter *mocks.MockdefaultClusterGetter
+}
+
+func mockHasDefaultCluster(m runTaskMocks) {
+	m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil).AnyTimes()
+}
+
+func mockRepositoryAnytime(m runTaskMocks) {
+	m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
+	m.repository.EXPECT().URI().AnyTimes()
 }
 
 func TestTaskRunOpts_Execute(t *testing.T) {
@@ -604,6 +593,29 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
+		"check if default cluster exists if deploying to default cluster": {
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
+				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).AnyTimes()
+				mockRepositoryAnytime(m)
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
+		"do not check for default cluster if deploying to environment": {
+			inEnv: "test",
+			setupMocks: func(m runTaskMocks) {
+				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
+				m.store.EXPECT().
+					GetEnvironment(gomock.Any(), "test").
+					Return(&config.Environment{
+						ExecutionRoleARN: "env execution role",
+					}, nil)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockRepositoryAnytime(m)
+				m.runner.EXPECT().Run().AnyTimes()
+			},
+		},
 		"error deploying resources": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
@@ -611,6 +623,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Name:  inGroupName,
 					Image: "",
 				}).Return(errors.New("error deploying"))
+				mockHasDefaultCluster(m)
 			},
 			wantedError: errors.New("provision resources for task my-task: error deploying"),
 		},
@@ -627,6 +640,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Name:  inGroupName,
 					Image: "uri/repo:latest",
 				}).Times(1).Return(errors.New("error updating"))
+				mockHasDefaultCluster(m)
 			},
 			wantedError: errors.New("update resources for task my-task: error updating"),
 		},
@@ -634,9 +648,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.deployer.EXPECT().DeployTask(gomock.Any()).Return(nil).Times(2)
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Eq(&defaultBuildArguments))
-				m.repository.EXPECT().URI().Return(mockRepoURI)
+				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().Return(nil, errors.New("error running"))
+				mockHasDefaultCluster(m)
 			},
 			wantedError: errors.New("run task my-task: error running"),
 		},
@@ -648,18 +662,18 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 						ExecutionRoleARN: "env execution role",
 					}, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
-				m.repository.EXPECT().URI().AnyTimes()
+				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
+				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
 			},
 		},
 		"deploy without execution role option if env is empty": {
 			setupMocks: func(m runTaskMocks) {
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(0)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
-				m.repository.EXPECT().BuildAndPush(gomock.Any(), gomock.Any()).AnyTimes()
-				m.repository.EXPECT().URI().AnyTimes()
+				mockRepositoryAnytime(m)
 				m.runner.EXPECT().Run().AnyTimes()
+				mockHasDefaultCluster(m)
 			},
 		},
 		"append 'latest' to image tag": {
@@ -676,6 +690,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				)
 				m.repository.EXPECT().URI().AnyTimes()
 				m.runner.EXPECT().Run().AnyTimes()
+				mockHasDefaultCluster(m)
 			},
 		},
 		"update image to task resource if image is not provided": {
@@ -692,6 +707,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					Image: "uri/repo:latest",
 				}).Times(1).Return(nil)
 				m.runner.EXPECT().Run().AnyTimes()
+				mockHasDefaultCluster(m)
 			},
 		},
 		"fail to write events": {
@@ -712,6 +728,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}, nil)
 				m.eventsWriter.EXPECT().WriteEventsUntilStopped().Times(1).
 					Return(errors.New("error writing events"))
+				mockHasDefaultCluster(m)
 			},
 			wantedError: errors.New("write events: error writing events"),
 		},
@@ -728,6 +745,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				runner:     mocks.NewMocktaskRunner(ctrl),
 				store:      mocks.NewMockstore(ctrl),
 				eventsWriter: mocks.NewMockeventsWriter(ctrl),
+				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -747,6 +765,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts.configureRuntimeOpts = func() error {
 				opts.runner = mocks.runner
 				opts.deployer = mocks.deployer
+				opts.defaultClusterGetter = mocks.defaultClusterGetter
 				return nil
 			}
 			opts.configureRepository = func() error {
