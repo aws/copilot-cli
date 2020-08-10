@@ -49,7 +49,6 @@ const (
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
     - A new ECS Cluster
-    - A public Application Load Balancer
     - New IAM Roles to manage services in your environment
     - Termination Protection for resources
 `
