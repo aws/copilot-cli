@@ -368,7 +368,11 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
 	if o.groupName == "" {
-		dir, _ := os.Getwd()
+		dir, err := os.Getwd()
+		if err != nil {
+			log.Errorf("Cannot retrieve working directory, please use --%s to specify a task group name.\n", taskGroupNameFlag)
+			return fmt.Errorf("get working directory: %v", err) 
+		}
 		o.groupName = filepath.Base(dir)
 	}
 
