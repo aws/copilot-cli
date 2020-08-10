@@ -102,14 +102,14 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 
 // Tags returns the tags that should be applied to the task CloudFormation.
 func (t *taskStackConfig) Tags() []*cloudformation.Tag {
-	appEnvTags := make(map[string]string)
-
-	if t.Env != "" {
-		appEnvTags[deploy.AppTagKey] = t.App
-		appEnvTags[deploy.EnvTagKey] = t.Env
+	tags := map[string]string{
+		deploy.TaskTagKey: t.Name,
 	}
 
-	return mergeAndFlattenTags(appEnvTags, map[string]string{
-		deploy.TaskTagKey: t.Name,
-	})
+	if t.Env != "" {
+		tags[deploy.AppTagKey] = t.App
+		tags[deploy.EnvTagKey] = t.Env
+	}
+
+	return mergeAndFlattenTags(t.AdditionalTags, tags)
 }
