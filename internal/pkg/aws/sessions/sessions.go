@@ -113,16 +113,14 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 // AreCredsFromEnvVars returns true if the session's credentials provider is environment variables, false otherwise.
 // An error is returned if the credentials are invalid or the request times out.
 func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
-	v, err := Credentials(sess)
+	v, err := creds(sess)
 	if err != nil {
 		return false, err
 	}
 	return v.ProviderName == session.EnvProviderName, nil
 }
 
-// Credentials returns the session's credentials.
-// An error is returned if the credentials are invalid or the request times out.
-func Credentials(sess *session.Session) (credentials.Value, error) {
+func creds(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
 

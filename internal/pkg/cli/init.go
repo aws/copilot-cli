@@ -93,11 +93,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		return nil, err
 	}
 
-	creds, err := sessions.Credentials(defaultSess)
-	if err != nil {
-		return nil, fmt.Errorf("get default session credentials: %w", err)
-	}
-
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			AppName: vars.appName,
@@ -131,12 +126,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			GlobalOpts:   NewGlobalOpts(),
 			Name:         defaultEnvironmentName,
 			IsProduction: false,
-
-			TempCreds: tempCredsVars{
-				AccessKeyID:     creds.AccessKeyID,
-				SecretAccessKey: creds.SecretAccessKey,
-				SessionToken:    creds.SessionToken,
-			},
 		},
 		store:         ssm,
 		appDeployer:   deployer,
@@ -144,7 +133,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:          spin,
 		identity:      id,
 
-		configureRuntimeClients: configureInitEnvClients,
+		configureRuntimeClients: configureInitEnvFromDefaultSess,
 	}
 
 	deploySvcCmd := &deploySvcOpts{
