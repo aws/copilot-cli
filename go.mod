@@ -3,9 +3,9 @@ module github.com/aws/copilot-cli
 go 1.14
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.8
+	github.com/AlecAivazis/survey/v2 v2.1.0
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.33.17
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/awslabs/goformation/v4 v4.14.0
 	github.com/briandowns/spinner v1.11.1
 	github.com/dustin/go-humanize v1.0.0
@@ -25,7 +25,7 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
-	github.com/spf13/afero v1.3.3
+	github.com/spf13/afero v1.3.4
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
