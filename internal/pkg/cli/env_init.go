@@ -47,19 +47,23 @@ const (
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
 	envInitProfileHelpPrompt       = "The AWS CLI named profile with the permissions to create an environment."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
-    - A new VPC with 3 AZs, 2 public subnets and 2 private subnets
-    - A new ECS Cluster
-    - New IAM Roles
+    - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
+		- A new ECS Cluster
+		- A public Application Load Balancer
+    - New IAM Roles to manage services in your environment
     - Termination Protection for resources
 `
-	envInitConfigImportSelectPrompt   = "Ok no problem - would you like to adjust the environment config or import your own resources?"
+	envInitConfigImportSelectPrompt   = "Ok no problem - would you like to adjust the environment configuration or import your own resources?"
 	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
 	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
 	envInitPrivateSubnetsSelectPrompt = "Which private subnets would you like to use?"
 
-	envInitVPCCIDRPrompt     = "What VPC CIDR would you like to use?"
-	envInitPublicCIDRPrompt  = "What CIDR would you like to use for the first public subnet?"
-	envInitPrivateCIDRPrompt = "What CIDR would you like to use for the second public subnet?"
+	envInitVPCCIDRPrompt         = "What VPC CIDR would you like to use?"
+	envInitVPCCIDRPromptHelp     = "CIDR used for your VPC. For example: 10.1.0.0/16"
+	envInitPublicCIDRPrompt      = "What CIDR would you like to use for your public subnets?"
+	envInitPublicCIDRPromptHelp  = "CIDRs used for your public subnets. For example: 10.1.0.0/24,10.1.1.0/24"
+	envInitPrivateCIDRPrompt     = "What CIDR would you like to use for your private subnets?"
+	envInitPrivateCIDRPromptHelp = "CIDRs used for your private subnets. For example: 10.1.2.0/24,10.1.3.0/24"
 
 	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
@@ -77,10 +81,7 @@ const (
 )
 
 var (
-	errNamedProfilesNotFound  = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
-	errVpcNotFound            = fmt.Errorf("no VPC found, create a new VPC first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
-	errPublicSubnetsNotFound  = fmt.Errorf("no public subnets found, create new public subnets first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
-	errPrivateSubnetsNotFound = fmt.Errorf("no private subnets found, create new private subnets first to import\n or run %s to use default Copilot environment config please", color.HighlightCode("env init"))
+	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
 
 	envInitImportEnvResourcesSelectOption        = "Import resources (VPC, subnets)"
 	envInitAdjustEnvResourcesSelectOption        = "Adjust environment configuration (CIDR)"
@@ -174,7 +175,7 @@ func configureInitEnvClients(o *initEnvOpts) error {
 
 	o.envIdentity = identity.New(sess)
 	o.envDeployer = deploycfn.New(sess)
-	o.sel = selector.NewEc2Select(o.prompt, ec2.New(sess))
+	o.sel = selector.NewEC2Select(o.prompt, ec2.New(sess))
 	return nil
 }
 
@@ -352,10 +353,15 @@ func (o *initEnvOpts) askCustomizedResources() error {
 }
 
 func (o *initEnvOpts) askImportResources() error {
-	// TODO: move selection logic to selector pkg.
 	if o.ImportVPC.ID == "" {
 		vpcID, err := o.sel.VPC(envInitVPCSelectPrompt, "")
 		if err != nil {
+			if err == selector.ErrVpcNotFound {
+				log.Errorf(`No existing VPCs were found. You can either:
+- Create a new VPC first and then import it.
+- Use the default Copilot environment configuration.
+`)
+			}
 			return fmt.Errorf("select VPC: %w", err)
 		}
 		o.ImportVPC.ID = vpcID
@@ -363,6 +369,11 @@ func (o *initEnvOpts) askImportResources() error {
 	if o.ImportVPC.PublicSubnetIDs == nil {
 		publicSubnets, err := o.sel.PublicSubnet(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
+			if err == selector.ErrSubnetsNotFound {
+				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
+- Create new public subnets and then import them.
+- Use the default Copilot environment configuration.`, o.ImportVPC.ID)
+			}
 			return fmt.Errorf("select public subnets: %w", err)
 		}
 		o.ImportVPC.PublicSubnetIDs = publicSubnets
@@ -370,6 +381,11 @@ func (o *initEnvOpts) askImportResources() error {
 	if o.ImportVPC.PrivateSubnetIDs == nil {
 		privateSubnets, err := o.sel.PrivateSubnet(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
+			if err == selector.ErrSubnetsNotFound {
+				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
+- Create new private subnets and then import them.
+- Use the default Copilot environment configuration.`, o.ImportVPC.ID)
+			}
 			return fmt.Errorf("select private subnets: %w", err)
 		}
 		o.ImportVPC.PrivateSubnetIDs = privateSubnets
@@ -379,7 +395,7 @@ func (o *initEnvOpts) askImportResources() error {
 
 func (o *initEnvOpts) askAdjustResources() error {
 	if o.AdjustVPC.CIDR.String() == emptyIPNet.String() {
-		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, "", validateCIDR,
+		vpcCIDRString, err := o.prompt.Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, validateCIDR,
 			prompt.WithDefaultInput(stack.DefaultVPCCIDR))
 		if err != nil {
 			return fmt.Errorf("get VPC CIDR: %w", err)
@@ -391,7 +407,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 		o.AdjustVPC.CIDR = *vpcCIDR
 	}
 	if o.AdjustVPC.PublicSubnetCIDRs == nil {
-		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, "", validateCIDRSlice,
+		publicCIDR, err := o.prompt.Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, validateCIDRSlice,
 			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
@@ -399,7 +415,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 		o.AdjustVPC.PublicSubnetCIDRs = strings.Split(publicCIDR, ",")
 	}
 	if o.AdjustVPC.PrivateSubnetCIDRs == nil {
-		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, "", validateCIDRSlice,
+		privateCIDR, err := o.prompt.Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, validateCIDRSlice,
 			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
@@ -575,6 +591,9 @@ func BuildEnvInitCmd() *cobra.Command {
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ copilot env init --name prod-iad --profile prod-admin --prod
+
+  Creates a test environment using default environment configuration.
+  /code $ copilot env init --name test --no-custom-resources
 
   Creates an environment with imported VPC resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \

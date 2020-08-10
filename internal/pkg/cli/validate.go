@@ -22,8 +22,8 @@ var (
 	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString                    = errors.New("value must be a string")
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
-	errValueNotAnIPNet                    = errors.New("value must be a valid IPNet")
-	errValueNotIPNetSlice                 = errors.New("value must be a valid IPNet slice")
+	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
+	errValueNotIPNetSlice                 = errors.New("value must be a valid IP address range slice (example: 10.0.0.0/16,10.0.1.0/16)")
 	errInvalidGitHubRepo                  = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
@@ -343,8 +343,7 @@ func validateCIDRSlice(val interface{}) error {
 		return errValueNotIPNetSlice
 	}
 	for _, str := range slice {
-		ip, _, err := net.ParseCIDR(str)
-		if err != nil || ip.String() == emptyIP.String() {
+		if err := validateCIDR(str); err != nil {
 			return errValueNotIPNetSlice
 		}
 	}

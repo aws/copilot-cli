@@ -399,7 +399,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Return(false, nil),
 					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return("", mockErr),
 				)
 			},
@@ -419,9 +419,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Return(false, nil),
 					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return("", mockErr),
 				)
 			},
@@ -441,11 +441,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Return(false, nil),
 					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockSubnetCIDRs, nil),
-					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return("", mockErr),
 				)
 			},
@@ -465,11 +465,11 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 						Return(false, nil),
 					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockSubnetCIDRs, nil),
-					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, "", gomock.Any(), gomock.Any()).
+					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockSubnetCIDRs, nil),
 				)
 			},

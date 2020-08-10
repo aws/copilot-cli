@@ -106,9 +106,10 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
+		public        bool
 
 		wantedError   error
-		wantedSubnets *Subnets
+		wantedSubnets []string
 	}{
 		"fail to describe subnets": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -132,10 +133,26 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 						subnet3,
 					}}, nil)
 			},
-			wantedSubnets: &Subnets{
-				Public:  []string{"subnet-2", "subnet-3"},
-				Private: []string{"subnet-1"},
+			wantedSubnets: []string{"subnet-1", "subnet-2", "subnet-3"},
+		},
+		"success with filtering": {
+			public: true,
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
+					Filters: toEC2Filter([]Filter{
+						{
+							Name:   "vpc-id",
+							Values: []string{mockVPCID},
+						},
+					}),
+				}).Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{
+						subnet1,
+						subnet2,
+						subnet3,
+					}}, nil)
 			},
+			wantedSubnets: []string{"subnet-2", "subnet-3"},
 		},
 	}
 
@@ -150,7 +167,13 @@ func TestEC2_ListVPCSubnets(t *testing.T) {
 				client: mockAPI,
 			}
 
-			subnets, err := ec2Client.ListVPCSubnets(mockVPCID)
+			var subnets []string
+			var err error
+			if tc.public {
+				subnets, err = ec2Client.ListVPCSubnets(mockVPCID, FilterForPublicSubnets())
+			} else {
+				subnets, err = ec2Client.ListVPCSubnets(mockVPCID)
+			}
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
