@@ -52,7 +52,7 @@ type GitHubProperties struct {
 	// An example for OwnerAndRepository would be: "aws/copilot"
 	OwnerAndRepository    string `structs:"repository" yaml:"repository"`
 	Branch                string `structs:"branch" yaml:"branch"`
-	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret` // TODO fix naming
+	GithubSecretIdKeyName string `structs:"access_token_secret" yaml:"access_token_secret"`
 }
 
 // NewProvider creates a source provider based on the type of

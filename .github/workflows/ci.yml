@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  staticcheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run go vet
+        run: go vet ./...
