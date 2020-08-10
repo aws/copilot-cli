@@ -30,18 +30,6 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type customizedEnvTypeSelection int
-
-func (s customizedEnvTypeSelection) String() string {
-	return envInitCustomizedEnvTypes[s]
-}
-
-const (
-	envInitImportEnvResources customizedEnvTypeSelection = iota
-	envInitAdjustEnvResources
-	envInitUseDefaultEnv
-)
-
 const (
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
@@ -50,7 +38,6 @@ const (
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
     - A new ECS Cluster
     - New IAM Roles to manage services in your environment
-    - Termination Protection for resources
 `
 	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
 	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
@@ -333,11 +320,11 @@ func (o *initEnvOpts) askCustomizedResources() error {
 		return fmt.Errorf("select adjusting or importing resources: %w", err)
 	}
 	switch adjustOrImport {
-	case envInitImportEnvResources.String():
+	case envInitImportEnvResourcesSelectOption:
 		return o.askImportResources()
-	case envInitAdjustEnvResources.String():
+	case envInitAdjustEnvResourcesSelectOption:
 		return o.askAdjustResources()
-	case envInitUseDefaultEnv.String():
+	case envInitWithNoCustomizedResourcesSelectOption:
 		return nil
 	}
 	return nil

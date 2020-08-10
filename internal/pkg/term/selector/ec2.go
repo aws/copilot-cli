@@ -58,19 +58,15 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.
 func (s *EC2Select) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.subnet(prompt, help, vpcID, true)
+	return s.subnet(prompt, help, vpcID, ec2.FilterForPublicSubnets())
 }
 
 // PrivateSubnets has the user multiselect private subnets given the VPC ID.
 func (s *EC2Select) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
-	return s.subnet(prompt, help, vpcID, false)
+	return s.subnet(prompt, help, vpcID, ec2.FilterForPrivateSubnets())
 }
 
-func (s *EC2Select) subnet(prompt, help string, vpcID string, public bool) ([]string, error) {
-	filter := ec2.FilterForPublicSubnets()
-	if !public {
-		filter = ec2.FilterForPrivateSubnets()
-	}
+func (s *EC2Select) subnet(prompt, help string, vpcID string, filter ec2.ListVPCSubnetsOpts) ([]string, error) {
 	subnets, err := s.ec2Svc.ListVPCSubnets(vpcID, filter)
 	if err != nil {
 		return nil, fmt.Errorf("list subnets for VPC %s: %w", vpcID, err)
