@@ -48,12 +48,11 @@ const (
 	envInitProfileHelpPrompt       = "The AWS CLI named profile with the permissions to create an environment."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
-		- A new ECS Cluster
-		- A public Application Load Balancer
+    - A new ECS Cluster
+    - A public Application Load Balancer
     - New IAM Roles to manage services in your environment
     - Termination Protection for resources
 `
-	envInitConfigImportSelectPrompt   = "Ok no problem - would you like to adjust the environment configuration or import your own resources?"
 	envInitVPCSelectPrompt            = "Which VPC would you like to use?"
 	envInitPublicSubnetsSelectPrompt  = "Which public subnets would you like to use?"
 	envInitPrivateSubnetsSelectPrompt = "Which private subnets would you like to use?"
@@ -83,9 +82,9 @@ const (
 var (
 	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
 
-	envInitImportEnvResourcesSelectOption        = "Import resources (VPC, subnets)"
-	envInitAdjustEnvResourcesSelectOption        = "Adjust environment configuration (CIDR)"
-	envInitWithNoCustomizedResourcesSelectOption = "Skip and create default"
+	envInitImportEnvResourcesSelectOption        = "No, I'd like to import existing resources (VPC, subnets)."
+	envInitAdjustEnvResourcesSelectOption        = "Yes, but I'd like configure the default resources (CIDR ranges)."
+	envInitWithNoCustomizedResourcesSelectOption = "Yes, use default."
 	envInitCustomizedEnvTypes                    = []string{envInitImportEnvResourcesSelectOption, envInitAdjustEnvResourcesSelectOption, envInitWithNoCustomizedResourcesSelectOption}
 )
 
@@ -328,15 +327,8 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	if o.NoCustomResources {
 		return nil
 	}
-	useDefaultEnv, err := o.prompt.Confirm(envInitDefaultEnvConfirmPrompt, "")
-	if err != nil {
-		return fmt.Errorf("confirm to use default environment %s: %w", o.Name, err)
-	}
-	if useDefaultEnv {
-		return nil
-	}
 	adjustOrImport, err := o.prompt.SelectOne(
-		envInitConfigImportSelectPrompt, "",
+		envInitDefaultEnvConfirmPrompt, "",
 		envInitCustomizedEnvTypes)
 	if err != nil {
 		return fmt.Errorf("select adjusting or importing resources: %w", err)

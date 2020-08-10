@@ -198,37 +198,6 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get the profile name: some error"),
 		},
-		"fail to confirm to use default environment": {
-			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, mockErr),
-				)
-			},
-			wantedError: fmt.Errorf("confirm to use default environment test: some error"),
-		},
-		"success with default environment with no flags": {
-			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(true, nil),
-				)
-			},
-		},
 		"success with default environment with flags": {
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
@@ -253,9 +222,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return("", mockErr),
 				)
 			},
@@ -271,9 +238,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitWithNoCustomizedResourcesSelectOption, nil),
 				)
 			},
@@ -288,9 +253,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("", mockErr),
 				)
@@ -307,9 +270,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
 					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
@@ -328,9 +289,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
 					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
@@ -351,9 +310,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
 					m.sel.EXPECT().PublicSubnet(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
@@ -378,9 +335,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitImportEnvResourcesSelectOption, nil),
 				)
 			},
@@ -395,9 +350,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
 					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return("", mockErr),
@@ -415,9 +368,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
 					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
@@ -437,9 +388,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
 					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
@@ -461,9 +410,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
 					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
 						Return(mockVPCCIDR, nil),
@@ -492,9 +439,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					m.prompt.EXPECT().
 						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
 						Return(mockProfile, nil),
-					m.prompt.EXPECT().Confirm(envInitDefaultEnvConfirmPrompt, gomock.Any()).
-						Return(false, nil),
-					m.prompt.EXPECT().SelectOne(envInitConfigImportSelectPrompt, "", envInitCustomizedEnvTypes).
+					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
 						Return(envInitAdjustEnvResourcesSelectOption, nil),
 				)
 			},
