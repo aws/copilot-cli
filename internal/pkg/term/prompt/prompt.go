@@ -169,6 +169,7 @@ func (p Prompt) Get(message, help string, validator ValidatorFunc, promptOpts ..
 
 	var result string
 	err := p(prompt, &result, stdio(), validators(validator), icons())
+
 	return result, err
 }
 
