@@ -45,9 +45,9 @@ const (
 	EnvOutputSubdomain                 = "EnvironmentSubdomain"
 
 	// Default parameter values
-	defaultVPCCIDR            = "10.0.0.0/16"
-	defaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
-	defaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+	DefaultVPCCIDR            = "10.0.0.0/16"
+	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
+	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -74,9 +74,9 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 	vpcConf := &template.AdjustVPCOpts{
-		CIDR:               defaultVPCCIDR,
-		PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
-		PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
+		CIDR:               DefaultVPCCIDR,
+		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
+		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 	}
 
 	if e.AdjustVPCOpts() != nil {

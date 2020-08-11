@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,6 +22,8 @@ var (
 	errValueBadFormat                     = errors.New("value must start with a letter and contain only lower-case letters, numbers, and hyphens")
 	errValueNotAString                    = errors.New("value must be a string")
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
+	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
+	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
 	errInvalidGitHubRepo                  = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
@@ -33,6 +36,11 @@ var (
 	errLSIAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
+)
+
+var (
+	emptyIPNet = net.IPNet{}
+	emptyIP    = net.IP{}
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
@@ -311,4 +319,33 @@ func validateLSIs(val interface{}) error {
 func prettify(inputStrings []string) string {
 	prettyTypes := template.QuoteSliceFunc(inputStrings)
 	return strings.Join(prettyTypes, ", ")
+}
+
+func validateCIDR(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	ip, _, err := net.ParseCIDR(s)
+	if err != nil || ip.String() == emptyIP.String() {
+		return errValueNotAnIPNet
+	}
+	return nil
+}
+
+func validateCIDRSlice(val interface{}) error {
+	s, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	slice := strings.Split(s, ",")
+	if len(slice) == 0 {
+		return errValueNotIPNetSlice
+	}
+	for _, str := range slice {
+		if err := validateCIDR(str); err != nil {
+			return errValueNotIPNetSlice
+		}
+	}
+	return nil
 }

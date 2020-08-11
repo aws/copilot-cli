@@ -3989,3 +3989,71 @@ func (mr *MockwsSelectorMockRecorder) Service(prompt, help interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockwsSelector)(nil).Service), prompt, help)
 }
+
+// Mockec2Selector is a mock of ec2Selector interface
+type Mockec2Selector struct {
+	ctrl     *gomock.Controller
+	recorder *Mockec2SelectorMockRecorder
+}
+
+// Mockec2SelectorMockRecorder is the mock recorder for Mockec2Selector
+type Mockec2SelectorMockRecorder struct {
+	mock *Mockec2Selector
+}
+
+// NewMockec2Selector creates a new mock instance
+func NewMockec2Selector(ctrl *gomock.Controller) *Mockec2Selector {
+	mock := &Mockec2Selector{ctrl: ctrl}
+	mock.recorder = &Mockec2SelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *Mockec2Selector) EXPECT() *Mockec2SelectorMockRecorder {
+	return m.recorder
+}
+
+// VPC mocks base method
+func (m *Mockec2Selector) VPC(prompt, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VPC", prompt, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VPC indicates an expected call of VPC
+func (mr *Mockec2SelectorMockRecorder) VPC(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VPC", reflect.TypeOf((*Mockec2Selector)(nil).VPC), prompt, help)
+}
+
+// PublicSubnets mocks base method
+func (m *Mockec2Selector) PublicSubnets(prompt, help, vpcID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicSubnets", prompt, help, vpcID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicSubnets indicates an expected call of PublicSubnets
+func (mr *Mockec2SelectorMockRecorder) PublicSubnets(prompt, help, vpcID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PublicSubnets), prompt, help, vpcID)
+}
+
+// PrivateSubnets mocks base method
+func (m *Mockec2Selector) PrivateSubnets(prompt, help, vpcID string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrivateSubnets", prompt, help, vpcID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrivateSubnets indicates an expected call of PrivateSubnets
+func (mr *Mockec2SelectorMockRecorder) PrivateSubnets(prompt, help, vpcID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PrivateSubnets), prompt, help, vpcID)
+}

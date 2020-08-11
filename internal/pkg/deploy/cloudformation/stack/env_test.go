@@ -47,9 +47,9 @@ func TestEnvTemplate(t *testing.T) {
 					EnableLongARNFormatLambda: "customresources",
 					ImportVPC:                 nil,
 					VPCConfig: &template.AdjustVPCOpts{
-						CIDR:               defaultVPCCIDR,
-						PrivateSubnetCIDRs: strings.Split(defaultPrivateSubnetCIDRs, ","),
-						PublicSubnetCIDRs:  strings.Split(defaultPublicSubnetCIDRs, ","),
+						CIDR:               DefaultVPCCIDR,
+						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
+						PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
 					},
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m

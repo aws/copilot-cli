@@ -15,8 +15,15 @@ type progress interface {
 	Events([]termprogress.TabRow)
 }
 
-// envProgressOrder is the order in which we want to progress text to appear on the terminal.
-var envProgressOrder = []termprogress.Text{textVPC, textInternetGateway, textPublicSubnets, textPrivateSubnets, textRouteTables, textECSCluster, textALB}
+var defaultResourceCounts = map[termprogress.Text]int{
+	textVPC:             1,
+	textInternetGateway: 2,
+	textPublicSubnets:   2,
+	textPrivateSubnets:  2,
+	textRouteTables:     4,
+	textECSCluster:      1,
+	textALB:             4,
+}
 
 // Row descriptions displayed while deploying an environment.
 const (

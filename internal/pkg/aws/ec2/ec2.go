@@ -19,6 +19,35 @@ const (
 	TagFilterName = "tag:%s"
 )
 
+// ListVPCSubnetsOpts sets up optional parameters for ListVPCSubnets function.
+type ListVPCSubnetsOpts func([]*ec2.Subnet) []*ec2.Subnet
+
+// FilterForPublicSubnets is used to filter to get public subnets.
+func FilterForPublicSubnets() ListVPCSubnetsOpts {
+	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
+		var publicSubnets []*ec2.Subnet
+		for _, subnet := range subnets {
+			if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
+				publicSubnets = append(publicSubnets, subnet)
+			}
+		}
+		return publicSubnets
+	}
+}
+
+// FilterForPrivateSubnets is used to filter to get private subnets.
+func FilterForPrivateSubnets() ListVPCSubnetsOpts {
+	return func(subnets []*ec2.Subnet) []*ec2.Subnet {
+		var privateSubnets []*ec2.Subnet
+		for _, subnet := range subnets {
+			if !aws.BoolValue(subnet.MapPublicIpOnLaunch) {
+				privateSubnets = append(privateSubnets, subnet)
+			}
+		}
+		return privateSubnets
+	}
+}
+
 var (
 	// FilterForDefaultVPCSubnets is a pre-defined filter for the default subnets at the availability zone.
 	FilterForDefaultVPCSubnets = Filter{
@@ -30,6 +59,7 @@ var (
 type api interface {
 	DescribeSubnets(*ec2.DescribeSubnetsInput) (*ec2.DescribeSubnetsOutput, error)
 	DescribeSecurityGroups(*ec2.DescribeSecurityGroupsInput) (*ec2.DescribeSecurityGroupsOutput, error)
+	DescribeVpcs(input *ec2.DescribeVpcsInput) (*ec2.DescribeVpcsOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -39,12 +69,6 @@ type Filter struct {
 	Name string
 	// Value of the filter.
 	Values []string
-}
-
-// Subnets contains subnets in a VPC.
-type Subnets struct {
-	Public  []string
-	Private []string
 }
 
 // EC2 wraps an AWS EC2 client.
@@ -59,8 +83,34 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
+// ListVPC returns IDs of all VPCs.
+func (c *EC2) ListVPC() ([]string, error) {
+	var vpcs []*ec2.Vpc
+	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
+	if err != nil {
+		return nil, fmt.Errorf("describe VPCs: %w", err)
+	}
+	vpcs = append(vpcs, response.Vpcs...)
+
+	for response.NextToken != nil {
+		response, err = c.client.DescribeVpcs(&ec2.DescribeVpcsInput{
+			NextToken: response.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe VPCs: %w", err)
+		}
+		vpcs = append(vpcs, response.Vpcs...)
+	}
+	var vpcNames []string
+	for _, vpc := range vpcs {
+		vpcNames = append(vpcNames, aws.StringValue(vpc.VpcId))
+	}
+
+	return vpcNames, nil
+}
+
 // ListVPCSubnets lists all subnets given a VPC ID.
-func (c *EC2) ListVPCSubnets(vpcID string) (*Subnets, error) {
+func (c *EC2) ListVPCSubnets(vpcID string, opts ...ListVPCSubnetsOpts) ([]string, error) {
 	respSubnets, err := c.subnets(Filter{
 		Name:   "vpc-id",
 		Values: []string{vpcID},
@@ -68,15 +118,14 @@ func (c *EC2) ListVPCSubnets(vpcID string) (*Subnets, error) {
 	if err != nil {
 		return nil, err
 	}
-	var subnets Subnets
-	for _, subnet := range respSubnets {
-		if aws.BoolValue(subnet.MapPublicIpOnLaunch) {
-			subnets.Public = append(subnets.Public, aws.StringValue(subnet.SubnetId))
-		} else {
-			subnets.Private = append(subnets.Private, aws.StringValue(subnet.SubnetId))
-		}
+	for _, opt := range opts {
+		respSubnets = opt(respSubnets)
 	}
-	return &subnets, nil
+	var subnets []string
+	for _, subnet := range respSubnets {
+		subnets = append(subnets, aws.StringValue(subnet.SubnetId))
+	}
+	return subnets, nil
 }
 
 // SubnetIDs finds the subnet IDs with optional filters.

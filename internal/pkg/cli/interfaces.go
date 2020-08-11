@@ -384,3 +384,9 @@ type wsSelector interface {
 	appEnvSelector
 	Service(prompt, help string) (string, error)
 }
+
+type ec2Selector interface {
+	VPC(prompt, help string) (string, error)
+	PublicSubnets(prompt, help, vpcID string) ([]string, error)
+	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+}

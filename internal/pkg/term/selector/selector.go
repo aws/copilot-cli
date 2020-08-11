@@ -17,6 +17,7 @@ import (
 // Prompter wraps the method to select an option from a list of options.
 type Prompter interface {
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
+	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
 }
 
 // AppEnvLister wraps methods to list apps and envs in config store.
