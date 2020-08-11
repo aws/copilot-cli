@@ -118,7 +118,7 @@ func (p *Provider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken st
 		Config: *newConfig(),
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create session from static credentials: %w", err)
 	}
 	sess.Handlers.Build.PushBackNamed(userAgentHandler())
 	return sess, nil
