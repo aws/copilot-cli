@@ -137,7 +137,7 @@ type initEnvOpts struct {
 	configureRuntimeClients func(*initEnvOpts) error
 }
 
-func configureInitEnvClients(o *initEnvOpts) error {
+func configureInitEnvFromFlags(o *initEnvOpts) error {
 	var sess *session.Session
 	if o.Profile != "" {
 		profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
@@ -164,6 +164,16 @@ func configureInitEnvClients(o *initEnvOpts) error {
 	return nil
 }
 
+func configureInitEnvFromDefaultSess(o *initEnvOpts) error {
+	sess, err := sessions.NewProvider().Default()
+	if err != nil {
+		return fmt.Errorf("create default session: %w", err)
+	}
+	o.envIdentity = identity.New(sess)
+	o.envDeployer = deploycfn.New(sess)
+	return nil
+}
+
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	store, err := config.NewStore()
 	if err != nil {
@@ -185,7 +195,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		identity:                identity.New(defaultSession),
 		profileConfig:           cfg,
 		prog:                    termprogress.NewSpinner(),
-		configureRuntimeClients: configureInitEnvClients,
+		configureRuntimeClients: configureInitEnvFromFlags,
 	}, nil
 }
 
