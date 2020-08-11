@@ -67,7 +67,7 @@ func (s *CredsSelect) Creds(prompt, help string) (*session.Session, error) {
 }
 
 func (s *CredsSelect) askTempCreds() (*session.Session, error) {
-	defaultAccessKey, defaultSecretAccessKey, defaultSessToken := s.defaultCreds()
+	defaultAccessKey, defaultSecretAccessKey, defaultSessToken := defaultCreds(s.Session)
 
 	accessKeyID, err := s.askWithMaskedDefault(accessKeyIDPrompt, defaultAccessKey)
 	if err != nil {
@@ -101,9 +101,11 @@ func (s *CredsSelect) askWithMaskedDefault(msg, defaultValue string) (string, er
 	return accessKeyId, nil
 }
 
-func (s *CredsSelect) defaultCreds() (accessKeyID, secretAccessKey, sessionToken string) {
+// defaultCreds returns the credential values from the default session.
+// If an error occurs, returns empty strings.
+func defaultCreds(session SessionProvider) (accessKeyID, secretAccessKey, sessionToken string) {
 	// If we cannot retrieve default creds, return empty credentials as default instead of an error.
-	defaultSess, err := s.Session.Default()
+	defaultSess, err := session.Default()
 	if err != nil {
 		return
 	}
