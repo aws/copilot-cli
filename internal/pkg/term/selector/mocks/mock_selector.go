@@ -34,6 +34,26 @@ func (m *MockPrompter) EXPECT() *MockPrompterMockRecorder {
 	return m.recorder
 }
 
+// Get mocks base method
+func (m *MockPrompter) Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{message, help, validator}
+	for _, a := range promptOpts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockPrompterMockRecorder) Get(message, help, validator interface{}, promptOpts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{message, help, validator}, promptOpts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockPrompter)(nil).Get), varargs...)
+}
+
 // SelectOne mocks base method
 func (m *MockPrompter) SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error) {
 	m.ctrl.T.Helper()

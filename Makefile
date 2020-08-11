@@ -143,6 +143,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -source=./internal/pkg/cli/interfaces.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_interfaces.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_selector.go -source=./internal/pkg/term/selector/selector.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_ec2.go -source=./internal/pkg/term/selector/ec2.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/term/selector/mocks/mock_creds.go -source=./internal/pkg/term/selector/creds.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/completion.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_completion.go
 	${GOBIN}/mockgen -source=./internal/pkg/cli/identity.go -package=mocks -destination=./internal/pkg/cli/mocks/mock_identity.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/describe/mocks/mock_lb_web_service.go -source=./internal/pkg/describe/lb_web_service.go
