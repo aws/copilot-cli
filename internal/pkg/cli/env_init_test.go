@@ -33,13 +33,13 @@ type initEnvMocks struct {
 
 func TestInitEnvOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inEnvName           string
-		inAppName           string
-		inNoCustomResources bool
-		inVPCID             string
-		inPublicIDs         []string
-		inVPCCIDR           net.IPNet
-		inPublicCIDRs       []string
+		inEnvName     string
+		inAppName     string
+		inDefault     bool
+		inVPCID       string
+		inPublicIDs   []string
+		inVPCCIDR     net.IPNet
+		inPublicCIDRs []string
 
 		inProfileName     string
 		inAccessKeyID     string
@@ -78,12 +78,12 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			wantedErrMsg: "cannot specify both import vpc flags and configure vpc flags",
 		},
 		"cannot import or configure resources if use default flag is set": {
-			inEnvName:           "test-pdx",
-			inAppName:           "phonetool",
-			inNoCustomResources: true,
-			inVPCID:             "mockID",
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
+			inDefault: true,
+			inVPCID:   "mockID",
 
-			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag),
+			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", defaultConfigFlag),
 		},
 		"should err if both profile and access key id are set": {
 			inAppName:     "phonetool",
@@ -116,8 +116,8 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:              tc.inEnvName,
-					NoCustomResources: tc.inNoCustomResources,
+					Name:          tc.inEnvName,
+					DefaultConfig: tc.inDefault,
 					AdjustVPC: adjustVPCVars{
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
 						CIDR:              tc.inVPCCIDR,
@@ -265,7 +265,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
 				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-					Return(envInitWithNoCustomizedResourcesSelectOption, nil)
+					Return(envInitDefaultConfigSelectOption, nil)
 			},
 		},
 		"fail to select VPC": {
@@ -426,13 +426,13 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					Name:              tc.inEnv,
-					Profile:           tc.inProfile,
-					TempCreds:         tc.inTempCreds,
-					Region:            tc.inRegion,
-					NoCustomResources: tc.inDefault,
-					AdjustVPC:         tc.inAdjustVPCVars,
-					ImportVPC:         tc.inImportVPCVars,
+					Name:          tc.inEnv,
+					Profile:       tc.inProfile,
+					TempCreds:     tc.inTempCreds,
+					Region:        tc.inRegion,
+					DefaultConfig: tc.inDefault,
+					AdjustVPC:     tc.inAdjustVPCVars,
+					ImportVPC:     tc.inImportVPCVars,
 					GlobalOpts: &GlobalOpts{
 						prompt: mocks.prompt,
 					},
