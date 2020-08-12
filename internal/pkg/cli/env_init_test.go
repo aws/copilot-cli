@@ -150,12 +150,14 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 }
 
 func TestInitEnvOpts_Ask(t *testing.T) {
-	mockEnv := "test"
-	mockProfile := "default"
+	const (
+		mockEnv         = "test"
+		mockProfile     = "default"
+		mockVPCCIDR     = "10.10.10.10/24"
+		mockSubnetCIDRs = "10.10.10.10/24,10.10.10.10/24"
+		mockRegion      = "us-west-2"
+	)
 	mockErr := errors.New("some error")
-	mockVPCCIDR := "10.10.10.10/24"
-	mockSubnetCIDRs := "10.10.10.10/24,10.10.10.10/24"
-	mockRegion := "us-west-2"
 	mockSession := &session.Session{
 		Config: &aws.Config{
 			Region: aws.String(mockRegion),
@@ -329,8 +331,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"fail to get VPC CIDR": {
@@ -403,8 +404,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			setupMocks: func(m initEnvMocks) {
 				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
-				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 	}
