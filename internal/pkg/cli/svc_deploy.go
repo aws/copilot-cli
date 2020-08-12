@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
@@ -240,7 +241,7 @@ func (o *deploySvcOpts) askImageTag() error {
 
 	log.Warningln("Failed to default tag, are you in a git repository?")
 
-	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", nil /*no validation*/)
+	userInputTag, err := o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 	if err != nil {
 		return fmt.Errorf("prompt for image tag: %w", err)
 	}

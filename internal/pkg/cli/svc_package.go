@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/command"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -233,7 +234,7 @@ func (o *packageSvcOpts) askTag() error {
 	tag, err := getVersionTag(o.runner)
 	if err != nil {
 		// We're not in a Git repository, prompt the user for an explicit tag.
-		tag, err = o.prompt.Get(inputImageTagPrompt, "", nil)
+		tag, err = o.prompt.Get(inputImageTagPrompt, "", prompt.RequireNonEmpty)
 		if err != nil {
 			return fmt.Errorf("prompt get image tag: %w", err)
 		}

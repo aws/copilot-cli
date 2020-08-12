@@ -84,9 +84,9 @@ func TestCredsSelect_Creds(t *testing.T) {
 					},
 				}, nil)
 
-				prompter.EXPECT().Get("What's your AWS Access Key ID?", "", nil, gomock.Any()).
+				prompter.EXPECT().Get("What's your AWS Access Key ID?", "", gomock.Any(), gomock.Any()).
 					Return("****************1111", nil)
-				prompter.EXPECT().Get("What's your AWS Secret Access Key?", "", nil, gomock.Any()).
+				prompter.EXPECT().Get("What's your AWS Secret Access Key?", "", gomock.Any(), gomock.Any()).
 					Return("****************2222", nil)
 				prompter.EXPECT().Get("What's your AWS Session Token?", "", nil, gomock.Any()).
 					Return("****************3333", nil)
