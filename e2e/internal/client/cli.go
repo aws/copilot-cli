@@ -36,10 +36,11 @@ type InitRequest struct {
 
 // EnvInitRequest contains the parameters for calling copilot env init
 type EnvInitRequest struct {
-	AppName string
-	EnvName string
-	Profile string
-	Prod    bool
+	AppName       string
+	EnvName       string
+	Profile       string
+	Prod          bool
+	CustomizedEnv bool
 }
 
 // EnvShowRequest contains the parameters for calling copilot env show
@@ -83,8 +84,8 @@ type TaskRunInput struct {
 
 	GroupName string
 
-	Image          string
-	Dockerfile     string
+	Image      string
+	Dockerfile string
 
 	Subnets        []string
 	SecurityGroups []string
@@ -281,7 +282,8 @@ copilot env init
 	--name $n
 	--app $a
 	--profile $pr
-	--prod (optionally)
+	--prod (optional)
+	--no-custom-resources (optional)
 */
 func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	commands := []string{"env", "init",
@@ -291,6 +293,9 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	}
 	if opts.Prod {
 		commands = append(commands, "--prod")
+	}
+	if !opts.CustomizedEnv {
+		commands = append(commands, "--no-custom-resources")
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
