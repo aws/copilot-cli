@@ -110,17 +110,32 @@ func (p *Provider) FromRole(roleARN string, region string) (*session.Session, er
 	return sess, nil
 }
 
+// FromStaticCreds returns a session from static credentials.
+func (p *Provider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
+	conf := newConfig()
+	conf.Credentials = credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config: *newConfig(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create session from static credentials: %w", err)
+	}
+	sess.Handlers.Build.PushBackNamed(userAgentHandler())
+	return sess, nil
+}
+
 // AreCredsFromEnvVars returns true if the session's credentials provider is environment variables, false otherwise.
 // An error is returned if the credentials are invalid or the request times out.
 func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
-	v, err := creds(sess)
+	v, err := Creds(sess)
 	if err != nil {
 		return false, err
 	}
 	return v.ProviderName == session.EnvProviderName, nil
 }
 
-func creds(sess *session.Session) (credentials.Value, error) {
+// Creds returns the credential values from a session.
+func Creds(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
 

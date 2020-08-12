@@ -14,8 +14,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 )
 
-// Prompter wraps the method to select an option from a list of options.
+// Prompter wraps the methods to ask for inputs from the terminal.
 type Prompter interface {
+	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.Option) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.Option) (string, error)
 	MultiSelect(message, help string, options []string, promptOpts ...prompt.Option) ([]string, error)
 }
