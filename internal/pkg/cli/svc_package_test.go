@@ -136,7 +136,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				m.EXPECT().Environment(svcPackageEnvNamePrompt, "", testAppName).Return("test", nil)
 			},
 			expectPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().Get(inputImageTagPrompt, "", nil).Return("v1.0.0", nil)
+				m.EXPECT().Get(inputImageTagPrompt, "", gomock.Any()).Return("v1.0.0", nil)
 			},
 
 			wantedSvcName: "frontend",

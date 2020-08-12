@@ -69,15 +69,15 @@ func (s *CredsSelect) Creds(prompt, help string) (*session.Session, error) {
 func (s *CredsSelect) askTempCreds() (*session.Session, error) {
 	defaultAccessKey, defaultSecretAccessKey, defaultSessToken := defaultCreds(s.Session)
 
-	accessKeyID, err := s.askWithMaskedDefault(accessKeyIDPrompt, defaultAccessKey)
+	accessKeyID, err := s.askWithMaskedDefault(accessKeyIDPrompt, defaultAccessKey, prompt.RequireNonEmpty)
 	if err != nil {
 		return nil, fmt.Errorf("get access key id: %w", err)
 	}
-	secretAccessKey, err := s.askWithMaskedDefault(secretAccessKeyPrompt, defaultSecretAccessKey)
+	secretAccessKey, err := s.askWithMaskedDefault(secretAccessKeyPrompt, defaultSecretAccessKey, prompt.RequireNonEmpty)
 	if err != nil {
 		return nil, fmt.Errorf("get secret access key: %w", err)
 	}
-	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken) // TODO(efekarakus): remove validation so that it can be empty.
+	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get session token: %w", err)
 	}
@@ -89,8 +89,8 @@ func (s *CredsSelect) askTempCreds() (*session.Session, error) {
 	return sess, nil
 }
 
-func (s *CredsSelect) askWithMaskedDefault(msg, defaultValue string) (string, error) {
-	accessKeyId, err := s.Prompt.Get(msg, "", nil, prompt.WithDefaultInput(mask(defaultValue)))
+func (s *CredsSelect) askWithMaskedDefault(msg, defaultValue string, f prompt.ValidatorFunc) (string, error) {
+	accessKeyId, err := s.Prompt.Get(msg, "", f, prompt.WithDefaultInput(mask(defaultValue)))
 	if err != nil {
 		return "", err
 	}
