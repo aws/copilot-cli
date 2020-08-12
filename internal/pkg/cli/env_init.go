@@ -325,10 +325,12 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	if o.NoCustomResources {
 		return nil
 	}
-	if o.selVPC == nil {
-		o.selVPC = selector.NewEC2Select(o.prompt, ec2.New(o.sess))
+	if o.ImportVPC.isSet() {
+		return o.askImportResources()
 	}
-
+	if o.AdjustVPC.isSet() {
+		return o.askAdjustResources()
+	}
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
 		envInitCustomizedEnvTypes)
@@ -347,6 +349,9 @@ func (o *initEnvOpts) askCustomizedResources() error {
 }
 
 func (o *initEnvOpts) askImportResources() error {
+	if o.selVPC == nil {
+		o.selVPC = selector.NewEC2Select(o.prompt, ec2.New(o.sess))
+	}
 	if o.ImportVPC.ID == "" {
 		vpcID, err := o.selVPC.VPC(envInitVPCSelectPrompt, "")
 		if err != nil {
