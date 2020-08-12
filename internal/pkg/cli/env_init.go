@@ -182,9 +182,25 @@ func (o *initEnvOpts) Validate() error {
 			return err
 		}
 	}
+
 	if o.AppName() == "" {
-		return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
+		existingApps, _ := o.store.ListApplications()
+		if len(existingApps) == 0 {
+			o.askAppName(fmtAppInitNamePrompt)
+		} else {
+			useExistingApp, err := o.prompt.Confirm(
+			"Would you like to use one of your existing applications?", "", prompt.WithTrueDefault(), prompt.WithFinalMessage("Use existing application:"))
+			if err != nil {
+				return fmt.Errorf("prompt to confirm using existing application: %w", err)
+			}
+			if useExistingApp {
+				o.askSelectExistingAppName(existingApps)
+			} else {
+				o.askAppName(fmtAppInitNewNamePrompt)
+			}
+		}
 	}
+
 	if err := o.validateCustomizedResources(); err != nil {
 		return err
 	}
@@ -264,6 +280,36 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.DefaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	return nil
+}
+
+func (o *GlobalOpts) askAppName(formatMsg string) error {
+	appName, err := o.prompt.Get(
+		fmt.Sprintf(formatMsg, color.Emphasize("name")),
+		appInitNameHelpPrompt,
+		validateAppName,
+		prompt.WithFinalMessage("Application name:"))
+	if err != nil {
+		return fmt.Errorf("prompt get application name: %w", err)
+	}
+	o.appName = appName
+	return nil
+}
+
+func (o *GlobalOpts) askSelectExistingAppName(existingApps []*config.Application) error {
+	var names []string
+	for _, p := range existingApps {
+		names = append(names, p.Name)
+	}
+	name, err := o.prompt.SelectOne(
+		fmt.Sprintf("Which %s do you want to add a new service to?", color.Emphasize("existing application")),
+		appInitNameHelpPrompt,
+		names,
+		prompt.WithFinalMessage("Application name:"))
+	if err != nil {
+		return fmt.Errorf("prompt select application name: %w", err)
+	}
+	o.appName = name
 	return nil
 }
 
