@@ -185,6 +185,14 @@ type sessionFromRoleProvider interface {
 	FromRole(roleARN string, region string) (*session.Session, error)
 }
 
+type sessionFromStaticProvider interface {
+	FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error)
+}
+
+type sessionFromProfileProvider interface {
+	FromProfile(name string) (*session.Session, error)
+}
+
 type profileNames interface {
 	Names() []string
 }
@@ -193,6 +201,8 @@ type sessionProvider interface {
 	defaultSessionProvider
 	regionalSessionProvider
 	sessionFromRoleProvider
+	sessionFromProfileProvider
+	sessionFromStaticProvider
 }
 
 type describer interface {
@@ -389,4 +399,8 @@ type ec2Selector interface {
 	VPC(prompt, help string) (string, error)
 	PublicSubnets(prompt, help, vpcID string) ([]string, error)
 	PrivateSubnets(prompt, help, vpcID string) ([]string, error)
+}
+
+type credsSelector interface {
+	Creds(prompt, help string) (*session.Session, error)
 }

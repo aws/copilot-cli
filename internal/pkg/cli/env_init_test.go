@@ -9,6 +9,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -22,9 +24,11 @@ import (
 )
 
 type initEnvMocks struct {
-	prompt *mocks.Mockprompter
-	sel    *mocks.Mockec2Selector
-	config *mocks.MockprofileNames
+	sessProvider *mocks.MocksessionProvider
+	prompt       *mocks.Mockprompter
+	selVPC       *mocks.Mockec2Selector
+	selCreds     *mocks.MockcredsSelector
+	config       *mocks.MockprofileNames
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -151,10 +155,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	mockErr := errors.New("some error")
 	mockVPCCIDR := "10.10.10.10/24"
 	mockSubnetCIDRs := "10.10.10.10/24,10.10.10.10/24"
+	mockRegion := "us-west-2"
+	mockSession := &session.Session{
+		Config: &aws.Config{
+			Region: aws.String(mockRegion),
+		},
+	}
 
 	testCases := map[string]struct {
 		inEnv           string
 		inProfile       string
+		inTempCreds     tempCredsVars
+		inRegion        string
 		inDefault       bool
 		inImportVPCVars importVPCVars
 		inAdjustVPCVars adjustVPCVars
@@ -173,255 +185,214 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get environment name: some error"),
 		},
-		"with no existing named profiles": {
-			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{}),
-				)
-			},
-			wantedError: errNamedProfilesNotFound,
-		},
-		"fail to select profile": {
-			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return("", mockErr),
-				)
-			},
-			wantedError: fmt.Errorf("get the profile name: some error"),
-		},
-		"success with default environment with flags": {
+		"should create a session from a named profile if flag is provided": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			inDefault: true,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
+					Config: &aws.Config{
+						Region: aws.String("us-west-2"),
+					},
+				}, nil)
+			},
+		},
+		"should create a session from temporary creds if flags are provided": {
+			inEnv: mockEnv,
+			inTempCreds: tempCredsVars{
+				AccessKeyID:     "abcd",
+				SecretAccessKey: "efgh",
+			},
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromStaticCreds("abcd", "efgh", "").Return(mockSession, nil)
+			},
+		},
+		"should prompt for credentials if no profile or temp creds flags are provided": {
+			inEnv:     mockEnv,
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				m.selCreds.EXPECT().Creds("Which credentials would you like to use to create test?", gomock.Any()).Return(mockSession, nil)
+			},
+		},
+		"should prompt for region if user configuration does not have one": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
+					Config: &aws.Config{},
+				}, nil)
+				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any()).Return("us-west-2", nil)
+			},
+		},
+		"should skip prompting for region if flag is provided": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inRegion:  mockRegion,
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(&session.Session{
+					Config: &aws.Config{},
+				}, nil)
+				m.prompt.EXPECT().Get("Which region?", gomock.Any(), nil, gomock.Any()).Times(0)
+			},
+		},
+		"should not prompt for configuring environment if default config flag is true": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inDefault: true,
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, gomock.Any(), gomock.Any()).Times(0)
 			},
 		},
 		"fail to select whether to adjust or import resources": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return("", mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("select adjusting or importing resources: some error"),
 		},
 		"success with no custom resources": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitWithNoCustomizedResourcesSelectOption, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitWithNoCustomizedResourcesSelectOption, nil)
 			},
 		},
 		"fail to select VPC": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitImportEnvResourcesSelectOption, nil),
-					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("", mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("select VPC: some error"),
 		},
 		"fail to select public subnets": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitImportEnvResourcesSelectOption, nil),
-					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
-						Return(nil, mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select public subnets: some error"),
 		},
 		"fail to select private subnets": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitImportEnvResourcesSelectOption, nil),
-					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
-						Return([]string{"mockPublicSubnet"}, nil),
-					m.sel.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
-						Return(nil, mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					Return(nil, mockErr)
 			},
 			wantedError: fmt.Errorf("select private subnets: some error"),
 		},
 		"success with importing env resources with no flags": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitImportEnvResourcesSelectOption, nil),
-					m.sel.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil),
-					m.sel.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
-						Return([]string{"mockPublicSubnet"}, nil),
-					m.sel.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
-						Return([]string{"mockPrivateSubnet"}, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.selVPC.EXPECT().PublicSubnets(envInitPublicSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", "mockVPC").
+					Return([]string{"mockPrivateSubnet"}, nil)
 			},
 		},
 		"success with importing env resources with flags": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			inImportVPCVars: importVPCVars{
 				ID:               "mockVPCID",
 				PrivateSubnetIDs: []string{"mockPrivateSubnetID"},
 				PublicSubnetIDs:  []string{"mockPublicSubnetID"},
 			},
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitImportEnvResourcesSelectOption, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitImportEnvResourcesSelectOption, nil)
 			},
 		},
 		"fail to get VPC CIDR": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return("", mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get VPC CIDR: some error"),
 		},
 		"fail to get public subnet CIDRs": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return("", mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get public subnet CIDRs: some error"),
 		},
 		"fail to get private subnet CIDRs": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockSubnetCIDRs, nil),
-					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return("", mockErr),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockSubnetCIDRs, nil)
+				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return("", mockErr)
 			},
 			wantedError: fmt.Errorf("get private subnet CIDRs: some error"),
 		},
 		"success with adjusting default env config with no flags": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitAdjustEnvResourcesSelectOption, nil),
-					m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockVPCCIDR, nil),
-					m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockSubnetCIDRs, nil),
-					m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
-						Return(mockSubnetCIDRs, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
+				m.prompt.EXPECT().Get(envInitVPCCIDRPrompt, envInitVPCCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockVPCCIDR, nil)
+				m.prompt.EXPECT().Get(envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockSubnetCIDRs, nil)
+				m.prompt.EXPECT().Get(envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp, gomock.Any(), gomock.Any()).
+					Return(mockSubnetCIDRs, nil)
 			},
 		},
 		"success with adjusting default env config with flags": {
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
 			inAdjustVPCVars: adjustVPCVars{
 				CIDR: net.IPNet{
 					IP:   net.IP{10, 1, 232, 0},
@@ -431,17 +402,9 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				PublicSubnetCIDRs:  []string{"mockPublicCIDR"},
 			},
 			setupMocks: func(m initEnvMocks) {
-				gomock.InOrder(
-					m.prompt.EXPECT().
-						Get(envInitNamePrompt, envInitNameHelpPrompt, gomock.Any()).
-						Return(mockEnv, nil),
-					m.config.EXPECT().Names().Return([]string{mockProfile}),
-					m.prompt.EXPECT().
-						SelectOne(fmt.Sprintf(fmtEnvInitProfilePrompt, mockEnv), envInitProfileHelpPrompt, gomock.Any()).
-						Return(mockProfile, nil),
-					m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
-						Return(envInitAdjustEnvResourcesSelectOption, nil),
-				)
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.prompt.EXPECT().SelectOne(envInitDefaultEnvConfirmPrompt, "", envInitCustomizedEnvTypes).
+					Return(envInitAdjustEnvResourcesSelectOption, nil)
 			},
 		},
 	}
@@ -451,14 +414,12 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompter := mocks.NewMockprompter(ctrl)
-			mockCfg := mocks.NewMockprofileNames(ctrl)
-			mockSel := mocks.NewMockec2Selector(ctrl)
-
 			mocks := initEnvMocks{
-				prompt: mockPrompter,
-				config: mockCfg,
-				sel:    mockSel,
+				sessProvider: mocks.NewMocksessionProvider(ctrl),
+				prompt:       mocks.NewMockprompter(ctrl),
+				config:       mocks.NewMockprofileNames(ctrl),
+				selVPC:       mocks.NewMockec2Selector(ctrl),
+				selCreds:     mocks.NewMockcredsSelector(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -467,18 +428,18 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 				initEnvVars: initEnvVars{
 					Name:              tc.inEnv,
 					Profile:           tc.inProfile,
+					TempCreds:         tc.inTempCreds,
+					Region:            tc.inRegion,
 					NoCustomResources: tc.inDefault,
 					AdjustVPC:         tc.inAdjustVPCVars,
 					ImportVPC:         tc.inImportVPCVars,
 					GlobalOpts: &GlobalOpts{
-						prompt: mockPrompter,
+						prompt: mocks.prompt,
 					},
 				},
-				profileConfig: mockCfg,
-				sel:           mockSel,
-				configureRuntimeClients: func(o *initEnvOpts) error {
-					return nil
-				},
+				sessProvider: mocks.sessProvider,
+				selVPC:       mocks.selVPC,
+				selCreds:     mocks.selCreds,
 			}
 
 			// WHEN
@@ -927,9 +888,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				identity:    mockIdentity,
 				envIdentity: mockIdentity,
 				prog:        mockProgress,
-				configureRuntimeClients: func(o *initEnvOpts) error {
-					return nil
-				},
 			}
 
 			// WHEN

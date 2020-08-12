@@ -77,7 +77,7 @@ func (s *CredsSelect) askTempCreds() (*session.Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get secret access key: %w", err)
 	}
-	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken)
+	sessionToken, err := s.askWithMaskedDefault(sessionTokenPrompt, defaultSessToken) // TODO(efekarakus): remove validation so that it can be empty.
 	if err != nil {
 		return nil, fmt.Errorf("get session token: %w", err)
 	}
