@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/profile"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -88,7 +87,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	spin := termprogress.NewSpinner()
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess)
-	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -127,13 +125,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			Name:         defaultEnvironmentName,
 			IsProduction: false,
 		},
-		store:         ssm,
-		appDeployer:   deployer,
-		profileConfig: cfg,
-		prog:          spin,
-		identity:      id,
+		store:       ssm,
+		appDeployer: deployer,
+		prog:        spin,
+		identity:    id,
 
-		configureRuntimeClients: configureInitEnvFromDefaultSess,
+		sess: defaultSess,
 	}
 
 	deploySvcCmd := &deploySvcOpts{

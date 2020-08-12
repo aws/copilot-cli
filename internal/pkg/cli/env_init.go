@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -33,7 +32,6 @@ import (
 const (
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
-	envInitProfileHelpPrompt       = "The AWS CLI named profile with the permissions to create an environment."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new production environment?
     - A new VPC with 2 AZs, 2 public subnets and 2 private subnets
     - A new ECS Cluster
@@ -50,7 +48,13 @@ const (
 	envInitPrivateCIDRPrompt     = "What CIDR would you like to use for your private subnets?"
 	envInitPrivateCIDRPromptHelp = "CIDRs used for your private subnets. For example: 10.1.2.0/24,10.1.3.0/24"
 
-	fmtEnvInitProfilePrompt  = "Which named profile should we use to create %s?"
+	fmtEnvInitCredsPrompt  = "Which credentials would you like to use to create %s?"
+	envInitCredsHelpPrompt = `The credentials are used to create your environment in an AWS account and region.
+To learn more:
+https://github.com/aws/copilot-cli/wiki/credentials#environment-credentials`
+	envInitRegionPrompt        = "Which region?"
+	envInitDefaultRegionOption = "us-west-2"
+
 	fmtDeployEnvStart        = "Proposing infrastructure changes for the %s environment."
 	fmtDeployEnvComplete     = "Environment %s already exists in application %s.\n"
 	fmtDeployEnvFailed       = "Failed to accept changes for the %s environment.\n"
@@ -106,6 +110,10 @@ type tempCredsVars struct {
 	SessionToken    string
 }
 
+func (v tempCredsVars) isSet() bool {
+	return v.AccessKeyID != "" && v.SecretAccessKey != ""
+}
+
 type initEnvVars struct {
 	*GlobalOpts
 	Name              string // Name for the environment.
@@ -124,54 +132,17 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	store         store
-	envDeployer   deployer
-	appDeployer   deployer
-	identity      identityService
-	envIdentity   identityService
-	profileConfig profileNames
-	prog          progress
-	sel           ec2Selector
+	sessProvider sessionProvider
+	store        store
+	envDeployer  deployer
+	appDeployer  deployer
+	identity     identityService
+	envIdentity  identityService
+	prog         progress
+	selVPC       ec2Selector
+	selCreds     credsSelector
 
-	// Initialize clients after Ask().
-	configureRuntimeClients func(*initEnvOpts) error
-}
-
-func configureInitEnvFromFlags(o *initEnvOpts) error {
-	var sess *session.Session
-	if o.Profile != "" {
-		profileSess, err := sessions.NewProvider().FromProfile(o.Profile)
-		if err != nil {
-			return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
-		}
-		sess = profileSess
-	} else {
-		staticSess, err := session.NewSession(&aws.Config{
-			Credentials: credentials.NewStaticCredentials(o.TempCreds.AccessKeyID, o.TempCreds.SecretAccessKey, o.TempCreds.SessionToken),
-		})
-		if err != nil {
-			return fmt.Errorf("create session from temporary credentials: %w", err)
-		}
-		sess = staticSess
-	}
-	if o.Region != "" {
-		sess.Config.Region = &o.Region
-	}
-
-	o.envIdentity = identity.New(sess)
-	o.envDeployer = deploycfn.New(sess)
-	o.sel = selector.NewEC2Select(o.prompt, ec2.New(sess))
-	return nil
-}
-
-func configureInitEnvFromDefaultSess(o *initEnvOpts) error {
-	sess, err := sessions.NewProvider().Default()
-	if err != nil {
-		return fmt.Errorf("create default session: %w", err)
-	}
-	o.envIdentity = identity.New(sess)
-	o.envDeployer = deploycfn.New(sess)
-	return nil
+	sess *session.Session // Session pointing to environment's AWS account and region.
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -179,7 +150,8 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	defaultSession, err := sessions.NewProvider().Default()
+	sessProvider := sessions.NewProvider()
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
@@ -189,13 +161,17 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	return &initEnvOpts{
-		initEnvVars:             vars,
-		store:                   store,
-		appDeployer:             deploycfn.New(defaultSession),
-		identity:                identity.New(defaultSession),
-		profileConfig:           cfg,
-		prog:                    termprogress.NewSpinner(),
-		configureRuntimeClients: configureInitEnvFromFlags,
+		initEnvVars:  vars,
+		sessProvider: sessProvider,
+		store:        store,
+		appDeployer:  deploycfn.New(defaultSession),
+		identity:     identity.New(defaultSession),
+		prog:         termprogress.NewSpinner(),
+		selCreds: &selector.CredsSelect{
+			Session: sessProvider,
+			Profile: cfg,
+			Prompt:  vars.prompt,
+		},
 	}, nil
 }
 
@@ -220,10 +196,10 @@ func (o *initEnvOpts) Ask() error {
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
-	if err := o.askEnvProfile(); err != nil {
+	if err := o.askEnvSession(); err != nil {
 		return err
 	}
-	if err := o.configureRuntimeClients(o); err != nil {
+	if err := o.askEnvRegion(); err != nil {
 		return err
 	}
 	return o.askCustomizedResources()
@@ -231,6 +207,14 @@ func (o *initEnvOpts) Ask() error {
 
 // Execute deploys a new environment with CloudFormation and adds it to SSM.
 func (o *initEnvOpts) Execute() error {
+	// Initialize environment clients if not set.
+	if o.envIdentity == nil {
+		o.envIdentity = identity.New(o.sess)
+	}
+	if o.envDeployer == nil {
+		o.envDeployer = deploycfn.New(o.sess)
+	}
+
 	app, err := o.store.GetApplication(o.AppName())
 	if err != nil {
 		// Ensure the app actually exists before we do a deployment.
@@ -242,7 +226,6 @@ func (o *initEnvOpts) Execute() error {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
 	}
-
 	// 1. Start creating the CloudFormation stack for the environment.
 	if err := o.deployEnv(app); err != nil {
 		return err
@@ -297,25 +280,44 @@ func (o *initEnvOpts) askEnvName() error {
 	return nil
 }
 
-func (o *initEnvOpts) askEnvProfile() error {
-	// TODO: add this behavior to selector pkg.
+func (o *initEnvOpts) askEnvSession() error {
 	if o.Profile != "" {
+		sess, err := o.sessProvider.FromProfile(o.Profile)
+		if err != nil {
+			return fmt.Errorf("create session from profile %s: %w", o.Profile, err)
+		}
+		o.sess = sess
 		return nil
 	}
-
-	names := o.profileConfig.Names()
-	if len(names) == 0 {
-		return errNamedProfilesNotFound
+	if o.TempCreds.isSet() {
+		sess, err := o.sessProvider.FromStaticCreds(o.TempCreds.AccessKeyID, o.TempCreds.SecretAccessKey, o.TempCreds.SessionToken)
+		if err != nil {
+			return err
+		}
+		o.sess = sess
+		return nil
 	}
-
-	profile, err := o.prompt.SelectOne(
-		fmt.Sprintf(fmtEnvInitProfilePrompt, color.HighlightUserInput(o.Name)),
-		envInitProfileHelpPrompt,
-		names)
+	sess, err := o.selCreds.Creds(fmt.Sprintf(fmtEnvInitCredsPrompt, color.HighlightUserInput(o.Name)), envInitCredsHelpPrompt)
 	if err != nil {
-		return fmt.Errorf("get the profile name: %w", err)
+		return fmt.Errorf("select creds: %w", err)
 	}
-	o.Profile = profile
+	o.sess = sess
+	return nil
+}
+
+func (o *initEnvOpts) askEnvRegion() error {
+	region := aws.StringValue(o.sess.Config.Region)
+	if o.Region != "" {
+		region = o.Region
+	}
+	if region == "" {
+		v, err := o.prompt.Get(envInitRegionPrompt, "", nil, prompt.WithDefaultInput(envInitDefaultRegionOption))
+		if err != nil {
+			return fmt.Errorf("get environment region: %w", err)
+		}
+		region = v
+	}
+	o.sess.Config.Region = aws.String(region)
 	return nil
 }
 
@@ -323,6 +325,10 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	if o.NoCustomResources {
 		return nil
 	}
+	if o.selVPC == nil {
+		o.selVPC = selector.NewEC2Select(o.prompt, ec2.New(o.sess))
+	}
+
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
 		envInitCustomizedEnvTypes)
@@ -342,7 +348,7 @@ func (o *initEnvOpts) askCustomizedResources() error {
 
 func (o *initEnvOpts) askImportResources() error {
 	if o.ImportVPC.ID == "" {
-		vpcID, err := o.sel.VPC(envInitVPCSelectPrompt, "")
+		vpcID, err := o.selVPC.VPC(envInitVPCSelectPrompt, "")
 		if err != nil {
 			if err == selector.ErrVPCNotFound {
 				log.Errorf(`No existing VPCs were found. You can either:
@@ -355,7 +361,7 @@ func (o *initEnvOpts) askImportResources() error {
 		o.ImportVPC.ID = vpcID
 	}
 	if o.ImportVPC.PublicSubnetIDs == nil {
-		publicSubnets, err := o.sel.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		publicSubnets, err := o.selVPC.PublicSubnets(envInitPublicSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing public subnets were found in VPC %s. You can either:
@@ -367,7 +373,7 @@ func (o *initEnvOpts) askImportResources() error {
 		o.ImportVPC.PublicSubnetIDs = publicSubnets
 	}
 	if o.ImportVPC.PrivateSubnetIDs == nil {
-		privateSubnets, err := o.sel.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
+		privateSubnets, err := o.selVPC.PrivateSubnets(envInitPrivateSubnetsSelectPrompt, "", o.ImportVPC.ID)
 		if err != nil {
 			if err == selector.ErrSubnetsNotFound {
 				log.Errorf(`No existing private subnets were found in VPC %s. You can either:
@@ -607,20 +613,32 @@ func BuildEnvInitCmd() *cobra.Command {
 		}),
 	}
 	cmd.Flags().StringVarP(&vars.Name, nameFlag, nameFlagShort, "", envFlagDescription)
+
 	cmd.Flags().StringVar(&vars.Profile, profileFlag, "", profileFlagDescription)
+	cmd.Flags().StringVar(&vars.TempCreds.AccessKeyID, accessKeyIDFlag, "", accessKeyIDFlagDescription)
+	cmd.Flags().StringVar(&vars.TempCreds.SecretAccessKey, secretAccessKeyFlag, "", secretAccessKeyFlagDescription)
+	cmd.Flags().StringVar(&vars.TempCreds.SessionToken, sessionTokenFlag, "", sessionTokenFlagDescription)
+	cmd.Flags().StringVar(&vars.Region, regionFlag, "", envRegionTokenFlagDescription)
+
 	cmd.Flags().BoolVar(&vars.IsProduction, prodEnvFlag, false, prodEnvFlagDescription)
+
 	cmd.Flags().StringVar(&vars.ImportVPC.ID, vpcIDFlag, "", vpcIDFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.ImportVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
+
 	cmd.Flags().IPNetVar(&vars.AdjustVPC.CIDR, vpcCIDRFlag, net.IPNet{}, vpcCIDRFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
 	cmd.Flags().BoolVar(&vars.NoCustomResources, noCustomResourcesFlag, false, noCustomResourcesFlagDescription)
 
-	flags := pflag.NewFlagSet("Required", pflag.ContinueOnError)
+	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
 	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
 	flags.AddFlag(cmd.Flags().Lookup(profileFlag))
+	flags.AddFlag(cmd.Flags().Lookup(accessKeyIDFlag))
+	flags.AddFlag(cmd.Flags().Lookup(secretAccessKeyFlag))
+	flags.AddFlag(cmd.Flags().Lookup(sessionTokenFlag))
+	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
 	flags.AddFlag(cmd.Flags().Lookup(noCustomResourcesFlag))
 	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
 
@@ -636,8 +654,8 @@ func BuildEnvInitCmd() *cobra.Command {
 
 	cmd.Annotations = map[string]string{
 		// The order of the sections we want to display.
-		"sections":                    "Flags,Import Existing Resources,Configure Default Resources",
-		"Flags":                       flags.FlagUsages(),
+		"sections":                    "Common,Import Existing Resources,Configure Default Resources",
+		"Common":                      flags.FlagUsages(),
 		"Import Existing Resources":   resourcesImportFlag.FlagUsages(),
 		"Configure Default Resources": resourcesConfigFlag.FlagUsages(),
 	}

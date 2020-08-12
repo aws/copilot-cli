@@ -1658,6 +1658,82 @@ func (mr *MocksessionFromRoleProviderMockRecorder) FromRole(roleARN, region inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionFromRoleProvider)(nil).FromRole), roleARN, region)
 }
 
+// MocksessionFromStaticProvider is a mock of sessionFromStaticProvider interface
+type MocksessionFromStaticProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MocksessionFromStaticProviderMockRecorder
+}
+
+// MocksessionFromStaticProviderMockRecorder is the mock recorder for MocksessionFromStaticProvider
+type MocksessionFromStaticProviderMockRecorder struct {
+	mock *MocksessionFromStaticProvider
+}
+
+// NewMocksessionFromStaticProvider creates a new mock instance
+func NewMocksessionFromStaticProvider(ctrl *gomock.Controller) *MocksessionFromStaticProvider {
+	mock := &MocksessionFromStaticProvider{ctrl: ctrl}
+	mock.recorder = &MocksessionFromStaticProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksessionFromStaticProvider) EXPECT() *MocksessionFromStaticProviderMockRecorder {
+	return m.recorder
+}
+
+// FromStaticCreds mocks base method
+func (m *MocksessionFromStaticProvider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromStaticCreds", accessKeyID, secretAccessKey, sessionToken)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromStaticCreds indicates an expected call of FromStaticCreds
+func (mr *MocksessionFromStaticProviderMockRecorder) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromStaticCreds", reflect.TypeOf((*MocksessionFromStaticProvider)(nil).FromStaticCreds), accessKeyID, secretAccessKey, sessionToken)
+}
+
+// MocksessionFromProfileProvider is a mock of sessionFromProfileProvider interface
+type MocksessionFromProfileProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MocksessionFromProfileProviderMockRecorder
+}
+
+// MocksessionFromProfileProviderMockRecorder is the mock recorder for MocksessionFromProfileProvider
+type MocksessionFromProfileProviderMockRecorder struct {
+	mock *MocksessionFromProfileProvider
+}
+
+// NewMocksessionFromProfileProvider creates a new mock instance
+func NewMocksessionFromProfileProvider(ctrl *gomock.Controller) *MocksessionFromProfileProvider {
+	mock := &MocksessionFromProfileProvider{ctrl: ctrl}
+	mock.recorder = &MocksessionFromProfileProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MocksessionFromProfileProvider) EXPECT() *MocksessionFromProfileProviderMockRecorder {
+	return m.recorder
+}
+
+// FromProfile mocks base method
+func (m *MocksessionFromProfileProvider) FromProfile(name string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromProfile", name)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromProfile indicates an expected call of FromProfile
+func (mr *MocksessionFromProfileProviderMockRecorder) FromProfile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionFromProfileProvider)(nil).FromProfile), name)
+}
+
 // MockprofileNames is a mock of profileNames interface
 type MockprofileNames struct {
 	ctrl     *gomock.Controller
@@ -1761,6 +1837,36 @@ func (m *MocksessionProvider) FromRole(roleARN, region string) (*session.Session
 func (mr *MocksessionProviderMockRecorder) FromRole(roleARN, region interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromRole", reflect.TypeOf((*MocksessionProvider)(nil).FromRole), roleARN, region)
+}
+
+// FromProfile mocks base method
+func (m *MocksessionProvider) FromProfile(name string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromProfile", name)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromProfile indicates an expected call of FromProfile
+func (mr *MocksessionProviderMockRecorder) FromProfile(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromProfile", reflect.TypeOf((*MocksessionProvider)(nil).FromProfile), name)
+}
+
+// FromStaticCreds mocks base method
+func (m *MocksessionProvider) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FromStaticCreds", accessKeyID, secretAccessKey, sessionToken)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FromStaticCreds indicates an expected call of FromStaticCreds
+func (mr *MocksessionProviderMockRecorder) FromStaticCreds(accessKeyID, secretAccessKey, sessionToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FromStaticCreds", reflect.TypeOf((*MocksessionProvider)(nil).FromStaticCreds), accessKeyID, secretAccessKey, sessionToken)
 }
 
 // Mockdescriber is a mock of describer interface
@@ -4056,4 +4162,42 @@ func (m *Mockec2Selector) PrivateSubnets(prompt, help, vpcID string) ([]string, 
 func (mr *Mockec2SelectorMockRecorder) PrivateSubnets(prompt, help, vpcID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateSubnets", reflect.TypeOf((*Mockec2Selector)(nil).PrivateSubnets), prompt, help, vpcID)
+}
+
+// MockcredsSelector is a mock of credsSelector interface
+type MockcredsSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockcredsSelectorMockRecorder
+}
+
+// MockcredsSelectorMockRecorder is the mock recorder for MockcredsSelector
+type MockcredsSelectorMockRecorder struct {
+	mock *MockcredsSelector
+}
+
+// NewMockcredsSelector creates a new mock instance
+func NewMockcredsSelector(ctrl *gomock.Controller) *MockcredsSelector {
+	mock := &MockcredsSelector{ctrl: ctrl}
+	mock.recorder = &MockcredsSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockcredsSelector) EXPECT() *MockcredsSelectorMockRecorder {
+	return m.recorder
+}
+
+// Creds mocks base method
+func (m *MockcredsSelector) Creds(prompt, help string) (*session.Session, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Creds", prompt, help)
+	ret0, _ := ret[0].(*session.Session)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Creds indicates an expected call of Creds
+func (mr *MockcredsSelectorMockRecorder) Creds(prompt, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Creds", reflect.TypeOf((*MockcredsSelector)(nil).Creds), prompt, help)
 }
