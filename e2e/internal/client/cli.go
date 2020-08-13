@@ -283,7 +283,7 @@ copilot env init
 	--app $a
 	--profile $pr
 	--prod (optional)
-	--no-custom-resources (optional)
+	--default-config (optional)
 */
 func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	commands := []string{"env", "init",
@@ -295,7 +295,7 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 		commands = append(commands, "--prod")
 	}
 	if !opts.CustomizedEnv {
-		commands = append(commands, "--no-custom-resources")
+		commands = append(commands, "--default-config")
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
