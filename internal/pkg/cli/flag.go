@@ -74,7 +74,7 @@ const (
 	publicSubnetCIDRsFlag  = "override-public-cidrs"
 	privateSubnetCIDRsFlag = "override-private-cidrs"
 
-	noCustomResourcesFlag = "no-custom-resources"
+	defaultConfigFlag = "default-config"
 
 	accessKeyIDFlag     = "aws-access-key-id"
 	secretAccessKeyFlag = "aws-secret-access-key"
@@ -186,7 +186,7 @@ Tasks with the same group name share the same set of resources.
 	publicSubnetCIDRsFlagDescription  = "Optional. CIDR to use for public subnets (default 10.0.0.0/24,10.0.1.0/24)."
 	privateSubnetCIDRsFlagDescription = "Optional. CIDR to use for private subnets (default 10.0.2.0/24,10.0.3.0/24)."
 
-	noCustomResourcesFlagDescription = "Optional. Skip prompting and use default environment configuration."
+	defaultConfigFlagDescription = "Optional. Skip prompting and use default environment configuration."
 
 	accessKeyIDFlagDescription     = "Optional. An AWS access key."
 	secretAccessKeyFlagDescription = "Optional. An AWS secret access key."

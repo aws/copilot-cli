@@ -72,10 +72,10 @@ https://github.com/aws/copilot-cli/wiki/credentials#environment-credentials`
 var (
 	errNamedProfilesNotFound = fmt.Errorf("no named AWS profiles found, run %s first please", color.HighlightCode("aws configure"))
 
-	envInitImportEnvResourcesSelectOption        = "No, I'd like to import existing resources (VPC, subnets)."
-	envInitAdjustEnvResourcesSelectOption        = "Yes, but I'd like configure the default resources (CIDR ranges)."
-	envInitWithNoCustomizedResourcesSelectOption = "Yes, use default."
-	envInitCustomizedEnvTypes                    = []string{envInitImportEnvResourcesSelectOption, envInitAdjustEnvResourcesSelectOption, envInitWithNoCustomizedResourcesSelectOption}
+	envInitDefaultConfigSelectOption      = "Yes, use default."
+	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges)."
+	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
+	envInitCustomizedEnvTypes             = []string{envInitDefaultConfigSelectOption, envInitAdjustEnvResourcesSelectOption, envInitImportEnvResourcesSelectOption}
 )
 
 type importVPCVars struct {
@@ -116,10 +116,10 @@ func (v tempCredsVars) isSet() bool {
 
 type initEnvVars struct {
 	*GlobalOpts
-	Name              string // Name for the environment.
-	Profile           string // The named profile to use for credential retrieval. Mutually exclusive with TempCreds.
-	IsProduction      bool   // True means retain resources even after deletion.
-	NoCustomResources bool   // True means no importing an existing VPC or adjusting a VPC.
+	Name          string // Name for the environment.
+	Profile       string // The named profile to use for credential retrieval. Mutually exclusive with TempCreds.
+	IsProduction  bool   // True means retain resources even after deletion.
+	DefaultConfig bool   // True means using default environment configuration.
 
 	ImportVPC importVPCVars // Existing VPC resources to use instead of creating new ones.
 	AdjustVPC adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
@@ -261,8 +261,8 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if o.ImportVPC.isSet() && o.AdjustVPC.isSet() {
 		return errors.New("cannot specify both import vpc flags and configure vpc flags")
 	}
-	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.NoCustomResources {
-		return fmt.Errorf("cannot import or configure vpc if --%s is set", noCustomResourcesFlag)
+	if (o.ImportVPC.isSet() || o.AdjustVPC.isSet()) && o.DefaultConfig {
+		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
 	return nil
 }
@@ -322,7 +322,7 @@ func (o *initEnvOpts) askEnvRegion() error {
 }
 
 func (o *initEnvOpts) askCustomizedResources() error {
-	if o.NoCustomResources {
+	if o.DefaultConfig {
 		return nil
 	}
 	if o.ImportVPC.isSet() {
@@ -342,7 +342,7 @@ func (o *initEnvOpts) askCustomizedResources() error {
 		return o.askImportResources()
 	case envInitAdjustEnvResourcesSelectOption:
 		return o.askAdjustResources()
-	case envInitWithNoCustomizedResourcesSelectOption:
+	case envInitDefaultConfigSelectOption:
 		return nil
 	}
 	return nil
@@ -425,7 +425,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 }
 
 func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
-	if o.NoCustomResources || !o.ImportVPC.isSet() {
+	if o.DefaultConfig || !o.ImportVPC.isSet() {
 		return nil
 	}
 	return &deploy.ImportVPCConfig{
@@ -436,7 +436,7 @@ func (o *initEnvOpts) importVPCConfig() *deploy.ImportVPCConfig {
 }
 
 func (o *initEnvOpts) adjustVPCConfig() *deploy.AdjustVPCConfig {
-	if o.NoCustomResources || !o.AdjustVPC.isSet() {
+	if o.DefaultConfig || !o.AdjustVPC.isSet() {
 		return nil
 	}
 	return &deploy.AdjustVPCConfig{
@@ -585,14 +585,11 @@ func BuildEnvInitCmd() *cobra.Command {
 		Use:   "init",
 		Short: "Creates a new environment in your application.",
 		Example: `
-  Creates a test environment in your "default" AWS profile.
-  /code $ copilot env init --name test --profile default
+  Creates a test environment in your "default" AWS profile using default configuration.
+  /code $ copilot env init --name test --profile default --default-config
 
   Creates a prod-iad environment using your "prod-admin" AWS profile.
   /code $ copilot env init --name prod-iad --profile prod-admin --prod
-
-  Creates a test environment using default environment configuration.
-  /code $ copilot env init --name test --no-custom-resources
 
   Creates an environment with imported VPC resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
@@ -635,7 +632,7 @@ func BuildEnvInitCmd() *cobra.Command {
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PublicSubnetCIDRs, publicSubnetCIDRsFlag, nil, publicSubnetCIDRsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.AdjustVPC.PrivateSubnetCIDRs, privateSubnetCIDRsFlag, nil, privateSubnetCIDRsFlagDescription)
-	cmd.Flags().BoolVar(&vars.NoCustomResources, noCustomResourcesFlag, false, noCustomResourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.DefaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
 	flags.AddFlag(cmd.Flags().Lookup(nameFlag))
@@ -644,7 +641,7 @@ func BuildEnvInitCmd() *cobra.Command {
 	flags.AddFlag(cmd.Flags().Lookup(secretAccessKeyFlag))
 	flags.AddFlag(cmd.Flags().Lookup(sessionTokenFlag))
 	flags.AddFlag(cmd.Flags().Lookup(regionFlag))
-	flags.AddFlag(cmd.Flags().Lookup(noCustomResourcesFlag))
+	flags.AddFlag(cmd.Flags().Lookup(defaultConfigFlag))
 	flags.AddFlag(cmd.Flags().Lookup(prodEnvFlag))
 
 	resourcesImportFlag := pflag.NewFlagSet("Import Existing Resources", pflag.ContinueOnError)
