@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -55,16 +53,8 @@ var _ = Describe("Customized Env", func() {
 			err := command.Run("aws", []string{"cloudformation", "create-stack", "--stack-name",
 				vpcStackName, "--template-body", vpcStackTemplatePath})
 			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
-			for {
-				var b bytes.Buffer
-				err := command.Run("bash", []string{"-c", fmt.Sprintf("aws cloudformation describe-stacks --stack-name %s | jq -r .Stacks[0].StackStatus", vpcStackName)}, command.Stdout(&b))
-				Expect(err).NotTo(HaveOccurred(), "describe vpc cloudformation stack")
-				status := strings.TrimSpace(b.String())
-				if status == stackCreateComplete {
-					break
-				}
-				time.Sleep(5 * time.Second)
-			}
+			err = command.Run("aws", []string{"cloudformation", "wait", "stack-create-complete", "--stack-name", vpcStackName})
+			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
 		})
 		It("parse vpc stack output", func() {
 			var b bytes.Buffer
