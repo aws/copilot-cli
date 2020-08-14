@@ -54,17 +54,13 @@ var (
 )
 
 var (
-	taskRunAppPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
-	taskRunEnvPrompt       = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
-	taskRunGroupNamePrompt = fmt.Sprintf("What would you like to %s your task group?", color.Emphasize("name"))
+	taskRunAppPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("application"), color.Emphasize("task"))
+	taskRunEnvPrompt = fmt.Sprintf("In which %s would you like to run this %s?", color.Emphasize("environment"), color.Emphasize("task"))
 
 	taskRunAppPromptHelp = fmt.Sprintf(`Task will be deployed to the selected application. 
 Select %s to run the task in your default VPC instead of any existing application.`, color.Emphasize(appEnvOptionNone))
 	taskRunEnvPromptHelp = fmt.Sprintf(`Task will be deployed to the selected environment.
 Select %s to run the task in your default VPC instead of any existing environment.`, color.Emphasize(appEnvOptionNone))
-	taskRunGroupNamePromptHelp = `The group name of the task. Tasks with the same group name share the same 
-set of resources, including CloudFormation stack, CloudWatch log group, 
-task definition and ECR repository.`
 )
 
 type runTaskVars struct {
@@ -371,7 +367,7 @@ func (o *runTaskOpts) Execute() error {
 		dir, err := os.Getwd()
 		if err != nil {
 			log.Errorf("Cannot retrieve working directory, please use --%s to specify a task group name.\n", taskGroupNameFlag)
-			return fmt.Errorf("get working directory: %v", err) 
+			return fmt.Errorf("get working directory: %v", err)
 		}
 		o.groupName = filepath.Base(dir)
 	}

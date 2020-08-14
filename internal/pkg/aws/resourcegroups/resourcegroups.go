@@ -22,11 +22,6 @@ type ResourceGroups struct {
 	client api
 }
 
-type tagFilter struct {
-	Key    string
-	Values []string
-}
-
 // Resource contains the ARN and the tags of the resource.
 type Resource struct {
 	ARN  string

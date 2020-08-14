@@ -16,10 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
-const (
-	cloudformationResourceType = "cloudformation:stack"
-)
-
 // EnvDescription contains the information about an environment.
 type EnvDescription struct {
 	Environment *config.Environment `json:"environment"`

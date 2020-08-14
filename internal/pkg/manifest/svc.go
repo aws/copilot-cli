@@ -29,7 +29,6 @@ const (
 
 var (
 	errUnmarshalBuildOpts = errors.New("can't unmarshal build field into string or compose-style map")
-	errNoDockerfile       = errors.New("must specify a Dockerfile path")
 )
 
 var dockerfileDefaultName = "Dockerfile"
@@ -286,27 +285,6 @@ func UnmarshalService(in []byte) (interface{}, error) {
 
 func durationp(v time.Duration) *time.Duration {
 	return &v
-}
-
-func boolpcopy(v *bool) *bool {
-	if v == nil {
-		return nil
-	}
-	return aws.Bool(*v)
-}
-
-func stringpcopy(v *string) *string {
-	if v == nil {
-		return nil
-	}
-	return aws.String(*v)
-}
-
-func intpcopy(v *int) *int {
-	if v == nil {
-		return nil
-	}
-	return aws.Int(*v)
 }
 
 // Valid sidecar portMapping example: 2000/udp, or 2000 (default to be tcp).

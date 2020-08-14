@@ -11,7 +11,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -337,20 +336,12 @@ type dockerfileParser interface {
 	GetHealthCheck() (*dockerfile.HealthCheck, error)
 }
 
-type serviceArnGetter interface {
-	GetServiceArn() (*ecs.ServiceArn, error)
-}
-
 type statusDescriber interface {
 	Describe() (*describe.ServiceStatusDesc, error)
 }
 
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
-}
-
-type resourceGroupsClient interface {
-	GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error)
 }
 
 type pipelineGetter interface {

@@ -743,8 +743,3 @@ func TestSelect_Application(t *testing.T) {
 		})
 	}
 }
-
-type envwithnoneMocks struct {
-	envLister *mocks.MockAppEnvLister
-	prompt    *mocks.MockPrompter
-}

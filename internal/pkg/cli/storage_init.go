@@ -28,12 +28,10 @@ const (
 const (
 	s3BucketFriendlyText      = "S3 Bucket"
 	dynamoDBTableFriendlyText = "DynamoDB Table"
-	lsiFriendlyText           = "Local Secondary Index"
 )
 
 const (
-	ddbKeyString       = "key"
-	ddbAttributeString = "attribute"
+	ddbKeyString = "key"
 )
 
 var storageTypes = []string{
@@ -56,8 +54,6 @@ S3 is a web object store built to store and retrieve any amount of data from any
 We'll deploy the resources for the storage when you run 'svc deploy'.`
 )
 
-var fmtStorageInitCreateConfirm = "Okay, we'll create %s %s named %s linked to your %s service."
-
 // DDB-specific questions and help prompts.
 var (
 	fmtStorageInitDDBKeyPrompt     = "What would you like to name the %s of this %s?"
@@ -78,36 +74,16 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 
 	storageInitDDBLSINamePrompt = "What would you like to name this " + color.Emphasize("alternate sort key") + "?"
 	storageInitDDBLSINameHelp   = "You can use the characters [a-zA-Z0-9.-_]"
-
-	storageInitDDBLSISortKeyHelp = "The sort key of this Local Secondary Index. An LSI can be queried based on the partition key and LSI sort key."
 )
 
 const (
 	ddbStringType = "S"
-	ddbIntType    = "N"
-	ddbBinaryType = "B"
 )
-
-var attributeTypes = []string{
-	ddbStringType,
-	ddbIntType,
-	ddbBinaryType,
-}
 
 var attributeTypesLong = []string{
 	"String",
 	"Number",
 	"Binary",
-}
-
-const (
-	ddbPartitionKeyType = "HASH"
-	ddbSortKeyType      = "RANGE"
-)
-
-type attribute struct {
-	name     string
-	dataType string
 }
 
 type initStorageVars struct {

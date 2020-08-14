@@ -20,8 +20,6 @@ const (
 	rulePriorityFunction = "Custom::RulePriorityFunction"
 	waitCondition        = "AWS::CloudFormation::WaitCondition"
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
-
-	serviceLogicalID = "Service"
 )
 
 type stackAndResourcesDescriber interface {
