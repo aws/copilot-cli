@@ -40,8 +40,8 @@ We're distributing binaries from our GitHub releases. Instructions for installin
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-darwin-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-linux-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.3.0/copilot-darwin-v0.3.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.3.0/copilot-linux-v0.3.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
 
 </details>
 
@@ -67,6 +67,18 @@ This will create a VPC, Application Load Balancer, an Amazon ECS Service with th
 ## Cleaning up 🧹
 
 Once you're finished playing around with this project, you can delete it and all the AWS resources associated it by running `copilot app delete`.
+
+## Running a one-off task 🏃‍♀️
+
+Copilot makes it easy to set up production-ready applications, but you can also use it to run tasks on AWS Fargate without having to set up any infrastructure. To run a simple hello world task on Fargate you can use Copilot:
+
+```sh
+$ copilot task run      \
+  --default             \
+  --follow              \
+  --image alpine:latest \
+  --command "echo 'Hello, Copilot v0.3.0'"
+```
 
 ## Learning more 📖
 
