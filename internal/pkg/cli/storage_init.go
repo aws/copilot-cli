@@ -88,11 +88,11 @@ const (
 	ddbBinaryType = "B"
 )
 
-var attributeTypes = []string{
-	ddbStringType,
-	ddbIntType,
-	ddbBinaryType,
-}
+const (
+	ddbStringTypeLong = "String"
+	ddbIntTypeLong = "Number"
+	ddbBinaryTypeLong = "Binary"
+)
 
 var attributeTypesLong = []string{
 	"String",

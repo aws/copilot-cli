@@ -160,8 +160,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedSvcName      = "frontend"
 		wantedBucketName   = "coolBucket"
 		wantedTableName    = "coolTable"
-		wantedPartitionKey = "DogName:S"
-		wantedSortKey      = "PhotoId:N"
+		wantedPartitionKey = "DogName:String"
+		wantedSortKey      = "PhotoId:Number"
 	)
 	testCases := map[string]struct {
 		inAppName     string
@@ -284,7 +284,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 					attributeTypesLong,
 					gomock.Any(),
-				).Return(ddbStringType, nil)
+				).Return(ddbStringTypeLong, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -358,7 +358,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Any(),
 					attributeTypesLong,
 					gomock.Any(),
-				).Return(ddbStringType, nil)
+				).Return(ddbStringTypeLong, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -501,7 +501,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					gomock.Eq(lsiTypeHelp),
 					gomock.Eq(attributeTypesLong),
 					gomock.Any(),
-				).Return(ddbStringType, nil)
+				).Return(ddbStringTypeLong, nil)
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),
@@ -521,7 +521,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				partitionKey: wantedPartitionKey,
 				sortKey:      wantedSortKey,
 				noLSI:        false,
-				lsiSorts:     []string{"Email:S"},
+				lsiSorts:     []string{"Email:String"},
 			},
 		},
 		"noLSI is set correctly if no lsis specified": {
@@ -663,7 +663,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inStorageName: wantedTableName,
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inLSISorts:    []string{"email:S"},
+			inLSISorts:    []string{"email:String"},
 
 			mockPrompt: func(m *mocks.Mockprompter) {},
 			mockCfg:    func(m *mocks.MockwsSelector) {},
@@ -721,8 +721,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 		wantedSvcName      = "frontend"
 		wantedBucketName   = "coolBucket"
 		wantedTableName    = "coolTable"
-		wantedPartitionKey = "DogName:S"
-		wantedSortKey      = "PhotoId:N"
+		wantedPartitionKey = "DogName:String"
+		wantedSortKey      = "PhotoId:Number"
 	)
 	fileExistsError := &workspace.ErrFileExists{FileName: "my-file"}
 	testCases := map[string]struct {
@@ -774,7 +774,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inStorageName: "my-table",
 			inPartition:   wantedPartitionKey,
 			inSort:        wantedSortKey,
-			inLSISorts:    []string{"goodness:N"},
+			inLSISorts:    []string{"goodness:Number"},
 
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
