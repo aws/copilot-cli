@@ -36,10 +36,6 @@ const (
 	inputImageTagPrompt = "Input an image tag value:"
 )
 
-var (
-	errNoLocalManifestsFound = errors.New("no manifest files found")
-)
-
 type deploySvcVars struct {
 	*GlobalOpts
 	Name         string

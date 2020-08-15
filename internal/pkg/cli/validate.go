@@ -24,7 +24,6 @@ var (
 	errValueNotAStringSlice               = errors.New("value must be a string slice")
 	errValueNotAnIPNet                    = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
 	errValueNotIPNetSlice                 = errors.New("value must be a valid slice of IP address range (example: 10.0.0.0/16,10.0.1.0/16)")
-	errInvalidGitHubRepo                  = errors.New("value must be a valid GitHub repository, e.g. https://github.com/myCompany/myRepo")
 	errPortInvalid                        = errors.New("value must be in range 1-65535")
 	errS3ValueBadSize                     = errors.New("value must be between 3 and 63 characters in length")
 	errS3ValueBadFormat                   = errors.New("value must not contain consecutive periods or dashes, or be formatted as IP address")
@@ -33,7 +32,6 @@ var (
 	errDDBValueBadSize                    = errors.New("value must be between 3 and 255 characters in length")
 	errValueBadFormatWithPeriodUnderscore = errors.New("value must contain only alphanumeric characters and ._-")
 	errDDBAttributeBadFormat              = errors.New("value must be of the form <name>:<T> where T is one of S, N, or B")
-	errLSIAttributeNotPresent             = errors.New("lsi must be present in list of attributes")
 	errTooManyLSIKeys                     = errors.New("number of specified LSI sort keys must be 5 or less")
 	errDomainInvalid                      = errors.New("value must contain at least one '.' character")
 )
@@ -44,8 +42,6 @@ var (
 )
 
 var fmtErrInvalidStorageType = "invalid storage type %s: must be one of %s"
-
-var githubRepoExp = regexp.MustCompile(`(https:\/\/github\.com\/|)(?P<owner>.+)\/(?P<repo>.+)`)
 
 // matches alphanumeric, ._-, from 3 to 255 characters long
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html

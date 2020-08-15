@@ -24,10 +24,6 @@ var storageTemplateFunctions = map[string]interface{}{
 	"envVarName":    template.EnvVarNameFunc,
 }
 
-type storage struct {
-	Name *string
-}
-
 // DynamoDB contains configuration options which fully descibe a DynamoDB table.
 // Implements the encoding.BinaryMarshaler interface.
 type DynamoDB struct {
