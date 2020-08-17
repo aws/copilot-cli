@@ -103,7 +103,7 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	summaryFileExists, err := ws.fsUtils.Exists(summaryPath)
+	summaryFileExists, _ := ws.fsUtils.Exists(summaryPath) // If an err occurs, return no applications.
 	if summaryFileExists {
 		value, err := ws.fsUtils.ReadFile(summaryPath)
 		if err != nil {
