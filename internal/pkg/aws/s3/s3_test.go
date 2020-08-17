@@ -250,7 +250,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			gotErr := service.EmptyBucket(tc.inBucket)
 
-			if gotErr != nil {
+			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			}
 		})
