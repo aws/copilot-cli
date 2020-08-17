@@ -435,11 +435,11 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 		commands = append(commands, "--env-vars", input.EnvVars)
 	}
 
-	if input.Default != false {
+	if input.Default {
 		commands = append(commands, "--default")
 	}
 
-	if input.Follow != false {
+	if input.Follow {
 		commands = append(commands, "--follow")
 	}
 

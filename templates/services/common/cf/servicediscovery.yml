@@ -5,9 +5,9 @@ DiscoveryService:
     DnsConfig:
       RoutingPolicy: MULTIVALUE
       DnsRecords:
-        - TTL: 60
+        - TTL: 10
           Type: A
-        - TTL: 60
+        - TTL: 10
           Type: SRV
     HealthCheckCustomConfig:
       FailureThreshold: 1

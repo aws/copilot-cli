@@ -213,9 +213,9 @@ func (o *showPipelineOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(o.w, data)
+		fmt.Fprint(o.w, data)
 	} else {
-		fmt.Fprintf(o.w, pipeline.HumanString())
+		fmt.Fprint(o.w, pipeline.HumanString())
 	}
 
 	return nil
