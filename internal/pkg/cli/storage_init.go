@@ -326,7 +326,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	if err != nil {
 		return fmt.Errorf("confirm DDB sort key: %w", err)
 	}
-	if response == false {
+	if !response {
 		o.noSort = true
 		return nil
 	}
