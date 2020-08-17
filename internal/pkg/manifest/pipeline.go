@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
@@ -103,21 +102,12 @@ type PipelineStage struct {
 	TestCommands     []string `yaml:"test_commands,omitempty"`
 }
 
-// CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, envs []*config.Environment) (*PipelineManifest, error) {
+// NewPipelineManifest returns a pipeline manifest object.
+func NewPipelineManifest(pipelineName string, provider Provider, stages []PipelineStage) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
-	if len(envs) == 0 {
+	if len(stages) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
-	}
-
-	stages := make([]PipelineStage, 0, len(envs))
-	for _, env := range envs {
-		pipelineStage := PipelineStage{
-			Name:             env.Name,
-			RequiresApproval: env.Prod,
-		}
-		stages = append(stages, pipelineStage)
 	}
 
 	return &PipelineManifest{
