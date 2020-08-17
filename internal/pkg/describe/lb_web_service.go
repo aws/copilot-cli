@@ -333,22 +333,20 @@ func cpuToString(s string) string {
 
 // IsStackNotExistsErr returns true if error type is stack not exist.
 func IsStackNotExistsErr(err error) bool {
-	for {
-		if err == nil {
-			return false
-		}
-		aerr, ok := err.(awserr.Error)
-		if !ok {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		if aerr.Code() != "ValidationError" {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		if !strings.Contains(aerr.Message(), "does not exist") {
-			return IsStackNotExistsErr(errors.Unwrap(err))
-		}
-		return true
+	if err == nil {
+		return false
 	}
+	aerr, ok := err.(awserr.Error)
+	if !ok {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	if aerr.Code() != "ValidationError" {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	if !strings.Contains(aerr.Message(), "does not exist") {
+		return IsStackNotExistsErr(errors.Unwrap(err))
+	}
+	return true
 }
 
 func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env string) []*ServiceDiscovery {

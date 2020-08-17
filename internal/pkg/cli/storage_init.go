@@ -109,7 +109,6 @@ type initStorageOpts struct {
 	ws    wsAddonManager
 	store store
 
-	app *config.Application
 	sel wsSelector
 }
 

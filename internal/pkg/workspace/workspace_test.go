@@ -301,9 +301,9 @@ func TestWorkspace_ServiceNames(t *testing.T) {
 
 func TestIsInGitRepository(t *testing.T) {
 	testCases := map[string]struct {
-		given func() FileStat
+		given  func() FileStat
 		wanted bool
-	} {
+	}{
 		"return false if directory does not contain a .git directory": {
 			given: func() FileStat {
 				fs := afero.NewMemMapFs()

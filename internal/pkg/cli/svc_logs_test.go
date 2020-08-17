@@ -21,7 +21,6 @@ import (
 type svcLogsMock struct {
 	configStore *mocks.Mockstore
 	sel         *mocks.MockdeploySelector
-	cwlogsSvc   *mocks.MockcwlogService
 }
 
 func TestSvcLogs_Validate(t *testing.T) {

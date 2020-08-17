@@ -343,7 +343,7 @@ func (o *initSvcOpts) askSvcPort() error {
 	if err != nil {
 		log.Debugln(err.Error())
 	}
-	var defaultPort = defaultSvcPortString
+	var defaultPort string
 	switch len(ports) {
 	case 0:
 		// There were no ports detected, keep the default port prompt.
