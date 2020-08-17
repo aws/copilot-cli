@@ -18,5 +18,8 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.30
+          args: --timeout 5m0s
