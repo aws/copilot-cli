@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/golang/mock/gomock"
@@ -45,11 +46,11 @@ func TestCreatePipeline(t *testing.T) {
 	const pipelineName = "pipepiper"
 
 	testCases := map[string]struct {
-		beforeEach     func() error
-		provider       Provider
-		expectedErr    error
-		inputStages    []string
-		expectedStages []PipelineStage
+		beforeEach        func() error
+		provider          Provider
+		expectedErr       error
+		inputEnvironments []*config.Environment
+		expectedStages    []PipelineStage
 	}{
 		"errors out when no stage provided": {
 			provider: func() Provider {
@@ -72,19 +73,34 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []string{"chicken", "wings"},
+			inputEnvironments: []*config.Environment{
+				{
+					Name: "chicken",
+					Prod: false,
+				},
+				{
+					Name: "wings",
+					Prod: true,
+				},
+			},
 			expectedStages: []PipelineStage{
-				{Name: "chicken",
-					TestCommands: []string(nil)},
-				{Name: "wings",
-					TestCommands: []string(nil)},
+				{
+					Name:             "chicken",
+					RequiresApproval: false,
+					TestCommands:     []string(nil),
+				},
+				{
+					Name:             "wings",
+					RequiresApproval: true,
+					TestCommands:     []string(nil),
+				},
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages)
+			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputEnvironments)
 
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())

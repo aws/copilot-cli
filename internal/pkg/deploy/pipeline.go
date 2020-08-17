@@ -163,8 +163,9 @@ func (s *Source) Owner() (string, error) {
 // test commands, if the user has opted to add any.
 type PipelineStage struct {
 	*AssociatedEnvironment
-	LocalServices []string
-	TestCommands  []string
+	LocalServices    []string
+	RequiresApproval bool
+	TestCommands     []string
 }
 
 // ServiceTemplatePath returns the full path to the service CFN template
@@ -193,7 +194,4 @@ type AssociatedEnvironment struct {
 
 	// AccountID of the account this environment is stored in.
 	AccountID string
-
-	// Whether or not this environment is a production environment.
-	Prod bool
 }

@@ -302,6 +302,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inGitHubRepo   string
 		inGitBranch    string
 		inAppName      string
+		inAppEnvs      []*config.Environment
 
 		mockSecretsManager          func(m *mocks.MocksecretsManager)
 		mockWsWriter                func(m *mocks.MockwsPipelineWriter)
@@ -318,6 +319,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -354,6 +363,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				existsErr := &secretsmanager.ErrSecretAlreadyExists{}
@@ -392,6 +409,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -410,6 +435,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -430,6 +463,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -456,6 +497,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -490,6 +539,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -526,6 +583,14 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			inGitHubRepo:   "goose",
 			inGitBranch:    "dev",
 			inAppName:      "badgoose",
+			inAppEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
 
 			mockSecretsManager: func(m *mocks.MocksecretsManager) {
 				m.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
@@ -592,6 +657,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				workspace:      mockWriter,
 				parser:         mockParser,
 				fs:             memFs,
+				envs:           tc.inAppEnvs,
 			}
 
 			// WHEN
@@ -688,34 +754,34 @@ koke	git://github.com/koke/grit.git (push)`,
 func TestInitPipelineOpts_parseOwnerRepoName(t *testing.T) {
 	testCases := map[string]struct {
 		inGitHubURL string
-		
+
 		expectedOwner string
-		expectedRepo string
+		expectedRepo  string
 		expectedError error
 	}{
 		"matches repo name without .git suffix": {
 			inGitHubURL: "https://github.com/badgoose/cli",
 
 			expectedOwner: "badgoose",
-			expectedRepo: "cli",
+			expectedRepo:  "cli",
 			expectedError: nil,
 		},
 		"matches repo name with .git suffix": {
 			inGitHubURL: "https://github.com/koke/grit.git",
 
 			expectedOwner: "koke",
-			expectedRepo: "grit",
+			expectedRepo:  "grit",
 			expectedError: nil,
 		},
 		"returns an error if it is not a github URL": {
 			inGitHubURL: "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever",
 
 			expectedOwner: "",
-			expectedRepo: "",
+			expectedRepo:  "",
 			expectedError: fmt.Errorf("unable to parse the GitHub repository owner and name from https://git-codecommit.us-east-1.amazonaws.com/v1/repos/whatever: please pass the repository URL with the format `--github-url https://github.com/{owner}/{repositoryName}`"),
 		},
 	}
-	
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
@@ -730,6 +796,72 @@ func TestInitPipelineOpts_parseOwnerRepoName(t *testing.T) {
 			} else {
 				require.Equal(t, tc.expectedOwner, owner)
 				require.Equal(t, tc.expectedRepo, repo)
+			}
+		})
+	}
+}
+
+func TestInitPipelineOpts_getEnvFromCache(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName         string
+		inEnvironmentName string
+		inEnvs            []*config.Environment
+
+		expectedEnvironment *config.Environment
+		expectedError       error
+	}{
+		"happy case": {
+			inAppName:         "badgoose",
+			inEnvironmentName: "test",
+			inEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
+
+			expectedEnvironment: &config.Environment{
+				Name: "test",
+			},
+			expectedError: nil,
+		},
+		"returns an error if an environment is not found": {
+			inAppName:         "badgoose",
+			inEnvironmentName: "badenv",
+			inEnvs: []*config.Environment{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
+
+			expectedEnvironment: nil,
+			expectedError:       fmt.Errorf("environment badenv in application badgoose is not found"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			opts := &initPipelineOpts{
+				initPipelineVars: initPipelineVars{
+					GlobalOpts: &GlobalOpts{appName: tc.inAppName},
+				},
+				envs: tc.inEnvs,
+			}
+
+			// WHEN
+			env, err := opts.getEnvFromCache(tc.inEnvironmentName)
+
+			// THEN
+			if tc.expectedError != nil {
+				require.EqualError(t, err, tc.expectedError.Error())
+			} else {
+				require.Equal(t, tc.expectedEnvironment, env)
 			}
 		})
 	}

@@ -247,6 +247,19 @@ func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
+func (o *initPipelineOpts) getEnvFromCache(environmentName string) (*config.Environment, error) {
+	var environment *config.Environment
+	for _, env := range o.envs {
+		if env.Name == environmentName {
+			environment = env
+		}
+	}
+	if environment == nil {
+		return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.AppName())
+	}
+	return environment, nil
+}
+
 func (o *initPipelineOpts) createPipelineManifest() error {
 	pipelineName := o.createPipelineName()
 	provider, err := o.createPipelineProvider()
@@ -254,7 +267,16 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return fmt.Errorf("create pipeline provider: %w", err)
 	}
 
-	manifest, err := manifest.CreatePipeline(pipelineName, provider, o.Environments)
+	var environments []*config.Environment
+	for _, environmentName := range o.Environments {
+		env, err := o.getEnvFromCache(environmentName)
+		if err != nil {
+			return err
+		}
+		environments = append(environments, env)
+	}
+
+	manifest, err := manifest.CreatePipeline(pipelineName, provider, environments)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
 	}
