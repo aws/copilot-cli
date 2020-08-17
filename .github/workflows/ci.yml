@@ -18,5 +18,5 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Run go vet
-        run: go vet ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v1
