@@ -114,7 +114,7 @@ func Warningln(args ...interface{}) {
 // Warningf formats according to the specifier, prefixes the message with a "Note:", colors the *entire* message in yellow, and writes to standard error.
 func Warningf(format string, args ...interface{}) {
 	wrappedFormat := fmt.Sprintf("%s %s", warningPrefix, format)
-	fmt.Fprintf(DiagnosticWriter, warningSprintf(wrappedFormat, args...))
+	fmt.Fprint(DiagnosticWriter, warningSprintf(wrappedFormat, args...))
 }
 
 // Info writes the message to standard error with the default color.

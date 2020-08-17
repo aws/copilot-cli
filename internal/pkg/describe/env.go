@@ -148,13 +148,13 @@ func (e *EnvDescription) JSONString() (string, error) {
 func (e *EnvDescription) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", e.Environment.Name)
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", "Type")
 	writer.Flush()
@@ -165,7 +165,7 @@ func (e *EnvDescription) HumanString() string {
 	}
 	writer.Flush()
 	if len(e.Tags) != 0 {
-		fmt.Fprintf(writer, color.Bold.Sprint("\nTags\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nTags\n\n"))
 		writer.Flush()
 		fmt.Fprintf(writer, "  %s\t%s\n", "Key", "Value")
 		fmt.Fprintf(writer, "  %s\t%s\n", "---", "-----")
@@ -182,7 +182,7 @@ func (e *EnvDescription) HumanString() string {
 	}
 	writer.Flush()
 	if len(e.Resources) != 0 {
-		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n\n"))
 		writer.Flush()
 		for _, resource := range e.Resources {
 			fmt.Fprintf(writer, "  %s\t%s\n", resource.Type, resource.PhysicalID)

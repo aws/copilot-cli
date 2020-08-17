@@ -169,22 +169,22 @@ func (w *backendSvcDesc) JSONString() (string, error) {
 func (w *backendSvcDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("About\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Application", w.App)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Name", w.Service)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Type", w.Type)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nConfigurations\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nService Discovery\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
 	w.ServiceDiscovery.humanString(writer)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nVariables\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
 	if len(w.Resources) != 0 {
-		fmt.Fprintf(writer, color.Bold.Sprint("\nResources\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))
 		writer.Flush()
 
 		// Go maps don't have a guaranteed order.
