@@ -47,7 +47,7 @@ type ServiceStatus struct {
 
 // ServiceStatusDesc contains the status for a service.
 type ServiceStatusDesc struct {
-	Service ecs.ServiceStatus        `json:",flow"`
+	Service ecs.ServiceStatus
 	Tasks   []ecs.TaskStatus         `json:"tasks"`
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
