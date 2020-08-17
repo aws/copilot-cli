@@ -328,7 +328,7 @@ func (o *deleteSvcOpts) deleteSSMParam() error {
 func (o *deleteSvcOpts) RecommendedActions() []string {
 	return []string{
 		fmt.Sprintf("Run %s to update the corresponding pipeline if it exists.",
-			color.HighlightCode(fmt.Sprintf("copilot pipeline update"))),
+			color.HighlightCode("copilot pipeline update")),
 	}
 }
 
