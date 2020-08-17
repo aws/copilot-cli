@@ -90,14 +90,14 @@ const (
 
 const (
 	ddbStringTypeLong = "String"
-	ddbIntTypeLong = "Number"
+	ddbIntTypeLong    = "Number"
 	ddbBinaryTypeLong = "Binary"
 )
 
 var attributeTypesLong = []string{
-	"String",
-	"Number",
-	"Binary",
+	ddbStringTypeLong,
+	ddbIntTypeLong,
+	ddbBinaryTypeLong,
 }
 
 const (
