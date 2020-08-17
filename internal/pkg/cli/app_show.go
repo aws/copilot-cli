@@ -75,14 +75,14 @@ func (o *showAppOpts) Execute() error {
 		return err
 	}
 	if !o.shouldOutputJSON {
-		fmt.Fprintf(o.w, description.HumanString())
+		fmt.Fprint(o.w, description.HumanString())
 		return nil
 	}
 	data, err := description.JSONString()
 	if err != nil {
 		return fmt.Errorf("get JSON string: %w", err)
 	}
-	fmt.Fprintf(o.w, data)
+	fmt.Fprint(o.w, data)
 	return nil
 }
 

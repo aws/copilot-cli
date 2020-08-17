@@ -111,9 +111,9 @@ func (o *showEnvOpts) Execute() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(o.w, data)
+		fmt.Fprint(o.w, data)
 	} else {
-		fmt.Fprintf(o.w, env.HumanString())
+		fmt.Fprint(o.w, env.HumanString())
 	}
 
 	return nil
@@ -151,9 +151,9 @@ func BuildEnvShowCmd() *cobra.Command {
 		GlobalOpts: NewGlobalOpts(),
 	}
 	cmd := &cobra.Command{
-		Use:    "show",
-		Short:  "Shows info about a deployed environment.",
-		Long:   "Shows info about a deployed environment, including region, account ID, and services.",
+		Use:   "show",
+		Short: "Shows info about a deployed environment.",
+		Long:  "Shows info about a deployed environment, including region, account ID, and services.",
 
 		Example: `
   Shows info about the environment "test".

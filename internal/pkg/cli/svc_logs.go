@@ -210,7 +210,7 @@ func (o *svcLogsOpts) askSvcEnvName() error {
 func (o *svcLogsOpts) outputLogs(logs []*cloudwatchlogs.Event) error {
 	if !o.shouldOutputJSON {
 		for _, log := range logs {
-			fmt.Fprintf(o.w, log.HumanString())
+			fmt.Fprint(o.w, log.HumanString())
 		}
 		return nil
 	}
@@ -219,7 +219,7 @@ func (o *svcLogsOpts) outputLogs(logs []*cloudwatchlogs.Event) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(o.w, data)
+		fmt.Fprint(o.w, data)
 	}
 	return nil
 }

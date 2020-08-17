@@ -106,7 +106,7 @@ func (o *listSvcOpts) Execute() error {
 			return err
 		}
 		out = data
-		fmt.Fprintf(o.w, out)
+		fmt.Fprint(o.w, out)
 	} else {
 		o.humanOutput(svcs)
 	}
