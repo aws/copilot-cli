@@ -45,10 +45,9 @@ func TestNewPipelineManifest(t *testing.T) {
 	const pipelineName = "pipepiper"
 
 	testCases := map[string]struct {
-		beforeEach     func() error
-		provider       Provider
-		inPipelineName string
-		inputStages    []PipelineStage
+		beforeEach  func() error
+		provider    Provider
+		inputStages []PipelineStage
 
 		expectedStages []PipelineStage
 		expectedErr    error
