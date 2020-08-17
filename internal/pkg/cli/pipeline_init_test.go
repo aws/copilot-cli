@@ -801,7 +801,7 @@ func TestInitPipelineOpts_parseOwnerRepoName(t *testing.T) {
 	}
 }
 
-func TestInitPipelineOpts_getEnvFromCache(t *testing.T) {
+func TestInitPipelineOpts_getEnvConfig(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName         string
 		inEnvironmentName string
