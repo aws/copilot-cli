@@ -329,9 +329,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(wantedPartitionKey, nil)
 				m.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
 					gomock.Any(),
-					attributeTypesLong,
+					attributeTypes,
 					gomock.Any(),
-				).Return(ddbStringTypeLong, nil)
+				).Return(ddbStringType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -403,9 +403,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				).Return(wantedPartitionKey, nil)
 				m.EXPECT().SelectOne(gomock.Eq(keyTypePrompt),
 					gomock.Any(),
-					attributeTypesLong,
+					attributeTypes,
 					gomock.Any(),
-				).Return(ddbStringTypeLong, nil)
+				).Return(ddbStringType, nil)
 			},
 			mockCfg: func(m *mocks.MockwsSelector) {},
 
@@ -546,9 +546,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				m.EXPECT().SelectOne(
 					gomock.Eq(lsiTypePrompt),
 					gomock.Eq(lsiTypeHelp),
-					gomock.Eq(attributeTypesLong),
+					gomock.Eq(attributeTypes),
 					gomock.Any(),
-				).Return(ddbStringTypeLong, nil)
+				).Return(ddbStringType, nil)
 				m.EXPECT().Confirm(
 					gomock.Eq(storageInitDDBMoreLSIPrompt),
 					gomock.Eq(storageInitDDBLSIHelp),

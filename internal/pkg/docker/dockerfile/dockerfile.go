@@ -4,7 +4,6 @@
 package dockerfile
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"regexp"
@@ -42,10 +41,6 @@ const (
 	hcInstrStartIndex = len("HEALTHCHECK ")
 	cmdLength         = "CMD "
 	cmdShell          = "CMD-SHELL"
-)
-
-var (
-	errCouldntParseDockerfilePort = errors.New("parse port from EXPOSE")
 )
 
 type portConfig struct {

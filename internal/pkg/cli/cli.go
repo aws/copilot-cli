@@ -118,15 +118,6 @@ func isStackSetNotExistsErr(err error) bool {
 	}
 }
 
-type svcEnv struct {
-	svcName string
-	envName string
-}
-
-func (s *svcEnv) String() string {
-	return fmt.Sprintf("%s (%s)", s.svcName, s.envName)
-}
-
 // relPath returns the path relative to the current working directory.
 func relPath(fullPath string) (string, error) {
 	wkdir, err := os.Getwd()

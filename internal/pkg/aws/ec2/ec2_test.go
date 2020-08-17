@@ -43,7 +43,6 @@ var (
 )
 
 func TestEC2_ListVPC(t *testing.T) {
-	const mockVPCID = "mockVPCID"
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
 

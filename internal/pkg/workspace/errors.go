@@ -38,7 +38,7 @@ func (e *errWorkspaceNotFound) Error() string {
 type errNoAssociatedApplication struct{}
 
 func (e *errNoAssociatedApplication) Error() string {
-	return fmt.Sprint("couldn't find an application associated with this workspace")
+	return "couldn't find an application associated with this workspace"
 }
 
 // errHasExistingApplication means we tried to create a workspace that belongs to another application.
