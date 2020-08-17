@@ -855,7 +855,7 @@ func TestInitPipelineOpts_getEnvFromCache(t *testing.T) {
 			}
 
 			// WHEN
-			env, err := opts.getEnvFromCache(tc.inEnvironmentName)
+			env, err := opts.getEnvConfig(tc.inEnvironmentName)
 
 			// THEN
 			if tc.expectedError != nil {

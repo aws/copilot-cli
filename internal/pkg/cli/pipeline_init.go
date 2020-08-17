@@ -247,11 +247,12 @@ func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 	return manifest.NewProvider(config)
 }
 
-func (o *initPipelineOpts) getEnvFromCache(environmentName string) (*config.Environment, error) {
+func (o *initPipelineOpts) getEnvConfig(environmentName string) (*config.Environment, error) {
 	var environment *config.Environment
 	for _, env := range o.envs {
 		if env.Name == environmentName {
 			environment = env
+			break
 		}
 	}
 	if environment == nil {
@@ -269,7 +270,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 
 	var environments []*config.Environment
 	for _, environmentName := range o.Environments {
-		env, err := o.getEnvFromCache(environmentName)
+		env, err := o.getEnvConfig(environmentName)
 		if err != nil {
 			return err
 		}
