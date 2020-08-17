@@ -95,6 +95,9 @@ func (s *S3) EmptyBucket(bucket string) error {
 				Objects: objectsToDelete,
 			},
 		})
+		if err != nil {
+			return fmt.Errorf("delete objects from bucket %s: %w", bucket, err)
+		}
 		if !aws.BoolValue(listResp.IsTruncated) {
 			return nil
 		}

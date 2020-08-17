@@ -231,7 +231,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 				}).Return(nil, errors.New("some error"))
 			},
 
-			wantErr: fmt.Errorf("delete objects for bucket mockBucket: some error"),
+			wantErr: fmt.Errorf("delete objects from bucket mockBucket: some error"),
 		},
 	}
 
@@ -250,7 +250,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			gotErr := service.EmptyBucket(tc.inBucket)
 
-			if gotErr != nil {
+			if tc.wantErr != nil {
 				require.EqualError(t, gotErr, tc.wantErr.Error())
 			}
 		})
