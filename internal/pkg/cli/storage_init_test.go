@@ -24,6 +24,8 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 		inPartition   string
 		inSort        string
 		inLSISorts    []string
+		inNoSort      bool
+		inNoLSI       bool
 
 		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
@@ -60,60 +62,103 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inStorageName: "my-bucket",
 			wantedErr:     errors.New("retrieve local service names: wanted err"),
 		},
-		"happy path s3": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
-			},
+		"successfully validates valid s3 bucket name": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
 			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
 			inStorageName: "my-bucket.4",
 			wantedErr:     nil,
 		},
-		"happy path ddb": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
-			},
+		"successfully validates valid DDB table name": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
 			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,
-			inSvcName:     "frontend",
 			inStorageName: "my-cool_table.3",
 			wantedErr:     nil,
 		},
 		"default to ddb name validation when storage type unspecified": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
-			},
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
 			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: "",
-			inSvcName:     "frontend",
 			inStorageName: "my-cool_table.3",
 			wantedErr:     nil,
 		},
 		"s3 bad character": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
-			},
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
 			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: s3StorageType,
-			inSvcName:     "frontend",
 			inStorageName: "mybadbucket???",
 			wantedErr:     errValueBadFormatWithPeriod,
 		},
 		"ddb bad character": {
-			mockWs: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ServiceNames().Return([]string{"frontend"}, nil)
-			},
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
 			mockStore:     func(m *mocks.Mockstore) {},
 			inAppName:     "bowie",
 			inStorageType: dynamoDBStorageType,
-			inSvcName:     "frontend",
 			inStorageName: "badTable!!!",
 			wantedErr:     errValueBadFormatWithPeriodUnderscore,
+		},
+		"successfully validates partition key flag": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inPartition:   "points:String",
+			wantedErr:     nil,
+		},
+		"successfully validates sort key flag": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inSort:        "userID:Number",
+			wantedErr:     nil,
+		},
+		"successfully validates LSI": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inLSISorts:    []string{"userID:Number", "data:Binary"},
+			wantedErr:     nil,
+		},
+		"success on providing --no-sort": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inNoSort:      true,
+			wantedErr:     nil,
+		},
+		"success on providing --no-lsi": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inNoLSI:       true,
+			wantedErr:     nil,
+		},
+		"fails when --no-lsi and --lsi are both provided": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inLSISorts:    []string{"userID:Number"},
+			inNoLSI:       true,
+			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-lsi and --lsi options at once"),
+		},
+		"fails when --no-sort and --lsi are both provided": {
+			mockWs:        func(m *mocks.MockwsAddonManager) {},
+			mockStore:     func(m *mocks.Mockstore) {},
+			inAppName:     "bowie",
+			inStorageType: dynamoDBStorageType,
+			inLSISorts:    []string{"userID:Number"},
+			inNoSort:      true,
+			wantedErr:     fmt.Errorf("validate LSI configuration: cannot specify --no-sort and --lsi options at once"),
 		},
 	}
 	for name, tc := range testCases {
@@ -136,6 +181,8 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 					partitionKey: tc.inPartition,
 					sortKey:      tc.inSort,
 					lsiSorts:     tc.inLSISorts,
+					noLSI:        tc.inNoLSI,
+					noSort:       tc.inNoSort,
 				},
 				ws:    mockWs,
 				store: mockStore,
