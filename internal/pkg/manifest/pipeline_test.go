@@ -11,8 +11,10 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
+	"github.com/fatih/structs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -49,8 +51,8 @@ func TestNewPipelineManifest(t *testing.T) {
 		provider    Provider
 		inputStages []PipelineStage
 
-		expectedStages []PipelineStage
-		expectedErr    error
+		expectedManifest *PipelineManifest
+		expectedErr      error
 	}{
 		"errors out when no stage provided": {
 			provider: func() Provider {
@@ -83,16 +85,25 @@ func TestNewPipelineManifest(t *testing.T) {
 					RequiresApproval: true,
 				},
 			},
-			expectedStages: []PipelineStage{
-				{
-					Name:             "chicken",
-					RequiresApproval: false,
-					TestCommands:     []string(nil),
+			expectedManifest: &PipelineManifest{
+				Name:    "pipepiper",
+				Version: Ver1,
+				Source: &Source{
+					ProviderName: "GitHub",
+					Properties: structs.Map(GitHubProperties{
+						OwnerAndRepository: "aws/amazon-ecs-cli-v2",
+						Branch:             "master",
+					}),
 				},
-				{
-					Name:             "wings",
-					RequiresApproval: true,
-					TestCommands:     []string(nil),
+				Stages: []PipelineStage{
+					{
+						Name:             "chicken",
+						RequiresApproval: false,
+					},
+					{
+						Name:             "wings",
+						RequiresApproval: true,
+					},
 				},
 			},
 		},
@@ -100,12 +111,20 @@ func TestNewPipelineManifest(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			expectedBytes, err := yaml.Marshal(tc.expectedManifest)
+			require.NoError(t, err)
+
+			// WHEN
 			m, err := NewPipelineManifest(pipelineName, tc.provider, tc.inputStages)
 
+			// THEN
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				require.Equal(t, tc.expectedStages, m.Stages, "the stages are different from the expected")
+				actualBytes, err := yaml.Marshal(m)
+				require.NoError(t, err)
+				require.Equal(t, expectedBytes, actualBytes, "the manifest is different from the expected")
 			}
 		})
 	}
