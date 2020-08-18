@@ -187,7 +187,6 @@ func TestPipelineCreation(t *testing.T) {
 						Name:      environmentToDeploy.Name,
 						Region:    *appSess.Config.Region,
 						AccountID: app.AccountID,
-						Prod:      true,
 					},
 					LocalServices: []string{"frontend", "backend"},
 				},

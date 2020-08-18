@@ -63,15 +63,15 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789012",
-						Prod:      false,
 					},
-					LocalServices: []string{"frontend", "backend"},
-					TestCommands:  []string{"make test", "echo \"made test\""},
+					LocalServices:    []string{"frontend", "backend"},
+					RequiresApproval: false,
+					TestCommands:     []string{"make test", "echo \"made test\""},
 				},
 			},
 			expectedError: nil,
 		},
-		"converts stages without test commands": {
+		"converts stages with only stage name": {
 			stages: []manifest.PipelineStage{
 				{
 					Name: "test",
@@ -98,10 +98,46 @@ func TestUpdatePipelineOpts_convertStages(t *testing.T) {
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789012",
-						Prod:      false,
 					},
-					LocalServices: []string{"frontend", "backend"},
-					TestCommands:  []string(nil),
+					LocalServices:    []string{"frontend", "backend"},
+					RequiresApproval: false,
+					TestCommands:     []string(nil),
+				},
+			},
+			expectedError: nil,
+		},
+		"converts stages with requires approval": {
+			stages: []manifest.PipelineStage{
+				{
+					Name:             "test",
+					RequiresApproval: true,
+				},
+			},
+			inAppName: "badgoose",
+			callMocks: func(m updatePipelineMocks) {
+				mockEnv := &config.Environment{
+					Name:      "test",
+					App:       "badgoose",
+					Region:    "us-west-2",
+					AccountID: "123456789012",
+					Prod:      true,
+				}
+				gomock.InOrder(
+					m.ws.EXPECT().ServiceNames().Return([]string{"frontend", "backend"}, nil).Times(1),
+					m.envStore.EXPECT().GetEnvironment("badgoose", "test").Return(mockEnv, nil).Times(1),
+				)
+			},
+
+			expectedStages: []deploy.PipelineStage{
+				{
+					AssociatedEnvironment: &deploy.AssociatedEnvironment{
+						Name:      "test",
+						Region:    "us-west-2",
+						AccountID: "123456789012",
+					},
+					LocalServices:    []string{"frontend", "backend"},
+					RequiresApproval: true,
+					TestCommands:     []string(nil),
 				},
 			},
 			expectedError: nil,
