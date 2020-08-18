@@ -1,0 +1,70 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package customized_env_test
+
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/aws/copilot-cli/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/command"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var cli *client.CLI
+var appName string
+var vpcStackName string
+var vpcStackTemplatePath string
+var vpcImport client.EnvInitRequestVPCImport
+var vpcConfig client.EnvInitRequestVPCConfig
+
+type vpcStackOutput struct {
+	OutputKey   string
+	OutputValue string
+	ExportName  string
+}
+
+/**
+The Customized Env Suite creates multiple environments with customized resources,
+deploys a service to it, and then
+tears it down.
+*/
+func Test_Customized_Env(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Customized Env Svc Suite")
+}
+
+var _ = BeforeSuite(func() {
+	vpcStackName = fmt.Sprintf("e2e-customizedenv-vpc-stack-%d", time.Now().Unix())
+	vpcStackTemplatePath = "file://vpc.yml"
+	ecsCli, err := client.NewCLI()
+	Expect(err).NotTo(HaveOccurred())
+	cli = ecsCli
+	appName = fmt.Sprintf("e2e-customizedenv-%d", time.Now().Unix())
+	vpcConfig = client.EnvInitRequestVPCConfig{
+		CIDR:               "10.1.0.0/16",
+		PrivateSubnetCIDRs: "10.1.2.0/24,10.1.3.0/24",
+		PublicSubnetCIDRs:  "10.1.0.0/24,10.1.1.0/24",
+	}
+})
+
+var _ = AfterSuite(func() {
+	_, err := cli.AppDelete(map[string]string{"test": "default", "prod": "default"})
+	Expect(err).NotTo(HaveOccurred())
+	// Delete VPC stack.
+	err = command.Run("aws", []string{"cloudformation", "delete-stack", "--stack-name", vpcStackName})
+	Expect(err).NotTo(HaveOccurred())
+})
+
+func BeforeAll(fn func()) {
+	first := true
+	BeforeEach(func() {
+		if first {
+			fn()
+			first = false
+		}
+	})
+}

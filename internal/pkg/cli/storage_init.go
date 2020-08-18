@@ -77,13 +77,15 @@ partition key but a different sort key. You may specify up to 5 alternate sort k
 )
 
 const (
-	ddbStringType = "S"
+	ddbStringType = "String"
+	ddbIntType    = "Number"
+	ddbBinaryType = "Binary"
 )
 
-var attributeTypesLong = []string{
-	"String",
-	"Number",
-	"Binary",
+var attributeTypes = []string{
+	ddbStringType,
+	ddbIntType,
+	ddbBinaryType,
 }
 
 type initStorageVars struct {
@@ -107,7 +109,6 @@ type initStorageOpts struct {
 	ws    wsAddonManager
 	store store
 
-	app *config.Application
 	sel wsSelector
 }
 
@@ -302,7 +303,7 @@ func (o *initStorageOpts) askDynamoPartitionKey() error {
 
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
-		attributeTypesLong,
+		attributeTypes,
 		prompt.WithFinalMessage("Partition key datatype:"),
 	)
 	if err != nil {
@@ -326,7 +327,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 	if err != nil {
 		return fmt.Errorf("confirm DDB sort key: %w", err)
 	}
-	if response == false {
+	if !response {
 		o.noSort = true
 		return nil
 	}
@@ -348,7 +349,7 @@ func (o *initStorageOpts) askDynamoSortKey() error {
 
 	keyType, err := o.prompt.SelectOne(keyTypePrompt,
 		keyTypeHelp,
-		attributeTypesLong,
+		attributeTypes,
 		prompt.WithFinalMessage("Sort key datatype:"),
 	)
 	if err != nil {
@@ -399,7 +400,7 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 		}
 		lsiType, err := o.prompt.SelectOne(lsiTypePrompt,
 			lsiTypeHelp,
-			attributeTypesLong,
+			attributeTypes,
 			prompt.WithFinalMessage("Attribute type:"),
 		)
 		if err != nil {

@@ -5,11 +5,12 @@ package task
 
 import (
 	"fmt"
+	"io"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"io"
-	"time"
 )
 
 const (
@@ -24,8 +25,8 @@ type TasksDescriber interface {
 // TaskEventsLogger gets a log group's log events.
 type TaskEventsLogger interface {
 	TaskLogEvents(logGroupName string,
-			streamLastEventTime map[string]int64,
-			opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+		streamLastEventTime map[string]int64,
+		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
 // EventsWriter represents a writer that writes tasks' log events to a writer.
@@ -33,15 +34,14 @@ type EventsWriter struct {
 	GroupName string
 	Tasks     []*Task
 
-	Writer io.Writer
+	Writer       io.Writer
 	EventsLogger TaskEventsLogger
-	Describer TasksDescriber
+	Describer    TasksDescriber
 
 	// Fields that are private that get modified each time
 	lastEventTimestampByLogGroup map[string]int64
-	runningTasks []*Task
+	runningTasks                 []*Task
 }
-
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
 func (ew *EventsWriter) WriteEventsUntilStopped() error {
@@ -72,7 +72,7 @@ func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) err
 		return fmt.Errorf("get task log events: %w", err)
 	}
 	for _, event := range logEventsOutput.Events {
-		if _, err := fmt.Fprintf(ew.Writer, event.HumanString()); err != nil {
+		if _, err := fmt.Fprint(ew.Writer, event.HumanString()); err != nil {
 			return fmt.Errorf("write log event: %w", err)
 		}
 	}
@@ -80,7 +80,7 @@ func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) err
 	return nil
 }
 
-func (ew *EventsWriter) allTasksStopped() (bool, error){
+func (ew *EventsWriter) allTasksStopped() (bool, error) {
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
 		taskARNs[idx] = task.TaskARN
@@ -101,7 +101,7 @@ func (ew *EventsWriter) allTasksStopped() (bool, error){
 			stopped = false
 			runningTasks = append(runningTasks, &Task{
 				ClusterARN: *t.ClusterArn,
-				TaskARN: *t.TaskArn,
+				TaskARN:    *t.TaskArn,
 			})
 		}
 	}

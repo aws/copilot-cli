@@ -21,7 +21,6 @@ import (
 
 type showEnvMocks struct {
 	storeSvc  *mocks.Mockstore
-	prompt    *mocks.Mockprompter
 	describer *mocks.MockenvDescriber
 	sel       *mocks.MockconfigSelector
 }

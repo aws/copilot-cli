@@ -225,7 +225,7 @@ func (o *initPipelineOpts) RecommendedActions() []string {
 	return []string{
 		"Commit and push the generated buildspec and manifest file.",
 		fmt.Sprintf("Update the %s phase of your buildspec to unit test your services before pushing the images.", color.HighlightResource("build")),
-		fmt.Sprint("Update your pipeline manifest to add additional stages."),
+		"Update your pipeline manifest to add additional stages.",
 		fmt.Sprintf("Run %s to deploy your pipeline for the repository.", color.HighlightCode("copilot pipeline update")),
 	}
 }
