@@ -14,10 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	stackCreateComplete = "CREATE_COMPLETE"
-)
-
 var cli *client.CLI
 var appName string
 var vpcStackName string
