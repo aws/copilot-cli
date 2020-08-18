@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package customized_env_test
 
 import (
@@ -49,7 +52,8 @@ var _ = Describe("Customized Env", func() {
 	})
 
 	Context("when deploying resources to be imported", func() {
-		It("deploy vpc cloudformation stack", func() {
+		BeforeAll(func() {
+			// TODO: move "aws" commands to aws.go
 			err := command.Run("aws", []string{"cloudformation", "create-stack", "--stack-name",
 				vpcStackName, "--template-body", vpcStackTemplatePath})
 			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
@@ -178,7 +182,7 @@ var _ = Describe("Customized Env", func() {
 			})
 		})
 
-		It("svc deploy should succeed to both environment", func() {
+		It("svc deploy should succeed to both environments", func() {
 			Expect(testDeployErr).NotTo(HaveOccurred())
 			Expect(prodEndDeployErr).NotTo(HaveOccurred())
 		})
