@@ -5,11 +5,11 @@ pull_request_rules:
       - "#approved-reviews-by>=2"
       - approved-reviews-by=@aws/aws-ecs-devx
       - -approved-reviews-by~=author
-      - status-success=ci / build (compile-linux) (pull_request)
-      - status-success=ci / build (compile-windows) (pull_request)
-      - status-success=ci / build (compile-darwin) (pull_request)
-      - status-success=ci / test (pull_request)
-      - status-success=ci / staticcheck (pull_request)
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
       - status-success=Semantic Pull Request
       - -label~=(WIP|do-not-merge)
       - -title~=(WIP|wip)
@@ -25,11 +25,11 @@ pull_request_rules:
   - name: Automatically approve and merge Dependabot PRs
     conditions:
       - base=mainline
-      - status-success=ci / build (compile-linux) (pull_request)
-      - status-success=ci / build (compile-windows) (pull_request)
-      - status-success=ci / build (compile-darwin) (pull_request)
-      - status-success=ci / test (pull_request)
-      - status-success=ci / staticcheck (pull_request)
+      - status-success=build (compile-linux)
+      - status-success=build (compile-windows)
+      - status-success=build (compile-darwin)
+      - status-success=test
+      - status-success=staticcheck
       - status-success=Semantic Pull Request
       - author=dependabot[bot]
       - -title~=(WIP|wip)
