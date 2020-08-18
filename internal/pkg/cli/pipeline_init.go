@@ -248,17 +248,12 @@ func (o *initPipelineOpts) createPipelineProvider() (manifest.Provider, error) {
 }
 
 func (o *initPipelineOpts) getEnvConfig(environmentName string) (*config.Environment, error) {
-	var environment *config.Environment
 	for _, env := range o.envs {
 		if env.Name == environmentName {
-			environment = env
-			break
+			return env, nil
 		}
 	}
-	if environment == nil {
-		return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.AppName())
-	}
-	return environment, nil
+	return nil, fmt.Errorf("environment %s in application %s is not found", environmentName, o.AppName())
 }
 
 func (o *initPipelineOpts) createPipelineManifest() error {
