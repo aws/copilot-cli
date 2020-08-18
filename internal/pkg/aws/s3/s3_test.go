@@ -214,6 +214,16 @@ func TestS3_EmptyBucket(t *testing.T) {
 
 			wantErr: fmt.Errorf("list objects for bucket mockBucket: some error"),
 		},
+		"should not invoke DeleteObjects if bucket is empty": {
+			inBucket: "mockBucket",
+			mockS3Client: func(m *mocks.Mocks3Api) {
+				m.EXPECT().ListObjectVersions(gomock.Any()).Return(&s3.ListObjectVersionsOutput{
+					IsTruncated: aws.Bool(false),
+				}, nil)
+				m.EXPECT().DeleteObjects(gomock.Any()).Times(0)
+			},
+			wantErr: nil,
+		},
 		"should wrap up error if fail to delete objects": {
 			inBucket: "mockBucket",
 			mockS3Client: func(m *mocks.Mocks3Api) {

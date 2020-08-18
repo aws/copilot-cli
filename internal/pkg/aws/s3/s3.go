@@ -89,6 +89,9 @@ func (s *S3) EmptyBucket(bucket string) error {
 				VersionId: deleteMarker.VersionId,
 			})
 		}
+		if len(objectsToDelete) == 0 {
+			return nil
+		}
 		_, err = s.s3Client.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(bucket),
 			Delete: &s3.Delete{
