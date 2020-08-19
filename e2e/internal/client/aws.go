@@ -42,11 +42,11 @@ func (a *AWS) CreateStack(name, templatePath string) error {
 	return a.exec(command)
 }
 
-/*StackCreateComplete runs:
+/*WaitStackCreateComplete runs:
 aws cloudformation wait stack-create-complete
 	--stack-name $name
 */
-func (a *AWS) StackCreateComplete(name string) error {
+func (a *AWS) WaitStackCreateComplete(name string) error {
 	command := strings.Join([]string{
 		"cloudformation",
 		"wait",
@@ -93,11 +93,11 @@ func (a *AWS) DeleteStack(name string) error {
 	return a.exec(command)
 }
 
-/*StackDeleteComplete runs:
+/*WaitStackDeleteComplete runs:
 aws cloudformation wait stack-delete-complete
 	--stack-name $name
 */
-func (a *AWS) StackDeleteComplete(name string) error {
+func (a *AWS) WaitStackDeleteComplete(name string) error {
 	command := strings.Join([]string{
 		"cloudformation",
 		"wait",

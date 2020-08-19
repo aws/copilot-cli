@@ -52,7 +52,7 @@ var _ = Describe("Customized Env", func() {
 		BeforeAll(func() {
 			err := aws.CreateStack(vpcStackName, vpcStackTemplatePath)
 			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
-			err = aws.StackCreateComplete(vpcStackName)
+			err = aws.WaitStackCreateComplete(vpcStackName)
 			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
 		})
 		It("parse vpc stack output", func() {

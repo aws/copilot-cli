@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package task
 
 import (
@@ -47,7 +50,7 @@ var _ = AfterSuite(func() {
 	err = aws.DeleteStack(taskStackName)
 	Expect(err).NotTo(HaveOccurred(), "start deleting task stack")
 	// Wait until task stack is removed.
-	err = aws.StackDeleteComplete(taskStackName)
+	err = aws.WaitStackDeleteComplete(taskStackName)
 	Expect(err).NotTo(HaveOccurred(), "task stack delete complete")
 	// Delete Copilot application.
 	_, err = cli.AppDelete(map[string]string{"test": "default"})
