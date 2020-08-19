@@ -10,7 +10,6 @@ import (
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
-	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -3441,44 +3440,6 @@ func (mr *MockdockerfileParserMockRecorder) GetHealthCheck() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHealthCheck", reflect.TypeOf((*MockdockerfileParser)(nil).GetHealthCheck))
 }
 
-// MockserviceArnGetter is a mock of serviceArnGetter interface
-type MockserviceArnGetter struct {
-	ctrl     *gomock.Controller
-	recorder *MockserviceArnGetterMockRecorder
-}
-
-// MockserviceArnGetterMockRecorder is the mock recorder for MockserviceArnGetter
-type MockserviceArnGetterMockRecorder struct {
-	mock *MockserviceArnGetter
-}
-
-// NewMockserviceArnGetter creates a new mock instance
-func NewMockserviceArnGetter(ctrl *gomock.Controller) *MockserviceArnGetter {
-	mock := &MockserviceArnGetter{ctrl: ctrl}
-	mock.recorder = &MockserviceArnGetterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockserviceArnGetter) EXPECT() *MockserviceArnGetterMockRecorder {
-	return m.recorder
-}
-
-// GetServiceArn mocks base method
-func (m *MockserviceArnGetter) GetServiceArn() (*ecs.ServiceArn, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetServiceArn")
-	ret0, _ := ret[0].(*ecs.ServiceArn)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetServiceArn indicates an expected call of GetServiceArn
-func (mr *MockserviceArnGetterMockRecorder) GetServiceArn() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceArn", reflect.TypeOf((*MockserviceArnGetter)(nil).GetServiceArn))
-}
-
 // MockstatusDescriber is a mock of statusDescriber interface
 type MockstatusDescriber struct {
 	ctrl     *gomock.Controller
@@ -3553,44 +3514,6 @@ func (m *MockenvDescriber) Describe() (*describe.EnvDescription, error) {
 func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
-}
-
-// MockresourceGroupsClient is a mock of resourceGroupsClient interface
-type MockresourceGroupsClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockresourceGroupsClientMockRecorder
-}
-
-// MockresourceGroupsClientMockRecorder is the mock recorder for MockresourceGroupsClient
-type MockresourceGroupsClientMockRecorder struct {
-	mock *MockresourceGroupsClient
-}
-
-// NewMockresourceGroupsClient creates a new mock instance
-func NewMockresourceGroupsClient(ctrl *gomock.Controller) *MockresourceGroupsClient {
-	mock := &MockresourceGroupsClient{ctrl: ctrl}
-	mock.recorder = &MockresourceGroupsClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockresourceGroupsClient) EXPECT() *MockresourceGroupsClientMockRecorder {
-	return m.recorder
-}
-
-// GetResourcesByTags mocks base method
-func (m *MockresourceGroupsClient) GetResourcesByTags(resourceType string, tags map[string]string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResourcesByTags", resourceType, tags)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetResourcesByTags indicates an expected call of GetResourcesByTags
-func (mr *MockresourceGroupsClientMockRecorder) GetResourcesByTags(resourceType, tags interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourcesByTags", reflect.TypeOf((*MockresourceGroupsClient)(nil).GetResourcesByTags), resourceType, tags)
 }
 
 // MockpipelineGetter is a mock of pipelineGetter interface

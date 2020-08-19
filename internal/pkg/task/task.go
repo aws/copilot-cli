@@ -6,14 +6,15 @@ package task
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"time"
 )
 
-// VpcGetter gets subnets and security groups.
+// VPCGetter gets subnets and security groups.
 type VPCGetter interface {
 	SubnetIDs(filters ...ec2.Filter) ([]string, error)
 	SecurityGroups(filters ...ec2.Filter) ([]string, error)
@@ -30,8 +31,8 @@ type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
 }
 
-// TaskRunner runs the tasks and wait for it to start.
-type TaskRunner interface {
+// Runner runs the tasks and wait for it to start.
+type Runner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
 }
 
@@ -69,4 +70,3 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	}
 	return tasks
 }
-

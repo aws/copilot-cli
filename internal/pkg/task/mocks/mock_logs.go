@@ -49,31 +49,31 @@ func (mr *MockTasksDescriberMockRecorder) DescribeTasks(cluster, taskARNs interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*MockTasksDescriber)(nil).DescribeTasks), cluster, taskARNs)
 }
 
-// MockTaskEventsLogger is a mock of TaskEventsLogger interface
-type MockTaskEventsLogger struct {
+// MockEventsLogger is a mock of EventsLogger interface
+type MockEventsLogger struct {
 	ctrl     *gomock.Controller
-	recorder *MockTaskEventsLoggerMockRecorder
+	recorder *MockEventsLoggerMockRecorder
 }
 
-// MockTaskEventsLoggerMockRecorder is the mock recorder for MockTaskEventsLogger
-type MockTaskEventsLoggerMockRecorder struct {
-	mock *MockTaskEventsLogger
+// MockEventsLoggerMockRecorder is the mock recorder for MockEventsLogger
+type MockEventsLoggerMockRecorder struct {
+	mock *MockEventsLogger
 }
 
-// NewMockTaskEventsLogger creates a new mock instance
-func NewMockTaskEventsLogger(ctrl *gomock.Controller) *MockTaskEventsLogger {
-	mock := &MockTaskEventsLogger{ctrl: ctrl}
-	mock.recorder = &MockTaskEventsLoggerMockRecorder{mock}
+// NewMockEventsLogger creates a new mock instance
+func NewMockEventsLogger(ctrl *gomock.Controller) *MockEventsLogger {
+	mock := &MockEventsLogger{ctrl: ctrl}
+	mock.recorder = &MockEventsLoggerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockTaskEventsLogger) EXPECT() *MockTaskEventsLoggerMockRecorder {
+func (m *MockEventsLogger) EXPECT() *MockEventsLoggerMockRecorder {
 	return m.recorder
 }
 
 // TaskLogEvents mocks base method
-func (m *MockTaskEventsLogger) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+func (m *MockEventsLogger) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{logGroupName, streamLastEventTime}
 	for _, a := range opts {
@@ -86,8 +86,8 @@ func (m *MockTaskEventsLogger) TaskLogEvents(logGroupName string, streamLastEven
 }
 
 // TaskLogEvents indicates an expected call of TaskLogEvents
-func (mr *MockTaskEventsLoggerMockRecorder) TaskLogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockEventsLoggerMockRecorder) TaskLogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{logGroupName, streamLastEventTime}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockTaskEventsLogger)(nil).TaskLogEvents), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockEventsLogger)(nil).TaskLogEvents), varargs...)
 }
