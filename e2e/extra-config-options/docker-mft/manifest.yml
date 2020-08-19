@@ -1,0 +1,32 @@
+# The manifest for the "fe" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-svc
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: configtest
+# The "architecture" of the service you're running.
+type: Load Balanced Web Service
+
+image:
+  # Path to your service's Dockerfile.
+  build: 
+    dockerfile: configtest/Dockerfile
+    context: configtest
+    args:
+      - MAGIC_WORDS: "open sesame"
+  # Port exposed through your container to route traffic to it.
+  port: 80
+
+http:
+  # Requests to this path will be forwarded to your service. 
+  # To match all requests you can use the "/" path. 
+  path: '/'
+  # You can specify a custom health check path. The default is "/"
+  healthcheck: '/healthcheck'
+
+# Number of CPU units for the task.
+cpu: 256
+# Amount of memory in MiB used by the task.
+memory: 512
+# Number of tasks that should be running in your service.
+count: 1
