@@ -72,13 +72,14 @@ var _ = Describe("extra config flow", func() {
 		var (
 			svcInitErr error
 		)
+
 		BeforeAll(func() {
 
 			// Copy the manifest into the copilot/docker-mft folder.
 			err := os.MkdirAll(fmt.Sprintf("./copilot/%s", svcName), 0777)
 			Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("create copilot and %s dirs", svcName))
 
-			destFile, err := os.Create(fmt.Sprintf("./copilot/%s/manifest.yml"))
+			destFile, err := os.Create(fmt.Sprintf("./copilot/%s/manifest.yml", svcName))
 			Expect(err).NotTo(HaveOccurred(), "create destination manifest")
 			defer destFile.Close()
 

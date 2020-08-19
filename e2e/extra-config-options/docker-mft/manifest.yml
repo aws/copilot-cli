@@ -10,8 +10,8 @@ type: Load Balanced Web Service
 image:
   # Path to your service's Dockerfile.
   build: 
-    dockerfile: configtest/Dockerfile
-    context: configtest
+    dockerfile: docker-mft/Dockerfile
+    context: docker-mft
     args:
       - MAGIC_WORDS: "open sesame"
   # Port exposed through your container to route traffic to it.
