@@ -14,6 +14,9 @@ batch:
         image:
           - aws/codebuild/standard:4.0
         variables:
+          # We increase the number of VPCs/region limit to 15 from 5 in our e2e tests accounts
+          # to accommodate running them in parallel.
+          # If TEST_SUITE goes above 15 e2e tests the limits and this comment should be updated.
           TEST_SUITE:
             - addons
             - init
