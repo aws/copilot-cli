@@ -17,7 +17,7 @@ import (
 )
 
 type writeEventMocks struct {
-	eventsLogger *mocks.MockTaskEventsLogger
+	eventsLogger *mocks.MockEventsLogger
 	describer    *mocks.MockTasksDescriber
 }
 
@@ -103,7 +103,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			}
 
 			mocks := writeEventMocks{
-				eventsLogger: mocks.NewMockTaskEventsLogger(ctrl),
+				eventsLogger: mocks.NewMockEventsLogger(ctrl),
 				describer:    mocks.NewMockTasksDescriber(ctrl),
 			}
 			tc.setUpMocks(mocks)

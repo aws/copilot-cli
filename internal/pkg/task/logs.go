@@ -22,8 +22,8 @@ type TasksDescriber interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
-// TaskEventsLogger gets a log group's log events.
-type TaskEventsLogger interface {
+// EventsLogger gets a log group's log events.
+type EventsLogger interface {
 	TaskLogEvents(logGroupName string,
 		streamLastEventTime map[string]int64,
 		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
@@ -35,7 +35,7 @@ type EventsWriter struct {
 	Tasks     []*Task
 
 	Writer       io.Writer
-	EventsLogger TaskEventsLogger
+	EventsLogger EventsLogger
 	Describer    TasksDescriber
 
 	// Fields that are private that get modified each time
