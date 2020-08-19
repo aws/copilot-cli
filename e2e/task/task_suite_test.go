@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package task
 
 import (
@@ -6,12 +9,12 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var cli *client.CLI
+var aws *client.AWS
 var appName, envName, groupName, taskStackName, repoName string
 
 /**
@@ -26,6 +29,7 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	cli = ecsCli
 	Expect(err).NotTo(HaveOccurred())
+	aws = client.NewAWS()
 
 	appName = fmt.Sprintf("e2e-task-%d", time.Now().Unix())
 	envName = "test"
@@ -40,13 +44,13 @@ var _ = BeforeSuite(func() {
 
 var _ = AfterSuite(func() {
 	// Clean ECR repo before deleting the stack.
-	err := command.Run("aws", []string{"ecr", "delete-repository", "--repository-name", repoName, "--force"})
+	err := aws.DeleteECRRepo(repoName)
 	Expect(err).NotTo(HaveOccurred(), "delete ecr repo")
 	// Delete task stack.
-	err = command.Run("aws", []string{"cloudformation", "delete-stack", "--stack-name", taskStackName})
+	err = aws.DeleteStack(taskStackName)
 	Expect(err).NotTo(HaveOccurred(), "start deleting task stack")
 	// Wait until task stack is removed.
-	err = command.Run("aws", []string{"cloudformation", "wait", "stack-delete-complete", "--stack-name", taskStackName})
+	err = aws.WaitStackDeleteComplete(taskStackName)
 	Expect(err).NotTo(HaveOccurred(), "task stack delete complete")
 	// Delete Copilot application.
 	_, err = cli.AppDelete(map[string]string{"test": "default"})
