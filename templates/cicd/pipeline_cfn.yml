@@ -251,7 +251,7 @@ Resources:
               - Name: BuildOutput
         {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$svcNum := len $stage.LocalServices}}{{if gt $svcNum 0}}
         - Name: DeployTo-{{$stage.Name}}
-          Actions:{{if $stage.Prod}}
+          Actions:{{if $stage.RequiresApproval }}
             - Name: ApprovePromotionTo-{{$stage.Name}}
               ActionTypeId:
                 Category: Approval

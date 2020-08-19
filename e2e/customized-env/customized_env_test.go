@@ -1,6 +1,12 @@
-package multi_env_app_test
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+package customized_env_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -8,25 +14,23 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
+	"github.com/aws/copilot-cli/e2e/internal/command"
 )
 
-var (
-	initErr error
-)
-
-var _ = Describe("Multiple Env App", func() {
+var _ = Describe("Customized Env", func() {
 	Context("when creating a new app", func() {
+		var appInitErr error
 		BeforeAll(func() {
-			_, initErr = cli.AppInit(&client.AppInitRequest{
+			_, appInitErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
 				Tags: map[string]string{
-					"e2e-test": "multi-env",
+					"e2e-test": "customized-env",
 				},
 			})
 		})
 
 		It("app init succeeds", func() {
-			Expect(initErr).NotTo(HaveOccurred())
+			Expect(appInitErr).NotTo(HaveOccurred())
 		})
 
 		It("app init creates a copilot directory", func() {
@@ -47,6 +51,39 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
+	Context("when deploying resources to be imported", func() {
+		BeforeAll(func() {
+			// TODO: move "aws" commands to aws.go
+			err := command.Run("aws", []string{"cloudformation", "create-stack", "--stack-name",
+				vpcStackName, "--template-body", vpcStackTemplatePath})
+			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
+			err = command.Run("aws", []string{"cloudformation", "wait", "stack-create-complete", "--stack-name", vpcStackName})
+			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
+		})
+		It("parse vpc stack output", func() {
+			var b bytes.Buffer
+			err := command.Run("bash", []string{"-c", fmt.Sprintf("aws cloudformation describe-stacks --stack-name %s | jq -r .Stacks[0].Outputs", vpcStackName)}, command.Stdout(&b))
+			Expect(err).NotTo(HaveOccurred(), "describe vpc cloudformation stack")
+			var outputs []vpcStackOutput
+			err = json.Unmarshal(b.Bytes(), &outputs)
+			Expect(err).NotTo(HaveOccurred(), "unmarshal vpc stack output")
+			for _, output := range outputs {
+				switch output.OutputKey {
+				case "PrivateSubnets":
+					vpcImport.PrivateSubnetIDs = output.OutputValue
+				case "VpcId":
+					vpcImport.ID = output.OutputValue
+				case "PublicSubnets":
+					vpcImport.PublicSubnetIDs = output.OutputValue
+				}
+			}
+			if !vpcImport.IsSet() {
+				err = errors.New("vpc resources are not configured properly")
+			}
+			Expect(err).NotTo(HaveOccurred(), "invalid vpc stack output")
+		})
+	})
+
 	Context("when adding cross account environments", func() {
 		var (
 			testEnvInitErr error
@@ -54,19 +91,21 @@ var _ = Describe("Multiple Env App", func() {
 		)
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "test",
-				Profile: testEnvironmentProfile,
-				Prod:    false,
+				AppName:       appName,
+				EnvName:       "test",
+				Profile:       "default",
+				Prod:          false,
+				VPCImport:     vpcImport,
+				CustomizedEnv: true,
 			})
-
 			_, prodEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
-				AppName: appName,
-				EnvName: "prod",
-				Profile: prodEnvironmentProfile,
-				Prod:    true,
+				AppName:       appName,
+				EnvName:       "prod",
+				Profile:       "default",
+				Prod:          true,
+				VPCConfig:     vpcConfig,
+				CustomizedEnv: true,
 			})
-
 		})
 
 		It("env init should succeed for test and prod envs", func() {
@@ -90,11 +129,6 @@ var _ = Describe("Multiple Env App", func() {
 
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
-
-			// Make sure, for the sake of coverage, these are cross account,
-			// cross region environments.
-			Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
-			Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
 		})
 	})
 
@@ -125,10 +159,6 @@ var _ = Describe("Multiple Env App", func() {
 			Expect(len(svcList.Services)).To(Equal(1))
 			Expect(svcList.Services[0].Name).To(Equal("front-end"))
 		})
-
-		It("svc package should output a cloudformation template and params file", func() {
-			Skip("not implemented yet")
-		})
 	})
 
 	Context("when deploying a svc to test and prod envs", func() {
@@ -152,7 +182,7 @@ var _ = Describe("Multiple Env App", func() {
 			})
 		})
 
-		It("svc deploy should succeed to both environment", func() {
+		It("svc deploy should succeed to both environments", func() {
 			Expect(testDeployErr).NotTo(HaveOccurred())
 			Expect(prodEndDeployErr).NotTo(HaveOccurred())
 		})
@@ -226,7 +256,7 @@ var _ = Describe("Multiple Env App", func() {
 				Expect(len(envShowOutput.Tags)).To(Equal(3))
 				Expect(envShowOutput.Tags["copilot-application"]).To(Equal(appName))
 				Expect(envShowOutput.Tags["copilot-environment"]).To(Equal(envName))
-				Expect(envShowOutput.Tags["e2e-test"]).To(Equal("multi-env"))
+				Expect(envShowOutput.Tags["e2e-test"]).To(Equal("customized-env"))
 
 				envs[envShowOutput.Environment.Name] = envShowOutput.Environment
 			}
@@ -234,27 +264,6 @@ var _ = Describe("Multiple Env App", func() {
 			Expect(envs["test"].Prod).To(BeFalse())
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
-			Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
-			Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
-			Expect(envs["test"].ExecutionRole).NotTo(Equal(envs["prod"].ExecutionRole))
-			Expect(envs["test"].ManagerRole).NotTo(Equal(envs["prod"].ExecutionRole))
 		})
 	})
-
-	Context("when setting up a pipeline", func() {
-		It("pipeline init should create a pipeline manifest", func() {
-			Skip("not implemented yet")
-		})
-
-		It("pipeline update should create a pipeline", func() {
-			Skip("not implemented yet")
-		})
-	})
-
-	Context("when pushing a change to the pipeline", func() {
-		It("the change should be propagated to test and prod environments", func() {
-			Skip("not implemented yet")
-		})
-	})
-
 })

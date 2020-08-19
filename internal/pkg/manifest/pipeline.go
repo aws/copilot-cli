@@ -97,21 +97,17 @@ type Source struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name         string   `yaml:"name"`
-	TestCommands []string `yaml:"test_commands,omitempty"`
+	Name             string   `yaml:"name"`
+	RequiresApproval bool     `yaml:"requires_approval,omitempty"`
+	TestCommands     []string `yaml:"test_commands,omitempty"`
 }
 
-// CreatePipeline returns a pipeline manifest object.
-func CreatePipeline(pipelineName string, provider Provider, stageNames []string) (*PipelineManifest, error) {
+// NewPipelineManifest returns a pipeline manifest object.
+func NewPipelineManifest(pipelineName string, provider Provider, stages []PipelineStage) (*PipelineManifest, error) {
 	// TODO: #221 Do more validations
-	if len(stageNames) == 0 {
+	if len(stages) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
-	}
-
-	stages := make([]PipelineStage, 0, len(stageNames))
-	for _, name := range stageNames {
-		stages = append(stages, PipelineStage{Name: name})
 	}
 
 	return &PipelineManifest{
