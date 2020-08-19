@@ -190,36 +190,6 @@ var _ = Describe("extra config flow", func() {
 				Expect(logLine.IngestionTime).NotTo(Equal(0))
 			}
 		})
-
-		It("svc delete should not delete local files", func() {
-			_, err := cli.SvcDelete(svcName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect("./copilot/hello/addons").Should(BeADirectory())
-			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
-			Expect("./copilot/.workspace").Should(BeAnExistingFile())
-
-			// Need to recreate the service for AfterSuite testing.
-			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:       svcName,
-				SvcType:    "Load Balanced Web Service",
-				Dockerfile: "./hello/Dockerfile",
-				SvcPort:    "80",
-			})
-			Expect(svcInitErr).NotTo(HaveOccurred())
-		})
-
-		It("app delete does remove .workspace but keep local files", func() {
-			_, err := cli.AppDelete(map[string]string{"test": "default"})
-			Expect(err).NotTo(HaveOccurred())
-			Expect("./copilot").Should(BeADirectory())
-			Expect("./copilot/hello/addons").Should(BeADirectory())
-			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
-			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
-
-			// Need to recreate the app for AfterSuite testing.
-			_, initErr = cli.AppInit(&client.AppInitRequest{
-				AppName: appName,
-			})
 			Expect(initErr).NotTo(HaveOccurred())
 		})
 	})
