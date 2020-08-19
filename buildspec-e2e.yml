@@ -19,6 +19,7 @@ batch:
           # If TEST_SUITE goes above 15 e2e tests the limits and this comment should be updated.
           TEST_SUITE:
             - addons
+            - customized-env
             - init
             - multi-env-app
             - multi-svc-app
