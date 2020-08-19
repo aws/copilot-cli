@@ -21,6 +21,7 @@ batch:
             - addons
             - customized-env
             - init
+            - extra-config-options
             - multi-env-app
             - multi-svc-app
             - root
