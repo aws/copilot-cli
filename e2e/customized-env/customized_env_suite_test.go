@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -51,7 +50,7 @@ var _ = AfterSuite(func() {
 	_, err := cli.AppDelete(map[string]string{"test": "default", "prod": "default"})
 	Expect(err).NotTo(HaveOccurred())
 	// Delete VPC stack.
-	err = command.Run("aws", []string{"cloudformation", "delete-stack", "--stack-name", vpcStackName})
+	err = aws.DeleteStack(vpcStackName)
 	Expect(err).NotTo(HaveOccurred())
 })
 
