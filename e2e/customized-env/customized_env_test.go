@@ -4,8 +4,6 @@
 package customized_env_test
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,7 +12,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/e2e/internal/command"
 )
 
 var _ = Describe("Customized Env", func() {
@@ -53,20 +50,14 @@ var _ = Describe("Customized Env", func() {
 
 	Context("when deploying resources to be imported", func() {
 		BeforeAll(func() {
-			// TODO: move "aws" commands to aws.go
-			err := command.Run("aws", []string{"cloudformation", "create-stack", "--stack-name",
-				vpcStackName, "--template-body", vpcStackTemplatePath})
+			err := aws.CreateStack(vpcStackName, vpcStackTemplatePath)
 			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
-			err = command.Run("aws", []string{"cloudformation", "wait", "stack-create-complete", "--stack-name", vpcStackName})
+			err = aws.StackCreateComplete(vpcStackName)
 			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
 		})
 		It("parse vpc stack output", func() {
-			var b bytes.Buffer
-			err := command.Run("bash", []string{"-c", fmt.Sprintf("aws cloudformation describe-stacks --stack-name %s | jq -r .Stacks[0].Outputs", vpcStackName)}, command.Stdout(&b))
-			Expect(err).NotTo(HaveOccurred(), "describe vpc cloudformation stack")
-			var outputs []vpcStackOutput
-			err = json.Unmarshal(b.Bytes(), &outputs)
-			Expect(err).NotTo(HaveOccurred(), "unmarshal vpc stack output")
+			outputs, err := aws.VPCStackOutput(vpcStackName)
+			Expect(err).NotTo(HaveOccurred(), "get VPC stack output")
 			for _, output := range outputs {
 				switch output.OutputKey {
 				case "PrivateSubnets":

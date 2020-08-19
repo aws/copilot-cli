@@ -4,16 +4,13 @@
 package sidecars_test
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -151,24 +148,22 @@ var _ = Describe("sidecars flow", func() {
 
 	Context("build and push sidecar image to ECR repo", func() {
 		var uri string
+		var err error
 		tag := "vortexstreet"
 		It("create new ECR repo for sidecar", func() {
-			var b bytes.Buffer
-			err := command.Run("bash", []string{"-c", fmt.Sprintf("aws ecr create-repository --repository-name %s | jq -r .repository.repositoryUri", sidecarRepoName)}, command.Stdout(&b))
+			uri, err = aws.CreateECRRepo(sidecarRepoName)
 			Expect(err).NotTo(HaveOccurred(), "create ECR repo for sidecar")
-			uri = strings.TrimSpace(b.String())
 			sidecarImageURI = fmt.Sprintf("%s:%s", uri, tag)
 		})
 		It("push sidecar image", func() {
-			var b bytes.Buffer
-			err := command.Run("aws", []string{"ecr", "get-login-password"}, command.Stdout(&b))
-			password := b.String()
+			var password string
+			password, err = aws.ECRLoginPassword()
 			Expect(err).NotTo(HaveOccurred(), "get ecr login password")
-			err = command.Run("docker", []string{"login", "-u", "AWS", "--password-stdin", uri}, command.Stdin(strings.NewReader(password)))
+			err = docker.Login(uri, password)
 			Expect(err).NotTo(HaveOccurred(), "docker login")
-			err = command.Run("docker", []string{"build", "-t", sidecarImageURI, "./nginx"})
+			err = docker.Build(sidecarImageURI, "./nginx")
 			Expect(err).NotTo(HaveOccurred(), "build sidecar image")
-			err = command.Run("docker", []string{"push", sidecarImageURI})
+			err = docker.Push(sidecarImageURI)
 			Expect(err).NotTo(HaveOccurred(), "push to ECR repo")
 		})
 	})

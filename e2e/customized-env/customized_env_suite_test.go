@@ -15,17 +15,12 @@ import (
 )
 
 var cli *client.CLI
+var aws *client.AWS
 var appName string
 var vpcStackName string
 var vpcStackTemplatePath string
 var vpcImport client.EnvInitRequestVPCImport
 var vpcConfig client.EnvInitRequestVPCConfig
-
-type vpcStackOutput struct {
-	OutputKey   string
-	OutputValue string
-	ExportName  string
-}
 
 /**
 The Customized Env Suite creates multiple environments with customized resources,
@@ -43,6 +38,7 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = ecsCli
+	aws = client.NewAWS()
 	appName = fmt.Sprintf("e2e-customizedenv-%d", time.Now().Unix())
 	vpcConfig = client.EnvInitRequestVPCConfig{
 		CIDR:               "10.1.0.0/16",
