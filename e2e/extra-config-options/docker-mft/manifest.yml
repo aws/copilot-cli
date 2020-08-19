@@ -13,7 +13,7 @@ image:
     dockerfile: docker-mft/Dockerfile
     context: docker-mft
     args:
-      - MAGIC_WORDS: "open sesame"
+      - MAGIC_WORDS_ARG: "open sesame"
   # Port exposed through your container to route traffic to it.
   port: 80
 

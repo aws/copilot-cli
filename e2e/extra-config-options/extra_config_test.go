@@ -96,13 +96,13 @@ var _ = Describe("extra config flow", func() {
 				Dockerfile: fmt.Sprintf("./%s/Dockerfile", svcName),
 				SvcPort:    "80"})
 
+			It("svc init should succeed", func() {
+				Expect(svcInitErr).NotTo(HaveOccurred())
+			})
+
 			It("manifest should exist", func() {
 				Expect(fmt.Sprintf("./copilot/%s/manifest.yml", svcName)).Should(BeAnExistingFile())
 			})
-		})
-
-		It("svc init should succeed", func() {
-			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
 
 		It("svc ls should list the service", func() {
