@@ -6,6 +6,7 @@ package cloudwatchlogs
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -35,7 +36,10 @@ type api interface {
 
 // CloudWatchLogs wraps an AWS Cloudwatch Logs client.
 type CloudWatchLogs struct {
-	client api
+	logGroup         string
+	w                io.Writer
+	shouldOutputJSON bool
+	client           api
 }
 
 // GetLogEventsOpts sets up optional parameters for LogEvents function.
@@ -62,8 +66,7 @@ func WithEndTime(endTime int64) GetLogEventsOpts {
 	}
 }
 
-// LogEventsOutput contains the output for LogEvents
-type LogEventsOutput struct {
+type logEventsOutput struct {
 	// Retrieved log events.
 	Events []*Event
 	// Timestamp for the last event
@@ -71,24 +74,27 @@ type LogEventsOutput struct {
 }
 
 // New returns a CloudWatchLogs configured against the input session.
-func New(s *session.Session) *CloudWatchLogs {
+func New(logGroup string, w io.Writer, outputJSON bool, s *session.Session) *CloudWatchLogs {
 	return &CloudWatchLogs{
-		client: cloudwatchlogs.New(s),
+		logGroup:         logGroup,
+		w:                w,
+		shouldOutputJSON: outputJSON,
+		client:           cloudwatchlogs.New(s),
 	}
 }
 
 // logStreams returns all name of the log streams in a log group.
-func (c *CloudWatchLogs) logStreams(logGroupName string) ([]*string, error) {
+func (c *CloudWatchLogs) logStreams() ([]*string, error) {
 	resp, err := c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
-		LogGroupName: aws.String(logGroupName),
+		LogGroupName: aws.String(c.logGroup),
 		Descending:   aws.Bool(true),
 		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("describe log streams of log group %s: %w", logGroupName, err)
+		return nil, fmt.Errorf("describe log streams of log group %s: %w", c.logGroup, err)
 	}
 	if len(resp.LogStreams) == 0 {
-		return nil, fmt.Errorf("no log stream found in log group %s", logGroupName)
+		return nil, fmt.Errorf("no log stream found in log group %s", c.logGroup)
 	}
 	logStreamNames := make([]*string, len(resp.LogStreams))
 	for ind, logStream := range resp.LogStreams {
@@ -98,16 +104,57 @@ func (c *CloudWatchLogs) logStreams(logGroupName string) ([]*string, error) {
 }
 
 // TaskLogEvents returns an array of Cloudwatch Logs events.
-func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*LogEventsOutput, error) {
+func (c *CloudWatchLogs) TaskLogEvents(follow bool, opts ...GetLogEventsOpts) error {
+	logEventsOutput := &logEventsOutput{
+		LastEventTime: make(map[string]int64),
+	}
+	var err error
+	for {
+		logEventsOutput, err = c.logEvents(logEventsOutput.LastEventTime, opts...)
+		if err != nil {
+			return err
+		}
+		if err := c.outputLogs(logEventsOutput.Events); err != nil {
+			return err
+		}
+		if !follow {
+			return nil
+		}
+		// for unit test.
+		if logEventsOutput.LastEventTime == nil {
+			return nil
+		}
+		time.Sleep(SleepDuration)
+	}
+}
+
+func (c *CloudWatchLogs) outputLogs(logs []*Event) error {
+	if !c.shouldOutputJSON {
+		for _, log := range logs {
+			fmt.Fprint(c.w, log.HumanString())
+		}
+		return nil
+	}
+	for _, log := range logs {
+		data, err := log.JSONString()
+		if err != nil {
+			return err
+		}
+		fmt.Fprint(c.w, data)
+	}
+	return nil
+}
+
+func (c *CloudWatchLogs) logEvents(streamLastEventTime map[string]int64, opts ...GetLogEventsOpts) (*logEventsOutput, error) {
 	var events []*Event
 	var in *cloudwatchlogs.GetLogEventsInput
-	logStreamNames, err := c.logStreams(logGroupName)
+	logStreamNames, err := c.logStreams()
 	if err != nil {
 		return nil, err
 	}
 	for _, logStreamName := range logStreamNames {
 		in = &cloudwatchlogs.GetLogEventsInput{
-			LogGroupName:  aws.String(logGroupName),
+			LogGroupName:  aws.String(c.logGroup),
 			LogStreamName: logStreamName,
 			Limit:         aws.Int64(10), // default to be 10
 		}
@@ -122,7 +169,7 @@ func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime 
 		// TODO: https://github.com/aws/copilot-cli/pull/628#discussion_r374291068 and https://github.com/aws/copilot-cli/pull/628#discussion_r374294362
 		resp, err := c.client.GetLogEvents(in)
 		if err != nil {
-			return nil, fmt.Errorf("get log events of %s/%s: %w", logGroupName, *logStreamName, err)
+			return nil, fmt.Errorf("get log events of %s/%s: %w", c.logGroup, *logStreamName, err)
 		}
 
 		for _, event := range resp.Events {
@@ -145,7 +192,7 @@ func (c *CloudWatchLogs) TaskLogEvents(logGroupName string, streamLastEventTime 
 	} else {
 		truncatedEvents = events
 	}
-	return &LogEventsOutput{
+	return &logEventsOutput{
 		Events:        truncatedEvents,
 		LastEventTime: streamLastEventTime,
 	}, nil

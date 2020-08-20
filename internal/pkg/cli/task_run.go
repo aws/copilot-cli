@@ -157,7 +157,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 			Tasks:     tasks,
 
 			Describer:    ecs.New(opts.sess),
-			EventsLogger: cloudwatchlogs.New(opts.sess),
+			EventsLogger: cloudwatchlogs.New(logGroupName, log.OutputWriter, false, opts.sess),
 			Writer:       log.OutputWriter,
 		}
 	}

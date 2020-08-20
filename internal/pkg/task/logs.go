@@ -6,6 +6,7 @@ package task
 import (
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -15,6 +16,7 @@ import (
 
 const (
 	numCWLogsCallsPerRound = 10
+	sleepDuration          = 1 * time.Second
 )
 
 // TasksDescriber describes ECS tasks.
@@ -24,9 +26,12 @@ type TasksDescriber interface {
 
 // EventsLogger gets a log group's log events.
 type EventsLogger interface {
-	TaskLogEvents(logGroupName string,
-		streamLastEventTime map[string]int64,
-		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	TaskLogEvents(follow bool, opts ...cloudwatchlogs.GetLogEventsOpts) error
+}
+
+type stopResult struct {
+	stop bool
+	err  error
 }
 
 // EventsWriter represents a writer that writes tasks' log events to a writer.
@@ -47,40 +52,49 @@ type EventsWriter struct {
 func (ew *EventsWriter) WriteEventsUntilStopped() error {
 	startTime := earliestStartTime(ew.Tasks)
 	ew.runningTasks = ew.Tasks
-	ew.lastEventTimestampByLogGroup = make(map[string]int64)
-	for {
-		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			if err := ew.writeEvents(cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime))); err != nil {
-				return err
+	errCh := make(chan error)
+	stopCh := make(chan stopResult)
+	waitGroup := &sync.WaitGroup{}
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		errCh <- ew.EventsLogger.TaskLogEvents(true, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
+	}(waitGroup)
+	waitGroup.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		for {
+			stopResult := ew.allTasksStopped()
+			if stopResult.err != nil || stopResult.stop {
+				stopCh <- stopResult
+				errCh <- nil
+				break
 			}
-			time.Sleep(cloudwatchlogs.SleepDuration)
+			time.Sleep(sleepDuration)
 		}
-		stopped, err := ew.allTasksStopped()
-		if err != nil {
-			return err
-		}
-		if stopped {
-			return nil
+		close(stopCh)
+	}(waitGroup)
+	go func() {
+		waitGroup.Wait()
+		close(errCh)
+	}()
+	for {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return fmt.Errorf("write task log events: %w", err)
+			}
+		case stopResult := <-stopCh:
+			if stopResult.err != nil {
+				return stopResult.err
+			}
+			if stopResult.stop {
+				return nil
+			}
 		}
 	}
 }
 
-// TODO: move this to a different package because this is not a task-specific method
-func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) error {
-	logEventsOutput, err := ew.EventsLogger.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
-	if err != nil {
-		return fmt.Errorf("get task log events: %w", err)
-	}
-	for _, event := range logEventsOutput.Events {
-		if _, err := fmt.Fprint(ew.Writer, event.HumanString()); err != nil {
-			return fmt.Errorf("write log event: %w", err)
-		}
-	}
-	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
-	return nil
-}
-
-func (ew *EventsWriter) allTasksStopped() (bool, error) {
+func (ew *EventsWriter) allTasksStopped() stopResult {
 	taskARNs := make([]string, len(ew.runningTasks))
 	for idx, task := range ew.runningTasks {
 		taskARNs[idx] = task.TaskARN
@@ -91,7 +105,10 @@ func (ew *EventsWriter) allTasksStopped() (bool, error) {
 
 	tasksResp, err := ew.Describer.DescribeTasks(cluster, taskARNs)
 	if err != nil {
-		return false, fmt.Errorf("describe tasks: %w", err)
+		return stopResult{
+			stop: false,
+			err:  fmt.Errorf("describe tasks: %w", err),
+		}
 	}
 
 	stopped := true
@@ -106,7 +123,9 @@ func (ew *EventsWriter) allTasksStopped() (bool, error) {
 		}
 	}
 	ew.runningTasks = runningTasks
-	return stopped, nil
+	return stopResult{
+		stop: stopped,
+	}
 }
 
 // The `StartedAt` field for the tasks shouldn't be nil.

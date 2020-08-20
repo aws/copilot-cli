@@ -151,7 +151,7 @@ type repositoryService interface {
 }
 
 type cwlogService interface {
-	TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
+	TaskLogEvents(follow bool, opts ...cloudwatchlogs.GetLogEventsOpts) error
 	LogGroupExists(logGroupName string) (bool, error)
 }
 
