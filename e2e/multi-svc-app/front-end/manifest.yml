@@ -3,17 +3,17 @@
 #  https://github.com/aws/amazon-ecs-cli-v2/wiki/Manifests#load-balanced-web-svc
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: configtest
+name: front-end
 # The "architecture" of the service you're running.
 type: Load Balanced Web Service
 
 image:
   # Path to your service's Dockerfile.
   build: 
-    dockerfile: docker-mft/Dockerfile
-    context: docker-mft
+    dockerfile: front-end/Dockerfile
+    context: front-end
     args:
-      - MAGIC_WORDS_ARG: "open sesame"
+      MAGIC_WORDS_ARG: "open sesame"
   # Port exposed through your container to route traffic to it.
   port: 80
 

@@ -2,8 +2,10 @@ package multi_svc_app_test
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,6 +72,22 @@ var _ = Describe("Multiple Service App", func() {
 			backEndInitErr  error
 		)
 		BeforeAll(func() {
+
+			// Copy the manifest into the copilot/front-end folder.
+			err := os.MkdirAll("./copilot/front-end", 0777)
+			Expect(err).NotTo(HaveOccurred(), "create copilot and front-end dirs")
+
+			destFile, err := os.Create("./copilot/front-end/manifest.yml")
+			Expect(err).NotTo(HaveOccurred(), "create destination manifest")
+			defer destFile.Close()
+
+			srcFile, err := os.Open("./front-end/manifest.yml")
+			Expect(err).NotTo(HaveOccurred(), "open source file")
+			defer srcFile.Close()
+
+			_, err = io.Copy(destFile, srcFile)
+			Expect(err).NotTo(HaveOccurred(), "copy frontend manifest file")
+
 			_, frontEndInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       "front-end",
 				SvcType:    "Load Balanced Web Service",
@@ -236,6 +254,34 @@ var _ = Describe("Multiple Service App", func() {
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
+		})
+
+		It("environment variable should be overridden and accessible through GET /magicwords", func() {
+			// The front-end service has a route called "/magicwords/" which returns the value of
+			// an environment variable set by a docker argument. If the argument is not overridden
+			// at build time, the endpoint will return "open caraway" in the body. If the value
+			// is overridden by the extended build configuration in the manifest, it will return
+			// "open sesame" in the body.
+			svcName := "front-end"
+			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    svcName,
+			})
+			Expect(svcShowErr).NotTo(HaveOccurred())
+			Expect(len(svc.Routes)).To(Equal(1))
+
+			// Calls the front end's magicwords endpoint
+			route := svc.Routes[0]
+			Expect(route.Environment).To(Equal("test"))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/magicwords/", route.URL))
+			Expect(fetchErr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(200))
+
+			// Read the response - successfully overridden build arg will result
+			// in a response of "open sesame"
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(bodyBytes)).To(Equal("open sesame"))
 		})
 
 		It("svc logs should display logs", func() {
