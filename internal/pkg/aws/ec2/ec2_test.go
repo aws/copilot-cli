@@ -81,7 +81,7 @@ func TestEC2_ListVPC(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedVPC: []string{"mockVPCID1", "mockVPC2Name"},
+			wantedVPC: []string{"mockVPCID1", "mockVPCID2 (mockVPC2Name)"},
 		},
 	}
 
