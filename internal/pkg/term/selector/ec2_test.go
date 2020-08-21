@@ -29,21 +29,21 @@ func TestEc2Select_VPC(t *testing.T) {
 	}{
 		"return error if fail to list VPCs": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPC().Return(nil, mockErr)
+				m.ec2Svc.EXPECT().ListVPCLabels().Return(nil, mockErr)
 
 			},
 			wantErr: fmt.Errorf("list VPC ID: some error"),
 		},
 		"return error if no VPC found": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPC().Return([]string{}, nil)
+				m.ec2Svc.EXPECT().ListVPCLabels().Return([]string{}, nil)
 
 			},
 			wantErr: ErrVPCNotFound,
 		},
 		"return error if fail to select a VPC": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPC().Return([]string{"mockVPC1", "mockVPC2"}, nil)
+				m.ec2Svc.EXPECT().ListVPCLabels().Return([]string{"mockVPC1", "mockVPC2"}, nil)
 				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPC1", "mockVPC2"}).
 					Return("", mockErr)
 
@@ -52,7 +52,7 @@ func TestEc2Select_VPC(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m ec2SelectMocks) {
-				m.ec2Svc.EXPECT().ListVPC().Return([]string{"mockVPC1", "mockVPC2"}, nil)
+				m.ec2Svc.EXPECT().ListVPCLabels().Return([]string{"mockVPC1", "mockVPC2"}, nil)
 				m.prompt.EXPECT().SelectOne("Select a VPC", "Help text", []string{"mockVPC1", "mockVPC2"}).
 					Return("mockVPC1", nil)
 

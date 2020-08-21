@@ -20,7 +20,7 @@ var (
 
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
-	ListVPC() ([]string, error)
+	ListVPCLabels() ([]string, error)
 	ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error)
 }
 
@@ -40,20 +40,20 @@ func NewEC2Select(prompt Prompter, ec2Client VPCSubnetLister) *EC2Select {
 
 // VPC has the user select an available VPC.
 func (s *EC2Select) VPC(prompt, help string) (string, error) {
-	vpcIDs, err := s.ec2Svc.ListVPC()
+	vpcLabels, err := s.ec2Svc.ListVPCLabels()
 	if err != nil {
 		return "", fmt.Errorf("list VPC ID: %w", err)
 	}
-	if len(vpcIDs) == 0 {
+	if len(vpcLabels) == 0 {
 		return "", ErrVPCNotFound
 	}
-	vpcID, err := s.prompt.SelectOne(
+	vpcLabel, err := s.prompt.SelectOne(
 		prompt, help,
-		vpcIDs)
+		vpcLabels)
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	return vpcID, nil
+	return vpcLabel, nil
 }
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.

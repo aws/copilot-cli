@@ -36,6 +36,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	gopkg.in/ini.v1 v1.60.0
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
+	rsc.io/quote/v3 v3.1.0 // indirect
 )
 
 replace github.com/containerd/containerd => github.com/containerd/containerd v1.3.1-0.20200227195959-4d242818bf55

@@ -83,8 +83,8 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// ListVPC returns IDs of all VPCs.
-func (c *EC2) ListVPC() ([]string, error) {
+// ListVPCLabels returns names (or IDs, if Name tag does not exist) of all VPCs.
+func (c *EC2) ListVPCLabels() ([]string, error) {
 	var vpcs []*ec2.Vpc
 	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err != nil {
@@ -101,12 +101,19 @@ func (c *EC2) ListVPC() ([]string, error) {
 		}
 		vpcs = append(vpcs, response.Vpcs...)
 	}
-	var vpcNames []string
+	var vpcLabels []string
+	var vpcLabel string
 	for _, vpc := range vpcs {
-		vpcNames = append(vpcNames, aws.StringValue(vpc.VpcId))
+		vpcLabel = aws.StringValue(vpc.VpcId)
+		for _, tag := range vpc.Tags {
+			if *tag.Key == "Name" {
+				vpcLabel = aws.StringValue(tag.Value)
+			}
+		}
+		vpcLabels = append(vpcLabels, vpcLabel)
 	}
 
-	return vpcNames, nil
+	return vpcLabels, nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.

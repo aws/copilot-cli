@@ -71,11 +71,17 @@ func TestEC2_ListVPC(t *testing.T) {
 					Vpcs: []*ec2.Vpc{
 						{
 							VpcId: aws.String("mockVPCID2"),
+							Tags: []*ec2.Tag{
+								{
+									Key: aws.String("Name"),
+									Value: aws.String("mockVPC2Name"),
+								},
+							},
 						},
 					},
 				}, nil)
 			},
-			wantedVPC: []string{"mockVPCID1", "mockVPCID2"},
+			wantedVPC: []string{"mockVPCID1", "mockVPC2Name"},
 		},
 	}
 
@@ -90,7 +96,7 @@ func TestEC2_ListVPC(t *testing.T) {
 				client: mockAPI,
 			}
 
-			vpcs, err := ec2Client.ListVPC()
+			vpcs, err := ec2Client.ListVPCLabels()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
