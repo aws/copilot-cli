@@ -1,10 +1,11 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package task
 
 import (
 	"fmt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
@@ -29,7 +30,7 @@ type NetworkConfigRunner struct {
 	Starter       TaskRunner
 
 	// Must not be nil if using default subnets.
-	VPCGetter     VPCGetter
+	VPCGetter VPCGetter
 }
 
 // Run runs tasks in the subnets and the security groups, and returns the tasks.

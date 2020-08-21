@@ -1,18 +1,19 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package task
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type writeEventMocks struct {
@@ -20,12 +21,13 @@ type writeEventMocks struct {
 	describer    *mocks.MockTasksDescriber
 }
 
-type mockWriter struct {}
-func (mockWriter) Write(p []byte) (int, error) {return 0, nil}
+type mockWriter struct{}
+
+func (mockWriter) Write(p []byte) (int, error) { return 0, nil }
 
 func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 	groupName := "my-log-group"
-	testCases := map[string] struct{
+	testCases := map[string]struct {
 		setUpMocks func(m writeEventMocks)
 
 		wantedError error
@@ -51,24 +53,24 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 		"success": {
 			setUpMocks: func(m writeEventMocks) {
 				m.eventsLogger.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(&cloudwatchlogs.LogEventsOutput{
-							Events: []*cloudwatchlogs.Event{},
-						}, nil).AnyTimes()
+					Return(&cloudwatchlogs.LogEventsOutput{
+						Events: []*cloudwatchlogs.Event{},
+					}, nil).AnyTimes()
 				m.describer.EXPECT().DescribeTasks("cluster", []string{"task-1", "task-2", "task-3"}).
 					Return([]*ecs.Task{
 						{
-							TaskArn: aws.String("task-1"),
+							TaskArn:    aws.String("task-1"),
 							LastStatus: aws.String(ecs.DesiredStatusStopped),
 						},
 						{
-							TaskArn: aws.String("task-2"),
+							TaskArn:    aws.String("task-2"),
 							LastStatus: aws.String(ecs.DesiredStatusStopped),
 						},
 						{
-							TaskArn: aws.String("task-3"),
+							TaskArn:    aws.String("task-3"),
 							LastStatus: aws.String(ecs.DesiredStatusStopped),
 						},
-				}, nil)
+					}, nil)
 			},
 		},
 	}
@@ -84,19 +86,19 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 
 			tasks := []*Task{
 				{
-					TaskARN: "task-1",
+					TaskARN:    "task-1",
 					ClusterARN: "cluster",
-					StartedAt: &now,
+					StartedAt:  &now,
 				},
 				{
-					TaskARN: "task-2",
+					TaskARN:    "task-2",
 					ClusterARN: "cluster",
-					StartedAt: &tomorrow,
+					StartedAt:  &tomorrow,
 				},
 				{
-					TaskARN: "task-3",
+					TaskARN:    "task-3",
 					ClusterARN: "cluster",
-					StartedAt: &theDayAfter,
+					StartedAt:  &theDayAfter,
 				},
 			}
 
@@ -108,11 +110,11 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 
 			ew := &EventsWriter{
 				GroupName: groupName,
-				Tasks: tasks,
+				Tasks:     tasks,
 
-				Writer: mockWriter{},
+				Writer:       mockWriter{},
 				EventsLogger: mocks.eventsLogger,
-				Describer: mocks.describer,
+				Describer:    mocks.describer,
 			}
 
 			err := ew.WriteEventsUntilStopped()
