@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 )
@@ -53,7 +54,8 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	return vpcLabel, nil
+	vpcID := strings.Split(vpcLabel, " ")[0]
+	return vpcID, nil
 }
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.
