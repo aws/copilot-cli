@@ -2,10 +2,8 @@ package multi_svc_app_test
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -72,21 +70,6 @@ var _ = Describe("Multiple Service App", func() {
 			backEndInitErr  error
 		)
 		BeforeAll(func() {
-
-			// Copy the manifest into the copilot/front-end folder.
-			err := os.MkdirAll("./copilot/front-end", 0777)
-			Expect(err).NotTo(HaveOccurred(), "create copilot and front-end dirs")
-
-			destFile, err := os.Create("./copilot/front-end/manifest.yml")
-			Expect(err).NotTo(HaveOccurred(), "create destination manifest")
-			defer destFile.Close()
-
-			srcFile, err := os.Open("./front-end/manifest.yml")
-			Expect(err).NotTo(HaveOccurred(), "open source file")
-			defer srcFile.Close()
-
-			_, err = io.Copy(destFile, srcFile)
-			Expect(err).NotTo(HaveOccurred(), "copy frontend manifest file")
 
 			_, frontEndInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       "front-end",
