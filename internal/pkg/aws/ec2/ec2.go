@@ -106,7 +106,7 @@ func (c *EC2) ListVPCLabels() ([]string, error) {
 	for _, vpc := range vpcs {
 		vpcLabel = aws.StringValue(vpc.VpcId)
 		for _, tag := range vpc.Tags {
-			if *tag.Key == "Name" {
+			if aws.StringValue(tag.Key) == "Name" {
 				vpcLabel = vpcLabel + " (" + aws.StringValue(tag.Value) + ")"
 			}
 		}
