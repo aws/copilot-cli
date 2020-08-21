@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const mockChangeSetName = "ecscli-31323334-3536-4738-b930-313233333435"
+const mockChangeSetName = "copilot-31323334-3536-4738-b930-313233333435"
 
 var (
 	mockStack = NewStack("id", "template")

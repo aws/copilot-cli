@@ -9,23 +9,17 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/e2e/internal/command"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var cli *client.CLI
+var aws *client.AWS
 var appName string
 var vpcStackName string
 var vpcStackTemplatePath string
 var vpcImport client.EnvInitRequestVPCImport
 var vpcConfig client.EnvInitRequestVPCConfig
-
-type vpcStackOutput struct {
-	OutputKey   string
-	OutputValue string
-	ExportName  string
-}
 
 /**
 The Customized Env Suite creates multiple environments with customized resources,
@@ -43,6 +37,7 @@ var _ = BeforeSuite(func() {
 	ecsCli, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = ecsCli
+	aws = client.NewAWS()
 	appName = fmt.Sprintf("e2e-customizedenv-%d", time.Now().Unix())
 	vpcConfig = client.EnvInitRequestVPCConfig{
 		CIDR:               "10.1.0.0/16",
@@ -55,7 +50,7 @@ var _ = AfterSuite(func() {
 	_, err := cli.AppDelete(map[string]string{"test": "default", "prod": "default"})
 	Expect(err).NotTo(HaveOccurred())
 	// Delete VPC stack.
-	err = command.Run("aws", []string{"cloudformation", "delete-stack", "--stack-name", vpcStackName})
+	err = aws.DeleteStack(vpcStackName)
 	Expect(err).NotTo(HaveOccurred())
 })
 

@@ -15,7 +15,7 @@ import (
 const (
 	// The change set name must match the regex [a-zA-Z][-a-zA-Z0-9]*. The generated UUID can start with a number,
 	// by prefixing the uuid with a word we guarantee that we start with a letter.
-	fmtChangeSetName = "ecscli-%s"
+	fmtChangeSetName = "copilot-%s"
 
 	// Status reasons that can occur if the change set execution status is "FAILED".
 	noChangesReason = "NO_CHANGES_REASON"
