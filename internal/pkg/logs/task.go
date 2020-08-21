@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package task
+package logs
 
 import (
 	"fmt"
@@ -9,12 +9,16 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/task"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 const (
 	numCWLogsCallsPerRound = 10
+	fmtTaskLogGroupName    = "/copilot/%s"
 )
 
 // TasksDescriber describes ECS tasks.
@@ -29,33 +33,50 @@ type EventsLogger interface {
 		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
-// EventsWriter represents a writer that writes tasks' log events to a writer.
-type EventsWriter struct {
+// TaskLogs represents a service that writes task log events.
+type TaskLogs struct {
 	GroupName string
-	Tasks     []*Task
+	Tasks     []*task.Task
 
 	Writer       io.Writer
 	EventsLogger EventsLogger
 	Describer    TasksDescriber
 
 	// Fields that are private that get modified each time
-	lastEventTimestampByLogGroup map[string]int64
-	runningTasks                 []*Task
+	runningTasks []*task.Task
+}
+
+// NewTaskLogs returns a TaskLogs configured against the input.
+func NewTaskLogs(groupName string, tasks []*task.Task, sess *session.Session) *TaskLogs {
+	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, groupName)
+	return &TaskLogs{
+		GroupName: logGroupName,
+		Tasks:     tasks,
+
+		Describer:    ecs.New(sess),
+		EventsLogger: cloudwatchlogs.New(sess),
+		Writer:       log.OutputWriter,
+	}
 }
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
-func (ew *EventsWriter) WriteEventsUntilStopped() error {
-	startTime := earliestStartTime(ew.Tasks)
-	ew.runningTasks = ew.Tasks
-	ew.lastEventTimestampByLogGroup = make(map[string]int64)
+func (t *TaskLogs) WriteEventsUntilStopped() error {
+	startTime := earliestStartTime(t.Tasks)
+	t.runningTasks = t.Tasks
+	lastEventTimestampByLogGroup := make(map[string]int64)
 	for {
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			if err := ew.writeEvents(cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime))); err != nil {
-				return err
+			logEventsOutput, err := t.EventsLogger.TaskLogEvents(t.GroupName, lastEventTimestampByLogGroup, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
+			if err != nil {
+				return fmt.Errorf("get task log events: %w", err)
 			}
+			if err := OutputCwLogsHuman(t.Writer, logEventsOutput.Events); err != nil {
+				return fmt.Errorf("write log event: %w", err)
+			}
+			lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
 			time.Sleep(cloudwatchlogs.SleepDuration)
 		}
-		stopped, err := ew.allTasksStopped()
+		stopped, err := t.allTasksStopped()
 		if err != nil {
 			return err
 		}
@@ -65,52 +86,37 @@ func (ew *EventsWriter) WriteEventsUntilStopped() error {
 	}
 }
 
-// TODO: move this to a different package because this is not a task-specific method
-func (ew *EventsWriter) writeEvents(opts ...cloudwatchlogs.GetLogEventsOpts) error {
-	logEventsOutput, err := ew.EventsLogger.TaskLogEvents(ew.GroupName, ew.lastEventTimestampByLogGroup, opts...)
-	if err != nil {
-		return fmt.Errorf("get task log events: %w", err)
-	}
-	for _, event := range logEventsOutput.Events {
-		if _, err := fmt.Fprint(ew.Writer, event.HumanString()); err != nil {
-			return fmt.Errorf("write log event: %w", err)
-		}
-	}
-	ew.lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
-	return nil
-}
-
-func (ew *EventsWriter) allTasksStopped() (bool, error) {
-	taskARNs := make([]string, len(ew.runningTasks))
-	for idx, task := range ew.runningTasks {
+func (t *TaskLogs) allTasksStopped() (bool, error) {
+	taskARNs := make([]string, len(t.runningTasks))
+	for idx, task := range t.runningTasks {
 		taskARNs[idx] = task.TaskARN
 	}
 
 	// NOTE: all tasks are deployed to the same cluster and there are at least one tasks being deployed
-	cluster := ew.runningTasks[0].ClusterARN
+	cluster := t.runningTasks[0].ClusterARN
 
-	tasksResp, err := ew.Describer.DescribeTasks(cluster, taskARNs)
+	tasksResp, err := t.Describer.DescribeTasks(cluster, taskARNs)
 	if err != nil {
 		return false, fmt.Errorf("describe tasks: %w", err)
 	}
 
 	stopped := true
-	var runningTasks []*Task
+	var runningTasks []*task.Task
 	for _, t := range tasksResp {
 		if *t.LastStatus != ecs.DesiredStatusStopped {
 			stopped = false
-			runningTasks = append(runningTasks, &Task{
+			runningTasks = append(runningTasks, &task.Task{
 				ClusterARN: *t.ClusterArn,
 				TaskARN:    *t.TaskArn,
 			})
 		}
 	}
-	ew.runningTasks = runningTasks
+	t.runningTasks = runningTasks
 	return stopped, nil
 }
 
 // The `StartedAt` field for the tasks shouldn't be nil.
-func earliestStartTime(tasks []*Task) time.Time {
+func earliestStartTime(tasks []*task.Task) time.Time {
 	earliest := *tasks[0].StartedAt
 	for _, task := range tasks {
 		if task.StartedAt.Before(earliest) {

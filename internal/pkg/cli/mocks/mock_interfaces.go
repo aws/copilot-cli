@@ -8,7 +8,6 @@ import (
 	encoding "encoding"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -16,6 +15,7 @@ import (
 	describe "github.com/aws/copilot-cli/internal/pkg/describe"
 	docker "github.com/aws/copilot-cli/internal/pkg/docker"
 	dockerfile "github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
+	logs "github.com/aws/copilot-cli/internal/pkg/logs"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
 	command "github.com/aws/copilot-cli/internal/pkg/term/command"
@@ -1315,62 +1315,41 @@ func (mr *MockrepositoryServiceMockRecorder) BuildAndPush(docker, args interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndPush", reflect.TypeOf((*MockrepositoryService)(nil).BuildAndPush), docker, args)
 }
 
-// MockcwlogService is a mock of cwlogService interface
-type MockcwlogService struct {
+// MocklogEventsWriter is a mock of logEventsWriter interface
+type MocklogEventsWriter struct {
 	ctrl     *gomock.Controller
-	recorder *MockcwlogServiceMockRecorder
+	recorder *MocklogEventsWriterMockRecorder
 }
 
-// MockcwlogServiceMockRecorder is the mock recorder for MockcwlogService
-type MockcwlogServiceMockRecorder struct {
-	mock *MockcwlogService
+// MocklogEventsWriterMockRecorder is the mock recorder for MocklogEventsWriter
+type MocklogEventsWriterMockRecorder struct {
+	mock *MocklogEventsWriter
 }
 
-// NewMockcwlogService creates a new mock instance
-func NewMockcwlogService(ctrl *gomock.Controller) *MockcwlogService {
-	mock := &MockcwlogService{ctrl: ctrl}
-	mock.recorder = &MockcwlogServiceMockRecorder{mock}
+// NewMocklogEventsWriter creates a new mock instance
+func NewMocklogEventsWriter(ctrl *gomock.Controller) *MocklogEventsWriter {
+	mock := &MocklogEventsWriter{ctrl: ctrl}
+	mock.recorder = &MocklogEventsWriterMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockcwlogService) EXPECT() *MockcwlogServiceMockRecorder {
+func (m *MocklogEventsWriter) EXPECT() *MocklogEventsWriterMockRecorder {
 	return m.recorder
 }
 
-// TaskLogEvents mocks base method
-func (m *MockcwlogService) TaskLogEvents(logGroupName string, streamLastEventTime map[string]int64, opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error) {
+// WriteLogEvents mocks base method
+func (m *MocklogEventsWriter) WriteLogEvents(opts logs.WriteLogEventsOpts) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{logGroupName, streamLastEventTime}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "TaskLogEvents", varargs...)
-	ret0, _ := ret[0].(*cloudwatchlogs.LogEventsOutput)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "WriteLogEvents", opts)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// TaskLogEvents indicates an expected call of TaskLogEvents
-func (mr *MockcwlogServiceMockRecorder) TaskLogEvents(logGroupName, streamLastEventTime interface{}, opts ...interface{}) *gomock.Call {
+// WriteLogEvents indicates an expected call of WriteLogEvents
+func (mr *MocklogEventsWriterMockRecorder) WriteLogEvents(opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{logGroupName, streamLastEventTime}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TaskLogEvents", reflect.TypeOf((*MockcwlogService)(nil).TaskLogEvents), varargs...)
-}
-
-// LogGroupExists mocks base method
-func (m *MockcwlogService) LogGroupExists(logGroupName string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LogGroupExists", logGroupName)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LogGroupExists indicates an expected call of LogGroupExists
-func (mr *MockcwlogServiceMockRecorder) LogGroupExists(logGroupName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogGroupExists", reflect.TypeOf((*MockcwlogService)(nil).LogGroupExists), logGroupName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteLogEvents", reflect.TypeOf((*MocklogEventsWriter)(nil).WriteLogEvents), opts)
 }
 
 // Mocktemplater is a mock of templater interface

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package task
+package logs
 
 import (
 	"errors"
@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			tasks := []*Task{
+			tasks := []*task.Task{
 				{
 					TaskARN:    "task-1",
 					ClusterARN: "cluster",
@@ -108,7 +109,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			}
 			tc.setUpMocks(mocks)
 
-			ew := &EventsWriter{
+			ew := &TaskLogs{
 				GroupName: groupName,
 				Tasks:     tasks,
 
