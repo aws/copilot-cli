@@ -141,7 +141,7 @@ type initEnvOpts struct {
 	prog         progress
 	selVPC       ec2Selector
 	selCreds     credsSelector
-	selApp   	 appSelector
+	selApp       appSelector
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 }
@@ -173,7 +173,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  vars.prompt,
 		},
-		selApp:		  selector.NewSelect(vars.prompt, store),
+		selApp:       selector.NewSelect(vars.prompt, store),
 	}, nil
 }
 
