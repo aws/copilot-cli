@@ -186,19 +186,20 @@ func (o *initEnvOpts) Validate() error {
 	if o.AppName() == "" {
 		existingApps, _ := o.store.ListApplications()
 		if len(existingApps) == 0 {
-			o.askAppName(fmtAppInitNamePrompt)
-		} else {
-			useExistingApp, err := o.prompt.Confirm(
-			"Would you like to use one of your existing applications?", "", prompt.WithTrueDefault(), prompt.WithFinalMessage("Use existing application:"))
-			if err != nil {
-				return fmt.Errorf("prompt to confirm using existing application: %w", err)
-			}
-			if useExistingApp {
-				o.askSelectExistingAppName(existingApps)
-			} else {
-				o.askAppName(fmtAppInitNewNamePrompt)
-			}
+			return fmt.Errorf("no application found: run %s or %s into your workspace please", color.HighlightCode("app init"), color.HighlightCode("cd"))
 		}
+
+		useExistingApp, err := o.prompt.Confirm(
+		"Would you like to use one of your existing applications?", "", prompt.WithTrueDefault(), prompt.WithFinalMessage("Use existing application:"))
+		if err != nil {
+			return fmt.Errorf("prompt to confirm using existing application: %w", err)
+		}
+		if useExistingApp {
+			o.askSelectExistingAppName(existingApps)
+		} else {
+			o.askAppName(fmtAppInitNewNamePrompt)
+		}
+		
 	}
 
 	if err := o.validateCustomizedResources(); err != nil {
@@ -217,6 +218,10 @@ func (o *initEnvOpts) Ask() error {
 	}
 	if err := o.askEnvRegion(); err != nil {
 		return err
+	}
+	if o.AppName() == "" {
+		existingApps, _ := o.store.ListApplications()
+		o.askSelectExistingAppName(existingApps)
 	}
 	return o.askCustomizedResources()
 }
