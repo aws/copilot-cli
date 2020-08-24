@@ -2,8 +2,8 @@ version: 0.2
 env:
   parameter-store:
     NEUTRAL_BUILD_RELEASE_ROLE: COPILOT_NEUTRAL_BUILD_RELEASE_ROLE_ARN
-    NEUTRAL_BUILD_RELEASE_BUCKET_NAME: COPILOT_NEUTRAL_BUILD_RELEASE_BUCKET_NAME
   variables: 
+    NEUTRAL_BUILD_RELEASE_BUCKET_NAME: ecs-cli-v2-release
     AWS_STS_REGIONAL_ENDPOINTS: regional
     INTEG_TEST_SESSION_NAME: aws_copilot_cli_integ_test
     TAG_KEY: access
@@ -21,7 +21,7 @@ phases:
       - export GOPATH=/go
       - rm -rf cf-custom-resources/node_modules
       - |
-        tag_artifacts() {{
+        tag_artifacts() {
             CREDS=`aws sts assume-role --duration-seconds 7200 --role-arn "$NEUTRAL_BUILD_RELEASE_ROLE" --role-session-name $INTEG_TEST_SESSION_NAME`
             export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
             export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
@@ -45,8 +45,8 @@ phases:
                 --key "$bn.asc" \
                 --tagging TagSet=[{{Key=$TAG_KEY,Value=$TAG_VALUE}}] || exit 1
             done
-        }}
-        make integ-test && {{
+        }
+        make integ-test && {
             # if $? -eq 0
             echo "integration tests passed!"
             GIT_TAG=`git tag --points-at HEAD`
@@ -56,10 +56,10 @@ phases:
                 echo "Successfully marked non-release artifacts as private and ready-for-clean up"
             fi
             exit 0
-        }} || {{
+        } || {
             # if $? -ne 0
             echo "integration tests failed! Marking these artifacts as private and ready for removal..."
             tag_artifacts
             echo "Successfully marked broken artifacts as private and ready-for-clean up. Exit with 1 because tests failed."
             exit 1
-        }}
+        }
