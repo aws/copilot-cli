@@ -22,7 +22,7 @@ phases:
       - rm -rf cf-custom-resources/node_modules
       - |
         tag_artifacts() {{
-            CREDS=`aws sts assume-role --region $AWS_DEFAULT_REGION --role-arn "$NEUTRAL_BUILD_RELEASE_ROLE" --role-session-name $INTEG_TEST_SESSION_NAME`
+            CREDS=`aws sts assume-role --duration-seconds 7200 --role-arn "$NEUTRAL_BUILD_RELEASE_ROLE" --role-session-name $INTEG_TEST_SESSION_NAME`
             export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
             export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
             export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`

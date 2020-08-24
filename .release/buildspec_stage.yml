@@ -9,7 +9,7 @@ env:
 phases:
   pre_build:
     commands:
-      - CREDS=`aws sts assume-role --region $AWS_DEFAULT_REGION --role-arn $STAGE_ROLE_ARN --role-session-name $STAGE_SESSION_NAME`
+      - CREDS=`aws sts assume-role --role-arn $STAGE_ROLE_ARN --role-session-name $STAGE_SESSION_NAME`
       - export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
       - export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
       - export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`
