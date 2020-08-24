@@ -1,3 +1,6 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package client
 
 import (
@@ -41,6 +44,29 @@ type EnvInitRequest struct {
 	Profile       string
 	Prod          bool
 	CustomizedEnv bool
+	VPCImport     EnvInitRequestVPCImport
+	VPCConfig     EnvInitRequestVPCConfig
+}
+
+// EnvInitRequestVPCImport contains the parameters for configuring VPC import when
+// calling copilot env init
+type EnvInitRequestVPCImport struct {
+	ID               string
+	PublicSubnetIDs  string
+	PrivateSubnetIDs string
+}
+
+// IsSet returns true if all fields are set.
+func (e EnvInitRequestVPCImport) IsSet() bool {
+	return e.ID != "" && e.PublicSubnetIDs != "" && e.PrivateSubnetIDs != ""
+}
+
+// EnvInitRequestVPCConfig contains the parameters for configuring VPC config when
+// calling copilot env init
+type EnvInitRequestVPCConfig struct {
+	CIDR               string
+	PublicSubnetCIDRs  string
+	PrivateSubnetCIDRs string
 }
 
 // EnvShowRequest contains the parameters for calling copilot env show
@@ -283,7 +309,13 @@ copilot env init
 	--app $a
 	--profile $pr
 	--prod (optional)
-	--no-custom-resources (optional)
+	--default-config (optional)
+	--import-private-subnets (optional)
+	--import-public-subnets (optional)
+	--import-vpc-id (optional)
+	--override-private-cidrs (optional)
+	--override-public-cidrs (optional)
+	--override-vpc-cidr (optional)
 */
 func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	commands := []string{"env", "init",
@@ -295,7 +327,15 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 		commands = append(commands, "--prod")
 	}
 	if !opts.CustomizedEnv {
-		commands = append(commands, "--no-custom-resources")
+		commands = append(commands, "--default-config")
+	}
+	if (opts.VPCImport != EnvInitRequestVPCImport{}) {
+		commands = append(commands, "--import-vpc-id", opts.VPCImport.ID, "--import-public-subnets",
+			opts.VPCImport.PublicSubnetIDs, "--import-private-subnets", opts.VPCImport.PrivateSubnetIDs)
+	}
+	if (opts.VPCConfig != EnvInitRequestVPCConfig{}) {
+		commands = append(commands, "--override-vpc-cidr", opts.VPCConfig.CIDR, "--override-public-cidrs",
+			opts.VPCConfig.PublicSubnetCIDRs, "--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }
@@ -435,11 +475,11 @@ func (cli *CLI) TaskRun(input *TaskRunInput) (string, error) {
 		commands = append(commands, "--env-vars", input.EnvVars)
 	}
 
-	if input.Default != false {
+	if input.Default {
 		commands = append(commands, "--default")
 	}
 
-	if input.Follow != false {
+	if input.Follow {
 		commands = append(commands, "--follow")
 	}
 

@@ -103,28 +103,17 @@ func runCmdE(f func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Co
 
 // returns true if error type is stack set not exist.
 func isStackSetNotExistsErr(err error) bool {
-	for {
-		if err == nil {
-			return false
-		}
-		aerr, ok := err.(awserr.Error)
-		if !ok {
-			return isStackSetNotExistsErr(errors.Unwrap(err))
-		}
-		if aerr.Code() != "StackSetNotFoundException" {
-			return isStackSetNotExistsErr(errors.Unwrap(err))
-		}
-		return true
+	if err == nil {
+		return false
 	}
-}
-
-type svcEnv struct {
-	svcName string
-	envName string
-}
-
-func (s *svcEnv) String() string {
-	return fmt.Sprintf("%s (%s)", s.svcName, s.envName)
+	aerr, ok := err.(awserr.Error)
+	if !ok {
+		return isStackSetNotExistsErr(errors.Unwrap(err))
+	}
+	if aerr.Code() != "StackSetNotFoundException" {
+		return isStackSetNotExistsErr(errors.Unwrap(err))
+	}
+	return true
 }
 
 // relPath returns the path relative to the current working directory.

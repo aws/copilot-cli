@@ -19,7 +19,7 @@ Use Copilot to:
 
 Read more about the Copilot charter and tenets [here](CHARTER.md).
 
-![copilot help menu](https://user-images.githubusercontent.com/828419/85797638-e181ae00-b6f0-11ea-8751-3a7552e3fa7f.png)
+![copilot help menu](https://user-images.githubusercontent.com/879348/90834852-087aeb80-e300-11ea-8340-7f64326036fc.png)
 
 > Using the instructions and assets in this repository folder is governed as a preview program under the AWS Service Terms (https://aws.amazon.com/service-terms/).
 
@@ -40,8 +40,8 @@ We're distributing binaries from our GitHub releases. Instructions for installin
 
 | Platform | Command to install |
 |---------|---------
-| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-darwin-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
-| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.2.0/copilot-linux-v0.2.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| macOS | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.3.0/copilot-darwin-v0.3.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
+| Linux | `curl -Lo /usr/local/bin/copilot https://github.com/aws/copilot-cli/releases/download/v0.3.0/copilot-linux-v0.3.0 && chmod +x /usr/local/bin/copilot && copilot --help` |
 
 </details>
 
@@ -67,6 +67,18 @@ This will create a VPC, Application Load Balancer, an Amazon ECS Service with th
 ## Cleaning up 🧹
 
 Once you're finished playing around with this project, you can delete it and all the AWS resources associated it by running `copilot app delete`.
+
+## Running a one-off task 🏃‍♀️
+
+Copilot makes it easy to set up production-ready applications, but you can also use it to run tasks on AWS Fargate without having to set up any infrastructure. To run a simple hello world task on Fargate you can use Copilot:
+
+```sh
+$ copilot task run      \
+  --default             \
+  --follow              \
+  --image alpine:latest \
+  --command "echo 'Hello, Copilot v0.3.0'"
+```
 
 ## Learning more 📖
 

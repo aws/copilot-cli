@@ -15,7 +15,7 @@ var appName string
 
 /**
 The Init Suite runs through the copilot init workflow for a brand new
-project. It creates a single environment, deploys an app to it, and then
+application. It creates a single environment, deploys a service to it, and then
 tears it down.
 */
 func TestInit(t *testing.T) {

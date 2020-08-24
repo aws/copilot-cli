@@ -11,8 +11,10 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
+	"github.com/fatih/structs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestNewProvider(t *testing.T) {
@@ -41,15 +43,16 @@ func TestNewProvider(t *testing.T) {
 	}
 }
 
-func TestCreatePipeline(t *testing.T) {
+func TestNewPipelineManifest(t *testing.T) {
 	const pipelineName = "pipepiper"
 
 	testCases := map[string]struct {
-		beforeEach     func() error
-		provider       Provider
-		expectedErr    error
-		inputStages    []string
-		expectedStages []PipelineStage
+		beforeEach  func() error
+		provider    Provider
+		inputStages []PipelineStage
+
+		expectedManifest *PipelineManifest
+		expectedErr      error
 	}{
 		"errors out when no stage provided": {
 			provider: func() Provider {
@@ -72,24 +75,56 @@ func TestCreatePipeline(t *testing.T) {
 				require.NoError(t, err, "failed to create provider")
 				return p
 			}(),
-			inputStages: []string{"chicken", "wings"},
-			expectedStages: []PipelineStage{
-				{Name: "chicken",
-					TestCommands: []string(nil)},
-				{Name: "wings",
-					TestCommands: []string(nil)},
+			inputStages: []PipelineStage{
+				{
+					Name:             "chicken",
+					RequiresApproval: false,
+				},
+				{
+					Name:             "wings",
+					RequiresApproval: true,
+				},
+			},
+			expectedManifest: &PipelineManifest{
+				Name:    "pipepiper",
+				Version: Ver1,
+				Source: &Source{
+					ProviderName: "GitHub",
+					Properties: structs.Map(GitHubProperties{
+						OwnerAndRepository: "aws/amazon-ecs-cli-v2",
+						Branch:             "master",
+					}),
+				},
+				Stages: []PipelineStage{
+					{
+						Name:             "chicken",
+						RequiresApproval: false,
+					},
+					{
+						Name:             "wings",
+						RequiresApproval: true,
+					},
+				},
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			m, err := CreatePipeline(pipelineName, tc.provider, tc.inputStages)
+			// GIVEN
+			expectedBytes, err := yaml.Marshal(tc.expectedManifest)
+			require.NoError(t, err)
 
+			// WHEN
+			m, err := NewPipelineManifest(pipelineName, tc.provider, tc.inputStages)
+
+			// THEN
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
-				require.Equal(t, tc.expectedStages, m.Stages, "the stages are different from the expected")
+				actualBytes, err := yaml.Marshal(m)
+				require.NoError(t, err)
+				require.Equal(t, expectedBytes, actualBytes, "the manifest is different from the expected")
 			}
 		})
 	}

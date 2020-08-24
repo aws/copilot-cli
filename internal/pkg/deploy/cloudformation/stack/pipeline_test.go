@@ -112,12 +112,11 @@ func TestPipelineStackConfig_Template(t *testing.T) {
 	}
 }
 
-func mockAssociatedEnv(envName, region string, isProd bool) *deploy.AssociatedEnvironment {
+func mockAssociatedEnv(envName, region string) *deploy.AssociatedEnvironment {
 	return &deploy.AssociatedEnvironment{
 		Name:      envName,
 		Region:    region,
 		AccountID: envAccountID,
-		Prod:      isProd,
 	}
 }
 
@@ -135,12 +134,12 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 		},
 		Stages: []deploy.PipelineStage{
 			{
-				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2", false),
+				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2"),
 				LocalServices:         []string{"frontend", "backend"},
 				TestCommands:          []string{"echo 'bok bok bok'", "make test"},
 			},
 			{
-				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1", true),
+				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1"),
 				LocalServices:         []string{"frontend", "backend"},
 			},
 		},

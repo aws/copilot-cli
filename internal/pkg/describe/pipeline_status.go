@@ -66,15 +66,15 @@ func (p PipelineStatus) JSONString() (string, error) {
 func (p PipelineStatus) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("Pipeline Status\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("Pipeline Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "%s\t%s\t%s\n", "Stage", "Transition", "Status")
 	fmt.Fprintf(writer, "%s\t%s\t%s\n", "-----", "----------", "------")
 	for _, stage := range p.StageStates {
-		fmt.Fprintf(writer, stage.HumanString())
+		fmt.Fprint(writer, stage.HumanString())
 	}
 	writer.Flush()
-	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(p.UpdatedAt))
 	writer.Flush()
 	return b.String()

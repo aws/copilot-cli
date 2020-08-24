@@ -171,7 +171,7 @@ var _ = Describe("Multiple Env App", func() {
 			}
 
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
-			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal([]string{"test", "prod"}))
+			Expect(svc.ServiceDiscoveries[0].Environment).To(ConsistOf("test", "prod"))
 			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local:80", svc.SvcName, appName)))
 
 			// Call each environment's endpoint and ensure it returns a 200

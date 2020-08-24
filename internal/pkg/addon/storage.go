@@ -17,15 +17,11 @@ const (
 	s3AddonPath       = "addons/s3/cf.yml"
 )
 
-var regexpMatchAttribute = regexp.MustCompile("^(\\S+):([sbnSBN])")
+var regexpMatchAttribute = regexp.MustCompile(`^(\S+):([sbnSBN])`)
 
 var storageTemplateFunctions = map[string]interface{}{
 	"logicalIDSafe": template.StripNonAlphaNumFunc,
 	"envVarName":    template.EnvVarNameFunc,
-}
-
-type storage struct {
-	Name *string
 }
 
 // DynamoDB contains configuration options which fully descibe a DynamoDB table.

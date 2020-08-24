@@ -47,7 +47,7 @@ type ServiceStatus struct {
 
 // ServiceStatusDesc contains the status for a service.
 type ServiceStatusDesc struct {
-	Service ecs.ServiceStatus        `json:",flow"`
+	Service ecs.ServiceStatus
 	Tasks   []ecs.TaskStatus         `json:"tasks"`
 	Alarms  []cloudwatch.AlarmStatus `json:"alarms"`
 }
@@ -154,21 +154,21 @@ func (s *ServiceStatusDesc) JSONString() (string, error) {
 func (s *ServiceStatusDesc) HumanString() string {
 	var b bytes.Buffer
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
-	fmt.Fprintf(writer, color.Bold.Sprint("Service Status\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("Service Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s %v / %v running tasks (%v pending)\n", statusColor(s.Service.Status),
 		s.Service.RunningCount, s.Service.DesiredCount, s.Service.DesiredCount-s.Service.RunningCount)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nLast Deployment\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\n", "Updated At", humanizeTime(s.Service.LastDeploymentAt))
 	fmt.Fprintf(writer, "  %s\t%s\n", "Task Definition", s.Service.TaskDefinition)
-	fmt.Fprintf(writer, color.Bold.Sprint("\nTask Status\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nTask Status\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\t%s\t%s\n", "ID", "Image Digest", "Last Status", "Health Status", "Started At", "Stopped At")
 	for _, task := range s.Tasks {
-		fmt.Fprintf(writer, task.HumanString())
+		fmt.Fprint(writer, task.HumanString())
 	}
-	fmt.Fprintf(writer, color.Bold.Sprint("\nAlarms\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nAlarms\n\n"))
 	writer.Flush()
 	fmt.Fprintf(writer, "  %s\t%s\t%s\t%s\n", "Name", "Health", "Last Updated", "Reason")
 	for _, alarm := range s.Alarms {

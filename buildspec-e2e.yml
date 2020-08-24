@@ -1,5 +1,32 @@
 version: 0.2
 
+batch:
+  fast-fail: false
+  build-matrix:
+    static:
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+    dynamic:
+      env:
+        compute-type:
+          - BUILD_GENERAL1_LARGE
+        image:
+          - aws/codebuild/standard:4.0
+        variables:
+          # We increase the number of VPCs/region limit to 15 from 5 in our e2e tests accounts
+          # to accommodate running them in parallel.
+          # If TEST_SUITE goes above 15 e2e tests the limits and this comment should be updated.
+          TEST_SUITE:
+            - addons
+            - customized-env
+            - init
+            - multi-env-app
+            - multi-svc-app
+            - root
+            - sidecars
+            - task
+
 phases:
   install:
     runtime-versions:
@@ -15,5 +42,5 @@ phases:
        - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
        - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
        - make build-e2e
-       - docker build -t ecs-cli-v2/e2e . -f e2e/Dockerfile
-       - docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home" ecs-cli-v2/e2e:latest
+       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
+       - docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home" -e "TEST_SUITE=$TEST_SUITE" copilot-cli/e2e:latest

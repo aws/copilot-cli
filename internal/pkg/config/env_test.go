@@ -18,12 +18,17 @@ func TestStore_ListEnvironments(t *testing.T) {
 	testEnvironment := Environment{Name: "test", AccountID: "12345", App: "chicken", Region: "us-west-2s", Prod: false}
 	testEnvironmentString, err := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.App, testEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+	require.NoError(t, err, "Marshal test environment should not fail")
 
-	prodEnvironment := Environment{Name: "prod", AccountID: "12345", App: "chicken", Region: "us-west-2s", Prod: true}
-	prodEnvironmentString, err := marshal(prodEnvironment)
-	prodEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, prodEnvironment.App, prodEnvironment.Name)
-	require.NoError(t, err, "Marshal environment should not fail")
+	prodPDXEnv := Environment{Name: "prod-pdx", AccountID: "12345", App: "chicken", Region: "us-west-2", Prod: true}
+	prodPDXEnvString, err := marshal(prodPDXEnv)
+	prodPDXEnvPath := fmt.Sprintf(fmtEnvParamPath, prodPDXEnv.App, prodPDXEnv.Name)
+	require.NoError(t, err, "Marshal pdx environment should not fail")
+
+	prodIADEnv := Environment{Name: "prod-iad", AccountID: "12345", App: "chicken", Region: "us-east-1", Prod: true}
+	prodIADEnvString, err := marshal(prodIADEnv)
+	prodIADEnvPath := fmt.Sprintf(fmtEnvParamPath, prodIADEnv.App, prodIADEnv.Name)
+	require.NoError(t, err, "Marshal iad environment should not fail")
 
 	environmentPath := fmt.Sprintf(rootEnvParamPath, testEnvironment.App)
 
@@ -41,8 +46,8 @@ func TestStore_ListEnvironments(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(prodEnvironmentPath), // <- return prod before test on purpose to test sorting by Prod
-							Value: aws.String(prodEnvironmentString),
+							Name:  aws.String(prodIADEnvPath),
+							Value: aws.String(prodIADEnvString),
 						},
 						{
 							Name:  aws.String(testEnvironmentPath),
@@ -52,7 +57,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 				}, nil
 			},
 
-			wantedEnvironments: []Environment{testEnvironment, prodEnvironment},
+			wantedEnvironments: []Environment{testEnvironment, prodIADEnv},
 			wantedErr:          nil,
 		},
 		"with malformed json": {
@@ -85,8 +90,8 @@ func TestStore_ListEnvironments(t *testing.T) {
 					return &ssm.GetParametersByPathOutput{
 						Parameters: []*ssm.Parameter{
 							{
-								Name:  aws.String(testEnvironmentPath),
-								Value: aws.String(testEnvironmentString),
+								Name:  aws.String(prodPDXEnvPath), // Return "pdx" first on purpose to test if alphabetical ordering is maintained.
+								Value: aws.String(prodPDXEnvString),
 							},
 						},
 						NextToken: aws.String("more"),
@@ -96,14 +101,18 @@ func TestStore_ListEnvironments(t *testing.T) {
 				return &ssm.GetParametersByPathOutput{
 					Parameters: []*ssm.Parameter{
 						{
-							Name:  aws.String(prodEnvironmentPath),
-							Value: aws.String(prodEnvironmentString),
+							Name:  aws.String(prodIADEnvPath),
+							Value: aws.String(prodIADEnvString),
+						},
+						{
+							Name:  aws.String(testEnvironmentPath), // Return "test" at the end to make sure prod environments are listed last.
+							Value: aws.String(testEnvironmentString),
 						},
 					},
 				}, nil
 			},
 
-			wantedEnvironments: []Environment{testEnvironment, prodEnvironment},
+			wantedEnvironments: []Environment{testEnvironment, prodIADEnv, prodPDXEnv},
 			wantedErr:          nil,
 		},
 	}
@@ -130,7 +139,6 @@ func TestStore_ListEnvironments(t *testing.T) {
 					environments = append(environments, *e)
 				}
 				require.Equal(t, tc.wantedEnvironments, environments)
-
 			}
 		})
 	}
