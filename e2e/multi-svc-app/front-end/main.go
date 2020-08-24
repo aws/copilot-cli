@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -9,6 +12,9 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 )
+
+// Get the env var "MAGIC_WORDS" for testing if the build arg was overridden.
+var magicWords string = os.Getenv("MAGIC_WORDS")
 
 // SimpleGet just returns true no matter what
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -37,9 +43,19 @@ func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter
 	w.Write(body)
 }
 
+// GetMagicWords returns the environment variable passed in by the arg override
+func GetMagicWords(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	log.Println("Get Succeeded")
+	w.WriteHeader(http.StatusOK)
+	log.Println(magicWords)
+	w.Write([]byte(magicWords))
+}
+
 func main() {
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
 	router.GET("/service-discovery-test", ServiceDiscoveryGet)
+	router.GET("/magicwords/", GetMagicWords)
+
 	log.Fatal(http.ListenAndServe(":80", router))
 }

@@ -26,6 +26,13 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /app ./
 # Make the binary executable
 RUN chmod +x ./e2e-service
+
+# Define a build argument which we'll override in the copilot manifest
+# and make available to the service through the environment
+ARG MAGIC_WORDS_ARG
+ENV MAGIC_WORDS=$MAGIC_WORDS_ARG
+RUN echo $MAGIC_WORDS
+
 # Start the service
 ENTRYPOINT ["./e2e-service"]
 # The service runs on port 80
