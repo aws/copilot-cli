@@ -10,6 +10,7 @@ pull_request_rules:
       - status-success=build (compile-darwin)
       - status-success=test
       - status-success=staticcheck
+      - status-success=license
       - status-success=Semantic Pull Request
       - -label~=(WIP|do-not-merge)
       - -title~=(WIP|wip)
@@ -30,6 +31,7 @@ pull_request_rules:
       - status-success=build (compile-darwin)
       - status-success=test
       - status-success=staticcheck
+      - status-success=license
       - status-success=Semantic Pull Request
       - author=dependabot[bot]
       - -title~=(WIP|wip)
