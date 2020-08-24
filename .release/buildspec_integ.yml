@@ -1,13 +1,65 @@
 version: 0.2
+env:
+  parameter-store:
+    NEUTRAL_BUILD_RELEASE_ROLE: COPILOT_NEUTRAL_BUILD_RELEASE_ROLE_ARN
+    NEUTRAL_BUILD_RELEASE_BUCKET_NAME: COPILOT_NEUTRAL_BUILD_RELEASE_BUCKET_NAME
+  variables: 
+    AWS_STS_REGIONAL_ENDPOINTS: regional
+    INTEG_TEST_SESSION_NAME: aws_copilot_cli_integ_test
+    TAG_KEY: access
+    TAG_VALUE: private
 
 phases:
   install:
     runtime-versions:
-      golang: 1.14
+      golang: 1.13
+      nodejs: 10
   build:
     commands:
-      - echo "Git commit hash for this revision:"
       - echo `git rev-parse HEAD` # Do not delete; for pipeline logging purposes
-artifacts:
-  files:
-    - "**/*"
+      - cd $CODEBUILD_SRC_DIR
+      - export GOPATH=/go
+      - rm -rf cf-custom-resources/node_modules
+      - |
+        tag_artifacts() {{
+            CREDS=`aws sts assume-role --region $AWS_DEFAULT_REGION --role-arn "$NEUTRAL_BUILD_RELEASE_ROLE" --role-session-name $INTEG_TEST_SESSION_NAME`
+            export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
+            export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
+            export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`
+            GIT_COMMIT_ID=`git rev-parse HEAD`
+            echo 'Artifacts to tag:'
+            ls -lah $(dirname `head -1 ./$GIT_COMMIT_ID.manifest`)
+            for artifact in `cat ./$GIT_COMMIT_ID.manifest`
+            do
+                bn="$(basename $artifact)"
+                echo "bn: $bn"
+                md5FileName="${{bn%.exe}}.md5"
+                echo "md5FileName: $md5FileName"
+                aws s3api put-object-tagging --bucket $NEUTRAL_BUILD_RELEASE_BUCKET_NAME \
+                --key "$md5FileName" \
+                --tagging TagSet=[{{Key=$TAG_KEY,Value=$TAG_VALUE}}] || exit 1
+                aws s3api put-object-tagging --bucket $NEUTRAL_BUILD_RELEASE_BUCKET_NAME \
+                --key "$bn" \
+                --tagging TagSet=[{{Key=$TAG_KEY,Value=$TAG_VALUE}}] || exit 1
+                aws s3api put-object-tagging --bucket $NEUTRAL_BUILD_RELEASE_BUCKET_NAME \
+                --key "$bn.asc" \
+                --tagging TagSet=[{{Key=$TAG_KEY,Value=$TAG_VALUE}}] || exit 1
+            done
+        }}
+        make integ-test && {{
+            # if $? -eq 0
+            echo "integration tests passed!"
+            GIT_TAG=`git tag --points-at HEAD`
+            if [ -z "$GIT_TAG" ]; then
+                echo "Marking artifacts as private and ready-for-cleanup because they weren't built from a commit that is tagged as a release"
+                tag_artifacts
+                echo "Successfully marked non-release artifacts as private and ready-for-clean up"
+            fi
+            exit 0
+        }} || {{
+            # if $? -ne 0
+            echo "integration tests failed! Marking these artifacts as private and ready for removal..."
+            tag_artifacts
+            echo "Successfully marked broken artifacts as private and ready-for-clean up. Exit with 1 because tests failed."
+            exit 1
+        }}
