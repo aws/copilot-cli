@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ecslogging contains utility functions for ECS logging.
 package ecslogging
 
 import (
@@ -40,10 +41,11 @@ type WriteLogEventsOpts struct {
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 }
 
-// NewServiceClient returns a ServiceClient configured against the input.
-func NewServiceClient(sess *session.Session, appName, envName, svcName string) *ServiceClient {
+// NewServiceClient returns a ServiceClient for the svc service under env and app.
+// The logging client is initialized from the given sess session.
+func NewServiceClient(sess *session.Session, app, env, svc string) *ServiceClient {
 	return &ServiceClient{
-		logGroupName: fmt.Sprintf(logGroupNamePattern, appName, envName, svcName),
+		logGroupName: fmt.Sprintf(logGroupNamePattern, app, env, svc),
 		eventsGetter: cloudwatchlogs.New(sess),
 		w:            log.OutputWriter,
 	}

@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ecslogging contains utility functions for ECS logging.
 package ecslogging
 
 import (
@@ -39,7 +40,7 @@ type TaskClient struct {
 	runningTasks []*task.Task
 }
 
-// NewTaskClient returns a TaskClient configured against the input.
+// NewTaskClient returns a TaskClient that can retrieve logs from the given tasks under the groupName.
 func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) *TaskClient {
 	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, groupName)
 	return &TaskClient{
