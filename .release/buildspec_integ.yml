@@ -46,8 +46,8 @@ phases:
                 --tagging TagSet=[{{Key=$TAG_KEY,Value=$TAG_VALUE}}] || exit 1
             done
         }
+      - |
         make integ-test && {
-            # if $? -eq 0
             echo "integration tests passed!"
             GIT_TAG=`git tag --points-at HEAD`
             if [ -z "$GIT_TAG" ]; then
@@ -57,7 +57,6 @@ phases:
             fi
             exit 0
         } || {
-            # if $? -ne 0
             echo "integration tests failed! Marking these artifacts as private and ready for removal..."
             tag_artifacts
             echo "Successfully marked broken artifacts as private and ready-for-clean up. Exit with 1 because tests failed."
