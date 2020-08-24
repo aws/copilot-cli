@@ -19,7 +19,7 @@ var (
 
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
-	ListVPCLabels() ([]ec2.VPCLabel, error)
+	ListVPCs() ([]string, error)
 	ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error)
 }
 
@@ -39,30 +39,20 @@ func NewEC2Select(prompt Prompter, ec2Client VPCSubnetLister) *EC2Select {
 
 // VPC has the user select an available VPC.
 func (s *EC2Select) VPC(prompt, help string) (string, error) {
-	vpcLabels, err := s.ec2Svc.ListVPCLabels()
+	vpcs, err := s.ec2Svc.ListVPCs()
 	if err != nil {
 		return "", fmt.Errorf("list VPC ID: %w", err)
 	}
-	if len(vpcLabels) == 0 {
+	if len(vpcs) == 0 {
 		return "", ErrVPCNotFound
 	}
-	var displayLabels []string
-	for _, label := range vpcLabels {
-		var displayLabel string
-		if label.Name != "" {
-			displayLabel = fmt.Sprintf("%s (%s)", label.ID, label.Name)
-		} else {
-			displayLabel = label.ID
-		}
-		displayLabels = append(displayLabels, displayLabel)
-	}
-	vpcLabel, err := s.prompt.SelectOne(
+	vpc, err := s.prompt.SelectOne(
 		prompt, help,
-		displayLabels)
+		vpcs)
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	id := ec2.ExtractVPCID(vpcLabel).ID
+	id := ec2.ExtractVPC(vpc).ID
 	return id, nil
 }
 

@@ -84,36 +84,34 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-type VPCLabel struct {
+// VPC contains the ID and name of a VPC.
+type VPC struct {
 	ID   string
 	Name string
 }
 
-//DisplayVPCLabels formats the elements of a VPCLabel into a user-friendly string.
-func ConvertVPCToLabel(vpc ec2.Vpc) VPCLabel {
-	for _, tag := range vpc.Tags {
-		if aws.StringValue(tag.Key) == "Name" {
-			return VPCLabel{
-				ID:   aws.StringValue(vpc.VpcId),
-				Name: aws.StringValue(tag.Value),
-			}
-		}
+// String formats the elements of a VPC into a display-ready string.
+func (v *VPC) String() string {
+	if v.Name != "" {
+		return fmt.Sprintf("%s (%s)", v.ID, v.Name)
 	}
-	return VPCLabel{
-		ID: aws.StringValue(vpc.VpcId),
-	}
+	return v.ID
 }
 
-// ExtractVPCID extracts the VPC ID from the VPC display string.
-func ExtractVPCID(string string) VPCLabel {
-	id := strings.Split(string, " ")[0]
-	return VPCLabel{
-		ID: id,
+// ExtractVPC extracts the VPC ID from the VPC display string.
+func ExtractVPC(string string) VPC{
+	splitVPC := strings.Split(string, " ")
+	extractedVPC := VPC{
+		ID: splitVPC[0],
 	}
+	if strings.Contains(string, "(") {
+		extractedVPC.Name = strings.Trim(splitVPC[1], "()")
+	}
+	return extractedVPC
 }
 
-// ListVPCLabels returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
-func (c *EC2) ListVPCLabels() ([]VPCLabel, error) {
+// ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
+func (c *EC2) ListVPCs() ([]string, error) {
 	var vpcs []*ec2.Vpc
 	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err != nil {
@@ -130,12 +128,22 @@ func (c *EC2) ListVPCLabels() ([]VPCLabel, error) {
 		}
 		vpcs = append(vpcs, response.Vpcs...)
 	}
-	var vpcLabels []VPCLabel
+	var vpcStrings []string
+	var label string
 	for _, vpc := range vpcs {
-		label := ConvertVPCToLabel(*vpc)
-		vpcLabels = append(vpcLabels, label)
+		VPC := VPC{
+			ID: aws.StringValue(vpc.VpcId),
+		}
+		for _, tag := range vpc.Tags {
+			if aws.StringValue(tag.Key) == "Name" {
+				VPC.Name = aws.StringValue(tag.Value)
+			}
+		}
+
+		label = VPC.String()
+		vpcStrings = append(vpcStrings, label)
 	}
-	return vpcLabels, nil
+	return vpcStrings, nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.
