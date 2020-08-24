@@ -1,4 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 
 // Package dockerfile provides simple Dockerfile parsing functionality.
 package dockerfile

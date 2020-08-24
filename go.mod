@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
-	github.com/aws/aws-sdk-go v1.34.5
+	github.com/aws/aws-sdk-go v1.34.9
 	github.com/awslabs/goformation/v4 v4.15.0
 	github.com/briandowns/spinner v1.11.1
 	github.com/dustin/go-humanize v1.0.0
@@ -34,7 +34,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/xlab/treeprint v1.0.0
 	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
-	gopkg.in/ini.v1 v1.60.0
+	gopkg.in/ini.v1 v1.60.1
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	rsc.io/quote/v3 v3.1.0 // indirect
 )
