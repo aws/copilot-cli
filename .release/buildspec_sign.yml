@@ -11,8 +11,8 @@ phases:
   build:
     commands:
       - GIT_COMMIT_ID=`git rev-parse HEAD`
-      - JSON_ARR=`jq -Rsc 'split(\"\\n\") | map(select(length > 0))' < $GIT_COMMIT_ID.manifest`
-      - echo "Signing these artifacts in S3: $JSON_ARR"
+      - JSON_ARR=`jq -Rsc 'split("\n") | map(select(length > 0))' < $GIT_COMMIT_ID.manifest`
+      - echo "Signing these artifacts in S3 $JSON_ARR"
       - echo "Invoking the signing solution..."
       - >
         aws lambda invoke
