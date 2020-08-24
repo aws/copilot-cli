@@ -1,11 +1,15 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package stack
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -56,7 +60,7 @@ func TestTaskStackConfig_Template(t *testing.T) {
 
 			taskStackConfig := &taskStackConfig{
 				CreateTaskResourcesInput: &taskInput,
-				parser: mockReadParser,
+				parser:                   mockReadParser,
 			}
 
 			got, err := taskStackConfig.Template()
@@ -111,10 +115,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 		CPU:    256,
 		Memory: 512,
 
-		Image: "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
-		TaskRole: "task-role",
+		Image:         "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
+		TaskRole:      "task-role",
 		ExecutionRole: "execution-role",
-		Command:  "echo hooray",
+		Command:       "echo hooray",
 	}
 
 	task := &taskStackConfig{
@@ -126,7 +130,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 
 func TestTaskStackConfig_StackName(t *testing.T) {
 	taskInput := deploy.CreateTaskResourcesInput{
-		Name:   "my-task",
+		Name: "my-task",
 	}
 
 	task := &taskStackConfig{
@@ -144,7 +148,7 @@ func TestTaskStackConfig_Tags(t *testing.T) {
 	}{
 		"with app and env": {
 			input: deploy.CreateTaskResourcesInput{
-				Name:   "my-task",
+				Name: "my-task",
 
 				App: "my-app",
 				Env: "test",
@@ -152,35 +156,34 @@ func TestTaskStackConfig_Tags(t *testing.T) {
 
 			expectedTags: []*cloudformation.Tag{
 				{
-					Key: aws.String(deploy.TaskTagKey),
+					Key:   aws.String(deploy.TaskTagKey),
 					Value: aws.String("my-task"),
 				},
 				{
-					Key: aws.String(deploy.AppTagKey),
+					Key:   aws.String(deploy.AppTagKey),
 					Value: aws.String("my-app"),
 				},
 				{
-					Key: aws.String(deploy.EnvTagKey),
+					Key:   aws.String(deploy.EnvTagKey),
 					Value: aws.String("test"),
 				},
 			},
 		},
 		"input without app or env": {
 			input: deploy.CreateTaskResourcesInput{
-				Name:   "my-task",
+				Name: "my-task",
 
 				Env: "",
 			},
 
 			expectedTags: []*cloudformation.Tag{
 				{
-					Key: aws.String(deploy.TaskTagKey),
+					Key:   aws.String(deploy.TaskTagKey),
 					Value: aws.String("my-task"),
 				},
 			},
 		},
 	}
-
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

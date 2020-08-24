@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 package ecs
@@ -387,7 +387,7 @@ func TestECS_DefaultCluster(t *testing.T) {
 }
 
 func TestECS_HasDefaultCluster(t *testing.T) {
-	testCases := map[string] struct{
+	testCases := map[string]struct {
 		mockECSClient func(m *mocks.Mockapi)
 
 		wantedHasDefaultCluster bool
@@ -414,7 +414,7 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 				m.EXPECT().DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							{ ClusterArn: aws.String("cluster") },
+							{ClusterArn: aws.String("cluster")},
 						},
 					}, nil)
 			},
@@ -445,7 +445,6 @@ func TestECS_HasDefaultCluster(t *testing.T) {
 		})
 	}
 }
-
 
 func TestECS_RunTask(t *testing.T) {
 	type input struct {

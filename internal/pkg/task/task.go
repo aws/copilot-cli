@@ -1,4 +1,4 @@
-// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
 // Package task provides support for running Amazon ECS tasks.
@@ -6,11 +6,12 @@ package task
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"time"
 )
 
 // VpcGetter gets subnets and security groups.
@@ -69,4 +70,3 @@ func convertECSTasks(ecsTasks []*ecs.Task) []*Task {
 	}
 	return tasks
 }
-
