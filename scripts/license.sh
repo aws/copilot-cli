@@ -23,10 +23,16 @@ if [ $# != 1 ]; then
 fi
 
 fail=0
-for file in $(find $1 -name '*.go'); do
+for file in $(find -E $1 -regex '.*\.(go|js)'); do
     case $file in
         $1/*/mocks/*)
             # Skip mocks
+        ;;
+        $1/*/node_modules/*)
+            # Skip node modules for js files.
+        ;;
+        $1/site/*)
+            # Skip website content
         ;;
         *)
             header="$(head -10 $file)"
