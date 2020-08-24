@@ -6,6 +6,7 @@ package ec2
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -83,8 +84,36 @@ func New(s *session.Session) *EC2 {
 	}
 }
 
-// ListVPCLabels returns names (or IDs, if Name tag does not exist) of all VPCs.
-func (c *EC2) ListVPCLabels() ([]string, error) {
+type VPCLabel struct {
+	ID   string
+	Name string
+}
+
+//DisplayVPCLabels formats the elements of a VPCLabel into a user-friendly string.
+func ConvertVPCToLabel(vpc ec2.Vpc) VPCLabel {
+	for _, tag := range vpc.Tags {
+		if aws.StringValue(tag.Key) == "Name" {
+			return VPCLabel{
+				ID:   aws.StringValue(vpc.VpcId),
+				Name: aws.StringValue(tag.Value),
+			}
+		}
+	}
+	return VPCLabel{
+		ID: aws.StringValue(vpc.VpcId),
+	}
+}
+
+// ExtractVPCID extracts the VPC ID from the VPC display string.
+func ExtractVPCID(string string) VPCLabel {
+	id := strings.Split(string, " ")[0]
+	return VPCLabel{
+		ID: id,
+	}
+}
+
+// ListVPCLabels returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
+func (c *EC2) ListVPCLabels() ([]VPCLabel, error) {
 	var vpcs []*ec2.Vpc
 	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err != nil {
@@ -101,18 +130,11 @@ func (c *EC2) ListVPCLabels() ([]string, error) {
 		}
 		vpcs = append(vpcs, response.Vpcs...)
 	}
-	var vpcLabels []string
-	var vpcLabel string
+	var vpcLabels []VPCLabel
 	for _, vpc := range vpcs {
-		vpcLabel = aws.StringValue(vpc.VpcId)
-		for _, tag := range vpc.Tags {
-			if aws.StringValue(tag.Key) == "Name" {
-				vpcLabel = vpcLabel + " (" + aws.StringValue(tag.Value) + ")"
-			}
-		}
-		vpcLabels = append(vpcLabels, vpcLabel)
+		label := ConvertVPCToLabel(*vpc)
+		vpcLabels = append(vpcLabels, label)
 	}
-
 	return vpcLabels, nil
 }
 

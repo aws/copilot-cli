@@ -7,8 +7,6 @@ package selector
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 )
 
@@ -21,7 +19,7 @@ var (
 
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
-	ListVPCLabels() ([]string, error)
+	ListVPCLabels() ([]ec2.VPCLabel, error)
 	ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error)
 }
 
@@ -48,14 +46,24 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if len(vpcLabels) == 0 {
 		return "", ErrVPCNotFound
 	}
+	var displayLabels []string
+	for _, label := range vpcLabels {
+		var displayLabel string
+		if label.Name != "" {
+			displayLabel = fmt.Sprintf("%s (%s)", label.ID, label.Name)
+		} else {
+			displayLabel = label.ID
+		}
+		displayLabels = append(displayLabels, displayLabel)
+	}
 	vpcLabel, err := s.prompt.SelectOne(
 		prompt, help,
-		vpcLabels)
+		displayLabels)
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
-	vpcID := strings.Split(vpcLabel, " ")[0]
-	return vpcID, nil
+	id := ec2.ExtractVPCID(vpcLabel).ID
+	return id, nil
 }
 
 // PublicSubnets has the user multiselect public subnets given the VPC ID.
