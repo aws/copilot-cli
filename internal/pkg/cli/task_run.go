@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/logs"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
@@ -150,7 +150,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 
 	opts.configureEventsWriter = func(tasks []*task.Task) {
-		opts.eventsWriter = logs.NewTaskLogs(opts.groupName, tasks, opts.sess)
+		opts.eventsWriter = ecslogging.NewTaskClient(opts.sess, opts.groupName, tasks)
 	}
 	return &opts, nil
 }

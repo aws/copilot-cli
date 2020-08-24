@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package logs
+package ecslogging
 
 import (
 	"bytes"
@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
-	"github.com/aws/copilot-cli/internal/pkg/logs/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type serviceLogsMocks struct {
-	logWriter *mocks.MocklogWriter
+	logGetter *mocks.MocklogGetter
 }
 
 func TestServiceLogs_WriteServiceLogEvents(t *testing.T) {
@@ -62,7 +62,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"failed to get task log events": {
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logWriter.EXPECT().TaskLogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
 						Return(nil, errors.New("some error")),
 				)
 			},
@@ -72,7 +72,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"success with human output": {
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logWriter.EXPECT().TaskLogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
 						}, nil),
@@ -85,7 +85,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			jsonOutput: true,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logWriter.EXPECT().TaskLogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
 						}, nil),
@@ -98,12 +98,12 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			follow: true,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logWriter.EXPECT().TaskLogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:        logEvents,
 							LastEventTime: mockLastEventTime,
 						}, nil),
-					m.logWriter.EXPECT().TaskLogEvents(mockLogGroupName, mockLastEventTime, gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(mockLogGroupName, mockLastEventTime, gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:        moreLogEvents,
 							LastEventTime: nil,
@@ -124,29 +124,29 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mocklogWriter := mocks.NewMocklogWriter(ctrl)
+			mocklogGetter := mocks.NewMocklogGetter(ctrl)
 
 			mocks := serviceLogsMocks{
-				logWriter: mocklogWriter,
+				logGetter: mocklogGetter,
 			}
 
 			tc.setupMocks(mocks)
 
 			b := &bytes.Buffer{}
-			svcLogs := &ServiceLogs{
+			svcLogs := &ServiceClient{
 				logGroupName: mockLogGroupName,
-				eventsGetter: mocklogWriter,
+				eventsGetter: mocklogGetter,
 				w:            b,
 			}
 
 			// WHEN
-			logWriter := OutputCwLogsHuman
+			logWriter := WriteHumanLogs
 			if tc.jsonOutput {
-				logWriter = OutputCwLogsJSON
+				logWriter = WriteJSONLogs
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
-				Follow:     tc.follow,
-				OutputLogs: logWriter,
+				Follow:   tc.follow,
+				OnEvents: logWriter,
 			})
 
 			// THEN

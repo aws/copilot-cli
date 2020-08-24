@@ -176,6 +176,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/task/mocks/mock_task.go -source=./internal/pkg/task/task.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/repository/mocks/mock_repository.go -source=./internal/pkg/repository/repository.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logs/mocks/mock_service.go -source=./internal/pkg/logs/service.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/logs/mocks/mock_task.go -source=./internal/pkg/logs/task.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecslogging/mocks/mock_service.go -source=./internal/pkg/ecslogging/service.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecslogging/mocks/mock_task.go -source=./internal/pkg/ecslogging/task.go
 

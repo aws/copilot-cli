@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package logs
+package ecslogging
 
 import (
 	"fmt"
@@ -26,30 +26,23 @@ type TasksDescriber interface {
 	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
-// EventsLogger gets a log group's log events.
-type EventsLogger interface {
-	TaskLogEvents(logGroupName string,
-		streamLastEventTime map[string]int64,
-		opts ...cloudwatchlogs.GetLogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
-}
-
-// TaskLogs represents a service that writes task log events.
-type TaskLogs struct {
+// TaskClient retrieves the logs of Amazon ECS tasks.
+type TaskClient struct {
 	GroupName string
 	Tasks     []*task.Task
 
 	Writer       io.Writer
-	EventsLogger EventsLogger
+	EventsLogger logGetter
 	Describer    TasksDescriber
 
 	// Fields that are private that get modified each time
 	runningTasks []*task.Task
 }
 
-// NewTaskLogs returns a TaskLogs configured against the input.
-func NewTaskLogs(groupName string, tasks []*task.Task, sess *session.Session) *TaskLogs {
+// NewTaskClient returns a TaskClient configured against the input.
+func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) *TaskClient {
 	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, groupName)
-	return &TaskLogs{
+	return &TaskClient{
 		GroupName: logGroupName,
 		Tasks:     tasks,
 
@@ -60,17 +53,17 @@ func NewTaskLogs(groupName string, tasks []*task.Task, sess *session.Session) *T
 }
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
-func (t *TaskLogs) WriteEventsUntilStopped() error {
+func (t *TaskClient) WriteEventsUntilStopped() error {
 	startTime := earliestStartTime(t.Tasks)
 	t.runningTasks = t.Tasks
 	lastEventTimestampByLogGroup := make(map[string]int64)
 	for {
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			logEventsOutput, err := t.EventsLogger.TaskLogEvents(t.GroupName, lastEventTimestampByLogGroup, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
+			logEventsOutput, err := t.EventsLogger.LogEvents(t.GroupName, lastEventTimestampByLogGroup, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
 			if err != nil {
 				return fmt.Errorf("get task log events: %w", err)
 			}
-			if err := OutputCwLogsHuman(t.Writer, logEventsOutput.Events); err != nil {
+			if err := WriteHumanLogs(t.Writer, cwEventsToHumanJSONStringers(logEventsOutput.Events)); err != nil {
 				return fmt.Errorf("write log event: %w", err)
 			}
 			lastEventTimestampByLogGroup = logEventsOutput.LastEventTime
@@ -86,7 +79,7 @@ func (t *TaskLogs) WriteEventsUntilStopped() error {
 	}
 }
 
-func (t *TaskLogs) allTasksStopped() (bool, error) {
+func (t *TaskClient) allTasksStopped() (bool, error) {
 	taskARNs := make([]string, len(t.runningTasks))
 	for idx, task := range t.runningTasks {
 		taskARNs[idx] = task.TaskARN
