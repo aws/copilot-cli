@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package task
+package ecslogging
 
 import (
 	"errors"
@@ -11,14 +11,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/task/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/ecslogging/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/task"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 type writeEventMocks struct {
-	eventsLogger *mocks.MockTaskEventsLogger
-	describer    *mocks.MockTasksDescriber
+	logGetter *mocks.MocklogGetter
+	describer *mocks.MockTasksDescriber
 }
 
 type mockWriter struct{}
@@ -34,14 +35,14 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 	}{
 		"error getting log events": {
 			setUpMocks: func(m writeEventMocks) {
-				m.eventsLogger.EXPECT().TaskLogEvents(groupName, gomock.Any(), gomock.Any()).
+				m.logGetter.EXPECT().LogEvents(groupName, gomock.Any(), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{}, errors.New("error getting log events"))
 			},
 			wantedError: errors.New("get task log events: error getting log events"),
 		},
 		"error describing tasks": {
 			setUpMocks: func(m writeEventMocks) {
-				m.eventsLogger.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.logGetter.EXPECT().LogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{
 						Events: []*cloudwatchlogs.Event{},
 					}, nil).AnyTimes()
@@ -52,7 +53,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 		},
 		"success": {
 			setUpMocks: func(m writeEventMocks) {
-				m.eventsLogger.EXPECT().TaskLogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
+				m.logGetter.EXPECT().LogEvents(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&cloudwatchlogs.LogEventsOutput{
 						Events: []*cloudwatchlogs.Event{},
 					}, nil).AnyTimes()
@@ -84,7 +85,7 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			tasks := []*Task{
+			tasks := []*task.Task{
 				{
 					TaskARN:    "task-1",
 					ClusterARN: "cluster",
@@ -103,17 +104,17 @@ func TestEventsWriter_WriteEventsUntilStopped(t *testing.T) {
 			}
 
 			mocks := writeEventMocks{
-				eventsLogger: mocks.NewMockTaskEventsLogger(ctrl),
-				describer:    mocks.NewMockTasksDescriber(ctrl),
+				logGetter: mocks.NewMocklogGetter(ctrl),
+				describer: mocks.NewMockTasksDescriber(ctrl),
 			}
 			tc.setUpMocks(mocks)
 
-			ew := &EventsWriter{
+			ew := &TaskClient{
 				GroupName: groupName,
 				Tasks:     tasks,
 
 				Writer:       mockWriter{},
-				EventsLogger: mocks.eventsLogger,
+				EventsLogger: mocks.logGetter,
 				Describer:    mocks.describer,
 			}
 
