@@ -14,7 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 )
 
-// VpcGetter gets subnets and security groups.
+// VPCGetter gets subnets and security groups.
 type VPCGetter interface {
 	SubnetIDs(filters ...ec2.Filter) ([]string, error)
 	SecurityGroups(filters ...ec2.Filter) ([]string, error)
@@ -31,8 +31,8 @@ type DefaultClusterGetter interface {
 	DefaultCluster() (string, error)
 }
 
-// TaskRunner runs the tasks and wait for it to start.
-type TaskRunner interface {
+// Runner runs the tasks and wait for it to start.
+type Runner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
 }
 

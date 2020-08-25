@@ -6,10 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/docker"
 	"path/filepath"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/docker"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/task"
@@ -61,7 +62,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 
 		inDefault bool
 
-		appName string
+		appName         string
 		isDockerfileSet bool
 
 		mockStore      func(m *mocks.Mockstore)
@@ -140,7 +141,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 				inCPU:    -15,
 				inMemory: 512,
 			},
-			wantedError: errCpuNotPositive,
+			wantedError: errCPUNotPositive,
 		},
 		"invalid memory": {
 			basicOpts: basicOpts{
@@ -162,9 +163,9 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 			basicOpts: defaultOpts,
 
 			inDockerfilePath: "world/hello/Dockerfile",
-			isDockerfileSet: true,
+			isDockerfileSet:  true,
 
-			wantedError:      errors.New("open world/hello/Dockerfile: file does not exist"),
+			wantedError: errors.New("open world/hello/Dockerfile: file does not exist"),
 		},
 		"specified app exists": {
 			basicOpts: defaultOpts,
@@ -252,7 +253,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both application and subnets specified": {
 			basicOpts: defaultOpts,
 
-			appName:     "my-app",
+			appName:   "my-app",
 			inSubnets: []string{"subnet id"},
 
 			wantedError: errors.New("cannot specify both `--subnets` and `--app`"),
@@ -260,7 +261,7 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 		"both application and security groups specified": {
 			basicOpts: defaultOpts,
 
-			appName: "my-app",
+			appName:          "my-app",
 			inSecurityGroups: []string{"security group id1", "security group id2"},
 
 			wantedError: errors.New("cannot specify both `--security-groups` and `--app`"),
@@ -287,8 +288,8 @@ func TestTaskRunOpts_Validate(t *testing.T) {
 					GlobalOpts: &GlobalOpts{
 						appName: tc.appName,
 					},
-					count:          tc.inCount,
-					cpu:            tc.inCPU,
+					count:             tc.inCount,
+					cpu:               tc.inCPU,
 					memory:            tc.inMemory,
 					groupName:         tc.inName,
 					image:             tc.inImage,
@@ -329,7 +330,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 	testCases := map[string]struct {
 		inName string
 
-		inSubnets []string
+		inSubnets        []string
 		inSecurityGroups []string
 
 		inDefault bool
@@ -364,7 +365,7 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 			wantedApp: "",
 		},
 		"don't prompt for app when under a workspace or app flag is specified": {
-			appName: "my-app",
+			appName:   "my-app",
 			inDefault: true,
 			mockPrompt: func(m *mocks.Mockprompter) {
 				m.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -554,11 +555,11 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 }
 
 type runTaskMocks struct {
-	deployer   *mocks.MocktaskDeployer
-	repository *mocks.MockrepositoryService
-	runner     *mocks.MocktaskRunner
-	store      *mocks.Mockstore
-	eventsWriter *mocks.MockeventsWriter
+	deployer             *mocks.MocktaskDeployer
+	repository           *mocks.MockrepositoryService
+	runner               *mocks.MocktaskRunner
+	store                *mocks.Mockstore
+	eventsWriter         *mocks.MockeventsWriter
 	defaultClusterGetter *mocks.MockdefaultClusterGetter
 }
 
@@ -712,7 +713,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 		},
 		"fail to write events": {
 			inFollow: true,
-			inImage: "image",
+			inImage:  "image",
 			setupMocks: func(m runTaskMocks) {
 				m.deployer.EXPECT().DeployTask(gomock.Any()).AnyTimes()
 				m.runner.EXPECT().Run().Return([]*task.Task{
@@ -740,11 +741,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			mocks := runTaskMocks{
-				deployer:   mocks.NewMocktaskDeployer(ctrl),
-				repository: mocks.NewMockrepositoryService(ctrl),
-				runner:     mocks.NewMocktaskRunner(ctrl),
-				store:      mocks.NewMockstore(ctrl),
-				eventsWriter: mocks.NewMockeventsWriter(ctrl),
+				deployer:             mocks.NewMocktaskDeployer(ctrl),
+				repository:           mocks.NewMockrepositoryService(ctrl),
+				runner:               mocks.NewMocktaskRunner(ctrl),
+				store:                mocks.NewMockstore(ctrl),
+				eventsWriter:         mocks.NewMockeventsWriter(ctrl),
 				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
 			}
 			tc.setupMocks(mocks)
@@ -752,12 +753,12 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts := &runTaskOpts{
 				runTaskVars: runTaskVars{
 					GlobalOpts: &GlobalOpts{},
-					groupName: inGroupName,
+					groupName:  inGroupName,
 
-					image:     tc.inImage,
-					imageTag:  tc.inTag,
-					env:       tc.inEnv,
-					follow:    tc.inFollow,
+					image:    tc.inImage,
+					imageTag: tc.inTag,
+					env:      tc.inEnv,
+					follow:   tc.inFollow,
 				},
 				spinner: &mockSpinner{},
 				store:   mocks.store,

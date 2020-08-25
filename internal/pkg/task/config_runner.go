@@ -27,7 +27,7 @@ type NetworkConfigRunner struct {
 
 	// Interfaces to interact with dependencies. Must not be nil.
 	ClusterGetter DefaultClusterGetter
-	Starter       TaskRunner
+	Starter       Runner
 
 	// Must not be nil if using default subnets.
 	VPCGetter VPCGetter
