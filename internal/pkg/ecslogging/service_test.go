@@ -62,7 +62,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"failed to get task log events": {
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(nil, errors.New("some error")),
 				)
 			},
@@ -72,7 +72,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"success with human output": {
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
 						}, nil),
@@ -85,7 +85,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			jsonOutput: true,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
 						}, nil),
@@ -98,12 +98,12 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			follow: true,
 			setupMocks: func(m serviceLogsMocks) {
 				gomock.InOrder(
-					m.logGetter.EXPECT().LogEvents(mockLogGroupName, make(map[string]int64), gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:        logEvents,
 							LastEventTime: mockLastEventTime,
 						}, nil),
-					m.logGetter.EXPECT().LogEvents(mockLogGroupName, mockLastEventTime, gomock.Any()).
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:        moreLogEvents,
 							LastEventTime: nil,

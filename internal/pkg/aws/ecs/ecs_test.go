@@ -341,11 +341,11 @@ func TestECS_DefaultCluster(t *testing.T) {
 					DescribeClusters(&ecs.DescribeClustersInput{}).
 					Return(&ecs.DescribeClustersOutput{
 						Clusters: []*ecs.Cluster{
-							&ecs.Cluster{
+							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster1"),
 								ClusterName: aws.String("cluster1"),
 							},
-							&ecs.Cluster{
+							{
 								ClusterArn:  aws.String("arn:aws:ecs:us-east-1:0123456:cluster/cluster2"),
 								ClusterName: aws.String("cluster2"),
 							},
@@ -492,13 +492,13 @@ func TestECS_RunTask(t *testing.T) {
 				}).
 					Return(&ecs.RunTaskOutput{
 						Tasks: []*ecs.Task{
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-1"),
 							},
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-2"),
 							},
-							&ecs.Task{
+							{
 								TaskArn: aws.String("task-3"),
 							},
 						},
@@ -616,26 +616,26 @@ func TestECS_DescribeTasks(t *testing.T) {
 					Tasks:   aws.StringSlice(inTaskARNs),
 				}).Return(&ecs.DescribeTasksOutput{
 					Tasks: []*ecs.Task{
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-1"),
 						},
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-2"),
 						},
-						&ecs.Task{
+						{
 							TaskArn: aws.String("task-3"),
 						},
 					},
 				}, nil)
 			},
 			wantedTasks: []*Task{
-				&Task{
+				{
 					TaskArn: aws.String("task-1"),
 				},
-				&Task{
+				{
 					TaskArn: aws.String("task-2"),
 				},
-				&Task{
+				{
 					TaskArn: aws.String("task-3"),
 				},
 			},

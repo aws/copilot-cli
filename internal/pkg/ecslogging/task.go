@@ -9,7 +9,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -20,6 +19,8 @@ import (
 const (
 	numCWLogsCallsPerRound = 10
 	fmtTaskLogGroupName    = "/copilot/%s"
+	// e.g., copilot-task/python/4f8243e83f8a4bdaa7587fa1eaff2ea3
+	fmtLogStreamName = "copilot-task/%s/%s"
 )
 
 // TasksDescriber describes ECS tasks.
@@ -42,9 +43,8 @@ type TaskClient struct {
 
 // NewTaskClient returns a TaskClient that can retrieve logs from the given tasks under the groupName.
 func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) *TaskClient {
-	logGroupName := fmt.Sprintf(fmtTaskLogGroupName, groupName)
 	return &TaskClient{
-		GroupName: logGroupName,
+		GroupName: groupName,
 		Tasks:     tasks,
 
 		Describer:    ecs.New(sess),
@@ -55,12 +55,19 @@ func NewTaskClient(sess *session.Session, groupName string, tasks []*task.Task) 
 
 // WriteEventsUntilStopped writes tasks' events to a writer until all tasks have stopped.
 func (t *TaskClient) WriteEventsUntilStopped() error {
-	startTime := earliestStartTime(t.Tasks)
 	t.runningTasks = t.Tasks
 	lastEventTimestampByLogGroup := make(map[string]int64)
 	for {
+		logStreams, err := t.logStreamNamesFromTasks(t.runningTasks)
+		if err != nil {
+			return err
+		}
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
-			logEventsOutput, err := t.EventsLogger.LogEvents(t.GroupName, lastEventTimestampByLogGroup, cloudwatchlogs.WithStartTime(aws.TimeUnixMilli(startTime)))
+			logEventsOutput, err := t.EventsLogger.LogEvents(&cloudwatchlogs.LogEventsOpts{
+				LogGroup:            fmt.Sprintf(fmtTaskLogGroupName, t.GroupName),
+				LogStream:           logStreams,
+				StreamLastEventTime: lastEventTimestampByLogGroup,
+			})
 			if err != nil {
 				return fmt.Errorf("get task log events: %w", err)
 			}
@@ -109,13 +116,13 @@ func (t *TaskClient) allTasksStopped() (bool, error) {
 	return stopped, nil
 }
 
-// The `StartedAt` field for the tasks shouldn't be nil.
-func earliestStartTime(tasks []*task.Task) time.Time {
-	earliest := *tasks[0].StartedAt
+func (t *TaskClient) logStreamNamesFromTasks(tasks []*task.Task) (logStreamNames []string, err error) {
 	for _, task := range tasks {
-		if task.StartedAt.Before(earliest) {
-			earliest = *task.StartedAt
+		id, err := ecs.TaskID(task.TaskARN)
+		if err != nil {
+			return nil, fmt.Errorf("parse task ID from ARN %s", task.TaskARN)
 		}
+		logStreamNames = append(logStreamNames, fmt.Sprintf(fmtLogStreamName, t.GroupName, id))
 	}
-	return earliest
+	return
 }

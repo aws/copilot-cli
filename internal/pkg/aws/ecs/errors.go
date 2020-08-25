@@ -17,7 +17,7 @@ const (
 // ErrNoDefaultCluster occurs when the default cluster is not found.
 var ErrNoDefaultCluster = errors.New("default cluster does not exist")
 
-// ErrResourceNotReadyForTasks contains the STOPPED reason for the container of the first task that failed to start.
+// ErrWaiterResourceNotReadyForTasks contains the STOPPED reason for the container of the first task that failed to start.
 type ErrWaiterResourceNotReadyForTasks struct {
 	tasks                  []*Task
 	awsErrResourceNotReady error
@@ -35,7 +35,7 @@ func (e *ErrWaiterResourceNotReadyForTasks) Error() string {
 			continue
 		}
 
-		taskID, err := task.taskID(aws.StringValue(task.TaskArn))
+		taskID, err := TaskID(aws.StringValue(task.TaskArn))
 		if err != nil {
 			continue
 		}
