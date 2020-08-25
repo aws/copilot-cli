@@ -181,7 +181,7 @@ var _ = Describe("Multiple Service App", func() {
 				Eventually(func() (int, error) {
 					resp, fetchErr = http.Get(route.URL)
 					return resp.StatusCode, fetchErr
-				}, "30s", "1s").Should(Equal(200))
+				}, "60s", "1s").Should(Equal(200))
 
 				// Read the response - our deployed apps should return a body with their
 				// name as the value.
