@@ -1,0 +1,60 @@
+version: 0.2
+env:
+  variables:
+    AWS_STS_REGIONAL_ENDPOINTS: regional
+    STAGE_SESSION_NAME: "aws_copilot_cli"
+  parameter-store:
+    SIGNING_LAMBDA_ARN: SIGNING_LAMBDA_ARN
+    STAGE_ROLE_ARN: COPILOT_STAGE_ROLE_ARN
+    STAGE_BUCKET: COPILOT_STAGE_BUCKET_NAME
+phases:
+  build:
+    commands:
+      - GIT_COMMIT_ID=`git rev-parse HEAD`
+      - JSON_ARR=`jq -Rsc 'split("\n") | map(select(length > 0))' < $GIT_COMMIT_ID.manifest`
+      - echo "Signing these artifacts in S3 $JSON_ARR"
+      - echo "Invoking the signing solution..."
+      - >
+        aws lambda invoke
+        --function-name $SIGNING_LAMBDA_ARN 
+        --invocation-type RequestResponse 
+        --region us-west-2 --payload $JSON_ARR /tmp/successfully_signed.txt
+      - MATCH=`jq --argfile a /tmp/successfully_signed.txt --argjson b $JSON_ARR -n '($a | sort) as $a | ($b | sort) as $b | $a==$b'`
+      - |
+        if [ "$MATCH" = "true" ]; then
+            echo "All artifacts successfully signed. Assuming role before downloading..."
+            CREDS=`aws sts assume-role \
+            --region $AWS_DEFAULT_REGION \
+            --role-arn $STAGE_ROLE_ARN \
+            --role-session-name $STAGE_SESSION_NAME`
+        else
+            echo "Not all of the artifacts were successfully signed!"
+            exit 1
+        fi
+      - export AWS_ACCESS_KEY_ID=`echo $CREDS | jq -r .Credentials.AccessKeyId`
+      - export AWS_SECRET_ACCESS_KEY=`echo $CREDS | jq -r .Credentials.SecretAccessKey`
+      - export AWS_SESSION_TOKEN=`echo $CREDS | jq -r .Credentials.SessionToken`
+      - echo "Role assumed. Downloading signature files..."
+      - |
+        for artifact in `cat ./$GIT_COMMIT_ID.manifest`
+        do
+            aws s3 cp "s3://$STAGE_BUCKET/$artifact.asc" $artifact.asc || exit 1
+            echo "Downloaded: $artifact.asc"
+        done
+      - ls -lah $(dirname `head -1 ./$GIT_COMMIT_ID.manifest`)
+  post_build:
+    commands:
+      - echo "Installing ecs-cli gpg public key"
+      - /usr/bin/gpg --version
+      - gpg --import .release/amazon-ecs-public-key.gpg
+      - echo "Verifying PGP signatures..."
+      - |
+        for artifact in `cat ./$GIT_COMMIT_ID.manifest`
+        do
+            chmod +x $artifact.asc
+            gpg --verify $artifact.asc $artifact || exit 1
+            echo "Verified signature for $artifact"
+        done
+artifacts:
+  files:
+    - '**/*'
