@@ -47,7 +47,7 @@ func TestEC2_ListVPC(t *testing.T) {
 		mockEC2Client func(m *mocks.Mockapi)
 
 		wantedError error
-		wantedVPC   []string
+		wantedVPC   []VPC
 	}{
 		"fail to describe vpcs": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -81,7 +81,15 @@ func TestEC2_ListVPC(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedVPC: []string{"mockVPCID1", "mockVPCID2 (mockVPC2Name)"},
+			wantedVPC: []VPC{
+				{
+					ID: "mockVPCID1",
+				},
+				{
+					ID:   "mockVPCID2",
+					Name: "mockVPC2Name",
+				},
+			},
 		},
 	}
 

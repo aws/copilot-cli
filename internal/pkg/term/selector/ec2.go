@@ -7,6 +7,7 @@ package selector
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 )
 
@@ -19,7 +20,7 @@ var (
 
 // VPCSubnetLister list VPCs and subnets.
 type VPCSubnetLister interface {
-	ListVPCs() ([]string, error)
+	ListVPCs() ([]ec2.VPC, error)
 	ListVPCSubnets(vpcID string, opts ...ec2.ListVPCSubnetsOpts) ([]string, error)
 }
 
@@ -46,9 +47,13 @@ func (s *EC2Select) VPC(prompt, help string) (string, error) {
 	if len(vpcs) == 0 {
 		return "", ErrVPCNotFound
 	}
+	var options []string
+	for _, vpc := range vpcs {
+		options = append(options, vpc.String())
+	}
 	vpc, err := s.prompt.SelectOne(
 		prompt, help,
-		vpcs)
+		options)
 	if err != nil {
 		return "", fmt.Errorf("select VPC: %w", err)
 	}
