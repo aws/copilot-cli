@@ -112,12 +112,12 @@ func ExtractVPC(label string) (VPC, error) {
 
 // ListVPCs returns names and IDs (or just IDs, if Name tag does not exist) of all VPCs.
 func (c *EC2) ListVPCs() ([]VPC, error) {
-	var vpcs []*ec2.Vpc
+	var ec2vpcs []*ec2.Vpc
 	response, err := c.client.DescribeVpcs(&ec2.DescribeVpcsInput{})
 	if err != nil {
 		return nil, fmt.Errorf("describe VPCs: %w", err)
 	}
-	vpcs = append(vpcs, response.Vpcs...)
+	ec2vpcs = append(ec2vpcs, response.Vpcs...)
 
 	for response.NextToken != nil {
 		response, err = c.client.DescribeVpcs(&ec2.DescribeVpcsInput{
@@ -126,10 +126,10 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 		if err != nil {
 			return nil, fmt.Errorf("describe VPCs: %w", err)
 		}
-		vpcs = append(vpcs, response.Vpcs...)
+		ec2vpcs = append(ec2vpcs, response.Vpcs...)
 	}
-	var VPCs []VPC
-	for _, vpc := range vpcs {
+	var vpcs []VPC
+	for _, vpc := range ec2vpcs {
 		VPC := VPC{
 			ID: aws.StringValue(vpc.VpcId),
 		}
@@ -138,9 +138,9 @@ func (c *EC2) ListVPCs() ([]VPC, error) {
 				VPC.Name = aws.StringValue(tag.Value)
 			}
 		}
-		VPCs = append(VPCs, VPC)
+		vpcs = append(vpcs, VPC)
 	}
-	return VPCs, nil
+	return vpcs, nil
 }
 
 // ListVPCSubnets lists all subnets given a VPC ID.
